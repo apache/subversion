@@ -36,6 +36,7 @@
 #include "adm_files.h"
 #include "questions.h"
 #include "entries.h"
+#include "translate.h"
 
 #include "svn_md5.h"
 #include <apr_md5.h>
@@ -119,9 +120,9 @@ svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool)
 
 
 
-/*** svn_wc_text_modified_p ***/
+/*** svn_wc_text_modified_p2 ***/
 
-/* svn_wc_text_modified_p answers the question:
+/* svn_wc_text_modified_p2 answers the question:
 
    "Are the contents of F different than the contents of
    .svn/text-base/F.svn-base?"
@@ -220,21 +221,58 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
 
 
 
+static svn_error_t *
+translate_from_normal_form (const char **tmp_vfile,
+                            const char *versioned_file,
+                            const char *base_file,
+                            svn_wc_adm_access_t *adm_access,
+                            apr_pool_t *pool)
+{
+  apr_hash_t *keywords;
+  const char *eol_str;
+  svn_boolean_t special;
+
+  SVN_ERR (svn_wc__get_keywords (&keywords, versioned_file, adm_access,
+                                 NULL, pool));
+  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, versioned_file,
+                                  adm_access, pool));
+  SVN_ERR (svn_wc__get_special (&special, versioned_file, adm_access,
+                                pool));
+
+  SVN_ERR (svn_wc_create_tmp_file2 (NULL, tmp_vfile,
+                                    svn_wc_adm_access_path (adm_access),
+                                    svn_io_file_del_on_pool_cleanup,
+                                    pool));
+
+  return svn_subst_copy_and_translate3 (base_file,
+                                        *tmp_vfile,
+                                        eol_str, FALSE,
+                                        keywords, TRUE,
+                                        special, pool);
+}
+
 
 svn_error_t *
 svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                  const char *versioned_file,
                                  svn_wc_adm_access_t *adm_access,
                                  const char *base_file,
+                                 svn_boolean_t compare_textbases,
                                  apr_pool_t *pool)
 {
   svn_boolean_t same;
   const char *tmp_vfile;
 
-  SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
-                                    TRUE, TRUE, pool));
+  if (compare_textbases)
+    SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
+                                      TRUE, TRUE, pool));
+  else
+    SVN_ERR (translate_from_normal_form (&tmp_vfile, versioned_file, base_file,
+                                         adm_access, pool));
 
-  SVN_ERR (svn_io_files_contents_same_p (&same, tmp_vfile, base_file, pool));
+  SVN_ERR (svn_io_files_contents_same_p (&same, tmp_vfile,
+                                         compare_textbases
+                                         ? base_file : versioned_file, pool));
   *modified_p = (! same);
 
   return SVN_NO_ERROR;
@@ -254,6 +292,7 @@ compare_and_verify (svn_boolean_t *modified_p,
                     const char *versioned_file,
                     svn_wc_adm_access_t *adm_access,
                     const char *base_file,
+                    svn_boolean_t compare_textbases,
                     apr_pool_t *pool)
 
 {
@@ -263,8 +302,12 @@ compare_and_verify (svn_boolean_t *modified_p,
   SVN_ERR (svn_wc_entry (&entry, versioned_file, adm_access, TRUE, pool));
 
 
-  SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
-                                    TRUE, TRUE, pool));
+  if (compare_textbases)
+    SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
+                                      TRUE, TRUE, pool));
+  else
+    SVN_ERR (translate_from_normal_form (&tmp_vfile, versioned_file,
+                                         base_file, adm_access, pool));
 
   /* Compare the files, while maybe calculating the base file's checksum. */
   {
@@ -283,8 +326,9 @@ compare_and_verify (svn_boolean_t *modified_p,
 
     SVN_ERR (svn_io_file_open (&v_file_h, tmp_vfile,
                                APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR (svn_io_file_open (&b_file_h, base_file, APR_READ, APR_OS_DEFAULT,
-                               pool));
+    SVN_ERR (svn_io_file_open (&b_file_h,
+                               compare_textbases ? base_file : versioned_file,
+                               APR_READ, APR_OS_DEFAULT, pool));
     if (entry->checksum)
       apr_md5_init (&context);
 
@@ -354,11 +398,12 @@ compare_and_verify (svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                        const char *filename,
-                        svn_boolean_t force_comparison,
-                        svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *pool)
+svn_wc_text_modified_p2 (svn_boolean_t *modified_p,
+                         const char *filename,
+                         svn_boolean_t force_comparison,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_boolean_t compare_textbases,
+                         apr_pool_t *pool)
 {
   const char *textbase_filename;
   svn_boolean_t equal_timestamps;
@@ -413,14 +458,15 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       *modified_p = TRUE;
       goto cleanup;
     }
-  
-  
+
+
   if (force_comparison)  /* Check all bytes, and verify checksum. */
     {
       SVN_ERR (compare_and_verify (modified_p,
                                    filename,
                                    adm_access,
                                    textbase_filename,
+                                   compare_textbases,
                                    subpool));
     }
   else  /* Else, fall back on the standard mod detector. */
@@ -429,6 +475,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                                 filename,
                                                 adm_access,
                                                 textbase_filename,
+                                                compare_textbases,
                                                 subpool));
     }
 
@@ -453,6 +500,17 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc_text_modified_p (svn_boolean_t *modified_p,
+                        const char *filename,
+                        svn_boolean_t force_comparison,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool)
+{
+  return svn_wc_text_modified_p2 (modified_p, filename, force_comparison,
+                                  adm_access, TRUE, pool);
+}
 
 
 

@@ -1110,7 +1110,7 @@ log_do_committed (struct log_runner *loggy,
           /* Verify that the working file is the same as the tmpf file. */
           if ((err = svn_wc__versioned_file_modcheck (&modified, wf,
                                                       loggy->adm_access,
-                                                      tmpf, pool)))
+                                                      tmpf, TRUE, pool)))
             return svn_error_createf (pick_error_code (loggy), err,
                                       _("Error comparing '%s' and '%s'"),
                                       svn_path_local_style (wf, pool),
@@ -2271,8 +2271,8 @@ svn_wc_cleanup2 (const char *path,
           SVN_ERR (svn_wc_props_modified_p (&modified, entry_path,
                                             adm_access, subpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR (svn_wc_text_modified_p (&modified, entry_path, FALSE,
-                                             adm_access, subpool));
+            SVN_ERR (svn_wc_text_modified_p2 (&modified, entry_path, FALSE,
+                                              adm_access, TRUE, subpool));
         }
     }
   svn_pool_destroy (subpool);

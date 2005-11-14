@@ -1047,14 +1047,37 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
+ * If @a compare_textbases is @c TRUE, the comparison will be between
+ * a detranslated version of @a *filename and the text base, otherwise,
+ * a translated version of the text base and @a *filename will be compared.
+ *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
- * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.  */
-svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                                     const char *filename,
-                                     svn_boolean_t force_comparison,
-                                     svn_wc_adm_access_t *adm_access,
-                                     apr_pool_t *pool);
+ * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * @since New in 1.4
+ *
+ */
+svn_error_t *
+svn_wc_text_modified_p2 (svn_boolean_t *modified_p,
+                         const char *filename,
+                         svn_boolean_t force_comparison,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_boolean_t compare_textbases,
+                         apr_pool_t *pool);
+
+
+/** Same as svn_wc_text_modified_p2, but always compares text bases.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
+ *
+ */
+svn_error_t *
+svn_wc_text_modified_p (svn_boolean_t *modified_p,
+                        const char *filename,
+                        svn_boolean_t force_comparison,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool);
 
 
 /** Set @a *modified_p to non-zero if @a path's properties are modified
