@@ -49,11 +49,6 @@ svn_cl__cleanup (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
-  /* At this point, we should never have an empty TARGETS array, but
-     check it just in case. */
-  if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; i++)
     {
