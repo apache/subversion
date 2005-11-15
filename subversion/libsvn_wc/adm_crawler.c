@@ -94,6 +94,7 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
   assert(entry != NULL);
 
+  SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool));
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
