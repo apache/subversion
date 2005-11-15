@@ -220,38 +220,6 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
 }
 
 
-
-static svn_error_t *
-translate_from_normal_form (const char **tmp_vfile,
-                            const char *versioned_file,
-                            const char *base_file,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool)
-{
-  apr_hash_t *keywords;
-  const char *eol_str;
-  svn_boolean_t special;
-
-  SVN_ERR (svn_wc__get_keywords (&keywords, versioned_file, adm_access,
-                                 NULL, pool));
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, versioned_file,
-                                  adm_access, pool));
-  SVN_ERR (svn_wc__get_special (&special, versioned_file, adm_access,
-                                pool));
-
-  SVN_ERR (svn_wc_create_tmp_file2 (NULL, tmp_vfile,
-                                    svn_wc_adm_access_path (adm_access),
-                                    svn_io_file_del_on_pool_cleanup,
-                                    pool));
-
-  return svn_subst_copy_and_translate3 (base_file,
-                                        *tmp_vfile,
-                                        eol_str, FALSE,
-                                        keywords, TRUE,
-                                        special, pool);
-}
-
-
 svn_error_t *
 svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                  const char *versioned_file,
@@ -264,11 +232,19 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
   const char *tmp_vfile;
 
   if (compare_textbases)
-    SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
-                                      TRUE, TRUE, pool));
+    SVN_ERR (svn_wc_translated_file2
+             (&tmp_vfile, versioned_file,
+              versioned_file, adm_access,
+              SVN_WC_TRANSLATE_TO_NF
+              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              pool));
   else
-    SVN_ERR (translate_from_normal_form (&tmp_vfile, versioned_file, base_file,
-                                         adm_access, pool));
+    SVN_ERR (svn_wc_translated_file2
+             (&tmp_vfile, base_file,
+              versioned_file, adm_access,
+              SVN_WC_TRANSLATE_FROM_NF
+              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              pool));
 
   SVN_ERR (svn_io_files_contents_same_p (&same, tmp_vfile,
                                          compare_textbases
@@ -303,11 +279,20 @@ compare_and_verify (svn_boolean_t *modified_p,
 
 
   if (compare_textbases)
-    SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
-                                      TRUE, TRUE, pool));
+    SVN_ERR (svn_wc_translated_file2
+             (&tmp_vfile, versioned_file,
+              versioned_file, adm_access,
+              SVN_WC_TRANSLATE_TO_NF
+              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              pool));
   else
-    SVN_ERR (translate_from_normal_form (&tmp_vfile, versioned_file,
-                                         base_file, adm_access, pool));
+    SVN_ERR (svn_wc_translated_file2
+             (&tmp_vfile, base_file,
+              versioned_file, adm_access,
+              SVN_WC_TRANSLATE_FROM_NF
+              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              pool));
+
 
   /* Compare the files, while maybe calculating the base file's checksum. */
   {

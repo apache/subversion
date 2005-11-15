@@ -71,20 +71,12 @@ svn_wc_merge (const char *left,
       /* Make sure a temporary copy of 'target' is available with keywords
          contracted and line endings in repository-normal (LF) form.
          This is the file that diff3 will read as the 'mine' file.  */
-      SVN_ERR (svn_wc_translated_file2 (&tmp_target, merge_target, adm_access,
-                                        TRUE, TRUE, pool));
-      if (tmp_target == merge_target)  /* contraction didn't happen */
-        {
-          /* The target is already in repository form, so we just need to
-             make a verbatim copy of it. */
-          SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_target,
-                                             merge_target,
-                                             SVN_WC__TMP_EXT,
-                                             svn_io_file_del_on_pool_cleanup,
-                                             pool));
-          SVN_ERR (svn_io_copy_file (merge_target,
-                                     tmp_target, TRUE, pool));
-        }
+      SVN_ERR (svn_wc_translated_file2
+               (&tmp_target, merge_target,
+                merge_target, adm_access,
+                SVN_WC_TRANSLATE_TO_NF
+                | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
+                | SVN_WC_TRANSLATE_FORCE_COPY, pool));
 
       /* Open a second temporary file for writing; this is where diff3
          will write the merged results. */

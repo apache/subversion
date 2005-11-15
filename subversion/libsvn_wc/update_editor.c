@@ -2006,8 +2006,10 @@ merge_file (svn_stringbuf_t *log_accum,
 
       /* A log command which copies and DEtranslates the working file
          to a tmp-text-base. */
-      SVN_ERR (svn_wc_translated_file2 (&tmptext, file_path, adm_access,
-                                        TRUE, FALSE, pool));
+      SVN_ERR (svn_wc_translated_file2 (&tmptext, file_path, file_path,
+                                        adm_access,
+                                        SVN_WC_TRANSLATE_TO_NF,
+                                        pool));
 
       tmptext = svn_path_is_child (parent_dir, tmptext, pool);
       /* A log command that copies the tmp-text-base and REtranslates
