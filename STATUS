@@ -9,22 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
- * r17214
-   Fix crash because of reentrant call to javahl and close race condition
-   window.
-   Justification:
-     Fixes JVM crash in Subclipse when it attempts to call
-     is/getAdminDirectory() or cancelOperation() while another operation
-     is running.
-   Notes:
-     markphip:
-     I applied this patch to 1.3.x branch and verified it fixes problems in
-     Subclipse.
-   Votes:
-     +1: malcolm
-     +1: (non-binding): markphip
-     -0: dlr
-
  * r17279
    Don't use recursive symbolic links in our build tree.
    Justification:
@@ -47,3 +31,20 @@ Approved changes:
    Votes:
      +1: blair
      +0: rooneg
+
+ * r17214
+   Fix crash because of reentrant call to javahl and close race condition
+   window.
+   Justification:
+     Fixes JVM crash in Subclipse when it attempts to call
+     is/getAdminDirectory() or cancelOperation() while another operation
+     is running.
+   Notes:
+     markphip:
+     I applied this patch to 1.3.x branch and verified it fixes problems in
+     Subclipse.
+   Votes:
+     +1: malcolm
+     +1: (non-binding): markphip
+     +0: rooneg
+     -0: dlr
