@@ -80,7 +80,6 @@ restore_file (const char *file_path,
                                     | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
                                     | SVN_WC_TRANSLATE_FORCE_COPY, pool));
 
-  SVN_ERR (svn_wc__prep_file_for_replacement (file_path, TRUE, pool));
   SVN_ERR (svn_io_file_rename (tmp_file, file_path, pool));
 
   SVN_ERR (svn_wc__maybe_set_read_only (NULL, file_path, adm_access, pool));

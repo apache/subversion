@@ -245,8 +245,6 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                   | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
                   | (special_only ? SVN_WC_TRANSLATE_SPECIAL_ONLY : 0),
                   pool));
-        SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, TRUE,
-                                                    pool));
         SVN_ERR (svn_io_file_rename (tmp_file, full_dest_path, pool));
 
         SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_dest_path,
@@ -270,16 +268,12 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                   | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
                   | (special_only ? SVN_WC_TRANSLATE_SPECIAL_ONLY : 0),
                   pool));
-        SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, TRUE,
-                                                    pool));
         SVN_ERR (svn_io_file_rename (tmp_file, full_dest_path, pool));
 
         return SVN_NO_ERROR;
       }
 
     case svn_wc__xfer_mv:
-      SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, TRUE, pool));
-
       err = svn_io_file_rename (full_from_path,
                                 full_dest_path, pool);
 
@@ -1175,7 +1169,6 @@ log_do_committed (struct log_runner *loggy,
           }
 
         /* Make the tmp prop file the new pristine one. */
-        SVN_ERR (svn_wc__prep_file_for_replacement (basef, TRUE, pool));
         SVN_ERR (svn_io_file_rename (tmpf, basef, pool));
         SVN_ERR (svn_io_set_file_read_only (basef, FALSE, pool));
       }

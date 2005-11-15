@@ -290,7 +290,6 @@ sync_adm_file (const char *path,
   va_end (ap);
   
   /* Rename. */
-  SVN_ERR (svn_wc__prep_file_for_replacement (path, TRUE, pool));
   SVN_ERR (svn_io_file_rename (tmp_path, path, pool));
   SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
 
@@ -586,7 +585,6 @@ close_adm_file (apr_file_t *fp,
       va_end (ap);
       
       /* Rename. */
-      SVN_ERR (svn_wc__prep_file_for_replacement (path, TRUE, pool));
       SVN_ERR (svn_io_file_rename (tmp_path, path, pool));
       SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
       
@@ -1189,27 +1187,4 @@ svn_wc_create_tmp_file (apr_file_t **fp,
                                   ? svn_io_file_del_on_close
                                   : svn_io_file_del_none,
                                   pool);
-}
-
-svn_error_t *
-svn_wc__prep_file_for_replacement (const char *path,
-                                   svn_boolean_t ignore_enoent,
-                                   apr_pool_t *pool)
-{
-   /* On Unix a read-only file can still be removed or replaced because
-      this is really an edit of the parent directory, not of the file
-      itself.  Windows apparently has different semantics, and so
-      when the svn_io_set_file_read_write() call was temporarily
-      removed in revision 5663, Subversion stopped working on Windows. 
-      
-      However, the svn_io_set_file_read_write() call sets all write
-      permissions on Unix, which is undesireable.  Since it is unnecessary
-      to make the file writeable, do nothing to prep the file for replacement
-      on Unix. */
-
-#ifdef WIN32
-  return svn_io_set_file_read_write (path, ignore_enoent, pool);
-#endif /* WIN32 */
-
-  return SVN_NO_ERROR;
 }
