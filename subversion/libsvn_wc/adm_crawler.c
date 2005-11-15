@@ -60,9 +60,7 @@ restore_file (const char *file_path,
               svn_boolean_t use_commit_times,
               apr_pool_t *pool)
 {
-  const char *text_base_path, *tmp_text_base_path;
-  apr_hash_t *keywords;
-  const char *eol;
+  const char *tmp_file, *text_base_path;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
   apr_time_t tstamp;
@@ -71,31 +69,19 @@ restore_file (const char *file_path,
   svn_boolean_t special;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
-  tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
   bname = svn_path_basename (file_path, pool);
 
-  SVN_ERR (svn_io_copy_file (text_base_path, tmp_text_base_path,
-                             FALSE, pool));
+  /* Copy / translate into a temporary file, which afterwards can
+     be atomically moved over the original working copy file. */
 
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol, file_path, adm_access, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords,
-                                 file_path, adm_access, NULL, pool));
-  SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool));
-                                
-  
-  /* When copying the tmp-text-base out to the working copy, make
-     sure to do any eol translations or keyword substitutions,
-     as dictated by the property values.  If these properties
-     are turned off, then this is just a normal copy. */
-  SVN_ERR (svn_subst_copy_and_translate3 (tmp_text_base_path,
-                                          file_path,
-                                          eol, FALSE, /* don't repair */
-                                          keywords,
-                                          TRUE, /* expand keywords */
-                                          special,
-                                          pool));
-  
-  SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
+  SVN_ERR (svn_wc_translated_file2 (&tmp_file,
+                                    text_base_path, file_path, adm_access,
+                                    SVN_WC_TRANSLATE_FROM_NF
+                                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
+                                    | SVN_WC_TRANSLATE_FORCE_COPY, pool));
+
+  SVN_ERR (svn_wc__prep_file_for_replacement (file_path, TRUE, pool));
+  SVN_ERR (svn_io_file_rename (tmp_file, file_path, pool));
 
   SVN_ERR (svn_wc__maybe_set_read_only (NULL, file_path, adm_access, pool));
 
@@ -120,7 +106,7 @@ restore_file (const char *file_path,
     {
       SVN_ERR (svn_io_file_affected_time (&tstamp, file_path, pool));
     }
-  
+
   /* Modify our entry's text-timestamp to match the working file. */
   modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
   newentry.text_time = tstamp;
@@ -756,7 +742,11 @@ svn_wc_transmit_text_deltas (const char *path,
      txdelta, b) we need to detranslate eol and keywords anyway, and
      c) after the commit, we're going to copy the tmp file to become
      the new text base anyway. */
-  SVN_ERR (svn_wc_translated_file (&tmpf, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_translated_file2 (&tmpf, path, path,
+                                    adm_access,
+                                    SVN_WC_TRANSLATE_TO_NF
+                                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+                                    pool));
 
   /* If the translation didn't create a new file then we need an explicit
      copy, if it did create a new file we need to rename it. */

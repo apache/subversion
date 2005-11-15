@@ -563,8 +563,11 @@ file_diff (struct dir_baton *dir_baton,
       SVN_ERR (get_local_mimetypes (NULL, &working_mimetype, NULL,
                                     adm_access, path, pool));
 
-      SVN_ERR (svn_wc_translated_file2 (&translated, path, adm_access,
-                                        TRUE, TRUE, pool));
+      SVN_ERR (svn_wc_translated_file2
+               (&translated, path, path, adm_access,
+                SVN_WC_TRANSLATE_TO_NF
+                | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+                pool));
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_added
                (NULL, NULL, NULL, path,
@@ -588,8 +591,12 @@ file_diff (struct dir_baton *dir_baton,
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
-          SVN_ERR (svn_wc_translated_file2 (&translated, path, adm_access,
-                                            TRUE, TRUE, pool));
+          SVN_ERR (svn_wc_translated_file2
+                   (&translated, path,
+                    path, adm_access,
+                    SVN_WC_TRANSLATE_TO_NF
+                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+                    pool));
         }
 
       if (modified || propchanges->nelts > 0)
@@ -1213,8 +1220,12 @@ close_file (void *file_baton,
             localfile = empty_file;
           else
             /* a detranslated version of the working file */
-            SVN_ERR (svn_wc_translated_file2 (&localfile, b->path, adm_access,
-                                              TRUE, TRUE, b->pool));
+            SVN_ERR (svn_wc_translated_file2
+                     (&localfile, b->path,
+                      b->path, adm_access,
+                      SVN_WC_TRANSLATE_TO_NF
+                      | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP ,
+                      pool));
 
           temp_file_path = b->temp_file_path;
         }
