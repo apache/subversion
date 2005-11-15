@@ -598,7 +598,7 @@ extraclean-swig-headers:
 	  rm -f $(EXTRA_SWIG_PROXY_FILES)
 	rm -f $(SWIG_PY_SRC_DIR)/[a-z]*.py
 clean-swig-headers:
-	if test $(top_srcdir) != .; then \
+	if test $(abs_srcdir) != $(abs_builddir); then \
 	  cd $(abs_builddir)/subversion/bindings/swig/proxy && \
 	    rm -f $(EXTRA_SWIG_PROXY_FILES); \
 	  rm -f $(SWIG_PY_DIR)/*.py; \
@@ -652,7 +652,7 @@ check-swig-py: swig-py
 clean-swig-py:
 	rm -rf $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
 	      $(SWIG_PY_DIR)/libsvn
-	if test $(top_srcdir) != .; then \
+	if test $(abs_srcdir) != $(abs_builddir); then \
 	  rm -f $(SWIG_PY_DIR)/*.py; \
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
