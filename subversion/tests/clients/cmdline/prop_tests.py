@@ -1112,14 +1112,11 @@ def removal_schedule_added_props(sbox):
 
   wc_dir = sbox.wc_dir
   newfile_path = os.path.join(wc_dir, 'newfile')
-  file_add_output = ("A         svn-test-work/working_copies/"
-                     "prop_tests-16/newfile")
-  propset_output = ("property 'newprop' set on 'svn-test-work/"
-                    "working_copies/prop_tests-16/newfile")
-  file_rm_output = ("D         svn-test-work/working_copies/"
-                    "prop_tests-16/newfile")
+  file_add_output = ["A         " + newfile_path + "\n"]
+  propset_output = ["property 'newprop' set on '" + newfile_path + "'\n"]
+  file_rm_output = ["D         " + newfile_path + "\n"]
   propls_output = [ 
-     "Properties on 'svn-test-work/working_copies/prop_tests-16/newfile':\n",
+     "Properties on '" + newfile_path + "':\n",
      "  newprop : newvalue\n",
                   ]
    
