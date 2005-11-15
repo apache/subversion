@@ -4,23 +4,26 @@
 A rough guide:
 
   http://svn.red-bean.com/svnbook/
-                             Subversion: The Definitive Guide. This is
-                             the book that has been published by
+                             "Version Control with Subversion"
+                             (a.k.a. "The Subversion Book", "The Svnbook",
+                             and formerly entitled
+                             "Subversion: The Definitive Guide".)
+                             This is the book that has been published by
                              O'Reilly & Associates. For both newbies and
                              experts alike.  Written in DocBook Lite,
                              and now maintained in a separate repository
                              of its own.
                              
-  misc-docs                  Holds additional DocBook Lite material that
+  HOWTO.DocBook              Instructions on how to build HTML, PDF, 
+                             or PostScript from DocBook Lite source.
+
+  misc-docs/                 Holds additional DocBook Lite material that
                              either isn't yet ready to go into the
-                             Definitive Guide, or which may never go
-                             into the Guide but instead into companion
+                             the Subversion Book, or which may never go
+                             into the Book but instead into companion
                              documents that would be available from the
                              Subversion site.  Think of it as a
                              temporary, but published, holding area.
-
-  HOWTO.DocBook              Instructions on how to build HTML, PDF, 
-                             or PostScript from DocBook Lite source.
 
   design/                    Subversion's original design document.
                              WARNING!  Extremely old!  From June 2000.
