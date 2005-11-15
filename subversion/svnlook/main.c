@@ -2281,14 +2281,7 @@ main (int argc, const char * const *argv)
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
-        {
-          svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
-          svn_opt_subcommand_help (subcommand->name, cmd_table,
-                                   options_table, pool);
-        }
-      else
-        svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
+      svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;

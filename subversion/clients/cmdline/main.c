@@ -1426,16 +1426,7 @@ main (int argc, const char * const *argv)
     {
       svn_error_t *tmp_err;
 
-      /* If we got an SVN_ERR_CL_ARG_PARSING_ERROR with no useful content
-         (i.e. a NULL or empty message), display help, otherwise just display 
-         the errors as usual, since the error output will probably be just as 
-         much help to them as our help output, if not more. */
-      if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR
-          && (err->message == NULL || err->message[0] == '\0'))
-        svn_opt_subcommand_help (subcommand->name, svn_cl__cmd_table,
-                                 svn_cl__options, pool);
-      else
-        svn_handle_error2 (err, stderr, FALSE, "svn: ");
+      svn_handle_error2 (err, stderr, FALSE, "svn: ");
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
