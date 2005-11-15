@@ -300,6 +300,36 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
 
 /*---------------------------------------------------------------------*/
 
+
+/* Build a space separated list of properties that are contained in
+   the hash PROPS.  The string is allocated in POOL. */
+
+const char *
+svn_wc__build_has_properties (apr_hash_t *props, apr_pool_t *pool)
+{
+  apr_array_header_t *cached_props;
+  svn_stringbuf_t * has_properties = svn_stringbuf_create ("", pool);
+  int i;
+  
+  if (!props || apr_hash_count (props) == 0)
+    return "";
+
+  cached_props = svn_cstring_split (svn_wc__cached_properties (), " ",
+                                    TRUE, pool);
+  for (i = 0; i < cached_props->nelts; i++)
+    {
+      const char *proptolookfor  = APR_ARRAY_IDX (cached_props, i, 
+                                                  const char *);
+
+      if (apr_hash_get (props, proptolookfor, APR_HASH_KEY_STRING) != NULL)
+        {
+          svn_stringbuf_appendcstr (has_properties, proptolookfor);
+          svn_stringbuf_appendcstr (has_properties, " ");
+        }
+    }
+  return has_properties->data;
+}
+
 /*** Loading regular properties. ***/
 svn_error_t *
 svn_wc__load_props (apr_hash_t **base_props_p,
@@ -419,12 +449,13 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
   /* Check if the props are modified. */
   SVN_ERR (svn_prop_diffs (&prop_diffs, working_props, base_props, pool));
   tmp_entry.prop_mods = (prop_diffs->nelts > 0);
-
-  /* ### TODO: Check props in working props and update flags for specific
-     props when we have such flags. */
+  tmp_entry.has_properties = svn_wc__build_has_properties (working_props, 
+                                                           pool);
 
   SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name, &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_PROP_MODS, pool));
+                                       SVN_WC__ENTRY_MODIFY_PROP_MODS 
+                                       | SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES,
+                                       pool));
 
   /* Write our property hashes into temporary files.  Notice that the
      paths computed are ABSOLUTE pathnames, which is what our disk
@@ -492,6 +523,13 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
       else
         SVN_ERR (svn_wc__loggy_remove (log_accum, adm_access, real_prop_base,
                                        pool));
+      
+      tmp_entry.has_properties = svn_wc__build_has_properties (base_props,
+                                                               pool);
+      SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name,
+                                           &tmp_entry,
+                                           SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES,
+                                           pool));
     }
 
   return SVN_NO_ERROR;
@@ -1373,9 +1411,60 @@ svn_wc_prop_list (apr_hash_t **props,
   return svn_wc__load_props (NULL, props, adm_access, entry->name, pool);
 }
 
+/* Return true if NAME is the name of a boolean svn: namespace
+   property.  */
 
+static svn_boolean_t
+is_boolean_property (const char *name)
+{
+  /* If we end up with more than 3 of these, we should probably put
+     them in a table and use bsearch.  With only three, it doesn't
+     make any speed difference.  */
+  if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
+    return TRUE;
+  else if (strcmp (name, SVN_PROP_NEEDS_LOCK) == 0)
+    return TRUE;
+  else if (strcmp (name, SVN_PROP_SPECIAL) == 0)
+    return TRUE;
+  return FALSE;
+}
 
+/* If NAME is a boolean svn: namespace property, return the value that
+   represents true for that property.  The result is allocated in
+   POOL. */
 
+static svn_string_t *
+value_of_boolean_prop (const char *name, apr_pool_t *pool)
+{
+  if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
+    return svn_string_create (SVN_PROP_EXECUTABLE_VALUE, pool);
+  else if (strcmp (name, SVN_PROP_NEEDS_LOCK) == 0)
+    return svn_string_create (SVN_PROP_NEEDS_LOCK_VALUE, pool);
+  else if (strcmp (name, SVN_PROP_SPECIAL) == 0)
+    return svn_string_create (SVN_PROP_SPECIAL_VALUE, pool);
+  return NULL;
+}
+
+/* Determine if PROPNAME is contained in the list of space separated
+   values STRING.  */
+
+static svn_boolean_t
+string_contains_prop (const char *string, const char *propname)
+{
+  const char *place = strstr (string, propname);
+  int proplen = strlen (propname);
+
+  if (!place)
+    return FALSE;
+  
+  while (place)
+    {      
+      if (place[proplen] == ' ' || place[proplen] == 0)
+        return TRUE;
+      place = strstr (place + 1, propname);
+    }
+  return FALSE;
+}
 
 svn_error_t *
 svn_wc_prop_get (const svn_string_t **value,
@@ -1386,8 +1475,38 @@ svn_wc_prop_get (const svn_string_t **value,
 {
   svn_error_t *err;
   apr_hash_t *prophash;
-
+  svn_boolean_t has_propcaching =
+    svn_wc__adm_wc_format (adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
   enum svn_prop_kind kind = svn_property_kind (NULL, name);
+
+  if (has_propcaching && string_contains_prop (svn_wc__cached_properties (),
+                                               name))
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, pool));
+
+      if (entry == NULL)
+        return SVN_NO_ERROR;
+
+      /* We separate these two cases so that we can return the correct
+         value for booleans if they exist in the string.  */
+      if (!entry->has_properties)
+        {
+          *value = NULL;
+          return SVN_NO_ERROR;
+        }
+      if (!string_contains_prop (entry->has_properties, name))
+        {
+          *value = NULL;
+          return SVN_NO_ERROR;
+        }
+      if (is_boolean_property (name))
+        {
+          *value = value_of_boolean_prop (name, pool);
+          assert (*value != NULL);
+          return SVN_NO_ERROR;
+        }
+    }
 
   if (kind == svn_prop_wc_kind)
     {
@@ -1817,13 +1936,19 @@ svn_wc__has_props (svn_boolean_t *has_props,
       return SVN_NO_ERROR;
     }
 
+  /* If we know we have some cached properties, we don't need to
+     check, we can return true.  */
+  if (has_propcaching && entry->has_properties
+      && strlen (entry->has_properties) != 0)
+    {
+      *has_props = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   if (has_propcaching && ! entry->prop_mods)
     SVN_ERR (svn_wc__prop_base_path (&prop_path, path, entry->kind, FALSE, pool));
   else
     SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
-  /* ### TODO: (dberlin) When we have property flags in the entry, we can
-     know for sure that we *have* props if any flag is set.
-     This *might* not be enough. */
   SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
 
   if (is_empty)
@@ -2214,4 +2339,12 @@ svn_wc__has_magic_property (const apr_array_header_t *properties)
         return TRUE;
     }
   return FALSE;
+}
+
+/* Return a space separated list of cached properties.  */
+
+const char *
+svn_wc__cached_properties (void)
+{
+  return SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK;
 }

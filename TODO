@@ -6,11 +6,6 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 * Make sure prop-mods flag work on copy (write test for it) after the
   install_file patch has been committed and merged from trunk. (lundblad)
 
-* Cache presence of svn:special, and svn:needs-lock and svn:externals
-  in entries file. (dberlin)
-
-* Shortcut svn_wc_prop_get for the cached props. (dberlin)
-
 * Consider caching presence of other props.
 
 * Implement WC format upgrading for the new format.

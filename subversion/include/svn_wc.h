@@ -1216,6 +1216,14 @@ typedef struct svn_wc_entry_t
    * @since New in 1.4. */
   svn_boolean_t prop_mods;
 
+  /** Cached property existence for this entry.
+   *  The working copy we are working with may cache the existence of
+   *  certain properties (this depends on wc-format).
+   *  For these wc formats, this string will contain those cached
+   *  properties that are set to some value for this entry.
+   *  @since New in 1.4. */
+  const char *has_properties;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;
