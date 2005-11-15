@@ -18,7 +18,13 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 * Require MD5 checksums on entries and include this in the WC format
   bump. (dionisos)
   NOTE: Done on this branch to avoid another wc format bump on trunk.
-* Consider keeping track of baseprops existence in entries file.
+
+* Use an empty has-props attribute to indicate existence of properties at all.
+  Would mean for an enough recent WC: has_props == NULL -> no props,
+  has_props == "" -> properties exists but none that are cached
+  has_props is some other string -> there are props and some cached.
+  svn_wc_status needs to know this, so we can avoiding stating each props
+  file.
 
 * Consider storing baseprops (and maybe working props) in a single file
   per directory.
