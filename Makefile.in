@@ -30,8 +30,6 @@ SVN_FS_LIB_DEPS = @SVN_FS_LIB_DEPS@
 SVN_FS_LIB_INSTALL_DEPS = @SVN_FS_LIB_INSTALL_DEPS@
 SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 
-DOC_DIRS = doc/misc-docs doc/design
-
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
@@ -409,10 +407,10 @@ check-clean:
                tests.log
 
 mkdir-init:
-	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SCHEMA_DIR)'; \
-        for i in $$list doc; do                          \
+	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \
+        for i in $$list; do                              \
             if [ ! -d $$i ]; then                        \
-                echo "mkdir $$i" ;                       \
+                echo "$(MKDIR) $$i" ;                    \
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
