@@ -632,9 +632,8 @@ clean-swig-pl:
 
 $(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
-	ln -sf $(SWIG_PY_DIR)/*.py $(SWIG_PY_DIR)/libsvn
 
-copy-swig-py: autogen-swig-py
+copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
 	@if test ! -e $(SWIG_PY_DIR)/__init__.py ; then \
 	  cp -pf $(SWIG_PY_SRC_DIR)/__init__.py $(SWIG_PY_DIR); \
 	  if test -e $(SWIG_PY_SRC_DIR)/core.py -a \
@@ -642,8 +641,9 @@ copy-swig-py: autogen-swig-py
 	    cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR); \
 	  fi; \
 	fi
+	@cp -pf $(SWIG_PY_DIR)/*.py $(SWIG_PY_DIR)/libsvn
 
-swig-py: autogen-swig-py copy-swig-py $(SWIG_PY_DIR)/libsvn
+swig-py: autogen-swig-py copy-swig-py
 
 check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
