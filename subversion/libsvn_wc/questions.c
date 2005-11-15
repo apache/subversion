@@ -127,11 +127,6 @@ svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool)
    "Are the contents of F different than the contents of
    .svn/text-base/F.svn-base?"
 
-   or
-
-   "Are the contents of .svn/props/xxx different than
-   .svn/prop-base/xxx.svn-base?"
-
    In other words, we're looking to see if a user has made local
    modifications to a file since the last update or commit.
 
