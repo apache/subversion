@@ -188,11 +188,23 @@ INSTALL_JAVAHL_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(swig_pydir)" "$(DESTDIR)"; \
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(swig_pydir_extra)" "$(DESTDIR)"; \
-   if test $(abs_srcdir) != $(abs_builddir); then \
-       $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(swig_pydir)" "$(DESTDIR)"; \
-   fi
+  $(MKDIR) $(DESTDIR)$(swig_pydir); \
+  $(MKDIR) $(DESTDIR)$(swig_pydir_extra); \
+  for i in $(abs_srcdir)/subversion/bindings/swig/python/svn/*.py; do \
+    $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir_extra); \
+  done; \
+  for i in $(abs_srcdir)/subversion/bindings/swig/python/*.py; do \
+    $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir); \
+  done; \
+  if test "$(abs_srcdir)" != "$(abs_builddir)"; then \
+    for i in $(abs_builddir)/subversion/bindings/swig/python/*.py; do \
+      $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir); \
+    done; \
+  fi; \
+  $(PYTHON) -c 'import compileall; \
+    compileall.compile_dir("$(DESTDIR)$(swig_pydir)", 1, "$(swig_pydir)"); \
+    compileall.compile_dir("$(DESTDIR)$(swig_pydir_extra)", 1, \
+    "$(swig_pydir_extra)");'
 
 # The path to generated and complementary source files for the SWIG
 # bindings.
