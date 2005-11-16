@@ -601,20 +601,13 @@ clean-swig: clean-swig-py clean-swig-pl clean-swig-rb
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
-EXTRA_SWIG_PROXY_FILES = swigrun.swg common.swg runtime.swg \
-  pyrun.swg perlrun.swg rubydef.swg rubyhead.swg python.swg \
-  swig_python_external_runtime.swg swig_perl_external_runtime.swg \
-  swig_ruby_external_runtime.swg
-extraclean-swig-headers:
-	cd $(abs_srcdir)/subversion/bindings/swig/proxy && \
-	  rm -f $(EXTRA_SWIG_PROXY_FILES)
-	rm -f $(SWIG_PY_SRC_DIR)/[a-z]*.py
 clean-swig-headers:
 	if test $(abs_srcdir) != $(abs_builddir); then \
-	  cd $(abs_builddir)/subversion/bindings/swig/proxy && \
-	    rm -f $(EXTRA_SWIG_PROXY_FILES); \
-	  rm -f $(SWIG_PY_DIR)/*.py; \
+	  rm -f $(top_builddir)/subversion/bindings/swig/proxy/*.swg
 	fi
+
+extraclean-swig-headers: clean-swig-headers
+	rm -f $(top_srcdir)/subversion/bindings/swig/proxy/*.swg
 
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
@@ -666,6 +659,7 @@ clean-swig-py:
 	      $(SWIG_PY_DIR)/libsvn
 	if test $(abs_srcdir) != $(abs_builddir); then \
 	  rm -f $(SWIG_PY_DIR)/*.py; \
+	  rm -f $(SWIG_PY_DIR)/*.c; \
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
@@ -682,8 +676,21 @@ check-swig-rb: swig-rb svnserve
 
 clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
+	if test $(abs_srcdir) != $(abs_builddir); then \
+	  rm -f $(SWIG_RB_DIR)/*.c; \
+	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \
 	  rm -rf *.lo *.la *.o .libs; \
 	done
+
+extraclean-swig-py: clean-swig-py
+	rm -f $(top_srcdir)/subversion/bindings/swig/python/[a-z]*.py
+	rm -f $(top_srcdir)/subversion/bindings/swig/python/*.c
+
+extraclean-swig-pl: clean-swig-pl
+	rm -f $(top_srcdir)/subversion/bindings/swig/perl/native/*.c
+
+extraclean-swig-rb: clean-swig-rb
+	rm -f $(top_srcdir)/subversion/bindings/swig/ruby/*.c
