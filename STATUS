@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Test erroneously fails otherwise. Failing test == bad.
     Votes:
-      +1: maxb
+      +1: maxb, dberlin
 
   * r17395
     Use the APR_BINARY flag on all calls to apr_file_open().
@@ -23,7 +23,7 @@ Candidate changes:
       Subversion never wants the OS or CRT to do EOL munging behind its back.
       I've been applying this to the official Cygwin binaries for some time.
     Votes:
-      +1: maxb
+      +1: maxb, dberlin
 
   * r17396
     Create a workaround for the Perl bindings' usage of circular linkage.
