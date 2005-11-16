@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-11-16 09:29+0100\n"
-"PO-Revision-Date: 2005-10-02 11:02+0200\n"
+"PO-Revision-Date: 2005-11-16 09:44+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -401,7 +401,7 @@ msgstr "arbeta endast med en katalog"
 
 #: clients/cmdline/main.c:72
 msgid "the change made by revision ARG (like -r ARG-1:ARG)"
-msgstr ""
+msgstr "ändringen i revision ARG (som -rARG-1:ARG)"
 
 #: clients/cmdline/main.c:74
 msgid ""
@@ -1531,27 +1531,22 @@ msgid "Non-numeric limit argument given"
 msgstr "Argumentet till limit-flaggan är inget tal"
 
 #: clients/cmdline/main.c:929
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
-msgstr ""
-"Flera revisionsargument påträffades; försök med \"-r M:N\" istället för \"-r "
-"M -r N\""
+msgstr "Flera revisionsargument påträffades; -c kan inte anges flera gåner; -c och -r kan inte användas samtidigt"
 
 #: clients/cmdline/main.c:938
-#, fuzzy
 msgid "Non-numeric change argument given to -c"
-msgstr "Argumentet till limit-flaggan är inget tal"
+msgstr "Argumentet till -c-flaggan är inget tal"
 
 #: clients/cmdline/main.c:944
-#, fuzzy
 msgid "There is no change 0"
-msgstr "skapande av ändring"
+msgstr "ändring 0 finns inte"
 
 #: clients/cmdline/main.c:950
 msgid "Argument to -c must be positive"
-msgstr ""
+msgstr "Argumentet till -c måste vara positivt"
 
 #: clients/cmdline/main.c:962
 #, fuzzy
@@ -1635,9 +1630,8 @@ msgid "Second revision required"
 msgstr "En andra revision måste anges"
 
 #: clients/cmdline/merge-cmd.c:72 clients/cmdline/merge-cmd.c:95
-#, fuzzy
 msgid "Too many arguments given"
-msgstr "För många argument till import-kommandot"
+msgstr "För många argument"
 
 #: clients/cmdline/merge-cmd.c:116
 msgid "A working copy merge source needs an explicit revision"
@@ -1952,11 +1946,11 @@ msgstr ""
 "Arkiverade revision %ld.\n"
 
 #: clients/cmdline/util.c:68
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "Warning: %s\n"
-msgstr "%svarning: %s\n"
+msgstr "\nVarning: %s\n"
 
 #: clients/cmdline/util.c:136
 msgid ""
@@ -2787,7 +2781,7 @@ msgstr "Klientfel vid tolkning av argument"
 
 #: include/svn_error_codes.h:998
 msgid "Not enough arguments provided; try 'svn help' for more info"
-msgstr ""
+msgstr "För få argument; använd \"svn --help\" för mer information"
 
 #: include/svn_error_codes.h:1002
 msgid "Mutually exclusive arguments specified"
@@ -3235,7 +3229,7 @@ msgstr "Katalogen \"%s\" saknar URL"
 
 #: libsvn_client/diff.c:2371
 msgid "Summarizing diff can only compare repository to repository"
-msgstr ""
+msgstr "Summerande diff kan endast jämföra arkiv med arkiv"
 
 #: libsvn_client/diff.c:2767 libsvn_client/diff.c:2773
 #: libsvn_client/diff.c:2888 libsvn_client/locking_commands.c:254
@@ -3395,9 +3389,9 @@ msgstr ""
 "orelaterat objekt"
 
 #: libsvn_client/relocate.c:101
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not the root of the repository"
-msgstr "\"%s\" är inte låst i arkivet"
+msgstr "\"%s\" är inte arkivets rot"
 
 #: libsvn_client/relocate.c:108
 #, c-format
@@ -4411,12 +4405,9 @@ msgid "Unrecognized URL scheme for '%s'"
 msgstr "Okänt URL-schema för \"%s\""
 
 #: libsvn_ra/ra_loader.c:337
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' isn't in the same repository as '%s'"
-msgstr ""
-"\"%s\"\n"
-"är inte samma arkiv som\n"
-"\"%s\""
+msgstr "\"%s\" är inte i samma arkiv som \"%s\""
 
 #: libsvn_ra/ra_loader.c:696
 #, c-format
@@ -4480,7 +4471,7 @@ msgid "Could not save the URL of the version resource"
 msgstr "Kunde inte spara URL:en för versionsresursen"
 
 #: libsvn_ra_dav/fetch.c:406
-#, fuzzy, c-format
+#, c-format
 msgid "Could not get content-type from response"
 msgstr "Kunde inte erhålla fältet \"content-type\" från serverns respons"
 
@@ -5373,9 +5364,8 @@ msgid "Not authorized to open root of edit operation"
 msgstr "Ej behörig att öppna editeringens rot"
 
 #: libsvn_repos/reporter.c:843
-#, fuzzy
 msgid "Target path does not exist"
-msgstr "Sökvägen \"%s\" finns inte"
+msgstr "Målsökvägen finns inte"
 
 #: libsvn_repos/reporter.c:850
 msgid "Cannot replace a directory from within"
@@ -5758,14 +5748,14 @@ msgid "Can't set process '%s' child errfile"
 msgstr "Kan inte sätta standard fel för processen \"%s\""
 
 #: libsvn_subr/io.c:1896
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' child errfile for error handler"
-msgstr "Kan inte sätta standard fel för processen \"%s\""
+msgstr "Kan inte sätta standard fel för processen \"%s\" för felhanteraren"
 
 #: libsvn_subr/io.c:1902
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' error handler"
-msgstr "Kan inte sätta standard fel för processen \"%s\""
+msgstr "Kan inte sätta felhanterare för processen \"%s\""
 
 #: libsvn_subr/io.c:1925
 #, c-format
@@ -7438,12 +7428,9 @@ msgid "Removed lock on '%s'.\n"
 msgstr "Tog bort lås på \"%s\".\n"
 
 #: svnadmin/main.c:1217
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
-msgstr ""
-"Flera revisionsargument påträffades; försök med \"-r M:N\" istället för \"-r "
-"M -r N\""
+msgstr "Flera revisionsargument påträffades; försök med \"-r M:N\" istället för \"-r M -r N\""
 
 #: svnadmin/main.c:1322
 #, c-format
@@ -8079,39 +8066,39 @@ msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "Flaggan --tunnel-user är endast giltig i tunnel-läge.\n"
 
 #: svnserve/main.c:446
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get address info"
-msgstr "Kan inte erhålla adressinfo: %s\n"
+msgstr "Kan inte erhålla adressinfo"
 
 #: svnserve/main.c:462
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create server socket"
-msgstr "Kan inte skapa uttag (socket) för servern: %s\n"
+msgstr "Kan inte skapa uttag (socket) för servern"
 
 #: svnserve/main.c:475
-#, fuzzy, c-format
+#, c-format
 msgid "Can't bind server socket"
-msgstr "Kan inte knyta adress till serveruttaget (socket): %s\n"
+msgstr "Kan inte knyta adress till serveruttaget (socket)"
 
 #: svnserve/main.c:518
-#, fuzzy, c-format
+#, c-format
 msgid "Can't accept client connection"
-msgstr "Kan inte acceptera anslutning från klient: %s\n"
+msgstr "Kan inte acceptera anslutning från klient"
 
 #: svnserve/main.c:572
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create threadattr"
-msgstr "Kan inte skapa trådattribut: %s\n"
+msgstr "Kan inte skapa trådattribut"
 
 #: svnserve/main.c:580
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set detached state"
-msgstr "Kan inte koppla låss tråd: %s\n"
+msgstr "Kan inte koppla låss tråd"
 
 #: svnserve/main.c:593
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create thread"
-msgstr "Kan inte skapa tråd: %s\n"
+msgstr "Kan inte skapa tråd"
 
 #: svnversion/main.c:90
 #, c-format
@@ -8194,52 +8181,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Wrong number of paths given"
-#~ msgstr "Fel antal sökvägar"
-
-#~ msgid "Not enough args provided"
-#~ msgstr "Argument saknas"
-
-#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-#~ msgstr ""
-#~ "Trasig kloningspost för \"%s\" i transaktionen \"%s\" i filsystemet \"%s\""
-
-#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-#~ msgstr "Felaktigt ID som nyckel i \"nodes\"-tabellen i filsystemet \"%s\""
-
-#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Trasigt värde för \"next-id\"-nyckel i tabellen \"%s\" i filsystemet \"%s"
-#~ "\""
-
-#~ msgid "Search for malformed path '%s' in filesystem '%s'"
-#~ msgstr "Sökning efter felaktig sökväg \"%s\" i filsystemet \"%s\""
-
-#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-#~ msgstr "Trasig nodrevision för noden \"%s\" i filsystemet \"%s\""
-
-#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-#~ msgstr "Trasig nodrevisions-id \"%s\" i filsystemet \"%s\""
-
-#~ msgid "Too few arguments"
-#~ msgstr "För få argument"
-
-#~ msgid "Error restoring props for '%s'"
-#~ msgstr "Fel vid återställande av egenskaper för \"%s\""
-
-#~ msgid "Error removing props for '%s'"
-#~ msgstr "Fel vid radering av egenskaper för \"%s\""
-
-#~ msgid ""
-#~ "'%s' is scheduled for deletion; it must be committed before it can be "
-#~ "overwritten"
-#~ msgstr ""
-#~ "\"%s\" är schemalagd för radering; den måste arkiveras innan den kan "
-#~ "skrivas över"
-
-#~ msgid "Unable to delete temporary file"
-#~ msgstr "Kan inte radera temporär fil"
-
-#~ msgid "'%s' has unknown value for svn:eol-style property"
-#~ msgstr "\"%s\" har okänt värde för egenskapen svn:eol-style"
