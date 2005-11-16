@@ -267,7 +267,7 @@ svn_io_open_unique_file2 (apr_file_t **f,
       SVN_ERR (svn_path_cstring_from_utf8 (&unique_name_apr, unique_name,
                                            pool));
 
-      apr_err = apr_file_open (&file, unique_name_apr, flag,
+      apr_err = apr_file_open (&file, unique_name_apr, flag | APR_BINARY,
                                APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST (apr_err))
@@ -1098,7 +1098,8 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
   /* Get the perms for the original file so we'll have any other bits
    * that were already set (like the execute bits, for example). */
   SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
-  status = apr_file_open (&fd, apr_path, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&fd, apr_path, APR_READ | APR_BINARY,
+                          APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file at '%s'"), path);
 
@@ -2275,7 +2276,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR (svn_path_cstring_from_utf8 (&fname_apr, fname, pool));
-  status = apr_file_open (new_file, fname_apr, flag, perm, pool);
+  status = apr_file_open (new_file, fname_apr, flag | APR_BINARY, perm, pool);
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file '%s'"),
