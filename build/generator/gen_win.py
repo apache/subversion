@@ -190,7 +190,7 @@ class WinGeneratorBase(GeneratorBase):
                              'build_locale.ezt', data)
 
     #Initialize parent
-    GeneratorBase.__init__(self, fname, verfname)
+    GeneratorBase.__init__(self, fname, verfname, options)
 
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
