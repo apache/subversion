@@ -61,11 +61,8 @@ restore_file (const char *file_path,
               apr_pool_t *pool)
 {
   const char *tmp_file, *text_base_path;
-  const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
-  apr_time_t tstamp;
   const char *bname;
-  apr_uint32_t modify_flags = 0;
   svn_boolean_t special;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
@@ -91,27 +88,33 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc_resolved_conflict2 (file_path, adm_access, TRUE, FALSE,
                                       FALSE, NULL, NULL, NULL, NULL, pool));
 
-  SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
-  assert(entry != NULL);
+  if (use_commit_times)
+    {
+      SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool)); 
+    }
 
-  SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool));
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
+      assert(entry != NULL);
+
       SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
                                               file_path, pool));
-      tstamp = entry->cmt_date;
+
+      newentry.text_time = entry->cmt_date;
     }
   else
     {
-      SVN_ERR (svn_io_file_affected_time (&tstamp, file_path, pool));
+      SVN_ERR (svn_io_file_affected_time (&newentry.text_time,
+                                          file_path, pool));
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
-  modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
-  newentry.text_time = tstamp;
   SVN_ERR (svn_wc__entry_modify (adm_access, bname,
-                                 &newentry, modify_flags,
+                                 &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                  TRUE /* do_sync now */, pool));
 
   return SVN_NO_ERROR;
