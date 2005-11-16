@@ -18,6 +18,13 @@ Candidate changes:
      +1: djames, rooneg
      +1: dberlin (r17279 only)
 
+ * r17375
+   Avoid 'function unused' warnings in python bindings.
+   Justification:
+     Build cleanliness - it is good to be able to use -Werror.
+   Votes:
+     +1: maxb
+
 Approved changes:
 
  * r17139
