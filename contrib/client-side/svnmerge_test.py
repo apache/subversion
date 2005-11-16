@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-import os
+import sys, os
 import unittest
+from cStringIO import StringIO
 import svnmerge
 
 class TestCase_kwextract(unittest.TestCase):
@@ -89,6 +90,51 @@ class TestCase_MinimalMergeIntervals(unittest.TestCase):
         phantom = svnmerge.RevisionList("8-11,13-16,19-23")
         revs = svnmerge.minimal_merge_intervals(rl, phantom)
         self.assertEqual(revs, [(4,12), (18,24)])
+
+class TestCase_HelpScreen(unittest.TestCase):
+    def svnmerge(self, args, error=False):
+        reload(svnmerge)
+        out = StringIO()
+        sys.stdout = sys.stderr = out
+        try:
+            try:
+                ret = svnmerge.main(args.split())
+            except SystemExit, e:
+                ret = e.code
+        finally:
+            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
+
+        if error:
+            self.assertNotEqual(ret, 0)
+        else:
+            self.assertEqual(ret, 0)
+
+        return out.getvalue()
+
+    def test_empty(self):
+        self.svnmerge("")
+    def test_help_commands(self):
+        out = self.svnmerge("help")
+        for cmd in svnmerge.command_table.keys():
+            self.svnmerge("help %s" % cmd)
+            self.svnmerge("%s --help" % cmd)
+            self.svnmerge("%s -h" % cmd)
+    def test_wrong_commands(self):
+        self.svnmerge("asijdoiasjd", error=True)
+        self.svnmerge("help asijdoiasjd", error=True)
+    def test_wrong_option(self):
+        self.svnmerge("--asdsad", error=True)
+        self.svnmerge("help --asdsad", error=True)
+        self.svnmerge("init --asdsad", error=True)
+        self.svnmerge("--asdsad init", error=True)
+    def test_version(self):
+        out = self.svnmerge("--version")
+        self.assert_("Giovanni Bajo" in out)
+        out = self.svnmerge("-V")
+        self.assert_("Giovanni Bajo" in out)
+        out = self.svnmerge("init -V")
+        self.assert_("Giovanni Bajo" in out)
 
 if __name__ == "__main__":
     unittest.main()
