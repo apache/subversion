@@ -89,7 +89,7 @@ svn_cl__lock (apr_getopt_t *os,
 
   /* We only support locking files, so '.' is not valid. */
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   /* Get comment. */
   SVN_ERR (get_comment (&comment, ctx, opt_state, pool));

@@ -1052,7 +1052,8 @@ copy_db_file_safely (const char *src_dir,
   char *buf;
 
   /* Open source file. */
-  status = apr_file_open (&s, file_src_path, (APR_READ | APR_LARGEFILE),
+  status = apr_file_open (&s, file_src_path,
+                          (APR_READ | APR_LARGEFILE | APR_BINARY),
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
@@ -1061,7 +1062,8 @@ copy_db_file_safely (const char *src_dir,
 
   /* Open destination file. */
   status = apr_file_open (&d, file_dst_path, 
-                          (APR_WRITE | APR_CREATE | APR_LARGEFILE),
+                          (APR_WRITE | APR_CREATE | APR_LARGEFILE
+                           | APR_BINARY),
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,

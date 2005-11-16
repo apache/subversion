@@ -47,7 +47,7 @@ svn_cl__revert (apr_getopt_t *os,
 
   /* Revert has no implicit dot-target `.', so don't you put that code here! */
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,

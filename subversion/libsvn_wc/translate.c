@@ -42,50 +42,62 @@
 #include "svn_private_config.h"
 
 svn_error_t *
-svn_wc_translated_file2 (const char **xlated_p,
-                         const char *vfile,
+svn_wc_translated_file2 (const char **xlated_path,
+                         const char *src,
+                         const char *versioned_file,
                          svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t force_repair,
-                         svn_boolean_t del_temp_on_pool_cleanup,
+                         apr_uint32_t flags,
                          apr_pool_t *pool)
 {
-  svn_subst_eol_style_t style;
-  const char *eol;
-  apr_hash_t *keywords;
+  svn_subst_eol_style_t style = svn_subst_eol_style_none;
+  const char *eol = NULL;
+  apr_hash_t *keywords = NULL;
   svn_boolean_t special;
-  
-  SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, adm_access, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
-  SVN_ERR (svn_wc__get_special (&special, vfile, adm_access, pool));
+  const char *tmp_dir, *tmp_vfile;
+  svn_boolean_t special_only = flags & SVN_WC_TRANSLATE_SPECIAL_ONLY;
 
-  if (! svn_subst_translation_required (style, eol, keywords, special, TRUE))
+  svn_path_split (versioned_file, &tmp_dir, &tmp_vfile, pool);
+
+  tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool, tmp_vfile, NULL);
+
+  if (! special_only)
+    {
+      SVN_ERR (svn_wc__get_eol_style (&style, &eol, versioned_file,
+                                      adm_access, pool));
+      SVN_ERR (svn_wc__get_keywords (&keywords, versioned_file,
+                                     adm_access, NULL, pool));
+    }
+  SVN_ERR (svn_wc__get_special (&special, versioned_file, adm_access, pool));
+
+
+  if (! svn_subst_translation_required (style, eol, keywords, special, TRUE)
+      && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
     {
       /* Translation would be a no-op, so return the original file. */
-      *xlated_p = vfile;
+      *xlated_path = src;
+
     }
-  else  /* some translation is necessary */
+  else  /* some translation (or copying) is necessary */
     {
-      const char *tmp_dir, *tmp_vfile;
+      SVN_ERR (svn_io_open_unique_file2
+               (NULL, &tmp_vfile,
+                tmp_vfile,
+                SVN_WC__TMP_EXT,
+                (flags & SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP)
+                ? svn_io_file_del_on_pool_cleanup : svn_io_file_del_none,
+                pool));
 
-      /* First, reserve a tmp file name. */
-      svn_path_split (vfile, &tmp_dir, &tmp_vfile, pool);
-      
-      tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
-                                    tmp_vfile, NULL);
-
-      SVN_ERR (svn_io_open_unique_file2 (NULL,
-                                         &tmp_vfile,
-                                         tmp_vfile,
-                                         SVN_WC__TMP_EXT,
-                                         del_temp_on_pool_cleanup
-                                         ? svn_io_file_del_on_pool_cleanup
-                                         : svn_io_file_del_none,
-                                         pool));
-
-      SVN_ERR (svn_subst_translate_to_normal_form
-               (vfile, tmp_vfile, style, eol, keywords, special, pool));
-
-      *xlated_p = tmp_vfile;
+      if (flags & SVN_WC_TRANSLATE_TO_NF)
+        SVN_ERR (svn_subst_translate_to_normal_form
+                 (src, tmp_vfile, style, eol, keywords, special, pool));
+      else /* translate */
+        SVN_ERR (svn_subst_copy_and_translate3 (src,
+                                                tmp_vfile,
+                                                eol, FALSE,
+                                                keywords, TRUE,
+                                                special,
+                                                pool));
+      *xlated_path = tmp_vfile;
     }
 
   return SVN_NO_ERROR;
@@ -99,8 +111,10 @@ svn_wc_translated_file (const char **xlated_p,
                         svn_boolean_t force_repair,
                         apr_pool_t *pool)
 {
-  return svn_wc_translated_file2 (xlated_p, vfile, adm_access,
-                                  force_repair, FALSE, pool);
+  /* we discard the force_repair flag,
+     because we know what to do ourselves now... but is it acceptable?! */
+  return svn_wc_translated_file2 (xlated_p, vfile, vfile, adm_access,
+                                  SVN_WC_TRANSLATE_TO_NF, pool);
 }
 
 

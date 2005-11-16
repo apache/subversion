@@ -995,7 +995,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CL_INSUFFICIENT_ARGS,
               SVN_ERR_CL_CATEGORY_START + 1,
-              "Not enough args provided")
+              "Not enough arguments provided; try 'svn help' for more info")
 
   SVN_ERRDEF (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
               SVN_ERR_CL_CATEGORY_START + 2,

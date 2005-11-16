@@ -1227,8 +1227,6 @@ main (int argc, const char * const *argv)
           svn_error_clear (svn_cmdline_fprintf
                            (stderr, pool,
                             _("\nError: no prefixes supplied.\n")));
-          svn_opt_subcommand_help (subcommand->name, cmd_table,
-                                   options_table, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1281,16 +1279,7 @@ main (int argc, const char * const *argv)
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
-        {
-          svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
-          svn_opt_subcommand_help (subcommand->name, cmd_table,
-                                   options_table, pool);
-        }
-      else
-        {
-          svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
-        }
+      svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }

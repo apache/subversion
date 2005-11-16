@@ -1675,7 +1675,7 @@ change_file_prop (void *file_baton,
 
 /* Write log commands to merge PROP_CHANGES into the existing properties of
    FILE_PATH.  PROP_CHANGES can contain regular properties as well as
-   entryprops and wcprops.  Update *PROP_STATE (which may be NULL)
+   entryprops and wcprops.  Update *PROP_STATE (unless PROP_STATE is NULL)
    to reflect the result of the regular prop merge.
    Make *LOCK_STATE reflect the possible removal of a lock token from
    FILE_PATH's entryprops.
@@ -1803,7 +1803,7 @@ tweak_entry (svn_stringbuf_t *log_accum,
  * "integrating" a new revision of a file into a working copy. 
  *
  * Given a FILE_PATH either already under version control, or
- * prepared (see below) to join revision control, fully install a
+ * prepared (see below) to join version control, fully install a
  * NEW_REVISION of the file;  ADM_ACCESS is an access baton with a
  * write lock for the directory containing FILE_PATH.
  *
@@ -1825,8 +1825,8 @@ tweak_entry (svn_stringbuf_t *log_accum,
  * generated log commands.  If there is no text base, HAS_NEW_TEXT_BASE
  * must be FALSE.
  *
- * The caller also provides the new properties for the file in the
- * PROP_CHANGES array; if there are no new props, then caller must pass 
+ * The caller also provides the property changes for the file in the
+ * PROP_CHANGES array; if there are no prop changes, then the caller must pass 
  * NULL instead.  This argument is an array of svn_prop_t structures, 
  * representing differences against the files existing base properties.
  * (A deletion is represented by setting an svn_prop_t's 'value'
@@ -1926,8 +1926,8 @@ merge_file (svn_stringbuf_t *log_accum,
                         file_path, prop_changes, pool));
 
   /* Has the user made local mods to the working file?  */
-  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                   file_path, FALSE, adm_access, pool));
+  SVN_ERR (svn_wc_text_modified_p2 (&is_locally_modified, file_path,
+                                    FALSE, adm_access, TRUE, pool));
 
   /* In the case where the user has replaced a file with a copy it may 
    * not show as locally modified.  So if the file isn't listed as
@@ -1963,19 +1963,22 @@ merge_file (svn_stringbuf_t *log_accum,
          only involves propchanges, but that some of those props still
          require a retranslation of the working file. */
 
-      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
+      const char *tmptext;
 
       /* A log command which copies and DEtranslates the working file
          to a tmp-text-base. */
-      SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
-                                   svn_wc__copy_detranslate,
-                                   base_name, tmptext, FALSE, pool));
+      SVN_ERR (svn_wc_translated_file2 (&tmptext, file_path, file_path,
+                                        adm_access,
+                                        SVN_WC_TRANSLATE_TO_NF,
+                                        pool));
 
+      tmptext = svn_path_is_child (parent_dir, tmptext, pool);
       /* A log command that copies the tmp-text-base and REtranslates
          the tmp-text-base back to the working file. */
       SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
                                    svn_wc__copy_translate,
                                    tmptext, base_name, FALSE, pool));
+
     }
 
   /* Set the new revision and URL in the entry and clean up some other
@@ -2720,7 +2723,8 @@ svn_wc_get_actual_target (const char *path,
 
 /* Write, to LOG_ACCUM, commands to install properties for an added DST_PATH.
    NEW_BASE_PROPS and NEW_PROPS are base and working properties, respectively.
-   BASE_PROPS can contain entryprops and wcprops as well.
+   BASE_PROPS can contain entryprops and wcprops as well.  ADM_ACCESS must
+   be an access baton for DST_PATH.
    Use @a POOL for temporary allocations. */
 static svn_error_t *
 install_added_props (svn_stringbuf_t *log_accum,

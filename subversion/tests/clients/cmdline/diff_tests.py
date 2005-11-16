@@ -2038,6 +2038,72 @@ def diff_mime_type_changes(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+# Test a repos-WORKING diff, with different versions of the same property
+# at repository, BASE, and WORKING.
+def diff_prop_change_local_propmod(sbox):
+  "diff a property change plus a local prop edit"
+
+  sbox.build()
+
+  expected_output_r2_wc = [
+    "\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Name: dirprop\n",
+    "   - r2value\n",
+    "   + workingvalue\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: fileprop\n",
+    "   - r2value\n",
+    "   + workingvalue\n",
+    "\n" ]
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Set a property on A/ and iota, and commit them (r2).
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'dirprop',
+                                       'r2value', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'fileprop',
+                                       'r2value', 'iota')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Change the property values on A/ and iota, and commit them (r3).
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'dirprop',
+                                       'r3value', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'fileprop',
+                                       'r3value', 'iota')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Finally, change the property values one last time.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'dirprop',
+                                       'workingvalue', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'fileprop',
+                                       'workingvalue', 'iota')
+
+    # Now, if we diff r2 to WORKING, we've got three property values
+    # to consider: r2value (in the repository), r3value (in BASE), and
+    # workingvalue (in WORKING).
+    # The diff should only show the r2->WORKING change.
+    svntest.actions.run_and_verify_svn(None, expected_output_r2_wc, [],
+                                       'diff', '-r', '2')
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -2074,6 +2140,7 @@ test_list = [ None,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
               XFail(diff_mime_type_changes),
+              XFail(diff_prop_change_local_propmod),
               ]
 
 if __name__ == '__main__':

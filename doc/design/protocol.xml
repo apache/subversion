@@ -1,0 +1,29 @@
+<chapter id="protocol">
+  <title>Protocol &mdash; How the client and server communicate</title>
+
+  <simplesect>
+    <para>The Subversion client library <literal>libsvn_ra_dav</literal> uses
+      the <emphasis>Neon</emphasis> library to generate WebDAV DeltaV requests
+      and sends them to a "Subversion-aware" Apache server.</para>
+
+    <para>This Apache server is running <emphasis>mod_dav</emphasis> and
+      <emphasis>mod_dav_svn</emphasis>, which translates the requests into
+      Subversion filesystem calls.</para>
+
+    <para>For more info, see <xref linkend="archi.network"/>.</para>
+
+    <para>For a detailed description of exactly how Greg Stein
+      <email>gstein@lyra.org</email> is mapping the WebDAV DeltaV spec to
+      Subversion, see his paper: <systemitem
+        class="url">http://svn.collab.net/repos/svn/trunk/www/webdav-usage.html</systemitem>
+    </para>
+
+    <para>For more information on WebDAV and the DeltaV extensions, see
+      <systemitem class="url">http://www.webdav.org</systemitem> and
+      <systemitem class="url">http://www.webdav.org/deltav.</systemitem>
+    </para>
+
+    <para>For more information on <emphasis>Neon</emphasis>, see
+      http://www.webdav.org/neon.</para>
+  </simplesect>
+</chapter>

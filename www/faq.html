@@ -224,6 +224,9 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#tiger-apr-0.9.6">Why do I get occasional, seemingly
     inconsistent errors checking out over http:// from a repository
     running on MacOS X 10.4 (Tiger)?</a></li>
+<li><a href="#debian-libtool">I can't build Subversion from working
+    copy source on Debian GNU/Linux; I get errors at the final link
+    stage.  What's wrong?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -1778,7 +1781,7 @@ temporary file used to enter/edit the log message.</p>
 
 <p>Due to the fact that the SVN_EDITOR string is passed as-is to the
 system's command shell, spaces in the editor name, or in the path name
-to the editor, will not work unless the editor name is in quotes.<p>
+to the editor, will not work unless the editor name is in quotes.</p>
 
 <p>For example, on Windows if your editor is in
 <code>C:\Program&nbsp;Files\Posix&nbsp;Tools\bin\vi</code> you would
@@ -3296,6 +3299,44 @@ where the problem lies.</p>
 
 </div>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="debian-libtool" title="debian-libtool">
+<h3>I can't build Subversion from working copy
+    source on Debian GNU/Linux; I get errors at the final link
+    stage.  What's wrong?</h3>
+    
+<p>If you see errors like this in the final link stage of a Subversion
+trunk source build:</p>
+
+<pre>
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_create'
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_strerror'
+</pre>
+
+<p>it might be because you're on a Debian GNU/Linux system and need to
+upgrade 'libtool'.  (I've also heard that the Debian packagers had to
+tweak 'libtool' and that this may cause some problems for Subversion
+builds.  But that's hearsay&nbsp;&mdash;&nbsp;I didn't have time to
+verify the details before writing this FAQ entry.  If you know the
+full story, please mail <a href="mailto:dev@subversion.tigris.org"
+>dev@subversion.tigris.org</a> and straighten us out.)</p>
+
+<p>In any case, after encountering this problem on a Debian GNU/Linux
+system running a newly-dist-upgraded 'testing' distribution on 15 Nov
+2005, the solution was to build <a
+href="http://www.gnu.org/software/libtool/libtool.html">libtool&nbsp;1.5.20</a>
+from source, using the standard "./configure &amp;&amp; make &amp;&amp;
+sudo&nbsp;make&nbsp;install" recipe.  After that, I did a 'make&nbsp;clean' in
+my Subversion working copy tree, './autogen.sh', './configure', 'make',
+and everything worked fine.</p>
+
+<p>Note that another report of these symptoms appeared at <a
+href="http://svn.haxx.se/dev/archive-2003-01/1125.shtml"
+>http://svn.haxx.se/dev/archive-2003-01/1125.shtml</a>, though the
+solution described here was not mentioned in that thread.</p>
+
+</div>
 
 <![CDATA[=========================================================]]>
 

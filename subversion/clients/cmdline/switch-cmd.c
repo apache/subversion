@@ -45,8 +45,8 @@ rewrite_urls(apr_array_header_t *targets,
   int i;
  
   if (targets->nelts < 2)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-          
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
   from = ((const char **) (targets->elts))[0];
   to = ((const char **) (targets->elts))[1];
 
@@ -103,7 +103,9 @@ svn_cl__switch (apr_getopt_t *os,
   if (opt_state->relocate)
     return rewrite_urls (targets, !opt_state->nonrecursive, ctx, pool);
 
-  if ((targets->nelts < 1) || (targets->nelts > 2))
+  if (targets->nelts < 1)
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 2)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   /* Get the required SWITCH_URL and the optional TARGET arguments. */
