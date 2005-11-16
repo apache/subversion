@@ -9,12 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r17396
-    Create a workaround for the Perl bindings' usage of circular linkage.
-    Justification:
-      Needed for Cygwin, on which circular linkage is not possible.
-    Votes:
-      +1: maxb
 
 Approved changes:
 
