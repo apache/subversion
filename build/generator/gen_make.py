@@ -123,6 +123,9 @@ class Generator(gen_base.GeneratorBase):
         '  -I$(abs_builddir)/subversion/bindings/swig/proxy \\\n'
         '  $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)\n\n')
 
+    if self.release_mode:
+      self.ofile.write('RELEASE_MODE = 1\n\n')
+    
     ########################################
     self.begin_section('SWIG headers (wrappers and external runtimes)')
 
@@ -181,7 +184,6 @@ class Generator(gen_base.GeneratorBase):
         'extraclean-swig: extraclean-swig-%s\n' % short[lang] +
         '\n')
     self.ofile.write('clean-swig: clean-swig-headers\n')
-    self.ofile.write('extraclean-swig: extraclean-swig-headers\n')
     self.ofile.write('\n')
     
     ########################################

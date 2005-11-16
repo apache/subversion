@@ -600,12 +600,9 @@ install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
 clean-swig-headers:
-	if test $(abs_srcdir) != $(abs_builddir); then \
-	  rm -f $(top_builddir)/subversion/bindings/swig/proxy/*.swg
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(top_builddir)/subversion/bindings/swig/proxy/*.swg; \
 	fi
-
-extraclean-swig-headers: clean-swig-headers
-	rm -f $(top_srcdir)/subversion/bindings/swig/proxy/*.swg
 
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
@@ -629,8 +626,8 @@ install-swig-pl: swig-pl install-swig-pl-lib
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
-	if test $(abs_srcdir) != $(abs_builddir); then \
-	  rm -f $(SWIG_PL_DIR)/native/*.c; \
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(SWIG_PL_DIR)/native/svn_*.c $(SWIG_PL_DIR)/native/core.c; \
 	fi
 	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
 	do \
@@ -662,10 +659,10 @@ check-swig-py: swig-py
 
 clean-swig-py:
 	rm -rf $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
-	      $(SWIG_PY_DIR)/libsvn
-	if test $(abs_srcdir) != $(abs_builddir); then \
-	  rm -f $(SWIG_PY_DIR)/*.py; \
-	  rm -f $(SWIG_PY_DIR)/*.c; \
+	      $(SWIG_PY_DIR)/libsvn $(SWIG_PY_DIR)/*.pyc
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
+	        $(SWIG_PY_DIR)/[a-z]*.py; \
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
@@ -682,8 +679,8 @@ check-swig-rb: swig-rb svnserve
 
 clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
-	if test $(abs_srcdir) != $(abs_builddir); then \
-	  rm -f $(SWIG_RB_DIR)/*.c; \
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(SWIG_RB_DIR)/svn_*.c $(SWIG_RB_DIR)/core.c; \
 	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
@@ -691,12 +688,3 @@ clean-swig-rb:
 	  rm -rf *.lo *.la *.o .libs; \
 	done
 
-extraclean-swig-py: clean-swig-py
-	rm -f $(top_srcdir)/subversion/bindings/swig/python/[a-z]*.py
-	rm -f $(top_srcdir)/subversion/bindings/swig/python/*.c
-
-extraclean-swig-pl: clean-swig-pl
-	rm -f $(top_srcdir)/subversion/bindings/swig/perl/native/*.c
-
-extraclean-swig-rb: clean-swig-rb
-	rm -f $(top_srcdir)/subversion/bindings/swig/ruby/*.c
