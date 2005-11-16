@@ -23,14 +23,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r17394
-    Change ra_local "invalid host" test to SKIP under Cygwin,
-    as Cygwin has UNC paths too.
-    Justification:
-      Test erroneously fails otherwise. Failing test == bad.
-    Votes:
-      +1: maxb, dberlin, rooneg
-
   * r17395
     Use the APR_BINARY flag on all calls to apr_file_open().
     Justification:
