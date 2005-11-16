@@ -41,6 +41,7 @@ my %config = (
     INC  => join(' ',$apr_cflags, $apu_cflags, 
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",
+                 " -I$svnlib_builddir",
                  " -I$swig_srcdir -g"),
     OBJECT => q/$(O_FILES)/,
     LIBS => [join(' ', $apr_ldflags,

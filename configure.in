@@ -225,6 +225,18 @@ case $host in
 esac
 AC_SUBST(LT_NO_UNDEFINED)
 
+AC_MSG_CHECKING([whether to avoid circular linkage at all costs])
+case $host in
+  *-*-cygwin*)
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK], 1,
+              [Define if circular linkage is not possible on this platform.])
+    ;;
+  *)
+    AC_MSG_RESULT([no])
+    ;;
+esac
+
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0.24.7 0.25.0 0.25.1 0.25.2 0.25.3 0.25.4"
