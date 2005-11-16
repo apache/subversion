@@ -9,15 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
  
- * r17279, r17359
-   Don't use recursive symbolic links in our build tree.
-   Justification:
-     Recursive symbolic links can cause issues with commonly used tools such
-     as scp and python.
-   Votes:
-     +1: djames, rooneg
-     +1: dberlin (r17279 only)
-
  * r17375
    Avoid 'function unused' warnings in python bindings.
    Justification:
@@ -40,3 +31,11 @@ Approved changes:
      +1: blair
      +0: rooneg
  
+ * r17279, r17359
+   Don't use recursive symbolic links in our build tree.
+   Justification:
+     Recursive symbolic links can cause issues with commonly used tools such
+     as scp and python.
+   Votes:
+     +1: djames, rooneg, dberlin
+
