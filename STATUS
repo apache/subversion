@@ -9,7 +9,28 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  (None at the moment.)
+  * r17394
+    Change ra_local "invalid host" test to SKIP under Cygwin,
+    as Cygwin has UNC paths too.
+    Justification:
+      Test erroneously fails otherwise. Failing test == bad.
+    Votes:
+      +1: maxb
+
+  * r17395
+    Use the APR_BINARY flag on all calls to apr_file_open().
+    Justification:
+      Subversion never wants the OS or CRT to do EOL munging behind its back.
+      I've been applying this to the official Cygwin binaries for some time.
+    Votes:
+      +1: maxb
+
+  * r17396
+    Create a workaround for the Perl bindings' usage of circular linkage.
+    Justification:
+      Needed for Cygwin, on which circular linkage is not possible.
+    Votes:
+      +1: maxb
 
 Approved changes:
 
