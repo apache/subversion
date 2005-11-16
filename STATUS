@@ -8,13 +8,8 @@ Status of 1.3.0:
 ================
 
 Candidate changes:
- 
- * r17375
-   Avoid 'function unused' warnings in python bindings.
-   Justification:
-     Build cleanliness - it is good to be able to use -Werror.
-   Votes:
-     +1: maxb
+
+  (None at the moment.)
 
 Approved changes:
 
@@ -39,3 +34,10 @@ Approved changes:
    Votes:
      +1: djames, rooneg, dberlin
 
+ * r17375
+   Avoid 'function unused' warnings in python bindings.
+   Justification:
+     Build cleanliness -- it is good to be able to use -Werror.
+   Votes:
+     +1: maxb
+     +0: djames
