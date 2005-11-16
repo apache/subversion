@@ -666,6 +666,16 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_md5_h.swg
 %include svn_diff_h.swg
 %include svn_error_h.swg
+
+%{
+#include "svn_private_config.h"
+%}
+%init %{
+#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
+  svn_swig_pl_bind_current_pool_fns (&svn_swig_pl_get_current_pool,
+                                     &svn_swig_pl_set_current_pool);
+#endif
+%}
 #endif
 
 #ifdef SWIGPYTHON

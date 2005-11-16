@@ -31,6 +31,7 @@
 
 #include "svn_pools.h"
 #include "svn_opt.h"
+#include "svn_private_config.h"
 
 #include "swig_perl_external_runtime.swg"
 
@@ -1208,8 +1209,21 @@ svn_boolean_t svn_swig_pl_thunk_config_enumerator (const char *name, const char 
 
 /* default pool support */
 
+#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
+static svn_swig_pl_get_current_pool_t svn_swig_pl_get_current_pool = NULL;
+static svn_swig_pl_set_current_pool_t svn_swig_pl_set_current_pool = NULL;
+
+void svn_swig_pl_bind_current_pool_fns (svn_swig_pl_get_current_pool_t get,
+                                        svn_swig_pl_set_current_pool_t set)
+{
+  svn_swig_pl_get_current_pool = get;
+  svn_swig_pl_set_current_pool = set;
+}
+#else
 apr_pool_t *svn_swig_pl_get_current_pool (void);
 void svn_swig_pl_set_current_pool (apr_pool_t *pool);
+#endif
+
 
 apr_pool_t *svn_swig_pl_make_pool (SV *obj)
 {
