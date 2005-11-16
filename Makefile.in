@@ -631,6 +631,14 @@ install-swig-pl: swig-pl install-swig-pl-lib
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
+	if test $(abs_srcdir) != $(abs_builddir); then \
+	  rm -f $(SWIG_PL_DIR)/native/*.c; \
+	fi
+	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
+	do \
+	  cd $$d; \
+	  rm -rf *.lo *.la *.o .libs; \
+	done
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
