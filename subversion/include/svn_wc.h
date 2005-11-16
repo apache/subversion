@@ -1219,10 +1219,11 @@ typedef struct svn_wc_entry_t
   /** Cached property existence for this entry.
    *  The working copy we are working with may cache the existence of
    *  certain properties (this depends on wc-format).
-   *  For these wc formats, this string will contain those cached
-   *  properties that are set to some value for this entry.
+   *  For these wc formats, this string will contain a space separated list
+   *  of the names of those cached properties that are set to some value
+   *  for this entry.
    *  @since New in 1.4. */
-  const char *has_properties;
+  const char *cached_props;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */

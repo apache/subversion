@@ -1956,9 +1956,9 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
                   SVN_WC__ENTRY_ATTR_PROP_MODS,
                   entry->prop_mods ? "true" : "false");
 
-  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES,
-                  SVN_WC__ENTRY_ATTR_HAS_PROPERTIES,
-                  entry->has_properties);
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CACHED_PROPS,
+                  SVN_WC__ENTRY_ATTR_CACHED_PROPS,
+                  entry->cached_props);
 
 #undef ADD_ENTRY_ATTR
 

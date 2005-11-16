@@ -305,29 +305,31 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
    the hash PROPS.  The string is allocated in POOL. */
 
 const char *
-svn_wc__build_has_properties (apr_hash_t *props, apr_pool_t *pool)
+svn_wc__build_cached_props (apr_hash_t *props, apr_pool_t *pool)
 {
-  apr_array_header_t *cached_props;
-  svn_stringbuf_t * has_properties = svn_stringbuf_create ("", pool);
+  apr_array_header_t *all_cached_props;
+  svn_stringbuf_t *cached_props = svn_stringbuf_create ("", pool);
   int i;
   
   if (!props || apr_hash_count (props) == 0)
-    return "";
+    return cached_props->data;
 
-  cached_props = svn_cstring_split (svn_wc__cached_properties (), " ",
-                                    TRUE, pool);
-  for (i = 0; i < cached_props->nelts; i++)
+  all_cached_props = svn_cstring_split (svn_wc__cached_props (), " ",
+                                        TRUE, pool);
+  for (i = 0; i < all_cached_props->nelts; i++)
     {
-      const char *proptolookfor  = APR_ARRAY_IDX (cached_props, i, 
-                                                  const char *);
+      const char *proptolookfor = APR_ARRAY_IDX (all_cached_props, i, 
+                                                 const char *);
 
       if (apr_hash_get (props, proptolookfor, APR_HASH_KEY_STRING) != NULL)
         {
-          svn_stringbuf_appendcstr (has_properties, proptolookfor);
-          svn_stringbuf_appendcstr (has_properties, " ");
+          svn_stringbuf_appendcstr (cached_props, proptolookfor);
+          svn_stringbuf_appendcstr (cached_props, " ");
         }
     }
-  return has_properties->data;
+  /* Avoid returning a string with a trailing space. */
+  svn_stringbuf_chop (cached_props, 1);
+  return cached_props->data;
 }
 
 /*** Loading regular properties. ***/
@@ -449,12 +451,11 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
   /* Check if the props are modified. */
   SVN_ERR (svn_prop_diffs (&prop_diffs, working_props, base_props, pool));
   tmp_entry.prop_mods = (prop_diffs->nelts > 0);
-  tmp_entry.has_properties = svn_wc__build_has_properties (working_props, 
-                                                           pool);
+  tmp_entry.cached_props = svn_wc__build_cached_props (working_props, pool);
 
   SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_PROP_MODS 
-                                       | SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES,
+                                       | SVN_WC__ENTRY_MODIFY_CACHED_PROPS,
                                        pool));
 
   /* Write our property hashes into temporary files.  Notice that the
@@ -524,11 +525,10 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
         SVN_ERR (svn_wc__loggy_remove (log_accum, adm_access, real_prop_base,
                                        pool));
       
-      tmp_entry.has_properties = svn_wc__build_has_properties (base_props,
-                                                               pool);
+      tmp_entry.cached_props = svn_wc__build_cached_props (base_props, pool);
       SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name,
                                            &tmp_entry,
-                                           SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES,
+                                           SVN_WC__ENTRY_MODIFY_CACHED_PROPS,
                                            pool));
     }
 
@@ -1479,8 +1479,7 @@ svn_wc_prop_get (const svn_string_t **value,
     svn_wc__adm_wc_format (adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
   enum svn_prop_kind kind = svn_property_kind (NULL, name);
 
-  if (has_propcaching && string_contains_prop (svn_wc__cached_properties (),
-                                               name))
+  if (has_propcaching && string_contains_prop (svn_wc__cached_props (), name))
     {
       const svn_wc_entry_t *entry;
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, pool));
@@ -1490,12 +1489,12 @@ svn_wc_prop_get (const svn_string_t **value,
 
       /* We separate these two cases so that we can return the correct
          value for booleans if they exist in the string.  */
-      if (!entry->has_properties)
+      if (!entry->cached_props)
         {
           *value = NULL;
           return SVN_NO_ERROR;
         }
-      if (!string_contains_prop (entry->has_properties, name))
+      if (!string_contains_prop (entry->cached_props, name))
         {
           *value = NULL;
           return SVN_NO_ERROR;
@@ -1938,15 +1937,16 @@ svn_wc__has_props (svn_boolean_t *has_props,
 
   /* If we know we have some cached properties, we don't need to
      check, we can return true.  */
-  if (has_propcaching && entry->has_properties
-      && strlen (entry->has_properties) != 0)
+  if (has_propcaching && entry->cached_props
+      && strlen (entry->cached_props) != 0)
     {
       *has_props = TRUE;
       return SVN_NO_ERROR;
     }
 
   if (has_propcaching && ! entry->prop_mods)
-    SVN_ERR (svn_wc__prop_base_path (&prop_path, path, entry->kind, FALSE, pool));
+    SVN_ERR (svn_wc__prop_base_path (&prop_path, path, entry->kind, FALSE,
+                                     pool));
   else
     SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
   SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
@@ -2344,7 +2344,7 @@ svn_wc__has_magic_property (const apr_array_header_t *properties)
 /* Return a space separated list of cached properties.  */
 
 const char *
-svn_wc__cached_properties (void)
+svn_wc__cached_props (void)
 {
   return SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK;
 }

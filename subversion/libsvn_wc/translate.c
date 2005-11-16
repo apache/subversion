@@ -196,7 +196,6 @@ svn_wc__get_special (svn_boolean_t *special,
                      apr_pool_t *pool)
 {
   const svn_string_t *propval;
-  svn_error_t *err;
   
   /* Get the property value. */
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path,

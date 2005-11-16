@@ -522,13 +522,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
   
-  /* has_properties string. */
+  /* cached_props string. */
   
-  entry->has_properties = apr_hash_get (atts, 
-                                        SVN_WC__ENTRY_ATTR_HAS_PROPERTIES,
-                                        APR_HASH_KEY_STRING);
-  if (entry->has_properties)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES;     
+  entry->cached_props = apr_hash_get (atts, 
+                                      SVN_WC__ENTRY_ATTR_CACHED_PROPS,
+                                      APR_HASH_KEY_STRING);
+  if (entry->cached_props)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHED_PROPS;
 
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -1095,9 +1095,10 @@ write_entry (svn_stringbuf_t **output,
                   APR_HASH_KEY_STRING, "true");
   
   /* Property existence. */
-  if (entry->has_properties)
-    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROPERTIES,
-                  APR_HASH_KEY_STRING, entry->has_properties);
+  if (entry->cached_props
+      && *entry->cached_props)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHED_PROPS,
+                  APR_HASH_KEY_STRING, entry->cached_props);
 
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
@@ -1424,10 +1425,10 @@ fold_entry (apr_hash_t *entries,
     cur_entry->prop_mods = entry->prop_mods;
 
   /* Property existence */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPERTIES)
-    cur_entry->has_properties = (entry->has_properties
-                                 ? apr_pstrdup (pool, entry->has_properties)
-                                 : NULL);
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CACHED_PROPS)
+    cur_entry->cached_props = (entry->cached_props
+                               ? apr_pstrdup (pool, entry->cached_props)
+                               : NULL);
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
@@ -1818,8 +1819,8 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_owner = apr_pstrdup (pool, entry->lock_owner);
   if (entry->lock_comment)
     dupentry->lock_comment = apr_pstrdup (pool, entry->lock_comment);
-  if (entry->has_properties)
-    dupentry->has_properties = apr_pstrdup (pool, entry->has_properties);
+  if (entry->cached_props)
+    dupentry->cached_props = apr_pstrdup (pool, entry->cached_props);
   return dupentry;
 }
 
