@@ -68,17 +68,18 @@ def _objinfo(o):
 def _usage_exit():
   "print usage, exit the script"
   print "USAGE:  gen-make.py [options...] [conf-file]"
-  print "  -s       skip dependency generation"
-  print "  --debug  print lots of stuff only developers care about"
-  print "  --reload reuse all options from the previous invocation"
-  print "           of the script, except -s, -t, --debug and --reload"
-  print "  -t TYPE  use the TYPE generator; can be one of:"
+  print "  -s        skip dependency generation"
+  print "  --debug   print lots of stuff only developers care about"
+  print "  --release release mode"
+  print "  --reload  reuse all options from the previous invocation"
+  print "            of the script, except -s, -t, --debug and --reload"
+  print "  -t TYPE   use the TYPE generator; can be one of:"
   items = gen_modules.items()
   items.sort()
   for name, (module, desc) in items:
-    print '           %-12s  %s' % (name, desc)
+    print '            %-12s  %s' % (name, desc)
   print
-  print "           The default generator type is 'make'"
+  print "            The default generator type is 'make'"
   print
   print "  Windows-specific options:"
   print
@@ -161,6 +162,7 @@ if __name__ == '__main__':
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
                                ['debug',
+                                'release',
                                 'reload',
                                 'with-apr=',
                                 'with-apr-util=',
