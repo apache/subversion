@@ -203,8 +203,8 @@ main (int argc, char **argv)
               window_AB->sview_len = 0;
             }
           else
-            window_AB = svn_txdelta__compose_windows (window_A, window_B,
-                                                      wpool);
+            window_AB = svn_txdelta_compose_windows (window_A, window_B,
+                                                     wpool);
           len_AB += print_delta_window (window_AB, "AB", quiet, stdout);
           svn_pool_clear (wpool);
         }

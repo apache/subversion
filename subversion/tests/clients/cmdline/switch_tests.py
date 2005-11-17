@@ -976,7 +976,7 @@ def relocate_beyond_repos_root(sbox):
   # actually changed the URL.
   svntest.actions.run_and_verify_svn(None, '^URL: ' + other_A_url + '$', [],
                                      'info', '-rHEAD', A_wc_dir)
-                                     
+
 #----------------------------------------------------------------------
 # Issue 2306.
 def refresh_read_only_attribute(sbox):
@@ -1072,7 +1072,7 @@ test_list = [ None,
               obstructed_switch,
               commit_mods_below_switch,
               relocate_beyond_repos_root,
-              XFail(refresh_read_only_attribute),
+              refresh_read_only_attribute,
              ]
 
 if __name__ == '__main__':

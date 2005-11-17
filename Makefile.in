@@ -30,8 +30,6 @@ SVN_FS_LIB_DEPS = @SVN_FS_LIB_DEPS@
 SVN_FS_LIB_INSTALL_DEPS = @SVN_FS_LIB_INSTALL_DEPS@
 SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 
-DOC_DIRS = doc/programmer/design doc/misc-docs
-
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
@@ -57,7 +55,6 @@ bindir = @bindir@
 includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
-infodir = @infodir@
 datadir = @datadir@
 localedir = @localedir@
 
@@ -76,11 +73,6 @@ javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
 javahl_libdir = @libdir@
 
-### should search for these...
-MAKEINFO = @MAKEINFO@
-TEXI2DVI = texi2dvi
-DVIPS = dvips
-DVIPDF = dvipdf
 MSGFMT = @MSGFMT@
 MSGFMTFLAGS = @MSGFMTFLAGS@
 MSGMERGE = @MSGMERGE@
@@ -196,11 +188,23 @@ INSTALL_JAVAHL_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(swig_pydir)" "$(DESTDIR)"; \
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(swig_pydir_extra)" "$(DESTDIR)"; \
-   if test $(abs_srcdir) != $(abs_builddir); then \
-       $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(swig_pydir)" "$(DESTDIR)"; \
-   fi
+  $(MKDIR) $(DESTDIR)$(swig_pydir); \
+  $(MKDIR) $(DESTDIR)$(swig_pydir_extra); \
+  for i in $(abs_srcdir)/subversion/bindings/swig/python/svn/*.py; do \
+    $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir_extra); \
+  done; \
+  for i in $(abs_srcdir)/subversion/bindings/swig/python/*.py; do \
+    $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir); \
+  done; \
+  if test "$(abs_srcdir)" != "$(abs_builddir)"; then \
+    for i in $(abs_builddir)/subversion/bindings/swig/python/*.py; do \
+      $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir); \
+    done; \
+  fi; \
+  $(PYTHON) -c 'import compileall; \
+    compileall.compile_dir("$(DESTDIR)$(swig_pydir)", 1, "$(swig_pydir)"); \
+    compileall.compile_dir("$(DESTDIR)$(swig_pydir_extra)", 1, \
+    "$(swig_pydir_extra)");'
 
 # The path to generated and complementary source files for the SWIG
 # bindings.
@@ -318,7 +322,7 @@ fast-distclean: fast-clean
               $(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean
+local-extraclean: local-distclean extraclean-swig
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -415,10 +419,10 @@ check-clean:
                tests.log
 
 mkdir-init:
-	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SCHEMA_DIR)'; \
-        for i in $$list doc; do                          \
+	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \
+        for i in $$list; do                              \
             if [ ! -d $$i ]; then                        \
-                echo "mkdir $$i" ;                       \
+                echo "$(MKDIR) $$i" ;                    \
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
@@ -481,42 +485,33 @@ doc-api:
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
-doc-design: doc-design-info doc-design-html doc-design-txt
+doc-design: doc-design-html doc-design-pdf doc-design-ps
 
 # Build all docs of a certain type.
 doc-all-html: doc-design-html doc-misc-docs-html
 doc-all-pdf: doc-design-pdf doc-misc-docs-pdf
 doc-all-ps: doc-design-ps doc-misc-docs-ps
-doc-all-info: doc-design-info
 
-# Different outputs for the 'design' document, written in texinfo.
-# Assumes you have {makeinfo, texi2dvi, dvips, dvipdf} installed.
-doc-design-info: doc/programmer/design/svn-design.info
-doc-design-html: doc/programmer/design/svn-design.html
-doc-design-txt: doc/programmer/design/svn-design.txt
-doc-design-dvi: doc/programmer/design/svn-design.dvi
-doc-design-ps: doc/programmer/design/svn-design.ps
-doc-design-pdf: doc/programmer/design/svn-design.pdf
-
-# Different outputs for the misc docs.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
-	cd $(top_srcdir)/doc && $(MAKE) misc-docs-html
+	cd $(top_srcdir)/doc/misc-docs && $(MAKE) all-html
 doc-misc-docs-pdf:
-	cd $(top_srcdir)/doc && $(MAKE) misc-docs-pdf
+	cd $(top_srcdir)/doc/misc-docs && $(MAKE) pdf
 doc-misc-docs-ps:
-	cd $(top_srcdir)/doc && $(MAKE) misc-docs-ps
+	cd $(top_srcdir)/doc/misc-docs && $(MAKE) ps
+
+doc-design-html:
+	cd $(top_srcdir)/doc/design && $(MAKE) all-html
+doc-design-pdf:
+	cd $(top_srcdir)/doc/design && $(MAKE) pdf
+doc-design-ps:
+	cd $(top_srcdir)/doc/design && $(MAKE) ps
 
 
 doc-clean:
-	for d in $(DOC_DIRS);                               \
-        do                                                  \
-            (cd $$d;                                        \
-             rm -f *.info *.info-[1-9]                      \
-                   *.aux *.cp *.fn *.ky *.log *.pg *.toc    \
-                   *.tp *.vr                                \
-                   *.dvi *.txt *.html *.ps *.pdf *.fo);     \
-        done
+	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
+	cd $(top_srcdir)/doc/design && $(MAKE) clean
+	rm -rf $(top_srcdir)/doc/doxygen
 
 # Converting from the .rnc XML shcemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
@@ -546,7 +541,7 @@ schema-clean:
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf \
+.SUFFIXES: .c .lo .o .la-a .la \
            .po .spo .mo .rnc .rng .dtd .xsd
 
 .c.o:
@@ -558,24 +553,6 @@ schema-clean:
 .la.la-a:
 	sed "/library_names/s/'.*'/''/" $< > $@
 
-
-.texi.info:
-	$(MAKEINFO) -I `dirname $<` -o $@ $< 
-
-.texi.dvi:
-	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) $$wd/$<
-
-.texi.txt:
-	$(MAKEINFO) -I `dirname $<` --no-headers -o $@ $<
-
-.texi.html:
-	$(MAKEINFO) -I `dirname $<` --no-split --html -o $@ $<
-
-.dvi.ps:
-	$(DVIPS) $< -o $@
-
-.dvi.pdf:
-	$(DVIPDF) $< $@
 
 # Strip the Content-Type: header from the po file if we don't have a
 # gettext that supports bind_textdomain_codeset, so it doesn't try
@@ -602,7 +579,7 @@ schema-clean:
 .rnc.xsd:
 	@TRANG@ $< $@
 
-install-docs: install-man @INSTALL_INFO@
+install-docs: install-man
 
 manroot = $(mandir)/man
 install-man:
@@ -619,35 +596,12 @@ install-man:
           $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst;         \
         done
 
-install-info: doc-all-info
-	$(MKDIR) $(DESTDIR)$(infodir)
-	@list='$(INFOPAGES)';                                         \
-        for i in $$list; do                                           \
-          if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i;          \
-          else file=$$i; fi;                                          \
-          inst=`echo $$file | sed -e 's/^.*\///'`;                    \
-          echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst";  \
-          $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
-        done
-
-clean-swig: clean-swig-py clean-swig-pl clean-swig-rb
-
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
-EXTRA_SWIG_PROXY_FILES = swigrun.swg common.swg runtime.swg \
-  pyrun.swg perlrun.swg rubydef.swg rubyhead.swg python.swg \
-  swig_python_external_runtime.swg swig_perl_external_runtime.swg \
-  swig_ruby_external_runtime.swg
-extraclean-swig-headers:
-	cd $(abs_srcdir)/subversion/bindings/swig/proxy && \
-	  rm -f $(EXTRA_SWIG_PROXY_FILES)
-	rm -f $(SWIG_PY_SRC_DIR)/[a-z]*.py
 clean-swig-headers:
-	if test $(top_srcdir) != .; then \
-	  cd $(abs_builddir)/subversion/bindings/swig/proxy && \
-	    rm -f $(EXTRA_SWIG_PROXY_FILES); \
-	  rm -f $(SWIG_PY_DIR)/*.py; \
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(top_builddir)/subversion/bindings/swig/proxy/*.swg; \
 	fi
 
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
@@ -672,14 +626,22 @@ install-swig-pl: swig-pl install-swig-pl-lib
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(SWIG_PL_DIR)/native/svn_*.c $(SWIG_PL_DIR)/native/core.c; \
+	fi
+	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
+	do \
+	  cd $$d; \
+	  rm -rf *.lo *.la *.o .libs; \
+	done
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
 
 $(SWIG_PY_DIR)/libsvn:
-	ln -sf $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn
+	mkdir $(SWIG_PY_DIR)/libsvn
 
-copy-swig-py: autogen-swig-py
+copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
 	@if test ! -e $(SWIG_PY_DIR)/__init__.py ; then \
 	  cp -pf $(SWIG_PY_SRC_DIR)/__init__.py $(SWIG_PY_DIR); \
 	  if test -e $(SWIG_PY_SRC_DIR)/core.py -a \
@@ -687,18 +649,20 @@ copy-swig-py: autogen-swig-py
 	    cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR); \
 	  fi; \
 	fi
+	@cp -pf $(SWIG_PY_DIR)/*.py $(SWIG_PY_DIR)/libsvn
 
-swig-py: autogen-swig-py copy-swig-py $(SWIG_PY_DIR)/libsvn
+swig-py: autogen-swig-py copy-swig-py
 
 check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
 clean-swig-py:
-	rm -f $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
-	      $(SWIG_PY_DIR)/libsvn
-	if test $(top_srcdir) != .; then \
-	  rm -f $(SWIG_PY_DIR)/*.py; \
+	rm -rf $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
+	      $(SWIG_PY_DIR)/libsvn $(SWIG_PY_DIR)/*.pyc
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
+	        $(SWIG_PY_DIR)/[a-z]*.py; \
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
@@ -715,8 +679,12 @@ check-swig-rb: swig-rb svnserve
 
 clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
+	if test -z "$(RELEASE_MODE)"; then \
+	  rm -f $(SWIG_RB_DIR)/svn_*.c $(SWIG_RB_DIR)/core.c; \
+	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \
 	  rm -rf *.lo *.la *.o .libs; \
 	done
+

@@ -35,7 +35,6 @@
 #include "svn_hash.h"
 #include "svn_md5.h"
 #include "svn_sorts.h"
-#include "../libsvn_delta/delta.h"
 
 #include "fs.h"
 #include "err.h"
@@ -1451,7 +1450,7 @@ get_combined_window (svn_txdelta_window_t **result,
       /* Combine this window with the current one.  Cycles pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create (rb->pool);
-      window = svn_txdelta__compose_windows (nwin, window, new_pool);
+      window = svn_txdelta_compose_windows (nwin, window, new_pool);
       svn_pool_destroy (pool);
       pool = new_pool;
     }
@@ -1573,8 +1572,8 @@ get_contents (struct rep_read_baton *rb,
               /* Apply lwindow to source. */
               tlen = lwindow->tview_len;
               tbuf = apr_palloc (rb->pool, tlen);
-              svn_txdelta__apply_instructions (lwindow, sbuf, tbuf,
-                                               &tlen);
+              svn_txdelta_apply_instructions (lwindow, sbuf, tbuf,
+                                              &tlen);
               if (tlen != lwindow->tview_len)
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff window length is "
@@ -1590,8 +1589,8 @@ get_contents (struct rep_read_baton *rb,
             {
               rb->buf_len = cwindow->tview_len;
               rb->buf = apr_palloc (rb->pool, rb->buf_len);
-              svn_txdelta__apply_instructions (cwindow, sbuf, rb->buf,
-                                               &rb->buf_len);
+              svn_txdelta_apply_instructions (cwindow, sbuf, rb->buf,
+                                              &rb->buf_len);
               if (rb->buf_len != cwindow->tview_len)
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff window length is "

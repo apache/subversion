@@ -146,7 +146,7 @@ svn_boolean_t svn_wc__has_special_property (apr_hash_t *props);
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
    changing the working file. */
-svn_boolean_t svn_wc__has_magic_property (apr_array_header_t *properties);
+svn_boolean_t svn_wc__has_magic_property (const apr_array_header_t *properties);
 
 #ifdef __cplusplus
 }

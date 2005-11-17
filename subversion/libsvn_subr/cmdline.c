@@ -375,28 +375,28 @@ svn_cmdline_setup_auth_baton (svn_auth_baton_t **ab,
       /* Two basic prompt providers: username/password, and just username. */
       svn_auth_get_simple_prompt_provider (&provider,
                                            svn_cmdline_auth_simple_prompt,
-                                           &pb,
+                                           pb,
                                            2, /* retry limit */
                                            pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       svn_auth_get_username_prompt_provider
-        (&provider, svn_cmdline_auth_username_prompt, &pb,
+        (&provider, svn_cmdline_auth_username_prompt, pb,
          2, /* retry limit */ pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       /* Three ssl prompt providers, for server-certs, client-certs,
          and client-cert-passphrases.  */
       svn_auth_get_ssl_server_trust_prompt_provider
-        (&provider, svn_cmdline_auth_ssl_server_trust_prompt, &pb, pool);
+        (&provider, svn_cmdline_auth_ssl_server_trust_prompt, pb, pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       svn_auth_get_ssl_client_cert_prompt_provider
-        (&provider, svn_cmdline_auth_ssl_client_cert_prompt, &pb, 2, pool);
+        (&provider, svn_cmdline_auth_ssl_client_cert_prompt, pb, 2, pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       svn_auth_get_ssl_client_cert_pw_prompt_provider
-        (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, &pb, 2, pool);
+        (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
     }
 

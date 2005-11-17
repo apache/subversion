@@ -57,6 +57,33 @@ extern "C" {
  */
 const svn_version_t *svn_wc_version (void);
 
+/** Flags for use with svn_wc_translated_file2
+ *
+ * @defgroup translate_flags Translation flags
+ *
+ * @{
+ */
+
+  /** Translate from Normal Format; excludes SVN_WC_TRANSLATE_TO_NF */
+#define SVN_WC_TRANSLATE_FROM_NF                 0x00000000
+
+  /** Translate to Normal Format; excludes SVN_WC_TRANSLATE_FROM_NF */
+#define SVN_WC_TRANSLATE_TO_NF                   0x00000001
+
+  /** Only do translation associated with the svn:special property only */
+#define SVN_WC_TRANSLATE_SPECIAL_ONLY            0x00000002
+
+  /** Translate the special property only */
+#define SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP 0x00000004
+
+  /** Guarantee a new file is created on successful return.
+   * The default shortcuts translation by returning the path
+   * of the untranslated file when no translation is required.
+   */
+#define SVN_WC_TRANSLATE_FORCE_COPY              0x00000008
+
+/** @} */
+
 
 /* Locking/Opening/Closing */
 
@@ -1047,14 +1074,37 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
+ * If @a compare_textbases is @c TRUE, the comparison will be between
+ * a detranslated version of @a *filename and the text base, otherwise,
+ * a translated version of the text base and @a *filename will be compared.
+ *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
- * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.  */
-svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                                     const char *filename,
-                                     svn_boolean_t force_comparison,
-                                     svn_wc_adm_access_t *adm_access,
-                                     apr_pool_t *pool);
+ * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * @since New in 1.4
+ *
+ */
+svn_error_t *
+svn_wc_text_modified_p2 (svn_boolean_t *modified_p,
+                         const char *filename,
+                         svn_boolean_t force_comparison,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_boolean_t compare_textbases,
+                         apr_pool_t *pool);
+
+
+/** Same as svn_wc_text_modified_p2, but always compares text bases.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
+ *
+ */
+svn_error_t *
+svn_wc_text_modified_p (svn_boolean_t *modified_p,
+                        const char *filename,
+                        svn_boolean_t force_comparison,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool);
 
 
 /** Set @a *modified_p to non-zero if @a path's properties are modified
@@ -3111,38 +3161,51 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
 /* EOL conversion and keyword expansion. */
 
-/** Set @a *xlated_p to a path to a possibly translated copy of versioned
- * file @a vfile, or to @a vfile itself if no translation is necessary.
- * That is, if @a vfile's properties indicate newline conversion or
- * keyword expansion, point @a *xlated_p to a copy of @a vfile whose
- * newlines are unconverted and keywords contracted, in whatever
- * manner is indicated by @a vfile's properties; otherwise, set @a *xlated_p
- * to @a vfile.
+/** Set @a *xlated_path to a path to translated copy of @src
+ * or to @a src itself if no translation is necessary.
+ * That is, if @a versioned_file's properties indicate newline conversion or
+ * keyword expansion, point @a *xlated_path to a copy of @a src
+ * whose newlines and keywords are converted using the translation
+ * as requested by @a flags.
  *
- * If @a force_repair is set, the translated file will have any
- * inconsistent line endings repaired.  This should only be used when
- * the resultant file is being created for comparison against @a vfile's
- * text base.
- *
- * Caller is responsible for detecting if they are different (pointer
- * comparison is sufficient), and for removing @a *xlated_p if
- * necessary.
+ * Caller can explicitly request a new file to be returned by setting the
+ * @c SVN_WC_TRANSLATE_FORCE_COPY flag in @a flags.
  *
  * This function is generally used to get a file that can be compared
- * meaningfully against @a vfile's text base.
+ * meaningfully against @a versioned_file's text base, if
+ * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
+ * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * If @a *xlated_p is different from @a vfile, then choose @a *xlated_p's 
- * name using svn_io_open_unique_file() with @c SVN_WC__TMP_EXT, and 
- * allocate it in @a pool.  Also use @a pool for any temporary allocation.
+ * Temporary files are created in the temp file area belonging to
+ * @a versioned_file.
+ *
+ * If @c SVN_WC_TRANSLATE_DEL_TEMP_ON_POOL_CLEANUP is specified,
+ * a pool cleanup handler is registered on *xlated_p if it points to a
+ * temporary file.
  *
  * If an error is returned, the effect on @a *xlated_p is undefined.
+ *
+ * @since New in 1.4
+ */
+svn_error_t *
+svn_wc_translated_file2 (const char **xlated_path,
+                         const char *src,
+                         const char *versioned_file,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_uint32_t flags,
+                         apr_pool_t *pool);
+
+
+/** Same as svn_wc_translated_file2, but will never clean up
+ * temporary files.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
  */
 svn_error_t *svn_wc_translated_file (const char **xlated_p,
                                      const char *vfile,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t force_repair,
                                      apr_pool_t *pool);
-
 
 
 /* Text/Prop Deltas Using an Editor */

@@ -54,32 +54,22 @@ svn_cl__merge (apr_getopt_t *os,
     {
       /* sanity check:  they better have given supplied a *range*.  */
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-        {
-          svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
-                                   svn_cl__options, pool);
-          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   _("Second revision required"));
-        }
+        return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
+                                 _("Second revision required"));
+
       using_alternate_syntax = TRUE;
     }
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
 
-  /* If there are no targets at all, then let's just give the user a
-     friendly help message, rather than spewing an error.  */
-  if (targets->nelts == 0)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
   if (using_alternate_syntax)
     {
-      if ((targets->nelts < 1) || (targets->nelts > 2))
-        {
-          svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
-                                   svn_cl__options, pool);
-          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   _("Wrong number of paths given"));
-        }
+      if (targets->nelts < 1)
+        return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
+      if (targets->nelts > 2)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Too many arguments given"));
 
       SVN_ERR (svn_opt_parse_path (&peg_revision, &sourcepath1,
                                    ((const char **)(targets->elts))[0], pool));
@@ -98,13 +88,11 @@ svn_cl__merge (apr_getopt_t *os,
     }
   else /* using @rev syntax */
     {
-      if ((targets->nelts < 2) || (targets->nelts > 3))
-        {
-          svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
-                                   svn_cl__options, pool);
-          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   _("Wrong number of paths given"));
-        }
+      if (targets->nelts < 2)
+        return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
+      if (targets->nelts > 3)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Too many arguments given"));
 
       /* the first two paths become the 'sources' */
       SVN_ERR (svn_opt_parse_path (&opt_state->start_revision, &sourcepath1,

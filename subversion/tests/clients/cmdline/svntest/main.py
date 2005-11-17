@@ -218,6 +218,11 @@ def get_post_commit_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "post-commit")
 
+def get_pre_revprop_change_hook_path(repo_dir):
+  "Return the path of the pre-revprop-change hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-revprop-change")
+
 
 # Run any binary, logging the command line (TODO: and return code)
 def run_command(command, error_expected, binary_mode=0, *varargs):
@@ -494,6 +499,23 @@ def canonize_url(input):
   else:
     return input
 
+
+def create_python_hook_script (hook_path, hook_script_code):
+  """Create a Python hook script at HOOK_PATH with the specified
+     HOOK_SCRIPT_CODE."""
+
+  if sys.platform == 'win32':
+    # Fill the python file.
+    file_append ("%s.py" % hook_path, hook_script_code)
+    # Fill the batch wrapper file.
+    file_append ("%s.bat" % hook_path,
+                 "@\"%s\" %s.py\n" % (sys.executable, hook_path))
+  else:
+    # For all other platforms
+    file_append (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
+    os.chmod (hook_path, 0755)
+
+
 ######################################################################
 # Sandbox handling
 
@@ -662,11 +684,8 @@ def run_tests(test_list):
   # log message will fail rather than invoke an editor.
   os.environ['SVN_EDITOR'] = ''
 
-  try:
-    opts, args = my_getopt(sys.argv[1:], 'v',
-                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
-  except getopt.GetoptError:
-    opts, args = [], []
+  opts, args = my_getopt(sys.argv[1:], 'v',
+                         ['url=', 'fs-type=', 'verbose', 'cleanup'])
 
   for arg in args:
     if arg == "list":
@@ -683,10 +702,10 @@ def run_tests(test_list):
     if arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
-      try:
-        testnum = int(arg)
-      except ValueError:
-        pass
+      if testnum is not None:
+        print 'Too many arguments: "' + arg + '"'
+        sys.exit(1)
+      testnum = int(arg)
 
   for opt, val in opts:
     if opt == "--url":

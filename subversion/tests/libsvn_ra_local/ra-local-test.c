@@ -338,7 +338,7 @@ split_url_test (const char **msg,
 
 /* The test table.  */
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__CYGWIN__)
 #define HAS_UNC_HOST 1
 #else
 #define HAS_UNC_HOST 0

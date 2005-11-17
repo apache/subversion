@@ -33,6 +33,7 @@
 #include <apr_general.h>
 #include <apr_file_io.h>
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_subst.h"
 
 #include "../svn_test.h"
@@ -270,6 +271,7 @@ substitute_and_verify (const char *test_name,
   const char *src_fname = apr_pstrcat (pool, test_name, ".src", NULL);
   const char *dst_fname = apr_pstrcat (pool, test_name, ".dst", NULL);
   svn_string_t *val;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /** Clean up from previous tests, set up src data, and convert. **/
   SVN_ERR (remove_file (src_fname, pool));
@@ -312,8 +314,8 @@ substitute_and_verify (const char *test_name,
     }
 
   err = svn_subst_copy_and_translate3 (src_fname, dst_fname, dst_eol, repair,
-                                       keywords, expand, FALSE, pool);
-
+                                       keywords, expand, FALSE, subpool);
+  svn_pool_destroy (subpool);
 
   /* Conversion should have failed, if src has mixed eol, and the
      repair flag was not set, and we requested eol translation. */

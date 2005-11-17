@@ -1682,6 +1682,13 @@ svn_client_resolved (const char *path,
  * until a commit occurs.  This scheduling can be removed with
  * svn_client_revert().
  *
+ * Attempt to create any parent directories for @a dst_path that do not exist.
+ *
+ * If @a dst_path already exists and is a directory, copy the item into that
+ * directory, keeping its name (the last component of @a src_path),
+ * otherwise copy the item to the new path and name @a dst_path.
+ * If @a dst_path already exists and is not a directory, fail.
+ *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is
  * needed.
@@ -1741,12 +1748,19 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
  *     repository until a commit occurs.  This scheduling can be removed
  *     with svn_client_revert().  If @a src_path is a file it is removed
  *     from the working copy immediately.  If @a src_path is a directory it 
- *     will remain n the working copy but all the files, and unversioned 
+ *     will remain in the working copy but all the files, and unversioned
  *     items, it contains will be removed.
  *
  *   - If @a src_path contains locally modified and/or unversioned items 
- *     and @a force is not set, the copy will fail. If @a force is set such 
+ *     and @a force is not set, the move will fail. If @a force is set such
  *     items will be removed.
+ *
+ * Attempt to create any parent directories for @a dst_path that do not exist.
+ *
+ * If @a dst_path already exists and is a directory, move the item into that
+ * directory, keeping its name (the last component of @a src_path),
+ * otherwise move the item to the new path and name @a dst_path.
+ * If @a dst_path already exists and is not a directory, fail.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.

@@ -50,7 +50,9 @@ svn_cl__export (apr_getopt_t *os,
                                           opt_state->targets, pool));
 
   /* We want exactly 1 or 2 targets for this subcommand. */
-  if ((targets->nelts < 1) || (targets->nelts > 2))
+  if (targets->nelts < 1)
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 2)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
   
   /* The first target is the `from' path. */

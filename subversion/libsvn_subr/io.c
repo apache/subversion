@@ -215,7 +215,7 @@ svn_io_open_unique_file2 (apr_file_t **f,
   apr_file_t *file;
   const char *unique_name;
   const char *unique_name_apr;
-  struct temp_file_cleanup_s *baton;
+  struct temp_file_cleanup_s *baton = NULL;
 
   assert (f || unique_name_p);
 
@@ -267,7 +267,7 @@ svn_io_open_unique_file2 (apr_file_t **f,
       SVN_ERR (svn_path_cstring_from_utf8 (&unique_name_apr, unique_name,
                                            pool));
 
-      apr_err = apr_file_open (&file, unique_name_apr, flag,
+      apr_err = apr_file_open (&file, unique_name_apr, flag | APR_BINARY,
                                APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST (apr_err))
@@ -1098,7 +1098,8 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
   /* Get the perms for the original file so we'll have any other bits
    * that were already set (like the execute bits, for example). */
   SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
-  status = apr_file_open (&fd, apr_path, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&fd, apr_path, APR_READ | APR_BINARY,
+                          APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file at '%s'"), path);
 
@@ -2275,7 +2276,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR (svn_path_cstring_from_utf8 (&fname_apr, fname, pool));
-  status = apr_file_open (new_file, fname_apr, flag, perm, pool);
+  status = apr_file_open (new_file, fname_apr, flag | APR_BINARY, perm, pool);
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file '%s'"),
@@ -2478,55 +2479,22 @@ svn_io_file_rename (const char *from_path, const char *to_path,
   const char *from_path_apr, *to_path_apr;
 
 #ifdef WIN32
-  /* Set the file writable but only on Windows, because Windows will
-     not allow us to rename files that are read-only. But preserve the
-     state of the read-only flag on the destination. */
-  svn_boolean_t was_read_only;
-  apr_finfo_t finfo;
-
-  SVN_ERR (svn_io_set_file_read_write (from_path, FALSE, pool));
+  /* Set the destination file writable but only on Windows, because
+     Windows will not allow us to rename over files that are read-only. */
+  SVN_ERR (svn_io_set_file_read_write (to_path, TRUE, pool));
 #endif /* WIN32 */
 
   SVN_ERR (svn_path_cstring_from_utf8 (&from_path_apr, from_path, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&to_path_apr, to_path, pool));
 
-#ifdef WIN32
-  status = apr_stat (&finfo, to_path_apr, APR_FINFO_PROT, pool);
-  if (APR_STATUS_IS_ENOENT (status))
-    {
-      was_read_only = FALSE;
-      status = APR_SUCCESS;
-    }
-  else if (!status)
-    {
-      /* Note: apr_stat doesn't look at just the read-only bit. It's
-         concievable that we get a positive result here because of
-         file permissions. But that shouldn't happen in a Subversion
-         working copy, and then set_read_write will fail, so the end
-         result is the same. */
-      was_read_only = !(finfo.protection
-                        & (APR_UWRITE | APR_GWRITE | APR_WWRITE));
-      if (was_read_only)
-        SVN_ERR (svn_io_set_file_read_write (to_path, FALSE, pool));
-    }
-#endif /* WIN32 */
-
-  if (!status)
-    {
-      status = apr_file_rename (from_path_apr, to_path_apr, pool);
-      WIN32_RETRY_LOOP (status,
-                        apr_file_rename (from_path_apr, to_path_apr, pool));
-    }
+  status = apr_file_rename (from_path_apr, to_path_apr, pool);
+  WIN32_RETRY_LOOP (status,
+                    apr_file_rename (from_path_apr, to_path_apr, pool));
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't move '%s' to '%s'"),
                                svn_path_local_style (from_path, pool),
                                svn_path_local_style (to_path, pool));
-
-#ifdef WIN32
-  if (was_read_only)
-    SVN_ERR (svn_io_set_file_read_only (to_path, FALSE, pool));
-#endif /* WIN32 */
 
   return SVN_NO_ERROR;
 }

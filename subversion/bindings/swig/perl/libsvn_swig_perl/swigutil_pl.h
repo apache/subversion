@@ -35,6 +35,7 @@
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_repos.h"
+#include "svn_private_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +50,14 @@ extern "C" {
 #endif
 
 
+
+#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
+typedef apr_pool_t *(*svn_swig_pl_get_current_pool_t) (void);
+typedef void (*svn_swig_pl_set_current_pool_t) (apr_pool_t *pool);
+
+void svn_swig_pl_bind_current_pool_fns (svn_swig_pl_get_current_pool_t get,
+                                        svn_swig_pl_set_current_pool_t set);
+#endif
 
 apr_pool_t *svn_swig_pl_make_pool (SV *obj);
 

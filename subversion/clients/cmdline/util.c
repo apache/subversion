@@ -65,7 +65,7 @@ svn_cl__print_commit_info (svn_commit_info_t *commit_info,
        * OTOH, this is only of informational nature to the user as
        * the commit has succeeded. */
       if (commit_info->post_commit_err)
-        SVN_ERR (svn_cmdline_printf (pool, _("\nWarning:%s\n"),
+        SVN_ERR (svn_cmdline_printf (pool, _("\nWarning: %s\n"),
                                  commit_info->post_commit_err));
     }
 
@@ -85,7 +85,7 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
                          const char *encoding,
                          apr_pool_t *pool)
 {
-  const char *editor = NULL;
+  const char *editor;
   const char *cmd;
   apr_file_t *tmp_file;
   const char *tmpfile_name;
@@ -101,8 +101,12 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   svn_boolean_t remove_file = TRUE;
   struct svn_config_t *cfg;
 
-  /* Look for the Subversion specific environment variable. */
-  editor = getenv ("SVN_EDITOR");
+  /* Use the editor specified on the command line via --editor-cmd, if any. */
+  editor = editor_cmd;
+
+  /* Otherwise look for the Subversion-specific environment variable. */
+  if (! editor)
+    editor = getenv ("SVN_EDITOR");
 
   /* If not found then fall back on the config file. */
   if (! editor)
@@ -124,11 +128,6 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   if (! editor)
     editor = SVN_CLIENT_EDITOR;
 #endif
-
-  /* Override further with the editor specified on the command line
-     via --editor-cmd, if any. */
-  if (editor_cmd)
-    editor = editor_cmd;
 
   /* Abort if there is no editor specified */
   if (! editor)

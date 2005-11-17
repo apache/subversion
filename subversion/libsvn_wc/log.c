@@ -234,68 +234,46 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        apr_hash_t *keywords = NULL;
-        const char *eol_str = NULL;
-        svn_boolean_t special = FALSE;
+        const char *tmp_file;
 
-        if (! special_only)
-          {
-            /* Note that this action takes properties from dest, not source. */
-            SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path,
-                                           adm_access, NULL, pool));
-            SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path,
-                                            adm_access, pool));
-          }
-        SVN_ERR (svn_wc__get_special (&special, full_dest_path, adm_access,
-                                      pool));
-
-        SVN_ERR (svn_subst_copy_and_translate3 (full_from_path,
-                                                full_dest_path,
-                                                eol_str,
-                                                TRUE,
-                                                keywords,
-                                                TRUE,
-                                                special,
-                                                pool));
+        SVN_ERR (svn_wc_translated_file2
+                 (&tmp_file,
+                  full_from_path,
+                  full_dest_path, adm_access,
+                  SVN_WC_TRANSLATE_FROM_NF
+                  | SVN_WC_TRANSLATE_FORCE_COPY
+                  | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
+                  | (special_only ? SVN_WC_TRANSLATE_SPECIAL_ONLY : 0),
+                  pool));
+        SVN_ERR (svn_io_file_rename (tmp_file, full_dest_path, pool));
 
         SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_dest_path,
                                               adm_access, pool));
 
-        /* After copying, set the file executable if props dictate. */
-        return svn_wc__maybe_set_executable (NULL, full_dest_path, adm_access,
-                                             pool);
-      }
+        SVN_ERR (svn_wc__maybe_set_executable (NULL, full_dest_path,
+                                               adm_access, pool));
 
+        return SVN_NO_ERROR;
+      }
     case svn_wc__xfer_cp_and_detranslate:
       {
-        apr_hash_t *keywords;
-        const char *eol_str;
-        svn_boolean_t special;
+        const char *tmp_file;
 
-        /* Note that this action takes properties from source, not dest. */
-        SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, adm_access,
-                                       NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_from_path,
-                                        adm_access, pool));
-        SVN_ERR (svn_wc__get_special (&special, full_from_path, adm_access,
-                                      pool));
+        SVN_ERR (svn_wc_translated_file2
+                 (&tmp_file,
+                  full_from_path,
+                  full_from_path, adm_access,
+                  SVN_WC_TRANSLATE_TO_NF
+                  | SVN_WC_TRANSLATE_FORCE_COPY
+                  | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
+                  | (special_only ? SVN_WC_TRANSLATE_SPECIAL_ONLY : 0),
+                  pool));
+        SVN_ERR (svn_io_file_rename (tmp_file, full_dest_path, pool));
 
-        /* If any specific eol style was indicated, then detranslate
-           back to repository normal form ("\n"), repairingly.  But if
-           no style indicated, don't touch line endings at all. */
-        return svn_subst_copy_and_translate3 (full_from_path,
-                                              full_dest_path,
-                                              (eol_str ? "\n" : NULL),
-                                              (eol_str ? TRUE : FALSE),  
-                                              keywords,
-                                              FALSE, /* contract keywords */
-                                              special,
-                                              pool);
+        return SVN_NO_ERROR;
       }
 
     case svn_wc__xfer_mv:
-      SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, TRUE, pool));
-
       err = svn_io_file_rename (full_from_path,
                                 full_dest_path, pool);
 
@@ -342,10 +320,8 @@ install_committed_file (svn_boolean_t *overwrote_working,
   const char *filepath;
   const char *tmp_text_base;
   svn_node_kind_t kind;
-  apr_hash_t *keywords;
   svn_boolean_t same, did_set;
-  const char *tmp_wfile, *pdir, *bname;
-  const char *eol_str;
+  const char *tmp_wfile;
   svn_boolean_t special;
 
   /* start off assuming that the working file isn't touched. */
@@ -370,57 +346,30 @@ install_committed_file (svn_boolean_t *overwrote_working,
    * reread the file if they don't really need to.
    */
 
-  /* start off getting the latest translation prop values. */
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, adm_access, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords, filepath, adm_access, NULL, pool));
-  SVN_ERR (svn_wc__get_special (&special, filepath, adm_access, pool));
-
-  svn_path_split (filepath, &pdir, &bname, pool);
-  tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname, NULL);
-
-  SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_wfile,
-                                     tmp_wfile, SVN_WC__TMP_EXT,
-                                     svn_io_file_del_none, pool));
-
   /* Is there a tmp_text_base that needs to be installed?  */
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
   SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
 
-  if (kind == svn_node_file)
-    SVN_ERR (svn_subst_copy_and_translate3 (tmp_text_base,
-                                            tmp_wfile,
-                                            eol_str,
-                                            FALSE, /* don't repair eol */
-                                            keywords,
-                                            TRUE, /* expand keywords */
-                                            special,
-                                            pool));
-  else
-    SVN_ERR (svn_subst_copy_and_translate3 (filepath,
-                                            tmp_wfile,
-                                            eol_str,
-                                            FALSE, /* don't repair eol */
-                                            keywords,
-                                            TRUE, /* expand keywords */
-                                            special,
-                                            pool));
+  SVN_ERR (svn_wc_translated_file2 (&tmp_wfile,
+                                    (kind == svn_node_file)
+                                       ? tmp_text_base : filepath,
+                                    filepath, adm_access,
+                                    SVN_WC_TRANSLATE_FROM_NF
+                                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
+                                    | SVN_WC_TRANSLATE_FORCE_COPY,
+                                    pool));
 
+  SVN_ERR (svn_wc__get_special (&special, filepath, adm_access, pool));
   if (! special)
-    {
-      SVN_ERR (svn_io_files_contents_same_p (&same, tmp_wfile, filepath, pool));
-    }
+    SVN_ERR (svn_io_files_contents_same_p (&same, tmp_wfile, filepath, pool));
   else
-    {
       same = TRUE;
-    }
-  
+
   if (! same)
     {
-      SVN_ERR (svn_io_copy_file (tmp_wfile, filepath, FALSE, pool));
+      SVN_ERR (svn_io_file_rename (tmp_wfile, filepath, pool));
       *overwrote_working = TRUE;
     }
-
-  SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
   SVN_ERR (svn_wc__maybe_set_read_only (&did_set, filepath, adm_access, pool));
   if (did_set)
@@ -1093,7 +1042,7 @@ log_do_committed (struct log_runner *loggy,
           /* Verify that the working file is the same as the tmpf file. */
           if ((err = svn_wc__versioned_file_modcheck (&modified, wf,
                                                       loggy->adm_access,
-                                                      tmpf, pool)))
+                                                      tmpf, TRUE, pool)))
             return svn_error_createf (pick_error_code (loggy), err,
                                       _("Error comparing '%s' and '%s'"),
                                       svn_path_local_style (wf, pool),
@@ -1220,7 +1169,6 @@ log_do_committed (struct log_runner *loggy,
           }
 
         /* Make the tmp prop file the new pristine one. */
-        SVN_ERR (svn_wc__prep_file_for_replacement (basef, TRUE, pool));
         SVN_ERR (svn_io_file_rename (tmpf, basef, pool));
         SVN_ERR (svn_io_set_file_read_only (basef, FALSE, pool));
       }
@@ -2254,8 +2202,8 @@ svn_wc_cleanup2 (const char *path,
           SVN_ERR (svn_wc_props_modified_p (&modified, entry_path,
                                             adm_access, subpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR (svn_wc_text_modified_p (&modified, entry_path, FALSE,
-                                             adm_access, subpool));
+            SVN_ERR (svn_wc_text_modified_p2 (&modified, entry_path, FALSE,
+                                              adm_access, TRUE, subpool));
         }
     }
   svn_pool_destroy (subpool);
