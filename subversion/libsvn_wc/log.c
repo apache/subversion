@@ -1900,6 +1900,10 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
                   SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
 
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_HAS_PROPS,
+                  SVN_WC__ENTRY_ATTR_HAS_PROPS,
+                  entry->has_props ? "true" : "false");
+
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PROP_MODS,
                   SVN_WC__ENTRY_ATTR_PROP_MODS,
                   entry->prop_mods ? "true" : "false");

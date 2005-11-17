@@ -375,7 +375,7 @@ svn_wc__load_props (apr_hash_t **base_props_p,
      our WC has prop caching, the user requested working props and there are no
      prop mods. */
   if (base_props_p
-      || (has_propcaching && ! entry->prop_mods))
+      || (has_propcaching && ! entry->prop_mods && entry->has_props))
     {
       const char *prop_base_path;
 
@@ -390,17 +390,19 @@ svn_wc__load_props (apr_hash_t **base_props_p,
 
   if (props_p)
     {
-      if (has_propcaching && ! entry->prop_mods)
+      if (has_propcaching && ! entry->prop_mods && entry->has_props)
         *props_p = apr_hash_copy (pool, base_props);
-      else
+      else if (! has_propcaching || entry->has_props)
         {
           const char *prop_path;
 
           SVN_ERR (svn_wc__prop_path (&prop_path, full_path,
                                       kind, FALSE, pool));
           *props_p = apr_hash_make (pool);
-      SVN_ERR (svn_wc__load_prop_file (prop_path, *props_p, pool));
+          SVN_ERR (svn_wc__load_prop_file (prop_path, *props_p, pool));
         }
+      else
+        *props_p = apr_hash_make (pool);
     }
       
   return SVN_NO_ERROR;
@@ -451,10 +453,12 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
   /* Check if the props are modified. */
   SVN_ERR (svn_prop_diffs (&prop_diffs, working_props, base_props, pool));
   tmp_entry.prop_mods = (prop_diffs->nelts > 0);
+  tmp_entry.has_props = (apr_hash_count (working_props) > 0);
   tmp_entry.cached_props = svn_wc__build_cached_props (working_props, pool);
 
   SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name, &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_PROP_MODS 
+                                       SVN_WC__ENTRY_MODIFY_HAS_PROPS
+                                       | SVN_WC__ENTRY_MODIFY_PROP_MODS 
                                        | SVN_WC__ENTRY_MODIFY_CACHED_PROPS,
                                        pool));
 
@@ -1935,20 +1939,16 @@ svn_wc__has_props (svn_boolean_t *has_props,
       return SVN_NO_ERROR;
     }
 
-  /* If we know we have some cached properties, we don't need to
-     check, we can return true.  */
-  if (has_propcaching && entry->cached_props
-      && strlen (entry->cached_props) != 0)
+  /* Use the flag in the entry if the WC is recent enough. */
+  if (has_propcaching)
     {
-      *has_props = TRUE;
+      *has_props = entry->has_props;
       return SVN_NO_ERROR;
     }
 
-  if (has_propcaching && ! entry->prop_mods)
-    SVN_ERR (svn_wc__prop_base_path (&prop_path, path, entry->kind, FALSE,
-                                     pool));
-  else
-    SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
+  /* The rest is for compatibility with WCs that don't have propcaching. */
+
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
   SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
 
   if (is_empty)

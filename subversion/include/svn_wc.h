@@ -1257,6 +1257,12 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t lock_creation_date;
 
+  /** Whether this entry has any working properties.
+   * False if this information is not stored in the entry.
+   *
+   * @since New in 1.4. */
+  svn_boolean_t has_props;
+
   /** Whether this entry has property modifications.
    *
    * @note For working copies in older formats, this flag is not valid.

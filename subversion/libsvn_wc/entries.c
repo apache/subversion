@@ -196,7 +196,6 @@ do_bool_attr (svn_boolean_t *entry_flag,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
 svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                        apr_uint32_t *modify_flags,
@@ -501,6 +500,11 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
   
+  /* has_props flag. */
+  SVN_ERR (do_bool_attr (&entry->has_props,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_HAS_PROPS,
+                         atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, name));
+
   /* prop-mods flag. */
   {
     const char *prop_mods_str
@@ -1089,12 +1093,16 @@ write_entry (svn_stringbuf_t **output,
                   APR_HASH_KEY_STRING,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
 
+  /* Has-props flag. */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
+                (entry->has_props ? "true" : NULL));
+
   /* Prop-mods. */
   if (entry->prop_mods)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
                   APR_HASH_KEY_STRING, "true");
   
-  /* Property existence. */
+  /* Cached props. */
   if (entry->cached_props
       && *entry->cached_props)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHED_PROPS,
@@ -1419,6 +1427,10 @@ fold_entry (apr_hash_t *entries,
   /* Lock creation date */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
+
+  /* has-props flag */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPS)
+    cur_entry->has_props = entry->has_props;
 
   /* prop-mods flag */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_MODS)
