@@ -3,8 +3,6 @@ libsvn_wc performance for some operations.  Below are the items to be done
 during the lifetime of this branch.
 See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
-* Cache existence of properties in .svn/entries. (lundblad)
-
 * Consider caching presence of other props.
 
 * Require MD5 checksums on entries and include this in the WC format
