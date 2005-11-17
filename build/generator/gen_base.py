@@ -941,7 +941,7 @@ class IncludeDependencyInfo:
     for hdr, hdr_type in hdrs.items():
       if hdr_type == '#':
         c_filenames.append(hdr)
-      else # hdr_type == '%':
+      else: # hdr_type == '%'
         swig_filenames.append(hdr)
     # Be independent of hash ordering
     c_filenames.sort()
