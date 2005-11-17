@@ -35,7 +35,15 @@
 
 #include "svn_private_config.h"
 
-
+#define TMP_STR \
+        "\x74\x6d\x70"
+        /* "tmp" */
+
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
+
 /*** Code. ***/
 
 /* Helper function to handle copying a potentially translated version of
@@ -234,7 +242,7 @@ svn_client_cat2 (svn_stream_t *out,
       /* grab a temporary file to write the target to. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
       SVN_ERR (svn_io_open_unique_file (&tmp_file, &tmp_filename,
-                 svn_path_join (temp_dir, "tmp", pool), ".tmp",
+                 svn_path_join (temp_dir, TMP_STR, pool), DOT_TMP_STR,
                  TRUE, pool));
 
       tmp_stream = svn_stream_from_aprfile (tmp_file, pool);

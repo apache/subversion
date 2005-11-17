@@ -28,11 +28,30 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 
+#define AGAINST_STR \
+        "\x61\x67\x61\x69\x6e\x73\x74"
+        /* "against" */
 
+#define PATH_STR \
+        "\x70\x61\x74\x68"
+        /* "path" */
+
+#define REVISION_STR \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define STATUS_STR \
+        "\x73\x74\x61\x74\x75\x73"
+        /* "status" */
+
+#define TARGET_STR \
+        "\x74\x61\x72\x67\x65\x74"
+        /* "target" */
 
 /*** Code. ***/
 
@@ -59,8 +78,8 @@ print_start_target_xml (const char *target, apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
 
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "target",
-                         "path", target, NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, TARGET_STR,
+                         PATH_STR, target, NULL);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -73,7 +92,7 @@ print_header_xml (apr_pool_t *pool)
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
 
   svn_xml_make_header (&sb, pool);
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "status", NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, STATUS_STR, NULL);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -85,7 +104,7 @@ print_footer_xml (apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
 
-  svn_xml_make_close_tag (&sb, pool, "status");
+  svn_xml_make_close_tag (&sb, pool, STATUS_STR);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -102,12 +121,12 @@ print_finish_target_xml (svn_revnum_t repos_rev,
   if (SVN_IS_VALID_REVNUM (repos_rev))
     {
       const char *repos_rev_str;
-      repos_rev_str = apr_psprintf (pool, "%ld", repos_rev);
-      svn_xml_make_open_tag (&sb, pool, svn_xml_self_closing, "against",
-                             "revision", repos_rev_str, NULL);
+      repos_rev_str = APR_PSPRINTF2 (pool, "%ld", repos_rev);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_self_closing, AGAINST_STR,
+                             REVISION_STR, repos_rev_str, NULL);
     }
 
-  svn_xml_make_close_tag (&sb, pool, "target");
+  svn_xml_make_close_tag (&sb, pool, TARGET_STR);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
