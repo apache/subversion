@@ -6993,7 +6993,7 @@ msgid ""
 "\n"
 "Create a new, empty repository at REPOS_PATH.\n"
 msgstr ""
-"Aufruf: svnadim create ARCHIV_PFAD\n"
+"Aufruf: svnadmin create ARCHIV_PFAD\n"
 "\n"
 "Erstellt ein neues, leeres Projektarchiv im ARCHIV_PFAD.\n"
 
