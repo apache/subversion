@@ -71,11 +71,11 @@ trim_string (char **pstr)
   char *str = *pstr;
   int i;
 
-  while (apr_isspace (*str))
+  while (APR_IS_ASCII_SPACE (*str))
     str++;
   *pstr = str;
   i = strlen (str);
-  while ((i > 0) && apr_isspace (str[i-1]))
+  while ((i > 0) && APR_IS_ASCII_SPACE (str[i-1]))
     i--;
   str[i] = '\0';
 }

@@ -35,8 +35,9 @@ extern "C" {
 #define SVN_WC__TMP_EXT \
         "\x2e\x74\x6d\x70"
         /* ".tmp" */
-#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
-                                               file */
+#define SVN_WC__REVERT_EXT \
+        "\x2e\x73\x76\x6e\x2d\x72\x65\x76\x65\x72\x74"
+        /* ".svn-revert" - for reverting a replaced file */
 
 #define SVN_WC__TEXT_REJ_EXT \
         "\x2e\x72\x65\x6a"
