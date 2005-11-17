@@ -131,9 +131,14 @@ Subversion Complaints:
   (automatically create parent directories; see issue #1776), as well
   as 'rm -k/--keep' (only "unversion" files, do not delete the working
   files), and 'diff -s/--summary' (status-like diff output; see issue
-  #2015), all of which were desired by clkao.  [Question: did someone
-  start on a patch for 'svn diff --summary' recently?  I think I may
-  have seen that on the dev@ list...]
+  #2015), all of which were desired by clkao.
+
+  [Question: Did someone start on a patch for 'svn diff --summary'
+  recently?  I think I may have seen that on the dev@ list... Yes.
+  In http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=108496,
+  Peter Lundblad says: "The API part of this is already implemented
+  some time ago. So, it is quite low-hanging to do the cmdline GUI
+  part."  -kfogel]
 
 * Smart patch format.  A patch format that can represent every kind of
   transformation that could be transmitted by 'svn update'.  We should
