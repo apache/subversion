@@ -1249,13 +1249,12 @@ main (int argc, const char * const *argv)
                    "try '-r M:N' instead of '-r M -r N'"));
               return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
             }
-          if (svn_opt_parse_revision (&(opt_state.start_revision),
+          err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
+          if (err ||
+              svn_opt_parse_revision (&(opt_state.start_revision),
                                       &(opt_state.end_revision),
-                                      opt_arg, pool) != 0)
+                                      utf8_opt_arg, pool) != 0)
             {
-              err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg,
-                                             pool);
-
               if (! err)
                 err = svn_error_createf
                   (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

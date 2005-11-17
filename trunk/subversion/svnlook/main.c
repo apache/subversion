@@ -2213,8 +2213,8 @@ main (int argc, const char * const *argv)
       if (os->ind >= os->argc)
         {
           svn_error_clear
-            (SVN_CMDLINE_FPRINTF (stderr, pool,
-                                  _("Subcommand argument required\n")));
+            (SVN_CMDLINE_FPRINTF2 (stderr, pool,
+                                   _("Subcommand argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -2231,8 +2231,8 @@ main (int argc, const char * const *argv)
               if (err)
                 return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
               svn_error_clear
-                (SVN_CMDLINE_FPRINTF (stderr, pool,
-                                      _("Unknown command: '%s'\n"),
+                (SVN_CMDLINE_FPRINTF2 (stderr, pool,
+                                       _("Unknown command: '%s'\n"),
                                       first_arg_utf8));
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
@@ -2264,7 +2264,7 @@ main (int argc, const char * const *argv)
       if (repos_path == NULL)
         {
           svn_error_clear
-            (SVN_CMDLINE_FPRINTF (stderr, pool,
+            (SVN_CMDLINE_FPRINTF2 (stderr, pool,
                                   _("Repository argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
@@ -2273,7 +2273,7 @@ main (int argc, const char * const *argv)
       else if (svn_path_is_url (repos_path))
         {
           svn_error_clear
-            (SVN_CMDLINE_FPRINTF (stderr, pool,
+            (SVN_CMDLINE_FPRINTF2 (stderr, pool,
                       _("'%s' is a URL when it should be a path\n"),
                       repos_path));
           svn_pool_destroy (pool);
@@ -2320,7 +2320,7 @@ main (int argc, const char * const *argv)
             svn_opt_get_option_from_code (opt_id, options_table);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           svn_error_clear
-            (SVN_CMDLINE_FPRINTF
+            (svn_cmdline_fprintf
              (stderr, pool,
               _("Subcommand '%s' doesn't accept option '%s'\n"
                 "Type 'svnlook help %s' for usage.\n"),
