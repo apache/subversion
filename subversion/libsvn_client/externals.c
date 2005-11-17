@@ -255,7 +255,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          before removing an old subdir, we would see if it wants to
          just be renamed to a new one. */ 
 
-      svn_error_t *err;
+      svn_error_t *err, *err2;
       svn_wc_adm_access_t *adm_access;
 
       SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path, TRUE, -1,
@@ -272,10 +272,17 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
       if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-        SVN_ERR (svn_wc_adm_close (adm_access));
+        if ((err2 = svn_wc_adm_close (adm_access)))
+          {
+            if (!err)
+              err = err2;
+            else
+              svn_error_clear (err2);
+          }
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;
+      svn_error_clear (err);
 
       /* ### If there were multiple path components leading down to
          that wc, we could try to remove them too. */
