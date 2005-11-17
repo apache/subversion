@@ -20,7 +20,7 @@ Candidate changes:
       preserved. Thanks to r17401, we now only regenerate SWIG files
       based on timestamps when we are in non-release mode.
     Votes:
-      +1: djames, maxb
+      +1: djames, maxb, dberlin
 
 Approved changes:
 
