@@ -1342,13 +1342,11 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
   const char *fullpath;
-  svn_node_kind_t kind;
-  svn_boolean_t modified_p, tgt_modified;
-  svn_boolean_t target_needs_retranslation = FALSE;
+  /* If true, force reinstallation of working file. */
+  svn_boolean_t reinstall_working = FALSE;
   apr_hash_t *modify_entry_atts = apr_hash_make (pool);
   svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
-  const char *bprop, *rprop, *wprop; /* full paths */
-  apr_hash_t *baseprops;
+  apr_hash_t *baseprops = NULL;
   const char *adm_path = svn_wc_adm_access_path (adm_access);
 
   /* Build the full path of the thing we're reverting. */
@@ -1356,72 +1354,92 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) != 0)
     fullpath = svn_path_join (fullpath, name, pool);
 
-  SVN_ERR (svn_wc__prop_base_path (&bprop, name, entry->kind, FALSE, pool));
+  /* Deal with properties. */
 
-  SVN_ERR (svn_wc__prop_revert_path (&rprop, name, entry->kind, FALSE, pool));
-
-  SVN_ERR (svn_wc__prop_path (&wprop, name, entry->kind, FALSE, pool));
-
-  /* Look for a revert base file. If it exists use it for
-   * the prop base for the file.  If it doesn't use the normal
-   * prop base. */
-
-  SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
-                               rprop, bprop, FALSE, pool));
-
-  /* Check for prop changes. */
-  SVN_ERR (svn_wc_props_modified_p (&modified_p, fullpath, adm_access, pool));  
-  if (modified_p)
+  if (entry->schedule == svn_wc_schedule_replace)
     {
-      apr_array_header_t *propchanges;
+      const char *rprop;
+      svn_node_kind_t kind;
 
-      /* Get the full list of property changes and see if any magic
-         properties were changed. */
-      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, fullpath,
-                                      adm_access, pool));
+      /* Use the revertpath as the new propsbase if it exists. */
+      SVN_ERR (svn_wc__prop_revert_path (&rprop, fullpath, entry->kind, FALSE,
+                                         pool));
+      SVN_ERR (svn_io_check_path (rprop, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          baseprops = apr_hash_make (pool);
+          SVN_ERR (svn_wc__load_prop_file (rprop, baseprops, pool));
+          /* Ensure the revert propfile gets removed. */
+          SVN_ERR (svn_wc__loggy_remove
+                   (&log_accum, adm_access,
+                    svn_path_is_child (adm_path, rprop, pool), pool));
+        }
+    }
+
+  /* If not schedule replace, or no revert props, use the normal
+     base-props and working props. */
+  if (! baseprops)
+    {
+      svn_boolean_t modified;
+
+      /* Check for prop changes. */
+      SVN_ERR (svn_wc_props_modified_p (&modified, fullpath, adm_access,
+                                        pool));
+      if (modified)
+        {
+          apr_array_header_t *propchanges;
+
+          /* Get the full list of property changes and see if any magic
+             properties were changed. */
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, fullpath,
+                                          adm_access, pool));
       
-      /* Determine if any of the propchanges are the "magic" ones that
-         might require changing the working file. */
-      target_needs_retranslation = svn_wc__has_magic_property (propchanges);
+          /* Determine if any of the propchanges are the "magic" ones that
+             might require changing the working file. */
+          reinstall_working = svn_wc__has_magic_property (propchanges);
   
-    }
-  else if (entry->schedule == svn_wc_schedule_replace)
-    {
-      /* If the replacement is a copy need to clean up the
-       * related things in entries */
-      if (entry->copied) 
-        apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPIED,
-                      APR_HASH_KEY_STRING, "false");
-
-      /* Edge case: we're reverting a replacement, and
-         svn_wc_props_modified_p thinks there's no property mods.
-         However, because of the scheduled replacement,
-         svn_wc_props_modified_p is deliberately ignoring the
-         base-props; it's "no" answer simply means that there are no
-         working props.  It's *still* possible that the base-props
-         exist, however, from the original replaced file.  */
-      baseprops = apr_hash_make (pool);
-      SVN_ERR (svn_wc__load_prop_file (rprop, baseprops, pool));
+        }
     }
 
-  if (modified_p || entry->schedule == svn_wc_schedule_replace)
+  /* Reinstall props if we need to.  Only rewrite the baseprops,
+     if we're reverting a replacement.  This is just an optimization. */
+  if (baseprops)
     SVN_ERR (svn_wc__install_props (&log_accum, adm_access, name, baseprops,
-                                    baseprops, FALSE, pool));
+                                    baseprops,
+                                    entry->schedule == svn_wc_schedule_replace,
+                                    pool));
+
+  /* Clean up the copied state if this is a replacement. */
+  if (entry->schedule == svn_wc_schedule_replace
+      && entry->copied)
+    apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPIED,
+                  APR_HASH_KEY_STRING, "false");
+
+  /* Deal with the contents. */
 
   if (entry->kind == svn_node_file)
     {
-      svn_node_kind_t disk_kind;
+      svn_node_kind_t base_kind;
       const char *base_thing;
+      svn_boolean_t tgt_modified;
 
-      SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
-      base_thing = svn_wc__text_base_path (name, 0, pool);
+      /* If the working file is missing, we need to reinstall it. */
+      if (! reinstall_working)
+        {
+          svn_node_kind_t kind;
+          SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
+          if (kind == svn_node_none)
+            reinstall_working = TRUE;
+        }
+
+      base_thing = svn_wc__text_base_path (name, FALSE, pool);
 
       /* Check for text base presence. */
-      SVN_ERR (svn_io_check_path (svn_path_join(adm_path,
-                                                base_thing, pool),
-                                  &disk_kind, pool));
+      SVN_ERR (svn_io_check_path (svn_path_join (adm_path,
+                                                 base_thing, pool),
+                                  &base_kind, pool));
 
-      if (disk_kind != svn_node_file)
+      if (base_kind != svn_node_file)
         return svn_error_createf (APR_ENOENT, NULL,
                                   _("Error restoring text for '%s'"),
                                   svn_path_local_style (fullpath, pool));
@@ -1433,16 +1451,16 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                (&log_accum, &tgt_modified, adm_access,
                 svn_wc__text_revert_path (name, FALSE, pool), base_thing,
                 FALSE, pool));
-      target_needs_retranslation = target_needs_retranslation || tgt_modified;
+      reinstall_working = reinstall_working || tgt_modified;
 
-      if (! target_needs_retranslation)
-        /* A shortcut: since we will translate when
-           target_needs_retranslation, we don't need to check if
-           the working file is modified
-         */
-        SVN_ERR (svn_wc_text_modified_p2 (&modified_p, fullpath, FALSE,
+      /* A shortcut: since we will translate when reinstall_working, we
+         don't need to check if the working file is modified
+      */
+      if (! reinstall_working)
+        SVN_ERR (svn_wc_text_modified_p2 (&reinstall_working, fullpath, FALSE,
                                           adm_access, FALSE, pool));
-      if (modified_p || kind == svn_node_none || target_needs_retranslation)
+
+      if (reinstall_working)
         {
           /* If there are textual mods (or if the working file is
              missing altogether), copy the text-base out into
@@ -1454,16 +1472,14 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
           /* Possibly set the timestamp to last-commit-time, rather
              than the 'now' time that already exists. */
-          if (use_commit_times)
+          if (use_commit_times && entry->cmt_date)
             SVN_ERR (svn_wc__loggy_set_timestamp
                      (&log_accum, adm_access,
                       name, svn_time_to_cstring (entry->cmt_date, pool),
                       pool));
 
-          /* Modify our entry structure. */
           apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                         APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
-
         }
     }
 
