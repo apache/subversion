@@ -88,4 +88,7 @@
 #define dgettext(domain,x) (x)
 #endif
 
+#define HAVE_SYMLINK 1
+#define HAVE_READLINK 1
+
 #endif /* CONFIG_HW */

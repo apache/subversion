@@ -641,7 +641,7 @@ svn_ebcdic_set_file_mtime(const char *fname,
                      "touch -acfm -t %4i%02i%02i%02i%02i.%02i \"%s\"",
                      /*              YYYYMMDDHHMM.SS */
                      timex->tm_year + 1900,
-                     timex->tm_mon,
+                     timex->tm_mon + 1,
                      timex->tm_mday,
                      timex->tm_hour,
                      timex->tm_min,

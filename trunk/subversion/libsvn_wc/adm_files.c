@@ -53,7 +53,7 @@
 
 /* The default name of the WC admin directory. This name is always
    checked by svn_wc_is_adm_dir. */
-static const char default_adm_dir_name[] = ".svn";
+static const char default_adm_dir_name[] = "\x2e\x73\x76\x6e"; /* ".svn" */
 
 /* The name that is actually used for the WC admin directory.  The
    commonest case where this won't be the default is in Windows
