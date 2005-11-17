@@ -113,11 +113,12 @@ class Generator(gen_base.GeneratorBase):
       wrapper_fname = build_path_join(self.swig.proxy_dir,
         string.replace(build_path_basename(fname),".h","_h.swg"))
       python_script = "$(abs_srcdir)/build/generator/swig/header_wrappers.py"
-      self.ofile.write(
-        '%s: %s %s\n\t' % (wrapper_fname, fname, python_script) +
-        '$(PYTHON) %s $(abs_srcdir)/build.conf $(SWIG) $(abs_srcdir)/%s\n' % 
-          (python_script, fname)
-      )
+      if not self.release_mode:
+        self.ofile.write(
+          '%s: %s %s\n\t' % (wrapper_fname, fname, python_script) +
+          '$(PYTHON) %s $(abs_srcdir)/build.conf $(SWIG) $(abs_srcdir)/%s\n' %
+            (python_script, fname)
+        )
       self.ofile.write(
         'swig-headers: %s\n' % wrapper_fname +
         'extraclean-swig-headers-%s:\n' % wrapper_fname + 
@@ -134,22 +135,23 @@ class Generator(gen_base.GeneratorBase):
     ########################################
     self.begin_section('SWIG external runtime')
 
-    runtime_pattern = '%s/swig_%%s_external_runtime.swg' % self.swig.proxy_dir
-    python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
-    build_runtime = '$(PYTHON) %s ' % python_script + \
-      '$(abs_srcdir)/build.conf "$(SWIG)"'
-    runtimes = []
-    for lang in self.swig_lang:
-      runtimes.append(runtime_pattern % lang)
-    self.ofile.write(
-      '%s:\n' % " ".join(runtimes) +
-      '\t%s\n' % build_runtime +
-      'swig-headers: %s\n' % " ".join(runtimes) +
-      'extraclean-runtime:\n' +
-      '\trm -f %s\n' % " ".join(map(lambda x: "$(abs_srcdir)/" + x,
-        runtimes) + map(lambda x: "$(abs_builddir)/" + x, runtimes)) +
-      'extraclean-swig-headers: extraclean-runtime\n')
-    self.ofile.write('\n')
+    if not self.release_mode:
+      runtime_pattern = '%s/swig_%%s_external_runtime.swg' % self.swig.proxy_dir
+      python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
+      build_runtime = '$(PYTHON) %s ' % python_script + \
+        '$(abs_srcdir)/build.conf "$(SWIG)"'
+      runtimes = []
+      for lang in self.swig_lang:
+        runtimes.append(runtime_pattern % lang)
+      self.ofile.write(
+        '%s:\n' % " ".join(runtimes) +
+        '\t%s\n' % build_runtime +
+        'swig-headers: %s\n' % " ".join(runtimes) +
+        'extraclean-runtime:\n' +
+        '\trm -f %s\n' % " ".join(map(lambda x: "$(abs_srcdir)/" + x,
+          runtimes) + map(lambda x: "$(abs_builddir)/" + x, runtimes)) +
+        'extraclean-swig-headers: extraclean-runtime\n')
+      self.ofile.write('\n')
 
     ########################################
     self.begin_section('SWIG autogeneration rules')
@@ -198,12 +200,15 @@ class Generator(gen_base.GeneratorBase):
       source = str(sources[0])
       source_dir = build_path_dirname(source)
       opts = self.swig.opts[objname.lang]
-      self.ofile.write('%s: %s\n' % (objname, deps) +
-        '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
-        'cp -pf $(abs_srcdir)/%s/*.i ' % source_dir +
-        '$(abs_builddir)/%s; fi\n' % source_dir +
-        '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
-        '-o $@ $(abs_builddir)/%s\n' % source +
+      if not self.release_mode:
+        self.ofile.write('%s: %s\n' % (objname, deps) +
+          '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
+          'cp -pf $(abs_srcdir)/%s/*.i ' % source_dir +
+          '$(abs_builddir)/%s; fi\n' % source_dir +
+          '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
+          '-o $@ $(abs_builddir)/%s\n' % source
+        )
+      self.ofile.write(
         'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
         'copy-swig-%s: %s\n' % (objname, objname) +
         '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +

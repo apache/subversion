@@ -9,19 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r17401
-    Only regenerate SWIG files based on timestamps when we are in
-    non-release mode.
-    Justification:
-      Prior to r17401, Subversion regenerated the SWIG files if 'make'
-      determined that the SWIG files were out of date, based on their
-      timestamps. This caused the SWIG files to be incorrectly
-      regenerated if the exact timestamps from the tarball were not
-      preserved. Thanks to r17401, we now only regenerate SWIG files
-      based on timestamps when we are in non-release mode.
-    Votes:
-      +1: djames, maxb, dberlin
-
 Approved changes:
 
 Status of 1.3.1:
@@ -39,7 +26,6 @@ Candidate changes:
     Notes:
       - r17403 causes a trivial conflict. I'll create a merge branch
         to solve this.
-    Dependencies: r17401
     Votes:
       +0: djames
 

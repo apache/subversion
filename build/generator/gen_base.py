@@ -35,6 +35,12 @@ class GeneratorBase:
     except:
       raise GenError('Unable to extract version.')
 
+    # Read options
+    self.release_mode = None
+    for opt, val in options:
+      if opt == '--release':
+        self.release_mode = 1
+
     # Now read and parse build.conf
     parser = ConfigParser.ConfigParser()
     parser.read(fname)
