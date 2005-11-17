@@ -1160,7 +1160,6 @@ def diff_targets(sbox):
       raise svntest.Failure
 
     diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
-    if err_output: raise svntest.Failure
 
     diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    update_path, add_path)
@@ -1961,20 +1960,18 @@ def diff_schedule_delete(sbox):
   os.chdir(wc_dir)
 
   try:
-    diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
-    if err_output: raise svntest.Failure
     svntest.main.file_append('foo', "xxx")
     svntest.main.run_svn(None, 'add', 'foo')
-    diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
-    if err_output: raise svntest.Failure
+    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+
     svntest.main.run_svn(None, 'rm', 'foo')
     expected_output = [
     "Index: foo\n", 
     "===================================================================\n"
     ]
-    diff_output, err = svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                                          'diff', '-r', '1' )
-    if err: raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'diff', '-r', '1' )
+
   finally:
     os.chdir(current_dir)
 
