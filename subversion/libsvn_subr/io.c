@@ -632,10 +632,13 @@ svn_io_copy_file (const char *src,
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't copy '%s' to '%s'"),
-       svn_path_local_style (src, pool),
-       svn_path_local_style (dst_tmp, pool));
+    {
+      apr_file_remove (dst_tmp_apr, pool);
+      return svn_error_wrap_apr
+        (apr_err, _("Can't copy '%s' to '%s'"),
+         svn_path_local_style (src, pool),
+         svn_path_local_style (dst_tmp, pool));
+    }
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
      atomically inherited in the upcoming rename.  But note that we
