@@ -434,22 +434,16 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
   if (access_len != 0 && access_path[access_len - 1] != '/')
     access_len++;
 
-  /* ### TODO: Is this check needed? */
-  if (name == NULL)
+  if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0)
     {
-      name = SVN_WC_ENTRY_THIS_DIR;
-      /* We must be working with props on the directory PATH  */
+      kind = svn_node_dir;
       full_path = access_path;
     }
   else
-    /* We must be working with props on the file PATH/NAME */
-    full_path = svn_path_join (access_path, name, pool);
-
-  if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0)
-    kind = svn_node_dir;
-  else
-    kind = svn_node_file;
-
+    {
+      kind = svn_node_file;
+      full_path = svn_path_join (access_path, name, pool);
+    }
   /* Check if the props are modified. */
   SVN_ERR (svn_prop_diffs (&prop_diffs, working_props, base_props, pool));
   tmp_entry.prop_mods = (prop_diffs->nelts > 0);
