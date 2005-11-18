@@ -364,7 +364,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   const char *reject_tmp_path = NULL;
 
   /* Empty path and paths ending in / don't need an extra slash removed */
-  if (access_len == 0 || access_path[access_len - 1] == '/')
+  if (access_len == 0 || access_path[access_len - 1] == SVN_UTF8_FSLASH)
     slash = 0;
   else
     slash = 1;
