@@ -1950,8 +1950,8 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_fs_root_t *root;
   void *edit_baton;
 
-  SVN_ERR (svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
-                                  &send_deltas));
+  SVN_ERR (svn_ra_svn_parse_tuple(params, pool, "r(?r)b", &rev,
+                                  &low_water_mark, &send_deltas));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
