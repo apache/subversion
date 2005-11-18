@@ -1593,6 +1593,7 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__unlock,
   svn_ra_dav__get_lock,
   svn_ra_dav__get_locks,
+  svn_ra_dav__replay,
 };
 
 svn_error_t *

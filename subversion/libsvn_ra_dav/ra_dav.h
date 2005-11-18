@@ -862,6 +862,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
                      const char *path,
                      apr_pool_t *pool);
 
+svn_error_t *
+svn_ra_dav__replay(svn_ra_session_t *session,
+                   const char *base_path,
+                   svn_revnum_t revision,
+                   svn_boolean_t send_deltas,
+                   const svn_delta_editor_t *editor,
+                   void *edit_baton,
+                   apr_pool_t *pool);
 
 /* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
    values into a stringbuf allocated in POOL.  The string will be of
