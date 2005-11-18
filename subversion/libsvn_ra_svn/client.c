@@ -1973,7 +1973,7 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 {
   ra_svn_session_baton_t *sess = session->priv;
 
-  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay", "r(?r)b", revision,
+  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay", "rrb", revision,
                                low_water_mark, send_deltas));
 
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
