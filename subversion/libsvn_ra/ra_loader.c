@@ -658,16 +658,14 @@ svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
 
 svn_error_t *svn_ra_replay (svn_ra_session_t *session,
                             svn_revnum_t revision,
-                            const char *base_path,
                             svn_revnum_t low_water_mark,
                             svn_boolean_t text_deltas,
                             const svn_delta_editor_t *editor,
                             void *edit_baton,
                             apr_pool_t *pool)
 {
-  return session->vtable->replay (session, revision, base_path,
-                                  low_water_mark, text_deltas,
-                                  editor, edit_baton, pool);
+  return session->vtable->replay (session, revision, low_water_mark,
+                                  text_deltas, editor, edit_baton, pool);
 }
 
 

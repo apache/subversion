@@ -1965,7 +1965,6 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
 
 static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
                                   svn_revnum_t revision,
-                                  const char *base_path,
                                   svn_revnum_t low_water_mark,
                                   svn_boolean_t send_deltas,
                                   const svn_delta_editor_t *editor,
@@ -1974,8 +1973,8 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 {
   ra_svn_session_baton_t *sess = session->priv;
 
-  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay", "rcrb", revision,
-                               base_path, low_water_mark, send_deltas));
+  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay", "rrb", revision,
+                               low_water_mark, send_deltas));
 
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
                                  _("Server doesn't support the replay "

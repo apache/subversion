@@ -206,7 +206,6 @@ typedef struct svn_ra__vtable_t {
                              apr_pool_t *pool);
   svn_error_t *(*replay) (svn_ra_session_t *session,
                           svn_revnum_t revision,
-                          const char *base_path,
                           svn_revnum_t low_water_mark,
                           svn_boolean_t text_deltas,
                           const svn_delta_editor_t *editor,

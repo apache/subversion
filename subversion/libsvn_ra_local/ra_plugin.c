@@ -1250,7 +1250,6 @@ svn_ra_local__get_locks (svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__replay (svn_ra_session_t *session,
                       svn_revnum_t revision,
-                      const char *base_path,
                       svn_revnum_t low_water_mark,
                       svn_boolean_t send_deltas,
                       const svn_delta_editor_t *editor,
@@ -1263,8 +1262,9 @@ svn_ra_local__replay (svn_ra_session_t *session,
   SVN_ERR (svn_fs_revision_root (&root, svn_repos_fs (sess->repos),
                                  revision, pool));
 
-  SVN_ERR (svn_repos_replay2 (root, base_path, low_water_mark, send_deltas,
-                              editor, edit_baton, NULL, NULL, pool));
+  SVN_ERR (svn_repos_replay2 (root, sess->fs_path->data, low_water_mark,
+                              send_deltas, editor, edit_baton, NULL, NULL,
+                              pool));
 
   SVN_ERR (editor->close_edit (edit_baton, pool));
 

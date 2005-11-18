@@ -3318,7 +3318,6 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
 }
 
 svn_error_t * svn_ra_dav__replay(svn_ra_session_t *session,
-                                 const char *base_path,
                                  svn_revnum_t revision,
                                  svn_boolean_t send_deltas,
                                  const svn_delta_editor_t *editor,

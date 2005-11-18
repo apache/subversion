@@ -822,8 +822,8 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                                                            current),
                                        subpool));
 
-      SVN_ERR (svn_ra_replay (from_session, current, "", SVN_INVALID_REVNUM,
-                              TRUE, sync_editor, sync_baton, subpool));
+      SVN_ERR (svn_ra_replay (from_session, current, 0, TRUE,
+                              sync_editor, sync_baton, subpool));
 
       /* XXX sanity check that we just committed a change that resulted in
        * the revision number we expected, if it didn't, that means that the
@@ -894,6 +894,8 @@ synchronize (apr_getopt_t *os, void *b, apr_pool_t *pool)
   baton.callbacks = &callbacks;
   baton.config = opt_baton->config;
   baton.to_url = to_url;
+
+  /* XXX verify that we're at the root of the repos */
 
   SVN_ERR (svn_ra_open2 (&to_session,
                          to_url,
