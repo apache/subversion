@@ -39,7 +39,10 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public SVNClientSynchronized()
     {
-        worker = new SVNClient();
+        synchronized(clazz)
+        {
+            worker = new SVNClient();
+        }
     }
 
     /**

@@ -4,7 +4,7 @@
 # external_runtime.py: Generate external runtime files for SWIG
 #
 
-import sys, os
+import sys, os, re, fileinput
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
@@ -52,6 +52,14 @@ class Generator(generator.swig.Generator):
         out_file.close()
       else:
         _exec.run("%s -%s -external-runtime %s" % (self.swig_path, lang, out))
+
+      # SWIG 1.3.25 and earlier use the wrong number of arguments in calls to
+      # SWIG_GetModule. We fix this below.
+      if self.version() <= 103025:
+        for line in fileinput.input(out, inplace=1):
+          sys.stdout.write(
+            re.sub(r"SWIG_GetModule\(\)", "SWIG_GetModule(NULL)", line)
+          )
 
   def write_long_long_fix(self):
     """Hide the SWIG implementation of 'long long' converters so that

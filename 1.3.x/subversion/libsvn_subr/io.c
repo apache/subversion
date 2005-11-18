@@ -236,13 +236,6 @@ svn_io_open_unique_file (apr_file_t **f,
       apr_status_t apr_err;
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
                           | APR_BUFFERED);
-#if APR_CHARSET_EBCDIC
-      /* Force apr_file_open to be binary so conversion of contents on read or
-       * write is disabled - see comment on similar treatment of flag in 
-       * svn_io_file_open for a full explanation.
-       */
-      flag |= APR_BINARY;
-#endif
 
       if (delete_on_close)
         flag |= APR_DELONCLOSE;
@@ -270,7 +263,7 @@ svn_io_open_unique_file (apr_file_t **f,
       SVN_ERR (svn_path_cstring_from_utf8 (&unique_name_apr, unique_name,
                                            pool));
 
-      apr_err = apr_file_open (f, unique_name_apr, flag,
+      apr_err = apr_file_open (f, unique_name_apr, flag | APR_BINARY,
                                APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST (apr_err))
@@ -1127,7 +1120,8 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
   /* Get the perms for the original file so we'll have any other bits
    * that were already set (like the execute bits, for example). */
   SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
-  status = apr_file_open (&fd, apr_path, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&fd, apr_path, APR_READ | APR_BINARY,
+                          APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file at '%s'"), path);
 
@@ -2296,29 +2290,9 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
         flag &= ~APR_EXCL;
       }
     }
-
-  /* On ebcdic platforms a file opened as text has it's contents converted from
-   * the CCSID tag of the file to the CCSID of the job (37 in our case) when the
-   * file is read.  Writing to the file causes the same behavior in reverse.
-   * This causes two problems:
-   * 
-   * 1) The conversion fails when opening files with mixed text and binary
-   *    data, e.g. revision files, as the OS attempts to convert binary data
-   *    to ebcdic.
-   * 
-   * 2) When the conversion works we end up with ebcdic, which is obviously a
-   *    problem when converting/comparing/analyzing/parsing file content and
-   *    expecting utf8.
-   * 
-   * To prevent this nasty conversion, all files are opened as binary.
-   * 
-   * Hmmmm, are there any problems with this approach?
-   * None that I'm aware of yet...   
-   */
-  flag |= APR_BINARY;
 #endif
 
-  status = apr_file_open(new_file, fname_apr, flag, perm, pool);
+  status = apr_file_open (new_file, fname_apr, flag | APR_BINARY, perm, pool);
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file '%s'"),

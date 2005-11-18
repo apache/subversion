@@ -36,7 +36,7 @@ class NativeResources
      * @throws UnsatisfiedLinkError If the native library cannot be
      * loaded.
      */
-    public static void loadNativeLibrary()
+    public static synchronized void loadNativeLibrary()
     {
         // If the user specified the fully qualified path to the
         // native library, try loading that first.
@@ -47,6 +47,7 @@ class NativeResources
             if (specifiedLibraryName != null)
             {
                 System.load(specifiedLibraryName);
+                SVNClient.initNative();
                 return;
             }
         }
@@ -60,6 +61,7 @@ class NativeResources
         try
         {
             System.loadLibrary("svnjavahl-1");
+            SVNClient.initNative();
             return;
         }
         catch (UnsatisfiedLinkError ex)
@@ -67,11 +69,13 @@ class NativeResources
             try
             {
                 System.loadLibrary("libsvnjavahl-1");
+                SVNClient.initNative();
                 return;
             }
             catch (UnsatisfiedLinkError e)
             {
                 System.loadLibrary("svnjavahl");
+                SVNClient.initNative();
             }
         }
     }
