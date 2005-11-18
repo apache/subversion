@@ -29,11 +29,13 @@
 #include <apr_network_io.h>
 #include <apr_uuid.h>
 
-#define LOCK_PROP              "svnsync:lock"
-#define FROM_URL_PROP          "svnsync:from-url"
-#define FROM_UUID_PROP         "svnsync:from-uuid"
-#define LAST_MERGED_REV_PROP   "svnsync:last-merged-rev"
-#define CURRENTLY_COPYING_PROP "svnsync:currently-copying"
+#define PROP_PREFIX            "svn:sync-"
+
+#define LOCK_PROP              PROP_PREFIX "lock"
+#define FROM_URL_PROP          PROP_PREFIX "from-url"
+#define FROM_UUID_PROP         PROP_PREFIX "from-uuid"
+#define LAST_MERGED_REV_PROP   PROP_PREFIX "last-merged-rev"
+#define CURRENTLY_COPYING_PROP PROP_PREFIX "currently-copying"
 
 static svn_opt_subcommand_t initialize, synchronize, help;
 
@@ -297,7 +299,7 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       pname = key;
       pval = val;
 
-      if (strncmp (pname, "svnsync:", 8) != 0)
+      if (strncmp (pname, PROP_PREFIX, sizeof (PROP_PREFIX) - 1) != 0)
         SVN_ERR (svn_ra_change_rev_prop (to_session, 0, pname, pval, pool));
     }
 
