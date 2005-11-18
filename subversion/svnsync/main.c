@@ -224,6 +224,24 @@ open_tmp_file (apr_file_t **fp, void *callback_baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+check_if_session_is_at_repos_root (svn_ra_session_t *sess,
+                                   const char *url,
+                                   apr_pool_t *pool)
+{
+  const char *sess_root;
+
+  SVN_ERR (svn_ra_get_repos_root (sess, &sess_root, pool));
+
+  if (strcmp (url, sess_root) == 0)
+    return SVN_NO_ERROR;
+  else
+    return svn_error_createf
+      (APR_EINVAL, NULL,
+       _("Session is rooted at '%s' but the repos root is '%s'"),
+       url, sess_root);
+}
+
 typedef struct {
   const char *from_url;
   const char *to_url;
@@ -263,10 +281,11 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  /* XXX verify that we're at the root of the repos */
-
   SVN_ERR (svn_ra_open2 (&from_session, baton->from_url, baton->callbacks,
                          baton, baton->config, pool));
+
+  SVN_ERR (check_if_session_is_at_repos_root (from_session, baton->from_url,
+                                              pool));
 
   SVN_ERR (svn_ra_change_rev_prop (to_session, 0, FROM_URL_PROP,
                                    svn_string_create (baton->from_url, pool),
@@ -335,14 +354,14 @@ initialize (apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   baton.callbacks = &callbacks;
 
-  /* XXX verify that we're at the root of the repos */
-
   SVN_ERR (svn_ra_open2 (&to_session,
                          baton.to_url,
                          &callbacks,
                          &baton,
                          baton.config,
                          pool));
+
+  SVN_ERR (check_if_session_is_at_repos_root (to_session, baton.to_url, pool));
 
   SVN_ERR (with_locked (to_session, do_initialize, &baton, pool));
 
@@ -754,10 +773,11 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
     return svn_error_create
       (APR_EINVAL, NULL, "destination repository has not been initialized");
 
-  /* XXX verify that we're at the root of the repos */
-
   SVN_ERR (svn_ra_open2 (&from_session, from_url->data, baton->callbacks,
                          baton, baton->config, pool));
+
+  SVN_ERR (check_if_session_is_at_repos_root (from_session, from_url->data,
+                                              pool));
 
   /* Ok, now sanity check the UUID of the source repository, it wouldn't
    * be a good thing to sync from a different repository. */
@@ -897,14 +917,14 @@ synchronize (apr_getopt_t *os, void *b, apr_pool_t *pool)
   baton.config = opt_baton->config;
   baton.to_url = to_url;
 
-  /* XXX verify that we're at the root of the repos */
-
   SVN_ERR (svn_ra_open2 (&to_session,
                          to_url,
                          baton.callbacks,
                          &baton,
                          baton.config,
                          pool));
+
+  SVN_ERR (check_if_session_is_at_repos_root (to_session, to_url, pool));
 
   SVN_ERR (with_locked (to_session, do_synchronize, &baton, pool));
 
