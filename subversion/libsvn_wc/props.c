@@ -1625,10 +1625,16 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
 
+  /* If we have no entry, we can't have any prop mods. */
+  if (! entry)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+
   /* For newer WCs, if there is an entry for the path, we have a fast
    * and nice way to retrieve the information from the entry. */
-  /* ### TODO: What about the case with no entry? */
-  if (wc_format > SVN_WC__NO_PROPCACHING_VERSION && entry)
+  if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
     {
       *modified_p = entry->prop_mods;
       return SVN_NO_ERROR;
