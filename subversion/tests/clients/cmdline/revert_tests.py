@@ -459,12 +459,12 @@ def revert_file_merge_replace_with_history(sbox):
 def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
 
-  revert_replacement_with_props(sbox, True)
+  revert_replacement_with_props(sbox, 1)
 
 def revert_repos_to_wc_replace_with_props(sbox):
   "revert svn cp URL PATH replace file with props"
 
-  revert_replacement_with_props(sbox, False)
+  revert_replacement_with_props(sbox, 0)
 
 def revert_after_second_replace(sbox):
   "revert file after second replace"

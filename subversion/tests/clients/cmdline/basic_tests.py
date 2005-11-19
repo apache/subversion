@@ -1658,13 +1658,13 @@ def info_nonhead(sbox):
   output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'info',
                                                       furl + '@1', '-r1')
-  got_url = False
+  got_url = 0
   for line in output:
     if line.find("URL:") >= 0:
-      got_url = True
+      got_url = 1
   if not got_url:
     print "Info didn't output an URL."
-    raise svntest.Falure
+    raise svntest.Failure
 
 
 
