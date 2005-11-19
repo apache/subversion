@@ -1293,16 +1293,11 @@ svn_wc_prop_set2 (const char *name,
 {
   svn_error_t *err;
   apr_hash_t *prophash, *base_prophash;
-  const char *prop_base_path;
-  apr_hash_t *old_keywords;
   svn_stringbuf_t *new_value = NULL;
-  svn_node_kind_t kind;
   enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
   const char *base_name;
   svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
   const svn_wc_entry_t *entry;
-
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_wc__wcprop_set (name, value, path, adm_access, pool);
@@ -1313,6 +1308,22 @@ svn_wc_prop_set2 (const char *name,
 
   /* Else, handle a regular property: */
 
+  /* Get the entry and name for this path. */
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (path, pool));
+
+  base_name = entry->name;
+
+  /* Get the access baton for the entry's directory. */
+  if (entry->kind == svn_node_dir)
+    SVN_ERR (svn_wc_adm_retrieve (&adm_access, adm_access, path, pool));
+  else
+    SVN_ERR (svn_wc_adm_retrieve (&adm_access, adm_access,
+                                  svn_path_dirname (path, pool), pool));
+
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
      inappropriate property is allowed, however, since older clients
@@ -1320,7 +1331,8 @@ svn_wc_prop_set2 (const char *name,
      the first place. */
   if (value)
     {
-      SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
+      SVN_ERR (validate_prop_against_node_kind (name, path, entry->kind,
+                                                pool));
       if (!skip_checks && (strcmp (name, SVN_PROP_EOL_STYLE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
@@ -1365,7 +1377,7 @@ svn_wc_prop_set2 (const char *name,
         }
     }
 
-  if (kind == svn_node_file && strcmp (name, SVN_PROP_EXECUTABLE) == 0)
+  if (entry->kind == svn_node_file && strcmp (name, SVN_PROP_EXECUTABLE) == 0)
     {
       /* If the svn:executable property was set, then chmod +x.
          If the svn:executable property was deleted (NULL value passed
@@ -1389,7 +1401,7 @@ svn_wc_prop_set2 (const char *name,
         }
     }
 
-  if (kind == svn_node_file && strcmp (name, SVN_PROP_NEEDS_LOCK) == 0)
+  if (entry->kind == svn_node_file && strcmp (name, SVN_PROP_NEEDS_LOCK) == 0)
     {
       /* If the svn:needs-lock property was set to NULL, set the file
          to read-write */
@@ -1413,17 +1425,16 @@ svn_wc_prop_set2 (const char *name,
         }
     }
 
-  err = svn_wc_prop_list (&prophash, path, adm_access, pool);
+  if (new_value)
+    value = svn_string_create_from_buf (new_value, pool);
+
+  err = svn_wc__load_props (&base_prophash, &prophash, adm_access, base_name,
+                            pool);
   if (err)
     return
       svn_error_quick_wrap
       (err, _("Failed to load properties from disk"));
 
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, kind, FALSE,
-                                   pool));
-
-  base_prophash = apr_hash_make (pool);
-  SVN_ERR (svn_wc__load_prop_file (prop_base_path, base_prophash, pool));
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
    * expansion affects the comparison of working file to text base.
@@ -1432,34 +1443,16 @@ svn_wc_prop_set2 (const char *name,
    * property is set, we'll grab the new list and see if it differs
    * from the old one.
    */
-  if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
-    SVN_ERR (svn_wc__get_keywords (&old_keywords, path, adm_access, NULL,
-                                   pool));
-
-  /* Now we have all the properties in our hash.  Simply merge the new
-     property into it. */
-  if (new_value)
-    value = svn_string_create_from_buf (new_value, pool);
-  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, value);
-  
-  /* Get the entry name for this path. */
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  if (entry && entry->kind == svn_node_dir)
-    base_name = SVN_WC_ENTRY_THIS_DIR;
-  else
-    svn_path_split (path, NULL, &base_name, pool);
-
-  SVN_ERR (svn_wc__install_props (&log_accum, adm_access, base_name,
-                                  base_prophash, prophash, FALSE, pool));
-  SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
-  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
-
-  /* ### TODO: Make the rest of this function loggy. */
-  if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
+  if (entry->kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     {
-      apr_hash_t *new_keywords;
-      SVN_ERR (svn_wc__get_keywords (&new_keywords, path, adm_access, NULL,
-                                     pool));
+      svn_string_t *old_value = apr_hash_get (prophash, SVN_PROP_KEYWORDS,
+                                              APR_HASH_KEY_STRING);
+      apr_hash_t *old_keywords, *new_keywords;
+
+      SVN_ERR (svn_wc__get_keywords (&old_keywords, path, adm_access,
+                                     old_value ? old_value->data : "", pool));
+      SVN_ERR (svn_wc__get_keywords (&new_keywords, path, adm_access,
+                                     value ? value->data : "", pool));
 
       if (svn_subst_keywords_differ2 (old_keywords, new_keywords, FALSE, pool))
         {
@@ -1470,11 +1463,21 @@ svn_wc_prop_set2 (const char *name,
              a real (albeit slow) check later on. */
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
-          SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                                         TRUE, pool));
+          SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access,
+                                               base_name, &tmp_entry,
+                                               SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                                               pool));
         }
     }
+
+  /* Now we have all the properties in our hash.  Simply merge the new
+     property into it. */
+  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, value);
+  
+  SVN_ERR (svn_wc__install_props (&log_accum, adm_access, base_name,
+                                  base_prophash, prophash, FALSE, pool));
+  SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
 }
