@@ -675,9 +675,87 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
      generally makes the calling code simpler as it doesn't need to check
      for NULL batons. */
   if (! *adm_access)
-    return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                              _("Working copy '%s' is missing or not locked"),
-                              svn_path_local_style (path, pool));
+    {
+      const char *wcpath;
+      const svn_wc_entry_t *subdir_entry;
+      svn_node_kind_t wckind;
+      svn_node_kind_t kind;
+      svn_error_t *err;
+
+      err = svn_wc_entry (&subdir_entry, path, associated, TRUE, pool);
+      
+      /* If we can't get an entry here, we are in pretty bad shape,
+         and will have to fall back to using just regular old paths to
+         see what's going on.  */
+      if (err)
+        {
+          svn_error_clear (err);
+          subdir_entry = NULL;
+        }
+      
+      err = svn_io_check_path (path, &kind, pool);
+
+      /* If we can't check the path, we can't make a good error
+         message.  */
+      if (err)
+        {
+          svn_error_clear (err);          
+          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                    _("Unable to check path existence for %s"),
+                                    svn_path_local_style (path, pool));
+        }
+      
+      if (subdir_entry)        
+        {
+          if (subdir_entry->kind == svn_node_dir
+              && kind == svn_node_file)
+            {
+              return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                        _("Expected %s to be a directory but found a file"), 
+                                        svn_path_local_style (path, pool));
+            }
+          else if (subdir_entry->kind == svn_node_file
+                   && kind == svn_node_dir)
+            {
+              return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                        _("Expected %s to be a file but found a directory"), 
+                                        svn_path_local_style (path, pool));
+            }
+        }
+      
+      wcpath = svn_wc__adm_path (path, FALSE, pool, NULL);
+      err = svn_io_check_path (wcpath, &wckind, pool);
+      
+      /* If we can't check the path, we can't make a good error
+         message.  */
+      if (err)
+        {
+          svn_error_clear (err);          
+          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                    _("Unable to check path existence for %s"),
+                                    svn_path_local_style (wcpath, pool));
+        }
+
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                  _("Directory '%s' is missing"),
+                                  svn_path_local_style (path, pool));
+      
+      else if (kind == svn_node_dir && wckind == svn_node_none)
+        return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                  _("Directory '%s' containing working copy admin area is missing"),
+                                  svn_path_local_style (wcpath, pool));
+
+      else if (kind == svn_node_dir && wckind == svn_node_dir)
+        return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                  _("Unable to lock %s"),
+                                  svn_path_local_style (path, pool));
+      
+      /* If all else fails, return our useless generic error.  */
+      return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                _("Working copy '%s' is not locked"),
+                                svn_path_local_style (path, pool));        
+    }
 
   return SVN_NO_ERROR;
 }

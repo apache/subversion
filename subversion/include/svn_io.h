@@ -677,6 +677,18 @@ svn_error_t *svn_io_remove_file (const char *path, apr_pool_t *pool);
 /** Recursively remove directory @a path.  @a path is utf8-encoded. */
 svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
+/** Read all of the disk entries in directory @a path, a utf8-encoded
+ * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
+ * undefined non-NULL values, allocated in @a pool.
+ *
+ * @note The `.' and `..' directories normally returned by
+ * apr_dir_read() are NOT returned in the hash.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_io_get_dir_filenames (apr_hash_t **dirents,
+                                       const char *path,
+                                       apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
