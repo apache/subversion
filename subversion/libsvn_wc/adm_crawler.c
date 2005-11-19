@@ -173,7 +173,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                              dir_path, subpool);
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path, subpool));
   SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, subpool));
-  SVN_ERR (svn_io_get_dirents2 (&dirents, full_path, subpool));
+  SVN_ERR (svn_io_get_dir_filenames (&dirents, full_path, subpool));
   
   /*** Do the real reporting and recursing. ***/
   
@@ -256,8 +256,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           if (dirent_kind == svn_node_none)
             missing = TRUE;
         }
-      else
-        dirent_kind = dirent->kind;
       
       /* From here on out, ignore any entry scheduled for addition */
       if (current_entry->schedule == svn_wc_schedule_add)
@@ -266,18 +264,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       /*** Files ***/
       if (current_entry->kind == svn_node_file) 
         {
-          /* If the dirent changed kind, report it as missing and
-             move on to the next entry.  Later on, the update
-             editor will return an 'obstructed update' error.  :) */
-          if ((dirent_kind != svn_node_none)
-              && (dirent_kind != svn_node_file)
-              && (! report_everything))
-            {
-              SVN_ERR (reporter->delete_path (report_baton, this_path, 
-                                              iterpool));
-              continue;
-            }
-
           /* If the item is missing from disk, and we're supposed to
              restore missing things, and it isn't missing as a result
              of a scheduling operation, then ... */
@@ -355,19 +341,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                 SVN_ERR (reporter->delete_path (report_baton, this_path,
                                                 iterpool));
               continue;
-            }
-          
-          /* No excuses here.  If the user changed a versioned
-             directory into something else, the working copy is hosed.
-             It can't receive updates within this dir anymore.  Throw
-             a real error. */
-          if ((dirent_kind != svn_node_none) && (dirent_kind != svn_node_dir))
-            {
-              return svn_error_createf
-                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                 _("The entry '%s' is no longer a directory; "
-                   "remove the entry before updating"),
-                 svn_path_local_style (this_path, iterpool));
             }
 
           /* We need to read the full entry of the directory from its
