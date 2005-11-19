@@ -748,8 +748,10 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  * terminated by @c NULL.  @a args[0] is the name of the program, though it
  * need not be the same as @a cmd.
  *
- * @a inherit sets whether the invoked program shall inherit its environment or
- * run "clean".
+ * If @a inherit is true, the invoked program inherits its environment from
+ * the caller and @a cmd, if not absolute, is searched for in PATH.
+ * Otherwise, the invoked program runs with an empty environment and @a cmd
+ * must be an absolute path.
  *
  * @note On some platforms, failure to execute @a cmd in the child process
  * will result in error output being written to @a errfile, if non-NULL, and
