@@ -1774,22 +1774,22 @@ def mixed_wc_to_url(sbox):
 def wc_copy_replacement(sbox):
   "svn cp PATH PATH replace file"
   
-  copy_replace(sbox, True)
+  copy_replace(sbox, 1)
 
 def wc_copy_replace_with_props(sbox):
   "svn cp PATH PATH replace file with props"
 
-  copy_replace_with_props(sbox, True)
+  copy_replace_with_props(sbox, 1)
 
 def repos_to_wc_copy_replacement(sbox):
   "svn cp URL PATH replace file"
 
-  copy_replace(sbox, False)
+  copy_replace(sbox, 0)
 
 def repos_to_wc_copy_replace_with_props(sbox):
   "svn cp URL PATH replace file with props"
 
-  copy_replace_with_props(sbox, False)
+  copy_replace_with_props(sbox, 0)
 
 def delete_replaced_file(sbox):
   "delete file scheduled for replace"
