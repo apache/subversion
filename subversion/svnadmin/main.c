@@ -977,8 +977,9 @@ subcommand_verify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   SVN_ERR (svn_fs_youngest_rev (&youngest, svn_repos_fs (repos), pool));
   SVN_ERR (create_stdio_stream (&stderr_stream, apr_file_open_stderr, pool));
-  SVN_ERR (svn_repos_dump_fs (repos, NULL, stderr_stream, 
-                              0, youngest, FALSE, check_cancel, NULL, pool));
+  SVN_ERR (svn_repos_dump_fs2 (repos, NULL, stderr_stream, 
+                               0, youngest, FALSE, FALSE, check_cancel, NULL,
+                               pool));
   return SVN_NO_ERROR;
 }
 
