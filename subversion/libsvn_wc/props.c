@@ -436,7 +436,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   for (i = 0; i < propchanges->nelts; i++)
     {
       const char *propname;
-      svn_string_t *conflict_description;
+      svn_string_t *conflict_description = NULL; /* Silence gcc warning */
       const svn_prop_t *incoming_change;
       const svn_string_t *from_val, *to_val, *working_val;
       svn_boolean_t is_normal, conflict = FALSE;
