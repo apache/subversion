@@ -135,7 +135,8 @@ send_file_contents (const char *path,
                 ".tmp", svn_io_file_del_on_pool_cleanup, pool));
 
       SVN_ERR (svn_subst_translate_to_normal_form
-               (path, tmpfile_path, eol_style, eol, keywords, special, pool));
+               (path, tmpfile_path, eol_style, eol, FALSE,
+                keywords, special, pool));
     }
 
   /* Open our contents file, either the original path or the temporary
