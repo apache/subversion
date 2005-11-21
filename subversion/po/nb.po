@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-11-21 17:29+0100\n"
-"PO-Revision-Date: 2005-11-13 18:53+0100\n"
+"PO-Revision-Date: 2005-11-21 19:12+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1627,9 +1627,8 @@ msgid "Second revision required"
 msgstr "Andre revisjon er påkrevd"
 
 #: clients/cmdline/merge-cmd.c:72 clients/cmdline/merge-cmd.c:95
-#, fuzzy
 msgid "Too many arguments given"
-msgstr "For mange argumenter til import-kommando"
+msgstr "For mange argumenter angitt"
 
 #: clients/cmdline/merge-cmd.c:116
 msgid "A working copy merge source needs an explicit revision"
@@ -2779,7 +2778,7 @@ msgstr "Klientfeil under analysering av argumenter"
 
 #: include/svn_error_codes.h:998
 msgid "Not enough arguments provided; try 'svn help' for more info"
-msgstr ""
+msgstr "Ikke nok argumenter angitt; prøv «svn help» for mer informasjon"
 
 #: include/svn_error_codes.h:1002
 msgid "Mutually exclusive arguments specified"
@@ -6544,39 +6543,39 @@ msgstr ""
 "Filstien «%s» slutter på «%s» som ikke er støttet til denne operasjonen"
 
 #: libsvn_wc/lock.c:704 libsvn_wc/lock.c:735
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to check path existence for %s"
-msgstr "Klarer ikke lage navn for «%s»"
+msgstr "Klarer ikke å sjekke at stien eksisterer for %s"
 
 #: libsvn_wc/lock.c:714
 #, c-format
 msgid "Expected %s to be a directory but found a file"
-msgstr ""
+msgstr "Forventet at %s skulle være en katalog, men fant en fil"
 
 #: libsvn_wc/lock.c:721
-#, fuzzy, c-format
+#, c-format
 msgid "Expected %s to be a file but found a directory"
-msgstr "URL-en «%s» refererer til en fil, ikke en katalog"
+msgstr "Forventet at %s skulle være en fil, men fant en katalog"
 
 #: libsvn_wc/lock.c:741
-#, fuzzy, c-format
+#, c-format
 msgid "Directory '%s' is missing"
-msgstr "Katalogen «%s» mangler adresse"
+msgstr "Katalogen «%s» mangler"
 
 #: libsvn_wc/lock.c:746
 #, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
-msgstr ""
+msgstr "Katalogen «%s» som inneholder administrasjonsområdet for arbeidskopien mangler"
 
 #: libsvn_wc/lock.c:751
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to lock %s"
-msgstr "Klarte ikke å tolke låsedata"
+msgstr "Klarer ikke å låse %s"
 
 #: libsvn_wc/lock.c:756
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy '%s' is not locked"
-msgstr "Arbeidskopien «%s» er låst"
+msgstr "Arbeidskopien «%s» er ikke låst"
 
 #: libsvn_wc/lock.c:1157
 #, c-format
