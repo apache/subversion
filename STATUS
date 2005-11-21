@@ -9,13 +9,13 @@ Status of 1.3.0:
 
 Candidate changes:
 
+Approved changes:
+
   * r17358  (Issue #2423)
     mod_dav_svn should escape paths with ":" in their names for browsing
     Justification: Theoretical exploit possible, though none reported.
     Votes:
-      +1: kfogel, maxb
-
-Approved changes:
+      +1: kfogel, maxb, lundblad
 
 Status of 1.3.1:
 ================
