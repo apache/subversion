@@ -246,6 +246,25 @@ fi
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
+echo "Downloading book into sandbox..."
+
+BOOK_PDF=http://svnbook.red-bean.com/en/1.1/svn-book.pdf
+BOOK_HTML=http://svnbook.red-bean.com/en/1.1/svn-book.html
+
+# We don't include the book source in newer versions of our trees
+# so if the doc/book/book path doesn't exist then use doc/book
+if [ -d "$DISTPATH/doc/book/book" ]; then
+  BOOK_DEST="$DISTPATH/doc/book/book"
+else
+  BOOK_DEST="$DISTPATH/doc/book"
+fi
+
+$HTTP_FETCH $BOOK_PDF $HTTP_FETCH_OUTPUT "$BOOK_DEST/svn-book.pdf" ||
+  ( echo "ERROR: Problem getting the svn-book.pdf file." && exit 1 )
+
+$HTTP_FETCH $BOOK_HTML $HTTP_FETCH_OUTPUT "$BOOK_DEST/svn-book.html" ||
+  ( echo "ERROR: Problem getting the svn-book.html file." && exit 1 )
+
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
 
