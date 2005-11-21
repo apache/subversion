@@ -233,6 +233,11 @@ Possible values are: commit, revert."
               (const revert))
   :group 'psvn)
 
+(defcustom svn-status-preserve-window-configuration nil
+  "*Try to preserve the window configuration."
+  :type 'boolean
+  :group 'psvn)
+
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -2476,8 +2481,9 @@ Consider svn-status-window-alist to choose the buffer name."
     (when svn-status-last-output-buffer-name
       (if window-mode
           (progn
-            (when (string= (buffer-name) svn-status-buffer-name)
-              (delete-other-windows))
+            (unless svn-status-preserve-window-configuration
+              (when (string= (buffer-name) svn-status-buffer-name)
+                (delete-other-windows)))
             (pop-to-buffer "*svn-process*")
             (switch-to-buffer (get-buffer-create svn-status-last-output-buffer-name))
             (let ((buffer-read-only nil))
