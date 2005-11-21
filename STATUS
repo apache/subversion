@@ -15,13 +15,6 @@ Candidate changes:
     Votes:
       +1: kfogel, maxb
 
-  * r17449
-    Fix the tests to work again on Redhat 7.3 (python 2.2) which doesn't have
-    True and False.
-    Justficiation: Makes the RPM build work again.
-    Votes:
-      +1: david
-
 Approved changes:
 
 Status of 1.3.1:
