@@ -97,33 +97,6 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
 }
 
 
-svn_error_t *
-svn_subst_eol_style_normalize (svn_boolean_t *force_repair,
-                               const char **eol,
-                               svn_subst_eol_style_t style)
-{
-  *force_repair = style == svn_subst_eol_style_fixed;
-  switch (style)
-    {
-    case svn_subst_eol_style_fixed:
-      break;
-
-    case svn_subst_eol_style_native:
-      *eol = SVN_SUBST__DEFAULT_EOL_STR;
-      break;
-
-    case svn_subst_eol_style_none:
-      *eol = NULL;
-      break;
-
-    default:
-      return svn_error_create (SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_boolean_t
 svn_subst_translation_required (svn_subst_eol_style_t style,
                                 const char *eol,
@@ -145,16 +118,21 @@ svn_subst_translate_to_normal_form (const char *src,
                                     const char *dst,
                                     svn_subst_eol_style_t eol_style,
                                     const char *eol_str,
+                                    svn_boolean_t always_repair_eols,
                                     apr_hash_t *keywords,
                                     svn_boolean_t special,
                                     apr_pool_t *pool)
 {
-  svn_boolean_t force_repair;
 
-  SVN_ERR (svn_subst_eol_style_normalize (&force_repair, &eol_str,
-                                          eol_style));
+  if (eol_style == svn_subst_eol_style_native)
+    eol_str = SVN_SUBST__DEFAULT_EOL_STR;
+  else if (! (eol_style == svn_subst_eol_style_fixed
+              || eol_style == svn_subst_eol_style_none))
+    return svn_error_create (SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-  return svn_subst_copy_and_translate3 (src, dst, eol_str, force_repair,
+  return svn_subst_copy_and_translate3 (src, dst, eol_str,
+                                        eol_style == svn_subst_eol_style_fixed
+                                        || always_repair_eols,
                                         keywords,
                                         FALSE /* contract keywords */,
                                         special,

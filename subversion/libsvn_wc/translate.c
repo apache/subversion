@@ -89,14 +89,16 @@ svn_wc_translated_file2 (const char **xlated_path,
 
       if (flags & SVN_WC_TRANSLATE_TO_NF)
         SVN_ERR (svn_subst_translate_to_normal_form
-                 (src, tmp_vfile, style, eol, keywords, special, pool));
+                 (src, tmp_vfile, style, eol,
+                  flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR,
+                  keywords, special, pool));
       else /* translate */
-        SVN_ERR (svn_subst_copy_and_translate3 (src,
-                                                tmp_vfile,
-                                                eol, FALSE,
-                                                keywords, TRUE,
-                                                special,
-                                                pool));
+        SVN_ERR (svn_subst_copy_and_translate3
+                 (src, tmp_vfile,
+                  eol, flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR,
+                  keywords, TRUE,
+                  special,
+                  pool));
       *xlated_path = tmp_vfile;
     }
 
@@ -111,10 +113,11 @@ svn_wc_translated_file (const char **xlated_p,
                         svn_boolean_t force_repair,
                         apr_pool_t *pool)
 {
-  /* we discard the force_repair flag,
-     because we know what to do ourselves now... but is it acceptable?! */
   return svn_wc_translated_file2 (xlated_p, vfile, vfile, adm_access,
-                                  SVN_WC_TRANSLATE_TO_NF, pool);
+                                  SVN_WC_TRANSLATE_TO_NF
+                                  | (force_repair ?
+                                     SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
+                                  pool);
 }
 
 
