@@ -62,6 +62,7 @@ struct file_rev_baton {
                           during a diff */
   struct blame *blame; /* linked list of blame chunks */
   struct blame *avail; /* linked list of free blame chunks */
+  const char *tmp_path; /* temp file name to feed svn_io_open_unique_file */
   apr_pool_t *mainpool;  /* lives during the whole sequence of calls */
   apr_pool_t *lastpool;  /* pool used during previous call */
   apr_pool_t *currpool;  /* pool used during this call */
@@ -377,7 +378,6 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
   struct file_rev_baton *frb = baton;
   svn_stream_t *last_stream;
   svn_stream_t *cur_stream;
-  const char *temp_dir;
   struct delta_baton *delta_baton;
 
   /* Clear the current pool. */
@@ -422,11 +422,9 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
     delta_baton->source_file = NULL;
   last_stream = svn_stream_from_aprfile (delta_baton->source_file, pool);
 
-  SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
   SVN_ERR (svn_io_open_unique_file2 (&delta_baton->file,
                                      &delta_baton->filename,
-                                     svn_path_join (temp_dir, "tmp",
-                                                    frb->currpool),
+                                     frb->tmp_path,
                                      ".tmp", svn_io_file_del_on_pool_cleanup,
                                      frb->currpool));
   cur_stream = svn_stream_from_aprfile (delta_baton->file, frb->currpool);
@@ -530,6 +528,10 @@ svn_client_blame2 (const char *target,
   frb.last_filename = NULL;
   frb.blame = NULL;
   frb.avail = NULL;
+
+  SVN_ERR (svn_io_temp_dir (&frb.tmp_path, pool));
+  frb.tmp_path = svn_path_join (frb.tmp_path, "tmp", pool),
+
   frb.mainpool = pool;
   /* The callback will flip the following two pools, because it needs
      information from the previous call.  Obviously, it can't rely on
