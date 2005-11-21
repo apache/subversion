@@ -2458,7 +2458,14 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 	/* We quote special characters in both XML and HTML. */
 	name = apr_xml_quote_string(entry_pool, name, !gen_html);
 
-        href = ap_escape_uri(entry_pool, href);
+        /* According to httpd-2.0.54/include/httpd.h, ap_os_escape_path()
+           behaves differently on different platforms.  It claims to
+           "convert an OS path to a URL in an OS dependant way".
+           Nevertheless, there appears to be only one implementation
+           of the function in httpd, and the code seems completely
+           platform independent, so we'll assume it's appropriate for
+           mod_dav_svn to use it to quote outbound paths. */
+        href = ap_os_escape_path(entry_pool, href, 0);
 	href = apr_xml_quote_string(entry_pool, href, 1);
 
         if (gen_html)
