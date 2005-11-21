@@ -51,6 +51,7 @@
 ;; C-d   - svn-status-rm                    run 'svn rm'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
 ;; b     - svn-status-blame                 run 'svn blame'
+;; X e   - svn-status-export                run 'svn export'
 ;; RET   - svn-status-find-file-or-examine-directory
 ;; ^     - svn-status-examine-parent
 ;; ~     - svn-status-get-specific-revision
@@ -138,7 +139,7 @@
 ;; * copy (cp)
 ;; * delete (del, remove, rm)  implemented
 ;; * diff (di)                 implemented
-;; * export
+;; * export                    implemented
 ;; * help (?, h)
 ;; * import
 ;; * info                      implemented
@@ -246,6 +247,10 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 (put 'svn-status-svn-executable 'risky-local-variable t)
+
+(defcustom svn-status-default-export-directory "~/" "*The default directory that is suggested svn export."
+  :type 'file
+  :group 'psvn)
 
 (defcustom svn-status-svn-environment-var-list '()
   "*A list of environment variables that should be set for that svn process.
@@ -1335,6 +1340,7 @@ A and B must be line-info's."
   (setq svn-status-mode-extension-map (make-sparse-keymap))
   (define-key svn-status-mode-extension-map (kbd "v") 'svn-status-resolved)
   (define-key svn-status-mode-extension-map (kbd "X") 'svn-status-resolve-conflicts)
+  (define-key svn-status-mode-extension-map (kbd "e") 'svn-status-export)
   (define-key svn-status-mode-map (kbd "X") svn-status-mode-extension-map))
 (when (not svn-status-mode-options-map)
   (setq svn-status-mode-options-map (make-sparse-keymap))
@@ -1371,6 +1377,7 @@ A and B must be line-info's."
     ["svn mkdir..." svn-status-make-directory t]
     ["svn mv..." svn-status-mv t]
     ["svn rm..." svn-status-rm t]
+    ["svn export..." svn-status-export t]
     ["Up Directory" svn-status-examine-parent t]
     ["Elide Directory" svn-status-toggle-elide t]
     ["svn revert" svn-status-revert t]
@@ -2779,6 +2786,17 @@ If no files have been marked, commit recursively the file at point."
       (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
         (insert-file svn-log-edit-file-name)))
     (svn-log-edit-mode)))
+
+(defun svn-status-export ()
+  "Run `svn export' for the current working copy.
+Ask the user for the destination path.
+`svn-status-default-export-directory' is suggested as export directory."
+  (interactive)
+  (let* ((src default-directory)
+         (dir1-name (nth 1 (nreverse (split-string src "/"))))
+         (dest (read-file-name (format "Export %s to " src) (concat svn-status-default-export-directory dir1-name))))
+    (svn-run-svn t t 'export "export" (expand-file-name src) (expand-file-name dest))
+    (message "svn-status-export %s %s" src dest)))
 
 (defun svn-status-cleanup (arg)
   "Run `svn cleanup' on all selected files.
