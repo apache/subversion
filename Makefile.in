@@ -390,12 +390,12 @@ davautocheck:
 	@APXS=$(APXS) sh $(top_srcdir)/subversion/tests/clients/cmdline/davautocheck.sh
 
 # First, run:
-#   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
+#   ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
 svncheck: 
 	@$(MAKE) check BASE_URL=svn://localhost
 
 # First, run:
-#   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/clients/cmdline
+#   ./subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/clients/cmdline
 
 svncheck6: 
 	@$(MAKE) check BASE_URL=svn://\[::1\]
