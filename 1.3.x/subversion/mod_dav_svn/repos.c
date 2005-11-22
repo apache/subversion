@@ -869,14 +869,23 @@ static dav_resource *dav_svn_create_private_resource(
   dav_resource_combined *comb;
   svn_stringbuf_t *path;
   const struct special_defn *defn;
-
+  
   for (defn = special_subdirs; defn->name != NULL; ++defn)
     if (defn->restype == restype)
       break;
   /* assert: defn->name != NULL */
 
+#if !APR_CHARSET_EBCDIC
   path = svn_stringbuf_createf(base->pool, "/%s/%s",
                             base->info->repos->special_uri, defn->name);
+#else
+  /* Work-around the fact that svn printf style functions in the
+   * ebcdic port must use utf-8 encoded variable string args. */
+  path = svn_stringbuf_createf(base->pool, "/");
+  svn_stringbuf_appendcstr(path, base->info->repos->special_uri);
+  svn_stringbuf_appendcstr(path, "/");
+  svn_stringbuf_appendcstr(path, defn->name);
+#endif
 
   comb = apr_pcalloc(base->pool, sizeof(*comb));
 
