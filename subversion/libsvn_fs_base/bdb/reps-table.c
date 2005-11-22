@@ -45,9 +45,8 @@ svn_fs_bdb__open_reps_table (DB **reps_p,
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&reps, env, 0));
   BDB_ERR (reps->open (SVN_BDB_OPEN_PARAMS(reps, NULL),
-                      "representations", 0, DB_BTREE,
-                      open_flags | SVN_BDB_AUTO_COMMIT,
-                      0666));
+                       "representations", 0, DB_BTREE,
+                       open_flags, 0666));
 
   /* Create the `next-key' table entry.  */
   if (create)
@@ -57,8 +56,7 @@ svn_fs_bdb__open_reps_table (DB **reps_p,
     BDB_ERR (reps->put
             (reps, 0,
              svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
-             svn_fs_base__str_to_dbt (&value, "0"),
-             SVN_BDB_AUTO_COMMIT));
+             svn_fs_base__str_to_dbt (&value, "0"), 0));
   }
 
   *reps_p = reps;

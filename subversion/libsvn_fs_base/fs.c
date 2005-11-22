@@ -45,6 +45,7 @@
 
 #include "bdb/bdb-err.h"
 #include "bdb/bdb_compat.h"
+#include "bdb/env.h"
 #include "bdb/nodes-table.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
@@ -170,7 +171,7 @@ cleanup_fs (svn_fs_t *fs)
   /* Finally, close the environment.  */
   bfd->env = 0;
   SVN_ERR (BDB_WRAP (fs, "closing environment",
-                    env->close (env, 0)));
+                     svn_fs_bdb__close_env (env)));
 
   return SVN_NO_ERROR;
 }
@@ -370,7 +371,6 @@ allocate_env (svn_fs_t *fs)
   return SVN_NO_ERROR;
 }
 
-
 
 /* Write the DB_CONFIG file. */
 static svn_error_t *
@@ -562,10 +562,12 @@ static fs_vtable_t fs_vtable = {
 /* Where the format number is stored. */
 #define FORMAT_FILE   "format"
 
+/* Depending on CREATE, create or open the environment and databases
+   for filesystem FS in PATH. Use POOL for temporary allocations. */
 static svn_error_t *
-base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+open_databases (svn_fs_t *fs, svn_boolean_t create,
+                const char *path, apr_pool_t *pool)
 {
-  svn_error_t *svn_err;
   const char *path_native;
   base_fs_data_t *bfd;
 
@@ -581,65 +583,81 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
 
-  SVN_ERR (bdb_write_config (fs));
+  if (create)
+    SVN_ERR (bdb_write_config (fs));
 
-  svn_err = allocate_env (fs);
-  if (svn_err) goto error;
+  SVN_ERR (allocate_env (fs));
 
   /* Create the Berkeley DB environment.  */
-  svn_err = svn_utf_cstring_from_utf8 (&path_native, fs->path, pool);
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating environment",
-                      bfd->env->open (bfd->env, path_native,
-                                      (DB_CREATE
-                                       | DB_INIT_LOCK
-                                       | DB_INIT_LOG
-                                       | DB_INIT_MPOOL
-                                       | DB_INIT_TXN
-                                       | SVN_BDB_AUTO_RECOVER),
-                                      0666));
-  if (svn_err) goto error;
+  SVN_ERR (svn_fs_bdb__path_from_utf8 (&path_native, fs->path, pool));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating environment"
+                          : "opening environment"),
+                     svn_fs_bdb__open_env (&(bfd->env), path_native,
+                                           SVN_BDB_STANDARD_ENV_FLAGS,
+                                           0666)));
 
   /* Create the databases in the environment.  */
-  svn_err = BDB_WRAP (fs, "creating 'nodes' table",
-                      svn_fs_bdb__open_nodes_table (&bfd->nodes, bfd->env,
-                                                    TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'revisions' table",
-                      svn_fs_bdb__open_revisions_table (&bfd->revisions,
-                                                        bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'transactions' table",
-                      svn_fs_bdb__open_transactions_table (&bfd->transactions,
-                                                           bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'copies' table",
-                      svn_fs_bdb__open_copies_table (&bfd->copies,
-                                                     bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'changes' table",
-                      svn_fs_bdb__open_changes_table (&bfd->changes,
-                                                      bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'representations' table",
-                      svn_fs_bdb__open_reps_table (&bfd->representations,
-                                                   bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'strings' table",
-                      svn_fs_bdb__open_strings_table (&bfd->strings,
-                                                      bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'uuids' table",
-                      svn_fs_bdb__open_uuids_table (&bfd->uuids,
-                                                    bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'locks' table",
-                      svn_fs_bdb__open_locks_table (&bfd->locks,
-                                                    bfd->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'lock-nodes' table",
-                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
-                                                          bfd->env, TRUE));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'nodes' table"
+                          : "opening 'nodes' table"),
+                     svn_fs_bdb__open_nodes_table (&bfd->nodes, bfd->env,
+                                                   create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'revisions' table"
+                          : "opening 'revisions' table"),
+                     svn_fs_bdb__open_revisions_table (&bfd->revisions,
+                                                       bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'transactions' table"
+                          : "opening 'transactions' table"),
+                     svn_fs_bdb__open_transactions_table (&bfd->transactions,
+                                                          bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'copies' table"
+                          : "opening 'copies' table"),
+                     svn_fs_bdb__open_copies_table (&bfd->copies,
+                                                    bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'changes' table"
+                          : "opening 'changes' table"),
+                     svn_fs_bdb__open_changes_table (&bfd->changes,
+                                                     bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'representations' table"
+                          : "opening 'representations' table"),
+                     svn_fs_bdb__open_reps_table (&bfd->representations,
+                                                  bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'strings' table"
+                          : "opening 'strings' table"),
+                     svn_fs_bdb__open_strings_table (&bfd->strings,
+                                                     bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'uuids' table"
+                          : "opening 'uuids' table"),
+                     svn_fs_bdb__open_uuids_table (&bfd->uuids,
+                                                   bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'locks' table"
+                          : "opening 'locks' table"),
+                     svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                   bfd->env, create)));
+  SVN_ERR (BDB_WRAP (fs, (create
+                          ? "creating 'lock-nodes' table"
+                          : "opening 'lock-nodes' table"),
+                     svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                         bfd->env, create)));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+{
+  /* Create the environment and databases. */
+  svn_error_t *svn_err = open_databases (fs, TRUE, path, pool);
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
@@ -683,80 +701,10 @@ check_format (int format)
 static svn_error_t *
 base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  svn_error_t *svn_err;
-  const char *path_native;
-  base_fs_data_t *bfd;
   int format;
 
-  SVN_ERR (check_already_open (fs));
-
-  apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
-                             apr_pool_cleanup_null);
-
-  bfd = apr_pcalloc (fs->pool, sizeof (*bfd));
-  fs->vtable = &fs_vtable;
-  fs->fsap_data = bfd;
-
-  /* Initialize paths. */
-  fs->path = apr_pstrdup (fs->pool, path);
-
-  svn_err = allocate_env (fs);
-  if (svn_err) goto error;
-
-  /* Open the Berkeley DB environment.  */
-  svn_err = svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool);
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening environment",
-                      bfd->env->open (bfd->env, path_native,
-                                      (DB_CREATE
-                                       | DB_INIT_LOCK
-                                       | DB_INIT_LOG
-                                       | DB_INIT_MPOOL
-                                       | DB_INIT_TXN
-                                       | SVN_BDB_AUTO_RECOVER),
-                                      0666));
-  if (svn_err) goto error;
-
-  /* Open the various databases.  */
-  svn_err = BDB_WRAP (fs, "opening 'nodes' table",
-                      svn_fs_bdb__open_nodes_table (&bfd->nodes,
-                                                    bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'revisions' table",
-                      svn_fs_bdb__open_revisions_table (&bfd->revisions,
-                                                        bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'transactions' table",
-                      svn_fs_bdb__open_transactions_table (&bfd->transactions,
-                                                           bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'copies' table",
-                      svn_fs_bdb__open_copies_table (&bfd->copies,
-                                                     bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'changes' table",
-                      svn_fs_bdb__open_changes_table (&bfd->changes,
-                                                      bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'representations' table",
-                      svn_fs_bdb__open_reps_table (&bfd->representations,
-                                                   bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'strings' table",
-                      svn_fs_bdb__open_strings_table (&bfd->strings,
-                                                      bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'uuids' table",
-                      svn_fs_bdb__open_uuids_table (&bfd->uuids,
-                                                    bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'locks' table",
-                      svn_fs_bdb__open_locks_table (&bfd->locks,
-                                                    bfd->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'lock-nodes' table",
-                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
-                                                         bfd->env, FALSE));
+  /* Create the environment and databases. */
+  svn_error_t *svn_err = open_databases (fs, FALSE, path, pool);
   if (svn_err) goto error;
 
   /* Read the FS format number. */
@@ -774,7 +722,7 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
     }
   else if (svn_err)
     goto error;
-  
+
   /* Now we've got a format number no matter what. */
   ((base_fs_data_t *) fs->fsap_data)->format = format;
   SVN_ERR (check_format (format));
@@ -816,16 +764,13 @@ bdb_recover (const char *path, svn_boolean_t fatal, apr_pool_t *pool)
      /not/ initialize locking. We want the environment files to go
      away. */
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    ((fatal ? DB_RECOVER_FATAL : DB_RECOVER)
-                                     | DB_CREATE
-                                     | DB_INIT_LOG
-                                     | DB_INIT_MPOOL
-                                     | DB_INIT_TXN
-                                     | DB_PRIVATE),
-                          0666));
-  SVN_BDB_ERR (ec_baton, env->close (env, 0));
+  SVN_ERR (svn_fs_bdb__path_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (ec_baton,
+               svn_fs_bdb__open_env (&env, path_native,
+                                     ((fatal ? DB_RECOVER_FATAL : DB_RECOVER)
+                                      | SVN_BDB_PRIVATE_ENV_FLAGS),
+                                     0666));
+  SVN_BDB_ERR (ec_baton, svn_fs_bdb__close_env (env));
 
   return SVN_NO_ERROR;
 }
@@ -858,17 +803,16 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
   *logfiles = apr_array_make (pool, 4, sizeof (const char *));
 
   SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN
-                                     | SVN_BDB_AUTO_RECOVER),
-                          0666));
+  SVN_ERR (svn_fs_bdb__path_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (ec_baton,
+               svn_fs_bdb__open_env (&env, path_native,
+                                     SVN_BDB_STANDARD_ENV_FLAGS,
+                                     0666));
   SVN_BDB_ERR (ec_baton, env->log_archive (env, &filelist, flags));
 
   if (filelist == NULL)
     {
-      SVN_BDB_ERR (ec_baton, env->close (env, 0));
+      SVN_BDB_ERR (ec_baton, svn_fs_bdb__close_env (env));
       return SVN_NO_ERROR;
     }
 
@@ -879,7 +823,7 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
 
   free (filelist);
 
-  SVN_BDB_ERR (ec_baton, env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, svn_fs_bdb__close_env (env));
 
   return SVN_NO_ERROR;
 }
@@ -972,16 +916,14 @@ check_env_flags (svn_boolean_t *match,
   bdb_errcall_baton_t *ec_baton;
 
   SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-
-  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN
-                                     | SVN_BDB_AUTO_RECOVER),
-                          0666));
+  SVN_ERR (svn_fs_bdb__path_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (ec_baton,
+               svn_fs_bdb__open_env (&env, path_native,
+                                     SVN_BDB_STANDARD_ENV_FLAGS,
+                                     0666));
 
   SVN_BDB_ERR (ec_baton, env->get_flags (env, &envflags));
-  SVN_BDB_ERR (ec_baton, env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, svn_fs_bdb__close_env (env));
 
   if (flags & envflags)
     *match = TRUE;
@@ -1006,13 +948,11 @@ get_db_pagesize (u_int32_t *pagesize,
   bdb_errcall_baton_t *ec_baton;
 
   SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-
-  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN
-                                     | SVN_BDB_AUTO_RECOVER),
-                          0666));
+  SVN_ERR (svn_fs_bdb__path_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (ec_baton,
+               svn_fs_bdb__open_env (&env, path_native,
+                                     SVN_BDB_STANDARD_ENV_FLAGS,
+                                     0666));
 
   /* ### We're only asking for the pagesize on the 'nodes' table.
          Is this enough?  We never call DB->set_pagesize() on any of
@@ -1022,7 +962,7 @@ get_db_pagesize (u_int32_t *pagesize,
                                                        FALSE));
   SVN_BDB_ERR (ec_baton, nodes_table->get_pagesize (nodes_table, pagesize));
   SVN_BDB_ERR (ec_baton, nodes_table->close (nodes_table, 0));
-  SVN_BDB_ERR (ec_baton, env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, svn_fs_bdb__close_env (env));
 
   return SVN_NO_ERROR;
 }

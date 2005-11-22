@@ -49,8 +49,7 @@ svn_fs_bdb__open_uuids_table (DB **uuids_p,
 
   error = uuids->open (SVN_BDB_OPEN_PARAMS (uuids, NULL),
                        "uuids", 0, DB_RECNO,
-                       open_flags | SVN_BDB_AUTO_COMMIT,
-                       0666);
+                       open_flags, 0666);
 
   /* This is a temporary compatibility check; it creates the
      UUIDs table if one does not already exist. */
@@ -80,8 +79,7 @@ svn_fs_bdb__open_uuids_table (DB **uuids_p,
       apr_uuid_get (&uuid);
       apr_uuid_format (buffer, &uuid);
 
-      BDB_ERR (uuids->put (uuids, 0, &key, &value,
-                           DB_APPEND | SVN_BDB_AUTO_COMMIT));
+      BDB_ERR (uuids->put (uuids, 0, &key, &value, DB_APPEND));
     }
 
   *uuids_p = uuids;

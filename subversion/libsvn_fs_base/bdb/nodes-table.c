@@ -51,9 +51,8 @@ svn_fs_bdb__open_nodes_table (DB **nodes_p,
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&nodes, env, 0));
   BDB_ERR (nodes->open (SVN_BDB_OPEN_PARAMS(nodes, NULL),
-                       "nodes", 0, DB_BTREE,
-                       open_flags | SVN_BDB_AUTO_COMMIT,
-                       0666));
+                        "nodes", 0, DB_BTREE,
+                        open_flags, 0666));
 
   /* Create the `next-id' table entry (use '1' because '0' is
      reserved for the root directory to use). */
@@ -62,9 +61,8 @@ svn_fs_bdb__open_nodes_table (DB **nodes_p,
     DBT key, value;
 
     BDB_ERR (nodes->put (nodes, 0,
-                        svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
-                        svn_fs_base__str_to_dbt (&value, "1"),
-                        SVN_BDB_AUTO_COMMIT));
+                         svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
+                         svn_fs_base__str_to_dbt (&value, "1"), 0));
   }
 
   *nodes_p = nodes;

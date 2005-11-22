@@ -48,9 +48,8 @@ svn_fs_bdb__open_strings_table (DB **strings_p,
   BDB_ERR (strings->set_flags (strings, DB_DUP));
 
   BDB_ERR (strings->open (SVN_BDB_OPEN_PARAMS(strings, NULL),
-                         "strings", 0, DB_BTREE,
-                         open_flags | SVN_BDB_AUTO_COMMIT,
-                         0666));
+                          "strings", 0, DB_BTREE,
+                          open_flags, 0666));
 
   if (create)
     {
@@ -60,8 +59,7 @@ svn_fs_bdb__open_strings_table (DB **strings_p,
       BDB_ERR (strings->put
               (strings, 0,
                svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
-               svn_fs_base__str_to_dbt (&value, "0"),
-               SVN_BDB_AUTO_COMMIT));
+               svn_fs_base__str_to_dbt (&value, "0"), 0));
     }
 
   *strings_p = strings;

@@ -26,6 +26,8 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 
+#include "../fs.h"              /* For bdb_errcall_baton_t. */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
