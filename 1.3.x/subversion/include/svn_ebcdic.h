@@ -251,6 +251,7 @@ svn_ebcdic_run_unix_type_script (const char *path,
                                  svn_boolean_t check_exitcode,
                                  svn_boolean_t read_stdout,
                                  svn_boolean_t read_sterr,
+                                 svn_stringbuf_t **err_stream,
                                  apr_pool_t *pool);
 
 
