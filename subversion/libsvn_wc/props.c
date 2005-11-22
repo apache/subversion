@@ -60,8 +60,8 @@
 
 
 /* Given two propchange objects, return TRUE iff they conflict.  If
-   there's a conflict, DESCRIPTION will contain an english description
-   of the problem. */
+   there's a conflict, set *DESCRIPTION to a human-readable description
+   of the problem.  Otherwise, set *DESCRIPTION to NULL. */
 
 /* For note, here's the table being implemented:
 
@@ -75,12 +75,14 @@
   ----------------------------------------------------
 
 */
-svn_boolean_t
-svn_wc__conflicting_propchanges_p (const svn_string_t **description,
-                                   const svn_prop_t *local,
-                                   const svn_prop_t *update,
-                                   apr_pool_t *pool)
+static svn_boolean_t
+conflicting_propchanges_p (const svn_string_t **description,
+                           const svn_prop_t *local,
+                           const svn_prop_t *update,
+                           apr_pool_t *pool)
 {
+  *description = NULL;
+
   /* We're assuming that whoever called this routine has already
      deduced that local and change2 affect the same property name.
      (After all, if they affect different property names, how can they
@@ -271,12 +273,14 @@ append_prop_conflict (apr_file_t *fp,
 }
 
 
-/* ### not used outside this file. make it static? */
-svn_error_t *
-svn_wc__get_existing_prop_reject_file (const char **reject_file,
-                                       svn_wc_adm_access_t *adm_access,
-                                       const char *name,
-                                       apr_pool_t *pool)
+/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
+   reject file describing a state of conflict.  Set *REJECT_FILE to the
+   name of that file, or to NULL if no such file exists. */
+static svn_error_t *
+get_existing_prop_reject_file (const char **reject_file,
+                               svn_wc_adm_access_t *adm_access,
+                               const char *name,
+                               apr_pool_t *pool)
 {
   apr_hash_t *entries;
   const svn_wc_entry_t *the_entry;
@@ -436,10 +440,10 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   for (i = 0; i < propchanges->nelts; i++)
     {
       const char *propname;
-      svn_string_t *conflict_description = NULL; /* Silence gcc warning */
+      svn_string_t *conflict = NULL;
       const svn_prop_t *incoming_change;
       const svn_string_t *from_val, *to_val, *working_val;
-      svn_boolean_t is_normal, conflict = FALSE;
+      svn_boolean_t is_normal;
 
       /* For the incoming propchange, figure out the TO and FROM values. */
       incoming_change = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
@@ -478,8 +482,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
 
               else
                 {
-                  conflict = TRUE;
-                  conflict_description = 
+                  conflict =
                     svn_string_createf 
                     (pool, 
                      _("Trying to add new property '%s' with value '%s',\n"
@@ -502,8 +505,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
             {
               if (to_val)
                 {
-                  conflict = TRUE;
-                  conflict_description = 
+                  conflict =
                     svn_string_createf 
                     (pool, 
                      _("Trying to change property '%s' from '%s' to '%s',\n"
@@ -532,8 +534,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
 
               else if (!to_val && !svn_string_compare (from_val, working_val))
                 {
-                  conflict = TRUE;
-                  conflict_description =
+                  conflict =
                     svn_string_createf
                     (pool, _("Trying to delete property '%s' but value"
                              " has been modified from '%s' to '%s'."),
@@ -550,8 +551,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                 }
               else /* property has some random value */
                 {
-                  conflict = TRUE;
-                  conflict_description = 
+                  conflict =
                     svn_string_createf 
                     (pool, 
                      _("Trying to change property '%s' from '%s' to '%s',\n"
@@ -579,8 +579,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                                            pool));
           
           /* Append the conflict to the open tmp/PROPS/---.prej file */
-          SVN_ERR (append_prop_conflict (reject_tmp_fp, conflict_description,
-                                         pool));
+          SVN_ERR (append_prop_conflict (reject_tmp_fp, conflict, pool));
         }
 
     }  /* foreach propchange ... */
@@ -648,10 +647,10 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                                   
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      SVN_ERR (svn_wc__get_existing_prop_reject_file (&reject_path,
-                                                      adm_access,
-                                                      entryname,
-                                                      pool));
+      SVN_ERR (get_existing_prop_reject_file (&reject_path,
+                                              adm_access,
+                                              entryname,
+                                              pool));
 
       if (! reject_path)
         {
@@ -804,7 +803,6 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
     {
       int j;
       int found_match = 0;          
-      const svn_string_t *conflict_description;
       const svn_prop_t *update_change;
       const svn_prop_t *local_change = NULL;
       const svn_string_t *value;
@@ -843,11 +841,11 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       
       if (found_match)
         {
-          svn_boolean_t conflict
-            = svn_wc__conflicting_propchanges_p (&conflict_description,
-                                                 local_change,
-                                                 update_change,
-                                                 pool);
+          const svn_string_t *conflict;
+          conflicting_propchanges_p (&conflict,
+                                     local_change,
+                                     update_change,
+                                     pool);
 
           /* Now see if the two changes actually conflict */
           if (conflict)
@@ -867,7 +865,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
               /* Append the conflict to the open tmp/PROPS/---.prej file */
               SVN_ERR (append_prop_conflict (reject_tmp_fp,
-                                             conflict_description,
+                                             conflict,
                                              pool));
 
               continue;  /* skip to the next update_change */
@@ -950,10 +948,10 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                   
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      SVN_ERR (svn_wc__get_existing_prop_reject_file (&reject_path,
-                                                      adm_access,
-                                                      entryname,
-                                                      pool));
+      SVN_ERR (get_existing_prop_reject_file (&reject_path,
+                                              adm_access,
+                                              entryname,
+                                              pool));
 
       if (! reject_path)
         {
