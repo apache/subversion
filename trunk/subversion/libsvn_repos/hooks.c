@@ -165,6 +165,7 @@ run_hook_cmd (const char *name,
                                              read_errstream,
                                              FALSE, /* Ignore stdout */
                                              TRUE,  /* Get stderr    */
+                                             &error,
                                              pool);
 #endif
       if (! err)

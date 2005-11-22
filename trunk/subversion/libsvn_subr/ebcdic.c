@@ -735,6 +735,7 @@ svn_ebcdic_run_unix_type_script (const char *path,
                                  svn_boolean_t check_exitcode,
                                  svn_boolean_t read_stdout,
                                  svn_boolean_t read_stderr,
+                                 svn_stringbuf_t **err_stream,
                                  apr_pool_t *pool)
 {
   int rc, fd_map[3], ignoreFds[2], useFds[2];
@@ -745,6 +746,8 @@ svn_ebcdic_run_unix_type_script (const char *path,
   pid_t child_pid, wait_rv;
   svn_stringbuf_t *script_output = svn_stringbuf_create ("", pool);
   apr_size_t args_arr_size = 0, i = 0;
+  
+  *err_stream = svn_stringbuf_create ("", pool);
 
   if (path)
     SVN_ERR (svn_utf_cstring_from_utf8 (&path, path, pool));
@@ -827,11 +830,13 @@ svn_ebcdic_run_unix_type_script (const char *path,
         {
           svn_error_t *child_err = SVN_NO_ERROR;
           if (script_output->len > 1)
-            child_err = svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                           script_output->data);
-          return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, child_err,
-                                    "Script '%s' returned error exitcode %d",
-                                    svn_path_basename (cmd, pool), *exitcode);
+            {
+              const char* script_out_utf8;
+              svn_utf_cstring_to_netccsid (&script_out_utf8,
+                                           script_output->data, pool);
+              svn_stringbuf_appendcstr (*err_stream, script_out_utf8);
+            }
+          return SVN_NO_ERROR;
         }
     }
   else if (WIFSIGNALED (*exitcode))
