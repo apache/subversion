@@ -2008,7 +2008,8 @@ merge_file (svn_stringbuf_t *log_accum,
          to a tmp-text-base. */
       SVN_ERR (svn_wc_translated_file2 (&tmptext, file_path, file_path,
                                         adm_access,
-                                        SVN_WC_TRANSLATE_TO_NF,
+                                        SVN_WC_TRANSLATE_TO_NF
+                                        | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
                                         pool));
 
       tmptext = svn_path_is_child (parent_dir, tmptext, pool);

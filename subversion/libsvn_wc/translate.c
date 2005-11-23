@@ -49,24 +49,15 @@ svn_wc_translated_file2 (const char **xlated_path,
                          apr_uint32_t flags,
                          apr_pool_t *pool)
 {
-  svn_subst_eol_style_t style = svn_subst_eol_style_none;
-  const char *eol = NULL;
-  apr_hash_t *keywords = NULL;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
   svn_boolean_t special;
-  const char *tmp_dir, *tmp_vfile;
-  svn_boolean_t special_only = flags & SVN_WC_TRANSLATE_SPECIAL_ONLY;
 
-  svn_path_split (versioned_file, &tmp_dir, &tmp_vfile, pool);
-
-  tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool, tmp_vfile, NULL);
-
-  if (! special_only)
-    {
-      SVN_ERR (svn_wc__get_eol_style (&style, &eol, versioned_file,
-                                      adm_access, pool));
-      SVN_ERR (svn_wc__get_keywords (&keywords, versioned_file,
-                                     adm_access, NULL, pool));
-    }
+  SVN_ERR (svn_wc__get_eol_style (&style, &eol, versioned_file,
+                                  adm_access, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords, versioned_file,
+                                 adm_access, NULL, pool));
   SVN_ERR (svn_wc__get_special (&special, versioned_file, adm_access, pool));
 
 
@@ -79,26 +70,34 @@ svn_wc_translated_file2 (const char **xlated_path,
     }
   else  /* some translation (or copying) is necessary */
     {
+      const char *tmp_dir, *tmp_vfile;
+      svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+
+      svn_path_split (versioned_file, &tmp_dir, &tmp_vfile, pool);
+      tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool, tmp_vfile, NULL);
+
       SVN_ERR (svn_io_open_unique_file2
                (NULL, &tmp_vfile,
                 tmp_vfile,
                 SVN_WC__TMP_EXT,
-                (flags & SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP)
-                ? svn_io_file_del_on_pool_cleanup : svn_io_file_del_none,
+                (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)
+                ? svn_io_file_del_none : svn_io_file_del_on_pool_cleanup,
                 pool));
 
       if (flags & SVN_WC_TRANSLATE_TO_NF)
+        /* to normal form */
         SVN_ERR (svn_subst_translate_to_normal_form
                  (src, tmp_vfile, style, eol,
-                  flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR,
+                  repair_forced,
                   keywords, special, pool));
-      else /* translate */
+      else /* from normal form */
         SVN_ERR (svn_subst_copy_and_translate3
                  (src, tmp_vfile,
-                  eol, flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR,
+                  eol, repair_forced,
                   keywords, TRUE,
                   special,
                   pool));
+
       *xlated_path = tmp_vfile;
     }
 

@@ -74,7 +74,6 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc_translated_file2 (&tmp_file,
                                     text_base_path, file_path, adm_access,
                                     SVN_WC_TRANSLATE_FROM_NF
-                                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
                                     | SVN_WC_TRANSLATE_FORCE_COPY, pool));
 
   SVN_ERR (svn_io_file_rename (tmp_file, file_path, pool));
@@ -720,8 +719,7 @@ svn_wc_transmit_text_deltas (const char *path,
      the new text base anyway. */
   SVN_ERR (svn_wc_translated_file2 (&tmpf, path, path,
                                     adm_access,
-                                    SVN_WC_TRANSLATE_TO_NF
-                                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+                                    SVN_WC_TRANSLATE_TO_NF,
                                     pool));
 
   /* If the translation didn't create a new file then we need an explicit
