@@ -181,7 +181,6 @@ class Generator(gen_base.GeneratorBase):
         'swig-%s: autogen-swig-%s\n' % (short[lang], short[lang]) +
         'autogen-swig: autogen-swig-%s\n' % short[lang] +
         'clean-swig: clean-swig-%s\n' % short[lang] +
-        'extraclean-swig: extraclean-swig-%s\n' % short[lang] +
         '\n')
     self.ofile.write('clean-swig: clean-swig-headers\n')
     self.ofile.write('\n')
