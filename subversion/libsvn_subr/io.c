@@ -23,12 +23,6 @@
 
 #ifndef WIN32
 #include <unistd.h>
-#ifndef APR_GSETID
-/* Needed for fallback setgid code in dir_make */
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#endif
 #endif
 
 #ifndef APR_STATUS_IS_EPERM
@@ -2533,7 +2527,6 @@ dir_make (const char *path, apr_fileperms_t perm,
     }
 #endif
 
-#if defined(APR_GSETID)
   if (sgid)
     {
       apr_finfo_t finfo;
@@ -2548,20 +2541,6 @@ dir_make (const char *path, apr_fileperms_t perm,
        * don't support the sgid bit, and that's okay. */
       apr_file_perms_set (path_apr, finfo.protection | APR_GSETID);
     }
-#elif !defined (WIN32)
-  /* APR_GSETID appears in APR 0.9.5, so we need some fallback code
-     until Subversion can require 0.9.5. */
-  if (sgid)
-  {
-    struct stat st;
-
-    if (stat (path_apr, &st) != 0)
-      return svn_error_wrap_apr (APR_FROM_OS_ERROR (errno),
-                                 _("Can't stat new directory '%s'"),
-                                 svn_path_local_style (path, pool));
-    chmod (path_apr, (st.st_mode & ~S_IFMT) | S_ISGID);
-  }
-#endif
 
   return SVN_NO_ERROR;
 }
