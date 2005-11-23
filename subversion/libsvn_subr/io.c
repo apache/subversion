@@ -493,108 +493,10 @@ svn_io_copy_link (const char *src,
 }
 
 
-#if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
-#include <apr_env.h>
-
-/* Try to open a temporary file in the temporary dir, write to it,
-   and then close it. */
-static int test_tempdir(const char *temp_dir, apr_pool_t *p)
-{
-    apr_file_t *dummy_file;
-    char *path = apr_pstrcat(p, temp_dir, "/apr-tmp.XXXXXX", NULL);
-
-    if (apr_file_mktemp(&dummy_file, path, 0, p) == APR_SUCCESS) {
-        if (apr_file_putc('!', dummy_file) == APR_SUCCESS) {
-            if (apr_file_close(dummy_file) == APR_SUCCESS) {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-#endif
-
 svn_error_t *
 svn_io_temp_dir (const char **dir,
                  apr_pool_t *pool)
 {
-#if 1  /* TODO: Remove this code when APR 0.9.6 is released. */
-  apr_status_t apr_err;
-  static const char *try_dirs[] = { "/tmp", "/usr/tmp", "/var/tmp" };
-  static const char *try_envs[] = { "TMP", "TEMP", "TMPDIR" };
-  const char *temp_dir;
-  char *cwd;
-  apr_size_t i;
-
-  /* Our goal is to find a temporary directory suitable for writing
-     into.  We'll only pay the price once if we're successful -- we
-     cache our successful find.  Here's the order in which we'll try
-     various paths:
-
-       $TMP
-       $TEMP
-       $TMPDIR
-       "C:\TEMP"     (windows only)
-       "/tmp"
-       "/var/tmp"
-       "/usr/tmp"
-       `pwd` 
-
-     NOTE: This algorithm is basically the same one used by Python
-     2.2's tempfile.py module. */
-
-  /* Try the environment first. */
-  for (i = 0; i < (sizeof(try_envs) / sizeof(const char *)); i++)
-    {
-      char *value;
-      apr_err = apr_env_get(&value, try_envs[i], pool);
-      if ((apr_err == APR_SUCCESS) && value)
-        {
-          apr_size_t len = strlen(value);
-          if (len && (len < APR_PATH_MAX) && test_tempdir(value, pool))
-	    {
-              temp_dir = value;
-              goto end;
-            }
-        }
-    }
-#ifdef WIN32
-  /* Next, on Win32, try the C:\TEMP directory. */
-  if (test_tempdir("C:\\TEMP", pool))
-    {
-      temp_dir = "C:\\TEMP";
-      goto end;
-    }
-#endif /* WIN32 */
-			    
-  /* Next, try a set of hard-coded paths. */
-  for (i = 0; i < (sizeof(try_dirs) / sizeof(const char *)); i++)
-    {
-      if (test_tempdir(try_dirs[i], pool))
-        {
-	  temp_dir = try_dirs[i];
-          goto end;
-        }
-    }
-
-  /* Finally, try the current working directory. */
-  if (APR_SUCCESS == apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool))
-    {
-      if (test_tempdir(cwd, pool))
-        {
-          temp_dir = cwd;
-	  goto end;
-        }
-    }
-
-  return svn_error_create
-           (APR_EGENERAL, NULL, _("Can't find a temporary directory"));
-
-end:
-  *dir = svn_path_canonicalize(temp_dir, pool);
-  return SVN_NO_ERROR;
-
-#else
   apr_status_t apr_err = apr_temp_dir_get (dir, pool);
 
   if (apr_err)
@@ -602,8 +504,7 @@ end:
 
   *dir = svn_path_canonicalize (*dir, pool);
 
-  return SVN_NO_ERROR;
-#endif
+  return svn_path_cstring_to_utf8 (dir, *dir, pool);
 }
 
 
