@@ -600,10 +600,15 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+EXTRACLEAN_SWIG_HEADERS=rm -f $(SWIG_BUILD_DIR)/proxy/*.swg
+
 clean-swig-headers:
 	if test -z "$(RELEASE_MODE)"; then \
-	  rm -f $(top_builddir)/subversion/bindings/swig/proxy/*.swg; \
+	  $(EXTRACLEAN_SWIG_HEADERS); \
 	fi
+
+extraclean-swig-headers:
+	$(EXTRACLEAN_SWIG_HEADERS)
 
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
@@ -623,12 +628,15 @@ check-swig-pl: swig-pl swig-pl-lib
 install-swig-pl: swig-pl install-swig-pl-lib
 	cd $(SWIG_PL_DIR)/native; $(MAKE) install
 
+EXTRACLEAN_SWIG_PL=rm -f $(SWIG_PL_DIR)/native/svn_*.c \
+                         $(SWIG_PL_DIR)/native/core.c
+
 # Running Makefile.PL at this point *fails* (cannot find ..../.libs) so if the
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
 	if test -z "$(RELEASE_MODE)"; then \
-	  rm -f $(SWIG_PL_DIR)/native/svn_*.c $(SWIG_PL_DIR)/native/core.c; \
+	  $(EXTRACLEAN_SWIG_PL); \
 	fi
 	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
 	do \
@@ -638,6 +646,9 @@ clean-swig-pl:
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
+
+extraclean-swig-pl:
+	$(EXTRACLEAN_SWIG_PL)
 
 $(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
@@ -658,17 +669,21 @@ check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
+EXTRACLEAN_SWIG_PY=rm -rf $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
+                          $(SWIG_PY_DIR)/[a-z]*.py
 clean-swig-py:
 	rm -rf $(SWIG_PY_DIR)/libsvn
 	if test -z "$(RELEASE_MODE)"; then \
-	  rm -f $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
-	        $(SWIG_PY_DIR)/[a-z]*.py; \
+	  $(EXTRACLEAN_SWIG_PY); \
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
 	  cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
 	done
 	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'
+
+extraclean-swig-py: clean-swig-py
+	$(EXTRACLEAN_SWIG_PY)
 
 swig-rb: autogen-swig-rb
 
@@ -678,14 +693,19 @@ check-swig-rb: swig-rb svnserve
 	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
 	    --verbose=$(SWIG_RB_TEST_VERBOSE)
 
+EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_DIR)/svn_*.c $(SWIG_RB_DIR)/core.c
+
 clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
 	if test -z "$(RELEASE_MODE)"; then \
-	  rm -f $(SWIG_RB_DIR)/svn_*.c $(SWIG_RB_DIR)/core.c; \
+	  $(EXTRACLEAN_SWIG_RB); \
 	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \
 	  rm -rf *.lo *.la *.o .libs; \
 	done
+
+extraclean-swig-rb: clean-swig-rb
+	$(EXTRACLEAN_SWIG_RB)
 
