@@ -565,8 +565,7 @@ file_diff (struct dir_baton *dir_baton,
 
       SVN_ERR (svn_wc_translated_file2
                (&translated, path, path, adm_access,
-                SVN_WC_TRANSLATE_TO_NF
-                | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+                SVN_WC_TRANSLATE_TO_NF,
                 pool));
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_added
@@ -594,8 +593,7 @@ file_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_translated_file2
                    (&translated, path,
                     path, adm_access,
-                    SVN_WC_TRANSLATE_TO_NF
-                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+                    SVN_WC_TRANSLATE_TO_NF,
                     pool));
         }
 
@@ -1223,8 +1221,7 @@ close_file (void *file_baton,
             SVN_ERR (svn_wc_translated_file2
                      (&localfile, b->path,
                       b->path, adm_access,
-                      SVN_WC_TRANSLATE_TO_NF
-                      | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP ,
+                      SVN_WC_TRANSLATE_TO_NF,
                       pool));
 
           temp_file_path = b->temp_file_path;

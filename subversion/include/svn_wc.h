@@ -70,24 +70,21 @@ const svn_version_t *svn_wc_version (void);
   /** Translate to Normal Format; excludes SVN_WC_TRANSLATE_FROM_NF */
 #define SVN_WC_TRANSLATE_TO_NF                   0x00000001
 
-  /** Only do translation associated with the svn:special property only */
-#define SVN_WC_TRANSLATE_SPECIAL_ONLY            0x00000002
-
   /** Force repair of eol styles, making sure the output file consistently
    * contains the one eol style as specified by the svn:eol-style
    * property and the required translation direction.
    *
    */
-#define SVN_WC_TRANSLATE_FORCE_EOL_REPAIR        0x00000004
+#define SVN_WC_TRANSLATE_FORCE_EOL_REPAIR        0x00000002
 
-  /** Translate the special property only */
-#define SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP 0x00000008
+  /** Don't register a pool cleanup to delete the output file */
+#define SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP       0x00000004
 
   /** Guarantee a new file is created on successful return.
    * The default shortcuts translation by returning the path
    * of the untranslated file when no translation is required.
    */
-#define SVN_WC_TRANSLATE_FORCE_COPY              0x00000010
+#define SVN_WC_TRANSLATE_FORCE_COPY              0x00000008
 
 /** @} */
 
