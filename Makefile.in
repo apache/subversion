@@ -319,7 +319,7 @@ fast-distclean: fast-clean
               svn_private_config.h svn-config
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean
+local-extraclean: local-distclean extraclean-swig
 	rm -f build-outputs.mk svn_private_config.h.in configure \
               ac-helpers/config.guess ac-helpers/config.sub      \
               ac-helpers/libtool.m4 ac-helpers/ltconfig          \
@@ -594,25 +594,18 @@ install-info: doc-all-info
           $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
         done
 
-clean-swig: clean-swig-py clean-swig-pl clean-swig-rb
-
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
-EXTRA_SWIG_PROXY_FILES = swigrun.swg common.swg runtime.swg \
-  pyrun.swg perlrun.swg rubydef.swg rubyhead.swg python.swg \
-  swig_python_external_runtime.swg swig_perl_external_runtime.swg \
-  swig_ruby_external_runtime.swg
-extraclean-swig-headers:
-	cd $(abs_srcdir)/subversion/bindings/swig/proxy && \
-	  rm -f $(EXTRA_SWIG_PROXY_FILES)
-	rm -f $(SWIG_PY_SRC_DIR)/[a-z]*.py
+EXTRACLEAN_SWIG_HEADERS=rm -f $(SWIG_BUILD_DIR)/proxy/*.swg
+
 clean-swig-headers:
-	if test $(top_srcdir) != .; then \
-	  cd $(abs_builddir)/subversion/bindings/swig/proxy && \
-	    rm -f $(EXTRA_SWIG_PROXY_FILES); \
-	  rm -f $(SWIG_PY_DIR)/*.py; \
+	if test -z "$(RELEASE_MODE)"; then \
+	  $(EXTRACLEAN_SWIG_HEADERS); \
 	fi
+
+extraclean-swig-headers:
+	$(EXTRACLEAN_SWIG_HEADERS)
 
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
@@ -632,13 +625,27 @@ check-swig-pl: swig-pl swig-pl-lib
 install-swig-pl: swig-pl install-swig-pl-lib
 	cd $(SWIG_PL_DIR)/native; $(MAKE) install
 
+EXTRACLEAN_SWIG_PL=rm -f $(SWIG_PL_DIR)/native/svn_*.c \
+                         $(SWIG_PL_DIR)/native/core.c
+
 # Running Makefile.PL at this point *fails* (cannot find ..../.libs) so if the
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
+	if test -z "$(RELEASE_MODE)"; then \
+	  $(EXTRACLEAN_SWIG_PL); \
+	fi
+	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
+	do \
+	  cd $$d; \
+	  rm -rf *.lo *.la *.o .libs; \
+	done
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
+
+extraclean-swig-pl:
+	$(EXTRACLEAN_SWIG_PL)
 
 $(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
@@ -659,16 +666,21 @@ check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
+EXTRACLEAN_SWIG_PY=rm -rf $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
+                          $(SWIG_PY_DIR)/[a-z]*.py
 clean-swig-py:
 	rm -rf $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
-	      $(SWIG_PY_DIR)/libsvn
-	if test $(top_srcdir) != .; then \
-	  rm -f $(SWIG_PY_DIR)/*.py; \
+	      $(SWIG_PY_DIR)/libsvn $(SWIG_PY_DIR)/*.pyc
+	if test -z "$(RELEASE_MODE)"; then \
+	  $(EXTRACLEAN_SWIG_PY); \
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
 	  cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
 	done
+
+extraclean-swig-py: clean-swig-py
+	$(EXTRACLEAN_SWIG_PY)
 
 swig-rb: autogen-swig-rb
 
@@ -678,10 +690,19 @@ check-swig-rb: swig-rb svnserve
 	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
 	    --verbose=$(SWIG_RB_TEST_VERBOSE)
 
+EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_DIR)/svn_*.c $(SWIG_RB_DIR)/core.c
+
 clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
+	if test -z "$(RELEASE_MODE)"; then \
+	  $(EXTRACLEAN_SWIG_RB); \
+	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \
 	  rm -rf *.lo *.la *.o .libs; \
 	done
+
+extraclean-swig-rb: clean-swig-rb
+	$(EXTRACLEAN_SWIG_RB)
+
