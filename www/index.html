@@ -10,64 +10,52 @@
   href="tigris-branding/css/print.css"/>
 <script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
 <title>subversion.tigris.org</title>
-<style>
+<style type="text/css">
 #projecthome .axial { display: none; }
+#apphead {
+  background: url('./subversion_logo_hor-468x64') no-repeat center center;
+  height: 70px;
+  text-align: bottom;
+}
+#apphead h1 { display: none; }
 </style>
 </head>
+
+<body>
 
 <!-- The class h2 is included on the main div, because the HTML which the
      server will wrap around the page includes a <div class="h2">.
      Thus, we include one here so that the page looks right when previewed
      locally, *but* we override the border which the CSS assigns to that
      style, so that we do not get two borders on the live page. -->
-<body>
 <div class="h2 app" style="border-left: 0px">
 
-<table border="0" cellpadding="2" cellspacing="2" width="98%"
-  style="background-color: white">
-<tr>
-<td style="background-color: yellow">
-<div style="color: red">
+<p>The goal of the Subversion project is to build a <strong>version
+   control system</strong> that is a compelling replacement for CVS in
+   the open source community.  The software is released under an <a
+   href="project_license.html">Apache/BSD-style</a> open source
+   license.</p>
 
-<p><b>NEWS: Subversion 1.2.3 is <a
-href="http://subversion.tigris.org/servlets/NewsItemView?newsItemID=1261"
->now available</a>.  Please see the <a href="svn_1.2_releasenotes.html"
->release notes</a> for what's new in the 1.2 series.</b></p>
+<h2>Latest Release</h2>
 
-<p><b>RESOURCES: The <a href="http://svnbook.red-bean.com/"
->Subversion Book</a> and <a href="faq.html">FAQ</a> can usually answer
-most questions.  You can also ask on the <a
-href="/servlets/ProjectMailingListList">users@subversion.tigris.org</a>
-mailing list, or in IRC at <tt><a href="irc://irc.freenode.net/"
->irc.freenode.net</a></tt>, channel <tt><a href="irc://irc.freenode.net/svn"
->#svn</a></tt>.  (Note that the mailing lists
-are <a href="faq.html#moderation">moderated</a>, so there may be a
-delay before your post shows up.)</b></p>
+<p>Subversion 1.2.3 is <a
+   href="http://subversion.tigris.org/servlets/NewsItemView?newsItemID=1261"
+   >now available</a>.  Please see the <a
+   href="svn_1.2_releasenotes.html" >release notes</a> for what's new
+   in the 1.2 series.</p>
 
-</div>
-</td>
-</tr>
+<h2>Got Questions?</h2>
 
-</table>
-
-<h3>What Is Subversion?</h3>
-
-<table border="0" cellpadding="2" cellspacing="2" width="98%"
-  style="background-color: white">
-<tr>
-<td style="background-color: #f0f0f0">
-
-<p>
-The goal of the Subversion project is to build a version control
-system that is a compelling replacement for CVS in the open source
-community.  The software is released under an <a
-href="project_license.html">Apache/BSD-style</a> open source license.
-</p>
-
-<p style="text-align: center">
-<img src="subversion_logo_hor-468x64.png" alt="Subversion"
-     width="468" height="64"/>
-</p>
+<p style="background: #dd9;">The <a
+   href="http://svnbook.red-bean.com/">Subversion Book</a> and <a
+   href="faq.html">FAQ</a> can usually answer most questions.  You can
+   also ask on the <a
+   href="/servlets/ProjectMailingListList">users@subversion.tigris.org</a>
+   mailing list, or in IRC at <tt><a href="irc://irc.freenode.net/"
+   >irc.freenode.net</a></tt>, channel <tt><a
+   href="irc://irc.freenode.net/svn" >#svn</a></tt>.  (Note that the
+   mailing lists are <a href="faq.html#moderation">moderated</a>, so
+   there may be a delay before your post shows up.)</p>
 
 <h2>Subversion's Features</h2>
 
@@ -185,9 +173,6 @@ href="project_license.html">Apache/BSD-style</a> open source license.
 <h2>Future Subversion Features</h2>
 
 <p>See the <a href="roadmap.html">Roadmap</a> page.</p>
-
-</td></tr>
-</table>
 
 </div>
 </body>
