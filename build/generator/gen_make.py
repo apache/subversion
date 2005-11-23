@@ -524,6 +524,8 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
     standalone.write('abs_builddir = %s\n' % os.getcwd())
+    standalone.write('top_srcdir = .\n')
+    standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
     standalone.write('\n')
