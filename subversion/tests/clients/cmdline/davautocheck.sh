@@ -194,6 +194,7 @@ $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_AUTH
 $LOAD_MOD_AUTHN
+LockFile            lock
 User                $(whoami)
 Group               $(groups | awk '{print $1}')
 Listen              localhost:$HTTPD_PORT
