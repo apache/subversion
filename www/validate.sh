@@ -17,7 +17,10 @@ if [ ! -r "$WWWDIR/tigris-branding/.download-complete" ]; then
   ensure "$BRANDING_URL/scripts/tigris.js" "tigris-branding/scripts"
   for f in `sed -n -e 's,.*url(\.\./images/\([^)]*\).*,\1,;tp' \
     -etp -ed -e:p -ep $WWWDIR/tigris-branding/css/*.css`; do
-    ensure "$BRANDING_URL/images/$f" "tigris-branding/images"
+    case $f in
+      collapsed_big.gif|expanded_big.gif) ;; # 404!
+      *) ensure "$BRANDING_URL/images/$f" "tigris-branding/images" ;;
+    esac
   done
   touch "$WWWDIR/tigris-branding/.download-complete"
 fi
