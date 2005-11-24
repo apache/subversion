@@ -9,6 +9,12 @@ Status of 1.3.0:
 
 Candidate changes:
 
+  * r17507
+    Fix Windows make_dist.py to use the correct path for the .mo files.
+    Justficiation: Include translations in the Windows binary packages again.
+    Votes:
+      +1: brane
+
 Approved changes:
 
 Status of 1.3.1:
