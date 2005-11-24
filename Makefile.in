@@ -608,7 +608,7 @@ clean-swig-headers:
 	  $(EXTRACLEAN_SWIG_HEADERS); \
 	fi
 
-extraclean-swig-headers:
+extraclean-swig-headers: clean-swig-headers
 	$(EXTRACLEAN_SWIG_HEADERS)
 
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
@@ -648,7 +648,7 @@ clean-swig-pl:
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
 
-extraclean-swig-pl:
+extraclean-swig-pl: clean-swig-pl
 	$(EXTRACLEAN_SWIG_PL)
 
 $(SWIG_PY_DIR)/libsvn:
