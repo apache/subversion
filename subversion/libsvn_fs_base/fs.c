@@ -1052,19 +1052,19 @@ copy_db_file_safely (const char *src_dir,
   char *buf;
 
   /* Open source file. */
-  status = apr_file_open (&s, file_src_path,
-                          (APR_READ | APR_LARGEFILE | APR_BINARY),
-                          APR_OS_DEFAULT, pool);
+  status = svn_io_file_open (&s, file_src_path,
+                             (APR_READ | APR_LARGEFILE | APR_BINARY),
+                             APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
                               _("Can't open file '%s' for reading"),
                               file_src_path);
 
   /* Open destination file. */
-  status = apr_file_open (&d, file_dst_path, 
-                          (APR_WRITE | APR_CREATE | APR_LARGEFILE
-                           | APR_BINARY),
-                          APR_OS_DEFAULT, pool);
+  status = svn_io_file_open (&d, file_dst_path, 
+                             (APR_WRITE | APR_CREATE | APR_LARGEFILE
+                              | APR_BINARY),
+                             APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
                               _("Can't open file '%s' for writing"),
