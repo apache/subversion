@@ -49,7 +49,7 @@ svn_cl__diff (apr_getopt_t *os,
   apr_file_t *outfile, *errfile;
   apr_status_t status;
   const char *old_target, *new_target;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
   int i;
 
@@ -172,17 +172,17 @@ svn_cl__diff (apr_getopt_t *os,
 
   svn_opt_push_implicit_dot_target (targets, pool);
 
-  subpool = svn_pool_create (pool);
+  iterpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX (targets, i, const char *);
       const char *target1, *target2;
 
+      svn_pool_clear (iterpool);
       if (! pegged_diff)
         {
-          svn_pool_clear (subpool);
-          target1 = svn_path_join (old_target, path, subpool);
-          target2 = svn_path_join (new_target, path, subpool);
+          target1 = svn_path_join (old_target, path, iterpool);
+          target2 = svn_path_join (new_target, path, iterpool);
           
           SVN_ERR (svn_client_diff3 (options,
                                      target1,
@@ -197,7 +197,7 @@ svn_cl__diff (apr_getopt_t *os,
                                      outfile,
                                      errfile,
                                      ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                     pool));
+                                     iterpool));
         }
       else
         {
@@ -205,7 +205,8 @@ svn_cl__diff (apr_getopt_t *os,
           svn_opt_revision_t peg_revision;
           
           /* First check for a peg revision. */
-          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, path, pool));
+          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, path, 
+                                       iterpool));
 
           /* Set the default peg revision if one was not specified. */
           if (peg_revision.kind == svn_opt_revision_unspecified)
@@ -227,10 +228,10 @@ svn_cl__diff (apr_getopt_t *os,
                                          outfile,
                                          errfile,
                                          ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                         pool));
+                                         iterpool));
         }
     }
-  svn_pool_destroy (subpool);
+  svn_pool_destroy (iterpool);
 
   return SVN_NO_ERROR;
 }
