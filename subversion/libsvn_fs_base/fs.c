@@ -1048,27 +1048,17 @@ copy_db_file_safely (const char *src_dir,
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   const char *file_src_path = svn_path_join (src_dir, filename, pool);
   const char *file_dst_path = svn_path_join (dst_dir, filename, pool);  
-  apr_status_t status;
   char *buf;
 
   /* Open source file. */
-  status = svn_io_file_open (&s, file_src_path,
+  SVN_ERR (svn_io_file_open (&s, file_src_path,
                              (APR_READ | APR_LARGEFILE | APR_BINARY),
-                             APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf (status, NULL,
-                              _("Can't open file '%s' for reading"),
-                              file_src_path);
+                             APR_OS_DEFAULT, pool));
 
   /* Open destination file. */
-  status = svn_io_file_open (&d, file_dst_path, 
-                             (APR_WRITE | APR_CREATE | APR_LARGEFILE
-                              | APR_BINARY),
-                             APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf (status, NULL,
-                              _("Can't open file '%s' for writing"),
-                              file_dst_path);
+  SVN_ERR (svn_io_file_open (&d, file_dst_path, (APR_WRITE | APR_CREATE |
+                                                 APR_LARGEFILE | APR_BINARY),
+                             APR_OS_DEFAULT, pool));
 
   /* Allocate our read/write buffer. */
   buf = apr_palloc (pool, chunksize);
@@ -1077,42 +1067,36 @@ copy_db_file_safely (const char *src_dir,
   while (1) 
     {
       apr_size_t bytes_this_time = chunksize;
-      apr_status_t read_err;
-      apr_status_t write_err;
+      svn_error_t *read_err, *write_err;
       
       /* Read 'em. */
-      read_err = apr_file_read(s, buf, &bytes_this_time);
-      if (read_err && !APR_STATUS_IS_EOF(read_err))
+      if ((read_err = svn_io_file_read (s, buf, &bytes_this_time, pool)))
         {
-          apr_file_close(s);  /* toss any error */
-          apr_file_close(d);  /* toss any error */
-          return svn_error_createf (status, NULL,
-                                    _("Error reading file '%s'"),
-                                    file_src_path);
+          if (APR_STATUS_IS_EOF (read_err->apr_err))
+            svn_error_clear (read_err);
+          else
+            {
+              svn_error_clear (svn_io_file_close (s, pool));
+              svn_error_clear (svn_io_file_close (d, pool));
+              return read_err;
+            }
         }
     
       /* Write 'em. */
-      write_err = apr_file_write_full(d, buf, bytes_this_time, NULL);
-      if (write_err)
+      if ((write_err = svn_io_file_write_full (d, buf, bytes_this_time, NULL,
+                                               pool)));
         {
-          apr_file_close(s);  /* toss any error */
-          apr_file_close(d);  /* toss any error */
-          return svn_error_createf (status, NULL,
-                                    _("Error writing file '%s'"),
-                                    file_dst_path);
+          svn_error_clear (svn_io_file_close (s, pool));
+          svn_error_clear (svn_io_file_close (d, pool));
+          return write_err;
         }
-    
-      if (read_err && APR_STATUS_IS_EOF(read_err)) 
-        {
-          status = apr_file_close(s);
-          if (status)
-            return svn_error_createf (status, NULL, _("Can't close file '%s'"),
-                                      file_src_path);
-          status = apr_file_close(d);
-          if (status)
-            return svn_error_createf (status, NULL, _("Can't close file '%s'"),
-                                      file_dst_path);
 
+      /* read_err is either NULL, or a dangling pointer - but it is only a
+         dangling pointer if it used to be an EOF error. */
+      if (read_err)
+        {
+          SVN_ERR (svn_io_file_close (s, pool));
+          SVN_ERR (svn_io_file_close (d, pool));
           break;  /* got EOF on read, all files closed, all done. */
         }
     }
