@@ -508,34 +508,37 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel", "pd"},
-    N_("Remove PROPNAME from files, dirs, or revisions.\n"
+    N_("Remove a property from files, dirs, or revisions.\n"
        "usage: 1. propdel PROPNAME [PATH...]\n"
-       "       2. propdel PROPNAME --revprop -r REV [URL]\n"
+       "       2. propdel PROPNAME --revprop -r REV [TARGET]\n"
        "\n"
        "  1. Removes versioned props in working copy.\n"
-       "  2. Removes unversioned remote prop on repos revision.\n"),
+       "  2. Removes unversioned remote prop on repos revision.\n"
+       "     TARGET only determines which repository to access.\n"),
     {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
-    N_("Edit property PROPNAME with an external editor on targets.\n"
+    N_("Edit a property with an external editor.\n"
        "usage: 1. propedit PROPNAME PATH...\n"
-       "       2. propedit PROPNAME --revprop -r REV [URL]\n"
+       "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
        "\n"
        "  1. Edits versioned props in working copy.\n"
-       "  2. Edits unversioned remote prop on repos revision.\n"),
+       "  2. Edits unversioned remote prop on repos revision.\n"
+       "     TARGET only determines which repository to access.\n"),
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
-    N_("Print value of PROPNAME on files, dirs, or revisions.\n"
+    N_("Print the value of a property on files, dirs, or revisions.\n"
        "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
-       "       2. propget PROPNAME --revprop -r REV [URL]\n"
+       "       2. propget PROPNAME --revprop -r REV [TARGET]\n"
        "\n"
-       "  1. Prints versioned prop. If specified, REV determines in which\n"
+       "  1. Prints versioned props. If specified, REV determines in which\n"
        "     revision the target is first looked up.\n"
        "  2. Prints unversioned remote prop on repos revision.\n"
+       "     TARGET only determines which repository to access.\n"
        "\n"
        "  By default, this subcommand will add an extra newline to the end\n"
        "  of the property values so that the output looks pretty.  Also,\n"
@@ -549,22 +552,26 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     N_("List all properties on files, dirs, or revisions.\n"
        "usage: 1. proplist [TARGET[@REV]...]\n"
-       "       2. proplist --revprop -r REV [URL]\n"
+       "       2. proplist --revprop -r REV [TARGET]\n"
        "\n"
        "  1. Lists versioned props. If specified, REV determines in which\n"
        "     revision the target is first looked up.\n"
-       "  2. Lists unversioned remote props on repos revision.\n"),
+       "  2. Lists unversioned remote props on repos revision.\n"
+       "     TARGET only determines which repository to access.\n"),
     {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
   { "propset", svn_cl__propset, {"pset", "ps"},
-    N_("Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
-       "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
-       "       2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] "
-       "[URL]\n"
+    N_("Set the value of a property on files, dirs, or revisions.\n"
+       "usage: 1. propset PROPNAME PROPVAL PATH...\n"
+       "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
        "\n"
        "  1. Creates a versioned, local propchange in working copy.\n"
        "  2. Creates an unversioned, remote propchange on repos revision.\n"
+       "     TARGET only determines which repository to access.\n"
+       "\n"
+       "  The value may be provided with the --file option instead of "
+       "PROPVAL.\n"
        "\n"
        "  Note: svn recognizes the following special versioned properties\n"
        "  but will store any arbitrary properties set:\n"
