@@ -732,7 +732,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
         {
           svn_error_clear (err);          
           return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                                    _("Unable to check path existence for %s"),
+                                    _("Unable to check path existence for '%s'"),
                                     svn_path_local_style (wcpath, pool));
         }
 
