@@ -391,7 +391,7 @@ check_mimetype (apr_array_header_t *prop_diffs, const char *target,
 
 
 static void
-get_eol_style (svn_subst_eol_style_t *style,
+update_eol_style (svn_subst_eol_style_t *style,
                  const char **eol,
                  apr_array_header_t *prop_diffs)
 {
@@ -428,8 +428,7 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
   /* If this file has a non-textual mime-type, bail out. */
   SVN_ERR (check_mimetype (prop_diffs, frb->target, frb->currpool));
 
-  /* */
-  get_eol_style (&frb->eol_style, &frb->eol_str, prop_diffs);
+  update_eol_style (&frb->eol_style, &frb->eol_str, prop_diffs);
 
   if (frb->ctx->notify_func2)
     {
