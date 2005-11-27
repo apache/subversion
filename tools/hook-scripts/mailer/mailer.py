@@ -67,6 +67,8 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   elif cmd == 'lock' or cmd == 'unlock':
     author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
+    # Override the repos revision author with the author of the lock/unlock
+    repos.author = author
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
