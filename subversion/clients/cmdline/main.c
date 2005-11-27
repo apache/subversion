@@ -59,101 +59,98 @@
  * The entire list must be terminated with an entry of nulls.
  */
 const apr_getopt_option_t svn_cl__options[] =
-  {
-    {"force",         svn_cl__force_opt, 0, N_("force operation to run")},
-    {"force-log",     svn_cl__force_log_opt, 0, 
-                      N_("force validity of log message source")},
-    {"help",          'h', 0, N_("show help on a subcommand")},
-    {NULL,            '?', 0, N_("show help on a subcommand")},
-    {"message",       'm', 1, N_("specify commit message ARG")},
-    {"quiet",         'q', 0, N_("print as little as possible")},
-    {"recursive",     'R', 0, N_("descend recursively")},
-    {"non-recursive", 'N', 0, N_("operate on single directory only")},
-    {"change",        'c', 1, N_("the change made by revision ARG (like -r ARG-1:ARG)")},
-    {"revision",      'r', 1, N_
-     ("ARG (some commands also take ARG1:ARG2 range)\n"
-      "                             A revision argument can be one of:\n"
-      "                                NUMBER       revision number\n"
-      "                                \"{\" DATE \"}\" revision at start "
-      "of the date\n"
-      "                                \"HEAD\"       latest in repository\n"
-      "                                \"BASE\"       base rev of item's "
-      "working copy\n"
-      "                                \"COMMITTED\"  last commit at or "
-      "before BASE\n"
-      "                                \"PREV\"       revision just before "
-      "COMMITTED")
-     /* spacing corresponds to svn_opt_format_option */
-    },
-    {"file",          'F', 1, N_("read data from file ARG")},
-    {"incremental",   svn_cl__incremental_opt, 0,
-                      N_("give output suitable for concatenation")},
-    {"encoding",      svn_cl__encoding_opt, 1,
-                      N_("treat value as being in charset encoding ARG")},
-    {"version",       svn_cl__version_opt, 0, N_("print client version info")},
-    {"verbose",       'v', 0, N_("print extra information")},
-    {"show-updates",  'u', 0, N_("display update information")},
-    {"username",      svn_cl__auth_username_opt, 1, 
-                      N_("specify a username ARG")},
-    {"password",      svn_cl__auth_password_opt, 1, 
-                      N_("specify a password ARG")},
-    {"extensions",    'x', 1, N_("pass ARG to --diff-cmd as options (default: '-u')")},
-    {"targets",       svn_cl__targets_opt, 1,
-                      N_("pass contents of file ARG as additional args")},
-    {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
-    {"strict",        svn_cl__strict_opt, 0, N_("use strict semantics")},
-    {"stop-on-copy",  svn_cl__stop_on_copy_opt, 0, 
-                      N_("do not cross copies while traversing history")},
-    {"no-ignore",     svn_cl__no_ignore_opt, 0,
-                      N_("disregard default and svn:ignore property ignores")},
-    {"no-auth-cache", svn_cl__no_auth_cache_opt, 0,
-                      N_("do not cache authentication tokens")},
-    {"non-interactive", svn_cl__non_interactive_opt, 0,
-                      N_("do no interactive prompting")},
-    {"dry-run",       svn_cl__dry_run_opt, 0,
-                      N_("try operation but make no changes")},
-    {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
-                      N_("do not print differences for deleted files")},
-    {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
-                      N_("notice ancestry when calculating differences")},
-    {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
-                      N_("ignore ancestry when calculating merges")},
-    {"ignore-externals", svn_cl__ignore_externals_opt, 0,
-                      N_("ignore externals definitions")},
-    {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
-                      N_("use ARG as diff command")},
-    {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
-                      N_("use ARG as merge command")},
-    {"editor-cmd",    svn_cl__editor_cmd_opt, 1,
-                      N_("use ARG as external editor")},
-    {"old",           svn_cl__old_cmd_opt, 1, 
-                      N_("use ARG as the older target")},
-    {"new",           svn_cl__new_cmd_opt, 1, 
-                      N_("use ARG as the newer target")},
-    {"revprop",       svn_cl__revprop_opt, 0,
-                      N_("operate on a revision property (use with -r)")},
-    {"relocate",      svn_cl__relocate_opt, 0,
-                      N_("relocate via URL-rewriting")},
-    {"config-dir",    svn_cl__config_dir_opt, 1,
-                      N_("read user configuration files from directory ARG")},
-    {"auto-props",    svn_cl__autoprops_opt, 0,
-                      N_("enable automatic properties")},
-    {"no-auto-props", svn_cl__no_autoprops_opt, 0,
-                      N_("disable automatic properties")},
-    {"native-eol",    svn_cl__native_eol_opt, 1,
-                      N_("use a different EOL marker than the standard\n"
-                         "                             "
-                         "system marker for files with the svn:eol-style\n"
-                         "                             "
-                         "property set to 'native'.\n"
-                         "                             "
-                         "ARG may be one of 'LF', 'CR', 'CRLF'")},
-    {"limit",         svn_cl__limit_opt, 1,
-                      N_("maximum number of log entries")},
-    {"no-unlock",     svn_cl__no_unlock_opt, 0,
-                      N_("don't unlock the targets")},
-    {0,               0, 0, 0}
-  };
+{
+  {"force",         svn_cl__force_opt, 0, N_("force operation to run")},
+  {"force-log",     svn_cl__force_log_opt, 0,
+                    N_("force validity of log message source")},
+  {"help",          'h', 0, N_("show help on a subcommand")},
+  {NULL,            '?', 0, N_("show help on a subcommand")},
+  {"message",       'm', 1, N_("specify commit message ARG")},
+  {"quiet",         'q', 0, N_("print as little as possible")},
+  {"recursive",     'R', 0, N_("descend recursively")},
+  {"non-recursive", 'N', 0, N_("operate on single directory only")},
+  {"change",        'c', 1, N_("the change made by revision ARG (like -r ARG-1:ARG)")},
+  {"revision",      'r', 1, N_
+   ("ARG (some commands also take ARG1:ARG2 range)\n"
+    "                             A revision argument can be one of:\n"
+    "                                NUMBER       revision number\n"
+    "                                \"{\" DATE \"}\" revision at start of the date\n"
+    "                                \"HEAD\"       latest in repository\n"
+    "                                \"BASE\"       base rev of item's working copy\n"
+    "                                \"COMMITTED\"  last commit at or before BASE\n"
+    "                                \"PREV\"       revision just before COMMITTED")
+   /* spacing corresponds to svn_opt_format_option */
+  },
+  {"file",          'F', 1, N_("read data from file ARG")},
+  {"incremental",   svn_cl__incremental_opt, 0,
+                    N_("give output suitable for concatenation")},
+  {"encoding",      svn_cl__encoding_opt, 1,
+                    N_("treat value as being in charset encoding ARG")},
+  {"version",       svn_cl__version_opt, 0, N_("print client version info")},
+  {"verbose",       'v', 0, N_("print extra information")},
+  {"show-updates",  'u', 0, N_("display update information")},
+  {"username",      svn_cl__auth_username_opt, 1,
+                    N_("specify a username ARG")},
+  {"password",      svn_cl__auth_password_opt, 1,
+                    N_("specify a password ARG")},
+  {"extensions",    'x', 1,
+                    N_("pass ARG to --diff-cmd as options (default: '-u')")},
+  {"targets",       svn_cl__targets_opt, 1,
+                    N_("pass contents of file ARG as additional args")},
+  {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
+  {"strict",        svn_cl__strict_opt, 0, N_("use strict semantics")},
+  {"stop-on-copy",  svn_cl__stop_on_copy_opt, 0,
+                    N_("do not cross copies while traversing history")},
+  {"no-ignore",     svn_cl__no_ignore_opt, 0,
+                    N_("disregard default and svn:ignore property ignores")},
+  {"no-auth-cache", svn_cl__no_auth_cache_opt, 0,
+                    N_("do not cache authentication tokens")},
+  {"non-interactive", svn_cl__non_interactive_opt, 0,
+                    N_("do no interactive prompting")},
+  {"dry-run",       svn_cl__dry_run_opt, 0,
+                    N_("try operation but make no changes")},
+  {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
+                    N_("do not print differences for deleted files")},
+  {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
+                    N_("notice ancestry when calculating differences")},
+  {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
+                    N_("ignore ancestry when calculating merges")},
+  {"ignore-externals", svn_cl__ignore_externals_opt, 0,
+                    N_("ignore externals definitions")},
+  {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
+                    N_("use ARG as diff command")},
+  {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
+                    N_("use ARG as merge command")},
+  {"editor-cmd",    svn_cl__editor_cmd_opt, 1,
+                    N_("use ARG as external editor")},
+  {"old",           svn_cl__old_cmd_opt, 1,
+                    N_("use ARG as the older target")},
+  {"new",           svn_cl__new_cmd_opt, 1,
+                    N_("use ARG as the newer target")},
+  {"revprop",       svn_cl__revprop_opt, 0,
+                    N_("operate on a revision property (use with -r)")},
+  {"relocate",      svn_cl__relocate_opt, 0,
+                    N_("relocate via URL-rewriting")},
+  {"config-dir",    svn_cl__config_dir_opt, 1,
+                    N_("read user configuration files from directory ARG")},
+  {"auto-props",    svn_cl__autoprops_opt, 0,
+                    N_("enable automatic properties")},
+  {"no-auto-props", svn_cl__no_autoprops_opt, 0,
+                    N_("disable automatic properties")},
+  {"native-eol",    svn_cl__native_eol_opt, 1,
+                    N_("use a different EOL marker than the standard\n"
+                       "                             "
+                       "system marker for files with the svn:eol-style\n"
+                       "                             "
+                       "property set to 'native'.\n"
+                       "                             "
+                       "ARG may be one of 'LF', 'CR', 'CRLF'")},
+  {"limit",         svn_cl__limit_opt, 1,
+                    N_("maximum number of log entries")},
+  {"no-unlock",     svn_cl__no_unlock_opt, 0,
+                    N_("don't unlock the targets")},
+  {0,               0, 0, 0}
+};
 
 
 
@@ -186,33 +183,33 @@ const apr_getopt_option_t svn_cl__options[] =
                                 svn_cl__force_log_opt, \
                                 svn_cl__editor_cmd_opt, \
                                 svn_cl__encoding_opt
- 
+
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
-  { "add", svn_cl__add, {0},
-    N_("Put files and directories under version control, scheduling\n"
-       "them for addition to repository.  They will be added in next commit.\n"
-       "usage: add PATH...\n"),
+  { "add", svn_cl__add, {0}, N_
+    ("Put files and directories under version control, scheduling\n"
+     "them for addition to repository.  They will be added in next commit.\n"
+     "usage: add PATH...\n"),
     {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt,
-     svn_cl__force_opt, svn_cl__no_ignore_opt, svn_cl__autoprops_opt, 
+     svn_cl__force_opt, svn_cl__no_ignore_opt, svn_cl__autoprops_opt,
      svn_cl__no_autoprops_opt} },
 
-  { "blame", svn_cl__blame, {"praise", "annotate", "ann"},
-    N_("Output the content of specified files or\n"
-       "URLs with revision and author information in-line.\n"
-       "usage: blame TARGET[@REV]...\n"
-       "\n"
-       "  If specified, REV determines in which revision the target is first\n"
-       "  looked up.\n"),
+  { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
+    ("Output the content of specified files or\n"
+     "URLs with revision and author information in-line.\n"
+     "usage: blame TARGET[@REV]...\n"
+     "\n"
+     "  If specified, REV determines in which revision the target is first\n"
+     "  looked up.\n"),
     {'r', 'v', svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
-  { "cat", svn_cl__cat, {0},
-    N_("Output the content of specified files or URLs.\n"
-       "usage: cat TARGET[@REV]...\n"
-       "\n"
-       "  If specified, REV determines in which revision the target is first\n"
-       "  looked up.\n"),
+  { "cat", svn_cl__cat, {0}, N_
+    ("Output the content of specified files or URLs.\n"
+     "usage: cat TARGET[@REV]...\n"
+     "\n"
+     "  If specified, REV determines in which revision the target is first\n"
+     "  looked up.\n"),
     {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
@@ -229,408 +226,367 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
      svn_cl__ignore_externals_opt} },
 
-  { "cleanup", svn_cl__cleanup, {0},
-    N_("Recursively clean up the working copy, removing locks, resuming\n"
-       "unfinished operations, etc.\n"
-       "usage: cleanup [PATH...]\n"),
+  { "cleanup", svn_cl__cleanup, {0}, N_
+    ("Recursively clean up the working copy, removing locks, resuming\n"
+     "unfinished operations, etc.\n"
+     "usage: cleanup [PATH...]\n"),
     {svn_cl__merge_cmd_opt, svn_cl__config_dir_opt} },
-  
-  { "commit", svn_cl__commit, {"ci"},
-    N_("Send changes from your working copy to the repository.\n"
-       "usage: commit [PATH...]\n"
-       "\n"
-       "  A log message must be provided, but it can be empty.  If it is not\n"
-       "  given by a --message or --file option, an editor will be started.\n"
-       "  If any targets are (or contain) locked items, those will be\n"
-       "  unlocked after a successful commit.\n"),
+
+  { "commit", svn_cl__commit, {"ci"}, N_
+    ("Send changes from your working copy to the repository.\n"
+     "usage: commit [PATH...]\n"
+     "\n"
+     "  A log message must be provided, but it can be empty.  If it is not\n"
+     "  given by a --message or --file option, an editor will be started.\n"
+     "  If any targets are (or contain) locked items, those will be\n"
+     "  unlocked after a successful commit.\n"),
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
-  { "copy", svn_cl__copy, {"cp"},
-    N_("Duplicate something in working copy or repository, remembering "
-       "history.\n"
-       "usage: copy SRC DST\n"
-       "\n"
-       "  SRC and DST can each be either a working copy (WC) path or URL:\n"
-       "    WC  -> WC:   copy and schedule for addition (with history)\n"
-       "    WC  -> URL:  immediately commit a copy of WC to URL\n"
-       "    URL -> WC:   check out URL into WC, schedule for addition\n"
-       "    URL -> URL:  complete server-side copy;  used to branch & tag\n"),
+
+  { "copy", svn_cl__copy, {"cp"}, N_
+    ("Duplicate something in working copy or repository, remembering history.\n"
+     "usage: copy SRC DST\n"
+     "\n"
+     "  SRC and DST can each be either a working copy (WC) path or URL:\n"
+     "    WC  -> WC:   copy and schedule for addition (with history)\n"
+     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
+     "    URL -> WC:   check out URL into WC, schedule for addition\n"
+     "    URL -> URL:  complete server-side copy;  used to branch & tag\n"),
     {'r', 'q',
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
-  { "delete", svn_cl__delete, {"del", "remove", "rm"},
-    N_("Remove files and directories from version control.\n"
-       "usage: 1. delete PATH...\n"
-       "       2. delete URL...\n"
-       "\n"
-       "  1. Each item specified by a PATH is scheduled for deletion upon\n"
-       "    the next commit.  Files, and directories that have not been\n"
-       "    committed, are immediately removed from the working copy.\n"
-       "    PATHs that are, or contain, unversioned or modified items will\n"
-       "    not be removed unless the --force option is given.\n"
-       "\n"
-       "  2. Each item specified by a URL is deleted from the repository\n"
-       "    via an immediate commit.\n"),
+
+  { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
+    ("Remove files and directories from version control.\n"
+     "usage: 1. delete PATH...\n"
+     "       2. delete URL...\n"
+     "\n"
+     "  1. Each item specified by a PATH is scheduled for deletion upon\n"
+     "    the next commit.  Files, and directories that have not been\n"
+     "    committed, are immediately removed from the working copy.\n"
+     "    PATHs that are, or contain, unversioned or modified items will\n"
+     "    not be removed unless the --force option is given.\n"
+     "\n"
+     "  2. Each item specified by a URL is deleted from the repository\n"
+     "    via an immediate commit.\n"),
     {svn_cl__force_opt, 'q', svn_cl__targets_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
-  { "diff", svn_cl__diff, {"di"},
-    N_("Display the differences between two paths.\n"
-       "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
-       "       2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] "
-       "[--new=NEW-TGT[@NEWREV]] \\\n"
-       "               [PATH...]\n"
-       "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
-       "\n"
-       "  1. Display the changes made to TARGETs as they are seen in REV "
-       "between\n"
-       "     two revisions.  TARGETs may be working copy paths or URLs.\n"
-       "\n"
-       "     N defaults to BASE if any TARGET is a working copy path, otherwise "
-       "it\n"
-       "     must be specified.  M defaults to the current working version if "
-       "any\n"
-       "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
-       "     The \"-c M\" option is equivalent to \"-r N:M\" where N = M-1.\n"
-       "\n"
-       "  2. Display the differences between OLD-TGT as it was seen in OLDREV "
-       "and\n"
-       "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative "
-       "to\n"
-       "     OLD-TGT and NEW-TGT and restrict the output to differences for "
-       "those\n"
-       "     paths.  OLD-TGT and NEW-TGT may be working copy paths or "
-       "URL[@REV]. \n"
-       "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV "
-       "default\n"
-       "     to N, -r N:M makes OLDREV default to N and NEWREV default to M,\n"
-       "     -c M makes OLDREV default to M-1 and NEWREV default to M.\n"
-       "\n"
-       "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] "
-       "--new=NEW-URL[@NEWREV]'\n"
-       "\n"
-       "  Use just 'svn diff' to display local modifications in "
-       "a working copy.\n"),
+
+  { "diff", svn_cl__diff, {"di"}, N_
+    ("Display the differences between two paths.\n"
+     "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+     "       2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
+     "               [PATH...]\n"
+     "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+     "\n"
+     "  1. Display the changes made to TARGETs as they are seen in REV between\n"
+     "     two revisions.  TARGETs may be working copy paths or URLs.\n"
+     "\n"
+     "     N defaults to BASE if any TARGET is a working copy path, otherwise it\n"
+     "     must be specified.  M defaults to the current working version if any\n"
+     "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
+     "     The \"-c M\" option is equivalent to \"-r N:M\" where N = M-1.\n"
+     "\n"
+     "  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
+     "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
+     "     OLD-TGT and NEW-TGT and restrict the output to differences for those\n"
+     "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV]. \n"
+     "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n"
+     "     to N, -r N:M makes OLDREV default to N and NEWREV default to M,\n"
+     "     -c M makes OLDREV default to M-1 and NEWREV default to M.\n"
+     "\n"
+     "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
+     "\n"
+     "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
-  { "export", svn_cl__export, {0},
-    N_("Create an unversioned copy of a tree.\n"
-       "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
-       "       2. export [-r REV] PATH1[@PEGREV] [PATH2]\n"
-       "\n"
-       "  1. Exports a clean directory tree from the repository specified by\n"
-       "     URL, at revision REV if it is given, otherwise at HEAD, into\n"
-       "     PATH. If PATH is omitted, the last component of the URL is used\n"
-       "     for the local directory name.\n"
-       "\n"
-       "  2. Exports a clean directory tree from the working copy specified "
-       "by\n"
-       "     PATH1, at revision REV if it is given, otherwise at WORKING, "
-       "into\n"
-       "     PATH2.  If PATH2 is omitted, the last component of the "
-       "PATH1 is used\n"
-       "     for the local directory name. If REV is not specified,"
-       " all local\n"
-       "     changes will be preserved.  Files not under version "
-       "control will\n"
-       "     not be copied.\n"
-       "\n"
-       "  If specified, PEGREV determines in which revision the target is "
-       "first\n"
-       "  looked up.\n"),
+  { "export", svn_cl__export, {0}, N_
+    ("Create an unversioned copy of a tree.\n"
+     "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
+     "       2. export [-r REV] PATH1[@PEGREV] [PATH2]\n"
+     "\n"
+     "  1. Exports a clean directory tree from the repository specified by\n"
+     "     URL, at revision REV if it is given, otherwise at HEAD, into\n"
+     "     PATH. If PATH is omitted, the last component of the URL is used\n"
+     "     for the local directory name.\n"
+     "\n"
+     "  2. Exports a clean directory tree from the working copy specified by\n"
+     "     PATH1, at revision REV if it is given, otherwise at WORKING, into\n"
+     "     PATH2.  If PATH2 is omitted, the last component of the PATH1 is used\n"
+     "     for the local directory name. If REV is not specified, all local\n"
+     "     changes will be preserved.  Files not under version control will\n"
+     "     not be copied.\n"
+     "\n"
+     "  If specified, PEGREV determines in which revision the target is first\n"
+     "  looked up.\n"),
     {'r', 'q', 'N', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__native_eol_opt, 
+     svn_cl__config_dir_opt, svn_cl__native_eol_opt,
      svn_cl__ignore_externals_opt} },
 
-  { "help", svn_cl__help, {"?", "h"},
-    N_("Describe the usage of this program or its subcommands.\n"
-       "usage: help [SUBCOMMAND...]\n"),
+  { "help", svn_cl__help, {"?", "h"}, N_
+    ("Describe the usage of this program or its subcommands.\n"
+     "usage: help [SUBCOMMAND...]\n"),
     {svn_cl__version_opt, 'q', svn_cl__config_dir_opt} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
      support them explicitly. */
-  
-  { "import", svn_cl__import, {0},
-    N_("Commit an unversioned file or tree into the repository.\n"
-       "usage: import [PATH] URL\n"
-       "\n"
-       "  Recursively commit a copy of PATH to URL.\n"
-       "  If PATH is omitted '.' is assumed.\n"
-       "  Parent directories are created as necessary in the repository.\n"
-       "  If PATH is a directory, the contents of the directory are added\n"
-       "  directly under URL.\n"),
+
+  { "import", svn_cl__import, {0}, N_
+    ("Commit an unversioned file or tree into the repository.\n"
+     "usage: import [PATH] URL\n"
+     "\n"
+     "  Recursively commit a copy of PATH to URL.\n"
+     "  If PATH is omitted '.' is assumed.\n"
+     "  Parent directories are created as necessary in the repository.\n"
+     "  If PATH is a directory, the contents of the directory are added\n"
+     "  directly under URL.\n"),
     {'q', 'N', svn_cl__autoprops_opt, svn_cl__no_autoprops_opt,
-     SVN_CL__LOG_MSG_OPTIONS, svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, 
+     SVN_CL__LOG_MSG_OPTIONS, svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
- 
-  { "info", svn_cl__info, {0},
-    N_("Display information about a local or remote item.\n"
-       "usage: info [TARGET...]\n"
-       "\n"
-       "  Print information about each TARGET (default: '.')\n"
-       "  TARGET may be either a working-copy path or URL.\n"),
+
+  { "info", svn_cl__info, {0}, N_
+    ("Display information about a local or remote item.\n"
+     "usage: info [TARGET...]\n"
+     "\n"
+     "  Print information about each TARGET (default: '.')\n"
+     "  TARGET may be either a working-copy path or URL.\n"),
     {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
- 
-  { "list", svn_cl__ls, {"ls"},
-    N_("List directory entries in the repository.\n"
-       "usage: list [TARGET[@REV]...]\n"
-       "\n"
-       "  List each TARGET file and the contents of each TARGET directory as\n"
-       "  they exist in the repository.  If TARGET is a working copy path, "
-       "the\n"
-       "  corresponding repository URL will be used. If specified, REV "
-       "determines\n"
-       "  in which revision the target is first looked up.\n"  
-       "\n"
-       "  The default TARGET is '.', meaning the repository URL of the "
-       "current\n"
-       "  working directory.\n"
-       "\n"
-       "  With --verbose, the following fields will be shown for each item:\n"
-       "\n"
-       "    Revision number of the last commit\n"
-       "    Author of the last commit\n"
-       "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
-       "    Size (in bytes)\n"
-       "    Date and time of the last commit\n"),
+
+  { "list", svn_cl__ls, {"ls"}, N_
+    ("List directory entries in the repository.\n"
+     "usage: list [TARGET[@REV]...]\n"
+     "\n"
+     "  List each TARGET file and the contents of each TARGET directory as\n"
+     "  they exist in the repository.  If TARGET is a working copy path, the\n"
+     "  corresponding repository URL will be used. If specified, REV determines\n"
+     "  in which revision the target is first looked up.\n"
+     "\n"
+     "  The default TARGET is '.', meaning the repository URL of the current\n"
+     "  working directory.\n"
+     "\n"
+     "  With --verbose, the following fields will be shown for each item:\n"
+     "\n"
+     "    Revision number of the last commit\n"
+     "    Author of the last commit\n"
+     "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
+     "    Size (in bytes)\n"
+     "    Date and time of the last commit\n"),
     {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
-  { "lock", svn_cl__lock, {0},
-    N_("Lock working copy paths or URLs in the repository, so that\n"
-       "no other user can commit changes to them.\n"
-       "usage: lock TARGET...\n"
-       "\n"
-       "  Use --force to steal the lock from another user or working copy.\n"),
+
+  { "lock", svn_cl__lock, {0}, N_
+    ("Lock working copy paths or URLs in the repository, so that\n"
+     "no other user can commit changes to them.\n"
+     "usage: lock TARGET...\n"
+     "\n"
+     "  Use --force to steal the lock from another user or working copy.\n"),
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
       svn_cl__encoding_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
       svn_cl__force_opt } },
-  { "log", svn_cl__log, {0},
-    N_("Show the log messages for a set of revision(s) and/or file(s).\n"
-       "usage: 1. log [PATH]\n"
-       "       2. log URL [PATH...]\n"
-       "\n"
-       "  1. Print the log messages for a local PATH (default: '.').\n"
-       "     The default revision range is BASE:1.\n"
-       "\n"
-       "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-       "     The default revision range is HEAD:1.\n"
-       "\n"
-       "  With -v, also print all affected paths with each log message.\n"
-       "  With -q, don't print the log message body itself (note that "
-       "this is\n"
-       "  compatible with -v).\n"
-       "\n"
-       "  Each log message is printed just once, even if more than one "
-       "of the\n"
-       "  affected paths for that revision were explicitly requested.  Logs\n"
-       "  follow copy history by default.  Use --stop-on-copy to "
-       "disable this\n"
-       "  behavior, which can be useful for determining branchpoints.\n"
-       "\n"
-       "  Examples:\n"
-       "    svn log\n"
-       "    svn log foo.c\n"
-       "    svn log http://www.example.com/repo/project/foo.c\n"
-       "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
+  { "log", svn_cl__log, {0}, N_
+    ("Show the log messages for a set of revision(s) and/or file(s).\n"
+     "usage: 1. log [PATH]\n"
+     "       2. log URL [PATH...]\n"
+     "\n"
+     "  1. Print the log messages for a local PATH (default: '.').\n"
+     "     The default revision range is BASE:1.\n"
+     "\n"
+     "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+     "     The default revision range is HEAD:1.\n"
+     "\n"
+     "  With -v, also print all affected paths with each log message.\n"
+     "  With -q, don't print the log message body itself (note that this is\n"
+     "  compatible with -v).\n"
+     "\n"
+     "  Each log message is printed just once, even if more than one of the\n"
+     "  affected paths for that revision were explicitly requested.  Logs\n"
+     "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+     "  behavior, which can be useful for determining branchpoints.\n"
+     "\n"
+     "  Examples:\n"
+     "    svn log\n"
+     "    svn log foo.c\n"
+     "    svn log http://www.example.com/repo/project/foo.c\n"
+     "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
-     svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS, 
+     svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt, svn_cl__limit_opt} },
 
-  { "merge", svn_cl__merge, {0},
-    N_("Apply the differences between two sources to a working copy path.\n"
-       "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
-       "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-       "       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
-       "\n"
-       "  1. In the first form, the source URLs are specified at revisions\n"
-       "     N and M.  These are the two sources to be compared.  The "
-       "revisions\n"
-       "     default to HEAD if omitted.\n"
-       "\n"
-       "  2. In the second form, the URLs corresponding to the source "
-       "working\n"
-       "     copy paths define the sources to be compared.  The revisions "
-       "must\n"
-       "     be specified.\n"
-       "\n"
-       "  3. In the third form, SOURCE can be a URL, or working copy item\n"
-       "     in which case the corresponding URL is used.  This URL in\n"
-       "     revision REV is compared as it existed between revisions N and \n"
-       "     M.  If REV is not specified, HEAD is assumed.  The \"-c M\"\n"
-       "     option is equivalent to \"-r N:M\" where N = M-1.\n"
-       "\n"
-       "  WCPATH is the working copy path that will receive the changes.\n"
-       "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
-       "  the sources have identical basenames that match a file within '.':\n"
-       "  in which case, the differences will be applied to that file.\n"),
+  { "merge", svn_cl__merge, {0}, N_
+    ("Apply the differences between two sources to a working copy path.\n"
+     "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
+     "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
+     "       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
+     "\n"
+     "  1. In the first form, the source URLs are specified at revisions\n"
+     "     N and M.  These are the two sources to be compared.  The revisions\n"
+     "     default to HEAD if omitted.\n"
+     "\n"
+     "  2. In the second form, the URLs corresponding to the source working\n"
+     "     copy paths define the sources to be compared.  The revisions must\n"
+     "     be specified.\n"
+     "\n"
+     "  3. In the third form, SOURCE can be a URL, or working copy item\n"
+     "     in which case the corresponding URL is used.  This URL in\n"
+     "     revision REV is compared as it existed between revisions N and \n"
+     "     M.  If REV is not specified, HEAD is assumed.  The \"-c M\"\n"
+     "     option is equivalent to \"-r N:M\" where N = M-1.\n"
+     "\n"
+     "  WCPATH is the working copy path that will receive the changes.\n"
+     "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
+     "  the sources have identical basenames that match a file within '.':\n"
+     "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt, 
+     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
-  { "mkdir", svn_cl__mkdir, {0},
-    N_("Create a new directory under version control.\n"
-       "usage: 1. mkdir PATH...\n"
-       "       2. mkdir URL...\n"
-       "\n"
-       "  Create version controlled directories.\n"
-       "\n"
-       "  1. Each directory specified by a working copy PATH is created "
-       "locally\n"
-       "    and scheduled for addition upon the next commit.\n"
-       "\n"
-       "  2. Each directory specified by a URL is created in the repository "
-       "via\n"
-       "    an immediate commit.\n"
-       "\n"
-       "  In both cases, all the intermediate directories must already "
-       "exist.\n"),
+
+  { "mkdir", svn_cl__mkdir, {0}, N_
+    ("Create a new directory under version control.\n"
+     "usage: 1. mkdir PATH...\n"
+     "       2. mkdir URL...\n"
+     "\n"
+     "  Create version controlled directories.\n"
+     "\n"
+     "  1. Each directory specified by a working copy PATH is created locally\n"
+     "    and scheduled for addition upon the next commit.\n"
+     "\n"
+     "  2. Each directory specified by a URL is created in the repository via\n"
+     "    an immediate commit.\n"
+     "\n"
+     "  In both cases, all the intermediate directories must already exist.\n"),
     {'q',
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
-  { "move", svn_cl__move, {"mv", "rename", "ren"},
-    N_("Move and/or rename something in working copy or repository.\n"
-       "usage: move SRC DST\n"
-       "\n"
-       "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
-       "  Note:  the --revision option has no use and is deprecated.\n"
-       "\n"
-       "  SRC and DST can both be working copy (WC) paths or URLs:\n"
-       "    WC  -> WC:   move and schedule for addition (with history)\n"
-       "    URL -> URL:  complete server-side rename.\n"),    
+  { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
+    ("Move and/or rename something in working copy or repository.\n"
+     "usage: move SRC DST\n"
+     "\n"
+     "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
+     "  Note:  the --revision option has no use and is deprecated.\n"
+     "\n"
+     "  SRC and DST can both be working copy (WC) paths or URLs:\n"
+     "    WC  -> WC:   move and schedule for addition (with history)\n"
+     "    URL -> URL:  complete server-side rename.\n"),
     {'r', 'q', svn_cl__force_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
-  { "propdel", svn_cl__propdel, {"pdel", "pd"},
-    N_("Remove a property from files, dirs, or revisions.\n"
-       "usage: 1. propdel PROPNAME [PATH...]\n"
-       "       2. propdel PROPNAME --revprop -r REV [TARGET]\n"
-       "\n"
-       "  1. Removes versioned props in working copy.\n"
-       "  2. Removes unversioned remote prop on repos revision.\n"
-       "     TARGET only determines which repository to access.\n"),
+
+  { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
+    ("Remove a property from files, dirs, or revisions.\n"
+     "usage: 1. propdel PROPNAME [PATH...]\n"
+     "       2. propdel PROPNAME --revprop -r REV [TARGET]\n"
+     "\n"
+     "  1. Removes versioned props in working copy.\n"
+     "  2. Removes unversioned remote prop on repos revision.\n"
+     "     TARGET only determines which repository to access.\n"),
     {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
-  
-  { "propedit", svn_cl__propedit, {"pedit", "pe"},
-    N_("Edit a property with an external editor.\n"
-       "usage: 1. propedit PROPNAME PATH...\n"
-       "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
-       "\n"
-       "  1. Edits versioned props in working copy.\n"
-       "  2. Edits unversioned remote prop on repos revision.\n"
-       "     TARGET only determines which repository to access.\n"),
+
+  { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
+    ("Edit a property with an external editor.\n"
+     "usage: 1. propedit PROPNAME PATH...\n"
+     "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
+     "\n"
+     "  1. Edits versioned props in working copy.\n"
+     "  2. Edits unversioned remote prop on repos revision.\n"
+     "     TARGET only determines which repository to access.\n"),
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
-  
-  { "propget", svn_cl__propget, {"pget", "pg"},
-    N_("Print the value of a property on files, dirs, or revisions.\n"
-       "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
-       "       2. propget PROPNAME --revprop -r REV [TARGET]\n"
-       "\n"
-       "  1. Prints versioned props. If specified, REV determines in which\n"
-       "     revision the target is first looked up.\n"
-       "  2. Prints unversioned remote prop on repos revision.\n"
-       "     TARGET only determines which repository to access.\n"
-       "\n"
-       "  By default, this subcommand will add an extra newline to the end\n"
-       "  of the property values so that the output looks pretty.  Also,\n"
-       "  whenever there are multiple paths involved, each property value\n"
-       "  is prefixed with the path with which it is associated.  Use\n"
-       "  the --strict option to disable these beautifications (useful,\n"
-       "  for example, when redirecting binary property values to a file).\n"),
-    {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt, 
+
+  { "propget", svn_cl__propget, {"pget", "pg"}, N_
+    ("Print the value of a property on files, dirs, or revisions.\n"
+     "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
+     "       2. propget PROPNAME --revprop -r REV [TARGET]\n"
+     "\n"
+     "  1. Prints versioned props. If specified, REV determines in which\n"
+     "     revision the target is first looked up.\n"
+     "  2. Prints unversioned remote prop on repos revision.\n"
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "  By default, this subcommand will add an extra newline to the end\n"
+     "  of the property values so that the output looks pretty.  Also,\n"
+     "  whenever there are multiple paths involved, each property value\n"
+     "  is prefixed with the path with which it is associated.  Use\n"
+     "  the --strict option to disable these beautifications (useful,\n"
+     "  for example, when redirecting binary property values to a file).\n"),
+    {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
-  { "proplist", svn_cl__proplist, {"plist", "pl"},
-    N_("List all properties on files, dirs, or revisions.\n"
-       "usage: 1. proplist [TARGET[@REV]...]\n"
-       "       2. proplist --revprop -r REV [TARGET]\n"
-       "\n"
-       "  1. Lists versioned props. If specified, REV determines in which\n"
-       "     revision the target is first looked up.\n"
-       "  2. Lists unversioned remote props on repos revision.\n"
-       "     TARGET only determines which repository to access.\n"),
+  { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
+    ("List all properties on files, dirs, or revisions.\n"
+     "usage: 1. proplist [TARGET[@REV]...]\n"
+     "       2. proplist --revprop -r REV [TARGET]\n"
+     "\n"
+     "  1. Lists versioned props. If specified, REV determines in which\n"
+     "     revision the target is first looked up.\n"
+     "  2. Lists unversioned remote props on repos revision.\n"
+     "     TARGET only determines which repository to access.\n"),
     {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
-  { "propset", svn_cl__propset, {"pset", "ps"},
-    N_("Set the value of a property on files, dirs, or revisions.\n"
-       "usage: 1. propset PROPNAME PROPVAL PATH...\n"
-       "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
-       "\n"
-       "  1. Creates a versioned, local propchange in working copy.\n"
-       "  2. Creates an unversioned, remote propchange on repos revision.\n"
-       "     TARGET only determines which repository to access.\n"
-       "\n"
-       "  The value may be provided with the --file option instead of "
-       "PROPVAL.\n"
-       "\n"
-       "  Note: svn recognizes the following special versioned properties\n"
-       "  but will store any arbitrary properties set:\n"
-       "    svn:ignore     - A newline separated list of file patterns to "
-       "ignore.\n"
-       "    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
-       "      URL, HeadURL             - The URL for the head version of "
-       "the object.\n"
-       "      Author, LastChangedBy    - The last person to modify the file.\n"
-       "      Date, LastChangedDate    - The date/time the object was last "
-       "modified.\n"
-       "      Rev, Revision,           - The last revision the object "
-       "changed.\n"
-       "      LastChangedRevision\n"
-       "      Id                       - A compressed summary of the "
-       "previous\n"
-       "                                   4 keywords.\n"
-       "    svn:executable - If present, make the file executable.\n"
-       "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
-       "    svn:mime-type  - The mimetype of the file.  Used to determine\n"
-       "      whether to merge the file, and how to serve it from Apache.\n"
-       "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
-       "      treated as text.  Anything else is treated as binary.\n"
-       "    svn:externals  - A newline separated list of module specifiers,\n"
-       "      each of which consists of a relative directory path, optional\n"
-       "      revision flags, and an URL.  For example\n"
-       "        foo             http://example.com/repos/zig\n"
-       "        foo/bar -r 1234 http://example.com/repos/zag\n"
-       "    svn:needs-lock - If present, indicates that the file should be "
-       "locked\n"
-       "      before it is modified.  Makes the working copy file read-only\n"
-       "      when it is not locked.\n"
-       "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type "
-       "and\n"
-       "  svn:needs-lock properties cannot be set on a directory.  A "
-       "non-recursive\n"
-       "  attempt will fail, and a recursive attempt will set the property\n"
-       "  only on the file children of the directory.\n"),
+  { "propset", svn_cl__propset, {"pset", "ps"}, N_
+    ("Set the value of a property on files, dirs, or revisions.\n"
+     "usage: 1. propset PROPNAME PROPVAL PATH...\n"
+     "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
+     "\n"
+     "  1. Creates a versioned, local propchange in working copy.\n"
+     "  2. Creates an unversioned, remote propchange on repos revision.\n"
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "  The value may be provided with the --file option instead of PROPVAL.\n"
+     "\n"
+     "  Note: svn recognizes the following special versioned properties\n"
+     "  but will store any arbitrary properties set:\n"
+     "    svn:ignore     - A newline separated list of file patterns to ignore.\n"
+     "    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
+     "      URL, HeadURL             - The URL for the head version of the object.\n"
+     "      Author, LastChangedBy    - The last person to modify the file.\n"
+     "      Date, LastChangedDate    - The date/time the object was last modified.\n"
+     "      Rev, Revision,           - The last revision the object changed.\n"
+     "      LastChangedRevision\n"
+     "      Id                       - A compressed summary of the previous\n"
+     "                                   4 keywords.\n"
+     "    svn:executable - If present, make the file executable.\n"
+     "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
+     "    svn:mime-type  - The mimetype of the file.  Used to determine\n"
+     "      whether to merge the file, and how to serve it from Apache.\n"
+     "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
+     "      treated as text.  Anything else is treated as binary.\n"
+     "    svn:externals  - A newline separated list of module specifiers,\n"
+     "      each of which consists of a relative directory path, optional\n"
+     "      revision flags, and an URL.  For example\n"
+     "        foo             http://example.com/repos/zig\n"
+     "        foo/bar -r 1234 http://example.com/repos/zag\n"
+     "    svn:needs-lock - If present, indicates that the file should be locked\n"
+     "      before it is modified.  Makes the working copy file read-only\n"
+     "      when it is not locked.\n"
+     "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
+     "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
+     "  attempt will fail, and a recursive attempt will set the property\n"
+     "  only on the file children of the directory.\n"),
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
-  
-  { "resolved", svn_cl__resolved, {0},
-    N_("Remove 'conflicted' state on working copy files or directories.\n"
-       "usage: resolved PATH...\n"
-       "\n"
-       "  Note:  this subcommand does not semantically resolve conflicts or\n"
-       "  remove conflict markers; it merely removes the conflict-related\n"
-       "  artifact files and allows PATH to be committed again.\n"),
+
+  { "resolved", svn_cl__resolved, {0}, N_
+    ("Remove 'conflicted' state on working copy files or directories.\n"
+     "usage: resolved PATH...\n"
+     "\n"
+     "  Note:  this subcommand does not semantically resolve conflicts or\n"
+     "  remove conflict markers; it merely removes the conflict-related\n"
+     "  artifact files and allows PATH to be committed again.\n"),
     {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
- 
-  { "revert", svn_cl__revert, {0},
-    N_("Restore pristine working copy file (undo most local edits).\n"
-       "usage: revert PATH...\n"
-       "\n"
-       "  Note:  this subcommand does not require network access, and "
-       "resolves\n"
-       "  any conflicted states.  However, it does not restore removed "
-       "directories.\n"),
+
+  { "revert", svn_cl__revert, {0}, N_
+    ("Restore pristine working copy file (undo most local edits).\n"
+     "usage: revert PATH...\n"
+     "\n"
+     "  Note:  this subcommand does not require network access, and resolves\n"
+     "  any conflicted states.  However, it does not restore removed directories.\n"),
     {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
@@ -642,8 +598,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  With -v, print full revision information on every item.\n"
      "\n"
      "  The first six columns in the output are each one character wide:\n"
-     "    First column: Says if item was added, deleted, or otherwise "
-     "changed\n"
+     "    First column: Says if item was added, deleted, or otherwise changed\n"
      "      ' ' no modifications\n"
      "      'A' Added\n"
      "      'C' Conflicted\n"
@@ -709,61 +664,52 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, svn_cl__incremental_opt,
       svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
       svn_cl__ignore_externals_opt} },
-  
-  { "switch", svn_cl__switch, {"sw"},
-    N_("Update the working copy to a different URL.\n"
-       "usage: 1. switch URL [PATH]\n"
-       "       2. switch --relocate FROM TO [PATH...]\n"
-       "\n"
-       "  1. Update the working copy to mirror a new URL within the "
-       "repository.\n"
-       "     This behaviour is similar to 'svn update', and is the way to\n"
-       "     move a working copy to a branch or tag within the same "
-       "repository.\n"
-       "\n"
-       "  2. Rewrite working copy URL metadata to reflect a syntactic change "
-       "only.\n"
-       "     This is used when repository's root URL changes (such as a "
-       "scheme\n"
-       "     or hostname change) but your working copy still reflects the "
-       "same\n"
-       "     directory within the same repository.\n"),
+
+  { "switch", svn_cl__switch, {"sw"}, N_
+    ("Update the working copy to a different URL.\n"
+     "usage: 1. switch URL [PATH]\n"
+     "       2. switch --relocate FROM TO [PATH...]\n"
+     "\n"
+     "  1. Update the working copy to mirror a new URL within the repository.\n"
+     "     This behaviour is similar to 'svn update', and is the way to\n"
+     "     move a working copy to a branch or tag within the same repository.\n"
+     "\n"
+     "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
+     "     This is used when repository's root URL changes (such as a scheme\n"
+     "     or hostname change) but your working copy still reflects the same\n"
+     "     directory within the same repository.\n"),
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
- 
-  { "unlock", svn_cl__unlock, {0},
-    N_("Unlock working copy paths or URLs.\n"
-       "usage: unlock TARGET...\n"
-       "\n"
-       "  Use --force to break the lock.\n"),
+
+  { "unlock", svn_cl__unlock, {0}, N_
+    ("Unlock working copy paths or URLs.\n"
+     "usage: unlock TARGET...\n"
+     "\n"
+     "  Use --force to break the lock.\n"),
     { svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS,
       svn_cl__config_dir_opt, svn_cl__force_opt } },
 
-  { "update", svn_cl__update, {"up"}, 
-    N_("Bring changes from the repository into the working copy.\n"
-       "usage: update [PATH...]\n"
-       "\n"
-       "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
-       "  Else synchronize working copy to revision given by -r.\n"
-       "\n"
-       "  For each updated item a line will start with a character reporting "
-       "the\n"
-       "  action taken.  These characters have the following meaning:\n"
-       "\n"
-       "    A  Added\n"
-       "    D  Deleted\n"
-       "    U  Updated\n"
-       "    C  Conflict\n"
-       "    G  Merged\n"
-       "\n"
-       "  A character in the first column signifies an update to the actual "
-       "file,\n"
-       "  while updates to the file's properties are shown in the second "
-       "column.\n"
-       "  A 'B' in the third column signifies that the lock for the file has\n"
-       "  been broken or stolen.\n"
-       ),
-    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
+  { "update", svn_cl__update, {"up"},  N_
+    ("Bring changes from the repository into the working copy.\n"
+     "usage: update [PATH...]\n"
+     "\n"
+     "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
+     "  Else synchronize working copy to revision given by -r.\n"
+     "\n"
+     "  For each updated item a line will start with a character reporting the\n"
+     "  action taken.  These characters have the following meaning:\n"
+     "\n"
+     "    A  Added\n"
+     "    D  Deleted\n"
+     "    U  Updated\n"
+     "    C  Conflict\n"
+     "    G  Merged\n"
+     "\n"
+     "  A character in the first column signifies an update to the actual file,\n"
+     "  while updates to the file's properties are shown in the second column.\n"
+     "  A 'B' in the third column signifies that the lock for the file has\n"
+     "  been broken or stolen.\n"),
+    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
