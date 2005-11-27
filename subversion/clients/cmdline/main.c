@@ -74,11 +74,11 @@ const apr_getopt_option_t svn_cl__options[] =
    ("ARG (some commands also take ARG1:ARG2 range)\n"
     "                             A revision argument can be one of:\n"
     "                                NUMBER       revision number\n"
-    "                                \"{\" DATE \"}\" revision at start of the date\n"
-    "                                \"HEAD\"       latest in repository\n"
-    "                                \"BASE\"       base rev of item's working copy\n"
-    "                                \"COMMITTED\"  last commit at or before BASE\n"
-    "                                \"PREV\"       revision just before COMMITTED")
+    "                                '{' DATE '}' revision at start of the date\n"
+    "                                'HEAD'       latest in repository\n"
+    "                                'BASE'       base rev of item's working copy\n"
+    "                                'COMMITTED'  last commit at or before BASE\n"
+    "                                'PREV'       revision just before COMMITTED")
    /* spacing corresponds to svn_opt_format_option */
   },
   {"file",          'F', 1, N_("read data from file ARG")},
@@ -284,7 +284,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "     N defaults to BASE if any TARGET is a working copy path, otherwise it\n"
      "     must be specified.  M defaults to the current working version if any\n"
      "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
-     "     The \"-c M\" option is equivalent to \"-r N:M\" where N = M-1.\n"
+     "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
      "\n"
      "  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
      "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
@@ -433,8 +433,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  3. In the third form, SOURCE can be a URL, or working copy item\n"
      "     in which case the corresponding URL is used.  This URL in\n"
      "     revision REV is compared as it existed between revisions N and \n"
-     "     M.  If REV is not specified, HEAD is assumed.  The \"-c M\"\n"
-     "     option is equivalent to \"-r N:M\" where N = M-1.\n"
+     "     M.  If REV is not specified, HEAD is assumed.  The '-c M'\n"
+     "     option is equivalent to '-r N:M' where N = M-1.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
