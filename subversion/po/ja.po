@@ -145,8 +145,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-11-27 19:15+0900\n"
-"PO-Revision-Date: 2005-11-27 19:13+0900\n"
+"POT-Creation-Date: 2005-11-27 19:53+0900\n"
+"PO-Revision-Date: 2005-11-27 19:53+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -7015,18 +7015,20 @@ msgstr ""
 
 #: libsvn_wc/lock.c:704 libsvn_wc/lock.c:735
 #, c-format
-msgid "Unable to check path existence for %s"
-msgstr "%s というパスの存在を確かめられません"
+msgid "Unable to check path existence for '%s'"
+msgstr "'%s' というパスの存在を確かめられません"
 
 #: libsvn_wc/lock.c:714
 #, c-format
-msgid "Expected %s to be a directory but found a file"
-msgstr "%s がディレクトリであることを期待しましたが、ファイルが見つかりました"
+msgid "Expected '%s' to be a directory but found a file"
+msgstr ""
+"'%s' がディレクトリであることを期待しましたが、ファイルが見つかりました"
 
 #: libsvn_wc/lock.c:721
 #, c-format
-msgid "Expected %s to be a file but found a directory"
-msgstr "%s がファイルであることを期待しましたが、ディレクトリが見つかりました"
+msgid "Expected '%s' to be a file but found a directory"
+msgstr ""
+"'%s' がファイルであることを期待しましたが、ディレクトリが見つかりました"
 
 #: libsvn_wc/lock.c:741
 #, c-format
@@ -7040,8 +7042,8 @@ msgstr "作業コピー管理領域を含むディレクトリ '%s' がありま
 
 #: libsvn_wc/lock.c:751
 #, c-format
-msgid "Unable to lock %s"
-msgstr "%s をロックできません"
+msgid "Unable to lock '%s'"
+msgstr "'%s' をロックできません"
 
 #: libsvn_wc/lock.c:756
 #, c-format
@@ -11570,3 +11572,17 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "  ジ元のベース名が同一でその名前のファイルが '.' に存在する場合、差分はそ"
 #~ "のファ\n"
 #~ "  イルに適用されます。\n"
+
+#~ msgid "Unable to check path existence for %s"
+#~ msgstr "%s というパスの存在を確かめられません"
+
+#~ msgid "Expected %s to be a directory but found a file"
+#~ msgstr ""
+#~ "%s がディレクトリであることを期待しましたが、ファイルが見つかりました"
+
+#~ msgid "Expected %s to be a file but found a directory"
+#~ msgstr ""
+#~ "%s がファイルであることを期待しましたが、ディレクトリが見つかりました"
+
+#~ msgid "Unable to lock %s"
+#~ msgstr "%s をロックできません"
