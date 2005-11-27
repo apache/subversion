@@ -15,6 +15,13 @@ Candidate changes:
     Votes:
       +1: brane
 
+  * r17521
+    Fix and improve help text for property commands such as 'svn propget'.
+    Justficiation: Misleading help messages are not good.
+    Notes: Only changes for messages.
+    Votes:
+      +0: nori
+
   * r17525
     Fix output mailer.py emails for locks and unlocks to use the
       author of the lock or unlock.  Currently, all outgoing email is
