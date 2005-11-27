@@ -701,7 +701,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
         {
           svn_error_clear (err);          
           return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                                    _("Unable to check path existence for %s"),
+                                    _("Unable to check path existence for '%s'"),
                                     svn_path_local_style (path, pool));
         }
       
@@ -711,14 +711,14 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
               && kind == svn_node_file)
             {
               return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                                        _("Expected %s to be a directory but found a file"), 
+                                        _("Expected '%s' to be a directory but found a file"), 
                                         svn_path_local_style (path, pool));
             }
           else if (subdir_entry->kind == svn_node_file
                    && kind == svn_node_dir)
             {
               return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                                        _("Expected %s to be a file but found a directory"), 
+                                        _("Expected '%s' to be a file but found a directory"), 
                                         svn_path_local_style (path, pool));
             }
         }
@@ -748,7 +748,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
 
       else if (kind == svn_node_dir && wckind == svn_node_dir)
         return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                                  _("Unable to lock %s"),
+                                  _("Unable to lock '%s'"),
                                   svn_path_local_style (path, pool));
       
       /* If all else fails, return our useless generic error.  */
