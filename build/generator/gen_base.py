@@ -553,7 +553,8 @@ class TargetSWIG(TargetLib):
     self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)
-    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
+    cfile = SWIGObject(build_path_join('$(top_srcdir)', self.path, cname),
+                       self.lang)
     ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
 
     # the .c file depends upon the .i file
@@ -941,7 +942,7 @@ class IncludeDependencyInfo:
     for hdr, hdr_type in hdrs.items():
       if hdr_type == '#':
         c_filenames.append(hdr)
-      else # hdr_type == '%':
+      else: # hdr_type == '%'
         swig_filenames.append(hdr)
     # Be independent of hash ordering
     c_filenames.sort()

@@ -269,6 +269,13 @@ svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
                               const char *diff3_cmd,
                               apr_pool_t *pool);
 
+/* Similar to svn_wc__run_log except that it is assumed that the log
+   file has been run before and so some of the log commands may
+   already have been processed. */
+svn_error_t *svn_wc__rerun_log (svn_wc_adm_access_t *adm_access,
+                                const char *diff3_cmd,
+                                apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

@@ -74,23 +74,6 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
                                 const char **eol,
                                 const char *value);
 
-/** Returns the @a eol and @a force_repair parameters needed to
- * translate @a style to its normal form (used for working copy text
- * bases and in the repository). @a eol is assumed to point to a
- * valid eol translation string and may be returned unmodified.
- *
- * @note For more information about line-endings see
- *       notes/line-endings-and-keywords.txt
- *
- * @since New in 1.4
- *
- */
-svn_error_t *
-svn_subst_eol_style_normalize (svn_boolean_t *force_repair,
-                               const char **eol,
-                               svn_subst_eol_style_t style);
-
-
 /** Indicates whether the working copy and normalized versions of a file
  * with the given the parameters differ.  If @a force_eol_check is true,
  * the routine also accounts for all translations required due to repairing
@@ -276,9 +259,12 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * Convenience routine: a variant of svn_subst_translate_stream3()
- * which operates on files.  In addition, it will create/detranslate a special
- * file if @a special is @c TRUE.
+ * Translates the file at path @a src into a file at path @a dst.  The
+ * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
+ * defined the same as in svn_subst_translate_stream3().
+ *
+ * In addition, it will create a special file from normal form or
+ * translate one to normal form if @a special is @c TRUE.
  *
  * Copy the contents of file-path @a src to file-path @a dst atomically,
  * either creating @a dst (or overwriting @a dst if it exists), possibly
@@ -372,10 +358,22 @@ svn_subst_translate_cstring (const char *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
 
-/** Convenience routine (wrapper around svn_subst_copy_and_translate3)
- * which detranslates the given @a src into @a dst.  The parameters
- * specified should be those immediately taken from the files'
- * properties.
+/**
+ * Translates a file @a src in working copy form to a file @a dst in
+ * normal form form.
+ *
+ * The values specified for @a eol_style, @a *eol_str, @a keywords and
+ * @a special, should be the ones used to translate the file to its
+ * working copy form.  Usually, these are the values specified by the
+ * user in the files' properties.
+ *
+ * Inconsistent line endings in the file will be automatically repaired
+ * (made consistent) for some eol styles.  For all others, an error is
+ * returned.  By setting @a always_repair_eols to @c TRUE, eols will be
+ * made consistent even for those styles which don't have it by default.
+ *
+ * @note To translate a file FROM normal form, use
+ *       svn_subst_copy_and_translate3().
  *
  * @since New in 1.4
  *
@@ -385,6 +383,7 @@ svn_subst_translate_to_normal_form (const char *src,
                                     const char *dst,
                                     svn_subst_eol_style_t eol_style,
                                     const char *eol_str,
+                                    svn_boolean_t always_repair_eols,
                                     apr_hash_t *keywords,
                                     svn_boolean_t special,
                                     apr_pool_t *pool);

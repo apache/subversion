@@ -21,6 +21,7 @@
 #include "client.h"
 
 #include "svn_client.h"
+#include "svn_subst.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_diff.h"
@@ -58,10 +59,13 @@ struct file_rev_baton {
   const char *target;
   svn_client_ctx_t *ctx;
   const char *last_filename;
+  svn_subst_eol_style_t eol_style;
+  const char *eol_str;
   struct rev *rev;     /* the rev for which blame is being assigned
                           during a diff */
   struct blame *blame; /* linked list of blame chunks */
   struct blame *avail; /* linked list of free blame chunks */
+  const char *tmp_path; /* temp file name to feed svn_io_open_unique_file */
   apr_pool_t *mainpool;  /* lives during the whole sequence of calls */
   apr_pool_t *lastpool;  /* pool used during previous call */
   apr_pool_t *currpool;  /* pool used during this call */
@@ -325,6 +329,25 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     SVN_ERR (svn_io_file_close (dbaton->source_file, frb->currpool));
   SVN_ERR (svn_io_file_close (dbaton->file, frb->currpool));
 
+  if (svn_subst_translation_required (frb->eol_style, frb->eol_str,
+                                      NULL, FALSE, FALSE))
+    {
+      const char *translation_tgt;
+
+      SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                         &translation_tgt,
+                                         frb->tmp_path,
+                                         ".tmp",
+                                         svn_io_file_del_on_pool_cleanup,
+                                         frb->currpool));
+      SVN_ERR (svn_subst_copy_and_translate3 (dbaton->filename,
+                                              translation_tgt,
+                                              frb->eol_str, FALSE,
+                                              NULL, FALSE, FALSE,
+                                              frb->currpool));
+      dbaton->filename = translation_tgt;
+    }
+
   /* Process this file. */
   SVN_ERR (add_file_blame (frb->last_filename,
                            dbaton->filename, frb));
@@ -366,6 +389,26 @@ check_mimetype (apr_array_header_t *prop_diffs, const char *target,
   return SVN_NO_ERROR;
 }
 
+
+static void
+update_eol_style (svn_subst_eol_style_t *style,
+                 const char **eol,
+                 apr_array_header_t *prop_diffs)
+{
+  int i;
+
+  for (i = 0; i < prop_diffs->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+      if (strcmp (prop->name, SVN_PROP_EOL_STYLE) == 0)
+        {
+          svn_subst_eol_style_from_value
+            (style, eol, prop->value ? prop->value->data : NULL);
+          return;
+        }
+    }
+}
+
 static svn_error_t *
 file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
                   apr_hash_t *rev_props,
@@ -377,7 +420,6 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
   struct file_rev_baton *frb = baton;
   svn_stream_t *last_stream;
   svn_stream_t *cur_stream;
-  const char *temp_dir;
   struct delta_baton *delta_baton;
 
   /* Clear the current pool. */
@@ -385,6 +427,8 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
 
   /* If this file has a non-textual mime-type, bail out. */
   SVN_ERR (check_mimetype (prop_diffs, frb->target, frb->currpool));
+
+  update_eol_style (&frb->eol_style, &frb->eol_str, prop_diffs);
 
   if (frb->ctx->notify_func2)
     {
@@ -422,11 +466,9 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
     delta_baton->source_file = NULL;
   last_stream = svn_stream_from_aprfile (delta_baton->source_file, pool);
 
-  SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
   SVN_ERR (svn_io_open_unique_file2 (&delta_baton->file,
                                      &delta_baton->filename,
-                                     svn_path_join (temp_dir, "tmp",
-                                                    frb->currpool),
+                                     frb->tmp_path,
                                      ".tmp", svn_io_file_del_on_pool_cleanup,
                                      frb->currpool));
   cur_stream = svn_stream_from_aprfile (delta_baton->file, frb->currpool);
@@ -528,8 +570,14 @@ svn_client_blame2 (const char *target,
   frb.target = target;
   frb.ctx = ctx;
   frb.last_filename = NULL;
+  frb.eol_style = svn_subst_eol_style_none;
+  frb.eol_str = NULL;
   frb.blame = NULL;
   frb.avail = NULL;
+
+  SVN_ERR (svn_io_temp_dir (&frb.tmp_path, pool));
+  frb.tmp_path = svn_path_join (frb.tmp_path, "tmp", pool),
+
   frb.mainpool = pool;
   /* The callback will flip the following two pools, because it needs
      information from the previous call.  Obviously, it can't rely on

@@ -51,6 +51,7 @@
 ;; C-d   - svn-status-rm                    run 'svn rm'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
 ;; b     - svn-status-blame                 run 'svn blame'
+;; X e   - svn-status-export                run 'svn export'
 ;; RET   - svn-status-find-file-or-examine-directory
 ;; ^     - svn-status-examine-parent
 ;; ~     - svn-status-get-specific-revision
@@ -138,7 +139,7 @@
 ;; * copy (cp)
 ;; * delete (del, remove, rm)  implemented
 ;; * diff (di)                 implemented
-;; * export
+;; * export                    implemented
 ;; * help (?, h)
 ;; * import
 ;; * info                      implemented
@@ -232,6 +233,11 @@ Possible values are: commit, revert."
               (const revert))
   :group 'psvn)
 
+(defcustom svn-status-preserve-window-configuration nil
+  "*Try to preserve the window configuration."
+  :type 'boolean
+  :group 'psvn)
+
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -247,11 +253,15 @@ This can be either absolute or looked up on `exec-path'."
   :group 'psvn)
 (put 'svn-status-svn-executable 'risky-local-variable t)
 
+(defcustom svn-status-default-export-directory "~/" "*The default directory that is suggested svn export."
+  :type 'file
+  :group 'psvn)
+
 (defcustom svn-status-svn-environment-var-list '()
   "*A list of environment variables that should be set for that svn process.
 Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
-variable to be entirely removed from the environment. 
+variable to be entirely removed from the environment.
 
 You could set this for example to '(\"LANG=C\")"
   :type '(repeat string)
@@ -644,7 +654,7 @@ Otherwise, return \"\"."
   (if (fboundp 'point-at-eol) 'point-at-eol 'line-end-position))
 (defalias 'svn-point-at-bol
   (if (fboundp 'point-at-bol) 'point-at-bol 'line-beginning-position))
-(defalias 'svn-read-directory-name 
+(defalias 'svn-read-directory-name
   (if (fboundp 'read-directory-name) 'read-directory-name 'read-file-name))
 
 (eval-when-compile
@@ -1335,6 +1345,7 @@ A and B must be line-info's."
   (setq svn-status-mode-extension-map (make-sparse-keymap))
   (define-key svn-status-mode-extension-map (kbd "v") 'svn-status-resolved)
   (define-key svn-status-mode-extension-map (kbd "X") 'svn-status-resolve-conflicts)
+  (define-key svn-status-mode-extension-map (kbd "e") 'svn-status-export)
   (define-key svn-status-mode-map (kbd "X") svn-status-mode-extension-map))
 (when (not svn-status-mode-options-map)
   (setq svn-status-mode-options-map (make-sparse-keymap))
@@ -1371,6 +1382,7 @@ A and B must be line-info's."
     ["svn mkdir..." svn-status-make-directory t]
     ["svn mv..." svn-status-mv t]
     ["svn rm..." svn-status-rm t]
+    ["svn export..." svn-status-export t]
     ["Up Directory" svn-status-examine-parent t]
     ["Elide Directory" svn-status-toggle-elide t]
     ["svn revert" svn-status-revert t]
@@ -2469,8 +2481,9 @@ Consider svn-status-window-alist to choose the buffer name."
     (when svn-status-last-output-buffer-name
       (if window-mode
           (progn
-            (when (string= (buffer-name) svn-status-buffer-name)
-              (delete-other-windows))
+            (unless svn-status-preserve-window-configuration
+              (when (string= (buffer-name) svn-status-buffer-name)
+                (delete-other-windows)))
             (pop-to-buffer "*svn-process*")
             (switch-to-buffer (get-buffer-create svn-status-last-output-buffer-name))
             (let ((buffer-read-only nil))
@@ -2777,8 +2790,19 @@ If no files have been marked, commit recursively the file at point."
     (setq default-directory dir)
     (unless use-existing-buffer
       (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
-        (insert-file svn-log-edit-file-name)))
+        (insert-file-contents svn-log-edit-file-name)))
     (svn-log-edit-mode)))
+
+(defun svn-status-export ()
+  "Run `svn export' for the current working copy.
+Ask the user for the destination path.
+`svn-status-default-export-directory' is suggested as export directory."
+  (interactive)
+  (let* ((src default-directory)
+         (dir1-name (nth 1 (nreverse (split-string src "/"))))
+         (dest (read-file-name (format "Export %s to " src) (concat svn-status-default-export-directory dir1-name))))
+    (svn-run-svn t t 'export "export" (expand-file-name src) (expand-file-name dest))
+    (message "svn-status-export %s %s" src dest)))
 
 (defun svn-status-cleanup (arg)
   "Run `svn cleanup' on all selected files.
@@ -3734,7 +3758,7 @@ The conflicts must be marked with rcsmerge conflict markers."
     (save-excursion
       (set-buffer your-buffer)
       (erase-buffer)
-      (insert-buffer result-buffer)
+      (insert-buffer-substring result-buffer)
       (goto-char (point-min))
       (while (re-search-forward "^<<<<<<< .mine\n" nil t)
         (setq found t)
@@ -3753,7 +3777,7 @@ The conflicts must be marked with rcsmerge conflict markers."
             (error "No conflict markers found")))
       (set-buffer other-buffer)
       (erase-buffer)
-      (insert-buffer result-buffer)
+      (insert-buffer-substring result-buffer)
       (goto-char (point-min))
       (while (re-search-forward "^<<<<<<< .mine\n" nil t)
         (let ((start (match-beginning 0)))
@@ -3788,7 +3812,7 @@ The conflicts must be marked with rcsmerge conflict markers."
                   (ediff-cleanup-mess)
                   (set-buffer result)
                   (erase-buffer)
-                  (insert-buffer buffer-C)
+                  (insert-buffer-substring buffer-C)
                   (kill-buffer buffer-A)
                   (kill-buffer buffer-B)
                   (kill-buffer buffer-C)

@@ -230,15 +230,13 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
     SVN_ERR (svn_wc_translated_file2
              (&tmp_vfile, versioned_file,
               versioned_file, adm_access,
-              SVN_WC_TRANSLATE_TO_NF
-              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              SVN_WC_TRANSLATE_TO_NF,
               pool));
   else
     SVN_ERR (svn_wc_translated_file2
              (&tmp_vfile, base_file,
               versioned_file, adm_access,
-              SVN_WC_TRANSLATE_FROM_NF
-              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              SVN_WC_TRANSLATE_FROM_NF,
               pool));
 
   SVN_ERR (svn_io_files_contents_same_p (&same, tmp_vfile,
@@ -277,15 +275,13 @@ compare_and_verify (svn_boolean_t *modified_p,
     SVN_ERR (svn_wc_translated_file2
              (&tmp_vfile, versioned_file,
               versioned_file, adm_access,
-              SVN_WC_TRANSLATE_TO_NF
-              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              SVN_WC_TRANSLATE_TO_NF,
               pool));
   else
     SVN_ERR (svn_wc_translated_file2
              (&tmp_vfile, base_file,
               versioned_file, adm_access,
-              SVN_WC_TRANSLATE_FROM_NF
-              | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP,
+              SVN_WC_TRANSLATE_FROM_NF,
               pool));
 
 

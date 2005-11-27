@@ -1418,16 +1418,16 @@ def info_moved_path(sbox):
                                                       fname2, '-r1')
   # Since we want to make sure that there is *no* lock info, to make this
   # more robust, we also check that the info command actually output some info.
-  got_url = False
+  got_url = 0
   for line in output:
     if line.find("URL:") >= 0:
-      got_url = True
+      got_url = 1
     if line.find("Lock Token:") >= 0:
       print fname2 + " was reported as locked."
       raise svntest.Failure
   if not got_url:
     print "Info didn't output an URL."
-    raise svntest.Falure
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests

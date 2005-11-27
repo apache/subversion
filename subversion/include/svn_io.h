@@ -677,6 +677,18 @@ svn_error_t *svn_io_remove_file (const char *path, apr_pool_t *pool);
 /** Recursively remove directory @a path.  @a path is utf8-encoded. */
 svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
+/** Read all of the disk entries in directory @a path, a utf8-encoded
+ * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
+ * undefined non-NULL values, allocated in @a pool.
+ *
+ * @note The `.' and `..' directories normally returned by
+ * apr_dir_read() are NOT returned in the hash.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_io_get_dir_filenames (apr_hash_t **dirents,
+                                       const char *path,
+                                       apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
@@ -736,8 +748,10 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  * terminated by @c NULL.  @a args[0] is the name of the program, though it
  * need not be the same as @a cmd.
  *
- * @a inherit sets whether the invoked program shall inherit its environment or
- * run "clean".
+ * If @a inherit is true, the invoked program inherits its environment from
+ * the caller and @a cmd, if not absolute, is searched for in PATH.
+ * Otherwise, the invoked program runs with an empty environment and @a cmd
+ * must be an absolute path.
  *
  * @note On some platforms, failure to execute @a cmd in the child process
  * will result in error output being written to @a errfile, if non-NULL, and

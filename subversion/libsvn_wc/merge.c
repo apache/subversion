@@ -75,7 +75,6 @@ svn_wc_merge (const char *left,
                (&tmp_target, merge_target,
                 merge_target, adm_access,
                 SVN_WC_TRANSLATE_TO_NF
-                | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
                 | SVN_WC_TRANSLATE_FORCE_COPY, pool));
 
       /* Open a second temporary file for writing; this is where diff3
