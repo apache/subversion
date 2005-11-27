@@ -64,10 +64,24 @@ const svn_version_t *svn_wc_version (void);
  * @{
  */
 
-  /** Translate from Normal Format; excludes SVN_WC_TRANSLATE_TO_NF */
+  /** Translate from Normal Form.
+   *
+   * The working copy text bases and repository files are stored
+   * in normal form.  Some files' contents - or ever representation -
+   * differs between the working copy and the normal form.  This flag
+   * specifies to take the latter form as input and transform it
+   * to the former.
+   *
+   * Either this flag or @c SVN_WC_TRANSLATE_FROM_NF should be specified,
+   * but not both.
+   */
 #define SVN_WC_TRANSLATE_FROM_NF                 0x00000000
 
-  /** Translate to Normal Format; excludes SVN_WC_TRANSLATE_FROM_NF */
+  /** Translate to Normal Form.
+   *
+   * Either this flag or @c SVN_WC_TRANSLATE_FROM_NF should be specified,
+   * but not both.
+   */
 #define SVN_WC_TRANSLATE_TO_NF                   0x00000001
 
   /** Force repair of eol styles, making sure the output file consistently
@@ -3165,14 +3179,20 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
 /* EOL conversion and keyword expansion. */
 
-/** Set @a *xlated_path to a path to translated copy of @src
+/** Set @a xlated_path to a translated copy of @a src
  * or to @a src itself if no translation is necessary.
  * That is, if @a versioned_file's properties indicate newline conversion or
  * keyword expansion, point @a *xlated_path to a copy of @a src
  * whose newlines and keywords are converted using the translation
  * as requested by @a flags.
  *
- * Caller can explicitly request a new file to be returned by setting the
+ * When translating to the normal form, inconsistent eol styles will be
+ * repaired when appropriate for the given setting.  When translating
+ * from normal form, no EOL repair is performed (consistency is assumed).
+ * This behaviour can be overridden by specifying
+ * @c SVN_WC_TRANSLATE_FORCE_EOL_REPAIR.
+ *
+ * The caller can explicitly request a new file to be returned by setting the
  * @c SVN_WC_TRANSLATE_FORCE_COPY flag in @a flags.
  *
  * This function is generally used to get a file that can be compared
@@ -3180,14 +3200,13 @@ svn_wc_create_tmp_file (apr_file_t **fp,
  * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
  * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * Temporary files are created in the temp file area belonging to
- * @a versioned_file.
+ * Output files are created in the temp file area belonging to
+ * @a versioned_file.  By default they will be deleted at pool cleanup.
  *
- * If @c SVN_WC_TRANSLATE_DEL_TEMP_ON_POOL_CLEANUP is specified,
- * a pool cleanup handler is registered on *xlated_p if it points to a
- * temporary file.
+ * If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the default
+ * pool cleanup handler to remove @a *xlated_path is not registered.
  *
- * If an error is returned, the effect on @a *xlated_p is undefined.
+ * If an error is returned, the effect on @a *xlated_path is undefined.
  *
  * @since New in 1.4
  */
