@@ -259,9 +259,12 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * Convenience routine: a variant of svn_subst_translate_stream3()
- * which operates on files.  In addition, it will create/detranslate a special
- * file if @a special is @c TRUE.
+ * Translates the file at path @a src into a file at path @a dst.  The
+ * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
+ * defined the same as in svn_subst_translate_stream3().
+ *
+ * In addition, it will create a special file from normal form or
+ * translate one to normal form if @a special is @c TRUE.
  *
  * Copy the contents of file-path @a src to file-path @a dst atomically,
  * either creating @a dst (or overwriting @a dst if it exists), possibly
@@ -355,8 +358,9 @@ svn_subst_translate_cstring (const char *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
 
-/** Convenience routine (wrapper around svn_subst_copy_and_translate3)
- * which detranslates the given @a src into @a dst.
+/**
+ * Translates a file @a src in working copy form to a file @a dst in
+ * normal form form.
  *
  * The values specified for @a eol_style, @a *eol_str, @a keywords and
  * @a special, should be the ones used to translate the file to its
@@ -367,6 +371,9 @@ svn_subst_translate_cstring (const char *src,
  * (made consistent) for some eol styles.  For all others, an error is
  * returned.  By setting @a always_repair_eols to @c TRUE, eols will be
  * made consistent even for those styles which don't have it by default.
+ *
+ * @note To translate a file FROM normal form, use
+ *       svn_subst_copy_and_translate3().
  *
  * @since New in 1.4
  *
