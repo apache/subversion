@@ -177,7 +177,7 @@ parse_value (int *pch, parse_context_t *ctx)
 
 /* Parse a single option */
 static svn_error_t *
-parse_option (int *pch, parse_context_t *ctx)
+parse_option (int *pch, parse_context_t *ctx, apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
@@ -196,8 +196,7 @@ parse_option (int *pch, parse_context_t *ctx)
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Option must end with ':' or '='",
-                               svn_path_local_style (ctx->file,
-                                                     ctx->cfg->pool),
+                               svn_path_local_style (ctx->file, pool),
                                ctx->line);
     }
   else
@@ -221,7 +220,7 @@ parse_option (int *pch, parse_context_t *ctx)
  * starts a section name.
  */
 static svn_error_t *
-parse_section_name (int *pch, parse_context_t *ctx)
+parse_section_name (int *pch, parse_context_t *ctx, apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
@@ -240,8 +239,7 @@ parse_section_name (int *pch, parse_context_t *ctx)
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Section header must end with ']'",
-                               svn_path_local_style (ctx->file,
-                                                     ctx->cfg->pool),
+                               svn_path_local_style (ctx->file, pool),
                                ctx->line);
     }
   else
@@ -349,9 +347,8 @@ svn_config__open_file (FILE **pfile,
 
 svn_error_t *
 svn_config__parse_file (svn_config_t *cfg, const char *file,
-                        svn_boolean_t must_exist)
+                        svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  apr_pool_t *pool = svn_pool_create (cfg->pool);
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
@@ -393,7 +390,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
         {
         case '[':               /* Start of section header */
           if (count == 0)
-            err = parse_section_name (&ch, &ctx);
+            err = parse_section_name (&ch, &ctx, pool);
           else
             {
               ch = EOF;
@@ -447,7 +444,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
                                        ctx.line);
             }
           else
-            err = parse_option (&ch, &ctx);
+            err = parse_option (&ch, &ctx, pool);
           break;
         }
     }
@@ -461,7 +458,6 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
                                svn_path_local_style (file, pool), ctx.line);
     }
 
-  svn_pool_destroy (ctx.pool);
   fclose (fd);
   return err;
 }
