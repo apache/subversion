@@ -13,7 +13,7 @@ Candidate changes:
     Fix Windows make_dist.py to use the correct path for the .mo files.
     Justficiation: Include translations in the Windows binary packages again.
     Votes:
-      +1: brane
+      +1: brane, dlr
 
   * r17521
     Fix and improve help text for property commands such as 'svn propget'.
@@ -21,15 +21,6 @@ Candidate changes:
     Notes: Only changes for messages.
     Votes:
       +0: nori
-
-  * r17525
-    Fix output mailer.py emails for locks and unlocks to use the
-      author of the lock or unlock.  Currently, all outgoing email is
-      from 'no_author'.
-    Justficiation: Easy, one line change uses method used for other
-      commands.
-    Votes:
-      +1: blair
 
 Approved changes:
 
@@ -60,3 +51,12 @@ Candidate changes:
       solves a trivial merge conflict in r17405.
     Votes:
       +1: djames
+
+  * r17525
+    Fix output mailer.py emails for locks and unlocks to use the
+      author of the lock or unlock.  Currently, all outgoing email is
+      from 'no_author'.
+    Justficiation: Easy, one line change uses method used for other
+      commands.
+    Votes:
+      +1: blair, dlr
