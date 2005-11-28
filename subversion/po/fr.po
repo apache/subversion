@@ -81,7 +81,7 @@ msgstr "Option 'incremental' valide seulement en mode XML"
 # a pegged revision : révision fixée
 #
 # fulltext: texte complet
-# version control: gestion(naire) de version ?
+# version control: gestion(naire) de version ? versionnage ?
 # text-base: copie de référence, texte/copie de base/pristine ?
 #
 #
@@ -437,7 +437,7 @@ msgstr "force l'exécution de l'opération"
 
 #: clients/cmdline/main.c:65
 msgid "force validity of log message source"
-msgstr "force la validité de la source de l'entrée du journal (log message)"
+msgstr "valide la source de l'entrée du journal"
 
 #: clients/cmdline/main.c:66 clients/cmdline/main.c:67 svnadmin/main.c:229
 #: svnadmin/main.c:232 svndumpfilter/main.c:781 svndumpfilter/main.c:784
@@ -479,7 +479,7 @@ msgid ""
 "BASE\n"
 "                                \"PREV\"       revision just before COMMITTED"
 msgstr ""
-"ARG (certaines commandes acceptent également une étendue ARG1:ARG2)\n"
+"ARG (peut aussi être une étendue ARG1:ARG2)\n"
 "                     L'argument d'une révision peut être :\n"
 "                       NUMÉRO       numéro de la révision\n"
 "                       \"{\" DATE \"}\" révision disponible à cette date\n"
@@ -602,7 +602,7 @@ msgstr "re-localise par réécriture d'URL"
 
 #: clients/cmdline/main.c:138 svnadmin/main.c:271
 msgid "read user configuration files from directory ARG"
-msgstr "lit les fichiers de configuration utilisateur dans le répertoire ARG"
+msgstr "fichiers de configuration dans ce répertoire"
 
 #: clients/cmdline/main.c:140
 msgid "enable automatic properties"
@@ -731,8 +731,8 @@ msgid ""
 "    URL -> WC:   check out URL into WC, schedule for addition\n"
 "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
 msgstr ""
-"Recopie quelque chose dans une copie de travail ou un dépôt, avec "
-"historique.\n"
+"Recopie quelque chose dans une copie de travail ou un dépôt,\n"
+"avec reprise de l'historique.\n"
 "usage : copy SRC DST\n"
 "\n"
 "  SRC et DST sont un chemin dans la copie de travail (CT) ou une URL :\n"
@@ -756,7 +756,7 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"Supprime fichiers et répertoires du gestionnaire de version.\n"
+"Supprime fichiers et répertoires du versionnage.\n"
 "usage : 1. delete CHEMIN...\n"
 "        2. delete URL...\n"
 "\n"
@@ -1095,7 +1095,8 @@ msgid ""
 "    WC  -> WC:   move and schedule for addition (with history)\n"
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
-"Déplace ou renomme quelque chose dans une copie de travail ou un dépôt.\n"
+"Déplace ou renomme quelque chose dans la copie de \n"
+"travail ou un dépôt.\n"
 "usage : move SRC DST\n"
 "\n"
 "  Note : cette sous-commande est équivalente à un 'copy' suivi d'un "
