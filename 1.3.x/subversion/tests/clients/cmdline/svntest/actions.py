@@ -20,6 +20,8 @@ import os.path, shutil, string, re, sys
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
+if sys.platform == 'AS/400':
+  import ebcdic
 
 class SVNUnexpectedOutput(Failure):
   """Exception raised if an invocation of svn results in unexpected
@@ -783,7 +785,8 @@ def duplicate_dir(wc_name, wc_copy_name):
 
   main.safe_rmtree(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
-  
+  if sys.platform == 'AS/400':
+    ebcdic.os400_tagtree(wc_copy_name, 1208)
 
 
 def get_virginal_state(wc_dir, rev):
@@ -806,7 +809,7 @@ def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
-  main.file_append(path, "stop looking!")
+  main.file_append(path, "stop looking!".encode('utf-8'))
 
 def enable_revprop_changes(repos_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a
@@ -814,7 +817,10 @@ pre-revprop-change hook script and (if appropriate) making it executable."""
   if os.name == 'posix':
     hook = os.path.join(repos_dir,
                         'hooks', 'pre-revprop-change')
-    main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+    if sys.platform != 'AS/400':
+      main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+    else:
+      main.file_append(hook, ebcdic.os400_convert_string_to_utf8("#!/bin/sh\n\nexit 0\n"))
     os.chmod(hook, 0755)
   elif sys.platform == 'win32':
     hook = os.path.join(repos_dir,

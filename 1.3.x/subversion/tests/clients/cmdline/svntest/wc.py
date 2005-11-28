@@ -1,9 +1,9 @@
 #
 #  wc.py: functions for interacting with a Subversion working copy
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os
+import os, sys
 import types
 
 import svntest.tree
@@ -103,6 +103,9 @@ class State:
 
         # write out the file contents now
         open(fullpath, 'wb').write(item.contents)
+        if sys.platform == 'AS/400':
+          qsh_set_ccsid_cmd = "QSYS/QSH CMD('setccsid 1208 " + fullpath + "')"
+          os.system(qsh_set_ccsid_cmd)
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."

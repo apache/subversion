@@ -68,6 +68,9 @@ spacetest = abc = def ; ghi = ; = j
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
+if sys.platform == 'AS/400':
+  config_contents = config_contents.encode('utf-8')
+
   svntest.main.create_config_dir(config_dir, config_contents)
 
 #----------------------------------------------------------------------
@@ -75,8 +78,8 @@ spacetest = abc = def ; ghi = ; = j
 def create_test_file(dir, name):
   "create a test file"
 
-  fd = open(os.path.join(dir, name), 'w')
-  fd.write('foo\nbar\nbaz\n')
+  fd = open(os.path.join(dir, name), 'wb')
+  fd.write('foo\nbar\nbaz\n'.encode('utf-8'))
   fd.close()
 
 #----------------------------------------------------------------------

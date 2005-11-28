@@ -159,28 +159,28 @@ def test_create(sbox):
 # dump stream tests need a dump file
 
 clean_dumpfile = \
-  [ "SVN-fs-dump-format-version: 2\n\n",
-    "UUID: 668cc64a-31ed-0310-8ccb-b75d75bb44e3\n\n",
-    "Revision-number: 0\n",
-    "Prop-content-length: 56\n",
-    "Content-length: 56\n\n",
-    "K 8\nsvn:date\nV 27\n2005-01-08T21:48:13.838745Z\nPROPS-END\n\n\n",
-    "Revision-number: 1\n",
-    "Prop-content-length: 98\n",
-    "Content-length: 98\n\n",
-    "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\n",
-    "K 8\nsvn:date\nV 27\n2005-01-08T21:51:16.313791Z\nPROPS-END\n\n\n",
-    "Node-path: A\n",
-    "Node-kind: file\n",
-    "Node-action: add\n",
-    "Prop-content-length: 35\n",
-    "Text-content-length: 5\n",
-    "Text-content-md5: e1cbb0c3879af8347246f12c559a86b5\n",
-    "Content-length: 40\n\n",
-    "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\ntext\n\n\n"]
+  [ "SVN-fs-dump-format-version: 2\n\n".encode('utf-8'),
+    "UUID: 668cc64a-31ed-0310-8ccb-b75d75bb44e3\n\n".encode('utf-8'),
+    "Revision-number: 0\n".encode('utf-8'),
+    "Prop-content-length: 56\n".encode('utf-8'),
+    "Content-length: 56\n\n".encode('utf-8'),
+    "K 8\nsvn:date\nV 27\n2005-01-08T21:48:13.838745Z\nPROPS-END\n\n\n".encode('utf-8'),
+    "Revision-number: 1\n".encode('utf-8'),
+    "Prop-content-length: 98\n".encode('utf-8'),
+    "Content-length: 98\n\n".encode('utf-8'),
+    "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\n".encode('utf-8'),
+    "K 8\nsvn:date\nV 27\n2005-01-08T21:51:16.313791Z\nPROPS-END\n\n\n".encode('utf-8'),
+    "Node-path: A\n".encode('utf-8'),
+    "Node-kind: file\n".encode('utf-8'),
+    "Node-action: add\n".encode('utf-8'),
+    "Prop-content-length: 35\n".encode('utf-8'),
+    "Text-content-length: 5\n".encode('utf-8'),
+    "Text-content-md5: e1cbb0c3879af8347246f12c559a86b5\n".encode('utf-8'),
+    "Content-length: 40\n\n".encode('utf-8'),
+    "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\ntext\n\n\n".encode('utf-8')]
 
 dumpfile_revisions = \
-  [ svntest.wc.State('', { 'A' : svntest.wc.StateItem(contents="text\n") }) ]
+  [ svntest.wc.State('', { 'A' : svntest.wc.StateItem(contents="text\n".encode('utf-8')) }) ]
 
 #----------------------------------------------------------------------
 def extra_headers(sbox):
@@ -191,7 +191,7 @@ def extra_headers(sbox):
   dumpfile = clean_dumpfile
 
   dumpfile[3:3] = \
-       [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
+       [ "X-Comment-Header: Ignored header normally not in dump stream\n".encode('utf-8') ]
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
 
@@ -205,10 +205,10 @@ def extra_blockcontent(sbox):
   test_create(sbox)
 
   dumpfile = clean_dumpfile[0:-2] + \
-             [ "Extra-content-length: 10\n",
-               "Content-length: 50\n\n",
-               "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\n",
-               "text\nextra text\n\n\n"]
+             [ "Extra-content-length: 10\n".encode('utf-8'),
+               "Content-length: 50\n\n".encode('utf-8'),
+               "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\n".encode('utf-8'),
+               "text\nextra text\n\n\n".encode('utf-8')]
 
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
@@ -221,7 +221,7 @@ def inconsistent_headers(sbox):
 
   dumpfile = clean_dumpfile
 
-  dumpfile[-2] = "Content-length: 30\n\n"
+  dumpfile[-2] = "Content-length: 30\n\n".encode('utf-8')
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
 
@@ -262,8 +262,8 @@ def dump_move_dir_modify_child(sbox):
   B_path = os.path.join(wc_dir, 'A', 'B')
   Q_path = os.path.join(wc_dir, 'A', 'Q')
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
-  svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', 
+  svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello'.encode('utf-8'))
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
@@ -331,11 +331,11 @@ def hotcopy_format(sbox):
     raise svntest.Failure
   
   # verify that the db/format files are the same
-  fp = open(os.path.join(sbox.repo_dir, "db", "format"))
+  fp = open(os.path.join(sbox.repo_dir, "db", "format"), 'rb')
   contents1 = fp.read()
   fp.close()
-  
-  fp2 = open(os.path.join(backup_dir, "db", "format"))
+
+  fp2 = open(os.path.join(backup_dir, "db", "format"), 'rb')
   contents2 = fp2.read()
   fp2.close()
   

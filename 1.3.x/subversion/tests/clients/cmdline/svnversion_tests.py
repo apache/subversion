@@ -49,7 +49,7 @@ def svnversion_test(sbox):
                                             [ "1S\n" ], [])
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append (mu_path, 'appended mu text')
+  svntest.main.file_append (mu_path, 'appended mu text'.encode('utf-8'))
 
   # Text modified
   svntest.actions.run_and_verify_svnversion("Modified text", wc_dir, repo_url,
@@ -87,7 +87,7 @@ def svnversion_test(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
+                      + 'appended mu text'.encode('utf-8'))
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
   if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,

@@ -19,9 +19,13 @@
 import re
 import string
 import os.path
+import sys
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
+if sys.platform == 'AS/400':
+  import ebcdic
+  import types
 
 # Tree Exceptions.
 
@@ -186,7 +190,14 @@ class SVNTreeNode:
   def pprint(self):
     print " * Node name:  ", self.name
     print "    Path:      ", self.path
-    print "    Contents:  ", self.contents
+    if sys.platform != 'AS/400':
+      print "    Contents:  ", self.contents
+    else:
+      print "    Contents:"
+      print "-------------------------------------------------------------"
+      if type(self.contents) != types.NoneType:
+        print self.contents
+      print "-------------------------------------------------------------"
     print "    Properties:", self.props
     print "    Attributes:", self.atts
     ### FIXME: I'd like to be able to tell the difference between
@@ -328,7 +339,10 @@ def get_text(path):
   if not os.path.isfile(path):
     return None
 
-  fp = open(path, 'r')
+  if sys.platform != 'AS/400':
+    fp = open(path, 'r')
+  else:
+    fp = open(path, 'rb')
   contents = fp.read()
   fp.close()
   return contents

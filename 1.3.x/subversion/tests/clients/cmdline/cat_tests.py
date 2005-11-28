@@ -62,8 +62,8 @@ def cat_base(sbox):
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, 'Appended text')
-  
+  svntest.main.file_append(mu_path, 'Appended text'.encode('utf-8'))
+
   outlines, errlines = svntest.main.run_svn(0, 'cat', mu_path)
 
   # Verify the expected output

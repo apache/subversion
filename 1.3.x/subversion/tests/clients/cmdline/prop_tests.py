@@ -22,6 +22,8 @@ import string, sys, re, os.path, shutil
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -218,7 +220,7 @@ def downdate_props(sbox):
                                          wc_dir)
 
   # Make some mod (something to commit)
-  svntest.main.file_append (mu_path, "some mod")
+  svntest.main.file_append (mu_path, "some mod".encode('utf-8'))
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -399,8 +401,8 @@ def commit_replacement_props(sbox):
 
   # Now recreate the files, and schedule them for addition.
   # Poof, the 'new' files don't have any properties at birth.
-  svntest.main.file_append (iota_path, 'iota TNG')
-  svntest.main.file_append (lambda_path, 'lambda TNG')
+  svntest.main.file_append (iota_path, 'iota TNG'.encode('utf-8'))
+  svntest.main.file_append (lambda_path, 'lambda TNG'.encode('utf-8'))
   svntest.main.run_svn(None, 'add', iota_path, lambda_path)
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
@@ -455,8 +457,8 @@ def revert_replacement_props(sbox):
 
   # Now recreate the files, and schedule them for addition.
   # Poof, the 'new' files don't have any properties at birth.
-  svntest.main.file_append (iota_path, 'iota TNG')
-  svntest.main.file_append (lambda_path, 'lambda TNG')
+  svntest.main.file_append (iota_path, 'iota TNG'.encode('utf-8'))
+  svntest.main.file_append (lambda_path, 'lambda TNG'.encode('utf-8'))
   svntest.main.run_svn(None, 'add', iota_path, lambda_path)
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
@@ -574,7 +576,7 @@ def inappropriate_props(sbox):
 # with inconsistent eol types.
   
   path = os.path.join(wc_dir, 'binary')
-  svntest.main.file_append(path, "binary")
+  svntest.main.file_append(path, "binary".encode('utf-8'))
   svntest.main.run_svn(None, 'add', path)
   
   svntest.main.run_svn(None, 'propset', 'svn:mime-type', 
@@ -586,7 +588,7 @@ def inappropriate_props(sbox):
                                      'CRLF', path)
    
   path = os.path.join(wc_dir, 'multi-eol')
-  svntest.main.file_append(path, "line1\rline2\n")
+  svntest.main.file_append(path, "line1\rline2\n".encode('utf-8'))
   svntest.main.run_svn(None, 'add', path)
   
   svntest.actions.run_and_verify_svn('Illegal target', None,
@@ -595,7 +597,7 @@ def inappropriate_props(sbox):
                                      'LF', path)
     
   path = os.path.join(wc_dir, 'backwards-eol')
-  svntest.main.file_append(path, "line1\n\r")
+  svntest.main.file_append(path, "line1\n\r".encode('utf-8'))
   svntest.main.run_svn(None, 'add', path)
   
   svntest.actions.run_and_verify_svn('Illegal target', None,
@@ -604,7 +606,7 @@ def inappropriate_props(sbox):
                                      'native', path)
     
   path = os.path.join(wc_dir, 'incomplete-eol')
-  svntest.main.file_append(path, "line1\r\n\r")
+  svntest.main.file_append(path, "line1\r\n\r".encode('utf-8'))
   svntest.main.run_svn(None, 'add', path)
   
   svntest.actions.run_and_verify_svn('Illegal target', None,
@@ -616,7 +618,7 @@ def inappropriate_props(sbox):
 # with inconsistent eol types if --force is passed.
   
   path = os.path.join(wc_dir, 'binary')
-  svntest.main.file_append(path, "binary")
+  svntest.main.file_append(path, "binary".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CRLF',
@@ -663,7 +665,7 @@ def copy_inherits_special_props(sbox):
 
   # Create the first path as a binary file.  To have svn treat the
   # file as binary, have a 0x00 in the file.
-  svntest.main.file_append(new_path1, "binary file\000")
+  svntest.main.file_append(new_path1, "binary file\000".encode('utf-8'))
   svntest.main.run_svn(None, 'add', new_path1)
 
   # Add initial svn:mime-type to the file
@@ -770,7 +772,7 @@ def prop_value_conversions(sbox):
   def set_prop(name, value, path, valf=propval_file, valp=propval_path):
     valf.seek(0)
     valf.truncate(0)
-    valf.write(value)
+    valf.write(value.encode('utf-8'))
     valf.flush()
     svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
 
@@ -810,7 +812,8 @@ def prop_value_conversions(sbox):
 
   # Close and remove the prop value file
   propval_file.close()
-  os.unlink(propval_path)
+  if sys.platform != 'AS/400':
+    os.unlink(propval_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
   # client converts to local encoding and local eoln style.
@@ -973,7 +976,7 @@ def recursive_base_wc_ops(sbox):
   svntest.main.run_svn(None, 'propset', 'p', 'old-del', fp_del)
   svntest.main.run_svn(None, 'propset', 'p', 'old-keep',fp_keep)
   svntest.main.run_svn(None, 'commit', '-m', '', wc_dir)
-  svntest.main.file_append(fp_add, 'blah')
+  svntest.main.file_append(fp_add, 'blah'.encode('utf-8'))
   svntest.main.run_svn(None, 'add', fp_add)
   svntest.main.run_svn(None, 'propset', 'p', 'new-add', fp_add)
   svntest.main.run_svn(None, 'propset', 'p', 'new-del', fp_del)
@@ -993,7 +996,11 @@ def recursive_base_wc_ops(sbox):
       if ((line.find(expected_out[ln]) == -1) or
           (line != '' and expected_out[ln] == '')):
         print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
+        if sys.platform != 'AS/400':
+          print '       actual full output:', output
+        else:
+          print '       actual full output:'
+          ebcdic.os400_spool_print(output)
         raise svntest.Failure
       ln = ln + 1
 
@@ -1009,11 +1016,18 @@ def recursive_base_wc_ops(sbox):
   
   # Test recursive propget
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir,
-                                        '-rBASE') 
-  verify_output([ 'old-del', 'old-keep' ], output, errput)
-  
+                                        '-rBASE')
+
+  if sys.platform != 'AS/400':
+    verify_output([ 'old-del', 'old-keep' ], output, errput)
+  else:
+    verify_output([ 'old-keep', 'old-del' ], output, errput)
+
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir)
-  verify_output([ 'new-add', 'new-keep' ], output, errput)
+  if sys.platform != 'AS/400':
+    verify_output([ 'new-add', 'new-keep' ], output, errput)
+  else:
+    verify_output([ 'new-keep', 'new-add' ], output, errput)
 
   # Test recursive propset (issue 1794)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1076,7 +1090,11 @@ def url_props_ops(sbox):
       if ((line.find(expected_out[ln]) == -1) or
           (line != '' and expected_out[ln] == '')):
         print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
+        if sys.platform != 'AS/400':
+          print '       actual full output:', output
+        else:
+          print '       actual full output:'
+          ebcdic.os400_spool_print(output)
         raise svntest.Failure
       ln = ln + 1
 

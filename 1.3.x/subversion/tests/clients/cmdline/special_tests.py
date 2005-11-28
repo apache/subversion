@@ -17,11 +17,13 @@
 ######################################################################
 
 # General modules
-import os, re
+import os, re, sys
 
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+    import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -46,7 +48,7 @@ def general_symlink(sbox):
   # First try to just commit a symlink
   newfile_path = os.path.join(wc_dir, 'newfile')
   linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  svntest.main.file_append(linktarget_path, 'this is just a link target'.encode('utf-8'))
   os.symlink('linktarget', newfile_path)
   svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
 
@@ -57,7 +59,10 @@ def general_symlink(sbox):
 
   # Run a diff and verify that we get the correct output
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff', wc_dir)
-  
+
+  if sys.platform == 'AS/400':
+    stdout_lines = ebcdic.os400_list_from_utf8(stdout_lines)
+
   regex = '^\+link linktarget'
   for line in stdout_lines:
     if re.match(regex, line):
@@ -218,7 +223,7 @@ def copy_tree_with_symlink(sbox):
   # Create a versioned symlink within directory 'A/D/H'.
   newfile_path = os.path.join(wc_dir, 'A', 'D', 'H', 'newfile')
   linktarget_path = os.path.join(wc_dir, 'A', 'D', 'H', 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  svntest.main.file_append(linktarget_path, 'this is just a link target'.encode('utf-8'))
   os.symlink('linktarget', newfile_path)
   svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
 
@@ -263,7 +268,7 @@ def replace_symlink_with_file(sbox):
   # Create a new special file and commit it.
   newfile_path = os.path.join(wc_dir, 'newfile')
   linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  svntest.main.file_append(linktarget_path, 'this is just a link target'.encode('utf-8'))
   os.symlink('linktarget', newfile_path)
   svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
 
@@ -287,7 +292,7 @@ def replace_symlink_with_file(sbox):
   # Now replace the symlink with a normal file and try to commit, we
   # should get an error
   os.remove(newfile_path);
-  svntest.main.file_append(newfile_path, "text of actual file");
+  svntest.main.file_append(newfile_path, "text of actual file".encode('utf-8'));
 
   # Does status show the obstruction?
   was_cwd = os.getcwd()
@@ -316,7 +321,7 @@ def remove_symlink(sbox):
   # Commit a symlink
   newfile_path = os.path.join(wc_dir, 'newfile')
   linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  svntest.main.file_append(linktarget_path, 'this is just a link target'.encode('utf-8'))
   os.symlink('linktarget', newfile_path)
   svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
 

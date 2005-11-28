@@ -20,6 +20,8 @@
 import stat, string, sys, os, shutil, re
 
 # Our testing module
+if sys.platform == 'AS/400':
+  import ebcdic
 import svntest
 from svntest import SVNAnyOutput
 
@@ -140,8 +142,8 @@ def basic_copy_and_move_files(sbox):
   alpha2_path = os.path.join(C_path, 'alpha2')
 
   # Make local mods to mu and rho
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append (mu_path, 'appended mu text'.encode('utf-8'))
+  svntest.main.file_append (rho_path, 'new appended text for rho'.encode('utf-8'))
 
   # Copy rho to D -- local mods
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', rho_path, D_path)
@@ -195,7 +197,7 @@ def basic_copy_and_move_files(sbox):
 
   # Issue 1091, alpha2 would now have the wrong checksum and so a
   # subsequent commit would fail
-  svntest.main.file_append (alpha2_path, 'appended alpha2 text')
+  svntest.main.file_append (alpha2_path, 'appended alpha2 text'.encode('utf-8'))
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/alpha2' : Item(verb='Sending'),
     })
@@ -269,7 +271,7 @@ def mv_unversioned_file(sbox):
 
   unver_path = os.path.join(wc_dir, 'A', 'unversioned')
   dst_path = os.path.join(wc_dir, 'A', 'hypothetical-dest')
-  svntest.main.file_append(unver_path, "an unversioned file")
+  svntest.main.file_append(unver_path, "an unversioned file".encode('utf-8'))
   output, errput = svntest.main.run_svn(1, 'mv', unver_path, dst_path)
 
   for line in errput:
@@ -347,9 +349,9 @@ def receive_copy_in_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/B/newG' : Item(),
-    'A/B/newG/pi' : Item("This is the file 'pi'.\n"),
-    'A/B/newG/rho' : Item("This is the file 'rho'.\n"),
-    'A/B/newG/tau' : Item("This is the file 'tau'.\n"),
+    'A/B/newG/pi' : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'A/B/newG/rho' : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'A/B/newG/tau' : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -536,7 +538,7 @@ def copy_modify_commit(sbox):
                                      wc_dir + '/A/B', wc_dir + '/A/B2')
   
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
-  svntest.main.file_append(alpha_path, "modified alpha")
+  svntest.main.file_append(alpha_path, "modified alpha".encode('utf-8'))
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2' : Item(verb='Adding'),
@@ -720,7 +722,7 @@ def copy_preserve_executable_bit(sbox):
   newpath2 = os.path.join(wc_dir, 'newfile2')
 
   # Create the first file.
-  svntest.main.file_append(newpath1, "a new file")
+  svntest.main.file_append(newpath1, "a new file".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], 'add', newpath1)
 
   mode1 = os.stat(newpath1)[stat.ST_MODE]
@@ -766,7 +768,7 @@ def wc_to_repos(sbox):
 
   # modify some items to be copied
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
-                           "new otext\n")
+                           "new otext\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], 'propset', 'foo', 'bar',
                                      beta_path)
 
@@ -791,13 +793,13 @@ def wc_to_repos(sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/omega',
-                      contents="This is the file 'omega'.\nnew otext\n")
+                      contents="This is the file 'omega'.\nnew otext\n".encode('utf-8'))
   expected_disk.add({
-    'A/B/E/beta2'  : Item("This is the file 'beta'.\n"),
-    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
-    'A/D/H2/omega' : Item("This is the file 'omega'.\nnew otext\n"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
-    'A/D/H2/beta'  : Item("This is the file 'beta'.\n"),
+    'A/B/E/beta2'  : Item("This is the file 'beta'.\n".encode('utf-8')),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n".encode('utf-8')),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\nnew otext\n".encode('utf-8')),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n".encode('utf-8')),
+    'A/D/H2/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
   expected_status.add({
@@ -847,7 +849,7 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
 
   # Extra test: modify file ASAP to check there was a timestamp sleep
-  svntest.main.file_append(pi_path, 'zig\n')
+  svntest.main.file_append(pi_path, 'zig\n'.encode('utf-8'))
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
@@ -864,7 +866,7 @@ def repos_to_wc(sbox):
     print "diff failed"
     raise svntest.Failure
   for line in out:
-    if line == '+zig\n': # Crude check for diff-like output
+    if line == '+zig\n'.encode('utf-8'): # Crude check for diff-like output
       break
   else:
     print "diff output incorrect", out
@@ -968,10 +970,10 @@ def url_copy_parent_into_child(sbox):
   expected_disk.add({
     'A/B/F/B'         : Item(),
     'A/B/F/B/E'       : Item(),
-    'A/B/F/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'A/B/F/B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'A/B/F/B/E/alpha' : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'A/B/F/B/E/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     'A/B/F/B/F'       : Item(),
-    'A/B/F/B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'A/B/F/B/lambda'  : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
@@ -1032,16 +1034,16 @@ def wc_copy_parent_into_child(sbox):
     })
   expected_disk = svntest.wc.State('', {
     'E'           : Item(),
-    'E/alpha'     : Item("This is the file 'alpha'.\n"),
-    'E/beta'      : Item("This is the file 'beta'.\n"),
+    'E/alpha'     : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'E/beta'      : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F'           : Item(),
-    'lambda'      : Item("This is the file 'lambda'.\n"),
+    'lambda'      : Item("This is the file 'lambda'.\n".encode('utf-8')),
     'F/B'         : Item(),
     'F/B/E'       : Item(),
-    'F/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'F/B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'F/B/E/alpha' : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'F/B/E/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F/B/F'       : Item(),
-    'F/B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'F/B/lambda'  : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.wc.State(wc_dir, {
     ''            : Item(status='  ', wc_rev=2),
@@ -1142,7 +1144,10 @@ def repos_to_wc_copy_eol_keywords(sbox):
 
   # Modify iota to make it checkworthy.
   f = open(iota_wc_path, "ab")
-  f.write("Hello\nSubversion\n$LastChangedRevision$\n")
+  if sys.platform != 'AS/400':
+    f.write("Hello\nSubversion\n$LastChangedRevision$\n")
+  else:
+    f.write(ebcdic.os400_convert_string_to_utf8("Hello\nSubversion\n$LastChangedRevision$\n"))
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1178,6 +1183,11 @@ def repos_to_wc_copy_eol_keywords(sbox):
   line_contents = f.readlines()
   f.close()
 
+  if sys.platform == 'AS/400':
+    line_contents = ebcdic.os400_split_utf8_lines(line_contents)
+    raw_contents = raw_contents.decode('utf-8').encode('cp037')
+    line_contents[3] = line_contents[3].decode('utf-8').encode('cp037')
+
   if re.match('[^\\r]\\n', raw_contents):
     raise svntest.Failure
 
@@ -1199,19 +1209,19 @@ def revision_kinds_local_source(sbox):
   # Make a file with different content in each revision and WC; BASE != HEAD.
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'), })
-  svntest.main.file_append(mu_path, "New r2 text.\n")
+  svntest.main.file_append(mu_path, "New r2 text.\n".encode('utf-8'))
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
                                         None, None, None, None, None, wc_dir)
-  svntest.main.file_append(mu_path, "New r3 text.\n")
+  svntest.main.file_append(mu_path, "New r3 text.\n".encode('utf-8'))
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
                                         None, None, None, None, None, wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', mu_path)
-  svntest.main.file_append(mu_path, "Working copy.\n")
+  svntest.main.file_append(mu_path, "Working copy.\n".encode('utf-8'))
 
-  r1 = "This is the file 'mu'.\n"
-  r2 = r1 + "New r2 text.\n"
-  r3 = r2 + "New r3 text.\n"
-  rWC = r2 + "Working copy.\n"
+  r1 = "This is the file 'mu'.\n".encode('utf-8')
+  r2 = r1 + "New r2 text.\n".encode('utf-8')
+  r3 = r2 + "New r3 text.\n".encode('utf-8')
+  rWC = r2 + "Working copy.\n".encode('utf-8')
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=rWC)
@@ -1610,12 +1620,12 @@ def mixed_wc_to_url(sbox):
                                      'ci', '-m', "Delete pi.", wc_dir)
 
   # Make a modification to A/D/G/rho, then commit that modification.
-  svntest.main.file_append(rho_path, "\nFirst modification to rho.\n")
+  svntest.main.file_append(rho_path, "\nFirst modification to rho.\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', "Modify rho.", wc_dir)
 
   # Make another modification to A/D/G/rho, but don't commit it.
-  svntest.main.file_append(rho_path, "Second modification to rho.\n")
+  svntest.main.file_append(rho_path, "Second modification to rho.\n".encode('utf-8'))
 
   # Now copy local A/D/G to create new directory A/D/Z the repository.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1627,13 +1637,16 @@ def mixed_wc_to_url(sbox):
   svntest.main.safe_rmtree(wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'co', Z_url, wc_dir)
-  
+
   if os.path.exists(os.path.join(wc_dir, 'pi')):
     raise svntest.Failure
 
-  fp = open(os.path.join(wc_dir, 'rho'), 'r')
+  fp = open(os.path.join(wc_dir, 'rho'), 'rb')
+  lines = fp.readlines()
+  if sys.platform == 'AS/400':
+    lines = lines[0].decode('utf-8').encode('cp037').split('\n')
   found_it = 0
-  for line in fp.readlines():
+  for line in lines:
     if re.match("^Second modification to rho.", line):
       found_it = 1
   if not found_it:

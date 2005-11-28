@@ -21,6 +21,8 @@ import shutil, string, sys, stat, re, os
 
 # Our testing module
 import svntest
+if sys.platform == 'AS/400':
+  import ebcdic
 
 
 # (abbreviation)
@@ -56,36 +58,44 @@ def revert_reexpand_keyword(sbox):
   wc_dir = sbox.wc_dir
   newfile_path = os.path.join(wc_dir, "newfile")
   unexpanded_contents = "This is newfile: $Rev$.\n"
+  if sys.platform == 'AS/400':
+    unexpanded_contents = ebcdic.os400_convert_string_to_utf8(unexpanded_contents)
 
   # Put an unexpanded keyword into iota.
-  fp = open(newfile_path, 'w')
+  fp = open(newfile_path, 'wb')
   fp.write(unexpanded_contents)
   fp.close()
+  if sys.platform == 'AS/400':
+    ebcdic.os400_tagtree(newfile_path, 1208, 1)
 
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None, 'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
-  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Rev', newfile_path)
   svntest.main.run_svn(None, 'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
   def check_expanded(path):
-    fp = open(path, 'r')
+    fp = open(path, 'rb')
     lines = fp.readlines()
     fp.close()
-    if lines[0] != "This is newfile: $Rev: 3 $.\n":
-      raise svntest.Failure
+    if sys.platform != 'AS/400':
+      if lines[0] != "This is newfile: $Rev: 3 $.\n":
+        raise svntest.Failure
+    else:
+      if lines[0] != ebcdic.os400_convert_string_to_utf8("This is newfile: $Rev: 3 $.\n"):
+        raise svntest.Failure
 
   check_expanded(newfile_path)
 
   # Now un-expand the keyword again.
-  fp = open(newfile_path, 'w')
+  fp = open(newfile_path, 'wb')
   fp.write(unexpanded_contents)
   fp.close()
 
-  fp = open(newfile_path, 'r')
+  fp = open(newfile_path, 'rb')
   lines = fp.readlines()
   fp.close()
 
@@ -93,6 +103,7 @@ def revert_reexpand_keyword(sbox):
   svntest.main.run_svn(None, 'revert', newfile_path)
 
   # Verify that the keyword got re-expanded.
+
   check_expanded(newfile_path)
   
 
@@ -108,7 +119,7 @@ def revert_replaced_file_without_props(sbox):
   file1_path = os.path.join(wc_dir, 'file1')
 
   # Add a new file, file1, that has no prop-base
-  svntest.main.file_append(file1_path, "This is the file 'file1' revision 2.")
+  svntest.main.file_append(file1_path, "This is the file 'file1' revision 2.".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
 
   # commit file1
@@ -133,8 +144,8 @@ def revert_replaced_file_without_props(sbox):
   expected_status.tweak('file1', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # recreate and add file1 
-  svntest.main.file_append(file1_path, "This is the file 'file1' revision 3.")
+  # recreate and add file1
+  svntest.main.file_append(file1_path, "This is the file 'file1' revision 3.".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
 
   # Test to see if file1 is schedule for replacement 

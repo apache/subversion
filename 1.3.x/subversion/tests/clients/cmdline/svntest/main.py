@@ -31,6 +31,10 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 
+if sys.platform == 'AS/400':
+  import tempfile
+  import ebcdic
+
 from svntest import Failure
 from svntest import Skip
 from svntest import testcase
@@ -94,10 +98,17 @@ else:
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
-svn_binary = os.path.abspath('../../../clients/cmdline/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../../svnlook/svnlook' + _exe)
-svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
+if sys.platform != 'AS/400':
+  svn_binary = os.path.abspath('../../../clients/cmdline/svn' + _exe)
+  svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin' + _exe)
+  svnlook_binary = os.path.abspath('../../../svnlook/svnlook' + _exe)
+  svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
+else:
+  # Paths to symbolic links for subversion binaries
+  svn_binary = './svn'
+  svnadmin_binary = './svnadmin'
+  svnlook_binary = './svnlook'
+  svnversion_binary = './svnversion'
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -155,26 +166,26 @@ default_config_dir = config_dir
 #
 _item = wc.StateItem
 greek_state = wc.State('', {
-  'iota'        : _item("This is the file 'iota'.\n"),
+  'iota'        : _item("This is the file 'iota'.\n".encode("utf-8")),
   'A'           : _item(),
-  'A/mu'        : _item("This is the file 'mu'.\n"),
+  'A/mu'        : _item("This is the file 'mu'.\n".encode("utf-8")),
   'A/B'         : _item(),
-  'A/B/lambda'  : _item("This is the file 'lambda'.\n"),
+  'A/B/lambda'  : _item("This is the file 'lambda'.\n".encode("utf-8")),
   'A/B/E'       : _item(),
-  'A/B/E/alpha' : _item("This is the file 'alpha'.\n"),
-  'A/B/E/beta'  : _item("This is the file 'beta'.\n"),
+  'A/B/E/alpha' : _item("This is the file 'alpha'.\n".encode("utf-8")),
+  'A/B/E/beta'  : _item("This is the file 'beta'.\n".encode("utf-8")),
   'A/B/F'       : _item(),
   'A/C'         : _item(),
   'A/D'         : _item(),
-  'A/D/gamma'   : _item("This is the file 'gamma'.\n"),
+  'A/D/gamma'   : _item("This is the file 'gamma'.\n".encode("utf-8")),
   'A/D/G'       : _item(),
-  'A/D/G/pi'    : _item("This is the file 'pi'.\n"),
-  'A/D/G/rho'   : _item("This is the file 'rho'.\n"),
-  'A/D/G/tau'   : _item("This is the file 'tau'.\n"),
+  'A/D/G/pi'    : _item("This is the file 'pi'.\n".encode("utf-8")),
+  'A/D/G/rho'   : _item("This is the file 'rho'.\n".encode("utf-8")),
+  'A/D/G/tau'   : _item("This is the file 'tau'.\n".encode("utf-8")),
   'A/D/H'       : _item(),
-  'A/D/H/chi'   : _item("This is the file 'chi'.\n"),
-  'A/D/H/psi'   : _item("This is the file 'psi'.\n"),
-  'A/D/H/omega' : _item("This is the file 'omega'.\n"),
+  'A/D/H/chi'   : _item("This is the file 'chi'.\n".encode("utf-8")),
+  'A/D/H/psi'   : _item("This is the file 'psi'.\n".encode("utf-8")),
+  'A/D/H/omega' : _item("This is the file 'omega'.\n".encode("utf-8")),
   })
 
 
@@ -233,7 +244,10 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   # Log the command line
   if verbose_mode:
-    print 'CMD:', os.path.basename(command) + args,
+    if sys.platform != 'AS/400':
+      print 'CMD:', os.path.basename(command) + args,
+    else:
+      ebcdic.os400_spool_print('CMD:' + os.path.basename(command) + args)
 
   if binary_mode:
     mode = 'b'
@@ -241,18 +255,33 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     mode = 't'
 
   start = time.time()
-  infile, outfile, errfile = os.popen3(command + args, mode)
+  if sys.platform != 'AS/400':
+    infile, outfile, errfile = os.popen3(command + args, mode)
+    if stdin_lines:
+      map(infile.write, stdin_lines)
 
-  if stdin_lines:
-    map(infile.write, stdin_lines)
+    infile.close()
 
-  infile.close()
+    stdout_lines = outfile.readlines()
+    stderr_lines = errfile.readlines()
 
-  stdout_lines = outfile.readlines()
-  stderr_lines = errfile.readlines()
+    outfile.close()
+    errfile.close()
+  else:
+    # os.popen3 not implemented on iSeries Python
+    out_utf8 = 0
+    err_utf8 = 0
 
-  outfile.close()
-  errfile.close()
+    # For commands that produce utf-8 output tag the
+    # temporary output file accordingly.
+    re_utf8_output = re.compile(r'(svn "diff")|(svn.*--xml)|(^svnlook)')
+
+    if re_utf8_output.search(os.path.basename(command) + args):
+      out_utf8 = 1
+
+    stdout_lines, stderr_lines = ebcdic.os400_run_cmd(command, stdin_lines,
+                                                      out_utf8, err_utf8,
+                                                      *varargs)
 
   if verbose_mode:
     stop = time.time()
@@ -283,6 +312,10 @@ def create_config_dir(cfgdir,
                       server_contents = '#\n'):
   "Create config directories and files"
 
+  if sys.platform == 'AS/400':
+    config_contents = ebcdic.os400_convert_string_to_utf8(config_contents)
+    server_contents = ebcdic.os400_convert_string_to_utf8(server_contents)
+    
   # config file names
   cfgfile_cfg = os.path.join(cfgdir, 'config')
   cfgfile_srv = os.path.join(cfgdir, 'server')
@@ -291,11 +324,11 @@ def create_config_dir(cfgdir,
   if not os.path.isdir(cfgdir):
     os.makedirs(cfgdir)
 
-  fd = open(cfgfile_cfg, 'w')
+  fd = open(cfgfile_cfg, 'wb')
   fd.write(config_contents)
   fd.close()
 
-  fd = open(cfgfile_srv, 'w')
+  fd = open(cfgfile_srv, 'wb')
   fd.write(server_contents)
   fd.close()
 
@@ -332,7 +365,13 @@ def chmod_tree(path, mode, mask):
       fullname = os.path.join(dirname, name)
       if not os.path.islink(fullname):
         new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
-        os.chmod(fullname, new_mode)
+        if sys.platform != 'AS/400':
+          os.chmod(fullname, new_mode)
+        else:
+          # iSeries Python's os.chmod(path, mode) can only handle the mode bits
+          # e.g. 00 - 04000, greater than that range causes the error
+          # OSError: [Errno 3021] The value specified for the argument is not correct.
+          os.chmod(fullname, new_mode & 07777)
   os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
@@ -360,8 +399,17 @@ def safe_rmtree(dirname, retry=0):
 # For making local mods to files
 def file_append(path, new_text):
   "Append NEW_TEXT to file at PATH"
-
-  fp = open(path, 'a')  # open in (a)ppend mode
+  if sys.platform != 'AS/400':
+    fp = open(path, 'a')  # open in (a)ppend mode
+  else: 
+    if not os.path.exists(path):
+      fp = open(path, 'ab')  # open in (a)ppend mode
+      fp.close()
+      ebcdic.os400_tagtree(path, 1208, 1)
+      # On iSeries Python files created using open() have the
+      # permissions -rwxrwxrwx.  Change this to -rw-rw-rw-
+      os.chmod(path, 0666)
+    fp = open(path, 'ab')  # open in (a)ppend mode
   fp.write(new_text)
   fp.close()
 
@@ -385,9 +433,9 @@ def create_repos(path):
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),
-              "[general]\nauth-access = write\npassword-db = passwd\n");
+              ("[general]\nauth-access = write\npassword-db = passwd\n").encode('utf-8'));
   file_append(os.path.join(path, "conf", "passwd"),
-               "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+               ("[users]\njrandom = rayjandom\njconstant = rayjandom\n").encode('utf-8'));
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
@@ -405,30 +453,52 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   if ignore_uuid:
     load_args = load_args + " --ignore-uuid"
   if verbose_mode:
-    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-          '|', os.path.basename(svnadmin_binary) + load_args,
+    if sys.platform != 'AS/400':
+      print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+            '|', os.path.basename(svnadmin_binary) + load_args,
+    else:
+      # Printing lines greater than 132 characters to a spool file causes an error.
+      ebcdic.os400_spool_print('CMD:' + os.path.basename(svnadmin_binary) +
+                               dump_args + '|' + os.path.basename(svnadmin_binary) + load_args)
   start = time.time()
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+  if sys.platform != 'AS/400':
+    dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+    load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+  else:
+    dump_out, dump_err = ebcdic.os400_run_cmd('/py_tests/svnadmin', None,
+                                              1, 0, 'dump', src_path)
+    if ignore_uuid:
+      load_out, load_err = ebcdic.os400_run_cmd('/py_tests/svnadmin', None,
+                                                0, 0, 'load', dst_path,
+                                                '--ignore-uuid', '<',
+                                                dump_out_file)
+    else:
+      load_out, load_err = ebcdic.os400_run_cmd('/py_tests/svnadmin', None,
+                                                0, 0, 'load', dst_path, '<',
+                                                dump_out_file)
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
+
+  if sys.platform != 'AS/400':
+    while 1:
+      data = dump_out.read(1024*1024)  # Arbitrary buffer size
+      if data == "":
+        break
+      load_in.write(data)
+    load_in.close() # Tell load we are done
+
+    dump_lines = dump_err.readlines()
+    load_lines = load_out.readlines()
+    dump_in.close()
+    dump_out.close()
+    dump_err.close()
+    load_out.close()
+    load_err.close()
+  else:
+    dump_lines = dump_err
+    load_lines = load_out
   
-  while 1:
-    data = dump_out.read(1024*1024)  # Arbitrary buffer size
-    if data == "":
-      break
-    load_in.write(data)
-  load_in.close() # Tell load we are done
-
-  dump_lines = dump_err.readlines()
-  load_lines = load_out.readlines()
-  dump_in.close()
-  dump_out.close()
-  dump_err.close()
-  load_out.close()
-  load_err.close()
-
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
   for dump_line in dump_lines:
