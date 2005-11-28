@@ -375,7 +375,7 @@ svn_wc__load_props (apr_hash_t **base_props_p,
      our WC has prop caching, the user requested working props and there are no
      prop mods. */
   if (base_props_p
-      || (has_propcaching && ! entry->prop_mods && entry->has_props))
+      || (has_propcaching && ! entry->has_prop_mods && entry->has_props))
     {
       const char *prop_base_path;
 
@@ -390,7 +390,7 @@ svn_wc__load_props (apr_hash_t **base_props_p,
 
   if (props_p)
     {
-      if (has_propcaching && ! entry->prop_mods && entry->has_props)
+      if (has_propcaching && ! entry->has_prop_mods && entry->has_props)
         *props_p = apr_hash_copy (pool, base_props);
       else if (! has_propcaching || entry->has_props)
         {
@@ -446,13 +446,13 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
     }
   /* Check if the props are modified. */
   SVN_ERR (svn_prop_diffs (&prop_diffs, working_props, base_props, pool));
-  tmp_entry.prop_mods = (prop_diffs->nelts > 0);
+  tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
   tmp_entry.has_props = (apr_hash_count (working_props) > 0);
   tmp_entry.cached_props = svn_wc__build_cached_props (working_props, pool);
 
   SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_HAS_PROPS
-                                       | SVN_WC__ENTRY_MODIFY_PROP_MODS 
+                                       | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS 
                                        | SVN_WC__ENTRY_MODIFY_CACHED_PROPS,
                                        pool));
 
@@ -462,7 +462,7 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
   SVN_ERR (svn_wc__prop_path (&working_propfile_path, full_path,
                               kind, FALSE, pool)); 
   real_props = apr_pstrdup (pool, working_propfile_path + access_len);
-  if (tmp_entry.prop_mods)
+  if (tmp_entry.has_prop_mods)
     {
       SVN_ERR (svn_wc__prop_path (&working_prop_tmp_path, full_path,
                                   kind, TRUE, pool));
@@ -1639,7 +1639,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
    * and nice way to retrieve the information from the entry. */
   if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
     {
-      *modified_p = entry->prop_mods;
+      *modified_p = entry->has_prop_mods;
       return SVN_NO_ERROR;
     }
       

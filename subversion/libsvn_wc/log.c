@@ -1264,7 +1264,7 @@ log_do_committed (struct log_runner *loggy,
   entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
-  entry->prop_mods = FALSE;
+  entry->has_prop_mods = FALSE;
   /* ### Update property flags when we have such flags. */
   if ((err = svn_wc__entry_modify (loggy->adm_access, name, entry,
                                    (SVN_WC__ENTRY_MODIFY_REVISION 
@@ -1280,7 +1280,7 @@ log_do_committed (struct log_runner *loggy,
                                     | (text_time
                                        ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                        : 0)
-                                    | SVN_WC__ENTRY_MODIFY_PROP_MODS
+                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
                                    FALSE, pool)))
     return svn_error_createf
@@ -1289,7 +1289,7 @@ log_do_committed (struct log_runner *loggy,
   loggy->entries_modified = TRUE;
 
   /* Remove the working props file if it exists.
-     This is done here, after resetting the prop_mods flag, since
+     This is done here, after resetting the has_prop_mods flag, since
      the text-base install stuff above will need this file if
      props_mod was set. */
   {
@@ -1995,9 +1995,9 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
                   SVN_WC__ENTRY_ATTR_HAS_PROPS,
                   entry->has_props ? "true" : "false");
 
-  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PROP_MODS,
-                  SVN_WC__ENTRY_ATTR_PROP_MODS,
-                  entry->prop_mods ? "true" : "false");
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
+                  SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                  entry->has_prop_mods ? "true" : "false");
 
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CACHED_PROPS,
                   SVN_WC__ENTRY_ATTR_CACHED_PROPS,

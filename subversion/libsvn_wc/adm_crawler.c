@@ -866,7 +866,7 @@ svn_wc_transmit_prop_deltas (const char *path,
 
   /* For an enough recent WC, we can have a really easy out. */
   if (svn_wc__adm_wc_format (adm_access) > SVN_WC__NO_PROPCACHING_VERSION
-      && ! entry->prop_mods)
+      && ! entry->has_prop_mods)
     {
       if (tempfile)
         *tempfile = NULL;

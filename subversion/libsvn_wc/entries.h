@@ -68,7 +68,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
 #define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
 #define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
-#define SVN_WC__ENTRY_ATTR_PROP_MODS          "prop-mods"
+#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
 #define SVN_WC__ENTRY_ATTR_CACHED_PROPS       "cached-props"
 
 /* Attribute values for 'schedule' */
@@ -144,7 +144,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       0x01000000
 #define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE 0x02000000
 #define SVN_WC__ENTRY_MODIFY_HAS_PROPS          0x04000000
-#define SVN_WC__ENTRY_MODIFY_PROP_MODS          0x08000000
+#define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      0x08000000
 #define SVN_WC__ENTRY_MODIFY_CACHED_PROPS       0x10000000
 
 

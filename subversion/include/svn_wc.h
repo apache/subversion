@@ -1277,7 +1277,7 @@ typedef struct svn_wc_entry_t
    * @see svn_wc_props_modified_p().
    *
    * @since New in 1.4. */
-  svn_boolean_t prop_mods;
+  svn_boolean_t has_prop_mods;
 
   /** Cached property existence for this entry.
    *  The working copy we are working with may cache the existence of

@@ -507,22 +507,22 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* prop-mods flag. */
   {
-    const char *prop_mods_str
-      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
+    const char *has_prop_mods_str
+      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
                       APR_HASH_KEY_STRING);
         
-    if (prop_mods_str)
+    if (has_prop_mods_str)
       {
-        if (strcmp (prop_mods_str, "true") == 0)
-          entry->prop_mods = TRUE;
-        else if (strcmp (prop_mods_str, "false") != 0)
+        if (strcmp (has_prop_mods_str, "true") == 0)
+          entry->has_prop_mods = TRUE;
+        else if (strcmp (has_prop_mods_str, "false") != 0)
           return svn_error_createf 
             (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
              _("Entry '%s' has invalid '%s' value"),
              (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_PROP_MODS);
+             SVN_WC__ENTRY_ATTR_HAS_PROP_MODS);
 
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_MODS;
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
       }
   }
   
@@ -1098,8 +1098,8 @@ write_entry (svn_stringbuf_t **output,
                 (entry->has_props ? "true" : NULL));
 
   /* Prop-mods. */
-  if (entry->prop_mods)
-    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
+  if (entry->has_prop_mods)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
                   APR_HASH_KEY_STRING, "true");
   
   /* Cached props. */
@@ -1433,8 +1433,8 @@ fold_entry (apr_hash_t *entries,
     cur_entry->has_props = entry->has_props;
 
   /* prop-mods flag */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_MODS)
-    cur_entry->prop_mods = entry->prop_mods;
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS)
+    cur_entry->has_prop_mods = entry->has_prop_mods;
 
   /* Property existence */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CACHED_PROPS)
