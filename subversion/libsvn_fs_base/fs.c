@@ -1029,12 +1029,6 @@ get_db_pagesize (u_int32_t *pagesize,
 #endif /* DB_LOG_AUTOREMOVE */
 
 
-/* Ensure compatibility with older APR 0.9.5 snapshots which don't
- * support the APR_LARGEFILE flag. */
-#ifndef APR_LARGEFILE
-#define APR_LARGEFILE (0)
-#endif
-
 /* Copy FILENAME from SRC_DIR to DST_DIR in byte increments of size
    CHUNKSIZE.  The read/write buffer of size CHUNKSIZE will be
    allocated in POOL. */
