@@ -279,9 +279,11 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     if re_utf8_output.search(os.path.basename(command) + args):
       out_utf8 = 1
 
-    stdout_lines, stderr_lines = ebcdic.os400_run_cmd(command, stdin_lines,
-                                                      out_utf8, err_utf8,
-                                                      *varargs)
+    stdout_lines, stderr_lines, of, ef = ebcdic.os400_run_cmd_va(command,
+                                                                 stdin_lines,
+                                                                 out_utf8,
+                                                                 err_utf8,
+                                                                 *varargs)
 
   if verbose_mode:
     stop = time.time()
@@ -465,17 +467,21 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
     dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
     load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
   else:
-    dump_out, dump_err = ebcdic.os400_run_cmd('/py_tests/svnadmin', None,
-                                              1, 0, 'dump', src_path)
+    dump_out, dump_err, dump_out_file, dump_err_file = ebcdic.os400_run_cmd_va('/py_tests/svnadmin',
+                                                                               None, 1, 0, 'dump',
+                                                                               src_path)
     if ignore_uuid:
-      load_out, load_err = ebcdic.os400_run_cmd('/py_tests/svnadmin', None,
-                                                0, 0, 'load', dst_path,
-                                                '--ignore-uuid', '<',
-                                                dump_out_file)
+      load_out, load_err, of, ef = ebcdic.os400_run_cmd_va('/py_tests/svnadmin',
+                                                           None, 0, 0, 'load',
+                                                           dst_path,
+                                                           '--ignore-uuid',
+                                                           '<',
+                                                           dump_out_file)
     else:
-      load_out, load_err = ebcdic.os400_run_cmd('/py_tests/svnadmin', None,
-                                                0, 0, 'load', dst_path, '<',
-                                                dump_out_file)
+      load_out, load_err, of, ef = ebcdic.os400_run_cmd_va('/py_tests/svnadmin',
+                                                           None, 0, 0, 'load',
+                                                           dst_path, '<',
+                                                           dump_out_file)
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
