@@ -2075,7 +2075,7 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
       || (resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined))
     return "";
 
-  /* ### what kind of etag to return for collections, activities, etc? */
+  /* ### what kind of etag to return for activities, etc.? */
 
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
                                       resource->info->repos_path,
