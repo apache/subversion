@@ -373,15 +373,17 @@ def os400_tagtree(root_path, ccsid, rootonly=0):
     raise Error, errors
 
 
-def os400_run_cmd(command, stdin_lines=None, out_utf8=0, err_utf8=0, *varargs):
+def os400_run_cmd_list(command, stdin_lines=None, out_utf8=0, err_utf8=0, va=[]):
   # Substitute for os.popen3 which is not implemented in iSeries Python.
   # Run qsh command with varargs and the list stdin_lines used as stdin.
   #
   # If out_utf8 or err_utf8 are true, then the temporary files created
   # which contain the command's stdout and stderr respectively are tagged
   # with a ccsid of 1208 to facilitate trouble shooting.
-  #
-  # Return the stdout and stderr from the command as lists.  
+
+  # Return the stdout and stderr from the command as lists and the file
+  # names of the temp files containing the stdout and stderr.
+
   if stdin_lines:
     fin, in_file = tempfile.mkstemp('.in.txt', 'cmd.', '/py_tests/scratch')
     finp = open(in_file, "wb")
@@ -394,7 +396,6 @@ def os400_run_cmd(command, stdin_lines=None, out_utf8=0, err_utf8=0, *varargs):
   fout, out_file = tempfile.mkstemp('.out.txt', 'cmd.', '/py_tests/scratch')
   ferr, err_file = tempfile.mkstemp('.err.txt', 'cmd.', '/py_tests/scratch')
 
-  # Are these really necessary.
   os.close(fout)
   os.close(ferr)
 
@@ -410,11 +411,8 @@ def os400_run_cmd(command, stdin_lines=None, out_utf8=0, err_utf8=0, *varargs):
 
   arg_str = []
 
-  for arg in varargs:
-    arg_str.append(str(arg))
-
   counter = 1
-  for arg in varargs:
+  for arg in va:
     if (str(arg) == '>' or str(arg) == '<'):
       qshcmd = qshcmd + ' ' + str(arg) + ' '
     else:
@@ -422,6 +420,7 @@ def os400_run_cmd(command, stdin_lines=None, out_utf8=0, err_utf8=0, *varargs):
 
   if stdin_lines:
     qshcmd += " < " + in_file
+
   qshcmd = qshcmd + " > " + out_file + " 2>" + err_file + "')"
 
   # Run the command via qsh
@@ -470,7 +469,59 @@ def os400_run_cmd(command, stdin_lines=None, out_utf8=0, err_utf8=0, *varargs):
   if os.stat(err_file)[stat.ST_SIZE] == 0:
     os.remove(err_file)
 
-  return solines, selines
+  return solines, selines, out_file, err_file
+
+
+def os400_run_cmd_va(command, stdin_lines=None, out_utf8=0, err_utf8=0, *varargs):
+  # Same as os400_run_cmd_list but accepts variable args.
+  arg_str = []
+  for arg in varargs:
+    arg_str.append(str(arg))
+  return os400_run_cmd_list(command, stdin_lines, out_utf8, err_utf8, arg_str)
+
+
+def os400_py_via_qshsys(script_path, opts=None):
+  # Run python script at script_path.
+
+  # Use .txt extensions for temp files so WebSphere can open them without difficulty.
+  fout, out_file = tempfile.mkstemp('.out.txt', 'py.', '/py_tests/scratch')
+  ferr, err_file = tempfile.mkstemp('.err.txt', 'py.', '/py_tests/scratch')
+  fpy, py_file   = tempfile.mkstemp('.py.txt', 'py.', '/py_tests/scratch')
+
+  script = open(py_file, 'w')
+  script_contents = "system \"PYTHON233/PYTHON PROGRAM(\'" + script_path + "\') "
+
+  if opts:
+    script_contents += "PARM("
+    for o in opts:
+      script_contents += "\'" + o + "\' "
+    script_contents += ")\""
+  else:
+    script_contents += "\""
+
+  script.write(script_contents)
+  script.close()
+
+  # Make tempfile executable
+  os.chmod(py_file, stat.S_IEXEC | stat.S_IREAD | stat.S_IWRITE)
+
+  failed = os.system("QSYS/QSH CMD('" + py_file + ">" + out_file + " 2>" + err_file + "')")
+
+  solog = open(out_file, 'rb')
+  selog = open(err_file, 'rb')
+  solines = solog.readlines()
+  selines = selog.readlines()
+  solog.close()
+  selog.close()
+
+  ### TODO: Delete these temp files, or use alternate function that cleans them up automagically.
+  ### For now we'll just remove the empty files to facilitate debugging.
+  if os.stat(out_file)[stat.ST_SIZE] == 0:
+    os.remove(out_file)
+  if os.stat(err_file)[stat.ST_SIZE] == 0:
+    os.remove(err_file)
+
+  return failed, solines, selines
 
 
 def os400_py_get_ccsid(path):
@@ -482,7 +533,7 @@ def os400_py_get_ccsid(path):
 
   # Use a qsh command to obtain the ccsid of file at path.
   qsh_set_ccsid_cmd = 'attr -p ' + path + ' CCSID'
-  solines, selines = os400_run_cmd(qsh_set_ccsid_cmd)
+  solines, selines, out_file, err_file = os400_run_cmd_list(qsh_set_ccsid_cmd)
 
   if selines:
     # If there is an error return 0.

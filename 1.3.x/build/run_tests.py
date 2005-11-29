@@ -15,6 +15,11 @@ constuctor.  All other parameters are names of test programs.
 import os, sys
 
 import getopt
+
+if sys.platform == 'AS/400':
+  import os400
+  import ebcdic
+
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -47,7 +52,10 @@ class TestHarness:
     self._open_log('w')
     failed = 0
     for prog in list:
-      failed = self._run_test(prog) or failed
+      if sys.platform != 'AS/400':
+        failed = self._run_test(prog) or failed
+      else:
+        failed = self._run_test_as400(prog) or failed
     self._open_log('r')
     log_lines = self.log.readlines()
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
@@ -129,6 +137,77 @@ class TestHarness:
     print >> self.log, 'END: ' + progbase + '\n'
     return failed
 
+  def _run_test_as400(self, prog):
+    'Run a single test on the IBM iSeries.'
+
+    progdir, progbase = os.path.split(prog)
+    print 'Running all tests in ' + progbase + '...',
+    print >> self.log, 'START: ' + progbase
+
+    if progbase[-3:] == '.py':
+      progname = sys.executable
+      cmdline = []
+      if self.verbose is not None:
+        cmdline.append('--verbose')
+      if self.cleanup is not None:
+        cmdline.append('--cleanup')
+      if self.base_url is not None:
+        cmdline.append('--url=' + self.base_url)
+      if self.fs_type is not None:
+        cmdline.append('--fs-type=' + self.fs_type)
+
+      sys.stdout.flush()
+      sys.stderr.flush()
+
+      old_stdout = sys.stdout
+      old_stderr = sys.stderr
+
+      qshcmd = "PYTHON233/PYTHON PROGRAM('" + prog + "') PARM('--verbose')"
+      parm_str = "'--verbose' '--cleanup'"
+      failed, test_out, test_err = ebcdic.os400_py_via_qshsys(prog, cmdline)
+
+      for line in test_out:
+        # Send output to log file, skipping leading space
+        print >> self.log, line[1:],
+
+      sys.stdout.flush()
+      sys.stderr.flush()
+      sys.stdout = old_stdout
+      sys.stderr = old_stderr
+    else:
+      progname = progbase
+      va = ['--srcdir=' + os.path.join(self.builddir, progdir)]
+      if self.verbose is not None:
+        va.append('--verbose')
+      if self.cleanup is not None:
+        va.append('--cleanup')
+      if self.fs_type is not None:
+        va.append('--fs-type=' + self.fs_type)
+
+      old_cwd = os.getcwd()
+      try:
+        os.chdir(progdir)
+        solines, selines, out_file, err_file = ebcdic.os400_run_cmd_list(progname, None, 0, 0, va)
+      except:
+        os.chdir(old_cwd)
+        raise
+      else:
+        os.chdir(old_cwd)
+
+      failed = 0
+
+      for line in solines:
+        print >> self.log, line,
+        if line.find('FAIL:  ') != -1 and line.find('XFAIL:  ') == -1:
+          failed = 1
+
+    if failed:
+      print 'FAILURE'
+    else:
+      print 'success'
+    print >> self.log, 'END: ' + progbase + '\n'
+    return failed
+
   def _run_prog(self, progname, cmdline):
     'Execute COMMAND, redirecting standard output and error to the log file.'
     def restore_streams(stdout, stderr):
@@ -145,7 +224,14 @@ class TestHarness:
     try:
       os.dup2(self.log.fileno(), 1)
       os.dup2(self.log.fileno(), 2)
-      rv = os.spawnv(os.P_WAIT, progname, cmdline)
+      if sys.platform != 'AS/400':
+        rv = os.spawnv(os.P_WAIT, progname, cmdline)
+      else:
+        # iSeries Python doesn't implement os.spawnv and os.spawn()
+        # won't work here, so os400.Program is used instead.
+        pgm = os400.Program('PYTHON', 'PYTHON233',
+                            (('c', 256), ('c', 256), ('c', 256), ('c', 256)))
+        rv = pgm(cmdline[1] + "\0", cmdline[2] + "\0", cmdline[3] + "\0")
     except:
       restore_streams(old_stdout, old_stderr)
       raise
