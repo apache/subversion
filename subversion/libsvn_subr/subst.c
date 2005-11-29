@@ -1266,6 +1266,8 @@ svn_subst_copy_and_translate3 (const char *src,
           (SVN_ERR_IO_INCONSISTENT_EOL, err,
            _("File '%s' has inconsistent newlines"),
            svn_path_local_style (src, pool));
+      else
+        return err;
     }
 
   /* clean up nicely. */
