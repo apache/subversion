@@ -182,8 +182,8 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   out, err = main.run_svn(want_err, *varargs)
 
   for (expected, actual, output_type, raisable) in (
-      (expected_stdout, out, 'stdout', SVNExpectedStdout),
-      (expected_stderr, err, 'stderr', SVNExpectedStderr)):
+      (expected_stderr, err, 'stderr', SVNExpectedStderr),
+      (expected_stdout, out, 'stdout', SVNExpectedStdout)):
     if type(expected) is type([]):
       compare_and_display_lines(message, output_type.upper(), expected, actual)
     elif type(expected) is type(''):
