@@ -162,17 +162,6 @@ svn_error_t *svn_wc__install_props (svn_stringbuf_t **log_accum,
                                     svn_boolean_t write_base_props,
                                     apr_pool_t *pool);
 
-/* Return a ' ' separated string containing the names of all of the
-   properties that subversion caches the existence of. */
-const char *svn_wc__cached_props (void);
-
-/* Return a ' ' separated string containing the names of all cached
-   properties that are set in PROPS.  This string is suitable for
-   using as the "cached_props" member of the entry structure.
-   The result is allocated in POOL.  */
-const char *svn_wc__build_cached_props (apr_hash_t *props, 
-                                        apr_pool_t *pool);
-
 /* Load the base and working props for NAME in ADM_ACCESS returning them
    in *BASE_PROPS_P and *PROPS_P, respectively.  BASE_PROPS or PROPS may be null.
    Do all allocations in POOL.  */

@@ -1279,14 +1279,22 @@ typedef struct svn_wc_entry_t
    * @since New in 1.4. */
   svn_boolean_t has_prop_mods;
 
+  /** A space-separated list of all properties whose presence/absence is cached
+   * in this entry.
+   *
+   * @see @c present_props.
+   *
+   * @since New in 1.4. */
+  const char *cachable_props;
+
   /** Cached property existence for this entry.
-   *  The working copy we are working with may cache the existence of
-   *  certain properties (this depends on wc-format).
-   *  For these wc formats, this string will contain a space separated list
-   *  of the names of those cached properties that are set to some value
-   *  for this entry.
-   *  @since New in 1.4. */
-  const char *cached_props;
+   * This is a space-separated list of property names.  If a name exists in
+   * @c cachable_props but not in this list, this entry does not have that
+   * property.  If a name exists in both lists, the property is present on this
+   * entry.
+   *
+   * @since New in 1.4. */
+  const char *present_props;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
