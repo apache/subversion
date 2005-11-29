@@ -227,6 +227,24 @@ svn_subst_translate_stream3 (svn_stream_t *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
 
+/** Return a stream which performs eol translation and keyword
+ * expansion like svn_subst_translate_stream3() except that
+ * it's done on-the-fly when reading or writing to @a stream.
+ *
+ * Read operations from and write operations to the stream
+ * perform the same operation: if @a expand is @c FALSE, both
+ * contract keywords.
+ *
+ * @since New in 1.4
+ */
+svn_stream_t *
+svn_subst_stream_translated (svn_stream_t *stream,
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             apr_hash_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool);
+
 /** Similar to svn_subst_translate_stream3() except relies upon a
  * @c svn_subst_keywords_t struct instead of a hash for the keywords.
  *
