@@ -208,7 +208,8 @@ svn_stream_readline (svn_stream_t *stream,
 svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
                               apr_pool_t *pool)
 {
-  char *buf = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
+  apr_pool_t *subpool = svn_pool_create (pool);
+  char *buf = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
   apr_size_t len;
 
   /* Read and write chunks until we get a short read, indicating the
@@ -223,6 +224,8 @@ svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
       if (len != SVN_STREAM_CHUNK_SIZE)
         break;
     }
+
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

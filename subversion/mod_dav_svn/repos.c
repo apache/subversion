@@ -2641,6 +2641,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
   /* resource->info->delta_base is NULL, or we had an invalid base URL */
     {
+      apr_pool_t *subpool;
       svn_stream_t *stream;
       char *block;
 
@@ -2658,7 +2659,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       /* ### one day in the future, we can create a custom bucket type
          ### which will read from the FS stream on demand */
 
-      block = apr_palloc(resource->pool, SVN_STREAM_CHUNK_SIZE);
+      subpool = svn_pool_create (resource->pool);
+      block = apr_palloc(subpool, SVN_STREAM_CHUNK_SIZE);
       while (1) {
         apr_size_t bufsize = SVN_STREAM_CHUNK_SIZE;
 
@@ -2684,6 +2686,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                "Could not write data to filter.");
         }
       }
+      svn_pool_destroy (subpool);
 
       /* done with the file. write an EOS bucket now. */
       bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
