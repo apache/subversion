@@ -291,7 +291,7 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
      isn't much need for specific state associated with an open fs_fs
      repository. */
   SVN_ERR (svn_io_file_open (&current_file, path_current (fs, pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                             APR_READ, APR_OS_DEFAULT, pool));
   SVN_ERR (svn_io_file_close (current_file, pool));
 
   /* Read the FS format number. */
@@ -328,7 +328,7 @@ get_youngest (svn_revnum_t *youngest_p,
 
   SVN_ERR (svn_io_file_open (&current_file,
                              svn_path_join (fs_path, PATH_CURRENT, pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                             APR_READ, APR_OS_DEFAULT, pool));
 
   len = sizeof (buf);
   SVN_ERR (svn_io_file_read (current_file, buf, &len, pool));
@@ -2490,8 +2490,8 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   /* Write the next-ids file. */
   SVN_ERR (svn_io_file_open (&next_ids_file,
                              path_txn_next_ids (fs, txn->id, pool),
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE
-                             | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                             APR_OS_DEFAULT, pool));
 
   next_ids_stream = svn_stream_from_aprfile (next_ids_file, pool);
 
@@ -2595,7 +2595,7 @@ write_next_ids (svn_fs_t *fs,
   svn_stream_t *out_stream;
 
   SVN_ERR (svn_io_file_open (&file, path_txn_next_ids (fs, txn_id, pool),
-                             APR_WRITE | APR_TRUNCATE | APR_BUFFERED,
+                             APR_WRITE | APR_TRUNCATE,
                              APR_OS_DEFAULT, pool));
 
   out_stream = svn_stream_from_aprfile (file, pool);
@@ -2818,8 +2818,8 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
   else
     {
       /* The directory rep is already mutable, so just open it for append. */
-      SVN_ERR (svn_io_file_open (&file, filename, APR_WRITE | APR_APPEND
-                                 | APR_BUFFERED, APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_open (&file, filename, APR_WRITE | APR_APPEND,
+                                 APR_OS_DEFAULT, pool));
       out = svn_stream_from_aprfile (file, pool);
     }
 
