@@ -37,6 +37,13 @@
 
 #include "svn_private_config.h"
 
+#define BASE_STR \
+        "\x62\x61\x73\x65"
+        /* "base" */
+
+#define HEAD_STR \
+        "\x68\x65\x61\x64"
+        /* "head" */
 
 /*** Code. ***/
 
@@ -524,12 +531,12 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
               if (is_url)
                 {
                   ret = svn_opt_parse_revision (&start_revision, &end_revision,
-                                                "head", pool);
+                                                HEAD_STR, pool);
                 }
               else
                 {
                   ret = svn_opt_parse_revision (&start_revision, &end_revision,
-                                                "base", pool);
+                                                BASE_STR, pool);
                 }
             }
           else  /* looking at non-empty peg revision */

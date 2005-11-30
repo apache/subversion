@@ -252,7 +252,12 @@ main (int argc, char *argv[])
       else if (strcmp(*arg, "--verbose") == 0)
         verbose_mode = 1;
       else if (strncmp(*arg, "--fs-type=", 10) == 0)
+#if !AS400
         opts.fs_type = apr_pstrdup (pool, (*arg) + 10);
+#else
+        /* Only fs type support on the iSeries */
+        opts.fs_type = DEFAULT_FS_TYPE;
+#endif
     }
 
   /* Create an iteration pool for the tests */
