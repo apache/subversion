@@ -228,14 +228,19 @@ svn_subst_translate_stream3 (svn_stream_t *src,
                              apr_pool_t *pool);
 
 /** Return a stream which performs eol translation and keyword
- * expansion like svn_subst_translate_stream3() except that
- * it's done on-the-fly when reading or writing to @a stream.
+ * expansion when read from or written to.  The stream @a stream
+ * is used to read and write all data.  Make sure you call
+ * svn_stream_close() on @a stream to make sure all data are flushed
+ * and cleaned up.
  *
  * Read operations from and write operations to the stream
  * perform the same operation: if @a expand is @c FALSE, both
- * contract keywords.
+ * contract keywords.  One stream supports both read and write
+ * operations.  Reads and writes may be mixed.
  *
- * @since New in 1.4
+ * The stream returned is allocated in @a pool.
+ *
+ * @since New in 1.4.
  */
 svn_stream_t *
 svn_subst_stream_translated (svn_stream_t *stream,
@@ -378,7 +383,7 @@ svn_subst_translate_cstring (const char *src,
 
 /**
  * Translates a file @a src in working copy form to a file @a dst in
- * normal form form.
+ * normal form.
  *
  * The values specified for @a eol_style, @a *eol_str, @a keywords and
  * @a special, should be the ones used to translate the file to its
