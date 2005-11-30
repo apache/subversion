@@ -26,6 +26,7 @@
 #include "svn_types.h"
 #include "svn_path.h"
 #include "svn_auth.h"
+#include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_user.h"
@@ -41,49 +42,102 @@ typedef struct parse_context_t
   const char *file;
 
   /* The file descriptor */
-  FILE *fd;
+  svn_stream_t *stream;
 
   /* The current line in the file */
   int line;
+
+  /* Cached ungotten character  - streams don't support ungetc()
+     [emulate it] */
+  int ungotten_char;
+  svn_boolean_t have_ungotten_char;
 
   /* Temporary strings, allocated from the temp pool */
   svn_stringbuf_t *section;
   svn_stringbuf_t *option;
   svn_stringbuf_t *value;
-
-  /* Temporary pool parsing */
-  apr_pool_t *pool;
 } parse_context_t;
 
 
-/* Eat chars from FD until encounter non-whitespace, newline, or EOF.
+
+/* Emulate getc() because streams don't support it.
+ *
+ * In order to be able to ungetc(), use the CXT instead of the stream
+ * to be able to store the 'ungotton' character.
+ *
+ */
+static APR_INLINE svn_error_t *
+parser_getc (parse_context_t *ctx, int *c)
+{
+  if (ctx->have_ungotten_char)
+    {
+      *c = ctx->ungotten_char;
+      ctx->have_ungotten_char = FALSE;
+    }
+  else
+    {
+      unsigned char char_buf;
+      apr_size_t readlen = 1;
+
+      SVN_ERR (svn_stream_read (ctx->stream, &char_buf, &readlen));
+
+      if (readlen == 1)
+        *c = char_buf;
+      else
+        *c = EOF;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Emulate ungetc() because streams don't support it.
+ *
+ * Use CTX to store the ungotten character C.
+ */
+static APR_INLINE svn_error_t *
+parser_ungetc (parse_context_t *ctx, int c)
+{
+  ctx->ungotten_char = c;
+  ctx->have_ungotten_char = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Eat chars from STREAM until encounter non-whitespace, newline, or EOF.
    Set *PCOUNT to the number of characters eaten, not counting the
    last one, and return the last char read (the one that caused the
    break).  */
-static APR_INLINE int
-skip_whitespace (FILE* fd, int *pcount)
+static APR_INLINE svn_error_t *
+skip_whitespace (parse_context_t *ctx, int *c, int *pcount)
 {
-  int ch = getc (fd);
+  int ch;
   int count = 0;
+
+  SVN_ERR (parser_getc (ctx, &ch));
   while (ch != EOF && ch != '\n' && apr_isspace (ch))
     {
       ++count;
-      ch = getc (fd);
+      SVN_ERR (parser_getc (ctx, &ch));
     }
   *pcount = count;
-  return ch;
+  *c = ch;
+  return SVN_NO_ERROR;
 }
 
 
 /* Skip to the end of the line (or file).  Returns the char that ended
    the line; the char is either EOF or newline. */
-static APR_INLINE int
-skip_to_eoln (FILE *fd)
+static APR_INLINE svn_error_t *
+skip_to_eoln (parse_context_t *ctx, int *c)
 {
-  int ch = getc (fd);
+  int ch;
+
+  SVN_ERR (parser_getc (ctx, &ch));
   while (ch != EOF && ch != '\n')
-    ch = getc (fd);
-  return ch;
+    SVN_ERR (parser_getc (ctx, &ch));
+
+  *c = ch;
+  return SVN_NO_ERROR;
 }
 
 
@@ -96,12 +150,13 @@ parse_value (int *pch, parse_context_t *ctx)
 
   /* Read the first line of the value */
   svn_stringbuf_setempty (ctx->value);
-  for (ch = getc (ctx->fd); /* last ch seen was ':' or '=' in parse_option. */
-       ch != EOF && ch != '\n';
-       ch = getc (ctx->fd))
+  SVN_ERR (parser_getc (ctx, &ch));
+  while (ch != EOF && ch != '\n')
+    /* last ch seen was ':' or '=' in parse_option. */
     {
       const char char_from_int = ch;
       svn_stringbuf_appendbytes (ctx->value, &char_from_int, 1);
+      SVN_ERR (parser_getc (ctx, &ch));
     }
   /* Leading and trailing whitespace is ignored. */
   svn_stringbuf_strip_whitespace (ctx->value);
@@ -109,22 +164,20 @@ parse_value (int *pch, parse_context_t *ctx)
   /* Look for any continuation lines. */
   for (;;)
     {
+
       if (ch == EOF || end_of_val)
         {
-          if (!ferror (ctx->fd))
-            {
-              /* At end of file. The value is complete, there can't be
-                 any continuation lines. */
-              svn_config_set (ctx->cfg, ctx->section->data,
-                              ctx->option->data, ctx->value->data);
-            }
+          /* At end of file. The value is complete, there can't be
+             any continuation lines. */
+          svn_config_set (ctx->cfg, ctx->section->data,
+                          ctx->option->data, ctx->value->data);
           break;
         }
       else
         {
           int count;
           ++ctx->line;
-          ch = skip_whitespace (ctx->fd, &count);
+          SVN_ERR (skip_whitespace (ctx, &ch, &count));
 
           switch (ch)
             {
@@ -147,7 +200,7 @@ parse_value (int *pch, parse_context_t *ctx)
                      it's either a section, option or comment.  Put
                      the char back into the stream, because it doesn't
                      belong to us. */
-                  ungetc (ch, ctx->fd);
+                  SVN_ERR (parser_ungetc (ctx, ch));
                   end_of_val = TRUE;
                 }
               else
@@ -155,13 +208,12 @@ parse_value (int *pch, parse_context_t *ctx)
                   /* This is a continuation line. Read it. */
                   svn_stringbuf_appendbytes (ctx->value, " ", 1);
 
-                  for (;
-                       ch != EOF && ch != '\n';
-                       ch = getc (ctx->fd))
+                  while (ch != EOF && ch != '\n')
                     {
                       const char char_from_int = ch;
                       svn_stringbuf_appendbytes (ctx->value,
                                                  &char_from_int, 1);
+                      SVN_ERR (parser_getc (ctx, &ch));
                     }
                   /* Trailing whitespace is ignored. */
                   svn_stringbuf_strip_whitespace (ctx->value);
@@ -183,12 +235,12 @@ parse_option (int *pch, parse_context_t *ctx, apr_pool_t *pool)
   int ch;
 
   svn_stringbuf_setempty (ctx->option);
-  for (ch = *pch;               /* Yes, the first char is relevant. */
-       ch != EOF && ch != ':' && ch != '=' && ch != '\n';
-       ch = getc (ctx->fd))
+  ch = *pch;   /* Yes, the first char is relevant. */
+  while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
       const char char_from_int = ch;
       svn_stringbuf_appendbytes (ctx->option, &char_from_int, 1);
+      SVN_ERR (parser_getc (ctx, &ch));
     }
 
   if (ch != ':' && ch != '=')
@@ -226,12 +278,12 @@ parse_section_name (int *pch, parse_context_t *ctx, apr_pool_t *pool)
   int ch;
 
   svn_stringbuf_setempty (ctx->section);
-  for (ch = getc (ctx->fd);
-       ch != EOF && ch != ']' && ch != '\n';
-       ch = getc (ctx->fd))
+  SVN_ERR (parser_getc (ctx, &ch));
+  while (ch != EOF && ch != ']' && ch != '\n')
     {
       const char char_from_int = ch;
       svn_stringbuf_appendbytes (ctx->section, &char_from_int, 1);
+      SVN_ERR (parser_getc (ctx, &ch));
     }
 
   if (ch != ']')
@@ -245,7 +297,7 @@ parse_section_name (int *pch, parse_context_t *ctx, apr_pool_t *pool)
   else
     {
       /* Everything from the ']' to the end of the line is ignored. */
-      ch = skip_to_eoln (ctx->fd);
+      SVN_ERR (skip_to_eoln (ctx, &ch));
       if (ch != EOF)
         ++ctx->line;
     }
@@ -330,20 +382,6 @@ svn_config__user_config_path (const char *config_dir,
 
 /*** Exported interfaces. ***/
 
-#ifndef WIN32
-svn_error_t *
-svn_config__open_file (FILE **pfile,
-                       const char *filename,
-                       const char *mode,
-                       apr_pool_t *pool)
-{
-  const char *filename_native;
-  SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native, filename, pool));
-  *pfile = fopen (filename_native, mode);
-  return SVN_NO_ERROR;
-}
-#endif /* WIN32 */
-
 
 svn_error_t *
 svn_config__parse_file (svn_config_t *cfg, const char *file,
@@ -352,71 +390,59 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
-  FILE *fd;
-  /* "Why," you ask yourself, "is he using stdio FILE's instead of
-     apr_file_t's?"  The answer is simple: newline translation.  For
-     all that it has an APR_BINARY flag, APR doesn't do newline
-     translation in files.  The only portable way I know to get
-     translated text files is to use the standard stdio library. */
+  apr_file_t *f;
 
-  SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));
-  if (fd == NULL)
+  /* No need for buffering; a translated stream buffers */
+  err = svn_io_file_open (&f, file, APR_BINARY | APR_READ,
+                          APR_OS_DEFAULT, pool);
+
+  if (! must_exist && err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
-      if (errno != ENOENT)
-        return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  _("Can't open config file '%s'"),
-                                  svn_path_local_style (file, pool));
-      else if (must_exist && errno == ENOENT)
-        return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  _("Can't find config file '%s'"),
-                                  svn_path_local_style (file, pool));
-      else
-        return SVN_NO_ERROR;
+      svn_error_clear (err);
+      return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR (err);
 
   ctx.cfg = cfg;
   ctx.file = file;
-  ctx.fd = fd;
+  ctx.stream = svn_subst_stream_translated (svn_stream_from_aprfile (f, pool),
+                                            "\n", TRUE, NULL, FALSE, pool);
   ctx.line = 1;
-  ctx.pool = pool;
-  ctx.section = svn_stringbuf_create("", ctx.pool);
-  ctx.option = svn_stringbuf_create("", ctx.pool);
-  ctx.value = svn_stringbuf_create("", ctx.pool);
+  ctx.have_ungotten_char = FALSE;
+  ctx.section = svn_stringbuf_create("", pool);
+  ctx.option = svn_stringbuf_create("", pool);
+  ctx.value = svn_stringbuf_create("", pool);
 
   do
     {
-      ch = skip_whitespace (fd, &count);
+      SVN_ERR (skip_whitespace (&ctx, &ch, &count));
+
       switch (ch)
         {
         case '[':               /* Start of section header */
           if (count == 0)
-            err = parse_section_name (&ch, &ctx, pool);
+            SVN_ERR (parse_section_name (&ch, &ctx, pool));
           else
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Section header"
-                                       " must start in the first column",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
+                                      "%s:%d: Section header"
+                                      " must start in the first column",
+                                      svn_path_local_style (file, pool),
+                                      ctx.line);
           break;
 
         case '#':               /* Comment */
           if (count == 0)
             {
-              ch = skip_to_eoln(fd);
+              SVN_ERR (skip_to_eoln(&ctx, &ch));
               ++ctx.line;
             }
           else
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Comment"
-                                       " must start in the first column",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
+                                      "%s:%d: Comment"
+                                      " must start in the first column",
+                                      svn_path_local_style (file, pool),
+                                      ctx.line);
           break;
 
         case '\n':              /* Empty line */
@@ -428,38 +454,27 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
         default:
           if (svn_stringbuf_isempty (ctx.section))
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Section header expected",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
+                                      "%s:%d: Section header expected",
+                                      svn_path_local_style (file, pool),
+                                      ctx.line);
           else if (count != 0)
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Option expected",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
+                                      "%s:%d: Option expected",
+                                      svn_path_local_style (file, pool),
+                                      ctx.line);
           else
-            err = parse_option (&ch, &ctx, pool);
+            SVN_ERR (parse_option (&ch, &ctx, pool));
           break;
         }
     }
   while (ch != EOF);
 
-  if (ferror (fd))
-    {
-      err = svn_error_createf (-1, /* FIXME: Wrong error code. */
-                               NULL,
-                               "%s:%d: Read error",
-                               svn_path_local_style (file, pool), ctx.line);
-    }
+  /* Close the file and streams (and other cleanup): */
+  SVN_ERR (svn_stream_close (ctx.stream));
+  SVN_ERR (svn_io_file_close (f, pool));
 
-  fclose (fd);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
