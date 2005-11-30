@@ -1099,7 +1099,7 @@ authz_get_handle (svn_authz_t **authz_p, const char *authz_contents,
 {
   apr_file_t *authz_file;
   apr_status_t apr_err;
-  const char *authz_file_path;
+  const char *authz_file_path, *authz_file_path_native;
   svn_error_t *err;
 
   /* Create a temporary file, and fetch its name. */
@@ -1107,19 +1107,26 @@ authz_get_handle (svn_authz_t **authz_p, const char *authz_contents,
                                       "authz_file", "tmp", FALSE, pool),
              "Opening temporary file");
 
+#if !APR_CHARSET_EBCDIC
+  authz_file_path_native = authz_file_path;
+#else
+  SVN_ERR (svn_utf_cstring_from_utf8(&authz_file_path_native,
+                                     authz_file_path, pool));
+#endif
+
   /* Write the authz ACLs to the file. */
   if ((apr_err = apr_file_write_full (authz_file, authz_contents,
                                       strlen (authz_contents), NULL)))
     {
       (void) apr_file_close (authz_file);
-      (void) apr_file_remove (authz_file_path, pool);
+      (void) apr_file_remove (authz_file_path_native, pool);
       return svn_error_wrap_apr (apr_err, "Writing test authz file");
     }
 
   /* Close the temporary descriptor. */
   if ((apr_err = apr_file_close (authz_file)))
     {
-      (void) apr_file_remove (authz_file_path, pool);
+      (void) apr_file_remove (authz_file_path_native, pool);
       return svn_error_wrap_apr (apr_err, "Closing test authz file");
     }
 
@@ -1131,7 +1138,7 @@ authz_get_handle (svn_authz_t **authz_p, const char *authz_contents,
     }
 
   /* Delete the file, but ignore the error if we've a more important one. */
-  if ((apr_err = apr_file_remove (authz_file_path, pool)))
+  if ((apr_err = apr_file_remove (authz_file_path_native, pool)))
     return svn_error_wrap_apr (apr_err, "Removing test authz file");
 
   return SVN_NO_ERROR;
@@ -1183,7 +1190,13 @@ authz (const char **msg,
     { NULL, NULL, svn_authz_none, FALSE }
   };
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "test authz access control";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1397,7 +1410,13 @@ commit_editor_authz  (const char **msg,
   apr_pool_t *subpool = svn_pool_create (pool);
   const char *authz_contents;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "test authz in the commit editor";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1646,7 +1665,13 @@ commit_continue_txn (const char **msg,
   apr_pool_t *subpool = svn_pool_create (pool);
   const char *txn_name;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "test commit with explicit txn";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
