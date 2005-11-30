@@ -823,29 +823,47 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
   return svn_subst_translate_stream3 (s, d, eol_str, repair, kh, expand, pool);
 }
 
+/* Baton for translate_chunk() to store its state in. */
 struct translation_baton
 {
   const char *eol_str;
   svn_boolean_t repair;
   apr_hash_t *keywords;
   svn_boolean_t expand;
+
+  /* Characters (excluding the terminating NUL character) which
+     may trigger a translation action, hence are 'interesting' */
   const char *interesting;
+
+  /* Length of the string EOL_STR points to. */
   apr_size_t eol_str_len;
-  char       newline_buf[2];
+
+  /* Buffer to cache any newline state between translation chunks */
+  char newline_buf[2];
+
+  /* Offset (within newline_buf) of the first *unused* character */
   apr_size_t newline_off;
-  char       keyword_buf[SVN_KEYWORD_MAX_LEN];
+
+  /* Buffer to cache keyword-parsing state between translation chunks */
+  char keyword_buf[SVN_KEYWORD_MAX_LEN];
+
+  /* Offset (within keyword-buf) to the first *unused* character */
   apr_size_t keyword_off;
-  char       src_format[2];
+
+  /* EOL style used in the chunk-source */
+  char src_format[2];
+
+  /* Length of the EOL style string found in the chunk-source,
+     or zero if none encountered yet */
   apr_size_t src_format_len;
-} translation_baton;
+};
 
 
 /* Allocate a baton for use with translate_chunk() in POOL and
  * initialize it for the first iteration.
  *
- * The caller must assure that EOL_STR and KEYWORDS are either
- * allocated in POOL, or at least have the same guaranteed life time
- * as the baton created.
+ * The caller must assure that EOL_STR and KEYWORDS at least
+ * have the same life time as that of POOL.
  *
  */
 
@@ -857,7 +875,6 @@ create_translation_baton (const char *eol_str,
                           apr_pool_t *pool)
 {
   struct translation_baton *b = apr_palloc (pool, sizeof (*b));
-  int i;
 
   /* For efficiency, convert an empty set of keywords to NULL. */
   if (keywords && (apr_hash_count (keywords) == 0))
@@ -869,14 +886,8 @@ create_translation_baton (const char *eol_str,
   b->keywords = keywords;
   b->expand = expand;
   b->interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
-  b->newline_buf[0] = '\0';
-  b->newline_buf[1] = '\0';
   b->newline_off = 0;
-  for (i = 0; i < SVN_KEYWORD_MAX_LEN; i++)
-    b->keyword_buf[i] = '\0';
   b->keyword_off = 0;
-  b->src_format[0] = '\0';
-  b->src_format[1] = '\0';
   b->src_format_len = 0;
 
   return b;
@@ -885,13 +896,15 @@ create_translation_baton (const char *eol_str,
 /* Translate eols and keywords of a 'chunk' of characters BUF of size BUFLEN
  * according to the settings and state stored in baton B.
  *
- * Write output to stream D.
+ * Write output to stream DST.
  *
  * To finish a series of chunk translations, flush all buffers by calling
  * this routine with a NULL value for BUF.
+ *
+ * Use POOL for temporary allocations.
  */
 static svn_error_t *
-translate_chunk (svn_stream_t *d,
+translate_chunk (svn_stream_t *dst,
                  struct translation_baton *b,
                  const char *buf,
                  apr_size_t buflen,
@@ -923,7 +936,7 @@ translate_chunk (svn_stream_t *d,
               SVN_ERR (translate_newline (b->eol_str, b->eol_str_len,
                                           b->src_format,
                                           &b->src_format_len, b->newline_buf,
-                                          b->newline_off, d, b->repair));
+                                          b->newline_off, dst, b->repair));
 
               b->newline_off = 0;
             }
@@ -937,7 +950,7 @@ translate_chunk (svn_stream_t *d,
               else
                 b->keyword_off--;
 
-              SVN_ERR (translate_write (d, b->keyword_buf, b->keyword_off));
+              SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
 
               b->keyword_off = 0;
             }
@@ -945,7 +958,7 @@ translate_chunk (svn_stream_t *d,
                    || (b->keyword_off && (*p == '\r' || *p == '\n')))
             {
               /* No closing '$' found; flush the keyword buffer. */
-              SVN_ERR (translate_write (d, b->keyword_buf, b->keyword_off));
+              SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
 
               b->keyword_off = 0;
             }
@@ -958,18 +971,19 @@ translate_chunk (svn_stream_t *d,
           /* We're in the boring state; look for interest characters. */
           len = 0;
 
-          /* Fake strcspn() with a length parameter, strncspn if you like,
-             because we're not sure the buffer ends with a NUL character.
+          /* We wanted memcspn(), but lacking that, the loop below has
+             the same effect.
 
-             Also, reject NUL characters explicitly, since index()
-             considers them part of the string argument, but we don't...
+             Also, skip NUL characters explicitly, since strchr()
+             considers them part of the string argument,
+             but we don't consider them interesting
           */
           while ((p + len) < end
-                 && (! p[len] || ! index (interesting, p[len])))
+                 && (! p[len] || ! strchr (interesting, p[len])))
             len++;
 
           if (len)
-            SVN_ERR (translate_write (d, p, len));
+            SVN_ERR (translate_write (dst, p, len));
 
           p += len;
 
@@ -991,7 +1005,7 @@ translate_chunk (svn_stream_t *d,
                                               b->src_format,
                                               &b->src_format_len,
                                               b->newline_buf,
-                                              b->newline_off, d, b->repair));
+                                              b->newline_off, dst, b->repair));
 
                   b->newline_off = 0;
                   break;
@@ -1005,25 +1019,45 @@ translate_chunk (svn_stream_t *d,
       if (b->newline_off)
         SVN_ERR (translate_newline (b->eol_str, b->eol_str_len, b->src_format,
                                     &b->src_format_len, b->newline_buf,
-                                    b->newline_off, d, b->repair));
+                                    b->newline_off, dst, b->repair));
 
       if (b->keyword_off)
-        SVN_ERR (translate_write (d, b->keyword_buf, b->keyword_off));
+        SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
     }
 
   return SVN_NO_ERROR;
 }
 
+/* Baton for use with translated stream callbacks. */
 struct translated_stream_baton
 {
+  /* Stream to take input from (before translation) on read
+     /write output to (after translation) on write. */
   svn_stream_t *stream;
+
+  /* Input/Output translation batons to make them separate chunk streams. */
   struct translation_baton *in_baton, *out_baton;
+
+  /* Remembers whether any write operations have taken place;
+     if so, we need to flush the output chunk stream. */
   svn_boolean_t written;
+
+  /* Buffer to hold translated read data. */
   svn_stringbuf_t *readbuf;
-  char *buf;
+
+  /* Offset of the first non-read character in readbuf. */
   apr_size_t readbuf_off;
+
+  /* Buffer to hold read data
+     between svn_stream_read() and translate_chunk(). */
+  char *buf;
+
+  /* Pool in which (only!) this baton is allocated. */
   apr_pool_t *pool;
-} translated_stream_baton;
+
+  /* Pool for callback iterations */
+  apr_pool_t *iterpool;
+};
 
 
 static svn_error_t *
@@ -1036,13 +1070,13 @@ translated_stream_read (void *baton,
   apr_size_t unsatisfied = *len;
   apr_size_t off = 0;
   apr_pool_t *iterpool;
-  svn_pool_clear (b->pool);
 
-  iterpool = svn_pool_create (b->pool);
+  iterpool = b->iterpool;
   while (readlen == SVN_STREAM_CHUNK_SIZE && unsatisfied > 0)
     {
       apr_size_t to_copy;
 
+      svn_pool_clear (iterpool);
       /* fill read buffer, if necessary */
       if (! (b->readbuf_off < b->readbuf->len))
         {
@@ -1082,10 +1116,11 @@ translated_stream_write (void *baton,
                          apr_size_t *len)
 {
   struct translated_stream_baton *b = baton;
-  svn_pool_clear (b->pool);
+  svn_pool_clear (b->iterpool);
 
   b->written = TRUE;
-  SVN_ERR (translate_chunk (b->stream, b->out_baton, buffer, *len, b->pool));
+  SVN_ERR (translate_chunk (b->stream, b->out_baton, buffer, *len,
+                            b->iterpool));
 
   return SVN_NO_ERROR;
 }
@@ -1096,11 +1131,11 @@ translated_stream_close (void *baton)
   struct translated_stream_baton *b = baton;
 
   if (b->written)
-    SVN_ERR (translate_chunk (b->stream, b->out_baton, NULL, 0, b->pool));
-
-  svn_pool_destroy (b->pool);
+    SVN_ERR (translate_chunk (b->stream, b->out_baton, NULL, 0, b->iterpool));
 
   SVN_ERR (svn_stream_close (b->stream));
+
+  svn_pool_destroy (b->pool);   /* Also destroys the baton itself */
   return SVN_NO_ERROR;
 }
 
@@ -1113,13 +1148,15 @@ svn_subst_stream_translated (svn_stream_t *stream,
                              svn_boolean_t expand,
                              apr_pool_t *pool)
 {
-  struct translated_stream_baton *baton = apr_palloc (pool, sizeof (*baton));
-  svn_stream_t *s = svn_stream_create (baton, pool);
+  apr_pool_t *baton_pool = svn_pool_create (pool);
+  struct translated_stream_baton *baton
+    = apr_palloc (baton_pool, sizeof (*baton));
+  svn_stream_t *s = svn_stream_create (baton, baton_pool);
 
   /* Make sure EOL_STR and KEYWORDS are allocated in POOL, as
      required by create_translation_baton() */
   if (eol_str)
-    eol_str = apr_pstrdup (pool, eol_str);
+    eol_str = apr_pstrdup (baton_pool, eol_str);
   if (keywords)
     {
       if (apr_hash_count (keywords) == 0)
@@ -1127,7 +1164,7 @@ svn_subst_stream_translated (svn_stream_t *stream,
       else
         {
           /* deep copy the hash to make sure it's allocated in POOL */
-          apr_hash_t *copy = apr_hash_make (pool);
+          apr_hash_t *copy = apr_hash_make (baton_pool);
           apr_hash_index_t *hi;
 
           for (hi = apr_hash_first (pool, keywords);
@@ -1136,9 +1173,9 @@ svn_subst_stream_translated (svn_stream_t *stream,
               const void *key;
               void *val;
               apr_hash_this (hi, &key, NULL, &val);
-              apr_hash_set (copy, apr_pstrdup (pool, key),
+              apr_hash_set (copy, apr_pstrdup (baton_pool, key),
                             APR_HASH_KEY_STRING,
-                            svn_string_dup (val, pool));
+                            svn_string_dup (val, baton_pool));
             }
 
           keywords = copy;
@@ -1148,14 +1185,15 @@ svn_subst_stream_translated (svn_stream_t *stream,
   /* Setup the baton fields */
   baton->stream = stream;
   baton->in_baton
-    = create_translation_baton (eol_str, repair, keywords, expand, pool);
+    = create_translation_baton (eol_str, repair, keywords, expand, baton_pool);
   baton->out_baton
-    = create_translation_baton (eol_str, repair, keywords, expand, pool);
+    = create_translation_baton (eol_str, repair, keywords, expand, baton_pool);
   baton->written = FALSE;
-  baton->readbuf = svn_stringbuf_create ("", pool);
+  baton->readbuf = svn_stringbuf_create ("", baton_pool);
   baton->readbuf_off = 0;
-  baton->buf = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE + 1);
-  baton->pool = svn_pool_create (pool);
+  baton->iterpool = svn_pool_create (baton_pool);
+  baton->pool = baton_pool;
+  baton->buf = apr_palloc (baton->pool, SVN_STREAM_CHUNK_SIZE + 1);
 
   /* Setup the stream methods */
   svn_stream_set_read (s, translated_stream_read);
@@ -1498,19 +1536,9 @@ svn_subst_copy_and_translate3 (const char *src,
   src_stream = svn_stream_from_aprfile (s, pool);
   dst_stream = svn_stream_from_aprfile (d, pool);
 
-  /* No reason to choose either source or destination,
-     other than to exercise all code paths */
-  if (expand)
-    src_stream = svn_subst_stream_translated (src_stream,
-                                              eol_str, repair,
-                                              keywords, expand, pool);
-  else
-    dst_stream = svn_subst_stream_translated (dst_stream,
-                                              eol_str, repair,
-                                              keywords, expand, pool);
-
   /* Translate src stream into dst stream. */
-  err = svn_stream_copy (src_stream, dst_stream, pool);
+  err = svn_subst_translate_stream3 (src_stream, dst_stream, eol_str,
+                                     repair, keywords, expand, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
