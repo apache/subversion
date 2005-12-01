@@ -2747,13 +2747,14 @@ static int end_element(void *userdata, int state,
       break;
       
     case ELEM_href:
+      if (rb->fetch_content)
+        /* record the href that we just found */
+        svn_ra_dav__copy_href(rb->href, rb->cdata_accum->data);
+      svn_stringbuf_setempty(rb->cdata_accum);
+
       /* do nothing if we aren't fetching content. */
       if (!rb->fetch_content)
         break;
-      
-      /* record the href that we just found */
-      svn_ra_dav__copy_href(rb->href, rb->cdata_accum->data);
-      svn_stringbuf_setempty(rb->cdata_accum);
       
       /* if we're within a <resource> tag, then just call the generic
          RA set_wcprop_callback directly;  no need to use the
