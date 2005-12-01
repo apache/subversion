@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
- * tests in subversion/tests/clients/cmdline/basic_tests.py).
+ * tests in subversion/tests/svn/basic_tests.py).
  */
 public class BasicTests extends SVNTests
 {

@@ -851,8 +851,8 @@ II.   INSTALLATION
     copy the client tests into the release test area.
 
     C:>cd src-%DIR%
-    C:>mkdir Release\subversion\tests\clients
-    C:>xcopy /S /Y subversion\tests\clients Release\subversion\tests\clients
+    C:>mkdir Release\subversion\tests\svn
+    C:>xcopy /S /Y subversion\tests\svn Release\subversion\tests\svn
 
     If the server dso modules  have been built then copy the dso files and
     dlls into the Apache modules directory.
@@ -890,13 +890,13 @@ II.   INSTALLATION
 
       <Location /svn-test-work/repositories>
        DAV svn
-       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
+       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/svn/
                      svn-test-work/repositories
       </Location>
 
       <Location /svn-test-work/local_tmp/repos>
        DAV svn
-       SVNPath c:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
+       SVNPath c:/SVN/src-trunk/Release/subversion/tests/svn/
                svn-test-work/local_tmp/repos
       </Location>
 
@@ -1146,7 +1146,7 @@ III.  BUILDING A SUBVERSION SERVER
       the Apache error logfile, /usr/local/apache2/logs/error_log.
 
       To run the regression test suite for networked Subversion, see
-      the instructions in subversion/tests/clients/cmdline/README.
+      the instructions in subversion/tests/svn/README.
       For advice about tracing problems, see "Debugging the server" in
       www/hacking.html.
 
