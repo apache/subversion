@@ -60,10 +60,15 @@ extern "C" {
  * The change from 4 to 5 was the addition of support for replacing files
  * with history.
  *
+ * The change from 5 to 6 was the introduction of caching of property
+ * modification state and certain properties in the entries file.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       5
+#define SVN_WC__VERSION       6
 
+/* A version <= this doesn't have property caching in the entries file. */
+#define SVN_WC__NO_PROPCACHING_VERSION 5
 
 /*** Update traversals. ***/
 
@@ -121,6 +126,15 @@ struct svn_wc_traversal_info_t
    directory.  */
 #define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
 
+
+
+/* A space separated list of properties that we cache presence/absence of.
+ *
+ * Note that each entry contains information about which properties are cached
+ * in that particular entry.  This constant is only used when writing entries.
+ */
+#define SVN_WC__CACHABLE_PROPS                                         \
+SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK
 
 
 /* A few declarations for stuff in util.c.

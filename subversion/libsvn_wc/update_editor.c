@@ -1228,8 +1228,6 @@ close_directory (void *dir_baton,
 
       if (regular_props->nelts)
         {
-          svn_boolean_t prop_modified;
-
           /* If recording traversal info, then see if the
              SVN_PROP_EXTERNALS property on this directory changed,
              and record before and after for the change. */
@@ -1278,40 +1276,14 @@ close_directory (void *dir_baton,
                 }
             }
 
-          {
-            apr_hash_t *old_pristine_props;
-            const char *pristine_prop_path;
-
-            /* Get the current pristine props. */
-            old_pristine_props = apr_hash_make (db->pool);
-            SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                             db->path, svn_node_dir,
-                                             FALSE, db->pool));
-            SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
-                                             old_pristine_props, db->pool));
-
-            /* Merge pending properties into temporary files (ignoring
-               conflicts). */
-            SVN_ERR_W (svn_wc__merge_props (&prop_state,
-                                            adm_access, NULL,
-                                            old_pristine_props,
-                                            regular_props, TRUE, FALSE,
-                                            db->pool, &entry_accum),
-                       _("Couldn't do property merge"));
-          }
-
-          /* Are the directory's props locally modified? */
-          SVN_ERR (svn_wc_props_modified_p (&prop_modified,
-                                            db->path, adm_access,
-                                            db->pool));
-
-          /* Log entry which sets a new property timestamp, but *only* if
-             there are no local changes to the props. */
-          if (! prop_modified)
-            SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
-                     (&entry_accum, adm_access,
-                      SVN_WC_ENTRY_THIS_DIR,
-                      SVN_WC__ENTRY_ATTR_PROP_TIME, pool));
+          /* Merge pending properties into temporary files (ignoring
+             conflicts). */
+          SVN_ERR_W (svn_wc__merge_props (&prop_state,
+                                          adm_access, NULL,
+                                          NULL /* use baseprops */,
+                                          regular_props, TRUE, FALSE,
+                                          db->pool, &entry_accum),
+                     _("Couldn't do property merge"));
         }
 
       SVN_ERR (accumulate_entry_props (entry_accum, NULL,
@@ -1737,23 +1709,12 @@ merge_props (svn_stringbuf_t *log_accum,
   /* Merge the 'regular' props into the existing working proplist. */
   if (regular_props)
     {
-      apr_hash_t *old_pristine_props;
-      const char *pristine_prop_path;
-
-      /* Get the current pristine props. */
-      old_pristine_props = apr_hash_make (pool);
-      SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                       file_path, svn_node_file,
-                                       FALSE, pool));
-      SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
-                                       old_pristine_props, pool));
-      
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
       SVN_ERR (svn_wc__merge_props (prop_state,
                                     adm_access, base_name,
-                                    old_pristine_props,
+                                    NULL /* use base props */,
                                     regular_props, TRUE, FALSE, pool,
                                     &log_accum));
     }
@@ -2777,7 +2738,6 @@ install_added_props (svn_stringbuf_t *log_accum,
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
   const char *base_name = svn_path_basename (dst_path, pool);
-  const char *adm_path = svn_wc_adm_access_path (adm_access);
 
   /* Categorize the base properties. */
   {
@@ -2803,52 +2763,11 @@ install_added_props (svn_stringbuf_t *log_accum,
       }
   }  
 
-  /* Install base props. */
-  {
-    const char *tmp_base_prop_path, *local_tmp_base_prop_path, *base_prop_path;
-
-    /* Save new props to temporary file. */
-    SVN_ERR (svn_wc__prop_base_path (&tmp_base_prop_path, dst_path,
-                                     svn_node_file, TRUE, pool));
-    SVN_ERR (svn_wc__save_prop_file (tmp_base_prop_path, new_base_props,
-                                     pool));
-
-    /* Rename temporary props file to base props. */
-    SVN_ERR (svn_wc__prop_base_path (&base_prop_path, base_name, svn_node_file,
-                                     FALSE, pool));
-
-    local_tmp_base_prop_path = svn_path_is_child (adm_path, tmp_base_prop_path,
-                                                  pool);
-    SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
-                                 local_tmp_base_prop_path, base_prop_path,
-                                 FALSE, pool));
-  }
-
-  /* Install working props.  Use the base props if no working props
-     were given. */
-  if (! new_props)
-    new_props = new_base_props;
-  {
-    const char *tmp_prop_path, *local_tmp_prop_path, *prop_path;
-
-    /* Save new props to temporary file. */
-    SVN_ERR (svn_wc__prop_path (&tmp_prop_path, dst_path, svn_node_file, TRUE,
-                                pool));
-    SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
-
-    /* Rename temporary props file to working props. */
-    SVN_ERR (svn_wc__prop_path (&prop_path, base_name, svn_node_file,
-                                FALSE, pool));
-
-    local_tmp_prop_path = svn_path_is_child (adm_path, tmp_prop_path, pool);
-    SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
-                                 local_tmp_prop_path, prop_path,
-                                 FALSE, pool));
-    /* Log entry which sets a new property timestamp. */
-    SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
-             (&log_accum, adm_access,
-              base_name, SVN_WC__ENTRY_ATTR_PROP_TIME, pool));
-  }
+  /* Install base and working props. */
+  SVN_ERR (svn_wc__install_props (&log_accum, adm_access, base_name,
+                                  new_base_props,
+                                  new_props ? new_props : new_base_props,
+                                  TRUE, pool));
 
   /* Install the entry props. */
   SVN_ERR (accumulate_entry_props (log_accum, NULL,
