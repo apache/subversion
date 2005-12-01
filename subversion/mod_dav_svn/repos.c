@@ -2179,7 +2179,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 #if 0
   /* As version resources don't change, encourage caching. */
   /* ### FIXME: This conditional is wrong -- type is often REGULAR,
-     ### and the resource doesn't seem to be basedlined. */
+     ### and the resource doesn't seem to be baselined. */
   if (resource->type == DAV_RESOURCE_TYPE_VERSION)
     /* Cache resource for one week (specified in seconds). */
     apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
