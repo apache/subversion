@@ -614,6 +614,7 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
                           const char *path2,
                           apr_pool_t *pool)
 {
+  apr_pool_t *subpool = svn_pool_create (pool);
   svn_filesize_t size1, size2;
   unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
   svn_stream_t *stream1, *stream2;
@@ -633,8 +634,8 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
   /* So, things have changed.  But we need to know if the two sets of
      file contents are actually different.  If they have differing
      sizes, then we know they differ. */
-  SVN_ERR (svn_fs_file_length (&size1, root1, path1, pool));
-  SVN_ERR (svn_fs_file_length (&size2, root2, path2, pool));
+  SVN_ERR (svn_fs_file_length (&size1, root1, path1, subpool));
+  SVN_ERR (svn_fs_file_length (&size2, root2, path2, subpool));
   if (size1 != size2)
     {
       *changed_p = TRUE;
@@ -643,8 +644,8 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
 
   /* Same sizes, huh?  Well, if their checksums differ, we know they
      differ. */
-  SVN_ERR (svn_fs_file_md5_checksum (digest1, root1, path1, pool));
-  SVN_ERR (svn_fs_file_md5_checksum (digest2, root2, path2, pool));
+  SVN_ERR (svn_fs_file_md5_checksum (digest1, root1, path1, subpool));
+  SVN_ERR (svn_fs_file_md5_checksum (digest2, root2, path2, subpool));
   if (! svn_md5_digests_match (digest1, digest2))
     {
       *changed_p = TRUE;
@@ -653,11 +654,11 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
 
   /* Same sizes, same checksums.  Chances are reallllly good that they
      don't differ, but to be absolute sure, we need to compare bytes. */
-  SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
-  SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
+  SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, subpool));
+  SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, subpool));
 
-  buf1 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
-  buf2 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
+  buf1 = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
+  buf2 = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
   do
     {
       len1 = len2 = SVN_STREAM_CHUNK_SIZE;
@@ -672,6 +673,7 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
     }
   while (len1 > 0);
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

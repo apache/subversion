@@ -278,7 +278,7 @@ log_end_element(void *userdata,
          *         emitting "<S:log-report>" and "</S:log-report>"
          *         instead.
          *
-         *    - clients/cmdline/log-cmd.c:
+         *    - svn/log-cmd.c:
          *         svn_cl__log() would no longer be responsible for
          *         emitting the "<log>" and "</log>" elements.  The
          *         body of this function would get a lot simpler, mmm!

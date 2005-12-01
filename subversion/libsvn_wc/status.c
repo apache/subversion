@@ -809,31 +809,34 @@ get_dir_status (struct edit_baton *eb,
   /* If "this dir" has "svn:externals" property set on it, store its
      name and value in traversal_info.  Also, we want to track the
      externals internally so we can report status more accurately. */
-  if (eb->traversal_info)
     {
       const svn_string_t *prop_val;
       SVN_ERR (svn_wc_prop_get (&prop_val, SVN_PROP_EXTERNALS, path, 
                                 adm_access, subpool));
       if (prop_val)
         {
-          apr_pool_t *dup_pool = eb->traversal_info->pool;
-          const char *dup_path = apr_pstrdup (dup_pool, path);
-          const char *dup_val = apr_pstrmemdup (dup_pool, prop_val->data, 
-                                                prop_val->len);
           apr_array_header_t *ext_items;
           int i;
 
-          /* First things first -- we put the externals information
-             into the "global" traversal info structure. */
-          apr_hash_set (eb->traversal_info->externals_old,
-                        dup_path, APR_HASH_KEY_STRING, dup_val);
-          apr_hash_set (eb->traversal_info->externals_new,
-                        dup_path, APR_HASH_KEY_STRING, dup_val);
+          if (eb->traversal_info)
+            {
+              apr_pool_t *dup_pool = eb->traversal_info->pool;
+              const char *dup_path = apr_pstrdup (dup_pool, path);
+              const char *dup_val = apr_pstrmemdup (dup_pool, prop_val->data, 
+                                                    prop_val->len);
+
+              /* First things first -- we put the externals information
+                 into the "global" traversal info structure. */
+              apr_hash_set (eb->traversal_info->externals_old,
+                            dup_path, APR_HASH_KEY_STRING, dup_val);
+              apr_hash_set (eb->traversal_info->externals_new,
+                            dup_path, APR_HASH_KEY_STRING, dup_val);
+            }
 
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
           SVN_ERR (svn_wc_parse_externals_description2 (&ext_items, path,
-                                                        dup_val, dup_pool));
+                                                        prop_val->data, pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
               svn_wc_external_item_t *item;
@@ -841,7 +844,7 @@ get_dir_status (struct edit_baton *eb,
               item = APR_ARRAY_IDX (ext_items, i, svn_wc_external_item_t *);
               apr_hash_set (eb->externals, svn_path_join (path,
                                                           item->target_dir,
-                                                          dup_pool),
+                                                          pool),
                             APR_HASH_KEY_STRING, item);
             }
         }
@@ -1852,7 +1855,7 @@ close_edit (void *edit_baton,
  cleanup:
   /* Let's make sure that we didn't harvest any traversal info for the
      anchor if we had a target. */
-  if (*eb->target)
+  if (eb->traversal_info && *eb->target)
     {
       apr_hash_set (eb->traversal_info->externals_old,
                     eb->anchor, APR_HASH_KEY_STRING, NULL);
@@ -1901,9 +1904,7 @@ svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
   eb->cancel_func       = cancel_func;
   eb->cancel_baton      = cancel_baton;
   eb->traversal_info    = traversal_info;
-  eb->externals         = traversal_info 
-                          ? apr_hash_make (traversal_info->pool)
-                          : NULL;
+  eb->externals         = apr_hash_make (pool);
   eb->anchor            = svn_wc_adm_access_path (anchor);
   eb->target            = target;
   eb->root_opened       = FALSE;

@@ -64,7 +64,8 @@ struct svn_config_t
 /* Read sections and options from a file. */
 svn_error_t *svn_config__parse_file (svn_config_t *cfg,
                                      const char *file,
-                                     svn_boolean_t must_exist);
+                                     svn_boolean_t must_exist,
+                                     apr_pool_t *pool);
 
 /* The name of the magic [DEFAULT] section. */
 #define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
@@ -79,7 +80,8 @@ svn_error_t *svn_config__win_config_path (const char **folder,
 /* Read sections and options from the Windows Registry. */
 svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                          const char *file,
-                                         svn_boolean_t must_exist);
+                                         svn_boolean_t must_exist,
+                                         apr_pool_t *pool);
 
 /* ### It's unclear to me whether this registry stuff should get the
    double underscore or not, and if so, where the extra underscore

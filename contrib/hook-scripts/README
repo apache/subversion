@@ -20,5 +20,11 @@ Your Mileage May Vary.
    5. pre-commit-check.py
       Template for writing pre-commit checks with the python bindings.
 
+   6. pre-lock-require-needs-lock.py
+      Verifies that the path a user is attempting to lock has the
+      'svn:needs-lock' property set on it.
+
+   7. svn2rss.py
+      Generates a RSS 2.0 file containing commit information.
 
 $Id$

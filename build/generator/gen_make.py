@@ -138,8 +138,8 @@ class Generator(gen_base.GeneratorBase):
       if not self.release_mode:
         self.ofile.write(
           '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
-          '\t$(PYTHON) %s' % (python_script) +
-          ' $(abs_srcdir)/build.conf $(SWIG) $(abs_srcdir)/%s\n\n' % (fname)
+          '\tcd $(top_srcdir) && $(PYTHON) %s' % (python_script) +
+          ' build.conf $(SWIG) %s\n\n' % (fname)
         )
     self.ofile.write('\n')
 
@@ -150,8 +150,8 @@ class Generator(gen_base.GeneratorBase):
     if not self.release_mode:
       self.ofile.write(
         '%s:\n' % " ".join(swig_runtime_fnames) +
-        '\t$(PYTHON) $(abs_srcdir)/build/generator/swig/external_runtime.py' +
-        ' $(abs_srcdir)/build.conf "$(SWIG)"\n\n'
+        '\tcd $(top_srcdir) && $(PYTHON)' +
+        ' build/generator/swig/external_runtime.py build.conf "$(SWIG)"\n\n'
       )
 
     self.ofile.write(
@@ -184,6 +184,7 @@ class Generator(gen_base.GeneratorBase):
         'extraclean-swig: extraclean-swig-%s\n' % short[lang] +
         '\n')
     self.ofile.write('clean-swig: clean-swig-headers\n')
+    self.ofile.write('extraclean-swig: extraclean-swig-headers\n')
     self.ofile.write('\n')
     
     ########################################
@@ -199,14 +200,6 @@ class Generator(gen_base.GeneratorBase):
           '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
           '-o $@ $(top_srcdir)/%s\n' % source
         )
-      self.ofile.write(
-        'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
-        'copy-swig-%s: %s\n' % (objname, objname) +
-        '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
-        '-r $(abs_srcdir)/%s -a ' % objname + 
-        '! -r $(abs_builddir)/%s; then ' % objname +
-        'cp -pf $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
-      )
 
     self.ofile.write('\n')
 
@@ -524,6 +517,8 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
     standalone.write('abs_builddir = %s\n' % os.getcwd())
+    standalone.write('top_srcdir = .\n')
+    standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
     standalone.write('\n')

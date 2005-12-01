@@ -88,146 +88,144 @@ enum
  * The entire list must be terminated with an entry of nulls.
  */
 static const apr_getopt_option_t options_table[] =
-  {
-    {"help",          'h', 0,
-     N_("show help on a subcommand")},
+{
+  {"help",          'h', 0,
+   N_("show help on a subcommand")},
 
-    {NULL,            '?', 0,
-     N_("show help on a subcommand")},
+  {NULL,            '?', 0,
+   N_("show help on a subcommand")},
 
-    {"version",       svnlook__version, 0,
-     N_("show version information")},
+  {"version",       svnlook__version, 0,
+   N_("show version information")},
 
-    {"revision",      'r', 1,
-     N_("specify revision number ARG")},
+  {"revision",      'r', 1,
+   N_("specify revision number ARG")},
 
-    {"transaction",  't', 1,
-     N_("specify transaction name ARG")},
+  {"transaction",  't', 1,
+   N_("specify transaction name ARG")},
 
-    {"verbose",  'v', 0,
-     N_("be verbose")},
+  {"verbose",  'v', 0,
+   N_("be verbose")},
 
-    {"show-ids",      svnlook__show_ids, 0,
-     N_("show node revision ids for each path")},
+  {"show-ids",      svnlook__show_ids, 0,
+   N_("show node revision ids for each path")},
 
-    {"no-diff-deleted", svnlook__no_diff_deleted, 0,
-     N_("do not print differences for deleted files")},
+  {"no-diff-deleted", svnlook__no_diff_deleted, 0,
+   N_("do not print differences for deleted files")},
 
-    {"no-diff-added", svnlook__no_diff_added, 0,
-     N_("do not print differences for added files")},
+  {"no-diff-added", svnlook__no_diff_added, 0,
+   N_("do not print differences for added files")},
 
-    {"diff-copy-from", svnlook__diff_copy_from, 0,
-     N_("print differences against the copy source")},
+  {"diff-copy-from", svnlook__diff_copy_from, 0,
+   N_("print differences against the copy source")},
 
-    {"revprop", svnlook__revprop_opt, 0,
-     N_("operate on a revision property (use with -r or -t)")},
+  {"revprop", svnlook__revprop_opt, 0,
+   N_("operate on a revision property (use with -r or -t)")},
 
-    {"full-paths", svnlook__full_paths, 0,
-     N_("show full paths instead of indenting them")},
+  {"full-paths", svnlook__full_paths, 0,
+   N_("show full paths instead of indenting them")},
 
-    {"copy-info", svnlook__copy_info, 0,
-     N_("show details for copies")},
+  {"copy-info", svnlook__copy_info, 0,
+   N_("show details for copies")},
 
-
-    {0,               0, 0, 0}
-  };
+  {0,               0, 0, 0}
+};
 
 
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
-  {
-    {"author", subcommand_author, {0},
-     N_("usage: svnlook author REPOS_PATH\n\n"
-        "Print the author.\n"),
-     {'r', 't'} },
-    
-    {"cat", subcommand_cat, {0},
-     N_("usage: svnlook cat REPOS_PATH FILE_PATH\n\n"
-        "Print the contents of a file.  Leading '/' on FILE_PATH is "
-        "optional.\n"),
-     {'r', 't'} },
-    
-    {"changed", subcommand_changed, {0},
-     N_("usage: svnlook changed REPOS_PATH\n\n"
-        "Print the paths that were changed.\n"),
-     {'r', 't', svnlook__copy_info} },
-    
-    {"date", subcommand_date, {0},
-     N_("usage: svnlook date REPOS_PATH\n\n"
-        "Print the datestamp.\n"),
-     {'r', 't'} },
+{
+  {"author", subcommand_author, {0},
+   N_("usage: svnlook author REPOS_PATH\n\n"
+      "Print the author.\n"),
+   {'r', 't'} },
 
-    {"diff", subcommand_diff, {0},
-     N_("usage: svnlook diff REPOS_PATH\n\n"
-        "Print GNU-style diffs of changed files and properties.\n"),
-     {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
-      svnlook__diff_copy_from} },
+  {"cat", subcommand_cat, {0},
+   N_("usage: svnlook cat REPOS_PATH FILE_PATH\n\n"
+      "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n"),
+   {'r', 't'} },
 
-    {"dirs-changed", subcommand_dirschanged, {0},
-     N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
-        "Print the directories that were themselves changed (property edits)\n"
-        "or whose file children were changed.\n"),
-     {'r', 't'} },
-    
-    {"help", subcommand_help, {"?", "h"},
-     N_("usage: svnlook help [SUBCOMMAND...]\n\n"
-        "Describe the usage of this program or its subcommands.\n"),
-     {svnlook__version} },
+  {"changed", subcommand_changed, {0},
+   N_("usage: svnlook changed REPOS_PATH\n\n"
+      "Print the paths that were changed.\n"),
+   {'r', 't', svnlook__copy_info} },
 
-    {"history", subcommand_history, {0},
-     N_("usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
-        "Print information about the history of a path in the repository (or\n"
-        "the root directory if no path is supplied).\n"),
-     {'r', svnlook__show_ids} },
+  {"date", subcommand_date, {0},
+   N_("usage: svnlook date REPOS_PATH\n\n"
+      "Print the datestamp.\n"),
+   {'r', 't'} },
 
-    {"info", subcommand_info, {0},
-     N_("usage: svnlook info REPOS_PATH\n\n"
-        "Print the author, datestamp, log message size, and log message.\n"),
-     {'r', 't'} },
+  {"diff", subcommand_diff, {0},
+   N_("usage: svnlook diff REPOS_PATH\n\n"
+      "Print GNU-style diffs of changed files and properties.\n"),
+   {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
+    svnlook__diff_copy_from} },
 
-    {"lock", subcommand_lock, {0},
-     N_("usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n\n"
-        "If a lock exists on a path in the repository, describe it.\n"),
-     {0} },
+  {"dirs-changed", subcommand_dirschanged, {0},
+   N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
+      "Print the directories that were themselves changed (property edits)\n"
+      "or whose file children were changed.\n"),
+   {'r', 't'} },
 
-    {"log", subcommand_log, {0},
-     N_("usage: svnlook log REPOS_PATH\n\n"
-        "Print the log message.\n"),
-     {'r', 't'} },
+  {"help", subcommand_help, {"?", "h"},
+   N_("usage: svnlook help [SUBCOMMAND...]\n\n"
+      "Describe the usage of this program or its subcommands.\n"),
+   {svnlook__version} },
 
-    {"propget", subcommand_pget, {"pget", "pg"},
-     N_("usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n\n"
-        "Print the raw value of a property on a path in the repository.\n"
-        "With --revprop, prints the raw value of a revision property.\n"),
-     {'r', 't', svnlook__revprop_opt} },
+  {"history", subcommand_history, {0},
+   N_("usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
+      "Print information about the history of a path in the repository (or\n"
+      "the root directory if no path is supplied).\n"),
+   {'r', svnlook__show_ids} },
 
-    {"proplist", subcommand_plist, {"plist", "pl"},
-     N_("usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n\n"
-        "List the properties of a path in the repository, or\n"
-        "with the --revprop option, revision properties.\n"
-        "With -v, show the property values too.\n"),
-     {'r', 't', 'v', svnlook__revprop_opt} },
+  {"info", subcommand_info, {0},
+   N_("usage: svnlook info REPOS_PATH\n\n"
+      "Print the author, datestamp, log message size, and log message.\n"),
+   {'r', 't'} },
 
-    {"tree", subcommand_tree, {0},
-     N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
-        "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
-        "of the tree otherwise), optionally showing node revision ids.\n"),
-     {'r', 't', svnlook__show_ids, svnlook__full_paths} },
+  {"lock", subcommand_lock, {0},
+   N_("usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n\n"
+      "If a lock exists on a path in the repository, describe it.\n"),
+   {0} },
 
-    {"uuid", subcommand_uuid, {0},
-     N_("usage: svnlook uuid REPOS_PATH\n\n"
-        "Print the repository's UUID.\n"),
-     {0} },
+  {"log", subcommand_log, {0},
+   N_("usage: svnlook log REPOS_PATH\n\n"
+      "Print the log message.\n"),
+   {'r', 't'} },
 
-    {"youngest", subcommand_youngest, {0},
-     N_("usage: svnlook youngest REPOS_PATH\n\n"
-        "Print the youngest revision number.\n"),
-     {0} },
+  {"propget", subcommand_pget, {"pget", "pg"},
+   N_("usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n\n"
+      "Print the raw value of a property on a path in the repository.\n"
+      "With --revprop, prints the raw value of a revision property.\n"),
+   {'r', 't', svnlook__revprop_opt} },
 
-    { NULL, NULL, {0}, NULL, {0} }
-  };
+  {"proplist", subcommand_plist, {"plist", "pl"},
+   N_("usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n\n"
+      "List the properties of a path in the repository, or\n"
+      "with the --revprop option, revision properties.\n"
+      "With -v, show the property values too.\n"),
+   {'r', 't', 'v', svnlook__revprop_opt} },
+
+  {"tree", subcommand_tree, {0},
+   N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
+      "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
+      "of the tree otherwise), optionally showing node revision ids.\n"),
+   {'r', 't', svnlook__show_ids, svnlook__full_paths} },
+
+  {"uuid", subcommand_uuid, {0},
+   N_("usage: svnlook uuid REPOS_PATH\n\n"
+      "Print the repository's UUID.\n"),
+   {0} },
+
+  {"youngest", subcommand_youngest, {0},
+   N_("usage: svnlook youngest REPOS_PATH\n\n"
+      "Print the youngest revision number.\n"),
+   {0} },
+
+  { NULL, NULL, {0}, NULL, {0} }
+};
 
 
 /* Baton for passing option/argument state to a subcommand function. */

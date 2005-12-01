@@ -19,6 +19,7 @@
 
 
 #include <httpd.h>
+#include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
 #include <http_core.h>  /* for ap_construct_url */
@@ -32,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_dav.h"
@@ -2061,21 +2063,68 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
                        "(at this time)");
 }
 
+/* Returns whether the DAV resource lacks potential for generation of
+   an ETag (defined as any of the following):
+   - it doesn't exist
+   - the resource type isn't REGULAR or VERSION
+   - the resource is a Baseline */
+#define RESOURCE_LACKS_ETAG_POTENTIAL(resource) \
+  (!resource->exists \
+   || (resource->type != DAV_RESOURCE_TYPE_REGULAR \
+       && resource->type != DAV_RESOURCE_TYPE_VERSION) \
+   || (resource->type == DAV_RESOURCE_TYPE_VERSION \
+       && resource->baselined))
+
+/* Return the last modification time of RESOURCE, or -1 if the DAV
+   resource type is not handled, or if an error occurs.  Temporary
+   allocations are made from RESOURCE->POOL. */
+static apr_time_t get_last_modified(const dav_resource *resource)
+{
+  apr_time_t last_modified;
+  svn_error_t *serr;
+  svn_revnum_t created_rev;
+  svn_string_t *date_time;
+
+  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
+    return -1;
+
+  if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
+                                      resource->info->repos_path,
+                                      resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  if ((serr = svn_fs_revision_prop(&date_time, resource->info->repos->fs,
+                                   created_rev, "svn:date", resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  if (date_time == NULL || date_time->data == NULL)
+    return -1;
+
+  if ((serr = svn_time_from_cstring(&last_modified, date_time->data,
+                                    resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  return last_modified;
+}
+
 const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
 {
   svn_error_t *serr;
   svn_revnum_t created_rev;
 
-  /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
-     resource, or it is a Baseline, then it has no etag. */
-  /* ### we should assign etags to all resources at some point */
-  if (!resource->exists
-      || (resource->type != DAV_RESOURCE_TYPE_REGULAR
-          && resource->type != DAV_RESOURCE_TYPE_VERSION)
-      || (resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined))
+  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
     return "";
 
-  /* ### what kind of etag to return for collections, activities, etc? */
+  /* ### what kind of etag to return for activities, etc.? */
 
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
                                       resource->info->repos_path,
@@ -2109,25 +2158,32 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   svn_error_t *serr;
   svn_filesize_t length;
   const char *mimetype = NULL;
+  apr_time_t last_modified;
   
   if (!resource->exists)
     return NULL;
 
-  /* ### what to do for collections, activities, etc */
-
-  /* make sure the proper mtime is in the request record */
-#if 0
-  ap_update_mtime(r, resource->info->finfo.mtime);
-#endif
-
-  /* ### note that these use r->filename rather than <resource> */
-#if 0
-  ap_set_last_modified(r);
-#endif
+  last_modified = get_last_modified(resource);
+  if (last_modified != -1)
+    {
+      /* Note the modification time for the requested resource, and
+         include the Last-Modified header in the response. */
+      ap_update_mtime(r, last_modified);
+      ap_set_last_modified(r);
+    }
 
   /* generate our etag and place it into the output */
   apr_table_setn(r->headers_out, "ETag",
                  dav_svn_getetag(resource, resource->pool));
+
+#if 0
+  /* As version resources don't change, encourage caching. */
+  /* ### FIXME: This conditional is wrong -- type is often REGULAR,
+     ### and the resource doesn't seem to be baselined. */
+  if (resource->type == DAV_RESOURCE_TYPE_VERSION)
+    /* Cache resource for one week (specified in seconds). */
+    apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
+#endif
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -2594,6 +2650,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
   /* resource->info->delta_base is NULL, or we had an invalid base URL */
     {
+      apr_pool_t *subpool;
       svn_stream_t *stream;
       char *block;
 
@@ -2611,7 +2668,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       /* ### one day in the future, we can create a custom bucket type
          ### which will read from the FS stream on demand */
 
-      block = apr_palloc(resource->pool, SVN_STREAM_CHUNK_SIZE);
+      subpool = svn_pool_create (resource->pool);
+      block = apr_palloc(subpool, SVN_STREAM_CHUNK_SIZE);
       while (1) {
         apr_size_t bufsize = SVN_STREAM_CHUNK_SIZE;
 
@@ -2637,6 +2695,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                "Could not write data to filter.");
         }
       }
+      svn_pool_destroy (subpool);
 
       /* done with the file. write an EOS bucket now. */
       bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);

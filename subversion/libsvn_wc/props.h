@@ -39,39 +39,6 @@ svn_error_t *svn_wc__has_props (svn_boolean_t *has_props,
                                 apr_pool_t *pool);
 
 
-
-/* Given two propchange objects, return TRUE iff they conflict.  If
-   there's a conflict, DESCRIPTION will contain an english description
-   of the problem. */
-
-/* For note, here's the table being implemented:
-
-              |  update set     |    update delete   |
-  ------------|-----------------|--------------------|
-  user set    | conflict iff    |      conflict      |
-              |  vals differ    |                    |
-  ------------|-----------------|--------------------|
-  user delete |   conflict      |      merge         |
-              |                 |    (no problem)    |
-  ----------------------------------------------------
-
-*/
-svn_boolean_t
-svn_wc__conflicting_propchanges_p (const svn_string_t **description,
-                                   const svn_prop_t *local,
-                                   const svn_prop_t *update,
-                                   apr_pool_t *pool);
-
-/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
-   reject file describing a state of conflict.  If such a file exists,
-   return the name of the file in REJECT_FILE.  If no such file exists,
-   return (REJECT_FILE = NULL). */
-svn_error_t *
-svn_wc__get_existing_prop_reject_file (const char **reject_file,
-                                       svn_wc_adm_access_t *adm_access,
-                                       const char *name,
-                                       apr_pool_t *pool);
-
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
    properties and load this file into HASH.  Otherwise, leave HASH
    untouched.  */

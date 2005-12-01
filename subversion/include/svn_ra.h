@@ -1181,6 +1181,9 @@ svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
  *
+ * @note It is not considered an error for @a path to not exist in HEAD.
+ * Such a search will simply return no locks.
+ *
  * @note This functionality is not available in pre-1.2 servers.  If the
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.

@@ -237,7 +237,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
           svn_error_clear (err);
         }
       break;
-      
+
     case svn_wc__xfer_cp:
       return svn_io_copy_file (full_from_path, full_dest_path, FALSE, pool);
 
@@ -246,14 +246,11 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         const char *tmp_file;
 
         err = svn_wc_translated_file2
-                 (&tmp_file,
-                  full_from_path,
-                  full_dest_path, adm_access,
-                  SVN_WC_TRANSLATE_FROM_NF
-                  | SVN_WC_TRANSLATE_FORCE_COPY
-                  | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
-                  | (special_only ? SVN_WC_TRANSLATE_SPECIAL_ONLY : 0),
-                  pool);
+          (&tmp_file,
+           full_from_path, full_dest_path, adm_access,
+           SVN_WC_TRANSLATE_FROM_NF
+           | SVN_WC_TRANSLATE_FORCE_COPY,
+           pool);
         if (err)
           {
             if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
@@ -280,9 +277,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                   full_from_path,
                   full_from_path, adm_access,
                   SVN_WC_TRANSLATE_TO_NF
-                  | SVN_WC_TRANSLATE_FORCE_COPY
-                  | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
-                  | (special_only ? SVN_WC_TRANSLATE_SPECIAL_ONLY : 0),
+                  | SVN_WC_TRANSLATE_FORCE_COPY,
                   pool));
         SVN_ERR (svn_io_file_rename (tmp_file, full_dest_path, pool));
 
@@ -371,7 +366,6 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                        ? tmp_text_base : filepath,
                                     filepath, adm_access,
                                     SVN_WC_TRANSLATE_FROM_NF
-                                    | SVN_WC_TRANSLATE_DEL_TMP_ON_POOL_CLEANUP
                                     | SVN_WC_TRANSLATE_FORCE_COPY,
                                     pool));
 

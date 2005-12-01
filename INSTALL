@@ -146,27 +146,40 @@ I.    BUILD REQUIREMENTS
       want to use Subversion to connect to a server over ra_dav (via a
       http:// or https:// url), you will require Neon.
 
-      The Neon library source code can be installed in "./neon" if you
-      want Subversion to build it as part of the Subversion build process.
-      The source code is included with the latest Subversion tarball, and it
-      can also be obtained from:
+      The source code is included with the latest Subversion tarball,
+      and it can also be obtained from:
 
           http://www.webdav.org/neon/neon-0.24.7.tar.gz
             -or-
           http://www.webdav.org/neon/neon-0.25.3.tar.gz
 
-      Unpack the archive using tar/gunzip and rename the resulting
-      directory from ./neon-0.XX.Y to just "./neon".
+      Building Neon inside the subversion build:
 
-      Without source code, a previously compiled library can be picked up
-      from the standard locations. If you want to specify a nonstandard
-      location, you need to use the LDFLAGS environment variable when
-      you run "./configure". You may also have to specify where the
-      neon-config script (which identifies various features of the Neon
-      library) is kept by giving the "--with-neon=" option to
-      "./configure". Note that the script should be kept in a "bin"
-      subdirectory beneath wherever "--with-neon" is pointed.
+      The Neon library source code can be installed in "./neon" if you
+      want Subversion to build it as part of the Subversion build process.
 
+      Unpack the archive using tar/gunzip.  Rename the resulting
+      directory from ./neon-0.XX.Y to just "./neon", inside the top
+      level of your Subversion source tree.
+
+      Using Neon as an external library:
+
+      We recommend that you keep the neon installation out of the
+      Subversion working copy.  This is because most developers have
+      multiple working copies of Subversion, and it is easier to use a
+      single instance of the Neon library for all instances.  To do
+      this, just unzip/untar Neon, and build and install it according
+      to its own standard installation instructions.  Then follow the
+      steps below to use the installed Neon when building 
+
+      Subversion's configuration mechanism should auto-detect the
+      installed Neon.  If it does not, you may need to set the LDFLAGS
+      environment variable when you run "./configure", or specify
+      Neon's location by passing the "--with-neon=" option to
+      "./configure".  Look for the "neon-config" script in a "bin/"
+      subdirectory of the target of "--with-neon".  For example, if
+      you pass "--with-neon=/usr/local/myneon/", then there should be
+      a file "/usr/local/myneon/bin/neon-config".
 
       5.  Berkeley DB 4.X
 
@@ -328,31 +341,14 @@ I.    BUILD REQUIREMENTS
       The Windows build scripts will compile the ZLib sources.
 
 
-      11. Building The Documentation
+      11. Documentation
 
-      The master source format for Subversion's documentation is
-      Docbook Lite.  See doc/book/README for instructions how to
-      compile the book into a useful format.
-
-      The preferred documentation source format used to be Texinfo. We are
-      in the process of migrating all texinfo files to DocBook Lite. The
-      online documentation for texinfo is at
-
-      http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
-
-      Depending on exactly which doc targets you make, you'll need one
-      or more of:
-
-         * the `makeinfo' program from the latest texinfo package in
-           ftp://ftp.gnu.org/pub/gnu/texinfo/
-
-         * the `texi2dvi' or `texi2html' programs
-
-         * the `dvipdf' script from Ghostscript (pipes dvi | ps |
-                                                 Ghostscript)
-
-      If `makeinfo' is not installed before `configure' is run, then
-      the documentation which requires it will not be created and installed.
+      The primary documentation for Subversion is the free book
+      "Version Control with Subversion", a.k.a. "The Subversion Book",
+      obtainable from http://svnbook.red-bean.com/.
+      
+      Various additional documentation exists in the doc/ subdirectory of
+      the Subversion source.  See the file doc/README for more information.
 
 
 
@@ -855,8 +851,8 @@ II.   INSTALLATION
     copy the client tests into the release test area.
 
     C:>cd src-%DIR%
-    C:>mkdir Release\subversion\tests\clients
-    C:>xcopy /S /Y subversion\tests\clients Release\subversion\tests\clients
+    C:>mkdir Release\subversion\tests\svn
+    C:>xcopy /S /Y subversion\tests\svn Release\subversion\tests\svn
 
     If the server dso modules  have been built then copy the dso files and
     dlls into the Apache modules directory.
@@ -894,13 +890,13 @@ II.   INSTALLATION
 
       <Location /svn-test-work/repositories>
        DAV svn
-       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
+       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/svn/
                      svn-test-work/repositories
       </Location>
 
       <Location /svn-test-work/local_tmp/repos>
        DAV svn
-       SVNPath c:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
+       SVNPath c:/SVN/src-trunk/Release/subversion/tests/svn/
                svn-test-work/local_tmp/repos
       </Location>
 
@@ -1150,7 +1146,7 @@ III.  BUILDING A SUBVERSION SERVER
       the Apache error logfile, /usr/local/apache2/logs/error_log.
 
       To run the regression test suite for networked Subversion, see
-      the instructions in subversion/tests/clients/cmdline/README.
+      the instructions in subversion/tests/svn/README.
       For advice about tracing problems, see "Debugging the server" in
       www/hacking.html.
 
