@@ -22,16 +22,6 @@ Candidate changes:
     Votes:
       +0: nori
 
-  * r17589
-    Fix a bug in parsing of the XML responses from mod_dav_svn which
-    exhibited itself as the concatenation of the href and
-    committed-rev fields for the value of the committed-rev field when
-    an explicitly requested resource is out of date.
-    Justficiation: Without this change, ood_last_cmt_rev will not be
-      set correctly.
-    Votes:
-      +1: dlr, rooneg, lundblad
-
 Approved changes:
 
 Status of 1.3.1:
