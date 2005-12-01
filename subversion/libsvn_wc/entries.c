@@ -114,6 +114,11 @@ svn_wc__entries_init (const char *path,
                   sizeof (SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
                   "true");
   
+  /* Add cachable-props here so that it can be inherited by other entries.
+   */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                APR_HASH_KEY_STRING, SVN_WC__CACHABLE_PROPS);
+
   svn_xml_make_open_tag_hash (&accum, pool, svn_xml_self_closing,
                               SVN_WC__ENTRIES_ENTRY, atts);
 
@@ -195,7 +200,6 @@ do_bool_attr (svn_boolean_t *entry_flag,
     }
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
@@ -501,6 +505,46 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
   
+  /* has-props flag. */
+  SVN_ERR (do_bool_attr (&entry->has_props,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_HAS_PROPS,
+                         atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, name));
+
+  /* has-prop-mods flag. */
+  {
+    const char *has_prop_mods_str
+      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                      APR_HASH_KEY_STRING);
+        
+    if (has_prop_mods_str)
+      {
+        if (strcmp (has_prop_mods_str, "true") == 0)
+          entry->has_prop_mods = TRUE;
+        else if (strcmp (has_prop_mods_str, "false") != 0)
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid '%s' value"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_HAS_PROP_MODS);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
+      }
+  }
+  
+  /* cachable-props string. */
+  entry->cachable_props = apr_hash_get (atts, 
+                                        SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                                        APR_HASH_KEY_STRING);
+  if (entry->cachable_props)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS;
+
+  /* present-props string. */
+  entry->present_props = apr_hash_get (atts, 
+                                       SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
+                                      APR_HASH_KEY_STRING);
+  if (entry->present_props)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_PRESENT_PROPS;
+
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -571,6 +615,9 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     {
       dst->uuid = src->uuid;
     }
+
+  if (! dst->cachable_props)
+    dst->cachable_props = src->cachable_props;
 }
 
 
@@ -1060,6 +1107,26 @@ write_entry (svn_stringbuf_t **output,
                   APR_HASH_KEY_STRING,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
 
+  /* Has-props flag. */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
+                (entry->has_props ? "true" : NULL));
+
+  /* Prop-mods. */
+  if (entry->has_prop_mods)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                  APR_HASH_KEY_STRING, "true");
+  
+  /* Cachable props. */
+  if (entry->cachable_props && *entry->cachable_props)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                  APR_HASH_KEY_STRING, entry->cachable_props);
+
+  /* Present props. */
+  if (entry->present_props
+      && *entry->present_props)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
+                  APR_HASH_KEY_STRING, entry->present_props);
+
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
   /* We only want to write out 'revision' and 'url' for the
@@ -1131,6 +1198,12 @@ write_entry (svn_stringbuf_t **output,
               && strcmp (entry->repos, this_dir->repos) == 0)
             apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
                           NULL);
+
+          /* Cachable props are also inherited. */
+          if (entry->cachable_props && this_dir->cachable_props
+              && strcmp (entry->cachable_props, this_dir->cachable_props) == 0)
+            apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                          APR_HASH_KEY_STRING, NULL);
         }
     }
 
@@ -1379,6 +1452,26 @@ fold_entry (apr_hash_t *entries,
   /* Lock creation date */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
+
+  /* has-props flag */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPS)
+    cur_entry->has_props = entry->has_props;
+
+  /* prop-mods flag */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS)
+    cur_entry->has_prop_mods = entry->has_prop_mods;
+
+  /* Cachable props. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS)
+    cur_entry->cachable_props = (entry->cachable_props
+                                 ? apr_pstrdup (pool, entry->cachable_props)
+                                 : NULL);
+
+  /* Property existence */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_PRESENT_PROPS)
+    cur_entry->present_props = (entry->present_props
+                                ? apr_pstrdup (pool, entry->present_props)
+                                : NULL);
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
@@ -1769,7 +1862,10 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_owner = apr_pstrdup (pool, entry->lock_owner);
   if (entry->lock_comment)
     dupentry->lock_comment = apr_pstrdup (pool, entry->lock_comment);
-
+  if (entry->cachable_props)
+    dupentry->cachable_props = apr_pstrdup (pool, entry->cachable_props);
+  if (entry->present_props)
+    dupentry->present_props = apr_pstrdup (pool, entry->present_props);
   return dupentry;
 }
 

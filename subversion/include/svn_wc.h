@@ -1275,6 +1275,38 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t lock_creation_date;
 
+  /** Whether this entry has any working properties.
+   * False if this information is not stored in the entry.
+   *
+   * @since New in 1.4. */
+  svn_boolean_t has_props;
+
+  /** Whether this entry has property modifications.
+   *
+   * @note For working copies in older formats, this flag is not valid.
+   *
+   * @see svn_wc_props_modified_p().
+   *
+   * @since New in 1.4. */
+  svn_boolean_t has_prop_mods;
+
+  /** A space-separated list of all properties whose presence/absence is cached
+   * in this entry.
+   *
+   * @see @c present_props.
+   *
+   * @since New in 1.4. */
+  const char *cachable_props;
+
+  /** Cached property existence for this entry.
+   * This is a space-separated list of property names.  If a name exists in
+   * @c cachable_props but not in this list, this entry does not have that
+   * property.  If a name exists in both lists, the property is present on this
+   * entry.
+   *
+   * @since New in 1.4. */
+  const char *present_props;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;

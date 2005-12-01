@@ -92,12 +92,12 @@ implement, some of them may not work at all.
   file for example.  The overhead may not matter to a command line
   client, but it can matter to a GUI that makes many such calls.
 
-- Get rid of .svn/README.txt and .svn/format.  Put the version
-  information into .svn/entries instead, either in the xml or just as
-  text on the first line.  Reading one file rather then two will put
-  less load on the physical filesystem.  Consider supporting out of
-  tree .svn directories.  Is the size of .svn/entries critical?  Would
-  a custom, less verbose, format be better than XML?
+- Get rid of .svn/format.  Put the version information into
+  .svn/entries instead, either in the xml or just as text on the first
+  line.  Reading one file rather then two will put less load on the
+  physical filesystem.  Consider supporting out of tree .svn
+  directories.  Is the size of .svn/entries critical?  Would a custom,
+  less verbose, format be better than XML?
 
 - In the present code most operations are IO bound and have CPU to
   spare.  Perhaps compressed text-bases would make things faster
@@ -126,23 +126,6 @@ implement, some of them may not work at all.
 
 - Optimise property handling
   http://svn.haxx.se/dev/archive-2004-11/0318.shtml
-
-  * When an item has no props dispense with the base and working
-    property files.  When an item has no property modifications
-    dispense with the working property file. These changes should make
-    it possible for svn_wc_props_modified_p to use a single stat()
-    when there are no property mods.
-
-  * It might be possible to replace prop-time in the entries file
-    with a props-modified flag and so have svn_wc_props_modified_p
-    avoid all disk IO.
-
-  * Consider caching svn:special in the entries file instead of (or as
-    well as?) the properties file.  Status calls svn_wc__get_special
-    for nearly every file, even unmodified ones, and that reads the
-    properties file.  If the above property handling optimisations
-    mean that svn_wc_props_modified_p usually avoids all disk IO then
-    svn_wc__get_special could become a major bottleneck.
 
   * Look at calls to svn_wc__get_keywords, svn_wc__get_eol_style and
     svn_wc__get_special, each of those reads the properties file.  If
