@@ -346,7 +346,7 @@ to ask for review on the developer mailing list.</p>
 <li><p><tt>subversion/libsvn_client/</tt><br />
     Common code for client operations.</p>
 </li>
-<li><p><tt>subversion/clients/cmdline/</tt><br />
+<li><p><tt>subversion/svn/</tt><br />
     The command line client.</p>
 </li>
 <li><p><tt>subversion/tests/</tt><br />
@@ -1218,7 +1218,7 @@ go to it.  If not, here's another way:</p>
 
    <pre>
     POOL DEBUG: [5383/1024] PCALLOC (      2763/      2763/      5419) \
-    0x08102D48 "subversion/clients/cmdline/main.c:612"                 \
+    0x08102D48 "subversion/svn/main.c:612"                             \
     &lt;subversion/libsvn_subr/auth.c:122&gt; (118/118/0)
    </pre>
 
@@ -2508,7 +2508,7 @@ allowed (typically anything except static initializers).  The latter
 is used whenever _() isn't.  Strings marked with N_() need to be
 passed to gettext translation routines whenever referenced in the
 code.  For an example, look at how the header and footer are handled
-in subversion/clients/cmdline/help-cmd.c.</p>
+in subversion/svn/help-cmd.c.</p>
 
 <p>When using direct calls to gettext routines (*gettext or
 *dgettext), keep in mind that most of Subversion code is library code.
