@@ -323,14 +323,14 @@ get_youngest (svn_revnum_t *youngest_p,
               apr_pool_t *pool)
 {
   apr_file_t *current_file;
-  char buf[80];
+  char buf[81];
   apr_size_t len;
 
   SVN_ERR (svn_io_file_open (&current_file,
                              svn_path_join (fs_path, PATH_CURRENT, pool),
                              APR_READ, APR_OS_DEFAULT, pool));
 
-  len = sizeof (buf);
+  len = sizeof (buf) - 1;
   SVN_ERR (svn_io_file_read (current_file, buf, &len, pool));
   buf[len] = '\0';
   
@@ -1010,7 +1010,7 @@ get_root_changes_offset (apr_off_t *root_offset,
                          apr_pool_t *pool)
 {
   apr_off_t offset;
-  char buf[65];
+  char buf[64];
   int i, num_bytes;
   apr_size_t len;
   
@@ -1019,11 +1019,11 @@ get_root_changes_offset (apr_off_t *root_offset,
   offset = 0;
   SVN_ERR (svn_io_file_seek (rev_file, APR_END, &offset, pool));
 
-  offset -= 64;
+  offset -= sizeof (buf);
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   /* Read in this last block, from which we will identify the last line. */
-  len=64;
+  len = sizeof (buf);
   SVN_ERR (svn_io_file_read (rev_file, buf, &len, pool));
 
   /* This cast should be safe since the maximum amount read, 64, will
@@ -1050,11 +1050,13 @@ get_root_changes_offset (apr_off_t *root_offset,
                                   "characters"));
     }
 
+  i++;
+
   if (root_offset)
     *root_offset = apr_atoi64 (&buf[i]);
 
   /* find the next space */
-  for ( ; i < (num_bytes - 3) ; i++)
+  for ( ; i < (num_bytes - 2) ; i++)
     if (buf[i] == ' ') break;
 
   if (i == (num_bytes - 2))
@@ -1063,71 +1065,12 @@ get_root_changes_offset (apr_off_t *root_offset,
 
   i++;
 
+  /* note that apr_atoi64() will stop reading as soon as it encounters
+     the final newline. */
   if (changes_offset)
     *changes_offset = apr_atoi64 (&buf[i]);
 
   return SVN_NO_ERROR;
-}
-
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL. */
-static svn_error_t *
-move_into_place (const char *old_filename, const char *new_filename,
-                 const char *perms_reference, apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-#ifndef WIN32
-  apr_status_t status;
-  apr_finfo_t finfo;
-  
-  /* Match the perms on the old file to the perms reference file. */
-  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
-  status = apr_file_perms_set (old_filename, finfo.protection);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), old_filename);
-#endif
-
-  /* Move the file into place. */
-  err = svn_io_file_rename (old_filename, new_filename, pool);
-  if (err && APR_STATUS_IS_EXDEV (err->apr_err))
-    {
-      apr_file_t *file;
-
-      /* Can't rename across devices; fall back to copying. */
-      svn_error_clear (err);
-      SVN_ERR (svn_io_copy_file (old_filename, new_filename, TRUE, pool));
-
-      /* Flush the target of the copy to disk. */
-      SVN_ERR (svn_io_file_open (&file, new_filename, APR_READ,
-                                 APR_OS_DEFAULT, pool));
-      SVN_ERR (svn_io_file_flush_to_disk (file, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
-    }
-
-#ifdef __linux__
-  {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    const char *dirname;
-    apr_file_t *file;
-
-    dirname = svn_path_dirname (new_filename, pool);
-    SVN_ERR (svn_io_file_open (&file, dirname, APR_READ, APR_OS_DEFAULT,
-                               pool));
-    SVN_ERR (svn_io_file_flush_to_disk (file, pool));
-    SVN_ERR (svn_io_file_close (file, pool));
-  }
-#endif
-
-  return err;
 }
 
 svn_error_t *
@@ -1181,10 +1124,11 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
   /* We use the rev file of this revision as the perms reference,
      because when setting revprops for the first time, the revprop
      file won't exist and therefore can't serve as its own reference.
-     (Whereas the rev file should already exist at this point.) */ 
-  SVN_ERR (move_into_place (tmp_path, final_path,
-                            svn_fs_fs__path_rev (fs, rev, pool), pool));
-  
+     (Whereas the rev file should already exist at this point.) */
+  SVN_ERR (svn_fs_fs__move_into_place (tmp_path, final_path,
+                                       svn_fs_fs__path_rev (fs, rev, pool),
+                                       pool));
+
   return SVN_NO_ERROR;
 }  
 
