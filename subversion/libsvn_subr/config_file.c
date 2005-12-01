@@ -76,7 +76,7 @@ parser_getc (parse_context_t *ctx, int *c)
     }
   else
     {
-      unsigned char char_buf;
+      char char_buf;
       apr_size_t readlen = 1;
 
       SVN_ERR (svn_stream_read (ctx->stream, &char_buf, &readlen));
