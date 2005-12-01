@@ -36,7 +36,10 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_BASE__FORMAT_NUMBER   1
+#define SVN_FS_BASE__FORMAT_NUMBER   2
+
+/* Minimum format number that supports svndiff version 1.  */
+#define SVN_FS_BASE__MIN_SVNDIFF1_FORMAT 2
 
 #define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
 typedef struct

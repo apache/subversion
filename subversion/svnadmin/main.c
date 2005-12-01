@@ -213,7 +213,8 @@ enum
     svnadmin__use_pre_commit_hook,
     svnadmin__use_post_commit_hook,
     svnadmin__clean_logs,
-    svnadmin__wait
+    svnadmin__wait,
+    svnadmin__no_svndiff1,
   };
 
 /* Option codes and descriptions.
@@ -283,6 +284,9 @@ static const apr_getopt_option_t options_table[] =
      N_("wait instead of exit if the repository is in\n"
         "                             use by another process")},
 
+    {"no-svndiff1",     svnadmin__no_svndiff1, 0,
+     N_("disallow use of SVNDIFF1 in on-disk storage, for backwards compatibility")},
+
     {NULL}
   };
 
@@ -302,7 +306,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    ("usage: svnadmin create REPOS_PATH\n\n"
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-    svnadmin__config_dir, svnadmin__fs_type} },
+    svnadmin__config_dir, svnadmin__fs_type, svnadmin__no_svndiff1} },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -410,6 +414,7 @@ struct svnadmin_opt_state
   const char *repository_path;
   const char *new_repository_path;                  /* hotcopy dest. path */
   const char *fs_type;                              /* --fs-type */
+  svn_boolean_t no_svndiff1;                        /* --no-svndiff1 */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -482,6 +487,11 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
                   APR_HASH_KEY_STRING,
                   opt_state->fs_type);
+
+  if (opt_state->no_svndiff1)
+    apr_hash_set (fs_config, SVN_FS_CONFIG_NO_SVNDIFF1,
+                  APR_HASH_KEY_STRING,
+                  "1");
 
   SVN_ERR (svn_config_get_config (&config, opt_state->config_dir, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
@@ -1253,6 +1263,9 @@ main (int argc, const char * const *argv)
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
         break;
+      case svnadmin__no_svndiff1:
+        opt_state.no_svndiff1 = TRUE;
+        break;        
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8 (&opt_state.fs_type, opt_arg, pool);
         if (err)

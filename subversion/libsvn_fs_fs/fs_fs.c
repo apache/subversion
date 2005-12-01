@@ -265,6 +265,11 @@ read_format (int *pformat, const char *file, apr_pool_t *pool)
 static svn_error_t *
 check_format (int format)
 {
+  
+  /* We support format 1 and 2 simultaneously */
+  if (format == 1 && SVN_FS_FS__FORMAT_NUMBER == 2)
+    return SVN_NO_ERROR;
+
   if (format != SVN_FS_FS__FORMAT_NUMBER)
     {
       return svn_error_createf 
@@ -3081,6 +3086,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   const char *txn_id, *header;
   svn_txdelta_window_handler_t wh;
   void *whb;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   b = apr_pcalloc (pool, sizeof (*b));
 
@@ -3128,7 +3134,11 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   SVN_ERR (get_file_offset (&b->delta_start, file, b->pool));
 
   /* Prepare to write the svndiff data. */
-  svn_txdelta_to_svndiff2 (b->rep_stream, pool, &wh, &whb, 1);
+  if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
+    svn_txdelta_to_svndiff2 (b->rep_stream, pool, &wh, &whb, 1);
+  else
+    svn_txdelta_to_svndiff2 (b->rep_stream, pool, &wh, &whb, 0);
+
   b->delta_stream = svn_txdelta_target_push (wh, whb, source, b->pool);
       
   *wb_p = b;
@@ -4003,7 +4013,8 @@ svn_fs_fs__create (svn_fs_t *fs,
 {
   char buffer [APR_UUID_FORMATTED_LENGTH + 1];
   apr_uuid_t uuid;
-  
+  const char *formatval;
+  int format = SVN_FS_FS__FORMAT_NUMBER;
   fs->path = apr_pstrdup (pool, path);
 
   SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path, PATH_REVS_DIR,
@@ -4023,11 +4034,17 @@ svn_fs_fs__create (svn_fs_t *fs,
   svn_fs_fs__set_uuid (fs, buffer, pool);
   
   SVN_ERR (svn_fs_fs__dag_init_fs (fs));
-
+  
+  /* See if we had an explicitly requested no svndiff1.  */
+  formatval = apr_hash_get (fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+                            APR_HASH_KEY_STRING);
+  if (formatval)
+    format = 1;
+  
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR (svn_io_write_version_file
-           (path_format (fs, pool), SVN_FS_FS__FORMAT_NUMBER, pool));
-  ((fs_fs_data_t *) fs->fsap_data)->format = SVN_FS_FS__FORMAT_NUMBER;
+           (path_format (fs, pool), format, pool));
+  ((fs_fs_data_t *) fs->fsap_data)->format = format;
 
   return SVN_NO_ERROR;
 }
