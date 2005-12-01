@@ -26,13 +26,8 @@ class TestCase_kwextract(unittest.TestCase):
         self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")
         self.assertEqual(svnmerge.kwextract("$Date: 2005-09-25 13:45 CET+1$"), "2005-09-25 13:45 CET+1")
     def test_failure(self):
-<<<<<<< .arbetskopia
-        self.assertEqual(svnmerge.kwextract("$Rev: 16860 $"), "<unknown>")
-        self.assertEqual(svnmerge.kwextract("$Date: 2005-10-20 20:58:08 +0200 (tor, 20 okt 2005) $"), "<unknown>")
-=======
         self.assertEqual(svnmerge.kwextract("$Rev: $"), "<unknown>")
         self.assertEqual(svnmerge.kwextract("$Date:$"), "<unknown>")
->>>>>>> .sammanslagning-höger.r17220
 
 class TestCase_launch(unittest.TestCase):
     if os.name == "nt":
