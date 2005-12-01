@@ -84,6 +84,10 @@ dnl Configure APR --------------------------
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
+dnl The specific reasons we require APR 0.9.5-final are:
+dnl   - APR_LARGEFILE added
+dnl   - APR_GSETID added
+dnl   - bug in apr_temp_dir_get() fixed
 APR_VER_REGEX=["0\.9\.[5-9]"]
 APR_VER_REGEX_TOO="1\."
 APU_VER_REGEX=["0\.9\.[5-9]"]
