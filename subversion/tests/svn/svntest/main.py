@@ -105,10 +105,10 @@ except ImportError:
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
-svn_binary = os.path.abspath('../../../svn/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../../svnlook/svnlook' + _exe)
-svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
+svn_binary = os.path.abspath('../../svn/svn' + _exe)
+svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
+svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
+svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
 # Username and password used by the working copies
 wc_author = 'jrandom'

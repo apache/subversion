@@ -7,7 +7,7 @@ case `uname -s` in
     *)       CURRENT_DIR=`pwd` ;;
 esac
 
-SVN_PROG=../../../../svn/svn
+SVN_PROG=../../../svn/svn
 XML_DIR=../../../xml
 if [ "x${1}" = "x" ]; then
     SVN_PROG=${CURRENT_DIR}/${SVN_PROG}

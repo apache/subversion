@@ -111,8 +111,8 @@ say "Using '$APXS'..."
 
 if [ -x svn-config ]; then
   ABS_BUILDDIR=$(pwd)
-elif [ -x $SCRIPTDIR/../../../../svn-config ]; then
-  pushd $SCRIPTDIR/../../../../ >/dev/null
+elif [ -x $SCRIPTDIR/../../../svn-config ]; then
+  pushd $SCRIPTDIR/../../../ >/dev/null
   ABS_BUILDDIR=$(pwd)
   popd >/dev/null
 else
