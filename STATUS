@@ -30,7 +30,7 @@ Candidate changes:
     Justficiation: Without this change, ood_last_cmt_rev will not be
       set correctly.
     Votes:
-      +1: dlr, rooneg
+      +1: dlr, rooneg, lundblad
 
 Approved changes:
 
