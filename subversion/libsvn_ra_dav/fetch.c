@@ -3316,14 +3316,3 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                         TRUE, /* spool_response */
                         pool);
 }
-
-svn_error_t * svn_ra_dav__replay(svn_ra_session_t *session,
-                                 svn_revnum_t revision,
-                                 svn_revnum_t low_water_mark,
-                                 svn_boolean_t send_deltas,
-                                 const svn_delta_editor_t *editor,
-                                 void *edit_baton,
-                                 apr_pool_t *pool)
-{
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}

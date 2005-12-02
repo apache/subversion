@@ -1,0 +1,395 @@
+/*
+ * replay.c :  routines for replaying revisions
+ *
+ * ====================================================================
+ * Copyright (c) 2005 CollabNet.  All rights reserved.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
+ *
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
+ * ====================================================================
+ */
+
+#include <apr_pools.h>
+#include <apr_strings.h>
+#include <apr_xml.h>
+#include <apr_md5.h>
+#include <mod_dav.h>
+
+#include "svn_pools.h"
+#include "svn_repos.h"
+#include "svn_fs.h"
+#include "svn_md5.h"
+#include "svn_base64.h"
+#include "svn_xml.h"
+#include "svn_path.h"
+#include "svn_dav.h"
+#include "svn_props.h"
+
+#include "dav_svn.h"
+#include <http_request.h>
+#include <http_log.h>
+
+typedef struct {
+  apr_bucket_brigade *bb;
+  ap_filter_t *output;
+  svn_boolean_t started;
+  svn_boolean_t sending_textdelta;
+} dav_svn_edit_baton_t;
+
+static svn_error_t *
+maybe_start_report(dav_svn_edit_baton_t *eb)
+{
+  if (! eb->started)
+    {
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 DAV_XML_HEADER DEBUG_CR
+                 "<S:editor-report xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+                 DEBUG_CR));
+
+      eb->started = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+maybe_close_textdelta(dav_svn_edit_baton_t *eb)
+{
+  if (eb->sending_textdelta)
+    { 
+      SVN_ERR(dav_svn__send_xml (eb->bb, eb->output,
+                                 "</S:apply-textdelta>" DEBUG_CR));
+      eb->sending_textdelta = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+set_target_revision(void *edit_baton,
+                    svn_revnum_t target_revision,
+                    apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = edit_baton;
+
+  SVN_ERR(maybe_start_report(eb));
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
+                            target_revision));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+open_root (void *edit_baton,
+           svn_revnum_t base_revision,
+           apr_pool_t *pool,
+           void **root_baton)
+{
+  dav_svn_edit_baton_t *eb = edit_baton;
+
+  *root_baton = edit_baton;
+
+  SVN_ERR(maybe_start_report(eb));
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
+                            base_revision));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *delete_entry(const char *path,
+                                 svn_revnum_t revision,
+                                 void *parent_baton,
+                                 apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = parent_baton;
+
+  const char *qname = apr_xml_quote_string(pool, path, 1);
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "<S:delete-entry name=\"%s\"/>" DEBUG_CR,
+                            qname));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *add_directory(const char *path,
+                                  void *parent_baton,
+                                  const char *copyfrom_path,
+                                  svn_revnum_t copyfrom_rev,
+                                  apr_pool_t *pool,
+                                  void **child_baton)
+{
+  dav_svn_edit_baton_t *eb = parent_baton;
+
+  const char *qpath = apr_xml_quote_string(pool, path, 1);
+
+  const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
+                                                           copyfrom_path,
+                                                           1)
+                                    : NULL;
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  *child_baton = parent_baton;
+
+  if (! copyfrom_path)
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                              "<S:add-directory path=\"%s\"/>" DEBUG_CR,
+                              qpath));
+  else
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                              "<S:add-directory path=\"%s\" "
+                                               "copyfrom-path=\"%s\" "
+                                               "copyfrom-rev=\"%ld\"/>"
+                              DEBUG_CR,
+                              qpath, qcopy, copyfrom_rev));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *open_directory(const char *path,
+                                   void *parent_baton,
+                                   svn_revnum_t base_revision,
+                                   apr_pool_t *pool,
+                                   void **child_baton)
+{
+  dav_svn_edit_baton_t *eb = parent_baton;
+
+  const char *qpath = apr_xml_quote_string(pool, path, 1);
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  *child_baton = parent_baton;
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "<S:open-directory path=\"%s\" rev=\"%ld\"/>"
+                            DEBUG_CR, qpath, base_revision));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *change_dir_prop(void *baton,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = baton;
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  /* XXX do stuff here */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *add_file(const char *path,
+                             void *parent_baton,
+                             const char *copyfrom_path,
+                             svn_revnum_t copyfrom_rev,
+                             apr_pool_t *pool,
+                             void **file_baton)
+{
+  dav_svn_edit_baton_t *eb = parent_baton;
+
+  const char *qname = apr_xml_quote_string(pool,
+                                           svn_path_basename (path, pool),
+                                           1);
+
+  const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
+                                                           copyfrom_path,
+                                                           1)
+                                    : NULL;
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  *file_baton = parent_baton;
+
+  if (! copyfrom_path)
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                              "<S:add-file name=\"%s\"/>" DEBUG_CR,
+                              qname));
+  else
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                              "<S:add-file name=\"%s\" "
+                                          "copyfrom-path=\"%s\" "
+                                          "copyfrom-rev=\"%ld\"/>"
+                              DEBUG_CR,
+                              qname, qcopy, copyfrom_rev));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *open_file(const char *path,
+                              void *parent_baton,
+                              svn_revnum_t base_revision,
+                              apr_pool_t *pool,
+                              void **file_baton)
+{
+  dav_svn_edit_baton_t *eb = parent_baton;
+
+  const char *qname = apr_xml_quote_string(pool,
+                                           svn_path_basename (path, pool),
+                                           1);
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  *file_baton = parent_baton;
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "<S:open-file name=\"%s\" rev=\"%ld\"/>"
+                            DEBUG_CR, qname, base_revision));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *apply_textdelta(void *file_baton,
+                                    const char *base_checksum,
+                                    apr_pool_t *pool,
+                                    svn_txdelta_window_handler_t *handler,
+                                    void **handler_baton)
+{
+  dav_svn_edit_baton_t *eb = file_baton;
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
+
+  if (base_checksum)
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\">",
+                              base_checksum));
+  else
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
+
+  svn_stream_t *stream = dav_svn_make_base64_output_stream(eb->bb,
+                                                           eb->output,
+                                                           pool);
+
+  svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
+
+  eb->sending_textdelta = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *change_file_prop(void *baton,
+                                     const char *name,
+                                     const svn_string_t *value,
+                                     apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = baton;
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  /* XXX do stuff here */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *close_file(void *file_baton,
+                               const char *text_checksum,
+                               apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = file_baton;
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:close-file/>" DEBUG_CR));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *close_edit(void *edit_baton,
+                               apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = edit_baton;
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "</S:editor-report>" DEBUG_CR));
+
+  return SVN_NO_ERROR;
+}
+
+static void make_editor(const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_bucket_brigade *bb,
+                        ap_filter_t *output,
+                        apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
+  svn_delta_editor_t *e = svn_delta_default_editor(pool);
+
+  eb->bb = bb;
+  eb->output = output;
+  eb->started = FALSE;
+  eb->sending_textdelta = FALSE;
+
+  e->set_target_revision = set_target_revision;
+  e->open_root = open_root;
+  e->delete_entry = delete_entry;
+  e->add_directory = add_directory;
+  e->open_directory = open_directory;
+  e->change_dir_prop = change_dir_prop;
+  e->add_file = add_file;
+  e->open_file = open_file;
+  e->apply_textdelta = apply_textdelta;
+  e->change_file_prop = change_file_prop;
+  e->close_file = close_file;
+  e->close_edit = close_edit;
+
+  *editor = e;
+  *edit_baton = eb;
+}
+
+dav_error *
+dav_svn__replay_report(const dav_resource *resource,
+                       const apr_xml_doc *doc,
+                       ap_filter_t *output)
+{
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  const char *base_dir = "";
+  svn_boolean_t send_deltas = TRUE;
+  svn_revnum_t low_water_mark = 0;
+  svn_revnum_t rev = 1;
+  svn_fs_root_t *root;
+  svn_error_t *err;
+
+  /* XXX get arguments out of doc */
+
+  apr_bucket_brigade *bb = apr_brigade_create(resource->pool,
+                                              output->c->bucket_alloc);
+
+  if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
+                                  resource->pool)))
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR, "XXX",
+                               resource->pool);
+
+  make_editor(&editor, &edit_baton, bb, output, resource->pool);;
+
+  if ((err = svn_repos_replay2(root, base_dir, low_water_mark,
+                               send_deltas, editor, edit_baton,
+                               NULL, NULL, /* XXX authz func/baton */
+                               resource->pool)))
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR, "XXX",
+                               resource->pool);
+
+  if ((err = editor->close_edit(edit_baton, resource->pool)))
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR, "XXX",
+                               resource->pool);
+
+  ap_fflush(output, bb);
+
+  return NULL;
+}

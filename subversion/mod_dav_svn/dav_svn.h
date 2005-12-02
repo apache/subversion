@@ -531,6 +531,10 @@ dav_error * dav_svn__file_revs_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
                                       ap_filter_t *output);
 
+dav_error * dav_svn__replay_report(const dav_resource *resource,
+                                   const apr_xml_doc *doc,
+                                   ap_filter_t *output);
+
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
 /* Output XML data to OUTPUT using BB.  Use FMT as format string for the

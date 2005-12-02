@@ -711,7 +711,12 @@ enum {
   ELEM_lock_owner,
   ELEM_lock_comment,
   ELEM_lock_creationdate,
-  ELEM_lock_expirationdate
+  ELEM_lock_expirationdate,
+  ELEM_editor_report,
+  ELEM_open_root,
+  ELEM_apply_textdelta,
+  ELEM_change_file_prop,
+  ELEM_change_dir_prop
 };
 
 /* ### docco */
