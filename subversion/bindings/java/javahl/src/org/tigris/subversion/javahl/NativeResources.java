@@ -25,6 +25,11 @@ package org.tigris.subversion.javahl;
 class NativeResources
 {
     /**
+     * Version information about the underlying native libraries.
+     */
+    static Version version;
+
+    /**
      * Load the required native library whose path is specified by the
      * system property <code>subversion.native.library</code> (which
      * can be passed to the JVM on start-up using an argument like
@@ -48,7 +53,7 @@ class NativeResources
             if (specifiedLibraryName != null)
             {
                 System.load(specifiedLibraryName);
-                SVNClient.initNative();
+                init();
                 return;
             }
         }
@@ -62,7 +67,7 @@ class NativeResources
         try
         {
             System.loadLibrary("svnjavahl-1");
-            SVNClient.initNative();
+            init();
             return;
         }
         catch (UnsatisfiedLinkError ex)
@@ -70,14 +75,27 @@ class NativeResources
             try
             {
                 System.loadLibrary("libsvnjavahl-1");
-                SVNClient.initNative();
+                init();
                 return;
             }
             catch (UnsatisfiedLinkError e)
             {
                 System.loadLibrary("svnjavahl");
-                SVNClient.initNative();
+                init();
+                return;
             }
         }
+    }
+
+    /**
+     * Initializer for native resources to be invoked <em>after</em>
+     * the native library has been loaded.  Sets library version
+     * information, and initializes the re-entrance hack for native
+     * code.
+     */
+    private static final void init()
+    {
+        version = new Version();
+        SVNClient.initNative();
     }
 }

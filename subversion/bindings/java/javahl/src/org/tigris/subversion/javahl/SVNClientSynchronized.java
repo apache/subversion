@@ -54,6 +54,17 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        synchronized(clazz)
+        {
+            return worker.getVersion();
+        }
+    }
+
+    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a

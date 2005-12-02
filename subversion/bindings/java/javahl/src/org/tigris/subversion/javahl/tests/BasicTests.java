@@ -74,7 +74,29 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNCLient.checkout functionality
+     * Test SVNClient.getVersion().
+     * @throws Throwable
+     */
+    public void testVersion() throws Throwable
+    {
+        try
+        {
+            Version version = client.getVersion();
+            String versionString = version.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("Version should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * test the basic SVNClient.checkout functionality
      * @throws Throwable
      */
     public void testBasicCheckout() throws Throwable

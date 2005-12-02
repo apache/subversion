@@ -61,6 +61,13 @@ public class SVNClient implements SVNClientInterface
      */
     protected long cppAddr;
     /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        return NativeResources.version;
+    }
+    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
