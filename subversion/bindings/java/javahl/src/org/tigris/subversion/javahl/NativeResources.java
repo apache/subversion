@@ -35,6 +35,7 @@ class NativeResources
      *
      * @throws UnsatisfiedLinkError If the native library cannot be
      * loaded.
+     * @since 1.3.0
      */
     public static synchronized void loadNativeLibrary()
     {
