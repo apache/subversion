@@ -536,14 +536,12 @@ parse_spool_file(const char *spool_file_name,
 {
   apr_file_t *spool_file;
   svn_stream_t *spool_stream;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  char *buf = apr_palloc(subpool, SVN_STREAM_CHUNK_SIZE);
+  char *buf = apr_palloc(pool, SVN_STREAM_CHUNK_SIZE);
   apr_size_t len;
   
   SVN_ERR( svn_io_file_open(&spool_file, spool_file_name,
-                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT,
-                            subpool));
-  spool_stream = svn_stream_from_aprfile(spool_file, subpool);
+                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
+  spool_stream = svn_stream_from_aprfile(spool_file, pool);
   while (1)
     {
       len = SVN_STREAM_CHUNK_SIZE;
@@ -553,8 +551,6 @@ parse_spool_file(const char *spool_file_name,
       if (len != SVN_STREAM_CHUNK_SIZE)
         break;
     }
-
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
