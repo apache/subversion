@@ -485,13 +485,28 @@ void svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
                                       apr_pool_t *pool);
 
 
-/** The maximum amount we (ideally) hold in memory at a time when
+/** A buffer size that may be used when processing a stream of data.
+ *
+ * @note We don't use this constant any longer, since it is considered to be
+ * unnecessarily large.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
+ */
+#define SVN_STREAM_CHUNK_SIZE 102400
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+/*
+ * The maximum amount we (ideally) hold in memory at a time when
  * processing a stream of data.
  *
  * For example, when copying data from one stream to another, do it in
  * blocks of this size.
+ *
+ * NOTE: This is an internal macro, put here for convenience.
+ * No public API may depend on the particular value of this macro.
  */
-#define SVN_STREAM_CHUNK_SIZE 102400
+#define SVN__STREAM_CHUNK_SIZE 16384
+#endif
 
 /** The maximum amount we can ever hold in memory. */
 /* FIXME: Should this be the same as SVN_STREAM_CHUNK_SIZE? */
