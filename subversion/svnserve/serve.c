@@ -1946,7 +1946,6 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev, low_water_mark;
   svn_boolean_t send_deltas;
   server_baton_t *b = baton;
-  const char *base_path;
   svn_fs_root_t *root;
   void *edit_baton;
 
