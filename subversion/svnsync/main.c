@@ -27,6 +27,7 @@
 #include "svn_private_config.h"
 
 #include <apr_network_io.h>
+#include <apr_signal.h>
 #include <apr_uuid.h>
 
 #define PROP_PREFIX            "svn:sync-"
