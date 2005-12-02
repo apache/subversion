@@ -536,7 +536,7 @@ parse_spool_file(const char *spool_file_name,
 {
   apr_file_t *spool_file;
   svn_stream_t *spool_stream;
-  char *buf = apr_palloc(pool, SVN_STREAM_CHUNK_SIZE);
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
   
   SVN_ERR( svn_io_file_open(&spool_file, spool_file_name,
@@ -544,11 +544,11 @@ parse_spool_file(const char *spool_file_name,
   spool_stream = svn_stream_from_aprfile(spool_file, pool);
   while (1)
     {
-      len = SVN_STREAM_CHUNK_SIZE;
+      len = SVN__STREAM_CHUNK_SIZE;
       SVN_ERR (svn_stream_read (spool_stream, buf, &len));
       if (len > 0)
         ne_xml_parse(success_parser, buf, len);
-      if (len != SVN_STREAM_CHUNK_SIZE)
+      if (len != SVN__STREAM_CHUNK_SIZE)
         break;
     }
   return SVN_NO_ERROR;

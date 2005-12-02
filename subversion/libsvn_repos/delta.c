@@ -656,11 +656,11 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
   SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
   SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
 
-  buf1 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
-  buf2 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
+  buf1 = apr_palloc (pool, SVN__STREAM_CHUNK_SIZE);
+  buf2 = apr_palloc (pool, SVN__STREAM_CHUNK_SIZE);
   do
     {
-      len1 = len2 = SVN_STREAM_CHUNK_SIZE;
+      len1 = len2 = SVN__STREAM_CHUNK_SIZE;
       SVN_ERR (svn_stream_read (stream1, buf1, &len1));
       SVN_ERR (svn_stream_read (stream2, buf2, &len2));
       

@@ -2667,9 +2667,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       /* ### one day in the future, we can create a custom bucket type
          ### which will read from the FS stream on demand */
 
-      block = apr_palloc(resource->pool, SVN_STREAM_CHUNK_SIZE);
+      block = apr_palloc(resource->pool, SVN__STREAM_CHUNK_SIZE);
       while (1) {
-        apr_size_t bufsize = SVN_STREAM_CHUNK_SIZE;
+        apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
 
         /* read from the FS ... */
         serr = svn_stream_read(stream, block, &bufsize);

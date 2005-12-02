@@ -1066,13 +1066,13 @@ translated_stream_read (void *baton,
                         apr_size_t *len)
 {
   struct translated_stream_baton *b = baton;
-  apr_size_t readlen = SVN_STREAM_CHUNK_SIZE;
+  apr_size_t readlen = SVN__STREAM_CHUNK_SIZE;
   apr_size_t unsatisfied = *len;
   apr_size_t off = 0;
   apr_pool_t *iterpool;
 
   iterpool = b->iterpool;
-  while (readlen == SVN_STREAM_CHUNK_SIZE && unsatisfied > 0)
+  while (readlen == SVN__STREAM_CHUNK_SIZE && unsatisfied > 0)
     {
       apr_size_t to_copy;
 
@@ -1089,7 +1089,7 @@ translated_stream_read (void *baton,
           SVN_ERR (translate_chunk (buf_stream, b->in_baton, b->buf,
                                     readlen, iterpool));
 
-          if (readlen != SVN_STREAM_CHUNK_SIZE)
+          if (readlen != SVN__STREAM_CHUNK_SIZE)
             SVN_ERR (translate_chunk (buf_stream, b->in_baton, NULL, 0,
                                       iterpool));
 
@@ -1193,7 +1193,7 @@ svn_subst_stream_translated (svn_stream_t *stream,
   baton->readbuf_off = 0;
   baton->iterpool = svn_pool_create (baton_pool);
   baton->pool = baton_pool;
-  baton->buf = apr_palloc (baton->pool, SVN_STREAM_CHUNK_SIZE + 1);
+  baton->buf = apr_palloc (baton->pool, SVN__STREAM_CHUNK_SIZE + 1);
 
   /* Setup the stream methods */
   svn_stream_set_read (s, translated_stream_read);
@@ -1216,14 +1216,14 @@ svn_subst_translate_stream3 (svn_stream_t *s, /* src stream */
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_pool_t *iterpool = svn_pool_create (subpool);
   struct translation_baton *baton;
-  apr_size_t readlen = SVN_STREAM_CHUNK_SIZE;
-  char *buf = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
+  apr_size_t readlen = SVN__STREAM_CHUNK_SIZE;
+  char *buf = apr_palloc (subpool, SVN__STREAM_CHUNK_SIZE);
 
   /* The docstring requires that *some* translation be requested. */
   assert (eol_str || keywords);
 
   baton = create_translation_baton (eol_str, repair, keywords, expand, pool);
-  while (readlen == SVN_STREAM_CHUNK_SIZE)
+  while (readlen == SVN__STREAM_CHUNK_SIZE)
     {
       svn_pool_clear (iterpool);
       SVN_ERR (svn_stream_read (s, buf, &readlen));
