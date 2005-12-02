@@ -478,12 +478,11 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
   svn_boolean_t eof;
   svn_stringbuf_t *linebuf;
   void *rev_baton = NULL;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  char *buffer = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
+  char *buffer = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
   apr_size_t buflen = SVN_STREAM_CHUNK_SIZE;
-  apr_pool_t *linepool = svn_pool_create (subpool);
-  apr_pool_t *revpool = svn_pool_create (subpool);
-  apr_pool_t *nodepool = svn_pool_create (subpool);
+  apr_pool_t *linepool = svn_pool_create (pool);
+  apr_pool_t *revpool = svn_pool_create (pool);
+  apr_pool_t *nodepool = svn_pool_create (pool);
   int version;
 
   SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
@@ -745,7 +744,9 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
   if (rev_baton != NULL)
     SVN_ERR (parse_fns->close_revision (rev_baton));
 
-  svn_pool_destroy (subpool);
+  svn_pool_destroy (linepool);
+  svn_pool_destroy (revpool);
+  svn_pool_destroy (nodepool);
   return SVN_NO_ERROR;
 }
 
