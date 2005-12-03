@@ -30,7 +30,7 @@ sub is_pool_default {
 	$$SVN::_Core::current_pool, $text);
 }
 
-my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
+my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
 

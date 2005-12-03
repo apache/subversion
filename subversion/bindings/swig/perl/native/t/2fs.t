@@ -10,7 +10,7 @@ require SVN::Fs;
 use File::Path qw(rmtree);
 use File::Temp qw(tempdir);
 
-my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
+my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
 
