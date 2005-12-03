@@ -25,6 +25,7 @@ $RM_F "${MY_LOG_FILE_PREF}_check"
 # Initialize log files
 $RM_F "${LOG_FILE}.errors.gz"
 echo "$BINDINGS_NAME: $REVPREFIX$REVISION on $BUILD" > $LOG_FILE
+echo "TIME: $($DATE '+%Y-%m-%d %H:%M:%S %z')" >> $LOG_FILE
 echo >> $LOG_FILE
 
 # Check the build type
@@ -93,4 +94,5 @@ test ! -z "$BINDINGS_CHECK" && {
    $CAT "${MY_LOG_FILE_PREF}_check" >> $LOG_FILE
 }
 
+echo "TIME: $($DATE '+%Y-%m-%d %H:%M:%S %z')" >> $LOG_FILE
 exit 0
