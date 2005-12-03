@@ -143,9 +143,10 @@ analogous to CVS/ subdirs:
    directory's properties live here. 
 
 `dir-prop-revert':
-   This is the base-props for this directory for the deleted directory
-   in a schedule replace situation.  If this file doesn't exist, the
-   `dir-prop-base' file is used. 
+   In a schedule-replace situation for this directory, this holds the
+   base-props for the deleted version of the directory (i.e., the
+   version that is being replaced).  If this file doesn't exist, the
+   `dir-prop-base' file is used.
 
 `lock'
 
