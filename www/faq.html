@@ -1895,10 +1895,14 @@ a +s binary program to run the update, since Unix won't allow scripts
 to run +s.  Compile a tiny C program:</p>
 
 <pre>
+#include &lt;stddef.h&gt;
 #include &lt;stdlib.h&gt;
-int main(int argc, const char *argv[])
+#include &lt;unistd.h&gt;
+int main(void)
 {
-  system("/usr/local/bin/svn update /home/joe/public_html/");
+  execl("/usr/local/bin/svn", "svn", "update", "/home/joe/public_html/",
+        (const char *) NULL);
+  return(EXIT_FAILURE);
 }
 </pre>
 
