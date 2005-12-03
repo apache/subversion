@@ -112,7 +112,8 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("show version information")},
     {"inetd",            'i', 0, N_("inetd mode")},
     {"root",             'r', 1, N_("root of directory to serve")},
-    {"read-only",        'R', 0, N_("deprecated; use repository config file")},
+    {"read-only",        'R', 0,
+     N_("force read only, overriding repository config file")},
     {"tunnel",           't', 0, N_("tunnel mode")},
     {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
      N_("tunnel username (default is current uid's name)")},
@@ -356,16 +357,6 @@ int main(int argc, const char *const *argv)
 
         case 'R':
           params.read_only = TRUE;
-          svn_error_clear
-            (svn_cmdline_fprintf
-               (stderr, pool,
-                _("Warning: -R is deprecated.\n"
-                  "Anonymous access is now read-only by default.\n"
-                  "To change, use conf/svnserve.conf in repos:\n"
-                  "  [general]\n"
-                  "  anon-access = read|write|none (default read)\n"
-                  "  auth-access = read|write|none (default write)\n"
-                  "Forcing all access to read-only for now\n")));
           break;
 
         case 'T':
