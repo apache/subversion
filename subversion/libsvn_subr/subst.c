@@ -492,7 +492,8 @@ translate_keyword_subst (char *buf,
       && (buf_ptr[1] == ':') /* second char after keyword is ':' */
       && (buf_ptr[2] == ' ') /* third char after keyword is ' ' */
       && ((buf[*len - 2] == ' ')  /* has ' ' for next to last character */
-          || (buf[*len - 2] == '#')) /* .. or has '#' for next to last character */
+          || (buf[*len - 2] == '#')) /* .. or has '#' for next to last
+                                        character */
       && ((6 + keyword_len) < *len))  /* holds "$kw:: x $" at least */
     {
       /* This is fixed length keyword, so *len remains unchanged */
@@ -500,10 +501,10 @@ translate_keyword_subst (char *buf,
 
       if (! value)
         {
-            /* no value, so unexpand */
-            buf_ptr += 2;
-            while (*buf_ptr != '$')
-                *(buf_ptr++) = ' ';
+          /* no value, so unexpand */
+          buf_ptr += 2;
+          while (*buf_ptr != '$')
+            *(buf_ptr++) = ' ';
         }
       else 
         {
