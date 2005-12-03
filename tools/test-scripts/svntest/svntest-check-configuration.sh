@@ -10,10 +10,6 @@ test -x "$SVN" || {
     echo "SVN: Not found or not executable [$SVN]"
     exit 1
 }
-test -x "$CVS" || { 
-    echo "CVS: Not found or not executable [$CVS]"
-    exit 1
-}
 test -x "$GUESS" || { 
     echo "GUESS: Not found or not executable [$GUESS]"
     exit 1
@@ -92,6 +88,10 @@ test -x "$TOUCH" || {
 }
 test -x "$UMOUNT" || {
     echo "UMOUNT: Not found or not executable [$UMOUNT]"
+    exit 1
+}
+test -x "$XARGS" || {
+    echo "XARGS: Not found or not executable [$XARGS]"
     exit 1
 }
 

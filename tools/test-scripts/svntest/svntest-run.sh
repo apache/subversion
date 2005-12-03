@@ -17,6 +17,7 @@ REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 $CP_F "$LOG_FILE_PREFIX.$BUILD_TYPE" $LOG_FILE
 echo >> $LOG_FILE
 echo "TEST: $REVPREFIX$REV on $TEST" >> $LOG_FILE
+echo "TIME: $($DATE '+%Y-%m-%d %H:%M:%S %z')" >> $LOG_FILE
 echo >> $LOG_FILE
 
 # Check the build type
@@ -91,6 +92,7 @@ case $CHECK_TARGET in
     svncheck)
         START "run svnserve" "Running svnserve..."
         $TEST_ROOT/$OBJ/subversion/svnserve/svnserve -d \
+            --listen-port $SVNSERVE_PORT \
             -r $TEST_ROOT/$OBJ/subversion/tests/svn \
             >> $LOG_FILE 2>&1
         test $? = 0 || FAIL
@@ -102,6 +104,7 @@ case $CHECK_TARGET in
                        | $SED -e 's/^ *//' | $CUT -f 1 -d ' ' -s`"
         test -n "$SVNSERVE_PID" || FAIL
         PASS
+        CHECK_ARGS="$CHECK_ARGS $RA_SVN_CHECK_ARGS"
         ;;
     davcheck)
         START "run $HTTPD_NAME" "Running $HTTPD_NAME..."
@@ -152,6 +155,9 @@ then
     # At the moment we can't give repository url with
     # make davcheck, so use check & BASE_URL here for the present
     $MAKE check $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
+elif test "$CHECK_TARGET" = "svncheck";
+then
+    $MAKE check $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
 else
     $MAKE $CHECK_TARGET $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
 fi
@@ -174,3 +180,5 @@ START "Timer: make $CHECK_TARGET $(($ts_stop - $ts_start)) sec" \
 PASS
 
 kill_svnserve
+echo "TIME: $($DATE '+%Y-%m-%d %H:%M:%S %z')" >> $LOG_FILE
+
