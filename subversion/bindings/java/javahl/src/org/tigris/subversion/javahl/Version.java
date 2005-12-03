@@ -27,7 +27,7 @@ public class Version
 {
     /**
      * @return The full version string for the loaded JavaHL library,
-     * as defined by <code>MAJOR.MINOR.PATCH</code>.
+     * as defined by <code>MAJOR.MINOR.PATCH INFO</code>.
      * @since 1.4.0
      */
     public String toString()
@@ -35,7 +35,9 @@ public class Version
         StringBuffer version = new StringBuffer();
         version.append(getMajor())
             .append('.').append(getMinor())
-            .append('.').append(getPatch());
+            .append('.').append(getPatch())
+            .append(getNumberTag())
+            .append(getTag());
         return version.toString();
     }
 
@@ -57,4 +59,19 @@ public class Version
      * @since 1.4.0
      */
     public native int getPatch();
+
+    /**
+     * @return Some text further describing the library version
+     * (e.g. <code>" (r1234)"</code>, <code>" (Alpha 1)"</code>,
+     * <code>" (dev build)"</code>, etc.).
+     * @since 1.4.0
+     */
+    private native String getTag();
+
+    /**
+     * @return Some text further describing the library version
+     * (e.g. "r1234", "Alpha 1", "dev build", etc.).
+     * @since 1.4.0
+     */
+    private native String getNumberTag();
 }

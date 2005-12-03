@@ -25,7 +25,7 @@
 /*
  * Class:     org_tigris_subversion_javahl_Version
  * Method:    getMajor
- * Signature: (I)V
+ * Signature: ()I
  */
 JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getMajor
   (JNIEnv* env, jobject jthis)
@@ -37,7 +37,7 @@ JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getMajor
 /*
  * Class:     org_tigris_subversion_javahl_Version
  * Method:    getMinor
- * Signature: (I)V
+ * Signature: ()I
  */
 JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getMinor
   (JNIEnv* env, jobject jthis)
@@ -49,11 +49,47 @@ JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getMinor
 /*
  * Class:     org_tigris_subversion_javahl_Version
  * Method:    getPatch
- * Signature: (I)V
+ * Signature: ()I
  */
 JNIEXPORT jint JNICALL Java_org_tigris_subversion_javahl_Version_getPatch
   (JNIEnv* env, jobject jthis)
 {
     JNIEntry(Version, getPatch);
     return SVN_VER_PATCH;
+}
+
+/*
+ * Class:     org_tigris_subversion_javahl_Version
+ * Method:    getTag
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_Version_getTag
+  (JNIEnv* env, jobject jthis)
+{
+    JNIEntry(Version, getTag);
+    jstring tag =
+        JNIUtil::makeJString(SVN_VER_TAG);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    return tag;
+}
+
+/*
+ * Class:     org_tigris_subversion_javahl_Version
+ * Method:    getNumberTag
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_Version_getNumberTag
+  (JNIEnv* env, jobject jthis)
+{
+    JNIEntry(Version, getNumberTag);
+    jstring numtag =
+        JNIUtil::makeJString(SVN_VER_NUMTAG);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    return numtag;
 }
