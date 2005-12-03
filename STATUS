@@ -7,22 +7,38 @@ delay a release, etc.
 Status of 1.3.0:
 ================
 
+Soak period:
+  2005-11-30 - Begun with public announcement of rc4.
+  2005-12-21 - Final week commences - critical backports only.
+  2005-12-28 - Soak period elapsed!
+
 Candidate changes:
 
   * r17507
     Fix Windows make_dist.py to use the correct path for the .mo files.
-    Justficiation: Include translations in the Windows binary packages again.
+    Justification:
+      Include translations in the Windows binary packages again.
     Votes:
       +1: brane, dlr
 
   * r17521
     Fix and improve help text for property commands such as 'svn propget'.
-    Justficiation: Misleading help messages are not good.
+    Justification:
+      Misleading help messages are not good.
     Notes: Only changes for messages.
     Votes:
       +0: nori
 
+  * r17614
+    Undeprecate the svnserve -R (--read-only) option.
+    Justification:
+      Trivial change - change one string constant and delete one
+      svn_cmdline_fprintf() call only.
+    Votes:
+      +1: maxb
+
 Approved changes:
+
 
 Status of 1.3.1:
 ================
@@ -53,10 +69,11 @@ Candidate changes:
       +1: djames
 
   * r17525
-    Fix output mailer.py emails for locks and unlocks to use the
-      author of the lock or unlock.  Currently, all outgoing email is
-      from 'no_author'.
-    Justficiation: Easy, one line change uses method used for other
-      commands.
+    Fix output mailer.py emails for locks and unlocks to use the author of the
+    lock or unlock.  Currently, all outgoing email is from 'no_author'.
+    Justification:
+      Easy, one line change uses method used for other commands.
     Votes:
       +1: blair, dlr
+
+Approved changes:
