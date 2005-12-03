@@ -268,7 +268,7 @@ svn_wc__load_props (apr_hash_t **base_props_p,
   svn_boolean_t has_propcaching =
     svn_wc__adm_wc_format (adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
   const svn_wc_entry_t *entry;
-  apr_hash_t *base_props;
+  apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
 
   if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0)
     {
