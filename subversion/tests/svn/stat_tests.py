@@ -316,9 +316,13 @@ def status_for_unignored_file(sbox):
 
   os.chdir(wc_dir)
   try:
+    # use a temp file to set properties with wildcards in their values
+    # otherwise Win32/VS2005 will expand them
+    svntest.main.file_append ('proptmp', 'new*')
     svntest.main.file_append('newfile', 'this is a new file')
     os.makedirs('newdir')
-    svntest.main.run_svn(None, 'propset', 'svn:ignore', 'new*', '.')
+    svntest.main.run_svn(None, 'propset', 'svn:ignore', '-F', 'proptmp', '.')
+    os.remove('proptmp')
 
     # status on the directory with --no-ignore
     svntest.actions.run_and_verify_svn(None,
