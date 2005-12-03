@@ -45,22 +45,26 @@
 
 /* A function that stores PASSWORD (or some encrypted version thereof)
    either directly in CREDS, or externally using REALMSTRING and USERNAME
-   as keys into the external store.  POOL is used for any necessary
-   allocation. */
+   as keys into the external store.  If NON_INTERACTIVE is set, the user
+   must not be involved in the storage process.  POOL is used for any
+   necessary allocation. */
 typedef svn_boolean_t (*password_set_t) (apr_hash_t *creds,
                                          const char *realmstring,
                                          const char *username,
                                          const char *password,
+                                         svn_boolean_t non_interactive,
                                          apr_pool_t *pool);
 
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
-   POOL is used for any necessary allocation. */
+   If NON_INTERACTIVE is set, the user must not be involved in the
+   retrieval process.  POOL is used for any necessary allocation. */
 typedef svn_boolean_t (*password_get_t) (const char **password,
                                          apr_hash_t *creds,
                                          const char *realmstring,
                                          const char *username,
+                                         svn_boolean_t non_interactive,
                                          apr_pool_t *pool);
 
 
@@ -72,6 +76,7 @@ simple_password_get (const char **password,
                      apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
+                     svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
   svn_string_t *str;
@@ -92,6 +97,7 @@ simple_password_set (apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
                      const char *password,
+                     svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
   apr_hash_set (creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY, APR_HASH_KEY_STRING,
@@ -124,6 +130,10 @@ simple_first_creds_helper (void **credentials,
   const char *password = apr_hash_get (parameters,
                                        SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                        APR_HASH_KEY_STRING);
+  svn_boolean_t non_interactive = apr_hash_get (parameters,
+                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                                APR_HASH_KEY_STRING) != NULL;
+
   svn_boolean_t may_save = username || password;
   svn_error_t *err;
 
@@ -168,7 +178,7 @@ simple_first_creds_helper (void **credentials,
               else
                 {
                   if (!password_get (&password, creds_hash, realmstring,
-                                     username, pool))
+                                     username, non_interactive, pool))
                     password = NULL;
 
                   /* If the auth data didn't contain a password type,
@@ -226,6 +236,9 @@ simple_save_creds_helper (svn_boolean_t *saved,
     apr_hash_get (parameters,
                   SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
                   APR_HASH_KEY_STRING);
+  svn_boolean_t non_interactive = apr_hash_get (parameters,
+                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                                APR_HASH_KEY_STRING) != NULL;
   svn_boolean_t password_stored = TRUE;
 
   *saved = FALSE;
@@ -245,7 +258,7 @@ simple_save_creds_helper (svn_boolean_t *saved,
   if (! dont_store_passwords)
     {
       password_stored = password_set (creds_hash, realmstring, creds->username,
-                                      creds->password, pool);
+                                      creds->password, non_interactive, pool);
       if (password_stored)
         {
           /* Store the password type with the auth data, so that we
@@ -563,6 +576,7 @@ windows_password_encrypter (apr_hash_t *creds,
                             const char *realmstring,
                             const char *username,
                             const char *in,
+                            svn_boolean_t non_interactive,
                             apr_pool_t *pool)
 {
   typedef BOOL (CALLBACK *encrypt_fn_t)(
@@ -609,6 +623,7 @@ windows_password_decrypter (const char **out,
                             apr_hash_t *creds,
                             const char *realmstring,
                             const char *username,
+                            svn_boolean_t non_interactive,
                             apr_pool_t *pool)
 {
   typedef BOOL (CALLBACK * decrypt_fn_t)(
