@@ -1037,19 +1037,6 @@ def refresh_read_only_attribute(sbox):
                           "to a branch on which its svn:needs-lock property "
                           "is not set" % mu_path)
 
-  # Though the previous check is failing, oddly a switch-to-trunk and
-  # switch-back-to-branch sets the file's read-only flag as expected
-  # (on Linux).
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', url, A_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', branch_url, A_path)
-  # The file should still be writable.
-  if not os.access(mu_path, os.W_OK):
-    raise svntest.Failure("'%s' expected to be writable after being switched "
-                          "to a branch on which its svn:needs-lock property "
-                          "is not set" % mu_path)
-
 ########################################################################
 # Run the tests
 

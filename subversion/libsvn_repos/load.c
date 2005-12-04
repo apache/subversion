@@ -478,8 +478,8 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
   svn_boolean_t eof;
   svn_stringbuf_t *linebuf;
   void *rev_baton = NULL;
-  char *buffer = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
-  apr_size_t buflen = SVN_STREAM_CHUNK_SIZE;
+  char *buffer = apr_palloc (pool, SVN__STREAM_CHUNK_SIZE);
+  apr_size_t buflen = SVN__STREAM_CHUNK_SIZE;
   apr_pool_t *linepool = svn_pool_create (pool);
   apr_pool_t *revpool = svn_pool_create (pool);
   apr_pool_t *nodepool = svn_pool_create (pool);

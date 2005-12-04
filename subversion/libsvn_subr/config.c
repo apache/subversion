@@ -94,10 +94,10 @@ svn_config_read (svn_config_t **cfgp, const char *file,
 #ifdef WIN32
   if (0 == strncmp (file, SVN_REGISTRY_PREFIX, SVN_REGISTRY_PREFIX_LEN))
     err = svn_config__parse_registry (cfg, file + SVN_REGISTRY_PREFIX_LEN,
-                                      must_exist);
+                                      must_exist, pool);
   else
 #endif /* WIN32 */
-    err = svn_config__parse_file (cfg, file, must_exist);
+    err = svn_config__parse_file (cfg, file, must_exist, pool);
 
   if (err != SVN_NO_ERROR)
     return err;

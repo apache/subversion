@@ -35,12 +35,13 @@ SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
-SCHEMA_DIR = subversion/clients/cmdline/schema
+SCHEMA_DIR = subversion/svn/schema
 
 NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
+SVN_KEYCHAIN_LIBS = @SVN_KEYCHAIN_LIBS@
 
 LIBS = @LIBS@
 
@@ -94,7 +95,7 @@ LT_LDFLAGS = @LT_LDFLAGS@
 LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
-INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@                    \
+INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_KEYCHAIN_INCLUDES@ \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
@@ -359,7 +360,7 @@ check-javahl: javahl
 	$(JAVA) -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.BasicTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
-# "make check TESTS=subversion/tests/clients/cmdline/basic_tests.py"
+# "make check TESTS=subversion/tests/svn/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
 check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
@@ -382,22 +383,22 @@ check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	fi;
 
 # First, set up Apache as documented in
-# subversion/tests/clients/cmdline/README.
+# subversion/tests/svn/README.
 davcheck: 
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
 davautocheck: 
-	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/clients/cmdline/davautocheck.sh
+	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/svn/davautocheck.sh
 
 # First, run:
-#   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
+#   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn
 svncheck: 
 	@$(MAKE) check BASE_URL=svn://localhost
 
 # First, run:
-#   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/clients/cmdline
+#   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/svn
 
 svncheck6: 
 	@$(MAKE) check BASE_URL=svn://\[::1\]
@@ -406,13 +407,13 @@ svncheck6:
 # the path of the resulting shell.
 svnsshcheck:
 	@$(MAKE) check \
-	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/clients/cmdline
+	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/svn
 
 fsfscheck:
 	@$(MAKE) check FS_TYPE=fsfs
 
 check-clean:
-	rm -rf subversion/tests/clients/cmdline/svn-test-work  \
+	rm -rf subversion/tests/svn/svn-test-work              \
                subversion/tests/libsvn_fs/test-repo-*          \
                subversion/tests/libsvn_fs_base/test-repo-*     \
                subversion/tests/libsvn_ra_local/test-repo-*    \

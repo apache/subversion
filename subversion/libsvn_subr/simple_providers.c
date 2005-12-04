@@ -29,6 +29,7 @@
 #include "svn_config.h"
 #include "svn_user.h"
 
+#include "svn_private_config.h"
 
 /*-----------------------------------------------------------------------*/
 /* File provider                                                         */
@@ -41,26 +42,31 @@
 
 #define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
 #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
+#define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
 
 
 /* A function that stores PASSWORD (or some encrypted version thereof)
    either directly in CREDS, or externally using REALMSTRING and USERNAME
-   as keys into the external store.  POOL is used for any necessary
-   allocation. */
+   as keys into the external store.  If NON_INTERACTIVE is set, the user
+   must not be involved in the storage process.  POOL is used for any
+   necessary allocation. */
 typedef svn_boolean_t (*password_set_t) (apr_hash_t *creds,
                                          const char *realmstring,
                                          const char *username,
                                          const char *password,
+                                         svn_boolean_t non_interactive,
                                          apr_pool_t *pool);
 
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
-   POOL is used for any necessary allocation. */
+   If NON_INTERACTIVE is set, the user must not be involved in the
+   retrieval process.  POOL is used for any necessary allocation. */
 typedef svn_boolean_t (*password_get_t) (const char **password,
                                          apr_hash_t *creds,
                                          const char *realmstring,
                                          const char *username,
+                                         svn_boolean_t non_interactive,
                                          apr_pool_t *pool);
 
 
@@ -72,6 +78,7 @@ simple_password_get (const char **password,
                      apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
+                     svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
   svn_string_t *str;
@@ -92,6 +99,7 @@ simple_password_set (apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
                      const char *password,
+                     svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
   apr_hash_set (creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY, APR_HASH_KEY_STRING,
@@ -124,6 +132,10 @@ simple_first_creds_helper (void **credentials,
   const char *password = apr_hash_get (parameters,
                                        SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                        APR_HASH_KEY_STRING);
+  svn_boolean_t non_interactive = apr_hash_get (parameters,
+                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                                APR_HASH_KEY_STRING) != NULL;
+
   svn_boolean_t may_save = username || password;
   svn_error_t *err;
 
@@ -168,7 +180,7 @@ simple_first_creds_helper (void **credentials,
               else
                 {
                   if (!password_get (&password, creds_hash, realmstring,
-                                     username, pool))
+                                     username, non_interactive, pool))
                     password = NULL;
 
                   /* If the auth data didn't contain a password type,
@@ -226,6 +238,9 @@ simple_save_creds_helper (svn_boolean_t *saved,
     apr_hash_get (parameters,
                   SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
                   APR_HASH_KEY_STRING);
+  svn_boolean_t non_interactive = apr_hash_get (parameters,
+                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
+                                                APR_HASH_KEY_STRING) != NULL;
   svn_boolean_t password_stored = TRUE;
 
   *saved = FALSE;
@@ -245,7 +260,7 @@ simple_save_creds_helper (svn_boolean_t *saved,
   if (! dont_store_passwords)
     {
       password_stored = password_set (creds_hash, realmstring, creds->username,
-                                      creds->password, pool);
+                                      creds->password, non_interactive, pool);
       if (password_stored)
         {
           /* Store the password type with the auth data, so that we
@@ -563,6 +578,7 @@ windows_password_encrypter (apr_hash_t *creds,
                             const char *realmstring,
                             const char *username,
                             const char *in,
+                            svn_boolean_t non_interactive,
                             apr_pool_t *pool)
 {
   typedef BOOL (CALLBACK *encrypt_fn_t)(
@@ -609,6 +625,7 @@ windows_password_decrypter (const char **out,
                             apr_hash_t *creds,
                             const char *realmstring,
                             const char *username,
+                            svn_boolean_t non_interactive,
                             apr_pool_t *pool)
 {
   typedef BOOL (CALLBACK * decrypt_fn_t)(
@@ -707,3 +724,136 @@ svn_auth_get_windows_simple_provider (svn_auth_provider_object_t **provider,
 }
 
 #endif /* WIN32 */
+
+/*-----------------------------------------------------------------------*/
+/* keychain simple provider, puts passwords in the KeyChain              */
+/*-----------------------------------------------------------------------*/
+
+#if SVN_HAVE_KEYCHAIN_SERVICES
+#include <Security/Security.h>
+
+/* Implementation of password_set_t that stores the password
+   in the OS X KeyChain. */
+static svn_boolean_t
+keychain_password_set (apr_hash_t *creds,
+                       const char *realmstring,
+                       const char *username,
+                       const char *password,
+                       svn_boolean_t non_interactive,
+                       apr_pool_t *pool)
+{
+  OSStatus status;
+  SecKeychainItemRef item;
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (FALSE);
+
+  status = SecKeychainFindGenericPassword (NULL, strlen (realmstring),
+                                           realmstring, strlen (username),
+                                           username, 0, NULL, &item);
+  if (status)
+    {
+      if (status == errSecItemNotFound)
+        status = SecKeychainAddGenericPassword (NULL, strlen(realmstring),
+                                                realmstring, strlen (username),
+                                                username, strlen (password),
+                                                password, NULL);
+    }
+  else
+    {
+      status = SecKeychainItemModifyAttributesAndData (item, NULL,
+                                                       strlen (password),
+                                                       password);
+      CFRelease (item);
+    }
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (TRUE);
+
+  return status == 0;
+}
+
+/* Implementation of password_get_t that retrieves the password
+   from the OS X KeyChain. */
+static svn_boolean_t
+keychain_password_get (const char **password,
+                       apr_hash_t *creds,
+                       const char *realmstring,
+                       const char *username,
+                       svn_boolean_t non_interactive,
+                       apr_pool_t *pool)
+{
+  OSStatus status;
+  UInt32 length;
+  void *data;
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (FALSE);
+
+  status = SecKeychainFindGenericPassword (NULL, strlen (realmstring),
+                                           realmstring, strlen (username),
+                                           username, &length, &data, NULL);
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (TRUE);
+
+  if (status != 0)
+    return FALSE;
+
+  *password = apr_pstrmemdup (pool, data, length);
+  SecKeychainItemFreeContent (NULL, data);
+  return TRUE;
+}
+
+/* Get cached encrypted credentials from the simple provider's cache. */
+static svn_error_t *
+keychain_simple_first_creds (void **credentials,
+                             void **iter_baton,
+                             void *provider_baton,
+                             apr_hash_t *parameters,
+                             const char *realmstring,
+                             apr_pool_t *pool)
+{
+  return simple_first_creds_helper (credentials,
+                                    iter_baton, provider_baton,
+                                    parameters, realmstring,
+                                    keychain_password_get,
+                                    SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                    pool);
+}
+
+/* Save encrypted credentials to the simple provider's cache. */
+static svn_error_t *
+keychain_simple_save_creds (svn_boolean_t *saved,
+                            void *credentials,
+                            void *provider_baton,
+                            apr_hash_t *parameters,
+                            const char *realmstring,
+                            apr_pool_t *pool)
+{
+  return simple_save_creds_helper (saved, credentials, provider_baton,
+                                   parameters, realmstring,
+                                   keychain_password_set,
+                                   SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                   pool);
+}
+
+static const svn_auth_provider_t keychain_simple_provider = {
+  SVN_AUTH_CRED_SIMPLE,
+  keychain_simple_first_creds,
+  NULL,
+  keychain_simple_save_creds
+};
+
+/* Public API */
+void
+svn_auth_get_keychain_simple_provider (svn_auth_provider_object_t **provider,
+                                       apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
+
+  po->vtable = &keychain_simple_provider;
+  *provider = po;
+}
+
+#endif /* SVN_HAVE_KEYCHAIN_SERVICES */

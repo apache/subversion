@@ -87,7 +87,7 @@
    Apache.
 
    To make sure httpd.conf is properly set up for DAV access, see
-   subversion/tests/clients/cmdline/README.
+   subversion/tests/svn/README.
 
    You should also have libtool-1.5.14 and autoconf-2.59 installed
    from source.   It is important that you do not use distribution
@@ -144,7 +144,7 @@
      f) make davcheck
 
         For this, start up Apache after having configured according to
-        the directions in subversion/tests/clients/cmdline/README.
+        the directions in subversion/tests/svn/README.
 
         Make sure, that if you maintain a development installation of
         apache, that you check the config file and update it for the
@@ -159,7 +159,7 @@
         First, start up svnserve with these args:
 
          $ subversion/svnserve/svnserve -d -r \
-           `pwd`/subversion/tests/clients/cmdline
+           `pwd`/subversion/tests/svn
 
         -d tells svnserve to run as a daemon
         -r tells svnserve to use the following directory as the
@@ -170,8 +170,7 @@
      h) Then test that you can check out the subversion repository
         with this environment:
 
-         subversion/clients/cmdline/svn co \
-                        https://svn.collab.net/repos/svn/trunk
+         subversion/svn/svn co https://svn.collab.net/repos/svn/trunk
 
      i) Verify that the perl and python swig bindings at least compile.
         If you can't do this, then have another developer verify.

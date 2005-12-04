@@ -11,7 +11,7 @@ require SVN::Fs;
 require SVN::Delta;
 use File::Path;
 
-my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
+my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
 

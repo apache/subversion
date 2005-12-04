@@ -238,7 +238,7 @@ parse_section (svn_config_t *cfg, HKEY hkey, const char *section,
 
 svn_error_t *
 svn_config__parse_registry (svn_config_t *cfg, const char *file,
-                            svn_boolean_t must_exist)
+                            svn_boolean_t must_exist, apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   svn_stringbuf_t *section, *option, *value;
@@ -261,7 +261,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
     {
       return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                                 "Unrecognised registry path '%s'",
-                                svn_path_local_style (file, cfg->pool));
+                                svn_path_local_style (file, pool));
     }
 
   err = RegOpenKeyEx (base_hkey, file, 0,
@@ -273,17 +273,17 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
       if (!is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                                   "Can't open registry key '%s'",
-                                  svn_path_local_style (file, cfg->pool));
+                                  svn_path_local_style (file, pool));
       else if (must_exist && is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                                   "Can't find registry key '%s'",
-                                  svn_path_local_style (file, cfg->pool));
+                                  svn_path_local_style (file, pool));
       else
         return SVN_NO_ERROR;
     }
 
 
-  subpool = svn_pool_create (cfg->pool);
+  subpool = svn_pool_create (pool);
   section = svn_stringbuf_create ("", subpool);
   option = svn_stringbuf_create ("", subpool);
   value = svn_stringbuf_create ("", subpool);

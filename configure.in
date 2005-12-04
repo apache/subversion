@@ -84,6 +84,10 @@ dnl Configure APR --------------------------
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
+dnl The specific reasons we require APR 0.9.5-final are:
+dnl   - APR_LARGEFILE added
+dnl   - APR_GSETID added
+dnl   - bug in apr_temp_dir_get() fixed
 APR_VER_REGEX=["0\.9\.[5-9]"]
 APR_VER_REGEX_TOO="1\."
 APU_VER_REGEX=["0\.9\.[5-9]"]
@@ -296,6 +300,37 @@ esac
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
+
+dnl Mac OS KeyChain -------------------
+
+AC_ARG_ENABLE(keychain,
+  AC_HELP_STRING([--disable-keychain], 
+  [Disable use of Mac OS KeyChain for auth credentials]),
+  [enable_keychain=$enableval],[enable_keychain=yes])
+
+AC_MSG_CHECKING([for Mac OS KeyChain Services])
+
+if test "$enable_keychain" = "yes"; then
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <AvailabilityMacros.h>
+#if !DARWIN || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_2)
+#error KeyChain API unavailable.
+#endif]], [[]])],[],[enable_keychain=no])
+fi
+
+SVN_KEYCHAIN_INCLUDES=""
+if test "$enable_keychain" = "yes"; then
+  SVN_KEYCHAIN_LIBS="-framework Security"
+  SVN_KEYCHAIN_LIBS="$SVN_KEYCHAIN_LIBS -framework CoreFoundation"
+  SVN_KEYCHAIN_LIBS="$SVN_KEYCHAIN_LIBS -framework CoreServices"
+  AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
+  AC_MSG_RESULT([yes])
+else
+  SVN_KEYCHAIN_LIBS=""
+  AC_MSG_RESULT([no])
+fi
+AC_SUBST(SVN_KEYCHAIN_INCLUDES)
+AC_SUBST(SVN_KEYCHAIN_LIBS)
+
 
 dnl I18n -------------------
 

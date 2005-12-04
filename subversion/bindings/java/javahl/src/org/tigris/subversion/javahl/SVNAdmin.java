@@ -64,6 +64,14 @@ public class SVNAdmin
     public static final String FSFS = "fsfs";
 
     /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        return NativeResources.version;
+    }
+
+    /**
      * create a subversion repository.
      * @param path                  the path where the repository will been 
      *                              created.

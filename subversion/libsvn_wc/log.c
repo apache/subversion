@@ -872,7 +872,6 @@ log_do_committed (struct log_runner *loggy,
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
-  apr_time_t prop_time = 0; /* By default, don't override old stamp. */
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
 
@@ -1122,7 +1121,7 @@ log_do_committed (struct log_runner *loggy,
      Also, we have to again decide which timestamp to use (see the
      text-time case above).  */
   {
-    const char *wf, *tmpf, *basef;
+    const char *tmpf, *basef;
 
     /* Get property file pathnames (not from the `tmp' area) depending
        on whether we're examining a file or THIS_DIR */
@@ -1131,11 +1130,6 @@ log_do_committed (struct log_runner *loggy,
        as loggy->adm_access->path, I think.  In which case we don't need the
        inline conditionals below... */
     
-    SVN_ERR (svn_wc__prop_path
-             (&wf,
-              is_this_dir
-              ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              entry->kind , FALSE, pool));
     SVN_ERR (svn_wc__prop_base_path
              (&basef,
               is_this_dir
@@ -1163,27 +1157,6 @@ log_do_committed (struct log_runner *loggy,
                                 svn_path_local_style (tmpf, pool));
     if (kind == svn_node_file)
       {
-        svn_boolean_t same;
-        const char *chosen;
-        
-        /* We need to decide which prop-timestamp to use, just like we
-           did with text-time above. */
-        if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
-          return svn_error_createf (pick_error_code (loggy), err,
-                                    _("Error comparing '%s' and '%s'"),
-                                    svn_path_local_style (wf, pool),
-                                    svn_path_local_style (tmpf, pool));
-
-        /* If they are the same, use the working file's timestamp,
-           else use the tmp_base file's timestamp. */
-        chosen = same ? wf : tmpf;
-
-        /* Get the timestamp of our chosen file. */
-        if ((err = svn_io_file_affected_time (&prop_time, chosen, pool)))
-          return svn_error_createf (pick_error_code (loggy), err,
-                                    _("Error getting 'affected time' of '%s'"),
-                                    svn_path_local_style (chosen, pool));
-
         /* Examine propchanges here before installing the new
            propbase.  If the executable prop was -deleted-, then set a
            flag that will remind us to run -x after our call to
@@ -1272,20 +1245,21 @@ log_do_committed (struct log_runner *loggy,
     }
     
   /* Files have been moved, and timestamps have been found.  It is now
-     fime for The Big Entry Modification. */
+     time for The Big Entry Modification. */
   entry->revision = SVN_STR_TO_REV (rev);
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;
   entry->deleted = FALSE;
   entry->text_time = text_time;
-  entry->prop_time = prop_time;
   entry->conflict_old = NULL;
   entry->conflict_new = NULL;
   entry->conflict_wrk = NULL;
   entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  entry->has_prop_mods = FALSE;
+  /* ### Update property flags when we have such flags. */
   if ((err = svn_wc__entry_modify (loggy->adm_access, name, entry,
                                    (SVN_WC__ENTRY_MODIFY_REVISION 
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE 
@@ -1300,15 +1274,31 @@ log_do_committed (struct log_runner *loggy,
                                     | (text_time
                                        ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                        : 0)
-                                    | (prop_time
-                                       ? SVN_WC__ENTRY_MODIFY_PROP_TIME
-                                       : 0)
+                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
                                    FALSE, pool)))
     return svn_error_createf
       (pick_error_code (loggy), err,
        _("Error modifying entry of '%s'"), name);
   loggy->entries_modified = TRUE;
+
+  /* Remove the working props file if it exists.
+     This is done here, after resetting the has_prop_mods flag, since
+     the text-base install stuff above will need this file if
+     props_mod was set. */
+  {
+    const char *wf;
+    SVN_ERR (svn_wc__prop_path
+             (&wf,
+              is_this_dir
+              ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
+              entry->kind, FALSE, pool));
+    if ((err = svn_io_remove_file (wf, pool))
+        && APR_STATUS_IS_ENOENT (err->apr_err))
+      svn_error_clear (err);
+    else if (err)
+      return err;
+  }
 
   /* If we aren't looking at "this dir" (meaning we are looking at a
      file), we are finished.  From here on out, it's all about a
@@ -1994,6 +1984,22 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
                   SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_HAS_PROPS,
+                  SVN_WC__ENTRY_ATTR_HAS_PROPS,
+                  entry->has_props ? "true" : "false");
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
+                  SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                  entry->has_prop_mods ? "true" : "false");
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS,
+                  SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                  entry->cachable_props);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
+                  SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
+                  entry->present_props);
 
 #undef ADD_ENTRY_ATTR
 

@@ -102,11 +102,18 @@ or a url (when false) copy source is used."""
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  # Use a temp file to set properties with wildcards in their values
+  # otherwise Win32/VS2005 will expand them
+  prop_path = os.path.join(wc_dir, 'proptmp')
+  svntest.main.file_append (prop_path, '*')
+
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.actions.run_and_verify_svn("", None, [],
-                                     'ps', 'phony-prop', '*', pi_path)
+                                     'ps', 'phony-prop', '-F',
+                                     prop_path, pi_path)
+  os.remove(prop_path)
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ps', 'svn:eol-style', 'LF', rho_path)
 

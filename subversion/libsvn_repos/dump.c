@@ -189,7 +189,7 @@ struct edit_baton
   svn_revnum_t oldest_dumped_rev;
 
   /* reusable buffer for writing file contents */
-  char buffer[SVN_STREAM_CHUNK_SIZE];
+  char buffer[SVN__STREAM_CHUNK_SIZE];
   apr_size_t bufsize;
 };
 

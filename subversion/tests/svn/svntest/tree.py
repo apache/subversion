@@ -630,7 +630,7 @@ def build_tree_from_status(lines):
   #
   #      "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
   #
-  # (Taken from 'print_status' in subversion/clients/cmdline/status.c.)
+  # (Taken from 'print_status' in subversion/svn/status.c.)
   #
   # Here are the parameters.  The middle number in parens is the
   # match.group(), followed by a brief description of the field:

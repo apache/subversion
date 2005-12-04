@@ -26,9 +26,13 @@ import java.io.OutputStream;
 public interface SVNClientInterface
 {
     /**
-    * release the native peer (should not depend on finalize)
-    */
+     * release the native peer (should not depend on finalize)
+     */
     void dispose();
+    /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion();
     /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.

@@ -6,7 +6,13 @@ Your Mileage May Vary.
       from `repository/hooks/post-commit'.  Run the script with no
       arguments for usage.
 
-   2. mailer.py, mailer.conf.example
+   2. commit-email.rb
+      Uses the Ruby/SWIG client bindings to query the repository about
+      the changes made by a particular revision, and send
+      corresponding change emails.  The program takes command-line
+      options for basic setup and to fine-tune its behavior.
+
+   3. mailer/mailer.py, mailer/mailer.conf.example
       Uses the Python/SWIG bindings to directly query the repository
       about the changes made by a particular revision.  The program
       uses a configuration file for basic setup and to fine-tune where
@@ -15,19 +21,23 @@ Your Mileage May Vary.
       smarter with binary files, and it streams its output into the
       mailer (to avoid in-memory buffering).
 
-   3. commit-access-control.pl, commit-access-control.cfg.example
+   4. commit-access-control.pl, commit-access-control.cfg.example
       Uses the `svnlook' program to check if the user who submitted
       the commit has appropriate rights to perform the commit on all
       the modified files and directories using the permissions
       specified in the configuration file.
 
-   4. svnperms.py, svnperms.conf.example
+   5. svnperms.py, svnperms.conf.example
       Similar to commit-access-control.pl, but uses a different
       syntax.  Run 'svnperms.py -h' for usage.
 
-   5. propchange-email.pl
+   6. propchange-email.pl
       Uses the `svnlook' program to send revision property change notice
       emails.  Invoke it from `repository/hook/post-revprop-change'.  Run
       the script with no arguments for usage.
+
+   7. verify-po.py
+      Checks whether the contents of PO files committed to the repository
+      are encoded in UTF-8.
 
 $Id$

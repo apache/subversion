@@ -38,6 +38,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_nls.h"
+#include "svn_auth.h"
 #include "utf_impl.h"
 
 #include "svn_private_config.h"
@@ -339,12 +340,16 @@ svn_cmdline_setup_auth_baton (svn_auth_baton_t **ab,
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
-    = apr_array_make (pool, 11, sizeof (svn_auth_provider_object_t *));
+    = apr_array_make (pool, 12, sizeof (svn_auth_provider_object_t *));
 
   /* The main disk-caching auth providers, for both
      'username/password' creds and 'username' creds.  */
 #ifdef WIN32
   svn_auth_get_windows_simple_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+#endif
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+  svn_auth_get_keychain_simple_provider (&provider, pool);
   APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 #endif
   svn_auth_get_simple_provider (&provider, pool);
