@@ -38,10 +38,11 @@ Candidate changes:
       +1: maxb
 
   * r17621
-    Check whether pools are valid before working with them in Subversion 1.2.x
-    compatibility wrappers.
+    Check whether pools are valid before working with them in the Subversion
+    1.2.x compatibility wrappers for the Python bindings.
     Justification:
-      Simple but important fix for compatibility with Trac 0.9.x.
+      Simple but important fix for compatibility with Trac 0.9.x. Affects the
+      Python bindings only.
     Notes:
       Prevents assertion failures when Subversion 1.2.x applications try to
       destroy pools during application shutdown, when the validity of the pool
