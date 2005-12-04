@@ -680,6 +680,26 @@ void svn_auth_get_windows_simple_provider (
   apr_pool_t *pool);
 #endif /* WIN32 || DOXYGEN */
 
+#if defined(DARWIN) || defined(DOXYGEN)
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_simple_provider(), except that the
+ * password is stored in the Mac OS KeyChain.
+ *
+ * @since New in 1.4
+ * @note This function is only available on Mac OS 10.2 and higher.
+ */
+void svn_auth_get_keychain_simple_provider (
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
+
+#endif /* DARWIN || DOXYGEN */
+
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
