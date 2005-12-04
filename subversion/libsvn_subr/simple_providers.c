@@ -29,6 +29,7 @@
 #include "svn_config.h"
 #include "svn_user.h"
 
+#include "svn_private_config.h"
 
 /*-----------------------------------------------------------------------*/
 /* File provider                                                         */
@@ -41,6 +42,7 @@
 
 #define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
 #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
+#define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
 
 
 /* A function that stores PASSWORD (or some encrypted version thereof)
@@ -722,3 +724,136 @@ svn_auth_get_windows_simple_provider (svn_auth_provider_object_t **provider,
 }
 
 #endif /* WIN32 */
+
+/*-----------------------------------------------------------------------*/
+/* keychain simple provider, puts passwords in the KeyChain              */
+/*-----------------------------------------------------------------------*/
+
+#if SVN_HAVE_KEYCHAIN_SERVICES
+#include <Security/Security.h>
+
+/* Implementation of password_set_t that stores the password
+   in the OS X KeyChain. */
+static svn_boolean_t
+keychain_password_set (apr_hash_t *creds,
+                       const char *realmstring,
+                       const char *username,
+                       const char *password,
+                       svn_boolean_t non_interactive,
+                       apr_pool_t *pool)
+{
+  OSStatus status;
+  SecKeychainItemRef item;
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (FALSE);
+
+  status = SecKeychainFindGenericPassword (NULL, strlen (realmstring),
+                                           realmstring, strlen (username),
+                                           username, 0, NULL, &item);
+  if (status)
+    {
+      if (status == errSecItemNotFound)
+        status = SecKeychainAddGenericPassword (NULL, strlen(realmstring),
+                                                realmstring, strlen (username),
+                                                username, strlen (password),
+                                                password, NULL);
+    }
+  else
+    {
+      status = SecKeychainItemModifyAttributesAndData (item, NULL,
+                                                       strlen (password),
+                                                       password);
+      CFRelease (item);
+    }
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (TRUE);
+
+  return status == 0;
+}
+
+/* Implementation of password_get_t that retrieves the password
+   from the OS X KeyChain. */
+static svn_boolean_t
+keychain_password_get (const char **password,
+                       apr_hash_t *creds,
+                       const char *realmstring,
+                       const char *username,
+                       svn_boolean_t non_interactive,
+                       apr_pool_t *pool)
+{
+  OSStatus status;
+  UInt32 length;
+  void *data;
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (FALSE);
+
+  status = SecKeychainFindGenericPassword (NULL, strlen (realmstring),
+                                           realmstring, strlen (username),
+                                           username, &length, &data, NULL);
+
+  if (non_interactive)
+    SecKeychainSetUserInteractionAllowed (TRUE);
+
+  if (status != 0)
+    return FALSE;
+
+  *password = apr_pstrmemdup (pool, data, length);
+  SecKeychainItemFreeContent (NULL, data);
+  return TRUE;
+}
+
+/* Get cached encrypted credentials from the simple provider's cache. */
+static svn_error_t *
+keychain_simple_first_creds (void **credentials,
+                             void **iter_baton,
+                             void *provider_baton,
+                             apr_hash_t *parameters,
+                             const char *realmstring,
+                             apr_pool_t *pool)
+{
+  return simple_first_creds_helper (credentials,
+                                    iter_baton, provider_baton,
+                                    parameters, realmstring,
+                                    keychain_password_get,
+                                    SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                    pool);
+}
+
+/* Save encrypted credentials to the simple provider's cache. */
+static svn_error_t *
+keychain_simple_save_creds (svn_boolean_t *saved,
+                            void *credentials,
+                            void *provider_baton,
+                            apr_hash_t *parameters,
+                            const char *realmstring,
+                            apr_pool_t *pool)
+{
+  return simple_save_creds_helper (saved, credentials, provider_baton,
+                                   parameters, realmstring,
+                                   keychain_password_set,
+                                   SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                   pool);
+}
+
+static const svn_auth_provider_t keychain_simple_provider = {
+  SVN_AUTH_CRED_SIMPLE,
+  keychain_simple_first_creds,
+  NULL,
+  keychain_simple_save_creds
+};
+
+/* Public API */
+void
+svn_auth_get_keychain_simple_provider (svn_auth_provider_object_t **provider,
+                                       apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
+
+  po->vtable = &keychain_simple_provider;
+  *provider = po;
+}
+
+#endif /* SVN_HAVE_KEYCHAIN_SERVICES */
