@@ -520,6 +520,24 @@ test_two_way_unified (const char **msg,
                          " Cc\r\n",
                          pool));
 
+  SVN_ERR (two_way_diff ("foo6d", "bar6d",
+                         "Aa\r"
+                         "Bb\r"
+                         "Cc\r",
+
+                         "Aa\r"
+                         "Xx\r"
+                         "Cc\r",
+
+                         "--- foo6d" APR_EOL_STR
+                         "+++ bar6d" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
+                         " Aa\r"
+                         "-Bb\r"
+                         "+Xx\r"
+                         " Cc\r",
+                         pool));
+
   SVN_ERR (two_way_diff ("foo7", "bar7",
                          "Aa\n",
 
@@ -543,6 +561,21 @@ test_two_way_unified (const char **msg,
                          "+++ bar7a" APR_EOL_STR
                          "@@ -1,2 +1,2 @@" APR_EOL_STR
                          "-Aa\n"
+                         "+Bb\n"
+                         " Cc\n",
+                         pool));
+
+  SVN_ERR (two_way_diff ("foo7b", "bar7b",
+                         "Aa\r"
+                         "Cc\n",
+
+                         "Bb\n"
+                         "Cc\n",
+
+                         "--- foo7b" APR_EOL_STR
+                         "+++ bar7b" APR_EOL_STR
+                         "@@ -1,2 +1,2 @@" APR_EOL_STR
+                         "-Aa\r"
                          "+Bb\n"
                          " Cc\n",
                          pool));
