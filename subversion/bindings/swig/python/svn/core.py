@@ -185,8 +185,7 @@ def svn_pool_destroy(pool):
   assert pool is not None
 
   if hasattr(pool,"destroy"):
-    if pool.valid():
-      pool.destroy()
+    pool.destroy()
   else:
     _core.apr_pool_destroy(pool)
 apr_pool_destroy = svn_pool_destroy
@@ -199,8 +198,7 @@ def svn_pool_clear(pool):
   assert pool is not None
 
   if hasattr(pool,"clear"):
-    if pool.valid():
-      pool.clear()
+    pool.clear()
   else:
     _core.apr_pool_clear(pool)
 apr_pool_clear = svn_pool_clear
