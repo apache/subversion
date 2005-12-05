@@ -62,7 +62,8 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"/>
+				Culture="1033"
+			    AdditionalIncludeDirectories="./include,../apr/include"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
 		</Configuration>
@@ -122,7 +123,8 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Culture="1033"
+				AdditionalIncludeDirectories="./include,../apr/include"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
 		</Configuration>
