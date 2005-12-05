@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-12-05 22:14+0100\n"
-"PO-Revision-Date: 2005-11-16 09:44+0100\n"
+"PO-Revision-Date: 2005-12-05 23:14+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1978,9 +1978,9 @@ msgstr ""
 #. Helper macro that evaluates to an error message indicating that
 #. the representation referred to by X has an unknown node kind.
 #: libsvn_fs_base/reps-strings.c:56
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown node kind for representation '%s'"
-msgstr "Okänd nodtyp för \"%s\""
+msgstr "Okänd nodtyp för representationen \"%s\""
 
 #: libsvn_fs_base/reps-strings.c:107
 msgid "Representation is not of type 'delta'"
@@ -4560,39 +4560,39 @@ msgstr ""
 "Sökvägen \"%s\" slutar med \"%s\", vilket inte stöds för den här operationen"
 
 #: libsvn_wc/lock.c:789 libsvn_wc/lock.c:820
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to check path existence for '%s'"
-msgstr "Kunde inte skapa namn för \"%s\""
+msgstr "Kunde inte kontrollera om sökvägen \"%s\" existerar"
 
 #: libsvn_wc/lock.c:799
 #, c-format
 msgid "Expected '%s' to be a directory but found a file"
-msgstr ""
+msgstr "\"%s\" borde vara en katalog, men den är en fil"
 
 #: libsvn_wc/lock.c:806
-#, fuzzy, c-format
+#, c-format
 msgid "Expected '%s' to be a file but found a directory"
-msgstr "URL:en \"%s\" pekar på en fil och ingen katalog"
+msgstr "\"%s\" borde varit en fil, men den är en katalog"
 
 #: libsvn_wc/lock.c:826
-#, fuzzy, c-format
+#, c-format
 msgid "Directory '%s' is missing"
-msgstr "Katalogen \"%s\" saknar URL"
+msgstr "Katalogen \"%s\" saknas"
 
 #: libsvn_wc/lock.c:831
 #, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
-msgstr ""
+msgstr "Katalogen \"%s\" med administrativ area saknas"
 
 #: libsvn_wc/lock.c:836
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to lock '%s'"
-msgstr "Kunde inte skapa namn för \"%s\""
+msgstr "Kunde inte låsa \"%s\""
 
 #: libsvn_wc/lock.c:841
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy '%s' is not locked"
-msgstr "Arbetskopian \"%s\" är låst"
+msgstr "Arbetskopian \"%s\" är inte låst"
 
 #: libsvn_wc/lock.c:1242
 #, c-format
@@ -5320,7 +5320,6 @@ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
 msgstr "ändringen i revision ARG (som -rARG-1:ARG)"
 
 #: svn/main.c:74
-#, fuzzy
 msgid ""
 "ARG (some commands also take ARG1:ARG2 range)\n"
 "                             A revision argument can be one of:\n"
@@ -5333,17 +5332,15 @@ msgid ""
 "                                'PREV'       revision just before COMMITTED"
 msgstr ""
 "ARG (en del kommandon accepterar även ett område\n"
-"                             (ARG1:ARG2)\n"
+"                             (ARG1:ARG2))\n"
 "                             Ett revisionsargument kan vara något av:\n"
 "                                TAL          revisionsnummer\n"
-"                                \"{\"DATUM\"}\"  revision vid början av "
-"angiven dag\n"
+"                                \"{\"DATUM\"}\"  revision vid början av angiven dag\n"
 "                                \"HEAD\"       senaste revisionen i arkivet\n"
 "                                \"BASE\"       basrevisionen för objektets\n"
 "                                             arbetskopia\n"
 "                                \"COMMITTED\"  revisionen för den senaste\n"
-"                                             arkiveringen vid eller före "
-"BASE\n"
+"                                             arkiveringen vid eller före BASE\n"
 "                                \"PREV\"       revisionen före COMMITTED"
 
 #: svn/main.c:84
@@ -5639,7 +5636,6 @@ msgstr ""
 "     omedelbar arkivering.\n"
 
 #: svn/main.c:275
-#, fuzzy
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5670,8 +5666,8 @@ msgid ""
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
 "Visa skillnaderna mellan två sökvägar.\n"
-"användning: 1. diff [-r N[:M]] [MÅL[@REV]...]\n"
-"            2. diff [-r N[:M]] --old=GAMMALT-MÅL[@GAMMALREV]\n"
+"användning: 1. diff [-c M | -r N[:M]] [MÅL[@REV]...]\n"
+"            2. diff [-C M | -r N[:M]] --old=GAMMALT-MÅL[@GAMMALREV]\n"
 "               [--new=NYTT-MÅL[@NYREV]] [SÖKVÄG...]\n"
 "            3. diff GAMMAL-URL[@GAMMALREV] NY-URL[@NYREV]\n"
 "\n"
@@ -5684,13 +5680,14 @@ msgstr ""
 "     versionen. Annars är standardvärdet HEAD.\n"
 "\n"
 "  2. Visa skillnaden mellan GAMMALT_MÅL som den såg ut i GAMMALREV och\n"
-"     NYTT-MÅL som den såg ut i NYREV. Om en eller flera sökvägar PATH\n"
-"     anges, ska dessa vara relativa GAMMALT_MÅL och NYTT-MÅL och de\n"
-"     begränsar i så fall utskriften till skillnaderna i dessa sökvägar.\n"
-"     GAMMALT_MÅL och NYTT_MÅL kan vara sökvägar till en arbetskopia\n"
-"     eller URL[@REV]. Standardvärdet för NYTT_MÅL är GAMMALT_MÅL. -r N\n"
+"     NYTT-MÅL som den såg ut i NYREV. Om en eller flera SÖKVÄGar anges,\n"
+"     ska dessa vara relativa GAMMALT-MÅL och NYTT-MÅL och de begränsar\n"
+"     i så fall utskriften till skillnaderna i dessa sökvägar.\n"
+"     GAMMALT-MÅL och NYTT-MÅL kan vara sökvägar till en arbetskopia\n"
+"     eller URL[@REV]. Standardvärdet för NYTT-MÅL är GAMMALT-MÅL. -r N\n"
 "     sätter standardvärdet för GAMMALREV till N. -r N:M sätter\n"
-"     standardvädet för GAMMALREV till N och för NYREV till M.\n"
+"     standardvädet för GAMMALREV till N och för NYREV till M; -c M sätter\n"
+"     standardvärdet för GAMMALREV till M-1 och för NYREV till M.\n"
 "\n"
 "  3. Kortare sätt att skriva \"svn diff --old=GAMMAL-URL[@GAMMALREV]\n"
 "     --new=NY-URL[@NYREV]\".\n"
@@ -5888,7 +5885,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:420
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -5917,7 +5913,7 @@ msgstr ""
 "Inför skillnaderna mellan två källor i en arbetskopia.\n"
 "användning: 1. merge källURL1[@N] källURL2[@M] [AKSÖKVÄG]\n"
 "            2. merge källAKSÖKVÄG1@N källAKSÖKVÄG2@M [AKSÖKVÄG]\n"
-"            3. merge -r N:M KÄLLA[REV] [AKSÖKVÄG]\n"
+"            3. merge [-c M | -r N:M] KÄLLA[REV] [AKSÖKVÄG]\n"
 "\n"
 "  1. I den första formen anges käll-URL:erna med revisionsnummer N och M.\n"
 "     Dessa är de två källor som kommer att jämföras. Revisionsnumren\n"
@@ -5929,13 +5925,12 @@ msgstr ""
 "\n"
 "  3. I den tredje formen kan KÄLLA vara en URL eller en sökväg till en\n"
 "     arbetskopia. I det senare fallet används motsvarande URL. Denna URL,\n"
-"     vid revision REV, som den såg ut i revisionerna N respektive M "
-"bestämmer\n"
-"     vad som ska jämföras. Om REV inte anges, används HEAD.\n"
+"     vid revision REV, som den såg ut i revisionerna N respektive M bestämmer\n"
+"     vad som ska jämföras. Om REV inte anges, används HEAD. Flaggan \"-c M\"\n"
+"     är liktydig med \"-r N:M\", där N = M-1.\n"
 "\n"
 "  AKSÖKVÄG är sökvägen till den arbetskopia där ändringarna kommer att\n"
-"  införas. Om AKSÖKVÄG utelämnas används \".\" som standardvärde, såvida "
-"inte\n"
+"  införas. Om AKSÖKVÄG utelämnas används \".\" som standardvärde, såvida inte\n"
 "  källorna har ett gemensamt basnamn som matchar en fil i \".\";\n"
 "  i så fall införs skillnaderna i den filen.\n"
 
@@ -5970,7 +5965,6 @@ msgstr ""
 "  I båda fallen måste katalogerna ovanför de angivna redan finnas.\n"
 
 #: svn/main.c:465
-#, fuzzy
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -5986,8 +5980,9 @@ msgstr ""
 "eller arkiv.\n"
 "användning: move KÄLLA DEST\n"
 "\n"
-"  Anmärkning: Detta underkommando är samma sak som \"copy\" följt av \"delete"
-"\".\n"
+"  Anmärkning: Detta underkommando är samma sak som \"copy\" följt av \"delete\".\n"
+"  Anmärkning: --revision-flaggan är meningslös och kvarstår av kompatibilitets-\n"
+"  skäl.\n"
 "\n"
 "  KÄLLA och DEST kan vara antingen sökvägar i en arbetskopia (AK)\n"
 "  eller URL:er:\n"
@@ -5995,7 +5990,6 @@ msgstr ""
 "    URL -> URL:  namnbyte på servern\n"
 
 #: svn/main.c:478
-#, fuzzy
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6005,16 +5999,16 @@ msgid ""
 "  2. Removes unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
-"Radera PROPNAMN från filer, kataloger eller revisioner.\n"
+"Radera en egenskap från filer, kataloger eller revisioner.\n"
 "användning: 1. propdel PROPNAMN [SÖKVÄG...]\n"
-"            2. propdel PROPNAMN --revprop -r REV [URL]\n"
+"            2. propdel PROPNAMN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Ta bort versionshanterade egenskaper i arbetskopian.\n"
 "  2. Ta bort en icke versionshanterad revisionsegenskap på en revision i\n"
 "     arkivet.\n"
+"     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 
 #: svn/main.c:489
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6024,17 +6018,16 @@ msgid ""
 "  2. Edits unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
-"Editera egenskapen PROPNAMN med en extern editor på\n"
-"angivna mål.\n"
+"Redigera en egenskap med en extern editor.\n"
 "användning: 1. propedit PROPNAMN SÖKVÄG...\n"
-"            2. propedit PROPNAMN --revprop -r REV [URL]\n"
+"            2. propedit PROPNAMN --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Editera versionshanterade egenskaper i arbetskopian.\n"
-"  2. Editera en icke versionshanterad revisionsegenskap på en revision i\n"
+"  1. Redigera versionshanterade egenskaper i arbetskopian.\n"
+"  2. Redigera en icke versionshanterad revisionsegenskap på en revision i\n"
 "     arkivet.\n"
+"     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 
 #: svn/main.c:501
-#, fuzzy
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6052,25 +6045,23 @@ msgid ""
 "  the --strict option to disable these beautifications (useful,\n"
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
-"Visa värdet på egenskapen PROPNAMN för filer, kataloger\n"
-"eller revisioner.\n"
-"användning: 1. propget PROPNAMN [SÖKVÄG...]\n"
-"            2. propget PROPNAMN --revprop -r REV [URL]\n"
+"Skriv ut värdet på en egenskap för filer, kataloger eller revisioner.\n"
+"användning: 1. propget PROPNAMN [MÅL[@REV]...]\n"
+"            2. propget PROPNAMN --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Visa en versionshanterad egenskap i arbetskopian.\n"
+"  1. Visa en versionshanterad egenskap i arbetskopian. Om REV anges, avgör\n"
+"     den i vilken revision MÅL söks upp.\n"
 "  2. Visa en icke versionshanterad revisionsegenskap för en revision i\n"
 "     arkivet.\n"
+"     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
 "  Normalt skrivs ett radslut ut efter värdena, så att utskrifterna ser\n"
 "  snyggare ut. Om egenskaper för fler än en sökväg skrivs ut, läggs också\n"
-"  sökvägen till före det värde som är kopplat till den. Använd flaggan --"
-"strict\n"
-"  för att slå av dessa \"tillsnyggningar\" (bland annat användbart när "
-"binära\n"
+"  sökvägen till före det värde som är kopplat till den. Använd flaggan --strict\n"
+"  för att slå av dessa \"tillsnyggningar\" (bland annat användbart när binära\n"
 "  egenskaper skickas till en fil).\n"
 
 #: svn/main.c:520
-#, fuzzy
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6084,16 +6075,15 @@ msgstr ""
 "Lista alla egenskaper på filer, kataloger eller\n"
 "revisioner.\n"
 "användning: 1. proplist [MÅL[@REV]...]\n"
-"            2. proplist --revprop -r REV [URL]\n"
+"            2. proplist --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Listar versionshanterade egenskaper. Om REV är angiven, bestämmer den "
-"i\n"
-"    vilken revision MÅL först letas upp.\n"
+"  1. Listar versionshanterade egenskaper. Om REV är angiven, bestämmer den i\n"
+"     vilken revision MÅL först letas upp.\n"
 "  2. Listar icke versionshanterade revisionsegenskaper för en revision i\n"
 "     ett arkiv.\n"
+"     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 
 #: svn/main.c:532
-#, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6137,49 +6127,48 @@ msgid ""
 "  attempt will fail, and a recursive attempt will set the property\n"
 "  only on the file children of the directory.\n"
 msgstr ""
-"Sätt egenskapen PROPNAME till PROPVAL på filer, kataloger\n"
-"eller revisioner.\n"
-"användning: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
-"            2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] "
-"[URL]\n"
+"Sätt värdet på en egenskap på filer, kataloger eller revisioner.\n"
+"användning: 1. propset PROPNAMN VÄRDE SÖKVÄG...\n"
+"            2. propset PROPNAMN --revprop -r REV VÄRDE [MÅL]\n"
 "\n"
 "  1. Gör en lokal ändring av en versionshanterad egenskap i en arbetskopia.\n"
 "  2. Gör en ändring av en icke versionshanterad revisionsegenskap på en\n"
 "     revision i arkivet.\n"
+"     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
-"  Anmärkning: svn känner igen följande särskilda versionshanterade "
-"egenskaper,\n"
+"  Värdet kan tillhandahållas med --file-flaggan istället för som VÄRDE.\n"
+"\n"
+"  Anmärkning: svn känner igen följande särskilda versionshanterade egenskaper,\n"
 "  men lagrar godtyckliga egenskaper:\n"
 "    svn:ignore     - En lista med filmönster att ignorera, avskilda med\n"
 "                     radslut.\n"
 "    svn:keywords   - Nyckelord som ska expanderas. Giltiga nyckelord är:\n"
 "      URL, HeadURL             - URL:en till objektets senaste revision.\n"
-"      Author, LastChangedBy    - Den person som gjorde den senaste "
-"ändringen.\n"
+"      Author, LastChangedBy    - Den person som gjorde den senaste ändringen.\n"
 "      Date, LastChangedDate    - Datum/tid för den senaste ändringen.\n"
-"      Rev, Revision            - Den senaste revisionen där objektet "
-"ändrades.\n"
+"      Rev, Revision            - Den senaste revisionen där objektet ändrades.\n"
 "      LastChangedRevision\n"
-"      Id                       - Ett sammandrag av de 4 föregående "
-"nyckelorden.\n"
-"    svn:executable - Om den finns, görs filen exekverbar. Den här "
-"egenskapen\n"
+"      Id                       - Ett sammandrag av de 4 nyckelorden ovan.\n"
+"    svn:executable - Om den finns, görs filen exekverbar. Den här egenskapen\n"
 "      kan inte sättas på en katalog. Ett icke-rekursivt försök kommer att\n"
-"      misslyckas, men om den sätts rekursivt sätts egenskapen för "
-"katalogens\n"
+"      misslyckas, men om den sätts rekursivt sätts egenskapen för katalogens\n"
 "      barn.\n"
 "    svn:eol-style  - Något av \"native\", \"CR\", \"LF\" eller \"CRLF\".\n"
 "    svn:mime-type  - Filens mime-typ. Används för att avgöra om merge\n"
 "      ska göras på filen och hur den skickas via Apache. En mime-typ som\n"
 "      inleds med \"text/\" eller som saknas behandlas som text. Allt annat\n"
 "      behandlas som binärdata.\n"
-"    svn:externals  - En lista, avskild med radslut, med "
-"modulspecifikationer,\n"
-"      vilka består av en relativ sökväg, valbara revisionsflaggor samt en "
-"URL.\n"
+"    svn:externals  - En lista, avskild med radslut, med modulspecifikationer,\n"
+"      vilka består av en relativ sökväg, valbara revisionsflaggor samt en URL.\n"
 "      Exempel:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
+"    svn:needs-lock - Om den är satt, visar den att filen bör låsas innan\n"
+"        den ändras. Gör att arbetsfilen blir skrivskyddad då den inte är låst.\n"
+"  Egenskaperna svn:keywords, svn:executable, svn:eol-style, svn:mime-type\n"
+"  och svn:needs-lock kan inte sättas på en katalog. Ett icke-rekursivt\n"
+"  försök kommer att misslyckas, men om de sätts rekursivt sätts egenskaperna\n"
+"  på de av katalogens barn som är filer.\n"
 
 #: svn/main.c:576
 msgid ""
@@ -6478,13 +6467,10 @@ msgid "Argument to -c must be positive"
 msgstr "Argumentet till -c måste vara positivt"
 
 #: svn/main.c:915
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
-msgstr ""
-"Flera revisionsargument påträffades; försök med \"-r M:N\" istället för \"-r "
-"M -r N\""
+msgstr "Flera revisionsargument påträffades; -r och -c kan inte anges samtidigt, eller försök med \"-r M:N\" istället för \"-r M -r N\""
 
 #: svn/main.c:928 svnadmin/main.c:1227
 #, c-format
@@ -7993,9 +7979,10 @@ msgid "root of directory to serve"
 msgstr "serverns rotkatalog"
 
 #: svnserve/main.c:116
-#, fuzzy
 msgid "force read only, overriding repository config file"
-msgstr "utfasad; använd arkivets konfigurationsfil"
+msgstr ""
+"tillåt endast läsning; överskuggar värdet i arkivets\n"
+"                             konfigurationsfil"
 
 #: svnserve/main.c:117
 msgid "tunnel mode"
@@ -8155,62 +8142,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Can't open file '%s' for reading"
-#~ msgstr "Kan inte öppna filen \"%s\" för läsning"
-
-#~ msgid "Can't open file '%s' for writing"
-#~ msgstr "Kan inte öppna filen \"%s\" för skrivning"
-
-#~ msgid "Error reading file '%s'"
-#~ msgstr "Fel vid läsning från filen \"%s\""
-
-#~ msgid "Error writing file '%s'"
-#~ msgstr "Fel vid skrivning till filen \"%s\""
-
-#~ msgid "Can't open config file '%s'"
-#~ msgstr "Kan inte öppna konfigurationsfilen \"%s\""
-
-#~ msgid "Can't find config file '%s'"
-#~ msgstr "Kan inte hitta konfigurationsfilen \"%s\""
-
-#~ msgid "Can't stat new directory '%s'"
-#~ msgstr "Kan inte ta status på den nya katalogen \"%s\""
-
-#~ msgid ""
-#~ "The entry '%s' is no longer a directory; remove the entry before updating"
-#~ msgstr ""
-#~ "Posten \"%s\" är inte längre en katalog; ta bort posten före uppdatering"
-
-#~ msgid "Working copy '%s' is missing or not locked"
-#~ msgstr "Arbetskopian \"%s\" saknas eller är inte låst"
-
-#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-#~ msgstr ""
-#~ "Egenskapen \"%s\" ändrad lokalt till \"%s\", men uppdatering raderar den\n"
-
-#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Egenskapen \"%s\" raderad lokalt, men uppdatering sätter den till \"%s\"\n"
-
-#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Egenskapen \"%s\" lokalt ändrad till \"%s\", men uppdatering sätter den "
-#~ "till \"%s\"\n"
-
-#~ msgid ""
-#~ "Warning: -R is deprecated.\n"
-#~ "Anonymous access is now read-only by default.\n"
-#~ "To change, use conf/svnserve.conf in repos:\n"
-#~ "  [general]\n"
-#~ "  anon-access = read|write|none (default read)\n"
-#~ "  auth-access = read|write|none (default write)\n"
-#~ "Forcing all access to read-only for now\n"
-#~ msgstr ""
-#~ "Varning: -R är utfasad.\n"
-#~ "Anonym åtkomst är endast för läsning som standard.\n"
-#~ "För att ändra detta, använda conf/svnserve.conf i arkivet:\n"
-#~ "  [general]\n"
-#~ "  anon-access = read|write|none (standard är read)\n"
-#~ "  auth-access = read|write|none (standard är write)\n"
-#~ "All åtkomst är skrivskoddad\n"
