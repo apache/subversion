@@ -1493,17 +1493,28 @@ committing the change.</p>
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>If someone pointed out a problem or suggested the fix, but did not
-actually write the patch, indicate the contribution with
-"Suggested&nbsp;by:&nbsp;":</p>
+<p>If someone found the bug or pointed out the problem, but didn't
+write the patch, indicate their contribution with
+"Found&nbsp;by:&nbsp;":</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
-   Suggested by: J. Random &lt;jrandom@example.com&gt;
+   Found by: J. Random &lt;jrandom@example.com&gt;
 
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
+</pre>
+
+<p>If someone suggested something useful, but didn't write the patch,
+indicate their contribution with "Suggested&nbsp;by:&nbsp;":</p>
+
+<pre>
+   Extend the Contribulyzer syntax to distinguish finds from ideas.
+
+   Suggested by: dlr
+
+   * www/hacking.html (crediting): Adjust accordingly.
 </pre>
 
 <p>If someone reviewed the change, use "Review&nbsp;by:&nbsp;":</p>
@@ -1526,7 +1537,7 @@ combination of fields:</p>
    Patch by: J. Random &lt;jrandom@example.com&gt;
              Enrico Caruso &lt;codingtenor@codingtenor.com&gt;
              me
-   Suggested by: J. Random &lt;jrandom@example.com&gt;
+   Found by: J. Random &lt;jrandom@example.com&gt;
    Review by: Eagle Eyes &lt;eeyes@example.com&gt;
               jcommitter
 
@@ -1554,11 +1565,12 @@ that the spacing is optional and not necessary for parseability:</p>
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>Currently, these three fields</p>
+<p>Currently, these fields</p>
 
 <pre>
    Patch by:
    Suggested by:
+   Found by:
    Review by:
 </pre>
 
