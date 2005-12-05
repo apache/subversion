@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>The Subversion Build/Test Farm</title>
+</head>
+
+<body>
+<div class="app">
+
+<p style="font-style: italic;"><b>WARNING:</b></p> 
+
+<p style="font-style: italic;">This document is not complete yet.
+When this warning disappears, that will mean the document is ready.</p>
+
+<h1 style="text-align: center;">The Subversion Build/Test Farm</h1>
+
+<pre style="text-align: center;"
+>$LastChangedDate$</pre>
+
+<p>We are designing a build/test farm for Subversion, to test
+portability more conveniently and consistently.  We hope this will
+lead to fewer surprises at Release Candidate time.</p>
+
+<p>This document describes the build farm.  The intended audiences
+are:</p>
+
+<ul>
+   <li>People who want to join the build farm, by running Subversion
+       builds on a box with a stable environment, and using the build
+       farm client software to send result reports to the central
+       server for publication.</li>
+
+   <li>People who administer the central build server (CollabNet's
+       operations team has volunteered to do this, as well as to run
+       some of the clients).</li>
+
+   <li>Developers who want to test a change's portability before
+       committing it, using the build farm's "try with this patch"
+       feature.</li>
+</ul>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="overview" title="overview">
+<h2>Overview</h2>
+
+<p>We've tentatively decided to use <a
+href="https://sourceforge.net/projects/buildbot/">BuildBot</a> for
+build management software, in part because of its <a
+href="http://buildbot.sourceforge.net/manual-0.7.0.html#try">TryScheduler</a>
+feature, which lets a developer to ask the question "What would happen
+if I committed this patch right now?".  It runs the unit test suite
+(across multiple build platforms) on the developer's current code,
+allowing her to make sure they will not break the tree when she
+finally commits her changes.</p>
+
+<p>The default setup, however, is to build a repository tree, usually
+trunk or a release branch (or tag).</p>
+
+<p class="todo">...working here...</p>
+
+</div>
+
+<div class="h2" id="references" title="references">
+<h2>References</h2>
+
+<ul>
+<li><p>BuildBot:<br/>
+    <a href="http://buildbot.sourceforge.net/"
+            >http://buildbot.sourceforge.net/</a>&nbsp;(start&nbsp;here)<br/>
+    <a href="http://buildbot.sourceforge.net/PyCon-2003/buildbot.html"
+            >http://buildbot.sourceforge.net/PyCon-2003/buildbot.html</a>&nbsp;(great&nbsp;technical&nbsp;overview)<br/>
+    <a href="https://sourceforge.net/projects/buildbot/"
+               >https://sourceforge.net/projects/buildbot/</a><br/>
+    <a href="http://buildbot.sourceforge.net/manual-0.7.0.html"
+               >http://buildbot.sourceforge.net/manual-0.7.0.html</a></p>
+</li>
+
+<li><p>Original mail about the system:</p>
+
+<pre>
+   <a
+   href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=109179"
+   >http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=109179</a>
+   From: Karl Fogel &lt;kfogel@collab.net&gt;
+   To: dev@subversion.tigris.org
+   Subject: Helping CollabNet provide an automated build farm for Subversion.
+   Date: Mon, 28 Nov 2005 15:09:48 -0600 (CST)
+   Message-Id: &lt;200511282109.jASL9m287485@newton.ch.collab.net&gt;
+</pre>
+
+<p>Direct thread link:</p>
+
+<pre>
+   <a
+href="http://subversion.tigris.org/servlets/BrowseList?list=dev&by=thread&from=398579">http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=398579</a>
+</pre>
+</li>
+
+<li><p>BuildBot depends on Python TwistedMatrix.  If you happen to use
+       Debian GNU/Linux, you install TwistedMatrix very easily:<p>
+
+    <pre>
+    # apt-get&nbsp;update && apt-get&nbsp;install&nbsp;twisted
+    </pre>
+
+<!-- More verbosely:
+
+   erdos:/home/kfogel# apt-get install twisted
+   Reading package lists... Done
+   Building dependency tree... Done
+   Note, selecting python2.3-twisted instead of twisted
+   The following extra packages will be installed:
+     python2.3-twisted python2.3-twisted-bin python2.3-zopeinterface
+   Recommended packages:
+     python2.3-pyopenssl python2.3-pam
+   The following NEW packages will be installed:
+     python2.3-twisted python2.3-twisted-bin python2.3-zopeinterface
+   0 upgraded, 3 newly installed, 0 to remove and 105 not upgraded.
+   Need to get 1345kB of archives.
+   After unpacking 7946kB of additional disk space will be used.
+   Do you want to continue [Y/n]? 
+
+-->
+</li>
+
+</ul>
+
+</div>
+
+</div>
+</body>
+</html>
