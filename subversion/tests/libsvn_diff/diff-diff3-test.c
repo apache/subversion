@@ -910,6 +910,50 @@ test_three_way_merge_no_overlap (const char **msg,
                             "Yy\n",
                             pool));
 
+  SVN_ERR (three_way_merge ("zig1a", "zag1a", "zog1a",
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n",
+
+                            "Xx\r\n"
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n",
+
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n"
+                            "Yy\r\n",
+
+                            "Xx\r\n"
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n"
+                            "Yy\r\n",
+                            pool));
+
+  SVN_ERR (three_way_merge ("zig1b", "zag1b", "zog1b",
+                            "Aa\r"
+                            "Bb\r"
+                            "Cc\r",
+
+                            "Xx\r"
+                            "Aa\r"
+                            "Bb\r"
+                            "Cc\r",
+
+                            "Aa\r"
+                            "Bb\r"
+                            "Cc\r"
+                            "Yy\r",
+
+                            "Xx\r"
+                            "Aa\r"
+                            "Bb\r"
+                            "Cc\r"
+                            "Yy\r",
+                            pool));
+
   SVN_ERR (three_way_merge ("zig2", "zag2", "zog2",
                             "Aa\n"
                             "Bb\n"
