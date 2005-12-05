@@ -25,6 +25,8 @@ module Svn
       ext_mod.constants.each do |const|
         target_name = nil
         case const
+        when /^SVN__/
+          # ignore private constants
         when /^SVN_(?:#{target_mod.name.split("::").last.upcase}_)?/
           target_name = $POSTMATCH
         when /^SWIG_SVN_/
