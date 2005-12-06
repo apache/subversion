@@ -377,6 +377,9 @@ create_empty_file (const char **empty_file,
                                        svn_wc_adm_access_path (adm_access),
                                        FALSE, pool));
       apr_file_name_get (empty_file, file);
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_to_utf8 (empty_file, *empty_file, pool));
+#endif
     }
   else
     {
