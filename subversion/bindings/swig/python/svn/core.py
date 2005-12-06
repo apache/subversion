@@ -184,7 +184,13 @@ def svn_pool_destroy(pool):
   
   assert pool is not None
 
-  pool.destroy()
+  # New in 1.3.x: All pools are automatically destroyed when Python shuts
+  # down. For compatibility with 1.2.x, we won't report an error if your
+  # app tries to destroy a pool during the shutdown process. Instead, we
+  # check to make sure the application_pool is still around before calling
+  # pool.destroy().
+  if application_pool:
+    pool.destroy()
 apr_pool_destroy = svn_pool_destroy
 
 def svn_pool_clear(pool):
