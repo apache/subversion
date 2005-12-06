@@ -274,10 +274,14 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   const char *vcc_url;
   replay_baton_t rb;
 
-  /* XXX include arguments */
-  const char *body = apr_psprintf(pool,
-                                  "<S:replay-report xmlns:S=\"svn:\">\n"
-                                  "</S:replay-report>");
+  const char *body
+    = apr_psprintf(pool,
+                   "<S:replay-report xmlns:S=\"svn:\">\n"
+                   "  <S:revision>%ld</S:revision>\n"
+                   "  <S:low-water-mark>%ld</S:low-water-mark>\n"
+                   "  <S:send-deltas>%d</S:send-deltas>\n"
+                   "</S:replay-report>",
+                   revision, low_water_mark, send_deltas);
 
   SVN_ERR (svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->url->data, pool));
 

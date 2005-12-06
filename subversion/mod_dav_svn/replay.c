@@ -352,24 +352,88 @@ static void make_editor(const svn_delta_editor_t **editor,
   *edit_baton = eb;
 }
 
+static dav_error *
+malformed_element_error(const char *tagname, apr_pool_t *pool)
+{
+  return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0,
+                                apr_pstrcat(pool,
+                                            "The request's '", tagname,
+                                            "' element is malformed; there "
+                                            "is a problem with the client.",
+                                            NULL),
+                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+}
+
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output)
 {
+  svn_revnum_t low_water_mark = SVN_INVALID_REVNUM;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
   const svn_delta_editor_t *editor;
-  void *edit_baton;
-  const char *base_dir = "";
   svn_boolean_t send_deltas = TRUE;
-  svn_revnum_t low_water_mark = 0;
-  svn_revnum_t rev = 1;
+  const char *base_dir = "";
+  apr_bucket_brigade *bb;
+  apr_xml_elem *child;
   svn_fs_root_t *root;
   svn_error_t *err;
+  void *edit_baton;
 
-  /* XXX get arguments out of doc */
+  int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  if (ns == -1)
+    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                  "The request does not contain the 'svn:' "
+                                  "namespace, so it is not going to have an "
+                                  "svn:revision element. That element is "
+                                  "required.",
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
 
-  apr_bucket_brigade *bb = apr_brigade_create(resource->pool,
-                                              output->c->bucket_alloc);
+  for (child = doc->root->first_child; child != NULL; child = child->next)
+    {
+      if (child->ns == ns)
+        {
+          const char *cdata;
+
+          if (strcmp(child->name, "revision") == 0)
+            {
+              cdata = dav_xml_get_cdata(child, resource->pool, 1);
+              if (! cdata)
+                return malformed_element_error("revision", resource->pool);
+              rev = SVN_STR_TO_REV(cdata);
+            }
+          else if (strcmp(child->name, "low-water-mark") == 0)
+            {
+              cdata = dav_xml_get_cdata(child, resource->pool, 1);
+              if (! cdata)
+                return malformed_element_error("low-water-mark",
+                                               resource->pool);
+              low_water_mark = SVN_STR_TO_REV(cdata);
+            }
+          else if (strcmp(child->name, "send-deltas") == 0)
+            {
+              cdata = dav_xml_get_cdata(child, resource->pool, 1);
+              if (! cdata)
+                return malformed_element_error("send-deltas", resource->pool);
+              send_deltas = atoi(cdata);
+            }
+        }
+    }
+
+  if (! SVN_IS_VALID_REVNUM(rev))
+    return dav_svn__new_error_tag
+             (resource->pool, HTTP_BAD_REQUEST, 0,
+              "Request was missing the revision argument.",
+              SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+
+  if (! SVN_IS_VALID_REVNUM(low_water_mark))
+    return dav_svn__new_error_tag
+             (resource->pool, HTTP_BAD_REQUEST, 0,
+              "Request was missing the low-water-mark argument.",
+              SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+
+  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
