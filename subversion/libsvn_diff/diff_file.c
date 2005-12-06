@@ -1164,9 +1164,6 @@ svn_diff3__file_output_conflict(void *baton,
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_modified,
                            &len));
-  len = sizeof(APR_EOL_STR) - 1;
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
                                       modified_start, modified_length));
@@ -1176,9 +1173,6 @@ svn_diff3__file_output_conflict(void *baton,
       len = strlen(file_baton->conflict_original);
       SVN_ERR(svn_stream_write(file_baton->output_stream,
                                file_baton->conflict_original, &len));
-      len = sizeof(APR_EOL_STR) - 1;
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               APR_EOL_STR, &len));
 
       SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
                                           original_start, original_length));
@@ -1187,9 +1181,6 @@ svn_diff3__file_output_conflict(void *baton,
   len = strlen(file_baton->conflict_separator);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_separator, &len));
-  len = sizeof(APR_EOL_STR) - 1;
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
                                       latest_start, latest_length));
@@ -1197,11 +1188,29 @@ svn_diff3__file_output_conflict(void *baton,
   len = strlen(file_baton->conflict_latest);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_latest, &len));
-  len = sizeof(APR_EOL_STR) - 1;
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           APR_EOL_STR, &len));
 
   return SVN_NO_ERROR;
+}
+
+/* Return the first eol marker found in [BUF, ENDP) as a NUL-terminated
+ * string, or NULL if no eol marker is found. */
+static const char *
+detect_eol (char *buf, char *endp)
+{
+  const char *eol = find_eol_start (buf, endp - buf);
+  if (eol)
+    {
+      if (*eol == '\n')
+        return "\n";
+
+      /* We found a CR. */
+      ++eol;
+      if (eol == endp || *eol != '\n')
+        return "\r";
+      return "\r\n";
+    }
+
+  return NULL;
 }
 
 svn_error_t *
@@ -1225,6 +1234,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
 #if APR_HAS_MMAP
   apr_mmap_t *mm[3] = { 0 };
 #endif /* APR_HAS_MMAP */
+  const char *eol;
 
   memset(&baton, 0, sizeof(baton));
   baton.output_stream = output_stream;
@@ -1268,6 +1278,23 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
       if (baton.endp[idx])
         baton.endp[idx] += size;
     }
+
+  /* Check what eol marker we should use for conflict markers.
+     We use the eol marker of the modified file and fall back on the
+     platform's eol marker if that file doesn't contain any newlines. */
+  eol = detect_eol (baton.buffer[1], baton.endp[1]);
+  if (! eol)
+    eol = APR_EOL_STR;
+
+  /* Extend our conflict markers with the correct eol marker. */
+  baton.conflict_modified = apr_pstrcat (pool, baton.conflict_modified, eol,
+                                         NULL);
+  baton.conflict_original = apr_pstrcat (pool, baton.conflict_original, eol,
+                                         NULL);
+  baton.conflict_separator = apr_pstrcat (pool, baton.conflict_separator, eol,
+                                          NULL);
+  baton.conflict_latest = apr_pstrcat (pool, baton.conflict_latest, eol,
+                                       NULL);
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));
