@@ -391,6 +391,12 @@ module Svn
         end
       end
       
+      if Core.respond_to?(:get_keychain_simple_provider)
+        def add_keychain_simple_provider
+          add_provider(Core.auth_get_keychain_simple_provider)
+        end
+      end
+      
       def add_username_provider
         add_provider(Core.auth_get_username_provider)
       end
