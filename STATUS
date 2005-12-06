@@ -37,9 +37,10 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r17621
-    Check whether pools are valid before working with them in the Subversion
-    1.2.x compatibility wrappers for the Python bindings.
+  * r17638, r17639
+    For compatibility with 1.2.x apps, don't report errors when apps try to
+    destroy pools that were already automatically destroyed. Followup to
+    r17082.
     Justification:
       Simple but important fix for compatibility with Trac 0.9.x. Affects the
       Python bindings only.
