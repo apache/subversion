@@ -57,6 +57,7 @@ import filecmp
 import shutil
 import traceback
 import configparser
+import time
 
 import getopt
 try:
@@ -84,11 +85,6 @@ if len(args) == 0:
   objdir = ''
 else:
   objdir = os.path.abspath(args[0])
-
-sys.path.append(os.path.join(os.path.realpath('.'),
-                             'subversion/tests/clients/cmdline'))
-sys.path.append(os.path.join(os.path.realpath('.'),
-                             'subversion/tests/libsvn_subr'))
 
 # Use fsfs since this is the only supported option on the iSeries
 fs_type = 'fsfs'
@@ -119,6 +115,7 @@ print 'Testing', objdir, 'configuration on', repo_loc
 
 sys.path.insert(0, os.path.join(abs_builddir, 'build'))
 sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/clients/cmdline'))
+sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/libsvn_subr'))
 import run_tests
 
 # If needed create the designated scratch folder needed by ebcdic.py
@@ -131,7 +128,16 @@ th = run_tests.TestHarness(abs_srcdir, abs_builddir,
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)
+  start_time = time.time()
   failed = th.run(all_tests)
+  end_time = time.time()
+  print 'Tests Complete'
+  print '  START TIME:   ' + time.ctime(start_time)
+  print '  END TIME:     ' + time.ctime(end_time)
+  hours = (end_time - start_time) / 3600
+  minutes = (end_time - start_time) % 3600 / 60
+  seconds = (end_time - start_time) % 60
+  print '  ELAPSED TIME: %.2d:%.2d:%.2d ' % (hours, minutes, seconds)
 except:
   os.chdir(old_cwd)
   raise
