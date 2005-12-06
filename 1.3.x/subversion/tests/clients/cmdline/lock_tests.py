@@ -653,7 +653,7 @@ def lock_status(sbox):
 
 #----------------------------------------------------------------------
 # III.c : Steal lock on a file from another working copy with 'svn lock
-# --force', and check the status of lock in the repository from the 
+# --force', and check the status of lock in the repository from the
 # working copy in which the file was initially locked.
 def stolen_lock_status (sbox):
   "verify status of stolen lock"
@@ -1318,7 +1318,7 @@ def unlock_already_unlocked_files(sbox):
                                      '--no-auth-cache',
                                      '-m', 'lock several',
                                      iota_path, lambda_path, alpha_path)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1387,7 +1387,7 @@ def info_moved_path(sbox):
                                          wc_dir)
 
   # Create a new, unrelated iota, creating r3.
-  svntest.main.file_append(fname, "Another iota")
+  svntest.main.file_append(fname, "Another iota".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", fname)
   expected_output = svntest.wc.State(wc_dir, {

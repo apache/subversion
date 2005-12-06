@@ -904,17 +904,17 @@ def diff_base_to_repos(sbox):
 
   # Makes diff output look the same on all platforms.
   def strip_eols(lines):
-    return [x.replace("\r".encode('utf-8'), "").replace("\n".encode('utf-8'), "") for x in lines]
+    return [x.replace("\r", "").replace("\n", "") for x in lines]
 
   expected_output_lines = [
-    "Index: svn-test-work/working_copies/diff_tests-14/iota\n".encode('utf-8'),
-    "===================================================================\n".encode('utf-8'),
-    "--- svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n".encode('utf-8'),
-    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n".encode('utf-8'),
-    "@@ -1 +1,3 @@\n".encode('utf-8'),
-    " This is the file 'iota'.\n".encode('utf-8'),
-    "+some rev2 iota text.\n".encode('utf-8'),
-    "+an iota local mod.\n".encode('utf-8')]
+    "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n",
+    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n",
+    "@@ -1 +1,3 @@\n",
+    " This is the file 'iota'.\n",
+    "+some rev2 iota text.\n",
+    "+an iota local mod.\n"]
 
   if strip_eols(diff_output) != strip_eols(expected_output_lines):
     raise svntest.Failure
@@ -927,12 +927,12 @@ def diff_base_to_repos(sbox):
                                                         wc_dir)
   expected_output_lines = [
     "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
-    "===================================================================\n".encode('utf-8'),
-    "--- svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n".encode('utf-8'),
-    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n".encode('utf-8'),
-    "@@ -1,2 +1 @@\n".encode('utf-8'),
-    " This is the file 'iota'.\n".encode('utf-8'),
-    "-some rev2 iota text.\n".encode('utf-8')]
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n",
+    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n",
+    "@@ -1,2 +1 @@\n",
+    " This is the file 'iota'.\n",
+    "-some rev2 iota text.\n"]
 
   if sys.platform == 'AS/400':
     diff_output = ebcdic.os400_list_from_utf8(diff_output)

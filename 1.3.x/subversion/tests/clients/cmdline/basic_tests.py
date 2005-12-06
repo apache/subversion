@@ -371,7 +371,7 @@ def basic_corruption(sbox):
   os.chmod (mu_tb_path, 0666)
   shutil.copyfile (mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append (mu_tb_path, 'Aiyeeeee, corruption!\nHelp!\n')
-  if sys.platform == != 'AS/400':
+  if sys.platform != 'AS/400':
     os.chmod (tb_dir_path, tb_dir_saved_mode)
     os.chmod (mu_tb_path, mu_tb_saved_mode)
   else:
@@ -390,7 +390,7 @@ def basic_corruption(sbox):
   os.chmod (mu_tb_path, 0666)
   os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
-  if sys.platform == != 'AS/400':
+  if sys.platform != 'AS/400':
     os.chmod (tb_dir_path, tb_dir_saved_mode)
     os.chmod (mu_tb_path, mu_tb_saved_mode)
   else:
@@ -473,7 +473,7 @@ def basic_merging_update(sbox):
   # Make local mods to wc_backup by recreating mu and rho
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  if sys.platform == != 'AS/400':
+  if sys.platform != 'AS/400':
     fp_mu = open(mu_path_backup, 'w+')
   else:
     fp_mu = open(mu_path_backup, 'wb+')
@@ -1630,9 +1630,13 @@ def basic_peg_revision(sbox):
     None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
-  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
+  output, errlines = svntest.actions.run_and_verify_svn(None,
+                                                        ["xyz\n".encode('utf-8')],
+                                                        [],
                                                         'cat', wc_file+'@')
-  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
+  output, errlines = svntest.actions.run_and_verify_svn(None,
+                                                        ["xyz\n".encode('utf-8')],
+                                                        [],
                                                         'cat', url+'@')
 
 

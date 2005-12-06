@@ -17,6 +17,7 @@ import os, sys
 import getopt
 
 if sys.platform == 'AS/400':
+  import ebcdic
   import os400
   import ebcdic
 
@@ -161,14 +162,9 @@ class TestHarness:
 
       old_stdout = sys.stdout
       old_stderr = sys.stderr
-
       qshcmd = "PYTHON233/PYTHON PROGRAM('" + prog + "') PARM('--verbose')"
       parm_str = "'--verbose' '--cleanup'"
-      failed, test_out, test_err = ebcdic.os400_py_via_qshsys(prog, cmdline)
-
-      for line in test_out:
-        # Send output to log file, skipping leading space
-        print >> self.log, line[1:],
+      result, solines, selines = ebcdic.os400_py_via_qshsys(prog, cmdline)
 
       sys.stdout.flush()
       sys.stderr.flush()
@@ -183,7 +179,6 @@ class TestHarness:
         va.append('--cleanup')
       if self.fs_type is not None:
         va.append('--fs-type=' + self.fs_type)
-
       old_cwd = os.getcwd()
       try:
         os.chdir(progdir)
@@ -194,12 +189,12 @@ class TestHarness:
       else:
         os.chdir(old_cwd)
 
-      failed = 0
-
-      for line in solines:
-        print >> self.log, line,
-        if line.find('FAIL:  ') != -1 and line.find('XFAIL:  ') == -1:
-          failed = 1
+    failed = 0
+    for line in solines:
+      # Send output to log file, skipping leading space
+      print >> self.log, line[1:],
+      if line.find('FAIL:  ') != -1 and line.find('XFAIL:  ') == -1:
+        failed = 1
 
     if failed:
       print 'FAILURE'

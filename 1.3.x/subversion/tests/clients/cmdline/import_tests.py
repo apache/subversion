@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, re, os.path
+import string, re, os.path, sys
 
 # Our testing module
 import svntest
@@ -298,7 +298,7 @@ def import_avoid_empty_revision(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(import_executable, (os.name != 'posix')),
+              Skip(import_executable, (os.name != 'posix' or sys.platform == 'AS/400')),
               import_ignores,
               import_avoid_empty_revision,
               import_no_ignores,

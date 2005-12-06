@@ -105,10 +105,10 @@ if sys.platform != 'AS/400':
   svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 else:
   # Paths to symbolic links for subversion binaries
-  svn_binary = './svn'
-  svnadmin_binary = './svnadmin'
-  svnlook_binary = './svnlook'
-  svnversion_binary = './svnversion'
+  svn_binary = os.path.join(os.getcwd(), 'svn')
+  svnadmin_binary = os.path.join(os.getcwd(), 'svnadmin')
+  svnlook_binary = os.path.join(os.getcwd(), 'svnlook')
+  svnversion_binary = os.path.join(os.getcwd(), 'svnversion')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -325,6 +325,14 @@ def create_config_dir(cfgdir,
   # create the directory
   if not os.path.isdir(cfgdir):
     os.makedirs(cfgdir)
+
+  if sys.platform == 'AS/400':
+    fd = open(cfgfile_cfg, 'wb')
+    fd.close()
+    fd = open(cfgfile_srv, 'wb')
+    fd.close()
+    ebcdic.os400_tagtree(cfgfile_cfg, 1208, True)
+    ebcdic.os400_tagtree(cfgfile_cfg, 1208, True)
 
   fd = open(cfgfile_cfg, 'wb')
   fd.write(config_contents)

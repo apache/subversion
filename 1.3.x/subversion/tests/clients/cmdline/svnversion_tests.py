@@ -17,7 +17,10 @@
 ######################################################################
 
 # General modules
-import os.path
+import os.path, sys
+
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # Our testing module
 import svntest
@@ -132,7 +135,14 @@ def ignore_externals(sbox):
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
   externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
-  tmp_f = os.tempnam(wc_dir, 'tmp')
+  if sys.platform != 'AS/400':
+    tmp_f = os.tempnam(wc_dir, 'tmp')
+  else:
+    externals_desc = externals_desc.encode('utf-8')
+    import tempfile
+    handle, tmp_f = tempfile.mkstemp('', 'tmp', wc_dir)
+    os.close(handle)
+    ebcdic.os400_tagtree(tmp_f, 1208, True)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn("", None, [],
                                      'pset',
