@@ -17,6 +17,10 @@ from svntest import Skip
 from svntest import testcase
 from svntest import wc
 
+scratch_path = os.path.join(os.getcwd(), 'scratch')
+if not os.path.exists(scratch_path):
+  os.mkdir(scratch_path)
+
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -90,61 +94,61 @@ e2a_table = [
 [ ' ',  '\x3f',  '\x1a',  '\x00' ],
 [ ' ',  '\x40',  '\x20',  '\x00' ],
 [ ' ',  '\x41',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'â',  '\x42',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ä',  '\x43',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'à',  '\x44',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'á',  '\x45',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x46',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'å',  '\x47',  '\x7d',  '\x00' ],
-[ 'ç',  '\x48',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ñ',  '\x49',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '¢',  '\x4a',  '\x23',  '\x00' ],
+[ 'Ã¢',  '\x42',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¤',  '\x43',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã ',  '\x44',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¡',  '\x45',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x46',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¥',  '\x47',  '\x7d',  '\x00' ],
+[ 'Ã§',  '\x48',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã±',  '\x49',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â¢',  '\x4a',  '\x23',  '\x00' ],
 [ '.',  '\x4b',  '\x2e',  '\x00' ],
 [ '<',  '\x4c',  '\x3c',  '\x00' ],
 [ '(',  '\x4d',  '\x28',  '\x00' ],
 [ '+',  '\x4e',  '\x2b',  '\x00' ],
 [ '|',  '\x4f',  '\x21',  '\x00' ],
 [ '&',  '\x50',  '\x26',  '\x00' ],
-[ 'é',  '\x51',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ê',  '\x52',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ë',  '\x53',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'è',  '\x54',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'í',  '\x55',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'î',  '\x56',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ï',  '\x57',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ì',  '\x58',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ß',  '\x59',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã©',  '\x51',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ãª',  '\x52',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã«',  '\x53',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¨',  '\x54',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã­',  '\x55',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã®',  '\x56',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¯',  '\x57',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¬',  '\x58',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'ÃŸ',  '\x59',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '!',  '\x5a',  '\x21',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '$',  '\x5b',  '\x24',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '*',  '\x5c',  '\x2a',  '\x00' ],
 [ ')',  '\x5d',  '\x29',  '\x00' ],
 [ ';',  '\x5e',  '\x3b',  '\x00' ],
-[ '¬',  '\x5f',  '\x5e',  '\x00' ],
+[ 'Â¬',  '\x5f',  '\x5e',  '\x00' ],
 [ '-',  '\x60',  '\x2d',  '\x00' ],
 [ '/',  '\x61',  '\x2f',  '\x00' ],
-[ '',  '\x62',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'Ä',  '\x63',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x64',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x65',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x66',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'Å',  '\x67',  '\x24',  '\x00' ],
-[ 'Ç',  '\x68',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'Ñ',  '\x69',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x6a',  '\x7c',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x62',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã„',  '\x63',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x64',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x65',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x66',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã…',  '\x67',  '\x24',  '\x00' ],
+[ 'Ã‡',  '\x68',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã‘',  '\x69',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x6a',  '\x7c',  '\x00' ], # Multibyte Conversion to UTF-8
 [ ',',  '\x6b',  '\x2c',  '\x00' ],
 [ '%',  '\x6c',  '\x25',  '\x00' ],
 [ '_',  '\x6d',  '\x5f',  '\x00' ],
 [ '>',  '\x6e',  '\x3e',  '\x00' ],
 [ '?',  '\x6f',  '\x3f',  '\x00' ],
-[ '',  '\x70',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'É',  '\x71',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x72',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x73',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x74',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x75',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x76',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x77',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x78',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x70',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã‰',  '\x71',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x72',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x73',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x74',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x75',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x76',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x77',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x78',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '`',  '\x79',  '\x60',  '\x00' ],
 [ ':',  '\x7a',  '\x3a',  '\x00' ],
 [ '#',  '\x7b',  '\x23',  '\x00' ], # Multibyte Conversion to UTF-8
@@ -152,7 +156,7 @@ e2a_table = [
 [ "'",  '0x7d',  '\x27',  '\x00' ],
 [ '=',  '\x7e',  '\x3d',  '\x00' ],
 [ '"',  '\x7f',  '\x22',  '\x00' ],
-[ '',  '\x80',  '\x40',  '\x00' ],
+[ '.',  '\x80',  '\x40',  '\x00' ],
 [ 'a',  '\x81',  '\x61',  '\x00' ],
 [ 'b',  '\x82',  '\x62',  '\x00' ],
 [ 'c',  '\x83',  '\x63',  '\x00' ],
@@ -162,13 +166,13 @@ e2a_table = [
 [ 'g',  '\x87',  '\x67',  '\x00' ],
 [ 'h',  '\x88',  '\x68',  '\x00' ],
 [ 'i',  '\x89',  '\x69',  '\x00' ],
-[ '«',  '\x8a',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '»',  '\x8b',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x8c',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x8d',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\x8e',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '±',  '\x8f',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '°',  '\x90',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â«',  '\x8a',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â»',  '\x8b',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x8c',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x8d',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\x8e',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â±',  '\x8f',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â°',  '\x90',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ 'j',  '\x91',  '\x6a',  '\x00' ],
 [ 'k',  '\x92',  '\x6b',  '\x00' ],
 [ 'l',  '\x93',  '\x6c',  '\x00' ],
@@ -178,13 +182,13 @@ e2a_table = [
 [ 'p',  '\x97',  '\x70',  '\x00' ],
 [ 'q',  '\x98',  '\x71',  '\x00' ],
 [ 'r',  '\x99',  '\x72',  '\x00' ],
-[ 'ª',  '\x9a',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'º',  '\x9b',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'æ',  '\x9c',  '\x7b',  '\x00' ],
-[ '',  '\x9d',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'Æ',  '\x9e',  '\x5b',  '\x00' ],
-[ '',  '\x9f',  '\x5d',  '\x00' ],
-[ '',  '\xa0',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Âª',  '\x9a',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Âº',  '\x9b',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¦',  '\x9c',  '\x7b',  '\x00' ],
+[ '.',  '\x9d',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã†',  '\x9e',  '\x5b',  '\x00' ],
+[ '.',  '\x9f',  '\x5d',  '\x00' ],
+[ '.',  '\xa0',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '~',  '\xa1',  '\x7E',  '\x00' ], # Multibyte Conversion to UTF-8
 [ 's',  '\xa2',  '\x73',  '\x00' ],
 [ 't',  '\xa3',  '\x74',  '\x00' ],
@@ -194,28 +198,28 @@ e2a_table = [
 [ 'x',  '\xa7',  '\x78',  '\x00' ],
 [ 'y',  '\xa8',  '\x79',  '\x00' ],
 [ 'z',  '\xa9',  '\x7a',  '\x00' ],
-[ '¡',  '\xaa',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '¿',  '\xab',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xac',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xad',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xae',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xaf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â¡',  '\xaa',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â¿',  '\xab',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xac',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xad',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xae',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xaf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '^',  '\xb0',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '£',  '\xb1',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '¥',  '\xb2',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '·',  '\xb3',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xb4',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '§',  '\xb5',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '¶',  '\xb6',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '¼',  '\xb7',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '½',  '\xb8',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xb9',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '[',  '\xba',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ ']',  '\xbb',  '\x7c',  '\x00' ],
-[ '',  '\xbc',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xbd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xbe',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xbf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â£',  '\xb1',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â¥',  '\xb2',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â·',  '\xb3',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xb4',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â§',  '\xb5',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â¶',  '\xb6',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â¼',  '\xb7',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â½',  '\xb8',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xb9',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '[',  '\xba',  '\x5b',  '\x00' ],
+[ ']',  '\xbb',  '\x5d',  '\x00' ],
+[ '.',  '\xbc',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xbd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xbe',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xbf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '{',  '\xc0',  '\x7b',  '\x00' ], # Multibyte Conversion to UTF-8
 [ 'A',  '\xc1',  '\x41',  '\x00' ],
 [ 'B',  '\xc2',  '\x42',  '\x00' ],
@@ -226,12 +230,12 @@ e2a_table = [
 [ 'G',  '\xc7',  '\x47',  '\x00' ],
 [ 'H',  '\xc8',  '\x48',  '\x00' ],
 [ 'I',  '\xc9',  '\x49',  '\x00' ],
-[ '',  '\xca',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ô',  '\xcb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ö',  '\xcc',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ò',  '\xcd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ó',  '\xce',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xcf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xca',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã´',  '\xcb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¶',  '\xcc',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã²',  '\xcd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã³',  '\xce',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xcf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '}',  '\xd0',  '\x7d',  '\x00' ], # Multibyte Conversion to UTF-8
 [ 'J',  '\xd1',  '\x4a',  '\x00' ],
 [ 'K',  '\xd2',  '\x4b',  '\x00' ],
@@ -242,14 +246,14 @@ e2a_table = [
 [ 'P',  '\xd7',  '\x50',  '\x00' ],
 [ 'Q',  '\xd8',  '\x51',  '\x00' ],
 [ 'R',  '\xd9',  '\x52',  '\x00' ],
-[ '',  '\xda',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'û',  '\xdb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ü',  '\xdc',  '\x7e',  '\x00' ],
-[ 'ù',  '\xdd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ú',  '\xde',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'ÿ',  '\xdf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '\\', '0xe0',  '\x5c'  ],
-[ '÷',  '\xe1',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xda',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã»',  '\xdb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¼',  '\xdc',  '\x7e',  '\x00' ],
+[ 'Ã¹',  '\xdd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ãº',  '\xde',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã¿',  '\xdf',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '\\', '0xe0',  '\x5c',  '\x00' ],
+[ 'Ã·',  '\xe1',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ 'S',  '\xe2',  '\x53',  '\x00' ],
 [ 'T',  '\xe3',  '\x54',  '\x00' ],
 [ 'U',  '\xe4',  '\x55',  '\x00' ],
@@ -258,12 +262,12 @@ e2a_table = [
 [ 'X',  '\xe7',  '\x58',  '\x00' ],
 [ 'Y',  '\xe8',  '\x59',  '\x00' ],
 [ 'Z',  '\xe9',  '\x5a',  '\x00' ],
-[ '²',  '\xea',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xeb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'Ö',  '\xec',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xed',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xee',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xef',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â²',  '\xea',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xeb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ã–',  '\xec',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xed',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xee',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xef',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 [ '0',  '\xf0',  '\x30',  '\x00' ],
 [ '1',  '\xf1',  '\x31',  '\x00' ],
 [ '2',  '\xf2',  '\x32',  '\x00' ],
@@ -274,12 +278,12 @@ e2a_table = [
 [ '7',  '\xf7',  '\x37',  '\x00' ],
 [ '8',  '\xf8',  '\x38',  '\x00' ],
 [ '9',  '\xf9',  '\x39',  '\x00' ],
-[ '',  '\xfa',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xfb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ 'Ü',  '\xfc',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xfd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ '',  '\xfe',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
-[ ' ',  '\xff',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xfa',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xfb',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Ãœ',  '\xfc',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xfd',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ '.',  '\xfe',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
+[ 'Â ',  '\xff',  '\x00',  '\x00' ], # Multibyte Conversion to UTF-8
 ]
 
 def os400_convert_string_to_utf8(s):
@@ -385,7 +389,7 @@ def os400_run_cmd_list(command, stdin_lines=None, out_utf8=0, err_utf8=0, va=[])
   # names of the temp files containing the stdout and stderr.
 
   if stdin_lines:
-    fin, in_file = tempfile.mkstemp('.in.txt', 'cmd.', '/py_tests/scratch')
+    fin, in_file = tempfile.mkstemp('.in.txt', 'cmd.', scratch_path)
     finp = open(in_file, "wb")
     finp.writelines(stdin_lines)
     finp.close()
@@ -393,8 +397,8 @@ def os400_run_cmd_list(command, stdin_lines=None, out_utf8=0, err_utf8=0, va=[])
     qsh_set_ccsid_cmd = "QSYS/QSH CMD('setccsid 1208 " + in_file + "')"
     os.system(qsh_set_ccsid_cmd)
 
-  fout, out_file = tempfile.mkstemp('.out.txt', 'cmd.', '/py_tests/scratch')
-  ferr, err_file = tempfile.mkstemp('.err.txt', 'cmd.', '/py_tests/scratch')
+  fout, out_file = tempfile.mkstemp('.out.txt', 'cmd.', scratch_path)
+  ferr, err_file = tempfile.mkstemp('.err.txt', 'cmd.', scratch_path)
 
   os.close(fout)
   os.close(ferr)
@@ -433,29 +437,31 @@ def os400_run_cmd_list(command, stdin_lines=None, out_utf8=0, err_utf8=0, va=[])
   # for utf-8 files - it reads in the entire file as one line.
   if (out_utf8):
     so_contents = solog.read()
+    if so_contents.endswith('\n'.encode('utf-8')):
+      ends_w_newline = False
+    else:
+      ends_w_newline = True
     solines_tmp = so_contents.split('\n'.encode('utf-8'))
     solines = []
     for line in solines_tmp:
       solines.append(line + '\n'.encode('utf-8'))
-    # Regardless of whether so_contents ended with a newline, the above code
-    # added one assumming split() removed it...
-    if len(so_contents) > 0  and so_contents[len(so_contents) - 1] == '\n'.encode('utf-8'):
-      # ...in that case remove that extra empty string.
-      solines[(len(solines) - 1)] = solines[(len(solines) - 1)].rstrip('\n'.encode('utf-8'))
+    if not ends_w_newline:
+      solines.pop()
   else:
     solines = solog.readlines()
 
   if (err_utf8):
     se_contents = selog.read()
+    if se_contents.endswith('\n'.encode('utf-8')):
+      ends_w_newline = False
+    else:
+      ends_w_newline = True
     selines_tmp = se_contents.split('\n'.encode('utf-8'))
     selines = []
     for line in selines_tmp:
       selines.append(line + '\n'.encode('utf-8'))
-    # Regardless of whether se_contents ended with a newline, the above code
-    # added one assumming split() removed it...
-    if (se_contents[len(se_contents) - 1] == '\n'.encode('utf-8')):
-      # ...in that case remove that extra empty string.
-      selines[(len(selines) - 1)] = selines[(len(selines) - 1)].rstrip('\n'.encode('utf-8'))
+    if not ends_w_newline:
+      selines.pop()
   else:
     selines = selog.readlines()
 
@@ -484,9 +490,9 @@ def os400_py_via_qshsys(script_path, opts=None):
   # Run python script at script_path.
 
   # Use .txt extensions for temp files so WebSphere can open them without difficulty.
-  fout, out_file = tempfile.mkstemp('.out.txt', 'py.', '/py_tests/scratch')
-  ferr, err_file = tempfile.mkstemp('.err.txt', 'py.', '/py_tests/scratch')
-  fpy, py_file   = tempfile.mkstemp('.py.txt', 'py.', '/py_tests/scratch')
+  fout, out_file = tempfile.mkstemp('.out.txt', 'py.', scratch_path)
+  ferr, err_file = tempfile.mkstemp('.err.txt', 'py.', scratch_path)
+  fpy, py_file   = tempfile.mkstemp('.py.txt', 'py.', scratch_path)
 
   script = open(py_file, 'w')
   script_contents = "system \"PYTHON233/PYTHON PROGRAM(\'" + script_path + "\') "

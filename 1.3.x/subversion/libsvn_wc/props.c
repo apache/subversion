@@ -222,7 +222,12 @@ append_prop_conflict (apr_file_t *fp,
      timestamp or something? */
   apr_size_t written;
   const char *conflict_description_native =
+#if !APR_CHARSET_EBCDIC
     svn_utf_cstring_from_utf8_fuzzy (conflict_description->data, pool);
+#else
+    /* The ebcdic port limits property values to utf-8. */
+    conflict_description->data;
+#endif
 
   SVN_ERR (svn_io_file_write_full (fp, conflict_description_native,
                                    strlen (conflict_description_native),
@@ -454,7 +459,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                 {
                   conflict = TRUE;
                   conflict_description = 
-                    svn_string_createf 
+                    SVN_STRING_CREATEF 
                     (pool, 
                      _("Trying to add new property '%s' with value '%s',\n"
                        "but property already exists with value '%s'."),
@@ -478,7 +483,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                 {
                   conflict = TRUE;
                   conflict_description = 
-                    svn_string_createf 
+                    SVN_STRING_CREATEF 
                     (pool, 
                      _("Trying to change property '%s' from '%s' to '%s',\n"
                        "but the property does not exist."),
@@ -508,7 +513,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                 {
                   conflict = TRUE;
                   conflict_description =
-                    svn_string_createf
+                    SVN_STRING_CREATEF
                     (pool, _("Trying to delete property '%s' but value"
                              " has been modified from '%s' to '%s'."),
                      propname, from_val->data, working_val->data);
@@ -526,7 +531,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                 {
                   conflict = TRUE;
                   conflict_description = 
-                    svn_string_createf 
+                    SVN_STRING_CREATEF 
                     (pool, 
                      _("Trying to change property '%s' from '%s' to '%s',\n"
                        "but property already exists with value '%s'."),
@@ -559,6 +564,15 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                                                 &reject_tmp_path,
                                                 tmppath, SVN_WC__PROP_REJ_EXT,
                                                 FALSE, pool));
+
+#if AS400
+              SVN_ERR (svn_io_file_close (reject_tmp_fp, pool));
+              SVN_ERR (svn_ebcdic_set_file_ccsid (reject_tmp_path, 1208,
+                                                  pool));
+              SVN_ERR (svn_io_file_open (&reject_tmp_fp, reject_tmp_path,
+                                         APR_READ | APR_WRITE | APR_BUFFERED,
+                                         0, pool));
+#endif
               
               /* reject_tmp_path is an absolute path at this point,
                  but that's no good for us.  We need to convert this
@@ -687,6 +701,9 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                                             FALSE, pool));
 
           SVN_ERR (svn_io_file_close (reject_fp, pool));
+#if AS400
+          SVN_ERR (svn_ebcdic_set_file_ccsid (reserved_path, 1208, pool));
+#endif
           
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
@@ -909,6 +926,14 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                                     SVN_WC__PROP_REJ_EXT,
                                                     FALSE,
                                                     pool));
+#if AS400
+                  SVN_ERR (svn_io_file_close (reject_tmp_fp, pool));
+                  SVN_ERR (svn_ebcdic_set_file_ccsid (reject_tmp_path, 1208,
+                                                      pool));
+                  SVN_ERR (svn_io_file_open (&reject_tmp_fp, reject_tmp_path,
+                                             APR_READ | APR_WRITE |
+                                             APR_BUFFERED, 0, pool));
+#endif
 
                   /* reject_tmp_path is an absolute path at this point,
                      but that's no good for us.  We need to convert this
@@ -1071,6 +1096,9 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                             pool));
 
           SVN_ERR (svn_io_file_close (reject_fp, pool));
+#if AS400
+          SVN_ERR (svn_ebcdic_set_file_ccsid (reserved_path, 1208, pool));
+#endif
           
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on

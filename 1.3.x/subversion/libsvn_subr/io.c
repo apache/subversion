@@ -694,9 +694,24 @@ svn_io_append_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   const char *src_apr, *dst_apr;
+#if AS400
+  svn_node_kind_t kind;
+#endif
 
   SVN_ERR (svn_path_cstring_from_utf8 (&src_apr, src, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_apr, dst, pool));
+
+#if AS400
+  /* On the iSeries if the dst file doesn't exist it is created with a
+   * native CCSID regardless of of src's CCSID, so svn_io_copy_path is used
+   * which ensures dst has a ccsid of 1208. */
+  SVN_ERR (svn_io_check_path (dst, &kind, pool));
+  if (kind == svn_node_none)
+    {
+      SVN_ERR (svn_io_copy_file (src, dst, APR_OS_DEFAULT, pool));
+      return SVN_NO_ERROR;
+    }
+#endif
 
   apr_err = apr_file_append (src_apr, dst_apr, APR_OS_DEFAULT, pool);
 
