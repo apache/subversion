@@ -1316,15 +1316,65 @@ test_three_way_merge_with_conflict (const char **msg,
 
                             "",
 
-                            "<<<<<<< dug2" APR_EOL_STR
+                            "<<<<<<< dug2\n"
                             "Aa\n"
                             "Bb\n"
                             "Cc\n"
                             "Dd\n"
                             "Ee\n"
                             "Ff\n"
-                            "=======" APR_EOL_STR
-                            ">>>>>>> dag2" APR_EOL_STR,
+                            "=======\n"
+                            ">>>>>>> dag2\n",
+                            pool));
+
+  SVN_ERR (three_way_merge ("dig2a", "dug2a", "dag2a",
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n",
+
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n"
+                            "Dd\r\n"
+                            "Ee\r\n"
+                            "Ff\r\n",
+
+                            "",
+
+                            "<<<<<<< dug2a\r\n"
+                            "Aa\r\n"
+                            "Bb\r\n"
+                            "Cc\r\n"
+                            "Dd\r\n"
+                            "Ee\r\n"
+                            "Ff\r\n"
+                            "=======\r\n"
+                            ">>>>>>> dag2a\r\n",
+                            pool));
+
+  SVN_ERR (three_way_merge ("dig2b", "dug2b", "dag2b",
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "Aa\r"
+                            "Bb\r"
+                            "Cc\r"
+                            "Dd\r"
+                            "Ee\r"
+                            "Ff\r",
+
+                            "",
+
+                            "<<<<<<< dug2b\r"
+                            "Aa\r"
+                            "Bb\r"
+                            "Cc\r"
+                            "Dd\r"
+                            "Ee\r"
+                            "Ff\r"
+                            "=======\r"
+                            ">>>>>>> dag2b\r",
                             pool));
 
   SVN_ERR (three_way_merge ("dig3", "dug3", "dag3",
@@ -1344,13 +1394,13 @@ test_three_way_merge_with_conflict (const char **msg,
 
                             "Aa\n"
                             "Bb\n"
-                            "<<<<<<< dug3" APR_EOL_STR
+                            "<<<<<<< dug3\n"
                             "Cc\n"
                             "Dd\n"
                             "Ee\n"
                             "Ff\n"
-                            "=======" APR_EOL_STR
-                            ">>>>>>> dag3" APR_EOL_STR,
+                            "=======\n"
+                            ">>>>>>> dag3\n",
                             pool));
 
   SVN_ERR (three_way_merge ("dig4", "dug4", "dag4",
@@ -1371,9 +1421,9 @@ test_three_way_merge_with_conflict (const char **msg,
                             "Aa\n"
                             "Bb\n"
                             "Cc\n"
-                            "<<<<<<< dug4" APR_EOL_STR
-                            "Dd=======" APR_EOL_STR
-                            "Ee>>>>>>> dag4" APR_EOL_STR,
+                            "<<<<<<< dug4\n"
+                            "Dd=======\n"
+                            "Ee>>>>>>> dag4\n",
                             pool));
 
   return SVN_NO_ERROR;
