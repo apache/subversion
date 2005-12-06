@@ -60,6 +60,7 @@ module Svn
       alias _initialize initialize
       def initialize
         @prompts = []
+        @batons = []
         @providers = []
         @auth_baton = Svn::Core::AuthBaton.new
         self.auth_baton = @auth_baton
@@ -457,8 +458,9 @@ module Svn
           prompt.call(cred, *prompt_args)
           cred
         end
-        method_name = "auth_get_#{name}_prompt_provider"
-        pro = Core.__send__(method_name, real_prompt, *args)
+        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
+        baton, pro = Core.__send__(method_name, real_prompt, *args)
+        @batons << baton
         @prompts << real_prompt
         add_provider(pro)
       end
