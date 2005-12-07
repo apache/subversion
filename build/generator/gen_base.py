@@ -125,7 +125,8 @@ class GeneratorBase:
     # Compute intra-library dependencies
     for section in self.sections.values():
       dependencies = (( DT_LINK,   section.options.get('libs',    "") ),
-                      ( DT_NONLIB, section.options.get('nonlibs', "") ))
+                      ( DT_NONLIB, section.options.get('nonlibs', "") ),
+                      ( DT_SOURCELIB, section.options.get('sourcelibs', "")))
 
       for dep_type, dep_names in dependencies:
         # Translate string names to Section objects
@@ -241,6 +242,7 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
+  'DT_SOURCELIB',# sources of dependency are directly compiled into target
   ]
 
 # create some variables for these
