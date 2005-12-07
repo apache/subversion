@@ -1193,9 +1193,13 @@ svn_diff3__file_output_conflict(void *baton,
 }
 
 /* Return the first eol marker found in [BUF, ENDP) as a
- * NUL-terminated string, or NULL if no eol marker is found.  Assume
- * that an entire file is read into memory (does not operate on
- * chunks).
+ * NUL-terminated string, or NULL if no eol marker is found.
+ *
+ * If the last valid character of BUF is the first byte of a
+ * potentially two-byte eol sequence, just return "\r", that is,
+ * assume BUF represents a CR-only file.  This is correct for callers
+ * that pass an entire file at once, and is no more likely to be
+ * incorrect than correct for any caller that doesn't.
  */
 static const char *
 detect_eol (char *buf, char *endp)
