@@ -804,8 +804,10 @@ svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
 #if APR_CHARSET_EBCDIC
       /* ebcdic platforms assume string components of svn_error_t are
        * encoded in ebcdic. */
-      SVN_ERR(svn_utf_cstring_from_utf8(&(err->message), err->message, pool));
-      SVN_ERR(svn_utf_cstring_from_utf8(&(err->file), err->file, pool)); 
+      if (err->message)
+        SVN_ERR(svn_utf_cstring_from_utf8(&(err->message), err->message, pool));
+      if (err->file)
+        SVN_ERR(svn_utf_cstring_from_utf8(&(err->file), err->file, pool)); 
 #endif
       err->line = line;
     }

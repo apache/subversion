@@ -2,7 +2,10 @@
 
 Usage: python iTest.py [option] [test-path]
     -v, --verbose      talk more
-
+    -u URL, --url=URL  run ra_svn tests against URL; will start
+                       svnserve for ra_svn tests
+    -l LIB, --lib=LIB  Use svnserve from this library;
+                       defaults to *LIBL.
 """
 
 test_scripts = [
@@ -51,7 +54,7 @@ test_scripts = [
                 'subversion/tests/clients/cmdline/import_tests.py'
                ]
 
-import os, sys
+import os, sys, re
 
 import filecmp
 import shutil
@@ -70,15 +73,21 @@ all_tests = test_scripts
 client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
                       all_tests)
 
-opts, args = my_getopt(sys.argv[1:], 'vcu::',
-                       ['verbose', 'cleanup', 'url=', 'svnserve-args='])
+opts, args = my_getopt(sys.argv[1:], 'vcu:l:',
+                       ['verbose', 'cleanup', 'url=', 'lib='])
 
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
-# Interpret the options and set parameters
-base_url, fs_type, verbose, cleanup = None, None, None, None
+run_svnserve = None
+svnserve_lib = None
+base_url = None
+fs_type = None
+verbose = None
+cleanup = None
 repo_loc = 'local repository.'
+log = 'tests.log.txt'
+fs_type = 'fsfs' # The only supported option on the iSeries
 
 if len(args) == 0:
   # Use home directory if no target dir given
@@ -86,18 +95,25 @@ if len(args) == 0:
 else:
   objdir = os.path.abspath(args[0])
 
-# Use fsfs since this is the only supported option on the iSeries
-fs_type = 'fsfs'
-
-log = 'tests.log.txt'
-run_svnserve = None
-svnserve_args = None
-
+# Interpret the options and set parameters
 for opt, val in opts:
-  if opt in ('-v', '--verbose'):
+  if opt in ('-u', '--url'):
+    all_tests = client_tests
+    repo_loc = 'remote repository ' + val + '.'
+    base_url = val
+    if val[:3] == 'svn':
+      log = 'svn-tests.log.txt'
+      run_svnserve = 1
+    else:
+      # Don't know this scheme, but who're we to judge whether it's
+      # correct or not?
+      log = 'url-tests.log.txt'
+  elif opt in ('-v', '--verbose'):
     verbose = 1
   elif opt in ('-c', '--cleanup'):
     cleanup = 1
+  elif opt in ('-l', '--lib'):
+    svnserve_lib = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -109,14 +125,32 @@ else:
   abs_builddir = os.path.abspath(args[0])
   create_dirs = 1
 
-# Run the tests
-
-print 'Testing', objdir, 'configuration on', repo_loc
-
 sys.path.insert(0, os.path.join(abs_builddir, 'build'))
 sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/clients/cmdline'))
 sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/libsvn_subr'))
 import run_tests
+import ebcdic
+
+# Run the tests
+if run_svnserve:
+  if svnserve_lib == None:
+    print 'WARNING: No lib specified for svnserve, using *LIBL, is this what you want?'
+  # Grab the port number from the url
+  cm = re.compile (":[0-9]+")
+  port = cm.findall(base_url)
+  if port:
+    cmd = "SBMJOB CMD(CALL PGM(%s/SVNSERVE) PARM('-d' '--listen-port' '%s' " \
+          "'-r' '%s')) JOB(SVNSERVE) JOBQ(AUTOSTART) LOG(*JOBD *JOBD *SECLVL) " \
+          "ALWMLTTHD(*YES)" % (svnserve_lib, port[0][1:], objdir)
+    print 'Starting svnserve:'
+    ebcdic.os400_spool_print(cmd)
+    os.system(cmd)
+  else:
+    print 'ERROR: Unable to parse port number from url=%s.' % (base_url)
+    print 'ERROR: No default port supported, svnserve not started.'
+    sys.exit(1)
+
+print 'Testing', objdir, 'configuration on', repo_loc
 
 # If needed create the designated scratch folder needed by ebcdic.py
 if not os.path.exists(os.path.join(abs_builddir, 'scratch')):
