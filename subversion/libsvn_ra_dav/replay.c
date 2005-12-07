@@ -145,11 +145,11 @@ start_element(void *baton, int parent_state, const char *nspace,
         if (! path)
           rb->err = svn_error_create
                       (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("MIssing name attr in delete-entry element"));
+                       _("Missing name attr in delete-entry element"));
         else if (! crev)
           rb->err = svn_error_create
                       (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("MIssing rev attr in delete-entry element"));
+                       _("Missing rev attr in delete-entry element"));
         else
           {
             dir_item_t *di = &TOP_DIR(rb);
