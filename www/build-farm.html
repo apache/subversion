@@ -48,8 +48,7 @@ are:</p>
        feature.</li>
 </ul>
 
-<![CDATA[=========================================================]]>
-
+<![CDATA[==============================================================]]>
 <div class="h2" id="overview" title="overview">
 <h2>Overview</h2>
 
@@ -61,15 +60,81 @@ feature, which lets a developer to ask the question "What would happen
 if I committed this patch right now?".  It runs the unit test suite
 (across multiple build platforms) on the developer's current code,
 allowing her to make sure they will not break the tree when she
-finally commits her changes.</p>
+finally commits her changes.  The default setup, however, is to build
+a repository tree, usually trunk, or a release branch or tag.</p>
 
-<p>The default setup, however, is to build a repository tree, usually
-trunk or a release branch (or tag).</p>
+<p>BuildBot uses two terms, <b>buildmaster</b> and <b>buildslave</b>,
+that mean exactly what you think they do.  There is typically one
+buildmaster, and multiple buildslaves.  Most people will want to read
+about <a href="#buildslave">buildslave configuration</a>, which tells
+how to set up a buildslave client.  Buildmaster setup is covered <a
+href="#buildmaster">here</a>, but is probably of interest only to the
+CollabNet administrators who run the buildmaster server.</p>
+
+</div>
+
+
+<![CDATA[==============================================================]]>
+<div class="h2" id="buildslave" title="buildslave">
+<h2>Buildslave</h2>
 
 <p class="todo">...working here...</p>
 
 </div>
 
+
+<![CDATA[==============================================================]]>
+<div class="h2" id="buildmaster" title="buildmaster">
+<h2>Buildmaster</h2>
+
+<p>BuildBot uses the usual Python installation mechanism, and depends
+on the TwistedMatrix library.  If you happen to use Debian GNU/Linux,
+you can set these up very easily:<p>
+
+<pre>
+   # apt-get update
+   # apt-get install&nbsp;python2.3-dev
+   # apt-get install&nbsp;twisted
+</pre>
+
+<p>Just follow the instructions at <a
+href="http://buildbot.sourceforge.net/manual-0.7.0.html#Installation"
+>http://buildbot.sourceforge.net/manual-0.7.0.html#Installation</a></p>
+
+<p class="todo">...working here...</p>
+
+<!-- More verbosely:
+
+   erdos:/home/kfogel# apt-get install twisted
+   Reading package lists... Done
+   Building dependency tree... Done
+   Note, selecting python2.3-twisted instead of twisted
+   The following extra packages will be installed:
+     python2.3-twisted python2.3-twisted-bin python2.3-zopeinterface
+   Recommended packages:
+     python2.3-pyopenssl python2.3-pam
+   The following NEW packages will be installed:
+     python2.3-twisted python2.3-twisted-bin python2.3-zopeinterface
+   0 upgraded, 3 newly installed, 0 to remove and 105 not upgraded.
+   Need to get 1345kB of archives.
+   After unpacking 7946kB of additional disk space will be used.
+   Do you want to continue [Y/n]? 
+
+-->
+
+</div>
+
+
+<![CDATA[==============================================================]]>
+<div class="h2" id="try" title="try">
+<h2>Trying out a change</h2>
+
+<p class="todo">...working here...</p>
+
+</div>
+
+
+<![CDATA[==============================================================]]>
 <div class="h2" id="references" title="references">
 <h2>References</h2>
 
@@ -104,33 +169,6 @@ trunk or a release branch (or tag).</p>
    <a
 href="http://subversion.tigris.org/servlets/BrowseList?list=dev&by=thread&from=398579">http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=398579</a>
 </pre>
-</li>
-
-<li><p>BuildBot depends on Python TwistedMatrix.  If you happen to use
-       Debian GNU/Linux, you install TwistedMatrix very easily:<p>
-
-    <pre>
-    # apt-get&nbsp;update && apt-get&nbsp;install&nbsp;twisted
-    </pre>
-
-<!-- More verbosely:
-
-   erdos:/home/kfogel# apt-get install twisted
-   Reading package lists... Done
-   Building dependency tree... Done
-   Note, selecting python2.3-twisted instead of twisted
-   The following extra packages will be installed:
-     python2.3-twisted python2.3-twisted-bin python2.3-zopeinterface
-   Recommended packages:
-     python2.3-pyopenssl python2.3-pam
-   The following NEW packages will be installed:
-     python2.3-twisted python2.3-twisted-bin python2.3-zopeinterface
-   0 upgraded, 3 newly installed, 0 to remove and 105 not upgraded.
-   Need to get 1345kB of archives.
-   After unpacking 7946kB of additional disk space will be used.
-   Do you want to continue [Y/n]? 
-
--->
 </li>
 
 </ul>
