@@ -47,7 +47,7 @@ Approved changes:
       Trivial change - change one string constant and delete one
       svn_cmdline_fprintf() call only.
     Votes:
-      +1: maxb, lundblad, rooneg
+      +1: maxb, lundblad, rooneg, dlr
 
   * r17638, r17639
     For compatibility with 1.2.x apps, don't report errors when apps try to
