@@ -64,6 +64,12 @@ AC_DEFUN(SVN_FIND_JDK,
   if test "$os_arch" = "Darwin" -a "$JDK" = "/usr" -a -d "/Library/Java/Home"; then
       JDK="/Library/Java/Home"
   fi
+  if test "$os_arch" = "Darwin" -a "$JDK" = "/Library/Java/Home"; then
+      JRE_LIB_DIR="/System/Library/Frameworks/JavaVM.framework/Classes"
+  else
+      JRE_LIB_DIR="$JDK/jre/lib"
+  fi
+
   if test -f "$JDK/include/jni.h"; then
     dnl This *must* be fully expanded, or we'll have problems later in find.
     JNI_INCLUDEDIR="$JDK/include"
@@ -106,8 +112,8 @@ AC_DEFUN(SVN_FIND_JDK,
         if test -z "$jikes_found" -a -x "$jikes"; then
           jikes_found="yes"
           JAVAC="$jikes"
-          JAVA_CLASSPATH="$JDK/jre/lib"
-          for jar in $JDK/jre/lib/*.jar; do
+          JAVA_CLASSPATH="$JRE_LIB_DIR"
+          for jar in $JRE_LIB_DIR/*.jar; do
             JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
           done
         fi
