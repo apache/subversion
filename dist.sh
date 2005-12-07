@@ -25,8 +25,8 @@
 #        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
 #        -apru ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
 #
-#   When building a alpha, beta or rc tarballs pass the apppropriate flag
-#   followeb by the number for that releasse.  For example you'd do
+#   When building alpha, beta or rc tarballs pass the appropriate flag
+#   followed by the number for that release.  For example you'd do
 #   the following for a Beta 1 release:
 #      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -beta 1
 # 
