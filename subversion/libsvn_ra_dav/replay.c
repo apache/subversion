@@ -16,6 +16,7 @@
  * ====================================================================
  */
 
+#include "svn_base64.h"
 #include "svn_pools.h"
 #include "svn_xml.h"
 
@@ -37,6 +38,19 @@ typedef struct {
 
   /* Stack of in progress directories, holds dir_item_t objects. */
   apr_array_header_t *dirs;
+
+  /* Cached file baton so we can pass it between the add/open file and
+   * apply textdelta portions of the editor drive. */
+  void *file_baton;
+
+  /* The pool we use for the current file. */
+  apr_pool_t *file_pool;
+
+  /* Variables required to decode and apply our svndiff data off the wire. */
+  svn_txdelta_window_handler_t whandler;
+  void *whandler_baton;
+  svn_stream_t *svndiff_decoder;
+  svn_stream_t *base64_decoder;
 } replay_baton_t;
 
 #define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
@@ -124,7 +138,26 @@ start_element(void *baton, int parent_state, const char *nspace,
       break;
 
     case ELEM_delete_entry:
-      /* XXX implement */
+      {
+        const char *path = svn_xml_get_attr_value("name", atts);
+        const char *crev = svn_xml_get_attr_value("rev", atts);
+
+        if (! path)
+          rb->err = svn_error_create
+                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                       _("MIssing name attr in delete-entry element"));
+        else if (! crev)
+          rb->err = svn_error_create
+                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                       _("MIssing rev attr in delete-entry element"));
+        else
+          {
+            dir_item_t *di = &TOP_DIR(rb);
+
+            rb->err = rb->editor->delete_entry(path, SVN_STR_TO_REV(crev),
+                                               di->baton, di->pool);
+          }
+      }
       break;
 
     case ELEM_open_directory:
@@ -132,6 +165,15 @@ start_element(void *baton, int parent_state, const char *nspace,
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
         const char *path = svn_xml_get_attr_value("path", atts);
+
+        /* If a file pool is in use, destroy it and NULL it out, since it
+         * applies to the previous directory's files, not this one.  If we
+         * need one for this directory we'll create one later on. */
+        if (rb->file_pool)
+          {
+            svn_pool_destroy(rb->file_pool);
+            rb->file_pool = NULL;
+          }
 
         /* Pop off any dirs we're done with, i.e. anything our path isn't
          * under */
@@ -154,7 +196,7 @@ start_element(void *baton, int parent_state, const char *nspace,
         if (! path)
           rb->err = svn_error_create
                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                      _("Missing revision path in open-directory element"));
+                      _("Missing name attr in open-directory element"));
         else
           {
             dir_item_t *parent = &TOP_DIR(rb);
@@ -195,15 +237,76 @@ start_element(void *baton, int parent_state, const char *nspace,
       break;
 
     case ELEM_open_file:
-      /* XXX implement */
-      break;
-
     case ELEM_add_file:
-      /* XXX implement */
+      {
+        const char *path = svn_xml_get_attr_value("name", atts);
+        svn_revnum_t rev;
+
+        dir_item_t *parent = &TOP_DIR(rb);
+
+        if (! path)
+          return svn_error_createf;
+                   (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing name attr in %s element"),
+                    elm->id == ELEM_open_file ? "open-file" : "add-file");
+
+        /* If there's already a file pool, clear it out, since it was used
+         * for the previous file.  If not, create a new one so we can use it
+         * for this file. */
+        if (rb->file_pool)
+          svn_pool_clear(rb->file_pool);
+        else
+          rb->file_pool = svn_pool_create(parent->pool);
+
+        if (elm->id == ELEM_add_file)
+          {
+            const char *cpath = svn_xml_get_attr_value("copyfrom-path", atts);
+            const char *crev = svn_xml_get_attr_value("copyfrom-rev", atts);
+
+            if (crev)
+              rev = SVN_STR_TO_REV(crev);
+            else
+              rev = SVN_INVALID_REVNUM;
+
+            rb->err = rb->editor->add_file(path, parent->baton, cpath, rev,
+                                           rb->file_pool, &rb->file_baton);
+          }
+        else
+          {
+            const char *crev = svn_xml_get_attr_value("rev", atts);
+
+            if (crev)
+              rev = SVN_STR_TO_REV(crev);
+            else
+              rev = SVN_INVALID_REVNUM;
+
+            rb->err = rb->editor->open_file(path, parent->baton, rev,
+                                            rb->file_pool,
+                                            &rb->file_baton);
+          }
+      }
       break;
 
     case ELEM_apply_textdelta:
-      /* XXX implement */
+      if (! rb->file_baton)
+        rb->err = svn_error_create
+                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                     _("Got apply-textdelta element without preceding "
+                       "add-file or open-file"));
+      else
+        rb->err = rb->editor->apply_textdelta(rb->file_baton,
+                                              NULL, /* XXX base checksum */
+                                              rb->file_pool,
+                                              &rb->whandler,
+                                              &rb->whandler_baton);
+      if (! rb->err)
+        {
+          rb->svndiff_decoder = svn_txdelta_parse_svndiff(rb->whandler,
+                                                          rb->whandler_baton,
+                                                          TRUE, rb->file_pool);
+          rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
+                                                 rb->file_pool);
+        }
       break;
 
     case ELEM_change_file_prop:
@@ -239,11 +342,21 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
       rb->err = rb->editor->close_edit(rb->edit_baton, rb->pool);
       break;
 
-    /* XXX anything else we need to handle in close?  apply textdelta maybe? */
+    case ELEM_apply_textdelta:
+      rb->err = svn_stream_close(rb->base64_decoder);
+      rb->file_baton = NULL;
+      rb->whandler = NULL;
+      rb->whandler_baton = NULL;
+      rb->svndiff_decoder = NULL;
+      rb->base64_decoder = NULL;
+      break;
 
     default:
       break;
     }
+
+  if (rb->err)
+    return NE_XML_ABORT;
 
   return SVN_RA_DAV__XML_VALID;
 }
@@ -251,12 +364,22 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
 static int
 cdata_handler(void *baton, int state, const char *cdata, size_t len)
 {
+  replay_baton_t *rb = baton;
+  apr_size_t nlen = len;
+
   switch (state)
     {
     case ELEM_apply_textdelta:
-      /* XXX implement */
+      rb->err = svn_stream_write(rb->base64_decoder, cdata, &nlen);
+      if (! rb->err && nlen != len)
+        rb->err = svn_error_createf
+                    (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                     _("Error writing stream: unexpected EOF"));
       break;
     }
+
+  if (rb->err)
+    return NE_XML_ABORT;
 
   return 0; /* no error */
 }
@@ -284,6 +407,8 @@ svn_ra_dav__replay(svn_ra_session_t *session,
                    revision, low_water_mark, send_deltas);
 
   SVN_ERR (svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->url->data, pool));
+
+  memset(&rb, 0, sizeof(rb));
 
   rb.editor = editor;
   rb.edit_baton = edit_baton;

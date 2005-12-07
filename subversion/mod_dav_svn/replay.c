@@ -120,8 +120,9 @@ static svn_error_t *delete_entry(const char *path,
   SVN_ERR(maybe_close_textdelta(eb));
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:delete-entry name=\"%s\"/>" DEBUG_CR,
-                            qname));
+                            "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
+                            DEBUG_CR,
+                            qname, revision));
 
   return SVN_NO_ERROR;
 }
@@ -205,9 +206,7 @@ static svn_error_t *add_file(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qname = apr_xml_quote_string(pool,
-                                           svn_path_basename (path, pool),
-                                           1);
+  const char *qname = apr_xml_quote_string(pool, path, 1);
 
   const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
                                                            copyfrom_path,
@@ -241,9 +240,7 @@ static svn_error_t *open_file(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qname = apr_xml_quote_string(pool,
-                                           svn_path_basename (path, pool),
-                                           1);
+  const char *qname = apr_xml_quote_string(pool, path, 1);
 
   SVN_ERR(maybe_close_textdelta(eb));
 
