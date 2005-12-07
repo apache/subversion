@@ -14,15 +14,6 @@ Soak period:
 
 Candidate changes:
 
-  * r17521
-    Fix and improve help text for property commands such as 'svn propget'.
-    Justification:
-      Misleading help messages are not good.
-    Notes: Only changes for messages.
-    Votes:
-      +0: nori
-      +1: lundblad, maxb
-
   * r17665, r17666
     Avoid corrupting WC when adding repos entry attribute, or when switching
     with an inconsistent URL.
@@ -40,6 +31,15 @@ Approved changes:
       Include translations in the Windows binary packages again.
     Votes:
       +1: brane, dlr, rooneg
+
+  * r17521
+    Fix and improve help text for property commands such as 'svn propget'.
+    Justification:
+      Misleading help messages are not good.
+    Notes: Only changes for messages.
+    Votes:
+      +0: nori
+      +1: lundblad, maxb, rooneg
 
   * r17614
     Undeprecate the svnserve -R (--read-only) option.
