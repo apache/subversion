@@ -110,7 +110,19 @@ start_element(void *baton, int parent_state, const char *nspace,
   if (! elm)
     return NE_XML_DECLINE;
 
-  /* XXX validate element */
+  if (parent_state == ELEM_root)
+    {
+      /* If we're at the root of the tree, the element has to be the editor
+       * report itself. */
+      if (elm->id != ELEM_editor_report)
+        return SVN_RA_DAV__XML_INVALID;
+    }
+  else if (parent_state != ELEM_editor_report)
+    {
+      /* If we're not at the root, our parent has to be the editor report,
+       * since we don't actually nest any elements. */
+      return SVN_RA_DAV__XML_INVALID;
+    }
 
   switch (elm->id)
     {
