@@ -68,7 +68,11 @@
 #define CRAM_MD5_STR \
         "\x43\x52\x41\x4d\x2d\x4d\x44\x35"
         /* "CRAM_MD5" */
-        
+
+#define DASH_T_STR \
+        "\x2d\x74"
+        /* "-t" */
+
 #define DELETE_PATH_STR \
         "\x64\x65\x6c\x65\x74\x65\x2d\x70\x61\x74\x68"
         /* "delete-path" */
@@ -140,6 +144,10 @@
 #define LOCK_STR \
         "\x6c\x6f\x63\x6b"
         /* "lock" */
+
+#define LOCK_MANY_STR \
+        "\x6c\x6f\x63\x6b\x2d\x6d\x61\x6e\x79"
+        /* "lock-many" */
         
 #define LOG_STR \
         "\x6C\x6F\x67"
@@ -161,6 +169,14 @@
         "\x73\x65\x74\x2d\x70\x61\x74\x68"
         /* "set-path" */
 
+#define SSH_STR \
+        "\x73\x73\x68"
+        /* "ssh" */
+
+#define DOLLAR_SVN_SSH_SSH_STR \
+        "\x24\x53\x56\x4e\x5f\x53\x53\x48\x20\x73\x73\x68"
+        /* "$SVN_SSH ssh" */
+
 #define STAT_STR \
         "\x73\x74\x61\x74"
          /* "stat" */
@@ -177,6 +193,10 @@
         "\x73\x76\x6e"
         /* "svn" */
 
+#define SVNSERVE_STR \
+        "\x73\x76\x6e\x73\x65\x72\x76\x65"
+        /* "svnserve" */
+
 #define SWITCH_STR \
         "\x73\x77\x69\x74\x63\x68"
         /* "switch" */
@@ -184,6 +204,10 @@
 #define UNLOCK_STR \
         "\x75\x6e\x6c\x6f\x63\x6b"
         /* "unlock" */
+
+#define UNLOCK_MANY_STR \
+        "\x75\x6e\x6c\x6f\x63\x6b\x2d\x6d\x61\x6e\x79"
+        /* "unlock-many" */
 
 #define UNKNOWN_STR \
         "\x75\x6e\x6b\x6e\x6f\x77\x6e"
@@ -628,8 +652,8 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
   svn_config_get(cfg, &val, SVN_CONFIG_SECTION_TUNNELS, tunnel, NULL);
 
   /* We have one predefined tunnel scheme, if it isn't overridden by config. */
-  if (!val && strcmp(tunnel, "ssh") == 0)
-    val = "$SVN_SSH ssh";
+  if (!val && strcmp(tunnel, SSH_STR) == 0)
+    val = DOLLAR_SVN_SSH_SSH_STR;
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -637,16 +661,16 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
 
   /* If the scheme definition begins with "$varname", it means there
    * is an environment variable which can override the command. */
-  if (*val == '$')
+  if (*val == SVN_UTF8_DOLLAR)
     {
       val++;
-      len = strcspn(val, " ");
+      len = strcspn(val, SVN_UTF8_SPACE_STR);
       var = apr_pstrmemdup(pool, val, len);
       cmd = getenv(var);
       if (!cmd)
         {
           cmd = val + len;
-          while (*cmd == ' ')
+          while (*cmd == SVN_UTF8_SPACE)
             cmd++;
           if (!*cmd)
             return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -669,8 +693,8 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
   *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
   memcpy(*argv, cmd_argv, n * sizeof(char *));
   (*argv)[n++] = svn_path_uri_decode (hostinfo, pool);
-  (*argv)[n++] = "svnserve";
-  (*argv)[n++] = "-t";
+  (*argv)[n++] = SVNSERVE_STR;
+  (*argv)[n++] = DASH_T_STR;
   (*argv)[n] = NULL;
 
   return SVN_NO_ERROR;
@@ -1729,7 +1753,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   svn_lock_t *lock;
   apr_array_header_t *list = NULL;
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)b(!", "lock-many",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)b(!", LOCK_MANY_STR,
                                  comment, steal_lock));
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
@@ -1779,7 +1803,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
          the middle of the request list.  If this happens, it will
          transmit "done" to end the lock-info early, and then the
          overall command response will talk about the fatal error. */
-      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, "done") == 0)
+      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, DONE_STR) == 0)
         break;
 
       if (elt->kind != SVN_RA_SVN_LIST)
@@ -1789,9 +1813,9 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "wl", &status,
                                      &list));
 
-      if (strcmp(status, "failure") == 0)
+      if (strcmp(status, FAILURE_STR) == 0)
         err = svn_ra_svn__handle_failure_status(list, subpool);
-      else if (strcmp(status, "success") == 0)
+      else if (strcmp(status, SUCCESS_STR) == 0)
         {
           SVN_ERR(parse_lock(list, subpool, &lock));
           err = NULL;
@@ -1818,7 +1842,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   if (!hi)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &elt));
-      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, "done") != 0)
+      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, DONE_STR) != 0)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Didn't receive end marker for lock "
                                   "responses"));
@@ -1851,7 +1875,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   const void *key;
   const char *path;
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(b(!", "unlock-many",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(b(!", UNLOCK_MANY_STR,
                                  break_lock));
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
@@ -1899,7 +1923,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
          the middle of the request list.  If this happens, it will
          transmit "done" to end the lock-info early, and then the
          overall command response will talk about the fatal error. */
-      if (elt->kind == SVN_RA_SVN_WORD && (strcmp(elt->u.word, "done") == 0))
+      if (elt->kind == SVN_RA_SVN_WORD && (strcmp(elt->u.word, DONE_STR) == 0))
         break;
 
       apr_hash_this(hi, &key, NULL, NULL);
@@ -1912,9 +1936,9 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "wl", &status,
                                      &list));
 
-      if (strcmp(status, "failure") == 0)
+      if (strcmp(status, FAILURE_STR) == 0)
         err = svn_ra_svn__handle_failure_status(list, subpool);
-      else if (strcmp(status, "success") == 0)
+      else if (strcmp(status, SUCCESS_STR) == 0)
         {
           SVN_ERR(svn_ra_svn_parse_tuple(list, subpool, "c", &path));
           err = SVN_NO_ERROR;
@@ -1940,7 +1964,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   if (!hi)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &elt));
-      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, "done") != 0)
+      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, DONE_STR) != 0)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Didn't receive end marker for unlock "
                                   "responses"));

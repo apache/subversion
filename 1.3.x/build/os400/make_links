@@ -32,6 +32,7 @@ mklnk $PGMLIB/SVN.PGM        $ROOTDIR/svn
 mklnk $PGMLIB/SVNADMIN.PGM   $ROOTDIR/svnadmin
 mklnk $PGMLIB/SVNVERSION.PGM $ROOTDIR/svnversion
 mklnk $PGMLIB/SVNLOOK.PGM    $ROOTDIR/svnlook
+mklnk $PGMLIB/SVNSERVE.PGM   $ROOTDIR/svnserve
 mklnk $PGMLIB/TEST_RAND.PGM  $ROOTDIR/subversion/tests/libsvn_delta/TEST_RAND
 mklnk $PGMLIB/TEST_DIFF3.PGM $ROOTDIR/subversion/tests/libsvn_diff/TEST_DIFF3
 mklnk $PGMLIB/TEST_LOCKS.PGM $ROOTDIR/subversion/tests/libsvn_fs/TEST_LOCKS
