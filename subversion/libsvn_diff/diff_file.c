@@ -67,7 +67,7 @@ typedef struct svn_diff__file_baton_t
 /* Look for the start of an end-of-line sequence (i.e. CR or LF)
  * in the array pointed to by BUF, of length LEN.
  * If such a byte is found, return the pointer to it, else return NULL.
-*/
+ */
 static char *
 find_eol_start (char *buf, apr_size_t len)
 {
