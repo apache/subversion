@@ -245,10 +245,13 @@ start_element(void *baton, int parent_state, const char *nspace,
         dir_item_t *parent = &TOP_DIR(rb);
 
         if (! path)
-          return svn_error_createf;
-                   (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                    _("Missing name attr in %s element"),
-                    elm->id == ELEM_open_file ? "open-file" : "add-file");
+          {
+            rb->err = svn_error_createf
+                        (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                         _("Missing name attr in %s element"),
+                         elm->id == ELEM_open_file ? "open-file" : "add-file");
+            break;
+          }
 
         /* If there's already a file pool, clear it out, since it was used
          * for the previous file.  If not, create a new one so we can use it
