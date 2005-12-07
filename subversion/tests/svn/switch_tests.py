@@ -1056,7 +1056,7 @@ def switch_change_repos_root(sbox):
 
   # A switch that changes the repo root part of the URL shouldn't work.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*not the sameEEE repository.*",
+                                     ".*not the same repository.*",
                                      'switch',
                                      other_A_url, A_wc_dir)
 
