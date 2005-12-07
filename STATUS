@@ -21,7 +21,7 @@ Candidate changes:
     Notes: Only changes for messages.
     Votes:
       +0: nori
-      +1: lundblad
+      +1: lundblad, maxb
 
   * r17665, r17666
     Avoid corrupting WC when adding repos entry attribute, or when switching
