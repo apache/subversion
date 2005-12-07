@@ -1192,8 +1192,11 @@ svn_diff3__file_output_conflict(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Return the first eol marker found in [BUF, ENDP) as a NUL-terminated
- * string, or NULL if no eol marker is found. */
+/* Return the first eol marker found in [BUF, ENDP) as a
+ * NUL-terminated string, or NULL if no eol marker is found.  Assume
+ * that an entire file is read into memory (does not operate on
+ * chunks).
+ */
 static const char *
 detect_eol (char *buf, char *endp)
 {
