@@ -1037,6 +1037,35 @@ def refresh_read_only_attribute(sbox):
                           "to a branch on which its svn:needs-lock property "
                           "is not set" % mu_path)
 
+# Check that switch can't change the repository root.
+def switch_change_repos_root(sbox):
+  "switch shouldn't allow changing repos root"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  other_repo_url = repo_url
+
+  # Strip trailing slashes and add something bogus to that other URL.
+  while other_repo_url[-1] == '/':
+    other_repos_url = other_repo_url[:-1]
+  other_repo_url = other_repo_url + "_bogus"
+
+  other_A_url = other_repo_url +  "/A"
+  A_wc_dir = os.path.join(wc_dir, "A")
+
+  # A switch that changes the repo root part of the URL shouldn't work.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*not the sameEEE repository.*",
+                                     'switch',
+                                     other_A_url, A_wc_dir)
+
+  # Make sure we didn't break the WC.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+                                        
+
+
 ########################################################################
 # Run the tests
 
@@ -1060,6 +1089,7 @@ test_list = [ None,
               commit_mods_below_switch,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
+              switch_change_repos_root,
              ]
 
 if __name__ == '__main__':

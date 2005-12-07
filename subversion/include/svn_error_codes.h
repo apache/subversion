@@ -384,6 +384,11 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 24,
               "Invalid relocation")
 
+  /** @since New in 1.3. */
+  SVN_ERRDEF (SVN_ERR_WC_INVALID_SWITCH,
+              SVN_ERR_WC_CATEGORY_START + 25,
+              "Invalid switch")
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
