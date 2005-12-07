@@ -50,15 +50,6 @@ extern "C" {
      svn_fs.h interface use Subversion transactions.  */
 
 
-/* Initializing a filesystem.  */
-
-
-/* Given a filesystem FS, which contains all the necessary tables,
-   create the initial revision 0, and the initial root directory.  */
-svn_error_t *svn_fs_fs__dag_init_fs (svn_fs_t *fs);
-
-
-
 /* Generic DAG node stuff.  */
 
 typedef struct dag_node_t dag_node_t;

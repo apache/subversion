@@ -283,9 +283,6 @@ svn_error_t *svn_fs_fs__set_uuid (svn_fs_t *fs,
                                   const char *uuid,
                                   apr_pool_t *pool);
 
-/* Write out the zeroth revision for filesystem FS. */
-svn_error_t *svn_fs_fs__write_revision_zero (svn_fs_t *fs);
-
 /* Set *NAMES_P to an array of names which are all the active
    transactions in filesystem FS.  Allocate the array from POOL. */
 svn_error_t *svn_fs_fs__list_transactions (apr_array_header_t **names_p,
