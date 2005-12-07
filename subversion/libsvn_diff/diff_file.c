@@ -69,7 +69,7 @@ typedef struct svn_diff__file_baton_t
  * If such a byte is found, return the pointer to it, else return NULL.
  */
 static char *
-find_eol_start (char *buf, apr_size_t len)
+find_eol_start(char *buf, apr_size_t len)
 {
   for (; len > 0; ++buf, --len)
     {
@@ -1202,9 +1202,9 @@ svn_diff3__file_output_conflict(void *baton,
  * incorrect than correct for any caller that doesn't.
  */
 static const char *
-detect_eol (char *buf, char *endp)
+detect_eol(char *buf, char *endp)
 {
-  const char *eol = find_eol_start (buf, endp - buf);
+  const char *eol = find_eol_start(buf, endp - buf);
   if (eol)
     {
       if (*eol == '\n')
@@ -1289,19 +1289,19 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
   /* Check what eol marker we should use for conflict markers.
      We use the eol marker of the modified file and fall back on the
      platform's eol marker if that file doesn't contain any newlines. */
-  eol = detect_eol (baton.buffer[1], baton.endp[1]);
+  eol = detect_eol(baton.buffer[1], baton.endp[1]);
   if (! eol)
     eol = APR_EOL_STR;
 
   /* Extend our conflict markers with the correct eol marker. */
-  baton.conflict_modified = apr_pstrcat (pool, baton.conflict_modified, eol,
+  baton.conflict_modified = apr_pstrcat(pool, baton.conflict_modified, eol,
+                                        NULL);
+  baton.conflict_original = apr_pstrcat(pool, baton.conflict_original, eol,
+                                        NULL);
+  baton.conflict_separator = apr_pstrcat(pool, baton.conflict_separator, eol,
                                          NULL);
-  baton.conflict_original = apr_pstrcat (pool, baton.conflict_original, eol,
-                                         NULL);
-  baton.conflict_separator = apr_pstrcat (pool, baton.conflict_separator, eol,
-                                          NULL);
-  baton.conflict_latest = apr_pstrcat (pool, baton.conflict_latest, eol,
-                                       NULL);
+  baton.conflict_latest = apr_pstrcat(pool, baton.conflict_latest, eol,
+                                      NULL);
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));
