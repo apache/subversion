@@ -192,7 +192,22 @@ static svn_error_t *change_dir_prop(void *baton,
 
   SVN_ERR(maybe_close_textdelta(eb));
 
-  /* XXX do stuff here */
+  if (value)
+    {
+      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
+
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 "<S:change-dir-prop name=\"%s\">%s</S:change-dir-prop>"
+                 DEBUG_CR, name, enc_value->data));
+    }
+  else
+    {
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 "<S:change-dir-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
+                 name));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -289,8 +304,22 @@ static svn_error_t *change_file_prop(void *baton,
 
   SVN_ERR(maybe_close_textdelta(eb));
 
-  /* XXX do stuff here */
+  if (value)
+    {
+      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
 
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 "<S:change-file-prop name=\"%s\">%s</S:change-file-prop>"
+                 DEBUG_CR, name, enc_value->data));
+    }
+  else
+    {
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 "<S:change-file-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
+                 name));
+    }
   return SVN_NO_ERROR;
 }
 

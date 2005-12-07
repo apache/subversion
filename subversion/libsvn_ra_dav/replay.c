@@ -51,6 +51,16 @@ typedef struct {
   void *whandler_baton;
   svn_stream_t *svndiff_decoder;
   svn_stream_t *base64_decoder;
+
+  /* A scratch pool used to allocate property data. */
+  apr_pool_t *prop_pool;
+
+  /* The name of a property that's being modified. */
+  const char *prop_name;
+
+  /* A stringbuf that holds the contents of a property being changed, if this
+   * is NULL it means that the property is being deleted. */
+  svn_stringbuf_t *prop_accum;
 } replay_baton_t;
 
 #define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
@@ -313,11 +323,28 @@ start_element(void *baton, int parent_state, const char *nspace,
       break;
 
     case ELEM_change_file_prop:
-      /* XXX implement */
-      break;
-
     case ELEM_change_dir_prop:
-      /* XXX implement */
+      {
+        const char *name = svn_xml_get_attr_value("name", atts);
+
+        if (! name)
+          rb->err = svn_error_createf
+                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                       _("Missing name attr in %s element"),
+                       elm->id == ELEM_change_file_prop ? "change-file-prop"
+                                                        : "change-dir-prop");
+        else
+          {
+            svn_pool_clear(rb->prop_pool);
+
+            if (svn_xml_get_attr_value("del", atts))
+              rb->prop_accum = NULL;
+            else
+              rb->prop_accum = svn_stringbuf_create("", rb->prop_pool);
+
+            rb->prop_name = apr_pstrdup(rb->prop_pool, name);
+          }
+      }
       break;
     }
 
@@ -354,6 +381,35 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
       rb->base64_decoder = NULL;
       break;
 
+    case ELEM_change_file_prop:
+    case ELEM_change_dir_prop:
+      {
+        const svn_string_t *decoded_value;
+        svn_string_t prop;
+
+        if (rb->prop_accum)
+          {
+            prop.data = rb->prop_accum->data;
+            prop.len = rb->prop_accum->len;
+
+            decoded_value = svn_base64_decode_string(&prop, rb->prop_pool);
+          }
+        else
+          decoded_value = NULL; /* It's a delete */
+
+        if (elm->id == ELEM_change_dir_prop)
+          rb->err = rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->prop_name,
+                                                decoded_value,
+                                                TOP_DIR(rb).pool);
+        else
+          rb->err = rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->prop_name,
+                                                 decoded_value,
+                                                 rb->file_pool);
+      }
+      break;
+
     default:
       break;
     }
@@ -378,6 +434,15 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
         rb->err = svn_error_createf
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                      _("Error writing stream: unexpected EOF"));
+      break;
+
+    case ELEM_change_dir_prop:
+    case ELEM_change_file_prop:
+      if (! rb->prop_accum)
+        rb->err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                    _("Got cdata content for a prop delete"));
+      else
+        svn_stringbuf_appendbytes(rb->prop_accum, cdata, len);
       break;
     }
 
@@ -418,6 +483,8 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.err = SVN_NO_ERROR;
   rb.pool = pool;
   rb.dirs = apr_array_make(pool, 5, sizeof (dir_item_t));
+  rb.prop_pool = svn_pool_create(pool);
+  rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
   SVN_ERR (svn_ra_dav__parsed_request(ras->sess, "REPORT", vcc_url, body,
                                       NULL, NULL,
