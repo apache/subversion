@@ -733,6 +733,25 @@ svn_auth_get_windows_simple_provider (svn_auth_provider_object_t **provider,
 #if SVN_HAVE_KEYCHAIN_SERVICES
 #include <Security/Security.h>
 
+/*
+ * XXX (2005-12-07): If no GUI is available (e.g. over a SSH session),
+ * you won't be prompted for credentials with which to unlock your
+ * keychain.  Apple recognizes lack of TTY prompting as a known
+ * problem.
+ *
+ *
+ * XXX (2005-12-07): SecKeychainSetUserInteractionAllowed(FALSE) does
+ * not appear to actually prevent all user interaction.  Specifically,
+ * if the executable changes (for example, if it is rebuilt), the
+ * system prompts the user to okay the use of the new executable.
+ *
+ * Worse than that, the interactivity setting is global per app (not
+ * process/thread), meaning that there is a race condition in the
+ * implementation below between calls to
+ * SecKeychainSetUserInteractionAllowed() when multiple instances of
+ * the same Subversion auth provider-based app run concurrently.
+ */
+
 /* Implementation of password_set_t that stores the password
    in the OS X KeyChain. */
 static svn_boolean_t
