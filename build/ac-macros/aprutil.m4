@@ -28,8 +28,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
 
   if test $apu_found = "reconfig"; then
-    SVN_SUBDIR_CONFIG(apr-util, --with-apr=../apr)
-    SVN_SUBDIRS="$SVN_SUBDIRS apr-util"
+    SVN_EXTERNAL_PROJECT([apr-util], [--with-apr=../apr])
   fi
 
   dnl check APRUTIL version number against regex  

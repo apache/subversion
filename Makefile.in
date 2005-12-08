@@ -33,7 +33,7 @@ SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
-EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
+SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
 
 SCHEMA_DIR = subversion/svn/schema
 
@@ -434,7 +434,7 @@ mkdir-init:
 # recursive targets to handle external projects (e.g. APR, Neon)
 external-all external-install:
 	@target=`echo $@ | sed s/external-//`;          \
-        list='$(EXTERNAL_PROJECT_DIRS)';                \
+        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
         for i in $$list; do                             \
             echo "------ making $$target in $$i";       \
             (cd $$i && $(MAKE) $$target) || exit 1;     \
@@ -445,7 +445,7 @@ external-all external-install:
 ### list so that it is cleaned before apr.
 external-clean external-distclean:
 	@target=`echo $@ | sed s/external-//`;          \
-        list='$(EXTERNAL_PROJECT_DIRS)';                \
+        list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
         for i in $$list; do                             \
             revlist="$$i $$revlist";                    \
         done;                                           \
@@ -458,7 +458,7 @@ external-clean external-distclean:
 ### temporary hack. Neon does not have an "extraclean" and neither does db
 ### If we don't have extraclean -- do the next best thing.
 external-extraclean:
-	@list='$(EXTERNAL_PROJECT_DIRS)';                                \
+	@list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';                         \
         for i in $$list; do                                              \
             revlist="$$i $$revlist";                                     \
         done;                                                            \
