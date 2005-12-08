@@ -65,6 +65,8 @@
   <title>Subversion</title>
   <subtitle>A New Version Control System</subtitle>
   <subtitle>(compiled from &svn.version;)</subtitle>
+  <subtitle>NOTE: This document is not up to date.  The last substantial
+    update was in October 2002 (r3377).</subtitle>
 
   <bookinfo>
     <author>
@@ -95,9 +97,6 @@
       <para>This manual describes the design of the Subversion version control
         system.</para>
       <para>First Version: June 2000</para>
-      <para>
-        $LastChangedDate$
-      </para>
     </abstract>
   </bookinfo>
 
