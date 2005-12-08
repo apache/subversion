@@ -22,12 +22,71 @@
 #include "bdb_compat.h"
 
 #include "env.h"
-
 
-svn_error_t *
-svn_fs_bdb__path_from_utf8 (const char **path_bdb,
-                            const char *path_utf8,
-                            apr_pool_t *pool)
+
+
+/* Allocating an appropriate Berkeley DB environment object.  */
+
+/* BDB error callback.  See bdb_env_t in env.h for more info.
+   Note: bdb_error_gatherer is a macro with BDB < 4.3, so be careful how
+   you use it! */
+static void
+bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
+{
+  bdb_env_t *bdb = (bdb_env_t *) baton;
+  svn_error_t *new_err;
+
+  SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
+
+  new_err = svn_error_createf(SVN_NO_ERROR, NULL, "bdb: %s", msg);
+  if (bdb->pending_errors)
+    svn_error_compose(bdb->pending_errors, new_err);
+  else
+    bdb->pending_errors = new_err;
+
+  if (bdb->user_callback)
+    bdb->user_callback(NULL, (char *)msg); /* ### I hate this cast... */
+}
+
+
+/* Create a Berkeley DB environment. */
+static int
+create_env (bdb_env_t **bdbp, apr_pool_t *pool)
+{
+  bdb_env_t *bdb = apr_pcalloc(pool, sizeof(*bdb));
+  int db_err = db_env_create(&(bdb->env), 0);
+
+  /* We must initialize this now, as our callers may assume their bdb
+     pointer is valid when checking for errors.  */
+  apr_cpystrn (bdb->errpfx_string,
+               BDB_ERRCALL_BATON_ERRPFX_STRING,
+               sizeof(bdb->errpfx_string));
+  *bdbp = bdb;
+
+  if (!db_err)
+    {
+      bdb->env->set_errpfx(bdb->env, (char *) bdb);
+      /* bdb_error_gatherer is in parens to stop macro expansion. */
+      bdb->env->set_errcall(bdb->env, (bdb_error_gatherer));
+
+      /* Needed on Windows in case Subversion and Berkeley DB are using
+         different C runtime libraries  */
+      db_err = bdb->env->set_alloc(bdb->env, malloc, realloc, free);
+
+      /* If we detect a deadlock, select a transaction to abort at
+         random from those participating in the deadlock.  */
+      if (!db_err)
+        db_err = bdb->env->set_lk_detect(bdb->env, DB_LOCK_RANDOM);
+    }
+  return db_err;
+}
+
+
+
+static svn_error_t *
+bdb_path_from_utf8 (const char **path_bdb,
+                    const char *path_utf8,
+                    apr_pool_t *pool)
 {
 #if SVN_BDB_PATH_UTF8
   *path_bdb = path_utf8;
@@ -38,9 +97,10 @@ svn_fs_bdb__path_from_utf8 (const char **path_bdb,
 }
 
 
-int
-svn_fs_bdb__open_env (DB_ENV **env, const char *path,
-                      u_int32_t flags, int mode)
+svn_error_t *
+svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
+                  u_int32_t flags, int mode,
+                  apr_pool_t *pool)
 {
   /* XXX TODO:
 
@@ -60,25 +120,45 @@ svn_fs_bdb__open_env (DB_ENV **env, const char *path,
      then, it's quite probable that threading is seriously broken on
      those systems anyway, so we'll rely on APR_HAS_THREADS.)
   */
+  const char *path_bdb;
+  bdb_env_t *bdb;
 
-  BDB_ERR((*env)->open(*env, path, flags, mode));
+  SVN_ERR(bdb_path_from_utf8(&path_bdb, path, pool));
+  SVN_BDB_ERR(bdb, create_env(&bdb, pool));
+  SVN_BDB_ERR(bdb, bdb->env->open(bdb->env, path_bdb, flags, mode));
 
 #if SVN_BDB_AUTO_COMMIT
   /* Assert the BDB_AUTO_COMMIT flag on the opened environment. This
      will force all operations on the environment (and handles that
      are opened within the environment) to be transactional. */
 
-  BDB_ERR((*env)->set_flags(*env, SVN_BDB_AUTO_COMMIT, 1));
+  SVN_BDB_ERR(bdb, bdb->env->set_flags(bdb->env, SVN_BDB_AUTO_COMMIT, 1));
 #endif
 
-  return 0;
+  *bdbp = bdb;
+  return SVN_NO_ERROR;
 }
 
 
-int
-svn_fs_bdb__close_env (DB_ENV *env)
+svn_error_t *
+svn_fs_bdb__close (bdb_env_t *bdb)
 {
   /* XXX TODO: Maintain the env handle cache. */
 
-  return env->close(env, 0);
+  SVN_BDB_ERR(bdb, bdb->env->close(bdb->env, 0));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_bdb__remove (const char *path, apr_pool_t *pool)
+{
+  const char *path_bdb;
+  bdb_env_t *bdb;
+
+  SVN_ERR(bdb_path_from_utf8(&path_bdb, path, pool));
+  SVN_BDB_ERR(bdb, create_env(&bdb, pool));
+  SVN_BDB_ERR(bdb, bdb->env->remove (bdb->env, path_bdb, DB_FORCE));
+
+  return SVN_NO_ERROR;
 }

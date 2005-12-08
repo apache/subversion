@@ -30,17 +30,42 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Convert PATH_UTF8 to PATH_BDB.
- *
- * The converted path will be in the encoding expected by BDB;
- * specifically, on Wincows as of BDB 4.3, it must also be in UTF-8.
- * Use POOL for temporary allocations.
- */
-svn_error_t * svn_fs_bdb__path_from_utf8 (const char **path_bdb,
-                                          const char *path_utf8,
-                                          apr_pool_t *pool);
+#define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
+
+/* The Berkeley DB environment descriptor. */
+typedef struct
+{
+  /* Berkeley DB returns extended error info by callback before returning
+     an error code from the failing function.  The callback baton type is a
+     string, not an arbitrary struct, so we prefix our struct with a valid
+     string, to avoid problems should BDB ever try to interpret our baton as
+     a string.  Initializers of this structure must strcpy the value of
+     BDB_ERRCALL_BATON_ERRPFX_STRING into this array.  */
+  char errpfx_string[sizeof(BDB_ERRCALL_BATON_ERRPFX_STRING)];
+
+  /* The Berkeley DB environment. */
+  DB_ENV *env;
+
+  /* We hold the extended info here until the Berkeley DB function returns.
+     It usually returns an error code, triggering the collection and
+     wrapping of the additional errors stored here.
+
+     Note: In some circumstances BDB will call the error function and not
+     go on to return an error code, so the caller must always check whether
+     pending_errors is non-NULL to avoid leaking errors.  This behaviour
+     has been seen when running recovery on a repository upgraded to 4.3
+     that still has old 4.2 log files present, a typical error string is
+     "Skipping log file db/log.0000000002: historic log version 8" */
+  svn_error_t *pending_errors;
+
+  /* We permitted clients of our library to install a Berkeley BDB errcall.
+     Since we now use the errcall ourselves, we must store and invoke a user
+     errcall, to maintain our API guarantees. */
+  void (*user_callback) (const char *errpfx, char *msg);
+} bdb_env_t;
 
 
+
 /* Flag combination for opening a shared BDB environment. */
 #define SVN_BDB_STANDARD_ENV_FLAGS (DB_CREATE       \
                                     | DB_INIT_LOCK  \
@@ -57,24 +82,35 @@ svn_error_t * svn_fs_bdb__path_from_utf8 (const char **path_bdb,
                                    | DB_PRIVATE)
 
 
-/* Open the Berkeley DB environment ENV.
+/* Allocate the Berkeley DB descriptor BDB and open the environment.
  *
- * Open ENV in PATH, using FLAGS and MODE.  If applicable, set the
- * BDB_AUTO_COMMIT flag for this environment.
- * Return a Berkeley DB error code.
+ * Open (*BDBP)->env in PATH, using FLAGS and MODE.  If applicable, set
+ * the BDB_AUTO_COMMIT flag for this environment.
  *
- * Note: This function may return a pointer to an already-opened
- * environment.
+ * Use POOL for temporary allocation.
+ *
+ * Note: This function may return a pointer to an existing
+ * @c bdb_env_t object with a previously opened environment.
  */
-int svn_fs_bdb__open_env (DB_ENV **env, const char *path,
-                          u_int32_t flags, int mode);
+svn_error_t *svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
+                               u_int32_t flags, int mode,
+                               apr_pool_t *pool);
 
-/* Close the Berkeley DB environemnt ENV.
+/* Close the Berkeley DB descriptor BDB.
  *
  * Note: This function might not actually close the environment if it
- * has been "svn_fs_bdb__open_env'd" more than once.
+ * has been "svn_fs_bdb__open'd" more than once.
  */
-int svn_fs_bdb__close_env (DB_ENV *env);
+svn_error_t *svn_fs_bdb__close (bdb_env_t *bdb);
+
+
+/* Remove the Berkeley DB environment at PATH.
+ *
+ * Use POOL for temporary allocation.
+ *
+ * This function will fail if the environment is already open.
+ */
+svn_error_t *svn_fs_bdb__remove (const char *path, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

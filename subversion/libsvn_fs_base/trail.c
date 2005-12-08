@@ -111,8 +111,8 @@ begin_trail (trail_t **trail_p,
         abort();
 
       SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
-                         bfd->env->txn_begin (bfd->env, 0,
-                                              &trail->db_txn, 0)));
+                         bfd->bdb->env->txn_begin (bfd->bdb->env, 0,
+                                                   &trail->db_txn, 0)));
       bfd->in_txn_trail = TRUE;
     }
   else
@@ -177,7 +177,7 @@ commit_trail (trail_t *trail)
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
      there should be an svn_fs_berkeley_mumble function to set them.  */
-  db_err = bfd->env->txn_checkpoint (bfd->env, 1024, 5, 0);
+  db_err = bfd->bdb->env->txn_checkpoint (bfd->bdb->env, 1024, 5, 0);
 
   /* Pre-4.1 Berkeley documentation says:
 
