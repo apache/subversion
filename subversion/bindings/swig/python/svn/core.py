@@ -184,10 +184,13 @@ def svn_pool_destroy(pool):
   
   assert pool is not None
 
-  if hasattr(pool,"destroy"):
+  # New in 1.3.x: All pools are automatically destroyed when Python shuts
+  # down. For compatibility with 1.2.x, we won't report an error if your
+  # app tries to destroy a pool during the shutdown process. Instead, we
+  # check to make sure the application_pool is still around before calling
+  # pool.destroy().
+  if application_pool:
     pool.destroy()
-  else:
-    _core.apr_pool_destroy(pool)
 apr_pool_destroy = svn_pool_destroy
 
 def svn_pool_clear(pool):
@@ -197,10 +200,7 @@ def svn_pool_clear(pool):
 
   assert pool is not None
 
-  if hasattr(pool,"clear"):
-    pool.clear()
-  else:
-    _core.apr_pool_clear(pool)
+  pool.clear()
 apr_pool_clear = svn_pool_clear
 
 def run_app(func, *args, **kw):
