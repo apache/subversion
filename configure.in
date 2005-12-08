@@ -71,13 +71,9 @@ AC_ARG_ENABLE(subdir-config,
   ])
 
 dnl the extra bits to include into our build process
-SVN_EXTRA_INCLUDES='-I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion'
-SVN_EXTRA_LIBS=
 
 SVN_SUBDIRS=
 
-AC_SUBST(SVN_EXTRA_INCLUDES)
-AC_SUBST(SVN_EXTRA_LIBS)
 AC_SUBST(SVN_SUBDIRS)
 
 dnl Configure APR --------------------------
