@@ -20,8 +20,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /nologo /f neon.mak ALL DEBUG=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL DEBUG=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				BuildCommandLine="nmake /nologo /f neon.mak ALL DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
 				Output="libneonD.lib"/>
 		</Configuration>
 		<Configuration
