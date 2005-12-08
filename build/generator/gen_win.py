@@ -167,17 +167,6 @@ class WinGeneratorBase(GeneratorBase):
       bat = os.path.join('build', 'win32', 'build_zlib.bat')
       self.write_with_template(bat, 'build_zlib.ezt', data)
 
-    # Generate the build_neon.bat file
-    data = {'neon_path': os.path.abspath(self.neon_path),
-            'expat_path': os.path.join(os.path.abspath(self.apr_util_path),
-                                       'xml', 'expat', 'lib'),
-            'zlib_path': self.zlib_path
-                         and os.path.abspath(self.zlib_path),
-            'openssl_path': self.openssl_path
-                            and os.path.abspath(self.openssl_path)}
-    bat = os.path.join('build', 'win32', 'build_neon.bat')
-    self.write_with_template(bat, 'build_neon.ezt', data)
-
     # Generate the build_locale.bat file
     pofiles = []
     if self.enable_nls:
@@ -450,6 +439,8 @@ class WinGeneratorBase(GeneratorBase):
       path = self.apr_util_path + target.external_project[8:]
     elif target.external_project[:4] == 'apr/':
       path = self.apr_path + target.external_project[3:]
+    elif target.external_project[:5] == 'neon/':
+      path = self.neon_path + target.external_project[4:]
     else:
       path = target.external_project
 
@@ -767,12 +758,19 @@ class WinGeneratorBase(GeneratorBase):
 
   def write_neon_project_file(self, name):
     neon_path = os.path.abspath(self.neon_path)
-    self.move_proj_file(os.path.join('build', 'win32'), name,
-                        (('neon_path', neon_path),
-                         ('neon_sources',
+    self.move_proj_file(self.neon_path, name,
+                        (('neon_sources',
                           glob.glob(os.path.join(neon_path, 'src', '*.c'))),
                          ('neon_headers',
                           glob.glob(os.path.join(neon_path, 'src', '*.h'))),
+                         ('expat_path',
+                          os.path.join(os.path.abspath(self.apr_util_path),
+                                       'xml', 'expat', 'lib')),
+                         ('zlib_path', self.zlib_path 
+                                       and os.path.abspath(self.zlib_path)),
+                         ('openssl_path',
+                          self.openssl_path
+                            and os.path.abspath(self.openssl_path)),
                         ))
 
   def move_proj_file(self, path, name, params=()):

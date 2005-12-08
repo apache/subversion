@@ -13,29 +13,29 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="[neon_path]\Debug"
-			IntermediateDirectory="[neon_path]\Debug"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_neon.bat debug"
-				ReBuildCommandLine="cmd /c build_neon.bat debug rebuild"
-				Output="[neon_path]\libneonD.lib"/>
+				BuildCommandLine="nmake /nologo /f neon.mak ALL DEBUG=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL DEBUG=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				Output="libneonD.lib"/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="[neon_path]\Release"
-			IntermediateDirectory="[neon_path]\Release"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_neon.bat release"
-				ReBuildCommandLine="cmd /c build_neon.bat release rebuild"
-				Output="[neon_path]\libneon.lib"/>
+				BuildCommandLine="nmake /nologo /f neon.mak ALL EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				Output="libneon.lib"/>
 		</Configuration>
 	</Configurations>
 	<Files>
