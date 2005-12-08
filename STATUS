@@ -33,13 +33,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r17507
-    Fix Windows make_dist.py to use the correct path for the .mo files.
-    Justification:
-      Include translations in the Windows binary packages again.
-    Votes:
-      +1: brane, dlr, rooneg
-
   * r17521
     Fix and improve help text for property commands such as 'svn propget'.
     Justification:
