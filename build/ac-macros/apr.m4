@@ -23,8 +23,7 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   if test $apr_found = "reconfig"; then
-    SVN_SUBDIR_CONFIG(apr)
-    SVN_SUBDIRS="$SVN_SUBDIRS apr"
+    SVN_EXTERNAL_PROJECT([apr])
   fi
 
   dnl check APR version number against regex  

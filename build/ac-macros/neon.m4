@@ -80,7 +80,7 @@ dnl Configure neon --------------------------
           if test -f "$abs_builddir/apr-util/xml/expat/lib/expat.h" ; then
             args="$args --with-expat='$abs_builddir/apr-util/xml/expat/lib/libexpat.la'"
           fi
-          SVN_SUBDIR_CONFIG(neon, $args)
+          SVN_EXTERNAL_PROJECT([neon], [$args])
 
           if test -f "$abs_builddir/neon/neon-config" ; then
             # Also find out which macros neon defines (but ignore extra include paths):
@@ -90,7 +90,6 @@ dnl Configure neon --------------------------
             svn_lib_neon="yes"
           fi
 
-          SVN_SUBDIRS="$SVN_SUBDIRS neon"
           break
         fi
       done
