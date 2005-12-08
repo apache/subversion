@@ -33,14 +33,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r17614
-    Undeprecate the svnserve -R (--read-only) option.
-    Justification:
-      Trivial change - change one string constant and delete one
-      svn_cmdline_fprintf() call only.
-    Votes:
-      +1: maxb, lundblad, rooneg, dlr
-
   * r17638, r17639
     For compatibility with 1.2.x apps, don't report errors when apps try to
     destroy pools that were already automatically destroyed. Followup to
