@@ -33,15 +33,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r17521
-    Fix and improve help text for property commands such as 'svn propget'.
-    Justification:
-      Misleading help messages are not good.
-    Notes: Only changes for messages.
-    Votes:
-      +0: nori
-      +1: lundblad, maxb, rooneg
-
   * r17614
     Undeprecate the svnserve -R (--read-only) option.
     Justification:
