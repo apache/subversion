@@ -82,6 +82,12 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   AC_SUBST(SVN_APRUTIL_LIBS)
   AC_SUBST(SVN_APRUTIL_EXPORT_LIBS)
   AC_SUBST(SVN_APRUTIL_PREFIX)
+
+  dnl What version of Expat are we using? -----------------
+  SVN_HAVE_OLD_EXPAT="`$apu_config --old-expat`"
+  if test "$SVN_HAVE_OLD_EXPAT" = "yes"; then
+    AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
+  fi
 ])
 
 dnl SVN_DOWNLOAD_APRUTIL()
