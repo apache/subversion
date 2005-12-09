@@ -926,8 +926,6 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       const svn_delta_editor_t *commit_editor;
       const svn_delta_editor_t *cancel_editor;
       const svn_delta_editor_t *sync_editor;
-      apr_hash_t *revprops;
-      apr_hash_index_t *hi;
       void *commit_baton;
       void *cancel_baton;
       void *sync_baton;
