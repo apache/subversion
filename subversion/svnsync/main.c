@@ -145,7 +145,6 @@ check_lib_versions (void)
   return svn_ver_check_list (&my_version, checklist);
 }
 
-/* XXX need a way to break the lock. */
 static svn_error_t *
 get_lock (svn_ra_session_t *session, apr_pool_t *pool)
 {
@@ -155,6 +154,7 @@ get_lock (svn_ra_session_t *session, apr_pool_t *pool)
   apr_status_t apr_err;
   apr_pool_t *subpool;
   apr_uuid_t uuid;
+  int i;
 
   apr_err = apr_gethostname (hostname_str, sizeof (hostname_str), pool);
   if (apr_err)
@@ -168,7 +168,7 @@ get_lock (svn_ra_session_t *session, apr_pool_t *pool)
 
   subpool = svn_pool_create (pool);
 
-  for (;;)
+  for (i = 0; i < 10; ++i)
     {
       svn_pool_clear (subpool);
 
@@ -177,12 +177,19 @@ get_lock (svn_ra_session_t *session, apr_pool_t *pool)
 
       if (reposlocktoken)
         {
-          /* did we get it?   if so, we're done, otherwise we sleep. */
+          /* Did we get it?   If so, we're done, otherwise we sleep. */
 
           if (strcmp (reposlocktoken->data, mylocktoken->data) == 0)
-            break;
+            return SVN_NO_ERROR;
           else
-            apr_sleep (1); /* XXX notify user */
+            {
+              SVN_ERR (svn_cmdline_printf (pool,
+                                           "Failed to get lock on destination "
+                                           "repos, currently held by '%s'\n",
+                                           reposlocktoken->data));
+
+              apr_sleep (apr_time_from_sec (1));
+            }
         }
       else
         {
@@ -191,7 +198,9 @@ get_lock (svn_ra_session_t *session, apr_pool_t *pool)
         }
     }
 
-  return SVN_NO_ERROR;
+  return svn_error_createf (APR_EINVAL, NULL,
+                            "Couldn't get lock on destination repos "
+                            "after %d attempts\n", i);
 }
 
 typedef svn_error_t *(*with_locked_func_t) (svn_ra_session_t *session,
