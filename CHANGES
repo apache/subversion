@@ -42,7 +42,6 @@ http://svn.collab.net/repos/svn/tags/1.3.0
     * fixed: conflict markers not in current encoding (r14621)
     * fixed: commands ignoring extraneous -m or -F switches (issue #2285)
     * fixed: poor error-checking when using revprops (r15542)
-    * fixed: non-interruptible OS X socket connection with svn:// (r15909)
     * fixed: stack-smashing bugs (r15948, r16037)
     * translation updates for all languages
 
