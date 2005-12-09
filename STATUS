@@ -31,16 +31,16 @@ Candidate changes:
     Votes:
       +1: zhakov
 
+
+Approved changes:
+
   * r17697
     Revert r15909, which was a questionable workaround for a Mac OS X bug.
     Justifications:
       In Mac OS X, the bug is now fixed, and anyway r15909 was not a
       great solution; see discussion referred to from r17697 for more.
     Votes:
-      +1: kfogel, rooneg
-
-
-Approved changes:
+      +1: kfogel, rooneg, dlr
 
 
 Status of 1.3.1:
