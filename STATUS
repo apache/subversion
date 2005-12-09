@@ -37,7 +37,7 @@ Candidate changes:
       In Mac OS X, the bug is now fixed, and anyway r15909 was not a
       great solution; see discussion referred to from r17697 for more.
     Votes:
-      +1: kfogel
+      +1: kfogel, rooneg
 
 
 Approved changes:
