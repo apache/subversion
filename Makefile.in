@@ -253,7 +253,8 @@ RUBY = @RUBY@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
-TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
+# The list of test programs passed to run_tests.py.
+TESTS = $(SVN_TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
 all: external-all local-all
 clean: external-clean local-clean
@@ -408,6 +409,9 @@ svnsshcheck:
 
 fsfscheck:
 	@$(MAKE) check FS_TYPE=fsfs
+
+svnsynccheck:
+	@$(MAKE) check TESTS=$(SVNSYNC_TEST_PROGRAMS)
 
 check-clean:
 	rm -rf subversion/tests/clients/cmdline/svn-test-work  \

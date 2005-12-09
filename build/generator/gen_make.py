@@ -94,8 +94,10 @@ class Generator(gen_base.GeneratorBase):
                      string.join(self.bdb_test_progs + self.bdb_scripts))
     self.ofile.write('TEST_DEPS = %s\n\n' %
                      string.join(self.test_deps + self.scripts))
-    self.ofile.write('TEST_PROGRAMS = %s\n\n' %
+    self.ofile.write('SVN_TEST_PROGRAMS = %s\n\n' %
                      string.join(self.test_progs + self.scripts))
+    ### TODO: Enumerate the test script names for SVNSync
+    self.ofile.write('SVNSYNC_TEST_PROGRAMS = %s\n\n' % '')
 
     # write list of all manpages
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
