@@ -769,6 +769,43 @@ get_sync_editor (const svn_delta_editor_t *wrapped_editor,
 }
 
 static svn_error_t *
+copy_revprops (svn_ra_session_t *from_session,
+               svn_ra_session_t *to_session,
+               svn_revnum_t rev,
+               apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *revprops;
+  apr_hash_index_t *hi;
+
+  SVN_ERR (svn_ra_rev_proplist (from_session, rev, &revprops, pool));
+
+  for (hi = apr_hash_first (pool, revprops);
+       hi;
+       hi = apr_hash_next (hi))
+    {
+      const char *pname;
+      svn_string_t *pval;
+      const void *key;
+      void *val;
+
+      svn_pool_clear (subpool);
+
+      apr_hash_this (hi, &key, NULL, &val);
+
+      pname = key;
+      pval = val;
+
+      SVN_ERR (svn_ra_change_rev_prop (to_session, rev, pname, pval,
+                                       subpool));
+    }
+
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 {
   svn_string_t *from_url, *from_uuid, *last_merged_rev;
@@ -809,11 +846,57 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                               "match expected UUID (%s)",
                               uuid, from_uuid->data);
 
+  /* Now, check to see if we have revprops that still need to be copied for
+   * a prior revision we didn't finish copying. */
+
+  {
+    svn_string_t *currently_copying;
+    svn_revnum_t to_latest, copying;
+
+    SVN_ERR (svn_ra_rev_prop (to_session, 0, CURRENTLY_COPYING_PROP,
+                              &currently_copying, pool));
+
+    SVN_ERR (svn_ra_get_latest_revnum (to_session, &to_latest, pool));
+
+    if (currently_copying)
+      {
+        copying = atol (currently_copying->data);
+
+        if (copying == to_latest)
+          {
+            SVN_ERR (copy_revprops (from_session, to_session, to_latest,
+                                    pool));
+
+            last_merged_rev = svn_string_create (apr_psprintf (pool, "%ld",
+                                                               to_latest),
+                                                 pool);
+
+            /* Now update last merged rev and drop currently changing.
+             * Note that the order here is significant, if we do them
+             * in the wrong order there are race conditions where we 
+             * end up not being able to tell if there have been bogus
+             * (i.e. non-svnsync) commits to the dest repository. */
+
+            SVN_ERR (svn_ra_change_rev_prop (to_session, 0,
+                                             LAST_MERGED_REV_PROP,
+                                             last_merged_rev, pool));
+
+            SVN_ERR (svn_ra_change_rev_prop (to_session, 0,
+                                             CURRENTLY_COPYING_PROP,
+                                             NULL, pool));
+          }
+        else if (copying < to_latest)
+          return svn_error_createf
+                   (APR_EINVAL, NULL,
+                    "Currently copying rev '%ld' in source is less than "
+                    "latest rev in destination (%ld)",
+                    copying, to_latest);
+      }
+  }
+
   /* Now check to see if there are any revisions to copy. */
 
   SVN_ERR (svn_ra_get_latest_revnum (from_session, &from_latest, pool));
-
-  /* XXX see if we had a copy in progress that needs to be finished. */
 
   if (from_latest < atol (last_merged_rev->data))
     return SVN_NO_ERROR;
@@ -880,26 +963,7 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       /* Ok, we're done with the data, now we just need to do the revprops
        * and we're all set. */
 
-      SVN_ERR (svn_ra_rev_proplist (from_session, current, &revprops,
-                                    subpool));
-
-      for (hi = apr_hash_first (subpool, revprops);
-           hi;
-           hi = apr_hash_next (hi))
-        {
-          const char *pname;
-          svn_string_t *pval;
-          const void *key;
-          void *val;
-
-          apr_hash_this (hi, &key, NULL, &val);
-
-          pname = key;
-          pval = val;
-
-          SVN_ERR (svn_ra_change_rev_prop (to_session, current, pname, pval,
-                                           subpool));
-        }
+      SVN_ERR (copy_revprops (from_session, to_session, current, subpool));
 
       /* Ok, we're done, bring the last-merged-rev property up to date. */
 
