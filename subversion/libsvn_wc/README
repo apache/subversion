@@ -327,7 +327,7 @@ named `wc-entries'.  This element contains one or more `entries'
 elements, one for each directory entry.  The `entry' element whose
 name attribute is the empty string is the entry for this directory,
 that is, the directory containing this administrative area.  This is
-known as the "this_dir" entry.  All XML elements in the entries file is in the
+known as the "this_dir" entry.  All XML elements in the entries file are in the
 XML namespace "svn:".
 
 All `entry' elements are empty, and can have the attributes described
