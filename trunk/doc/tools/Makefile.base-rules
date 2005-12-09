@@ -1,0 +1,88 @@
+# See comment in ./Makefile.base-vars
+
+# Grouping targets
+all: html html-chunk pdf ps
+all-html: html html-chunk
+install: install-html install-html-chunk install-pdf install-ps
+
+# Build targets
+$(VERSION_SOURCE): version
+version:
+	@if $(SVNVERSION) . > /dev/null; then \
+	  echo '<!ENTITY svn.version "$(L10N_REVISION) '`$(SVNVERSION) .`'">' \
+	    > $(VERSION_SOURCE).tmp; \
+	else \
+	  echo '<!ENTITY svn.version "">' > $(VERSION_SOURCE).tmp; \
+	fi
+	@if cmp -s $(VERSION_SOURCE) $(VERSION_SOURCE).tmp; then \
+	  rm $(VERSION_SOURCE).tmp; \
+	else \
+	  mv $(VERSION_SOURCE).tmp $(VERSION_SOURCE); \
+	fi
+
+html: $(HTML_TARGET)
+$(HTML_TARGET): $(ALL_SOURCE) $(VERSION_SOURCE) $(STYLESHEET) $(IMAGES)
+	$(ENSURE_XSL)
+	$(XSLTPROC) $(HTML_XSLTPROC_OPTS) --output $(HTML_TARGET) \
+	  $(TOOLS_DIR)/html-stylesheet.xsl $(XML_SOURCE)
+
+# The trailing slash on the xsltproc --output option is essential to
+# output pages into the directory
+html-chunk: $(HTML_CHUNK_TARGET)
+$(HTML_CHUNK_TARGET): $(ALL_SOURCE) $(VERSION_SOURCE) $(STYLESHEET) $(IMAGES)
+	mkdir -p $(HTML_CHUNK_DIR)
+	$(IFIMAGES) mkdir -p $(HTML_CHUNK_DIR)/images $(ENDIF)
+	$(ENSURE_XSL)
+	$(XSLTPROC) $(HTML_XSLTPROC_OPTS) \
+           --output $(HTML_CHUNK_DIR)/ \
+	   $(TOOLS_DIR)/chunk-stylesheet.xsl $(XML_SOURCE)
+	cp $(STYLESHEET) $(HTML_CHUNK_DIR)
+	$(IFIMAGES) cp $(IMAGES) $(HTML_CHUNK_DIR)/images $(ENDIF)
+
+fo: $(FO_TARGET)
+$(FO_TARGET): $(ALL_SOURCE) $(VERSION_SOURCE) $(IMAGES)
+	$(ENSURE_XSL)
+	$(XSLTPROC) $(FO_XSLTPROC_OPTS) --output $(FO_TARGET) \
+	  $(TOOLS_DIR)/fo-stylesheet.xsl $(XML_SOURCE)
+
+pdf: $(PDF_TARGET)
+$(PDF_TARGET): $(FO_TARGET) $(IMAGES)
+	$(TOOLS_DIR)/bin/run-fop.sh -fo $(FO_TARGET) -pdf $(PDF_TARGET)
+
+ps: $(PS_TARGET)
+$(PS_TARGET): $(FO_TARGET) $(IMAGES)
+	$(TOOLS_DIR)/bin/run-fop.sh -fo $(FO_TARGET) -ps $(PS_TARGET)
+
+# Install targets
+$(INSTALL_SUBDIR):
+	$(INSTALL) -d $(INSTALL_SUBDIR)
+
+install-html: $(HTML_TARGET) $(INSTALL_SUBDIR)
+	$(IFIMAGES) $(INSTALL) -d $(INSTALL_SUBDIR)/images $(ENDIF)
+	$(INSTALL) $(HTML_TARGET) $(INSTALL_SUBDIR)
+	$(INSTALL) $(STYLESHEET) $(INSTALL_SUBDIR)
+	$(IFIMAGES) $(INSTALL) $(IMAGES) $(INSTALL_SUBDIR)/images $(ENDIF)
+
+install-html-chunk: $(HTML_CHUNK_TARGET) $(INSTALL_SUBDIR)
+	$(IFIMAGES) $(INSTALL) -d $(INSTALL_SUBDIR)/images $(ENDIF)
+	$(INSTALL) $(HTML_CHUNK_DIR)/*.html $(INSTALL_SUBDIR)
+	$(INSTALL) $(STYLESHEET) $(INSTALL_SUBDIR)
+	$(IFIMAGES) $(INSTALL) $(IMAGES) $(INSTALL_SUBDIR)/images $(ENDIF)
+
+install-pdf: $(PDF_TARGET) $(INSTALL_SUBDIR)
+	$(INSTALL) $(PDF_TARGET) $(INSTALL_SUBDIR)
+
+install-ps: $(PS_TARGET) $(INSTALL_SUBDIR)
+	$(INSTALL) $(PS_TARGET) $(INSTALL_SUBDIR)
+
+# Clean targets
+clean:
+	rm -f $(VERSION_SOURCE)
+	rm -f $(HTML_TARGET) $(FO_TARGET)
+	rm -rf $(HTML_CHUNK_DIR)
+	rm -f $(PDF_TARGET) $(PS_TARGET) 
+
+# Utility targets
+valid: $(VERSION_SOURCE)
+	$(XMLLINT) --noout --nonet --valid $(XML_SOURCE)
+

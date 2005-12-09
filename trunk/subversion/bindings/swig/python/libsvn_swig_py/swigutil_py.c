@@ -542,10 +542,6 @@ static PyObject *make_ob_##type(void *value) \
   svn_##type##_t *new_value = dup(value, new_pool); \
   return svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
       new_py_pool); \
-} \
-static PyObject *convert_##type(void *value, void *ctx, PyObject *py_pool) \
-{ \
-  return make_ob_##type(value); \
 }
  
 DECLARE_SWIG_CONSTRUCTOR(txdelta_window, svn_txdelta_window_dup)
@@ -554,6 +550,12 @@ DECLARE_SWIG_CONSTRUCTOR(wc_status, svn_wc_dup_status)
 DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
 DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
     svn_auth_ssl_server_cert_info_dup)
+
+static PyObject *convert_log_changed_path(void *value, void *ctx,
+                                          PyObject *py_pool)
+{
+  return make_ob_log_changed_path(value);
+}
 
 PyObject *svn_swig_py_c_strings_to_list(char **strings)
 {

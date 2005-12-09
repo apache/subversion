@@ -211,7 +211,8 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-  svn_auth_baton_t **, svn_diff_t **, svn_config_t **
+  svn_auth_baton_t **, svn_diff_t **, svn_config_t **,
+  svn_auth_provider_object_t **
 }
 
 /* -----------------------------------------------------------------------
@@ -594,6 +595,44 @@ PyObject *svn_swig_py_exception_type(void);
   apr_array_header_t **regular_props
 };
 
+/* -----------------------------------------------------------------------
+  thunk the various authentication prompt functions.
+*/
+%typemap(ruby, in) (svn_auth_simple_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_simple_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_username_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_username_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_types_h.swg
@@ -627,6 +666,16 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_md5_h.swg
 %include svn_diff_h.swg
 %include svn_error_h.swg
+
+%{
+#include "svn_private_config.h"
+%}
+%init %{
+#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
+  svn_swig_pl_bind_current_pool_fns (&svn_swig_pl_get_current_pool,
+                                     &svn_swig_pl_set_current_pool);
+#endif
+%}
 #endif
 
 #ifdef SWIGPYTHON
@@ -655,6 +704,10 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
+%init %{
+  svn_swig_rb_initialize();
+%}
+
 /* Dummy declaration */
 struct apr_pool_t 
 {
@@ -687,7 +740,72 @@ svn_locale_charset(void)
 {
   return INT2NUM((int)APR_LOCALE_CHARSET);
 }
+
+/* prompt providers return baton for protecting GC */
+static VALUE
+svn_swig_rb_auth_get_simple_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_simple_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_simple_prompt_provider(provider, prompt_func, prompt_baton,
+                                      retry_limit, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_prompt_provider(provider, prompt_func,
+                                               prompt_baton, retry_limit,
+                                               pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_pw_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_prompt_provider(provider, prompt_func,
+                                                  prompt_baton, retry_limit,
+                                                  pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_server_trust_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+  void *prompt_baton,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_server_trust_prompt_provider(provider, prompt_func,
+                                                prompt_baton, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_username_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_username_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_username_prompt_provider(provider, prompt_func, prompt_baton,
+                                        retry_limit, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
 %}
-
 #endif
-

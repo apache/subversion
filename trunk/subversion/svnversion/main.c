@@ -121,8 +121,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "  If invoked on a directory that is not a working copy, an\n"
         "  exported directory say, the program will output 'exported'.\n"
         "\n"
-        "  If invoked without arguments WC_PATH will be the current "
-        "directory.\n"
+        "  If invoked without arguments WC_PATH will be the current directory.\n"
         "\n"
         "Valid options:\n")));
   while (options->description)

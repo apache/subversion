@@ -28,6 +28,10 @@ Usage
    during rebuilding:
    $INST_DIR/<proj_name>, ie. with present configuration the paths are: 
    /home/YOUR_USERNAME/svn/inst/{apr-0.9,apr-util-0.9,httpd-2.0,svn}
+   
+   It will also clean off all non-versioned data from working copies of apr, 
+   apr-util, httpd and svn. Don't put anything under these directories by 
+   yourself.
 
 3) Create one or more scripts that configure Subversion in different
    ways (e.g., configure.shared, configure.static). Here's the script

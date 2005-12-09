@@ -384,6 +384,11 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 24,
               "Invalid relocation")
 
+  /** @since New in 1.3. */
+  SVN_ERRDEF (SVN_ERR_WC_INVALID_SWITCH,
+              SVN_ERR_WC_CATEGORY_START + 25,
+              "Invalid switch")
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
@@ -995,7 +1000,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CL_INSUFFICIENT_ARGS,
               SVN_ERR_CL_CATEGORY_START + 1,
-              "Not enough args provided")
+              "Not enough arguments provided; try 'svn help' for more info")
 
   SVN_ERRDEF (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
               SVN_ERR_CL_CATEGORY_START + 2,

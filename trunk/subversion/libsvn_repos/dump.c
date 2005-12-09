@@ -60,6 +60,10 @@
         "\x3a\x20\x74\x72\x75\x65\x0a"
         /* ": true\n" */
 
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
 /*----------------------------------------------------------------------*/
 
 /** A variant of our hash-writing routine in libsvn_subr;  this one
@@ -165,7 +169,7 @@ store_delta (apr_file_t **tempfile, svn_filesize_t *len,
              svn_fs_root_t *oldroot, const char *oldpath,
              svn_fs_root_t *newroot, const char *newpath, apr_pool_t *pool)
 {
-  const char *tempdir, *name;
+  const char *tempdir;
   svn_stream_t *temp_stream;
   apr_off_t offset = 0;
   svn_txdelta_stream_t *delta_stream;
@@ -174,9 +178,9 @@ store_delta (apr_file_t **tempfile, svn_filesize_t *len,
 
   /* Create a temporary file and open a stream to it. */
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
-  SVN_ERR (svn_io_open_unique_file (tempfile, &name,
-                                    APR_PSPRINTF2 (pool, "%s/dump", tempdir),
-                                    ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (tempfile, NULL,
+                                     APR_PSPRINTF2 (pool, "%s/dump", tempdir),
+                                     DOT_TMP_STR, svn_io_file_del_on_close, pool));
 
   temp_stream = svn_stream_from_aprfile (*tempfile, pool);
 
@@ -224,7 +228,7 @@ struct edit_baton
   svn_revnum_t oldest_dumped_rev;
 
   /* reusable buffer for writing file contents */
-  char buffer[SVN_STREAM_CHUNK_SIZE];
+  char buffer[SVN__STREAM_CHUNK_SIZE];
   apr_size_t bufsize;
 };
 

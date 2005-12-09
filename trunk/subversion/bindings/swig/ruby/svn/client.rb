@@ -60,6 +60,7 @@ module Svn
       alias _initialize initialize
       def initialize
         @prompts = []
+        @batons = []
         @providers = []
         @auth_baton = Svn::Core::AuthBaton.new
         self.auth_baton = @auth_baton
@@ -381,17 +382,23 @@ module Svn
       end
       
       def add_simple_provider
-        add_provider(Client.get_simple_provider)
+        add_provider(Core.auth_get_simple_provider)
       end
 
-      if Client.respond_to?(:get_windows_simple_provider)
+      if Core.respond_to?(:get_windows_simple_provider)
         def add_windows_simple_provider
-          add_provider(Client.get_windows_simple_provider)
+          add_provider(Core.auth_get_windows_simple_provider)
+        end
+      end
+      
+      if Core.respond_to?(:get_keychain_simple_provider)
+        def add_keychain_simple_provider
+          add_provider(Core.auth_get_keychain_simple_provider)
         end
       end
       
       def add_username_provider
-        add_provider(Client.get_username_provider)
+        add_provider(Core.auth_get_username_provider)
       end
       
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
@@ -425,18 +432,15 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
-        @log_msg_baton = callback
-        Client.set_log_msg_func2(self, callback)
+        @log_msg_baton = Client.set_log_msg_func2(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)
-        @notify_baton2 = callback
-        Client.set_notify_func2(self, callback)
+        @notify_baton = Client.set_notify_func2(self, callback)
       end
       
       def set_cancel_func(callback=Proc.new)
-        @cancel_baton = callback
-        Client.set_cancel_func(self, callback)
+        @cancel_baton = Client.set_cancel_func(self, callback)
       end
       
       private
@@ -460,7 +464,9 @@ module Svn
           prompt.call(cred, *prompt_args)
           cred
         end
-        pro = Client.__send__("get_#{name}_prompt_provider", real_prompt, *args)
+        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
+        baton, pro = Core.__send__(method_name, real_prompt, *args)
+        @batons << baton
         @prompts << real_prompt
         add_provider(pro)
       end

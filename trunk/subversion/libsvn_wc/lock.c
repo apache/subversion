@@ -29,6 +29,9 @@
 #include "adm_files.h"
 #include "lock.h"
 #include "questions.h"
+#include "props.h"
+#include "log.h"
+#include "entries.h"
 
 #include "svn_private_config.h"
 
@@ -90,6 +93,55 @@ static svn_error_t *
 do_close (svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
 
 
+/* Write, to LOG_ACCUM, log entries to convert an old WC that did not have
+   propcaching into a WC that uses propcaching.  Do this conversion for
+   the directory of ADM_ACCESS and its file children.  Use POOL for 
+   temporary allocations.  */
+static svn_error_t *
+introduce_propcaching (svn_stringbuf_t *log_accum,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+
+  /* Reinstall the properties for each file and this dir; subdirs are handled
+     when they're opened. */
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      void *val;
+      const svn_wc_entry_t *entry;
+      svn_wc_entry_t tmpentry;
+      apr_hash_t *base_props, *props;
+
+      apr_hash_this (hi, NULL, NULL, &val);
+      entry = val;
+
+      if (entry->kind != svn_node_file
+          && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+        continue;
+
+      svn_pool_clear (subpool);
+      
+      SVN_ERR (svn_wc__load_props (&base_props, &props, adm_access,
+                                   entry->name, subpool));
+      SVN_ERR (svn_wc__install_props (&log_accum, adm_access, entry->name,
+                                      base_props, props, TRUE, subpool));
+      /* Make sure we get rid of that prop-time field.
+         It only wastes space in new WCs. */
+      tmpentry.prop_time = 0;
+      SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access,
+                                           entry->name, &tmpentry,
+                                           SVN_WC__ENTRY_MODIFY_PROP_TIME,
+                                           pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Maybe upgrade the working copy directory represented by ADM_ACCESS
    to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
    lock.  Use POOL for all temporary allocation.
@@ -113,9 +165,42 @@ maybe_upgrade_format (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
     {
       const char *path = svn_wc__adm_path (adm_access->path, FALSE, pool,
                                            SVN_WC__ADM_FORMAT, NULL);
+      svn_boolean_t convert_to_propcaching =
+        (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION);
 
-      SVN_ERR (svn_io_write_version_file (path, SVN_WC__VERSION, pool));
+      /* Convert an old WC that doesn't use propcaching. */
+      if (convert_to_propcaching)
+        {
+          svn_boolean_t cleanup_required;
+          svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
+          const char *tmp_path;
+
+          /* Don't try to mess with the WC if there are old log files left. */
+          SVN_ERR (svn_wc__adm_is_cleanup_required (&cleanup_required,
+                                                    adm_access, pool));
+          if (cleanup_required)
+            return SVN_NO_ERROR;
+
+          /* First, loggily upgrade the format file. */
+          SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_path, path, ".tmp",
+                                             svn_io_file_del_none, pool));
+          SVN_ERR (svn_io_write_version_file (tmp_path, SVN_WC__VERSION,
+                                              pool));
+          SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
+                                       svn_path_is_child (adm_access->path,
+                                                          tmp_path, pool),
+                                       svn_path_is_child (adm_access->path,
+                                                          path, pool),
+                                       FALSE, pool));
+          SVN_ERR (introduce_propcaching (log_accum, adm_access, pool));
+          SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
+          SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
+        }
+      else
+        SVN_ERR (svn_io_write_version_file (path, SVN_WC__VERSION, pool));
+
       adm_access->wc_format = SVN_WC__VERSION;
+
     }
 
   return SVN_NO_ERROR;
@@ -676,9 +761,87 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
      generally makes the calling code simpler as it doesn't need to check
      for NULL batons. */
   if (! *adm_access)
-    return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                              _("Working copy '%s' is missing or not locked"),
-                              svn_path_local_style (path, pool));
+    {
+      const char *wcpath;
+      const svn_wc_entry_t *subdir_entry;
+      svn_node_kind_t wckind;
+      svn_node_kind_t kind;
+      svn_error_t *err;
+
+      err = svn_wc_entry (&subdir_entry, path, associated, TRUE, pool);
+      
+      /* If we can't get an entry here, we are in pretty bad shape,
+         and will have to fall back to using just regular old paths to
+         see what's going on.  */
+      if (err)
+        {
+          svn_error_clear (err);
+          subdir_entry = NULL;
+        }
+      
+      err = svn_io_check_path (path, &kind, pool);
+
+      /* If we can't check the path, we can't make a good error
+         message.  */
+      if (err)
+        {
+          svn_error_clear (err);          
+          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                    _("Unable to check path existence for '%s'"),
+                                    svn_path_local_style (path, pool));
+        }
+      
+      if (subdir_entry)        
+        {
+          if (subdir_entry->kind == svn_node_dir
+              && kind == svn_node_file)
+            {
+              return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                        _("Expected '%s' to be a directory but found a file"), 
+                                        svn_path_local_style (path, pool));
+            }
+          else if (subdir_entry->kind == svn_node_file
+                   && kind == svn_node_dir)
+            {
+              return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                        _("Expected '%s' to be a file but found a directory"), 
+                                        svn_path_local_style (path, pool));
+            }
+        }
+      
+      wcpath = svn_wc__adm_path (path, FALSE, pool, NULL);
+      err = svn_io_check_path (wcpath, &wckind, pool);
+      
+      /* If we can't check the path, we can't make a good error
+         message.  */
+      if (err)
+        {
+          svn_error_clear (err);          
+          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                    _("Unable to check path existence for '%s'"),
+                                    svn_path_local_style (wcpath, pool));
+        }
+
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                  _("Directory '%s' is missing"),
+                                  svn_path_local_style (path, pool));
+      
+      else if (kind == svn_node_dir && wckind == svn_node_none)
+        return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                  _("Directory '%s' containing working copy admin area is missing"),
+                                  svn_path_local_style (wcpath, pool));
+
+      else if (kind == svn_node_dir && wckind == svn_node_dir)
+        return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                  _("Unable to lock '%s'"),
+                                  svn_path_local_style (path, pool));
+      
+      /* If all else fails, return our useless generic error.  */
+      return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+                                _("Working copy '%s' is not locked"),
+                                svn_path_local_style (path, pool));        
+    }
 
   return SVN_NO_ERROR;
 }

@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style type="text/css"> /* <![CDATA[ */
@@ -113,11 +113,12 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a
 <li><a href="#ssh-authorized-keys-trick">
 I want to allow access via svn+ssh://, but am paranoid.  I hate the
 idea of giving each user a login; I would then have to worry about
-what they are and are not allowed to access on my machine.
+what they are, and are not, allowed to access on my machine.
 </a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
+<li><a href="#svn-editor">How do I handle spaces in the editor path?</a></li>
 <li><a href="#divining-bdb-version">How do I determine which version of
 Berkeley DB a repository is using?</a></li>
 <li><a href="#website-auto-update">I'm managing a website in my
@@ -223,6 +224,9 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#tiger-apr-0.9.6">Why do I get occasional, seemingly
     inconsistent errors checking out over http:// from a repository
     running on MacOS X 10.4 (Tiger)?</a></li>
+<li><a href="#debian-libtool">I can't build Subversion from working
+    copy source on Debian GNU/Linux; I get errors at the final link
+    stage.  What's wrong?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -1437,7 +1441,11 @@ svn update
 
 <p>As you can see, adding a file with the wrong case is tricky to fix on
 an operating system that has a case insensitive filesystem.  Do try to
-get it right when you add the file the first time!</p>
+get it right when you add the file the first time!  To prevent the
+problem from occurring in the first place, you can create a pre-commit hook that
+calls the file <tt>check-case-insensitive.pl</tt>.  That file lives
+in the Subversion
+source tarball, in the directory <tt>contrib/hook-scripts</tt>.</p>
 
 </div>
 
@@ -1699,6 +1707,10 @@ SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
 export SVN_SSH
 </pre>
 
+      <p><a
+      href="http://svn.collab.net/repos/svn/trunk/notes/ssh-tricks">This
+      file</a> discusses this topic in more detail.</p>
+      
 </div>
 
 <![CDATA[=========================================================]]>
@@ -1706,7 +1718,7 @@ export SVN_SSH
 <div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
 <h3>I want to allow access via svn+ssh://, but am paranoid.  I hate the
 idea of giving each user a login; I would then have to worry about
-what they are and are not allowed to access on my machine.</h3>
+what they are, and are not, allowed to access on my machine.</h3>
 <p>See the section about hacking
 the <tt>~/.ssh/authorized_keys</tt> file in the answer
 to <a href="#ssh-svnserve-location">this other question</a>; ignore the stuff
@@ -1757,6 +1769,69 @@ auto-props settings.  There's already a feature request filed for this
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue
 1974</a>), though this feature is still being debated by developers,
 and isn't being worked on yet.</p>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h3" id="svn-editor" title="auto-props">
+<h3>How do I deal with spaces in the editor path?&nbsp; Also, how can
+I define command line options for the editor?</h3>
+
+<p>The Subversion command line client will invoke the editor defined
+in the environment variable SVN_EDITOR.&nbsp; This environment variable
+is passed directly to the operating system along with the name of a
+temporary file used to enter/edit the log message.</p>
+
+<p>Due to the fact that the SVN_EDITOR string is passed as-is to the
+system's command shell, spaces in the editor name, or in the path name
+to the editor, will not work unless the editor name is in quotes.</p>
+
+<p>For example, on Windows if your editor is in
+<code>C:\Program&nbsp;Files\Posix&nbsp;Tools\bin\vi</code> you would
+want to set the variable as follows:
+</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi"
+</pre>
+
+<p>Note that there is no need to escape the quotes in the Windows
+shell as they are not part of the syntax for the <code>set</code>
+command.
+</p>
+
+<p>On UNIX systems you would need to follow your shell's specific
+methods for setting the variable.&nbsp; For example, in a bash shell,
+the following should work:
+</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs"'
+   export SVN_EDITOR
+</pre>
+
+<p>In case a command line option would be needed for the invocation
+of the editor, just add that after the editor name in the SVN_EDITOR
+environment variable just like you would us on the command line.&nbsp;
+For example, if the options <code>-nx -r</code> would be wanted for
+the above editors, the following will provide those options:
+</p>
+
+<p>For Windows:</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi" -nx -r
+</pre>
+
+<p>For UNIX/bash:</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs" -nx -r'
+   export SVN_EDITOR
+</pre>
+
+<p>Note that SVN_EDITOR is the Subversion specific environment variable
+setting for the editor selection.&nbsp; Subversion also supports
+using the more generic EDITOR variable but if you need special behaviors
+with Subversion it is best to use the SVN_EDITOR variable.
+</p>
 
 </div>
 
@@ -1820,10 +1895,14 @@ a +s binary program to run the update, since Unix won't allow scripts
 to run +s.  Compile a tiny C program:</p>
 
 <pre>
+#include &lt;stddef.h&gt;
 #include &lt;stdlib.h&gt;
-int main(int argc, const char *argv[])
+#include &lt;unistd.h&gt;
+int main(void)
 {
-  system("/usr/local/bin/svn update /home/joe/public_html/");
+  execl("/usr/local/bin/svn", "svn", "update", "/home/joe/public_html/",
+        (const char *) NULL);
+  return(EXIT_FAILURE);
 }
 </pre>
 
@@ -3228,6 +3307,44 @@ where the problem lies.</p>
 
 </div>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="debian-libtool" title="debian-libtool">
+<h3>I can't build Subversion from working copy
+    source on Debian GNU/Linux; I get errors at the final link
+    stage.  What's wrong?</h3>
+    
+<p>If you see errors like this in the final link stage of a Subversion
+trunk source build:</p>
+
+<pre>
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_create'
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_strerror'
+</pre>
+
+<p>it might be because you're on a Debian GNU/Linux system and need to
+upgrade 'libtool'.  (I've also heard that the Debian packagers had to
+tweak 'libtool' and that this may cause some problems for Subversion
+builds.  But that's hearsay&nbsp;&mdash;&nbsp;I didn't have time to
+verify the details before writing this FAQ entry.  If you know the
+full story, please mail <a href="mailto:dev@subversion.tigris.org"
+>dev@subversion.tigris.org</a> and straighten us out.)</p>
+
+<p>In any case, after encountering this problem on a Debian GNU/Linux
+system running a newly-dist-upgraded 'testing' distribution on 15 Nov
+2005, the solution was to build <a
+href="http://www.gnu.org/software/libtool/libtool.html">libtool&nbsp;1.5.20</a>
+from source, using the standard "./configure &amp;&amp; make &amp;&amp;
+sudo&nbsp;make&nbsp;install" recipe.  After that, I did a 'make&nbsp;clean' in
+my Subversion working copy tree, './autogen.sh', './configure', 'make',
+and everything worked fine.</p>
+
+<p>Note that another report of these symptoms appeared at <a
+href="http://svn.haxx.se/dev/archive-2003-01/1125.shtml"
+>http://svn.haxx.se/dev/archive-2003-01/1125.shtml</a>, though the
+solution described here was not mentioned in that thread.</p>
+
+</div>
 
 <![CDATA[=========================================================]]>
 

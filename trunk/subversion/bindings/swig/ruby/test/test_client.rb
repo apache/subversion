@@ -1473,7 +1473,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_windows_simple_provider
-    return unless Svn::Client.respond_to?(:add_windows_simple_provider)
+    return unless Svn::Core.respond_to?(:add_windows_simple_provider)
 
     log = "sample log"
     src = "source\n"

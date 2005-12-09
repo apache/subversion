@@ -31,6 +31,11 @@ HTTPD_NAME=${HTTPD_NAME:="httpd-2.0"}
 HTTPD_REPO=${HTTPD_REPO:="$TEST_ROOT/$HTTPD_NAME"}
 
 
+# Forced update revision for SVN
+# format is: FORCE_UP_REV_SVN=-r<rev num>
+# empty FORCE_UP_REV_SVN will default to current head
+FORCE_UP_REV_SVN=
+
 MAKE_OPTS=
 
 #
@@ -43,6 +48,12 @@ RAMDISK=no
 # INTERMEDIATE_CLEANUP=<yes|no>
 #
 INTERMEDIATE_CLEANUP=${RAMDISK:="no"}
+
+#
+# Which build targets to test
+#
+TEST_STATIC=${TEST_STATIC:="yes"}
+TEST_SHARED=${TEST_SHARED:="yes"}
 
 #
 # Whether to test the BDB backend, TEST_FSFS=<yes|no>
@@ -63,7 +74,12 @@ TEST_BINDINGS_SWIG_PYTHON=${TEST_BINDINGS_SWIG_PYTHON:="no"}
 TEST_BINDINGS_SWIG_RUBY=${TEST_BINDINGS_SWIG_RUBY:="no"}
 
 # This should correspond with your httpd Listen directive
-RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
+RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:52080"
+
+# port number for svntest's svnserve
+SVNSERVE_PORT=52069
+RA_SVN_CHECK_ARGS="BASE_URL=svn://localhost:$SVNSERVE_PORT"
+
 
 #
 # Log file name prefix
@@ -97,9 +113,6 @@ PERLBIN="/usr/bin"
 
 # Statically linked svn binary (used for repository updates)
 SVN="$TEST_ROOT/static/bin/svn"
-
-# CVS binary (used for updating APR & friends)
-CVS="$USRBIN/cvs"
 
 # Path to config.guess (used for generating the mail subject line)
 GUESS="/usr/share/libtool/config.guess"
@@ -162,6 +175,7 @@ TAIL="$USRBIN/tail"
 TAIL_100="$TAIL -n 100"
 TOUCH="$USRBIN/touch"
 UMOUNT="$BIN/umount"
+XARGS="$USRBIN/xargs"
 
 #
 # Branch prefix for the e-mail subject

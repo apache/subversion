@@ -19,7 +19,6 @@
 #include <assert.h>
 
 #include "svn_path.h"
-#include "svn_time.h"
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -228,74 +227,6 @@ svn_fs_fs__dag_get_predecessor_count (int *count,
   SVN_ERR (get_node_revision (&noderev, node, pool));
   *count = noderev->predecessor_count;
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_fs__dag_walk_predecessors (dag_node_t *node,
-                                  dag_pred_func_t callback,
-                                  void *baton,
-                                  apr_pool_t *pool)
-{
-  svn_fs_t *fs = svn_fs_fs__dag_get_fs (node);
-  dag_node_t *this_node;
-  svn_boolean_t done = FALSE;
-  apr_pool_t *last_iterpool, *iterpool, *tmp_iterpool;
-
-  last_iterpool = svn_pool_create (pool);
-  iterpool = svn_pool_create (pool);
-  this_node = node;
-  while ((! done) && this_node)
-    {
-      node_revision_t *noderev;
-
-      /* Cycle the pools so iterpool will remain valid on the next
-       * iteration. */
-      tmp_iterpool = last_iterpool;
-      last_iterpool = iterpool;
-      iterpool = tmp_iterpool;
-      svn_pool_clear (iterpool);
-
-      /* Get the node revision for THIS_NODE so we can examine its
-         predecessor id.  */
-      SVN_ERR (get_node_revision (&noderev, this_node, iterpool));
-
-      /* If THIS_NODE has a predecessor, replace THIS_NODE with the
-         precessor, else set it to NULL.  */
-      if (noderev->predecessor_id)
-        SVN_ERR (svn_fs_fs__dag_get_node (&this_node, fs, 
-                                          noderev->predecessor_id,
-                                          iterpool));
-      else
-        this_node = NULL;
-
-      /* Now call the user-supplied callback with our predecessor
-         node. */
-      if (callback)
-        SVN_ERR (callback (baton, this_node, &done, iterpool));
-    }
-  svn_pool_destroy (iterpool);
-  svn_pool_destroy (last_iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_fs__dag_init_fs (svn_fs_t *fs)
-{
-  apr_hash_t *proplist;
-  svn_string_t date;
-  
-  /* Write out a rev file for revision 0. */
-  SVN_ERR (svn_fs_fs__write_revision_zero (fs));
-
-  /* Set a date on revision 0. */
-  date.data = svn_time_to_cstring (apr_time_now(), fs->pool);
-  date.len = strlen (date.data);
-  proplist = apr_hash_make (fs->pool);
-  apr_hash_set (proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
-  return svn_fs_fs__set_revision_proplist (fs, 0, proplist, fs->pool);
 }
 
 
@@ -1095,103 +1026,6 @@ svn_fs_fs__things_different (svn_boolean_t *props_changed,
       (! svn_fs_fs__noderev_same_rep_key (noderev1->data_rep,
                                           noderev2->data_rep));
   
-  return SVN_NO_ERROR;
-}
-
-
-
-struct is_ancestor_baton
-{
-  const svn_fs_id_t *node1_id;
-  svn_boolean_t is_ancestor;
-  svn_boolean_t need_parent; /* TRUE if we only care about parenthood, not
-                                full ancestry */
-};
-
-
-static svn_error_t *
-is_ancestor_callback (void *baton,
-                      dag_node_t *node,
-                      svn_boolean_t *done,
-                      apr_pool_t *pool)
-{
-  struct is_ancestor_baton *b = baton;
-
-  /* If there is no NODE, then this is the last call, and we didn't
-     find an ancestor.  But if there is ... */
-  if (node)
-    {
-      /* ... compare NODE's ID with the ID we're looking for. */
-      if (svn_fs_fs__id_eq (b->node1_id, svn_fs_fs__dag_get_id (node)))
-        b->is_ancestor = TRUE;
-
-      /* Now, if we only are interested in parenthood, we don't care
-         to look any further than this. */
-      if (b->need_parent)
-        *done = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__dag_is_ancestor (svn_boolean_t *is_ancestor,
-                            dag_node_t *node1,
-                            dag_node_t *node2,
-                            apr_pool_t *pool)
-{
-  struct is_ancestor_baton baton;
-  const svn_fs_id_t 
-    *id1 = svn_fs_fs__dag_get_id (node1),
-    *id2 = svn_fs_fs__dag_get_id (node2);
-
-  /* Pessimism. */
-  *is_ancestor = FALSE;
-
-  /* Ancestry holds relatedness as a prerequisite. */
-  if (! svn_fs_fs__id_check_related (id1, id2))
-    return SVN_NO_ERROR;
-
-  baton.is_ancestor = FALSE;
-  baton.need_parent = FALSE;
-  baton.node1_id = id1;
-
-  SVN_ERR (svn_fs_fs__dag_walk_predecessors (node2, is_ancestor_callback,
-                                             &baton, pool));
-  if (baton.is_ancestor)
-    *is_ancestor = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_fs__dag_is_parent (svn_boolean_t *is_parent,
-                          dag_node_t *node1,
-                          dag_node_t *node2,
-                          apr_pool_t *pool)
-{
-  struct is_ancestor_baton baton;
-  const svn_fs_id_t 
-    *id1 = svn_fs_fs__dag_get_id (node1),
-    *id2 = svn_fs_fs__dag_get_id (node2);
-
-  /* Pessimism. */
-  *is_parent = FALSE;
-
-  /* Parentry holds relatedness as a prerequisite. */
-  if (! svn_fs_fs__id_check_related (id1, id2))
-    return SVN_NO_ERROR;
-
-  baton.is_ancestor = FALSE;
-  baton.need_parent = TRUE;
-  baton.node1_id = id1;
-
-  SVN_ERR (svn_fs_fs__dag_walk_predecessors (node2, is_ancestor_callback,
-                                             &baton, pool));
-  if (baton.is_ancestor)
-    *is_parent = TRUE;
-
   return SVN_NO_ERROR;
 }
 

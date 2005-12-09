@@ -39,39 +39,6 @@ svn_error_t *svn_wc__has_props (svn_boolean_t *has_props,
                                 apr_pool_t *pool);
 
 
-
-/* Given two propchange objects, return TRUE iff they conflict.  If
-   there's a conflict, DESCRIPTION will contain an english description
-   of the problem. */
-
-/* For note, here's the table being implemented:
-
-              |  update set     |    update delete   |
-  ------------|-----------------|--------------------|
-  user set    | conflict iff    |      conflict      |
-              |  vals differ    |                    |
-  ------------|-----------------|--------------------|
-  user delete |   conflict      |      merge         |
-              |                 |    (no problem)    |
-  ----------------------------------------------------
-
-*/
-svn_boolean_t
-svn_wc__conflicting_propchanges_p (const svn_string_t **description,
-                                   const svn_prop_t *local,
-                                   const svn_prop_t *update,
-                                   apr_pool_t *pool);
-
-/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
-   reject file describing a state of conflict.  If such a file exists,
-   return the name of the file in REJECT_FILE.  If no such file exists,
-   return (REJECT_FILE = NULL). */
-svn_error_t *
-svn_wc__get_existing_prop_reject_file (const char **reject_file,
-                                       svn_wc_adm_access_t *adm_access,
-                                       const char *name,
-                                       apr_pool_t *pool);
-
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
    properties and load this file into HASH.  Otherwise, leave HASH
    untouched.  */
@@ -91,6 +58,9 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
 /* Given ADM_ACCESS/NAME and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
    Necessary log entries will be appended to ENTRY_ACCUM.
+
+   If SERVER_BASEPROPS is NULL than base props will be used as
+   PROPCHANGES base.
 
    If we are attempting to merge changes to a directory, simply pass
    ADM_ACCESS and NULL for NAME.
@@ -146,7 +116,28 @@ svn_boolean_t svn_wc__has_special_property (apr_hash_t *props);
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
    changing the working file. */
-svn_boolean_t svn_wc__has_magic_property (apr_array_header_t *properties);
+svn_boolean_t svn_wc__has_magic_property (const apr_array_header_t *properties);
+
+/* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
+   is true, BASE_PROPS for the path NAME in ADM_ACCESS, updating the wc entry
+   to reflect the changes.  Use POOL for temporary allocations. */
+svn_error_t *svn_wc__install_props (svn_stringbuf_t **log_accum,
+                                    svn_wc_adm_access_t *adm_access,
+                                    const char *name,
+                                    apr_hash_t *base_props,
+                                    apr_hash_t *props,
+                                    svn_boolean_t write_base_props,
+                                    apr_pool_t *pool);
+
+/* Load the base and working props for NAME in ADM_ACCESS returning them
+   in *BASE_PROPS_P and *PROPS_P, respectively.  BASE_PROPS or PROPS may be null.
+   Do all allocations in POOL.  */
+svn_error_t *
+svn_wc__load_props (apr_hash_t **base_props_p,
+                    apr_hash_t **props_p,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *name,
+                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

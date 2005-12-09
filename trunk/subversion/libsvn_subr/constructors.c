@@ -47,6 +47,8 @@ svn_commit_info_dup (const svn_commit_info_t *src_commit_info,
   dst_commit_info->author = src_commit_info->author
     ? apr_pstrdup (pool, src_commit_info->author) : NULL;
   dst_commit_info->revision = src_commit_info->revision;
+  dst_commit_info->post_commit_err = src_commit_info->post_commit_err
+    ? apr_pstrdup (pool, src_commit_info->post_commit_err) : NULL;
 
   return dst_commit_info;
 }

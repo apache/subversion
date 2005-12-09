@@ -1827,3 +1827,14 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_info2
     }
     return cl->info2(path, revision, pegRevision, jrecurse ? true : false);
 }
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    initNative
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_initNative
+  (JNIEnv *env, jclass jclazz)
+{
+	// No standard JNIEntry here, because this call initializes everthing
+	JNIUtil::JNIGlobalInit(env);
+}

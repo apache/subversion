@@ -118,7 +118,7 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
-   eND may be of kind svn_opt_revision_unspecified (in which case
+   END may be of kind svn_opt_revision_unspecified (in which case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
 
@@ -133,7 +133,8 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
    one pegged by REVISION.  In other words, all three objects must
    be connected by a single line of history which exactly passes
    through PATH at REVISION.  If this sanity check fails, return
-   SVN_ERR_CLIENT_UNRELATED_RESOURCES.
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES.  If PATH doesn't exist in the future
+   revision, SVN_ERR_FS_NOT_FOUND may also be returned.
 
    CTX is the client context baton.
 

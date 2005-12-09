@@ -8,7 +8,9 @@ space than just one version of that file.  The two most common
 techniques are the SCCS "weave", which represents all revisions of a
 file as a single data stream with the moral equivalent of #ifdefs, and
 the technique of storing deltas (differences) between related
-revisions of files.  Subversion uses deltas.
+revisions of files (see
+http://web.mit.edu/ghudson/thoughts/file-versioning for details).
+Subversion uses deltas.
 
 Subversion uses a technique called "skip-deltas" to ensure that only a
 reasonable number of deltas need to be composed in order to retrieve

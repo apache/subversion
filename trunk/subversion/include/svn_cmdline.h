@@ -31,6 +31,8 @@
 #include <apr_want.h>
 
 #include "svn_utf.h"
+#include "svn_auth.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -182,6 +184,115 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool);
 int svn_cmdline_handle_exit_error (svn_error_t *error,
                                    apr_pool_t *pool,
                                    const char *prefix);
+
+/** Prompt the user for input, using @a prompt_str for the prompt and
+ * returning the user's response in @a result, allocated in @a pool.
+ */
+svn_error_t *
+svn_cmdline_prompt_user (const char **result,
+                         const char *prompt_str,
+                         apr_pool_t *pool);
+
+/** A cancellation function/baton pair to be passed as the baton argument
+ * to the @c svn_cmdline_*_prompt functions.
+ */
+typedef struct {
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+} svn_cmdline_prompt_baton_t;
+
+/** An implementation of @c svn_auth_simple_prompt_func_t that prompts
+ * the user for keyboard input on the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
+                                void *baton,
+                                const char *realm,
+                                const char *username,
+                                svn_boolean_t may_save,
+                                apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_username_prompt_func_t that prompts
+ * the user for their username via the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_username_prompt (svn_auth_cred_username_t **cred_p,
+                                  void *baton,
+                                  const char *realm,
+                                  svn_boolean_t may_save,
+                                  apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_ssl_server_trust_prompt_func_t that
+ * asks the user if they trust a specific ssl server via the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_server_trust_prompt (
+  svn_auth_cred_ssl_server_trust_t **cred_p,
+  void *baton,
+  const char *realm,
+  apr_uint32_t failures,
+  const svn_auth_ssl_server_cert_info_t *cert_info,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
+ * prompts the user for the filename of their SSL client certificate via
+ * the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_client_cert_prompt (
+  svn_auth_cred_ssl_client_cert_t **cred_p,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_ssl_client_cert_pw_prompt_func_t that
+ * prompts the user for their SSL certificate password via the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_client_cert_pw_prompt (
+  svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+/** Initialize auth baton @a ab with the standard set of authentication
+ * providers used by the command line client.  @a non_interactive,
+ * @a username, @a password, @a config_dir, and @a auth_cache are the 
+ * values of the command line options of the same names.  @a cfg is the
+ * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
+ * @a cancel_baton control the cancellation of the prompting providers
+ * that are initialized.  @a pool is used for all allocations.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_cmdline_setup_auth_baton (svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *username,
+                              const char *password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -876,8 +876,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
 
   if (older)
     {
-      SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, FALSE,
-                                       adm_access, subpool));
+      SVN_ERR (svn_wc_text_modified_p2 (&has_local_mods, mine, FALSE,
+                                        adm_access, TRUE, subpool));
 
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
@@ -1829,9 +1829,9 @@ single_file_merge_get_file (const char **filename,
                                                  merge_b->ctx, pool));
   SVN_ERR (svn_client__get_revision_number (rev, ra_session, revision,
                                             path, pool));
-  SVN_ERR (svn_io_open_unique_file (&fp, filename, 
-                                    merge_b->target, DOT_TMP_STR,
-                                    FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&fp, filename, 
+                                     merge_b->target, DOT_TMP_STR,
+                                     svn_io_file_del_none, pool));
   SVN_ERR (svn_ra_get_file (ra_session, "", *rev,
                             svn_stream_from_aprfile (fp, pool),
                             NULL, props, pool));

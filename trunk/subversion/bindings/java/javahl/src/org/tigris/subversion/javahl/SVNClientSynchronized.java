@@ -39,7 +39,10 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public SVNClientSynchronized()
     {
-        worker = new SVNClient();
+        synchronized(clazz)
+        {
+            worker = new SVNClient();
+        }
     }
 
     /**
@@ -48,6 +51,17 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void dispose()
     {
         worker.dispose();
+    }
+
+    /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        synchronized(clazz)
+        {
+            return worker.getVersion();
+        }
     }
 
     /**

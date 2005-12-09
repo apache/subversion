@@ -25,6 +25,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_repos.h"
+#include "svn_utf.h"
 #include "repos.h"
 #include "svn_utf.h"
 #include "svn_ebcdic.h"
@@ -146,11 +147,12 @@ run_hook_cmd (const char *name,
     }
   else
     {
-      svn_stringbuf_t *error;
+      svn_stringbuf_t *native_error;
+      const char *error;
       svn_error_t *err2;
 
 #if !AS400
-      err2 = svn_stringbuf_from_aprfile (&error, read_errhandle, pool);
+      err2 = svn_stringbuf_from_aprfile (&native_error, read_errhandle, pool);
       err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
 #else
       err2 = SVN_NO_ERROR;
@@ -165,7 +167,7 @@ run_hook_cmd (const char *name,
                                              read_errstream,
                                              FALSE, /* Ignore stdout */
                                              TRUE,  /* Get stderr    */
-                                             &error,
+                                             &native_error,
                                              pool);
 #endif
       if (! err)
@@ -174,10 +176,13 @@ run_hook_cmd (const char *name,
             {
               if (read_errstream && ! err2)
                 {
-                  err = svn_error_createf
-                    (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                     _("'%s' hook failed with error output:\n%s"),
-                     name, error->data);
+                  err2 = svn_utf_cstring_to_utf8 (&error, native_error->data,
+                                                  pool);
+                  if (! err2)
+                    err = svn_error_createf
+                      (SVN_ERR_REPOS_HOOK_FAILURE, err,
+                       _("'%s' hook failed with error output:\n%s"),
+                       name, error);
                 }
               else
                 {
@@ -220,13 +225,13 @@ run_hook_cmd (const char *name,
 static svn_error_t *
 create_temp_file (apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
 {
-  const char *dir, *fname;
+  const char *dir;
   apr_off_t offset = 0;
 
   SVN_ERR (svn_io_temp_dir (&dir, pool));
-  SVN_ERR (svn_io_open_unique_file (f, &fname,
-                                    svn_path_join (dir, HOOK_INPUT_STR, pool),
-                                    "", TRUE /* delete on close */, pool));
+  SVN_ERR (svn_io_open_unique_file2 (f, NULL,
+                                     svn_path_join (dir, HOOK_INPUT_STR, pool),
+                                     "", svn_io_file_del_on_close, pool));
   SVN_ERR (svn_io_file_write_full (*f, value->data, value->len, NULL, pool));
   SVN_ERR (svn_io_file_seek (*f, APR_SET, &offset, pool));
   return SVN_NO_ERROR;
@@ -370,7 +375,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
       args[2] = APR_PSPRINTF2 (pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd (POST_COMMIT_STR, hook, args, FALSE, NULL, pool));
+      SVN_ERR (run_hook_cmd (POST_COMMIT_STR, hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;

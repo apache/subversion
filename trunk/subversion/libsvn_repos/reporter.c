@@ -1037,7 +1037,7 @@ svn_repos_begin_report (void **report_baton,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
-  const char *tempdir, *dummy;
+  const char *tempdir;
 
   /* Build a reporter baton.  Copy strings in case the caller doesn't
      keep track of them. */
@@ -1058,10 +1058,9 @@ svn_repos_begin_report (void **report_baton,
   b->authz_read_baton = authz_read_baton;
 
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
-  SVN_ERR (svn_io_open_unique_file (&b->tempfile, &dummy, 
-                                    APR_PSPRINTF2 (pool, "%s/report",
-                                                   tempdir),
-                  DOT_TMP_STR, TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&b->tempfile, NULL,
+                                     APR_PSPRINTF2 (pool, "%s/report", tempdir),
+                                     DOT_TMP_STR, svn_io_file_del_on_close, pool));
 
   /* Hand reporter back to client. */
   *report_baton = b;

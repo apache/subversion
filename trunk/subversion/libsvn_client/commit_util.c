@@ -111,7 +111,7 @@ check_prop_mods (svn_boolean_t *props_changed,
 
   *eol_prop_changed = *props_changed = FALSE;
   SVN_ERR (svn_wc_props_modified_p (props_changed, path, adm_access, pool));
-  if (! props_changed)
+  if (! *props_changed)
     return SVN_NO_ERROR;
   SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, adm_access, pool));
   for (i = 0; i < prop_mods->nelts; i++)
@@ -433,8 +433,9 @@ harvest_committables (apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR (svn_wc_text_modified_p (&text_mod, path, eol_prop_changed,
-                                             adm_access, pool));
+            SVN_ERR (svn_wc_text_modified_p2 (&text_mod, path,
+                                              eol_prop_changed, adm_access,
+                                              TRUE, pool));
           else
             text_mod = TRUE;
         }
@@ -458,8 +459,8 @@ harvest_committables (apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR (svn_wc_text_modified_p (&text_mod, path, eol_prop_changed, 
-                                         adm_access, pool));
+        SVN_ERR (svn_wc_text_modified_p2 (&text_mod, path, eol_prop_changed,
+                                         adm_access, TRUE, pool));
     }
 
   /* Set text/prop modification flags accordingly. */

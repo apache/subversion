@@ -19,6 +19,7 @@ Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
+Patch0: apr.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -371,6 +372,9 @@ Tools for Subversion.
 %prep
 %setup -q
 
+# APR patch
+%patch0 -p0
+
 if [ -f /usr/bin/autoconf-2.53 ]; then
    AUTOCONF="autoconf-2.53"
    AUTOHEADER="autoheader-2.53"
@@ -440,7 +444,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
 make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -473,7 +477,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
 make svncheck CLEANUP=true FS_TYPE=fsfs
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"

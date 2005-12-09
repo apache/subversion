@@ -166,8 +166,8 @@ class InstallMoFiles(Action):
 # This is the distribution tree
 _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
-             'bin': (File('%(blddir)s/clients/cmdline/svn.exe'),
-                     File('%(blddir)s/clients/cmdline/svn.pdb'),
+             'bin': (File('%(blddir)s/svn.exe'),
+                     File('%(blddir)s/svn.pdb'),
                      File('%(blddir)s/svnadmin/svnadmin.exe'),
                      File('%(blddir)s/svnadmin/svnadmin.pdb'),
                      File('%(blddir)s/svnlook/svnlook.exe'),
@@ -243,7 +243,7 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                         ),
 
              'share': None,
-             'share/locale': InstallMoFiles('%(svndir)s/po'),
+             'share/locale': InstallMoFiles('%(srcdir)s/%(svnrel)s/mo'),
              }
 
 # Define Perl module DLLs

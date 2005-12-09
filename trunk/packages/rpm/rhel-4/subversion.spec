@@ -436,7 +436,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
 make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -468,7 +468,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
 make svncheck CLEANUP=true FS_TYPE=fsfs
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"

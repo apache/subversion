@@ -56,7 +56,7 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
   /* Remove this_dir's wcprops */
   SVN_ERR (svn_wc__wcprop_path (&wcprop_path,
                                 svn_wc_adm_access_path (adm_access),
-                                adm_access, FALSE, subpool));
+                                svn_node_dir, FALSE, subpool));
   err = svn_io_remove_file (wcprop_path, subpool);
   if (err)
     svn_error_clear (err);
@@ -84,8 +84,8 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
       /* If a file, remove it from wcprops. */
       if (current_entry->kind == svn_node_file)
         {
-          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, adm_access,
-                                        FALSE, subpool));
+          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path,
+                                        svn_node_file, FALSE, subpool));
           err = svn_io_remove_file (wcprop_path, subpool);
           if (err)
             svn_error_clear (err);
@@ -135,7 +135,6 @@ copy_file_administratively (const char *src_path,
 {
   svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
-  const char *src_wprop, *src_bprop, *dst_wprop;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -144,14 +143,6 @@ copy_file_administratively (const char *src_path,
   /* Discover the paths to the two text-base files */
   const char *src_txtb = svn_wc__text_base_path (src_path, FALSE, pool);
   const char *tmp_txtb = svn_wc__text_base_path (dst_path, TRUE, pool);
-
-  /* Discover the paths to the four prop files */
-  SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
-                              src_access, FALSE, pool));
-  SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path,
-                                   src_access, FALSE, pool));
-  SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path,
-                              dst_parent, FALSE, pool));
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
@@ -202,26 +193,20 @@ copy_file_administratively (const char *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, src_access, pool));
 
-    /* Load source base props. */
-    base_props = apr_hash_make (pool);
-    SVN_ERR (svn_wc__load_prop_file (src_bprop, base_props, pool));
-
-    /* Load source working props. */
-    props = apr_hash_make (pool);
-    SVN_ERR (svn_wc__load_prop_file (src_wprop, props, pool));
+    /* Load source base and working props. */
+    SVN_ERR (svn_wc__load_props (&base_props, &props, src_access,
+                                 src_entry->name, pool));
 
     /* Copy pristine text-base to temporary location. */
     SVN_ERR (svn_io_copy_file (src_txtb, tmp_txtb, TRUE, pool));
 
     /* Copy working copy file to temporary location */
     {
-      apr_file_t *fp;
       svn_boolean_t special;
 
-      SVN_ERR (svn_wc_create_tmp_file2 (&fp, &tmp_wc_text,
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_wc_text,
                                         svn_wc_adm_access_path (dst_parent),
-                                        FALSE, pool));
-      SVN_ERR (svn_io_file_close (fp, pool));
+                                        svn_io_file_del_none, pool));
 
       SVN_ERR (svn_wc__get_special (&special, src_path, src_access, pool));
       if (special)
@@ -505,14 +490,27 @@ svn_wc_copy2 (const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
+  const char *dst_path;
   const svn_wc_entry_t *dst_entry, *src_entry;
 
   SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
                                    cancel_func, cancel_baton, pool));
 
-  SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
-                         dst_parent, FALSE, pool));
+  dst_path =  svn_wc_adm_access_path (dst_parent);
+  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, dst_parent, FALSE, pool));
+  if (! dst_entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+       _("'%s' is not under version control"),
+       svn_path_local_style (dst_path, pool));
+
   SVN_ERR (svn_wc_entry (&src_entry, src_path, adm_access, FALSE, pool));
+  if (! src_entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+       _("'%s' is not under version control"),
+       svn_path_local_style (src_path, pool));
+
   if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
       strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
@@ -528,7 +526,7 @@ svn_wc_copy2 (const char *src_path,
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
-  
+
   if (src_kind == svn_node_file)
     SVN_ERR (copy_file_administratively (src_path, adm_access,
                                          dst_parent, dst_basename,

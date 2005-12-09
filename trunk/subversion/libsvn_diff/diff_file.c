@@ -69,6 +69,21 @@ typedef struct svn_diff__file_baton_t
 } svn_diff__file_baton_t;
 
 
+/* Look for the start of an end-of-line sequence (i.e. CR or LF)
+ * in the array pointed to by BUF, of length LEN.
+ * If such a byte is found, return the pointer to it, else return NULL.
+ */
+static char *
+find_eol_start(char *buf, apr_size_t len)
+{
+  for (; len > 0; ++buf, --len)
+    {
+      if (*buf == SVN_UTF8_NEWLINE || *buf == SVN_UTF8_CR)
+        return buf;
+    }
+  return NULL;
+}
+      
 static
 int
 svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
@@ -252,6 +267,8 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
   int last_chunk;
   apr_size_t length;
   apr_uint32_t h = 0;
+  /* Did the last chunk end in a CR character? */
+  svn_boolean_t had_cr = FALSE;
 
   *token = NULL;
 
@@ -286,14 +303,18 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
   while (1)
     {
-      /* XXX: '\n' doesn't really cut it.  We need to be able to detect
-       * XXX: '\n', '\r' and '\r\n'.
-       */
-      eol = memchr(curp, SVN_UTF8_NEWLINE, endp - curp);
+      eol = find_eol_start(curp, endp - curp);
       if (eol)
         {
+          had_cr = (*eol == SVN_UTF8_CR);
           eol++;
-          break;
+          /* If we have the whole eol sequence in the chunk... */
+          if (!had_cr || eol != endp)
+            {
+              if (had_cr && *eol == SVN_UTF8_NEWLINE)
+                ++eol;
+              break;
+            }
         }
 
       if (file_baton->chunk[idx] == last_chunk)
@@ -317,6 +338,15 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
                          curp, length, 
                          chunk_to_offset(file_baton->chunk[idx]),
                          file_baton->pool));
+
+      /* If the last chunk ended in a CR, we're done. */
+      if (had_cr)
+        {
+          eol = curp;
+          if (*curp == SVN_UTF8_NEWLINE)
+            ++eol;
+          break;
+        }
     }
 
   length = eol - curp;
@@ -573,6 +603,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
   apr_size_t length;
   svn_error_t *err;
   svn_boolean_t bytes_processed = FALSE;
+  svn_boolean_t had_cr = FALSE;
 
   length = baton->length[idx];
   curp = baton->curp[idx];
@@ -613,30 +644,38 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
                 }
             }
 
-          /* XXX: '\n' doesn't really cut it.  We need to be able to detect
-           * XXX: '\n', '\r' and '\r\n'.
-           */
-          eol = memchr(curp, SVN_UTF8_NEWLINE, length);
+          eol = find_eol_start(curp, length);
 
           if (eol != NULL)
             {
               apr_size_t len;
 
+              had_cr = (*eol == SVN_UTF8_CR);
               eol++;
               len = (apr_size_t)(eol - curp);
-              length -= len;
 
-              if (type != svn_diff__file_output_unified_skip)
+              if (! had_cr || len < length)
                 {
-                  svn_stringbuf_appendbytes(baton->hunk, curp, len);
+                  if (had_cr && *eol == SVN_UTF8_NEWLINE)
+                    {
+                      ++eol;
+                      ++len;
+                    }
+
+                  length -= len;
+
+                  if (type != svn_diff__file_output_unified_skip)
+                    {
+                      svn_stringbuf_appendbytes(baton->hunk, curp, len);
+                    }
+                  
+                  baton->curp[idx] = eol;
+                  baton->length[idx] = length;
+
+                  err = SVN_NO_ERROR;
+
+                  break;
                 }
-
-              baton->curp[idx] = eol;
-              baton->length[idx] = length;
-
-              err = SVN_NO_ERROR;
-
-              break;
             }
 
           if (type != svn_diff__file_output_unified_skip)
@@ -651,6 +690,22 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       length = sizeof(baton->buffer[idx]);
 
       err = svn_io_file_read(baton->file[idx], curp, &length, baton->pool);
+
+      /* If the last chunk ended with a CR, we look for an LF at the start
+         of this chunk. */
+      if (had_cr)
+        {
+          if (! err && length > 0 && *curp == SVN_UTF8_NEWLINE)
+            {
+              if (type != svn_diff__file_output_unified_skip)
+                {
+                  svn_stringbuf_appendbytes(baton->hunk, curp, 1);
+                }
+              ++curp;
+              --length;
+            }
+          break;
+        }
     }
   while (! err);
 
@@ -662,7 +717,8 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       svn_error_clear (err);
       /* Special case if we reach the end of file AND the last line is in the
          changed range AND the file doesn't end with a newline */
-      if (bytes_processed && (type != svn_diff__file_output_unified_skip))
+      if (bytes_processed && (type != svn_diff__file_output_unified_skip)
+          && ! had_cr)
         {
           const char *out_str;
 #if !APR_CHARSET_EBCDIC
@@ -1018,14 +1074,16 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   if (curp == endp)
     return SVN_NO_ERROR;
 
-  /* XXX: '\n' doesn't really cut it.  We need to be able to detect
-   * XXX: '\n', '\r' and '\r\n'.
-   */
-  eol = memchr(curp, SVN_UTF8_NEWLINE, endp - curp);
+  eol = find_eol_start(curp, endp - curp);
   if (!eol)
     eol = endp;
   else
-    eol++;
+    {
+      svn_boolean_t had_cr = (*eol == SVN_UTF8_CR);
+      eol++;
+      if (had_cr && eol != endp && *eol == SVN_UTF8_NEWLINE)
+        eol++;
+    }
 
   if (type != svn_diff3__file_output_skip)
     {
@@ -1139,9 +1197,6 @@ svn_diff3__file_output_conflict(void *baton,
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_modified,
                            &len));
-  len = sizeof(APR_EOL_STR) - 1;
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
                                       modified_start, modified_length));
@@ -1151,9 +1206,6 @@ svn_diff3__file_output_conflict(void *baton,
       len = strlen(file_baton->conflict_original);
       SVN_ERR(svn_stream_write(file_baton->output_stream,
                                file_baton->conflict_original, &len));
-      len = sizeof(APR_EOL_STR) - 1;
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               APR_EOL_STR, &len));
 
       SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
                                           original_start, original_length));
@@ -1162,9 +1214,6 @@ svn_diff3__file_output_conflict(void *baton,
   len = strlen(file_baton->conflict_separator);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_separator, &len));
-  len = sizeof(APR_EOL_STR) - 1;
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
                                       latest_start, latest_length));
@@ -1172,15 +1221,40 @@ svn_diff3__file_output_conflict(void *baton,
   len = strlen(file_baton->conflict_latest);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_latest, &len));
-  len = sizeof(APR_EOL_STR) - 1;
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           APR_EOL_STR, &len));
 
   return SVN_NO_ERROR;
 }
 #if APR_CHARSET_EBCDIC
 #pragma convert(37)
 #endif
+
+/* Return the first eol marker found in [BUF, ENDP) as a
+ * NUL-terminated string, or NULL if no eol marker is found.
+ *
+ * If the last valid character of BUF is the first byte of a
+ * potentially two-byte eol sequence, just return "\r", that is,
+ * assume BUF represents a CR-only file.  This is correct for callers
+ * that pass an entire file at once, and is no more likely to be
+ * incorrect than correct for any caller that doesn't.
+ */
+static const char *
+detect_eol(char *buf, char *endp)
+{
+  const char *eol = find_eol_start(buf, endp - buf);
+  if (eol)
+    {
+      if (*eol == SVN_UTF8_NEWLINE)
+        return SVN_UTF8_NEWLINE_STR;
+
+      /* We found a CR. */
+      ++eol;
+      if (eol == endp || *eol != SVN_UTF8_NEWLINE)
+        return SVN_UTF8_CR_STR;
+      return SVN_UTF8_CR_STR SVN_UTF8_NEWLINE_STR;
+    }
+
+  return NULL;
+}
 
 svn_error_t *
 svn_diff_file_output_merge(svn_stream_t *output_stream,
@@ -1203,6 +1277,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
 #if APR_HAS_MMAP
   apr_mmap_t *mm[3] = { 0 };
 #endif /* APR_HAS_MMAP */
+  const char *eol;
 
   memset(&baton, 0, sizeof(baton));
   baton.output_stream = output_stream;
@@ -1257,6 +1332,23 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
       if (baton.endp[idx])
         baton.endp[idx] += size;
     }
+
+  /* Check what eol marker we should use for conflict markers.
+     We use the eol marker of the modified file and fall back on the
+     platform's eol marker if that file doesn't contain any newlines. */
+  eol = detect_eol(baton.buffer[1], baton.endp[1]);
+  if (! eol)
+    eol = APR_EOL_STR;
+
+  /* Extend our conflict markers with the correct eol marker. */
+  baton.conflict_modified = apr_pstrcat(pool, baton.conflict_modified, eol,
+                                        NULL);
+  baton.conflict_original = apr_pstrcat(pool, baton.conflict_original, eol,
+                                        NULL);
+  baton.conflict_separator = apr_pstrcat(pool, baton.conflict_separator, eol,
+                                         NULL);
+  baton.conflict_latest = apr_pstrcat(pool, baton.conflict_latest, eol,
+                                      NULL);
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));

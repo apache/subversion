@@ -15,6 +15,7 @@
 #              <justin@erenkrantz.com>
 #              me
 #    (I wrote the regression tests.)
+#    Found by: Phineas T. Phinder <phtph@ph1nderz.com>
 #    Suggested by: Snosbig Q. Ptermione <sqptermione@example.com>
 #    Review by: Justin Erenkrantz <justin@erenkrantz.com>
 #               rooneg
@@ -463,7 +464,7 @@ class LogMessage:
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review|Suggested) by:\s+(.*)')
+field_re = re.compile('^(Patch|Review|Suggested|Found) by:\s+(.*)')
 parenthetical_aside_re = re.compile('^\(.*\)\s*$')
 
 def graze(input):

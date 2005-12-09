@@ -42,17 +42,33 @@ EOF
   chmod +x $1
 ])
 
-dnl
-dnl SVN_SUBDIR_CONFIG(dir [, sub-package-cmdline-args])
-dnl
-dnl Note that this code is a direct copy of that which is found in 
-dnl the apr project's build/apr_common.m4.
-AC_DEFUN(SVN_SUBDIR_CONFIG, [
+
+# SVN_EXTERNAL_PROJECT_SETUP()
+# Internal helper for SVN_EXTERNAL_PROJECT.
+AC_DEFUN([SVN_EXTERNAL_PROJECT_SETUP], [
+  do_subdir_config="yes"
+  AC_ARG_ENABLE([subdir-config],
+    AC_HELP_STRING([--disable-subdir-config],
+                   [do not reconfigure packages in subdirectories]),
+    [if test "$enableval" = "no"; then do_subdir_config="no"; fi])
+  AC_SUBST([SVN_EXTERNAL_PROJECT_SUBDIRS], [""])
+])
+
+# SVN_EXTERNAL_PROJECT(SUBDIR [, ADDITIONAL-CONFIGURE-ARGS])
+# Setup SUBDIR as an external project. This means:
+# - Execute the configure script immediately at the point of macro invocation.
+# - Add SUBDIR to the substitution variable SVN_EXTERNAL_PROJECT_SUBDIRS,
+#   for the Makefile.in to arrange to execute make in the subdir.
+#
+# Derived from APR_SUBDIR_CONFIG
+AC_DEFUN([SVN_EXTERNAL_PROJECT], [
+  AC_REQUIRE([SVN_EXTERNAL_PROJECT_SETUP])
+  SVN_EXTERNAL_PROJECT_SUBDIRS="$SVN_EXTERNAL_PROJECT_SUBDIRS $1"
   if test "$do_subdir_config" = "yes" ; then
     # save our work to this point; this allows the sub-package to use it
     AC_CACHE_SAVE
 
-    echo "configuring package in $1 now"
+    AC_MSG_NOTICE([configuring package in $1 now])
     ac_popdir=`pwd`
     ac_abs_srcdir=`(cd $srcdir/$1 && pwd)`
     apr_config_subdirs="$1"
@@ -82,9 +98,9 @@ AC_DEFUN(SVN_SUBDIR_CONFIG, [
     # grab any updates from the sub-package
     AC_CACHE_LOAD
   else
-    AC_MSG_WARN(not running configure in $1)
+    AC_MSG_WARN([not running configure in $1])
   fi
-])dnl
+])
 
 dnl
 dnl SVN_CONFIG_SCRIPT(path)

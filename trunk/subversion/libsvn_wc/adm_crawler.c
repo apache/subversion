@@ -42,6 +42,7 @@
 #include "props.h"
 #include "translate.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -60,42 +61,23 @@ restore_file (const char *file_path,
               svn_boolean_t use_commit_times,
               apr_pool_t *pool)
 {
-  const char *text_base_path, *tmp_text_base_path;
-  apr_hash_t *keywords;
-  const char *eol;
-  const svn_wc_entry_t *entry;
+  const char *tmp_file, *text_base_path;
   svn_wc_entry_t newentry;
-  apr_time_t tstamp;
   const char *bname;
-  apr_uint32_t modify_flags = 0;
   svn_boolean_t special;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
-  tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
   bname = svn_path_basename (file_path, pool);
 
-  SVN_ERR (svn_io_copy_file (text_base_path, tmp_text_base_path,
-                             FALSE, pool));
+  /* Copy / translate into a temporary file, which afterwards can
+     be atomically moved over the original working copy file. */
 
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol, file_path, adm_access, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords,
-                                 file_path, adm_access, NULL, pool));
-  SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool));
-                                
-  
-  /* When copying the tmp-text-base out to the working copy, make
-     sure to do any eol translations or keyword substitutions,
-     as dictated by the property values.  If these properties
-     are turned off, then this is just a normal copy. */
-  SVN_ERR (svn_subst_copy_and_translate3 (tmp_text_base_path,
-                                          file_path,
-                                          eol, FALSE, /* don't repair */
-                                          keywords,
-                                          TRUE, /* expand keywords */
-                                          special,
-                                          pool));
-  
-  SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
+  SVN_ERR (svn_wc_translated_file2 (&tmp_file,
+                                    text_base_path, file_path, adm_access,
+                                    SVN_WC_TRANSLATE_FROM_NF
+                                    | SVN_WC_TRANSLATE_FORCE_COPY, pool));
+
+  SVN_ERR (svn_io_file_rename (tmp_file, file_path, pool));
 
   SVN_ERR (svn_wc__maybe_set_read_only (NULL, file_path, adm_access, pool));
 
@@ -106,26 +88,33 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc_resolved_conflict2 (file_path, adm_access, TRUE, FALSE,
                                       FALSE, NULL, NULL, NULL, NULL, pool));
 
-  SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
-  assert(entry != NULL);
+  if (use_commit_times)
+    {
+      SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool)); 
+    }
 
   /* Possibly set timestamp to last-commit-time. */
   if (use_commit_times && (! special))
     {
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
+      assert(entry != NULL);
+
       SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
                                               file_path, pool));
-      tstamp = entry->cmt_date;
+
+      newentry.text_time = entry->cmt_date;
     }
   else
     {
-      SVN_ERR (svn_io_file_affected_time (&tstamp, file_path, pool));
+      SVN_ERR (svn_io_file_affected_time (&newentry.text_time,
+                                          file_path, pool));
     }
-  
+
   /* Modify our entry's text-timestamp to match the working file. */
-  modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
-  newentry.text_time = tstamp;
   SVN_ERR (svn_wc__entry_modify (adm_access, bname,
-                                 &newentry, modify_flags,
+                                 &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                  TRUE /* do_sync now */, pool));
 
   return SVN_NO_ERROR;
@@ -184,7 +173,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                              dir_path, subpool);
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path, subpool));
   SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, subpool));
-  SVN_ERR (svn_io_get_dirents2 (&dirents, full_path, subpool));
+  SVN_ERR (svn_io_get_dir_filenames (&dirents, full_path, subpool));
   
   /*** Do the real reporting and recursing. ***/
   
@@ -267,8 +256,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           if (dirent_kind == svn_node_none)
             missing = TRUE;
         }
-      else
-        dirent_kind = dirent->kind;
       
       /* From here on out, ignore any entry scheduled for addition */
       if (current_entry->schedule == svn_wc_schedule_add)
@@ -277,18 +264,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       /*** Files ***/
       if (current_entry->kind == svn_node_file) 
         {
-          /* If the dirent changed kind, report it as missing and
-             move on to the next entry.  Later on, the update
-             editor will return an 'obstructed update' error.  :) */
-          if ((dirent_kind != svn_node_none)
-              && (dirent_kind != svn_node_file)
-              && (! report_everything))
-            {
-              SVN_ERR (reporter->delete_path (report_baton, this_path, 
-                                              iterpool));
-              continue;
-            }
-
           /* If the item is missing from disk, and we're supposed to
              restore missing things, and it isn't missing as a result
              of a scheduling operation, then ... */
@@ -366,19 +341,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                 SVN_ERR (reporter->delete_path (report_baton, this_path,
                                                 iterpool));
               continue;
-            }
-          
-          /* No excuses here.  If the user changed a versioned
-             directory into something else, the working copy is hosed.
-             It can't receive updates within this dir anymore.  Throw
-             a real error. */
-          if ((dirent_kind != svn_node_none) && (dirent_kind != svn_node_dir))
-            {
-              return svn_error_createf
-                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                 _("The entry '%s' is no longer a directory; "
-                   "remove the entry before updating"),
-                 svn_path_local_style (this_path, iterpool));
             }
 
           /* We need to read the full entry of the directory from its
@@ -756,7 +718,10 @@ svn_wc_transmit_text_deltas (const char *path,
      txdelta, b) we need to detranslate eol and keywords anyway, and
      c) after the commit, we're going to copy the tmp file to become
      the new text base anyway. */
-  SVN_ERR (svn_wc_translated_file (&tmpf, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_translated_file2 (&tmpf, path, path,
+                                    adm_access,
+                                    SVN_WC_TRANSLATE_TO_NF,
+                                    pool));
 
   /* If the translation didn't create a new file then we need an explicit
      copy, if it did create a new file we need to rename it. */
@@ -897,8 +862,17 @@ svn_wc_transmit_prop_deltas (const char *path,
   /* Get the right access baton for the job. */
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, adm_access, path, pool));
 
+  /* For an enough recent WC, we can have a really easy out. */
+  if (svn_wc__adm_wc_format (adm_access) > SVN_WC__NO_PROPCACHING_VERSION
+      && ! entry->has_prop_mods)
+    {
+      if (tempfile)
+        *tempfile = NULL;
+      return SVN_NO_ERROR;
+    }
+
   /* First, get the prop_path from the original path */
-  SVN_ERR (svn_wc__prop_path (&props, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc__prop_path (&props, path, entry->kind, FALSE, pool));
   
   /* Get the full path of the prop-base `pristine' file */
   if (entry->schedule == svn_wc_schedule_replace)
@@ -910,11 +884,11 @@ svn_wc_transmit_prop_deltas (const char *path,
     }
   else
     /* the real prop-base hash */
-    SVN_ERR (svn_wc__prop_base_path (&props_base, path, adm_access, FALSE,
+    SVN_ERR (svn_wc__prop_base_path (&props_base, path, entry->kind, FALSE,
                                      pool));
 
   /* Copy the local prop file to the administrative temp area */
-  SVN_ERR (svn_wc__prop_path (&props_tmp, path, adm_access, TRUE, pool));
+  SVN_ERR (svn_wc__prop_path (&props_tmp, path, entry->kind, TRUE, pool));
   SVN_ERR (svn_io_copy_file (props, props_tmp, FALSE, pool));
 
   /* Alert the caller that we have created a temporary file that might

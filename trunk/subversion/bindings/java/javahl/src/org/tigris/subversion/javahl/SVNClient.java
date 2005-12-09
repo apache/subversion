@@ -61,6 +61,13 @@ public class SVNClient implements SVNClientInterface
      */
     protected long cppAddr;
     /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        return NativeResources.version;
+    }
+    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
@@ -921,7 +928,7 @@ public class SVNClient implements SVNClientInterface
      * @param path        the path of the file
      * @param revision    the revision to retrieve
      * @param pegRevision the revision at which to interpret the path
-     * @param the stream to write the file's content to
+     * @param stream      the stream to write the file's content to
      * @throws ClientException
      * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedOutputStream.html">PipedOutputStream</a>
      * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
@@ -1116,4 +1123,9 @@ public class SVNClient implements SVNClientInterface
     public native Info2[] info2(String pathOrUrl, Revision revision,
                                 Revision pegRevision, boolean recurse)
             throws ClientException;
+    /**
+     * Internal method to initialize the native layer. Only to be called by
+     * NativeResources.loadNativeLibrary
+     */
+    static native void initNative();
 }

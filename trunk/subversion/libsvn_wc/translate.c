@@ -48,94 +48,81 @@
 #define CRLF_STR   "\x43\x52\x4c\x46"         /* "CRLF"   */
 
 svn_error_t *
+svn_wc_translated_file2 (const char **xlated_path,
+                         const char *src,
+                         const char *versioned_file,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_uint32_t flags,
+                         apr_pool_t *pool)
+{
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
+
+  SVN_ERR (svn_wc__get_eol_style (&style, &eol, versioned_file,
+                                  adm_access, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords, versioned_file,
+                                 adm_access, NULL, pool));
+  SVN_ERR (svn_wc__get_special (&special, versioned_file, adm_access, pool));
+
+
+  if (! svn_subst_translation_required (style, eol, keywords, special, TRUE)
+      && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
+    {
+      /* Translation would be a no-op, so return the original file. */
+      *xlated_path = src;
+
+    }
+  else  /* some translation (or copying) is necessary */
+    {
+      const char *tmp_dir, *tmp_vfile;
+      svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+
+      svn_path_split (versioned_file, &tmp_dir, &tmp_vfile, pool);
+      tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool, tmp_vfile, NULL);
+
+      SVN_ERR (svn_io_open_unique_file2
+               (NULL, &tmp_vfile,
+                tmp_vfile,
+                SVN_WC__TMP_EXT,
+                (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)
+                ? svn_io_file_del_none : svn_io_file_del_on_pool_cleanup,
+                pool));
+
+      if (flags & SVN_WC_TRANSLATE_TO_NF)
+        /* to normal form */
+        SVN_ERR (svn_subst_translate_to_normal_form
+                 (src, tmp_vfile, style, eol,
+                  repair_forced,
+                  keywords, special, pool));
+      else /* from normal form */
+        SVN_ERR (svn_subst_copy_and_translate3
+                 (src, tmp_vfile,
+                  eol, repair_forced,
+                  keywords, TRUE,
+                  special,
+                  pool));
+
+      *xlated_path = tmp_vfile;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_translated_file (const char **xlated_p,
                         const char *vfile,
                         svn_wc_adm_access_t *adm_access,
                         svn_boolean_t force_repair,
                         apr_pool_t *pool)
 {
-  svn_subst_eol_style_t style;
-  const char *eol;
-  apr_hash_t *keywords;
-  svn_boolean_t special;
-  
-  SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, adm_access, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
-  SVN_ERR (svn_wc__get_special (&special, vfile, adm_access, pool));
-
-  if ((style == svn_subst_eol_style_none) && (! keywords) && (! special))
-    {
-      /* Translation would be a no-op, so return the original file. */
-      *xlated_p = vfile;
-    }
-  else  /* some translation is necessary */
-    {
-      const char *tmp_dir, *tmp_vfile;
-      apr_file_t *ignored;
-
-      /* First, reserve a tmp file name. */
-
-      svn_path_split (vfile, &tmp_dir, &tmp_vfile, pool);
-      
-      tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
-                                    tmp_vfile, NULL);
-      
-      SVN_ERR (svn_io_open_unique_file (&ignored,
-                                        &tmp_vfile,
-                                        tmp_vfile,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE,
-                                        pool));
-      
-      /* We were just reserving the name and don't actually need the
-         filehandle, so close immediately. */
-      SVN_ERR (svn_io_file_close (ignored, pool));
-      
-      if (style == svn_subst_eol_style_fixed)
-        {
-          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
-                                                  tmp_vfile,
-                                                  eol,
-                                                  TRUE,
-                                                  keywords,
-                                                  FALSE,
-                                                  special,
-                                                  pool));
-        }
-      else if (style == svn_subst_eol_style_native)
-        {
-          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
-                                                  tmp_vfile,
-                                                  SVN_WC__DEFAULT_EOL_MARKER,
-                                                  force_repair,
-                                                  keywords,
-                                                  FALSE,
-                                                  special,
-                                                  pool));
-        }
-      else if (style == svn_subst_eol_style_none)
-        {
-          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
-                                                  tmp_vfile,
-                                                  NULL,
-                                                  force_repair,
-                                                  keywords,
-                                                  FALSE,
-                                                  special,
-                                                  pool));
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_IO_UNKNOWN_EOL, NULL,
-             _("'%s' has unknown value for svn:eol-style property"),
-             svn_path_local_style (vfile, pool));
-        }
-
-      *xlated_p = tmp_vfile;
-    }
-
-  return SVN_NO_ERROR;
+  return svn_wc_translated_file2 (xlated_p, vfile, vfile, adm_access,
+                                  SVN_WC_TRANSLATE_TO_NF
+                                  | (force_repair ?
+                                     SVN_WC_TRANSLATE_FORCE_EOL_REPAIR : 0),
+                                  pool);
 }
 
 
@@ -230,17 +217,12 @@ svn_wc__get_special (svn_boolean_t *special,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
-  apr_hash_t *prophash;
-  svn_error_t *err;
-
+  const svn_string_t *propval;
+  
   /* Get the property value. */
-  err = svn_wc_prop_list (&prophash, path, adm_access, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, _("Failed to load properties from disk"));
-
-  *special = svn_wc__has_special_property (prophash);
+  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path,
+                            adm_access, pool));
+  *special = propval != NULL;
 
   return SVN_NO_ERROR;
 }

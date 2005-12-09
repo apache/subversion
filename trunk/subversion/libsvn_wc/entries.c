@@ -132,6 +132,11 @@ svn_wc__entries_init (const char *path,
                   sizeof (SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
                   TRUE_STR);
   
+  /* Add cachable-props here so that it can be inherited by other entries.
+   */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                APR_HASH_KEY_STRING, SVN_WC__CACHABLE_PROPS);
+
   svn_xml_make_open_tag_hash (&accum, pool, svn_xml_self_closing,
                               SVN_WC__ENTRIES_ENTRY, atts);
 
@@ -184,6 +189,35 @@ alloc_entry (apr_pool_t *pool)
   return entry;
 }
 
+
+/* If attribute ATTR_NAME appears in hash ATTS, set *ENTRY_FLAG to its
+ * boolean value and add MODIFY_FLAG into *MODIFY_FLAGS, else set *ENTRY_FLAG
+ * false.  ENTRY_NAME is the name of the WC-entry. */
+static svn_error_t *
+do_bool_attr (svn_boolean_t *entry_flag,
+              apr_uint32_t *modify_flags, apr_uint32_t modify_flag,
+              apr_hash_t *atts, const char *attr_name,
+              const char *entry_name)
+{
+  const char *str = apr_hash_get (atts, attr_name, APR_HASH_KEY_STRING);
+
+  *entry_flag = FALSE;
+  if (str)
+    {
+      if (strcmp (str, TRUE_STR) == 0)
+        *entry_flag = TRUE;
+      else if (strcmp (str, FALSE_STR) == 0 || strcmp (str, "") == 0)
+        *entry_flag = FALSE;
+      else
+        return svn_error_createf
+          (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+           _("Entry '%s' has invalid '%s' value"),
+           (entry_name ? entry_name : SVN_WC_ENTRY_THIS_DIR), attr_name);
+
+      *modify_flags |= modify_flag;
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
@@ -300,52 +334,52 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   
   /* Is this entry in a state of mental torment (conflict)? */
   {
-    if ((entry->prejfile 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE, 
+    if ((entry->prejfile
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->prejfile = *(entry->prejfile) ? entry->prejfile : NULL;
+      }
 
-    if ((entry->conflict_old 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD, 
+    if ((entry->conflict_old
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_old =
+          *(entry->conflict_old) ? entry->conflict_old : NULL;
+      }
 
-    if ((entry->conflict_new 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW, 
+    if ((entry->conflict_new
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_new =
+          *(entry->conflict_new) ? entry->conflict_new : NULL;
+      }
 
-    if ((entry->conflict_wrk 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK, 
+    if ((entry->conflict_wrk
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_wrk =
+          *(entry->conflict_wrk) ? entry->conflict_wrk : NULL;
+      }
   }
 
   /* Is this entry copied? */
+  SVN_ERR (do_bool_attr (&entry->copied,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_COPIED,
+                         atts, SVN_WC__ENTRY_ATTR_COPIED, name));
   {
-    const char *copiedstr, *revstr;
-      
-    copiedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPIED, 
-                              APR_HASH_KEY_STRING);
-        
-    entry->copied = FALSE;
-    if (copiedstr)
-      {
-        if (! strcmp (copiedstr, TRUE_STR))
-          entry->copied = TRUE;
-        else if (! strcmp (copiedstr, FALSE_STR))
-          entry->copied = FALSE;
-        else if (! strcmp (copiedstr, ""))
-          entry->copied = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_COPIED);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-      }
+    const char *revstr;
 
     entry->copyfrom_url = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                                         APR_HASH_KEY_STRING);
@@ -368,86 +402,19 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry deleted? */
-  {
-    const char *deletedstr;
-      
-    deletedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_DELETED, 
-                               APR_HASH_KEY_STRING);
-        
-    entry->deleted = FALSE;
-    if (deletedstr)
-      {
-        if (! strcmp (deletedstr, TRUE_STR))
-          entry->deleted = TRUE;
-        else if (! strcmp (deletedstr, FALSE_STR))
-          entry->deleted = FALSE;
-        else if (! strcmp (deletedstr, ""))
-          entry->deleted = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_DELETED);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
-      }
-  }
+  SVN_ERR (do_bool_attr (&entry->deleted,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_DELETED,
+                         atts, SVN_WC__ENTRY_ATTR_DELETED, name));
 
   /* Is this entry absent? */
-  {
-    const char *absentstr;
-      
-    absentstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_ABSENT, 
-                               APR_HASH_KEY_STRING);
-        
-    entry->absent = FALSE;
-    if (absentstr)
-      {
-        if (! strcmp (absentstr, TRUE_STR))
-          entry->absent = TRUE;
-        else if (! strcmp (absentstr, FALSE_STR))
-          entry->absent = FALSE;
-        else if (! strcmp (absentstr, ""))
-          entry->absent = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_ABSENT);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_ABSENT;
-      }
-  }
+  SVN_ERR (do_bool_attr (&entry->absent,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_ABSENT,
+                         atts, SVN_WC__ENTRY_ATTR_ABSENT, name));
 
   /* Is this entry incomplete? */
-  {
-    const char *incompletestr;
-      
-    incompletestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, 
-                                  APR_HASH_KEY_STRING);
-        
-    entry->incomplete = FALSE;
-    if (incompletestr)
-      {
-        if (! strcmp (incompletestr, TRUE_STR))
-          entry->incomplete = TRUE;
-        else if (! strcmp (incompletestr, FALSE_STR))
-          entry->incomplete = FALSE;
-        else if (! strcmp (incompletestr, ""))
-          entry->incomplete = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_INCOMPLETE);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
-      }
-  }
-
+  SVN_ERR (do_bool_attr (&entry->incomplete,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                         atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
 
   /* Attempt to set up timestamps. */
   {
@@ -573,6 +540,46 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
   
+  /* has-props flag. */
+  SVN_ERR (do_bool_attr (&entry->has_props,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_HAS_PROPS,
+                         atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, name));
+
+  /* has-prop-mods flag. */
+  {
+    const char *has_prop_mods_str
+      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                      APR_HASH_KEY_STRING);
+        
+    if (has_prop_mods_str)
+      {
+        if (strcmp (has_prop_mods_str, TRUE_STR) == 0)
+          entry->has_prop_mods = TRUE;
+        else if (strcmp (has_prop_mods_str, FALSE_STR) != 0)
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid '%s' value"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_HAS_PROP_MODS);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
+      }
+  }
+  
+  /* cachable-props string. */
+  entry->cachable_props = apr_hash_get (atts, 
+                                        SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                                        APR_HASH_KEY_STRING);
+  if (entry->cachable_props)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS;
+
+  /* present-props string. */
+  entry->present_props = apr_hash_get (atts, 
+                                       SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
+                                      APR_HASH_KEY_STRING);
+  if (entry->present_props)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_PRESENT_PROPS;
+
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -643,6 +650,9 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     {
       dst->uuid = src->uuid;
     }
+
+  if (! dst->cachable_props)
+    dst->cachable_props = src->cachable_props;
 }
 
 
@@ -1132,6 +1142,26 @@ write_entry (svn_stringbuf_t **output,
                   APR_HASH_KEY_STRING,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
 
+  /* Has-props flag. */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
+                (entry->has_props ? TRUE_STR : NULL));
+
+  /* Prop-mods. */
+  if (entry->has_prop_mods)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                  APR_HASH_KEY_STRING, TRUE_STR);
+  
+  /* Cachable props. */
+  if (entry->cachable_props && *entry->cachable_props)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                  APR_HASH_KEY_STRING, entry->cachable_props);
+
+  /* Present props. */
+  if (entry->present_props
+      && *entry->present_props)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
+                  APR_HASH_KEY_STRING, entry->present_props);
+
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
   /* We only want to write out 'revision' and 'url' for the
@@ -1203,6 +1233,12 @@ write_entry (svn_stringbuf_t **output,
               && strcmp (entry->repos, this_dir->repos) == 0)
             apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
                           NULL);
+
+          /* Cachable props are also inherited. */
+          if (entry->cachable_props && this_dir->cachable_props
+              && strcmp (entry->cachable_props, this_dir->cachable_props) == 0)
+            apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                          APR_HASH_KEY_STRING, NULL);
         }
     }
 
@@ -1451,6 +1487,26 @@ fold_entry (apr_hash_t *entries,
   /* Lock creation date */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
+
+  /* has-props flag */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPS)
+    cur_entry->has_props = entry->has_props;
+
+  /* prop-mods flag */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS)
+    cur_entry->has_prop_mods = entry->has_prop_mods;
+
+  /* Cachable props. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS)
+    cur_entry->cachable_props = (entry->cachable_props
+                                 ? apr_pstrdup (pool, entry->cachable_props)
+                                 : NULL);
+
+  /* Property existence */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_PRESENT_PROPS)
+    cur_entry->present_props = (entry->present_props
+                                ? apr_pstrdup (pool, entry->present_props)
+                                : NULL);
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
@@ -1841,7 +1897,10 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_owner = apr_pstrdup (pool, entry->lock_owner);
   if (entry->lock_comment)
     dupentry->lock_comment = apr_pstrdup (pool, entry->lock_comment);
-
+  if (entry->cachable_props)
+    dupentry->cachable_props = apr_pstrdup (pool, entry->cachable_props);
+  if (entry->present_props)
+    dupentry->present_props = apr_pstrdup (pool, entry->present_props);
   return dupentry;
 }
 

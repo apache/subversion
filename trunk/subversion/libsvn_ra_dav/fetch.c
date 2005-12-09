@@ -972,7 +972,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
          properties. */
       if ((SVN_DIRENT_HAS_PROPS & dirent_fields) == 0)
         {
-          apr_size_t num_props = 1; /* start with one for the final NULL */
+          int num_props = 1; /* start with one for the final NULL */
 
           if (dirent_fields & SVN_DIRENT_KIND)
             ++num_props;
@@ -1714,8 +1714,8 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
 
 
   /* We always run the report on the 'public' URL, which represents
-     HEAD anyway.  If the path doesn't exist in HEAD, then
-     svn_ra_get_locks() *should* fail.  Lock queries are always on HEAD. */
+     HEAD anyway.  If the path doesn't exist in HEAD, then there can't
+     possibly be a lock, so we just return no locks. */
   url = svn_path_url_add_component (ras->url->data, path, pool);
 
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
@@ -1728,6 +1728,13 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    &status_code,
                                    FALSE,
                                    pool);
+
+  if (err && err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+    {
+      svn_error_clear (err);
+      *locks = baton.lock_hash;
+      return SVN_NO_ERROR;
+    }
 
   /* ### Should svn_ra_dav__parsed_request() take care of storing auth
      ### info itself? */
@@ -2740,13 +2747,14 @@ static int end_element(void *userdata, int state,
       break;
       
     case ELEM_href:
+      if (rb->fetch_content)
+        /* record the href that we just found */
+        svn_ra_dav__copy_href(rb->href, rb->cdata_accum->data);
+      svn_stringbuf_setempty(rb->cdata_accum);
+
       /* do nothing if we aren't fetching content. */
       if (!rb->fetch_content)
         break;
-      
-      /* record the href that we just found */
-      svn_ra_dav__copy_href(rb->href, rb->cdata_accum->data);
-      svn_stringbuf_setempty(rb->cdata_accum);
       
       /* if we're within a <resource> tag, then just call the generic
          RA set_wcprop_callback directly;  no need to use the

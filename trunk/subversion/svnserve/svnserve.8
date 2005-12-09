@@ -50,6 +50,17 @@ pathname in URLs provided by the client will be interpreted relative
 to this root, and will not be allowed to escape this root.
 .PP
 .TP 5
+\fB\-R\fP \fB\-\-read-only\fP
+Force all write operations through this \fBsvnserve\fP instance to be
+forbidden, overriding all other access policy configuration.  Do not
+use this option to set general repository access policy - that is what
+the \fBconf/svnserve.conf\P repository configuration file is for.
+This option should be used only to restrict access via a certain
+method of invoking \fBsvnserve\fP - for example, to allow write access
+via SSH, but not via a \fBsvnserve\fP daemon, or to create a
+restricted SSH key which is only capable of read access.
+.PP
+.TP 5
 \fB\-t\fP, \fB\-\-tunnel\fP
 Causes \fBsvnserve\fP to run in tunnel mode, which is just like the
 inetd mode of operation (serve one connection over stdin/stdout)

@@ -665,6 +665,7 @@ close_edit (void *edit_baton,
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
+  char *post_commit_err = NULL;
 
   /* If no transaction has been created (ie. if open_root wasn't
      called before close_edit), abort the operation here with an
@@ -703,12 +704,13 @@ close_edit (void *edit_baton,
     }
   else if (err)
     {
-      /* ### TODO: ra_local is the only RA layer that currently
-         understands SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  And as of
-         at least r12960, svn_repos_fs_commit_txn() would never return
-         that anyway.  If someone who knows ra_svn better can add
-         handling for this special case, this whole "else if" block
-         can go away (again).  */ 
+      /* Post-commit hook's failure output can be passed back to the
+         client. However, this cannot be a commit failure. Hence
+         passing back the post-commit error message as a string to
+         be displayed as a warning. */
+      if (err->child && err->child->message)
+        post_commit_err = apr_pstrdup (pool, err->child->message) ;
+  
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
@@ -739,6 +741,7 @@ close_edit (void *edit_baton,
         commit_info->revision = new_revision;
         commit_info->date = date ? date->data : NULL;
         commit_info->author = author ? author->data : NULL;
+        commit_info->post_commit_err = post_commit_err;
         err2 = (*eb->commit_callback) (commit_info, 
                                        eb->commit_callback_baton,
                                        pool);

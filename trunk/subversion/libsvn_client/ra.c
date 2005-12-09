@@ -42,8 +42,9 @@ open_admin_tmp_file (apr_file_t **fp,
                      apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = callback_baton;
-  
-  SVN_ERR (svn_wc_create_tmp_file (fp, cb->base_dir, TRUE, pool));
+
+  SVN_ERR (svn_wc_create_tmp_file2 (fp, NULL, cb->base_dir,
+                                    svn_io_file_del_on_close, pool));
 
   return SVN_NO_ERROR;
 }
@@ -56,7 +57,6 @@ open_tmp_file (apr_file_t **fp,
 {
   svn_client__callback_baton_t *cb = callback_baton;
   const char *truepath;
-  const char *ignored_filename;
 
   if (cb->base_dir)
     truepath = apr_pstrdup (pool, cb->base_dir);
@@ -66,9 +66,8 @@ open_tmp_file (apr_file_t **fp,
   /* Tack on a made-up filename. */
   truepath = svn_path_join (truepath, "tempfile", pool);
 
-  /* Open a unique file;  use APR_DELONCLOSE. */  
-  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    truepath, ".tmp", TRUE, pool));
+  /* Open a unique file;  use APR_DELONCLOSE. */
+  SVN_ERR (svn_io_open_unique_file (fp, NULL, truepath, ".tmp", TRUE, pool));
 
   return SVN_NO_ERROR;
 }

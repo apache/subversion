@@ -1,0 +1,294 @@
+    Notes from Version Control BOF (Tuesday, 18 Oct, EuroOSCON 2005)
+    ================================================================
+
+We didn't have a very broad range of systems: most people used SVN or
+CVS, plus a scattering of other systems (3 SVK users, a couple of P4s,
+an MKS, and a PVCS).
+
+Since we already knew CVS's problems, we gathered complaints about
+Subversion, and some information about different groups' general VC
+methodologies.  See the end of this file for a list of attendees.
+
+Subversion Complaints:
+----------------------
+
+* Lack of easy merging.  One wants to type "svn merge SRC DST", but
+  instead, one must type "svn merge -rX:Y URL WC".  Why can't the DST
+  just remember what has been merged from that SRC before and DTRT?
+
+  For that matter, why can't branches remember where they come from,
+  so one could just type "svn merge SRC" and it'd know the DST?
+
+  Note that SVK does all this.
+  
+  [gstein: shouldn't that be "svn merge DST"? you're merging *into*
+  the destination using a known SRC. and DST might just be "."
+
+  [kfogel: Well, I'm not sure, it could work both ways, right?  That
+  is, maybe you want to feed a branch's changes back into its trunk,
+  or maybe you want to pull trunk changes out into a branch.
+  Grammatically the argument could be the subject or object, I don't
+  feel like either way is inherently more intuitive.  Which may mean
+  this syntax is too ambiguous to use...]
+
+  [fwiemann: So why not add new commands, "push" and "pull"?]
+
+* One person mentioned pulling (pushing?) trunk changes to multiple
+  branches, a sort of "find my descendants and do THIS to them"
+  operation.  Some more thoughts: it would be nice to be able to do
+  this to
+
+  - All branches descending from the LoD ("line of development")
+    that contains the change in question
+  - Branches selected by inclusion
+  - Branches selected by exclusion
+
+  This person also said they do cherry-picking of changes sometimes;
+  wish we'd had time to drill down on that a bit more.
+
+* Someone mentioned it would be nice to be able to commit from a trunk
+  working copy directly into a branch.
+  
+  [gstein: isn't this just "svn cp . http://.../branches/newbranch" ?]
+
+  [kfogel: Ah, yes, right, in fact we even said so at the meeting.
+  That combined with 'svn revert' gets the desired feature.  Unless
+  the user actually wanted to commit changes from a trunk wc into an
+  existing branch... but that would involve perilous auto-merging.]
+
+  [fwiemann: Then the branch starts out with changes, so that the
+  branch point to diff/merge against is the trunk in the previous
+  revision, which complicates things a little because we cannot type
+  "svn diff -r123:HEAD mybranch".  Not a major problem, though.]
+
+* Offline commits.  A lot of people wanted these, mainly, it seemed,
+  as a way of cleanly storing up commits until they can get back
+  online again.  It's important that they be real commits, not just
+  patch files, because the successive commits might depend on each
+  other.
+
+* The One-File-In-Many-Branches Problem.  We hand-waved a bit about
+  what this means exactly, but I'm pretty sure it was the feature of
+  having files (or perhaps even whole directories?) that follow one
+  LoD but are visible from many LoD.  In other words, you create a
+  branch, but mostly the files on the branch are really the same
+  entities as they are on trunk, except for a few files that you
+  designate as being "hard branched" (perhaps this designation happens
+  automatically when you modify something).
+
+  This is apparently similar to p4 "views".  Can someone confirm this?
+  
+  [gstein: p4 client specs can assemble a wc from many locations, much
+  like you can have a multi-source wc in svn. I'm not familiar with a
+  "view", but I'm guessing the implication is something that many
+  developers can share to create their client spec. Wouldn't this be
+  like an svn:external that pulls together all the various bits? or
+  maybe use some kind of repos-side symlink.]
+
+  [jackr: ClearCase "view" is the sum of a working copy and a
+  "configuration specification," which means that each WC can
+  have a separate configuration.  In principal, each file and
+  directory can come from a completely different branch, tag, or
+  version; in practice, of course, most cspecs take most files
+  from the same source.  But it's quite common to have
+  'components' in the working set, and have each component
+  follow a different branch.  We might have a RELEASE1 branche,
+  nearly ready to ship, and a RELEASE2 branch that's still a
+  long way from release.  You might be working on a RELEASE2
+  feature, and so your cspec picks your component from the
+  RELEASE2 branch.  But other components haven't started on
+  RELEASE2 yet; you pick them from the RELEASE1 branch, and are
+  assured that you're building and testing against their latest
+  (integrate early, integrate often).]
+
+* Subversion has no way to answer "What branches/tags is this version
+  of this file present in?"  This is especially important for software
+  producers who have to support releases for a long time.  When they
+  discover that a given bug is present in, say, r325 of foo.c, they
+  need a way to ask what releases (i.e., what tags) that exact entity
+  (i.e., "node revision") is present in, because those releases will
+  also have the bug!
+
+  CVS can do this, by virtue of RCS format.  ClearCase can too, I
+  believe.  Subversion certainly could do it; in general, we need to
+  think about how to make these kinds of reports and queries easier.
+  If we ever get serious about switching to an SQL back end for SVN,
+  this would be a perfect test problem to see if our design is on the
+  right track.
+
+  Gervase demonstrated Bonsai doing this, a CVS tree viewing tool
+  which, as he says, "is very cool but not well documented and only
+  mozilla.org seems to use".  Since  it views CVS, this sort of 
+  calculation is easy for it.
+  
+  It was pointed out by Axel Hecht that due to the requirements of
+  l10n work, Mozilla actually uses this feature "at least once per
+  week".
+
+* Branching subdirectories in SVN is not intuitive...
+
+* ...which means this is probably a good time to bring up 'mkdir -p'
+  (automatically create parent directories; see issue #1776), as well
+  as 'rm -k/--keep' (only "unversion" files, do not delete the working
+  files), and 'diff -s/--summary' (status-like diff output; see issue
+  #2015), all of which were desired by clkao.
+
+  [Question: Did someone start on a patch for 'svn diff --summary'
+  recently?  I think I may have seen that on the dev@ list... Yes.
+  In http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=108496,
+  Peter Lundblad says: "The API part of this is already implemented
+  some time ago. So, it is quite low-hanging to do the cmdline GUI
+  part."  -kfogel]
+
+* Smart patch format.  A patch format that can represent every kind of
+  transformation that could be transmitted by 'svn update'.  We should
+  make sure to be compatible with SVK when we do this; clkao and
+  kfogel have already discussed this, and there's been some talk on
+  dev@subversion.tigris.org too.
+
+Comments from projects that switched from CVS to SVN:
+-----------------------------------------------------
+
+* The w.c. space penalty is a real issue for large projects.  Disk
+  space is not as cheap as we thought, those .svn/text-base/* files
+  hurt.  See http://subversion.tigris.org/issues/show_bug.cgi?id=525.
+  
+  [gerv: Random thought - if you can't easily do copy-on-write, could
+  you perhaps share text-base files by hard-linking between multiple
+  checkouts of the same tree (which is where this problem normally
+  hits hardest.) Yes, OK, there are scary thoughts there about trees
+  no longer being independent of each other...]
+
+* Hosting the repository and migrating the user base were issues for
+  at least one open source project (Docutils, reported by Felix
+  Wiemann):
+
+  - There weren't many free Subversion hosting services that offer
+    enough features; see
+    <http://svn.berlios.de/viewcvs/docutils/trunk/sandbox/felixwiemann/subversion.txt?rev=3080>
+    for a list of requirements we had.  We chose BerliOS, which is
+    scary though because they provide little support.
+
+    Tigris (recently?) started to offer free Subversion hosting as
+    well, but it's a bit difficult to find that out from their web
+    site, and it isn't listed in the Subversion Project Links.
+
+  - Repository migration went flawless with cvs2svn (except for some
+    binary files being garbled).
+
+    Since there seemed to be some interest in that: We even could've
+    migrated the repository in several passes (migrating one part at a
+    time) by converting a part and then dumping the resulting
+    repository.  Note however that commit dates would get out-of-order
+    (non-chronological) so that -r{DATE} doesn't work anymore.
+
+  - Regarding migrating the user base: There's some natural tension to
+    switch the SCM because developers have to install a new tool.
+    That seemed acceptably easy in this case, however.  Also, all
+    developers have to manually re-register at the new site (BerliOS)
+    to get access to the repository.  But overall that part of the
+    migration went quite painless.
+
+* One group rejected BitKeeper for UI reasons.
+
+* One person commented that distributed systems don't address
+  migration concerns.  Also, they don't clearly say how to implement a
+  centralized-style system on top of the decentralized substrate.  In
+  general, they need more process guidance.  Subversion probably gets
+  off easy here because it takes advantage of a process people already
+  know, because they used CVS before.
+
+* Also, the distributed systems don't have GUI tools, at least not as
+  many so far.  I (kfogel) took this comment as indicating that the
+  overall "tool ecosystem" is an important part of the decision for a
+  lot of groups.
+
+* GIT and BK have GUIs that display topology.  I think ClearCase does
+  too, btw.  Wish we'd had time to go into more detail about exactly
+  how these viewers are used, and how often.  Anyone care to comment?
+
+  [jackr: Yes, ClearCase has a graphical topology viewer.  Mixed
+   success.  Tends to become absolutely crucial to managing
+   branches at a certain level of complexity; tends to destroy
+   the server with its server-side computations at about "that
+   level plus epsilon".  Example: parallel development of some
+   new feature, occasional ladder-merges from trunk out to that
+   branch keep it in sync.  Just before delivering the work to
+   the world on trunk, you wonder "what's happened since my last
+   merge-out?"
+
+   Another example: we branch releases off trunk just before
+   release, for final stabilization. Then we create patches on
+   that same branch.  Sometimes, we fork a new branch for a
+   maintenance release, sometimes we just extend the existing
+   branch.  Now, you're assigned to provide an urgent patch to
+   some old maintenance release: quick: do you use the parent
+   release branch, or is there a maintenance branch?  In SVN,
+   you may be able to handle this with a listing of branches/
+   and some knowledge of branch-naming strategies, but in
+   ClearCase there's nothing quite analogous.]
+
+Attendees:
+----------
+
+* Gervase Markham <gerv {_at_} mozilla.org>
+  Large CVS repository (mozilla), small SVN (personal)  
+
+* Chia-Liang Gao <clkao {_at_} clkao.org>
+  SVK, SVN, p4, CVS
+
+* Ottone Grasso <ottone.grasso {_at_} tilab.com>
+  SVN
+
+* Mauro Borghi <mauro.borghi {_at_} telecomitalia.it>
+  Small CVS and SVN
+
+* Axel Hecht <axel {_at_} mozilla.com>
+  1 SVN + N CVS
+
+* Felix Wiemann <felix.wiemann {_at_} ososo.de>
+  SVN, CVS, MKS
+
+* Greg Stein <gstein {_at_} google.com>
+  CVS, SVN, p4
+
+* John Viega <viega {_at_} securesoftware.com>
+  Didn't say.
+
+* Brian Fitzpatrick <fitz {_at_} google.com>
+  CVS, SVN, p4
+
+* Sander Striker <striker {_at_} apache.org>
+  SVN, CVS
+
+* Stefan Taxhet <stefan.taxhet {_at_} sun.com>
+  CVS (OpenOffice.org)
+
+* Christian Neeb <chneeb {_at_} gmx.net>
+  CVS, PVCS
+
+* Arjen Schwarz <arjen.schwarz {_at_} gmail.com>
+  No version control.
+
+* Erik Hülsmann <ehuels {_at_} gmail.com>
+  SVN, CVS
+
+* Dobrica Pavlinusic <dpavlin {_at_} rot13.org>
+  Legacy CVS, SVN, SVK, svn2cvs.pl
+
+* Gonçalo Afonso <gafonso {_at_} gmail.com>
+  CVS
+
+* David Ramalho <dramalho {_at_} blackorange.pt>
+  CVS, SVN, SVK
+
+* Karl Fogel <kfogel {_at_} collab.net>
+  SVN, CVS
+
+Also, Jack Repenning <jrepenning {_at_} collab.net> did not attend,
+but read the notes and added some comments; search for "jackr".
+
+## Local Variables:
+## coding:utf-8
+## End:
+## vim:encoding=utf8

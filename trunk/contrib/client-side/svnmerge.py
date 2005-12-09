@@ -33,7 +33,6 @@
 #
 # Differences from official svnmerge:
 # - More portable: tested as working in FreeBSD and OS/2.
-# - Add support for more informative commit message (-V).
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
 # - "svnmerge avail" now only shows commits in head, not also commits in other
 #   parts of the repository.
@@ -894,7 +893,7 @@ class CommandOpts:
             Option("-h", "--help", help="show help for this command and exit"))
         if self.version is not None:
             self.gopts.append(
-                Option("--version", help="show version info and exit"))
+                Option("-V", "--version", help="show version info and exit"))
         self.ctable["help"] = (self._cmd_help,
             "help [COMMAND]",
             "Display help for a specific command. If COMMAND is omitted, "
@@ -972,8 +971,6 @@ class CommandOpts:
     def _command(self, cmd):
         if cmd not in self.ctable:
             self.error("unknown command: '%s'" % cmd)
-            self.print_command_list()
-            sys.exit(2)
         return self.ctable[cmd]
 
     def parse(self, args):
@@ -1000,6 +997,8 @@ class CommandOpts:
             else:
                 self.print_command_help(cmd)
                 sys.exit(0)
+        if cmd is None:
+            self.error("command argument required")
         if str(cmd) == "help":
             cmd(*args)
             sys.exit(0)
@@ -1009,6 +1008,8 @@ class CommandOpts:
         print >>sys.stderr, "%s: %s" % (self.progname, s)
         if cmd is not None:
             self.print_command_help(cmd)
+        else:
+            self.print_small_help()
         sys.exit(1)
     def print_small_help(self):
         print "Type '%s help' for usage" % self.progname
@@ -1165,7 +1166,7 @@ def main(args):
         elif len(args) > 1:
             optsparser.error("wrong number of parameters", cmd)
     else:
-        assert 0, "command not handled: %s" % action
+        assert 0, "command not handled: %s" % cmd
 
     # Validate branch_dir
     if not is_wc(branch_dir):
@@ -1181,7 +1182,8 @@ def main(args):
         if str(cmd) == "init":
             cf_head, cf_rev = get_copyfrom(branch_dir)
             if not cf_head:
-                error('no copyfrom info available. Explicit "src" (-S) argument required.')
+                error('no copyfrom info available. '
+                      'Explicit head argument (-S/--head) required.')
             opts["head_path"] = cf_head
             if not opts["revision"]:
                 opts["revision"] = "1-" + cf_rev

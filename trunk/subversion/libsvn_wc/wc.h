@@ -75,10 +75,15 @@ extern "C" {
  * The change from 4 to 5 was the addition of support for replacing files
  * with history.
  *
+ * The change from 5 to 6 was the introduction of caching of property
+ * modification state and certain properties in the entries file.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       5
+#define SVN_WC__VERSION       6
 
+/* A version <= this doesn't have property caching in the entries file. */
+#define SVN_WC__NO_PROPCACHING_VERSION 5
 
 /*** Update traversals. ***/
 
@@ -116,18 +121,10 @@ struct svn_wc_traversal_info_t
 
 /*** Names and file/dir operations in the administrative area. ***/
 
-/* kff todo: namespace-protecting these #defines so we never have to
-   worry about them conflicting with future all-caps symbols that may
-   be defined in svn_wc.h. */
-
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT \
         "\x66\x6f\x72\x6d\x61\x74"
         /* "format" */
-
-#define SVN_WC__ADM_README \
-        "\x52\x45\x41\x44\x4d\x45\x2e\x74\x78\x74"
-        /* "README.txt" */
 
 #define SVN_WC__ADM_ENTRIES \
         "\x65\x6e\x74\x72\x69\x65\x73"
@@ -181,10 +178,6 @@ struct svn_wc_traversal_info_t
         "\x4b\x49\x4c\x4c\x4d\x45"
         /* "KILLME" */
 
-#define SVN_WC__ADM_EMPTY_FILE \
-        "\x65\x6d\x70\x74\x79\x2d\x66\x69\x6c\x65"
-        /* "empty-file" */
-
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -193,6 +186,15 @@ struct svn_wc_traversal_info_t
         "\x64\x69\x72\x5f\x63\x6f\x6e\x66\x6c\x69\x63\x74\x73"
         /* "dir_conflicts" */
 
+
+
+/* A space separated list of properties that we cache presence/absence of.
+ *
+ * Note that each entry contains information about which properties are cached
+ * in that particular entry.  This constant is only used when writing entries.
+ */
+#define SVN_WC__CACHABLE_PROPS                                         \
+SVN_PROP_SPECIAL "\x20" SVN_PROP_EXTERNALS "\x20" SVN_PROP_NEEDS_LOCK
 
 
 /* A few declarations for stuff in util.c.

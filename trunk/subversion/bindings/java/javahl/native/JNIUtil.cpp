@@ -67,33 +67,41 @@ std::ofstream JNIUtil::g_logStream;
  */
 bool JNIUtil::JNIInit(JNIEnv *env)
 {
-    // the main part of this method has to be run only once during the run a 
+    // clear all standing exceptions.
+    env->ExceptionClear();
+
+    // remember the env paramater for the remainder of the request
+    setEnv(env);
+
+    // lock the list of finalized objects
+    JNICriticalSection cs(*g_finalizedObjectsMutex) ;
+    if(isExceptionThrown())
+    {
+        return false;
+    }
+
+    // delete all finalized, but not yet deleted objects
+    for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin(); 
+        it != g_finalizedObjects.end(); it++)
+    {
+        delete *it;
+    }
+    g_finalizedObjects.clear();
+
+    return true;
+}
+/**
+ * initialize the environment for all requests
+ * @param env   the JNI environment for this request
+ */
+bool JNIUtil::JNIGlobalInit(JNIEnv *env)
+{
+	// this method has to be run only once during the run a 
     // programm
     static bool run = false;
     if(run) // already run
     {
-        // clear all standing exceptions.
-        env->ExceptionClear();
-
-        // remember the env paramater for the remainder of the request
-        setEnv(env);
-
-        // lock the list of finalized objects
-        JNICriticalSection cs(*g_finalizedObjectsMutex) ;
-        if(isExceptionThrown())
-        {
-            return false;
-        }
-
-        // delete all finalized, but not yet deleted objects
-        for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin(); 
-            it != g_finalizedObjects.end(); it++)
-        {
-            delete *it;
-        }
-        g_finalizedObjects.clear();
-
-        return true;
+		return true;
     }
     run = true;
     // do not run this part more than one time. 
@@ -458,6 +466,7 @@ bool JNIUtil::isExceptionThrown()
  */
 void JNIUtil::setEnv(JNIEnv *env)
 {
+	JNIThreadData::pushNewThreadData();
     JNIThreadData *data = JNIThreadData::getThreadData();
     data->m_env = env;
     data->m_exceptionThrown = false;

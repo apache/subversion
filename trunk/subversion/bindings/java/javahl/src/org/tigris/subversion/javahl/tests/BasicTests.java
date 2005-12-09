@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
- * tests in subversion/tests/clients/cmdline/basic_tests.py).
+ * tests in subversion/tests/svn/basic_tests.py).
  */
 public class BasicTests extends SVNTests
 {
@@ -74,7 +74,29 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNCLient.checkout functionality
+     * Test SVNClient.getVersion().
+     * @throws Throwable
+     */
+    public void testVersion() throws Throwable
+    {
+        try
+        {
+            Version version = client.getVersion();
+            String versionString = version.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("Version should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * test the basic SVNClient.checkout functionality
      * @throws Throwable
      */
     public void testBasicCheckout() throws Throwable
@@ -1403,7 +1425,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * thest the basic SVNClient.merge functionality
+     * test the basic SVNClient.merge functionality
      * @throws Throwable
      * @since 1.2
      */
@@ -1475,5 +1497,53 @@ public class BasicTests extends SVNTests
                       true), 5);
  
     }
-
+    /**
+     * test the basic SVNClient.isAdminDirectory functionality
+     * @throws Throwable
+     * @since 1.2
+     */
+    public void testBasicIsAdminDirectory() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        Notify2 notify = new Notify2(){
+            public void onNotify(NotifyInformation info)
+            {
+                client.isAdminDirectory(".svn");
+            }
+        };
+        client.notification2(notify);
+        // update the test
+        assertEquals("wrong revision number from update",
+                client.update(thisTest.getWCPath(), null, true), 1);
+    }
+    public void testBasicCancelOperation() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        Notify2 notify = new Notify2(){
+            public void onNotify(NotifyInformation info)
+            {
+                try
+                {
+                    client.cancelOperation();
+                }
+                catch (ClientException e)
+                {
+                    fail(e.getMessage());
+                }
+            }
+        };
+        client.notification2(notify);
+        // update the test to try to cancel an operation
+        try
+        {
+            client.update(thisTest.getWCPath(), null, true);
+            fail("missing exception for canceled operation");
+        }
+        catch (ClientException e)
+        {
+            // this is expected
+        }
+    }
 }

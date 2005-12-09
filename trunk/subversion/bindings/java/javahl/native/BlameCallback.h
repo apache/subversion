@@ -37,7 +37,7 @@ class BlameCallback
 public:
     BlameCallback(jobject jcallback);
     ~BlameCallback();
-    void callback(svn_revnum_t revision, const char *author,
+    svn_error_t *callback(svn_revnum_t revision, const char *author,
                       const char *date, const char *line, apr_pool_t *pool);
 private:
     /**

@@ -34,7 +34,7 @@ version_header = os.path.join('subversion', 'include', 'svn_version.h')
 gen_obj = gen_win.GeneratorBase('build.conf', version_header, [])
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
+client_tests = filter(lambda x: x.startswith('subversion/tests/svn/'),
                       all_tests)
 
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
@@ -184,7 +184,7 @@ class Svnserve:
     self.path = os.path.join(abs_objdir,
                              'subversion', 'svnserve', self.name)
     self.root = os.path.join(abs_builddir,
-                             'subversion', 'tests', 'clients', 'cmdline')
+                             'subversion', 'tests', 'svn')
     self.proc_handle = None
 
   def __del__(self):
@@ -234,7 +234,7 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     os.path.walk('subversion', copy_execs, baton)
-    create_target_dir('subversion/tests/clients/cmdline')
+    create_target_dir('subversion/tests/svn')
   except:
     os.chdir(old_cwd)
     raise

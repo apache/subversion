@@ -109,7 +109,7 @@ The python test framework exercises the command-line client as a
 "black box".
 
 To write python tests, please look at the README file inside the
-clients/cmdline/ subdirectory.
+svn/ subdirectory.
 
 
 When to write new tests
@@ -193,7 +193,7 @@ What's here
     of these testing trees isn't what you need, create a new one and
     put it with the others.
 
-   * clients/cmdline/
+   * svn/
      A collection of python scripts to test the command-line client.
    
 
@@ -219,7 +219,7 @@ section.
 Testing Over DAV
 ----------------
 
-Please see subversion/tests/clients/cmdline/README for how to run the
+Please see subversion/tests/svn/README for how to run the
 command-line client test suite against a remote repository.
 
 Conclusion

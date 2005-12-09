@@ -50,15 +50,6 @@ extern "C" {
      svn_fs.h interface use Subversion transactions.  */
 
 
-/* Initializing a filesystem.  */
-
-
-/* Given a filesystem FS, which contains all the necessary tables,
-   create the initial revision 0, and the initial root directory.  */
-svn_error_t *svn_fs_fs__dag_init_fs (svn_fs_t *fs);
-
-
-
 /* Generic DAG node stuff.  */
 
 typedef struct dag_node_t dag_node_t;
@@ -117,26 +108,6 @@ svn_error_t *svn_fs_fs__dag_get_predecessor_count (int *count,
                                                    dag_node_t *node,
                                                    apr_pool_t *pool);
 
-
-/* Callback function type for svn_fs_fs__dag_walk_predecessors() */
-typedef svn_error_t *(*dag_pred_func_t) (void *baton,
-                                         dag_node_t *node,
-                                         svn_boolean_t *done,
-                                         apr_pool_t *pool);
-
-/* Walk over NODE's predecessor list, calling CALLBACK (with its
-   associated BATON) for each predecessor until the callback returns
-   an error (in which case, return that error) or until it sets its
-   DONE flag.  When the predecessor walk reaches a node with no
-   predecessor, it will call the CALLBACK one final time with a NULL
-   `node' argument to indicate that the predecessor walk is now
-   complete.
-
-   Do all allocations in POOL.  */
-svn_error_t *svn_fs_fs__dag_walk_predecessors (dag_node_t *node,
-                                               dag_pred_func_t callback,
-                                               void *baton,
-                                               apr_pool_t *pool);
 
 /* Return non-zero IFF NODE is currently mutable under Subversion
    transaction TXN_ID.  */
@@ -454,21 +425,6 @@ svn_error_t *svn_fs_fs__things_different (svn_boolean_t *props_changed,
                                           dag_node_t *node2,
                                           apr_pool_t *pool);
 
-
-/* Set *IS_ANCESTOR to non-zero IFF NODE1 is an ancestor of NODE2.
-   Get any temporary allocations from POOL.  */
-svn_error_t *svn_fs_fs__dag_is_ancestor (svn_boolean_t *is_ancestor,
-                                         dag_node_t *node1,
-                                         dag_node_t *node2,
-                                         apr_pool_t *pool);
-
-
-/* Set *IS_PARENT to non-zero IFF NODE1 is the parent of NODE2.
-   Get any temporary allocations from POOL.  */
-svn_error_t *svn_fs_fs__dag_is_parent (svn_boolean_t *is_ancestor,
-                                       dag_node_t *node1,
-                                       dag_node_t *node2,
-                                       apr_pool_t *pool);
 
 /* Set *NODE_ID to the node-id of the coyproot of node NODE, or NULL
    if no copyroot exists.  Get any temporary allocations from POOL. */
