@@ -319,18 +319,22 @@ start_element(void *baton, int parent_state, const char *nspace,
                      _("Got apply-textdelta element without preceding "
                        "add-file or open-file"));
       else
-        rb->err = rb->editor->apply_textdelta(rb->file_baton,
-                                              NULL, /* XXX base checksum */
-                                              rb->file_pool,
-                                              &rb->whandler,
-                                              &rb->whandler_baton);
-      if (! rb->err)
         {
-          rb->svndiff_decoder = svn_txdelta_parse_svndiff(rb->whandler,
-                                                          rb->whandler_baton,
-                                                          TRUE, rb->file_pool);
-          rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
-                                                 rb->file_pool);
+          const char *checksum = svn_xml_get_attr_value("checksum", atts);
+
+          rb->err = rb->editor->apply_textdelta(rb->file_baton,
+                                                checksum,
+                                                rb->file_pool,
+                                                &rb->whandler,
+                                                &rb->whandler_baton);
+          if (! rb->err)
+            {
+              rb->svndiff_decoder = svn_txdelta_parse_svndiff
+                                      (rb->whandler, rb->whandler_baton,
+                                       TRUE, rb->file_pool);
+              rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
+                                                     rb->file_pool);
+            }
         }
       break;
 
@@ -380,7 +384,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
   switch (elm->id)
     {
     case ELEM_editor_report:
-      /* XXX close remaining dirs? */
+      svn_pool_destroy(APR_ARRAY_IDX(rb->dirs, 0, dir_item_t).pool);
       rb->err = rb->editor->close_edit(rb->edit_baton, rb->pool);
       break;
 
