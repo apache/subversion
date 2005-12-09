@@ -400,6 +400,7 @@ typedef struct {
   apr_hash_t *config;
   svn_ra_callbacks2_t *callbacks;
   const char *to_url;
+  svn_revnum_t committed_rev;
 } sync_baton_t;
 
 static svn_error_t *
@@ -407,8 +408,12 @@ commit_callback (const svn_commit_info_t *commit_info,
                  void *baton,
                  apr_pool_t *pool)
 {
+  sync_baton_t *sb = baton;
+
   SVN_ERR (svn_cmdline_printf (pool, "Committing rev %ld\n",
                                commit_info->revision));
+
+  sb->committed_rev = commit_info->revision;
 
   return SVN_NO_ERROR;
 }
@@ -733,10 +738,9 @@ close_edit (void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* Create a wrapper editor that holds our commit editor.  The only
- * responsibility of this wrapper is to make sure that we don't try to
- * pass "weird" properties over the wire that libsvn_ra complains about.
- */
+/* Create a wrapper editor that holds our commit editor.  This takes care
+ * of the magic needed to map from the output of replay to the input that
+ * the commit editor expects. */
 static svn_error_t *
 get_sync_editor (const svn_delta_editor_t *wrapped_editor,
                  void *wrapped_edit_baton,
@@ -930,7 +934,7 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
       svn_pool_clear (subpool);
 
-      /* The actual copy is just a diff hooked up to a commit. */
+      /* The actual copy is just a replay hooked up to a commit. */
 
       SVN_ERR (svn_ra_get_commit_editor2 (to_session, &commit_editor,
                                           &commit_baton,
@@ -964,10 +968,12 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       SVN_ERR (svn_ra_replay (from_session, current, 0, TRUE,
                               cancel_editor, cancel_baton, subpool));
 
-      /* XXX sanity check that we just committed a change that resulted in
-       * the revision number we expected, if it didn't, that means that the
-       * two repositories are now out of sync, probably because someone has
-       * accidentally committed a change to the destination repository. */
+      /* Sanity check that we actually committed the revision we meant to. */
+      if (baton->committed_rev != current)
+        return svn_error_createf
+                 (APR_EINVAL, NULL,
+                  "Commit created rev %ld but should have created %ld",
+                  baton->committed_rev, current);
 
       /* Ok, we're done with the data, now we just need to do the revprops
        * and we're all set. */
