@@ -134,20 +134,6 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
                             apr_uint32_t modify_flags,
                             apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
-   according entry fieldnames and values specified in *PROPS.
-
-   The fieldnames should be taken from SVN_WC__ENTRY_ATTR_* as specified in
-   entries.h.  The values should be the associated string-encoded values.
-*/
-svn_error_t *
-svn_wc__loggy_entry_modify_hash (svn_stringbuf_t **log_accum,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const char *name,
-                                 apr_hash_t *props,
-                                 apr_pool_t *pool);
-
-
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
 */

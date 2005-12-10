@@ -706,7 +706,8 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
                         apr_pool_t *pool)
 {
   int i;
-  apr_hash_t *props = apr_hash_make (pool);
+  svn_wc_entry_t tmp_entry;
+  apr_uint32_t flags = 0;
 
   if (lock_state)
     *lock_state = svn_wc_notify_lock_state_unchanged;
@@ -714,7 +715,7 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
   for (i = 0; i < entry_props->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
-      const char *entry_field;
+      const char *val;
 
       /* The removal of the lock-token entryprop means that the lock was
          defunct. */
@@ -733,24 +734,33 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
       if (! prop->value)
         continue;
 
-      if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
-        entry_field = SVN_WC__ENTRY_ATTR_CMT_AUTHOR;
-      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
-        entry_field = SVN_WC__ENTRY_ATTR_CMT_REV;
-      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
-        entry_field = SVN_WC__ENTRY_ATTR_CMT_DATE;
-      else if (! strcmp (prop->name, SVN_PROP_ENTRY_UUID))
-        entry_field = SVN_WC__ENTRY_ATTR_UUID;
-      else
-        continue;
+      val = prop->value->data;
 
-      apr_hash_set (props, entry_field,
-                    APR_HASH_KEY_STRING, prop->value->data);
+      if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
+          tmp_entry.cmt_author = val;
+        }
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
+          tmp_entry.cmt_rev = SVN_STR_TO_REV (val);
+        }
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
+          SVN_ERR (svn_time_from_cstring (&tmp_entry.cmt_date, val, pool));
+        }
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_UUID))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_UUID;
+          tmp_entry.uuid = val;
+        }
     }
 
-  if (apr_hash_count (props) > 0)
-    SVN_ERR (svn_wc__loggy_entry_modify_hash (&log_accum, adm_access,
-                                              base_name, props, pool));
+  if (flags)
+    SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access, base_name,
+                                         &tmp_entry, flags, pool));
 
   return SVN_NO_ERROR;
 }
