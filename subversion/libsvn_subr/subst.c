@@ -1084,6 +1084,7 @@ translated_stream_read (void *baton,
           svn_stream_t *buf_stream;
 
           svn_stringbuf_setempty (b->readbuf);
+          b->readbuf_off = 0;
           SVN_ERR (svn_stream_read (b->stream, b->buf, &readlen));
           buf_stream = svn_stream_from_stringbuf (b->readbuf, iterpool);
 
