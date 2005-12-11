@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-12-05 22:14+0100\n"
-"PO-Revision-Date: 2005-12-05 23:14+0100\n"
+"PO-Revision-Date: 2005-12-11 22:51+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -6907,7 +6907,7 @@ msgstr "Ditt loggmeddelande lämnades i en temporär fil:"
 
 #: svn/util.c:471
 msgid "--This line, and those below, will be ignored--"
-msgstr "--Denna och nedanstående rader kommer att tas bort--"
+msgstr "--Denna och nedanstående rader kommer inte med i loggmeddelandet--"
 
 #: svn/util.c:584
 msgid "Cannot invoke editor to get log message when non-interactive"
