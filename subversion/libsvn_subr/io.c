@@ -1347,6 +1347,7 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
   /* First make sure that any user-space buffered data is flushed. */
   SVN_ERR (do_io_file_wrapper_cleanup (file, apr_file_flush (file),
                                        N_("Can't flush file '%s'"),
+                                       /* xgettext:c-format */
                                        N_("Can't flush stream"),
                                        pool));
 
@@ -2257,6 +2258,7 @@ svn_io_file_close (apr_file_t *file, apr_pool_t *pool)
   return do_io_file_wrapper_cleanup
     (file, apr_file_close (file),
      N_("Can't close file '%s'"),
+     /* xgettext:c-format */
      N_("Can't close stream"),
       pool);
 }
@@ -2268,6 +2270,7 @@ svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool)
   return do_io_file_wrapper_cleanup
     (file, apr_file_getc (ch, file),
      N_("Can't read file '%s'"),
+     /* xgettext:c-format */
      N_("Can't read stream"),
      pool);
 }
@@ -2280,6 +2283,7 @@ svn_io_file_info_get (apr_finfo_t *finfo, apr_int32_t wanted,
   return do_io_file_wrapper_cleanup
     (file, apr_file_info_get (finfo, wanted, file),
      N_("Can't get attribute information from file '%s'"),
+     /* xgettext:c-format */
      N_("Can't get attribute information from stream"),
      pool);
 }
@@ -2292,6 +2296,7 @@ svn_io_file_read (apr_file_t *file, void *buf,
   return do_io_file_wrapper_cleanup
     (file, apr_file_read (file, buf, nbytes),
      N_("Can't read file '%s'"),
+     /* xgettext:c-format */
      N_("Can't read stream"),
      pool);
 }
@@ -2305,6 +2310,7 @@ svn_io_file_read_full (apr_file_t *file, void *buf,
   return do_io_file_wrapper_cleanup
     (file, apr_file_read_full (file, buf, nbytes, bytes_read),
      N_("Can't read file '%s'"),
+     /* xgettext:c-format */
      N_("Can't read stream"),
      pool);
 }
@@ -2317,6 +2323,7 @@ svn_io_file_seek (apr_file_t *file, apr_seek_where_t where,
   return do_io_file_wrapper_cleanup
     (file, apr_file_seek (file, where, offset),
      N_("Can't set position pointer in file '%s'"),
+     /* xgettext:c-format */
      N_("Can't set position pointer in stream"),
      pool);
 }
@@ -2329,6 +2336,7 @@ svn_io_file_write (apr_file_t *file, const void *buf,
   return do_io_file_wrapper_cleanup
     (file, apr_file_write (file, buf, nbytes),
      N_("Can't write to file '%s'"),
+     /* xgettext:c-format */
      N_("Can't write to stream"),
      pool);
 }
@@ -2342,6 +2350,7 @@ svn_io_file_write_full (apr_file_t *file, const void *buf,
   return do_io_file_wrapper_cleanup
     (file, apr_file_write_full (file, buf, nbytes, bytes_written),
      N_("Can't write to file '%s'"),
+     /* xgettext:c-format */
      N_("Can't write to stream"),
      pool);
 }
