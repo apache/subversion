@@ -26,6 +26,7 @@ module Svn
 
     class Info
       alias url URL
+      alias repos_root_url repos_root_URL
     end
 
     PropListItem = ProplistItem
