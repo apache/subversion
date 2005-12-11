@@ -390,6 +390,12 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
 
     case ELEM_apply_textdelta:
       rb->err = svn_stream_close(rb->base64_decoder);
+
+      if (! rb->err)
+        rb->err = rb->editor->close_file(rb->file_baton,
+                                         NULL /* XXX text checksum */,
+                                         rb->file_pool);
+
       rb->file_baton = NULL;
       rb->whandler = NULL;
       rb->whandler_baton = NULL;
