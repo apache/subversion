@@ -1378,13 +1378,18 @@ svn_swig_rb_log_receiver(void *baton,
   
   if (!NIL_P(proc)) {
     VALUE args;
+    VALUE rb_changed_paths = Qnil;
+
+    if (changed_paths) {
+      rb_changed_paths =
+        svn_swig_rb_apr_hash_to_hash_swig_type(changed_paths,
+                                               "svn_log_changed_path_t *");
+    }
 
     args = rb_ary_new3(7,
                        proc,
                        rb_id_call(),
-                       changed_paths ? 
-                       svn_swig_rb_apr_hash_to_hash_string(changed_paths) :
-                       Qnil,
+                       rb_changed_paths,
                        c2r_long(&revision, NULL),
                        c2r_string2(author),
                        c2r_string2(date),
