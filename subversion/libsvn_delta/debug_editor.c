@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-#include "svn_delta.h"
+#include "debug_editor.h"
 
 struct edit_baton
 {
@@ -381,11 +381,11 @@ close_edit (void *edit_baton,
 }
 
 svn_error_t *
-svn_delta_get_debug_editor (const svn_delta_editor_t *wrapped_editor,
-                            void *wrapped_edit_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            apr_pool_t *pool)
+svn_delta__get_debug_editor (const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             const svn_delta_editor_t *wrapped_editor,
+                             void *wrapped_edit_baton,
+                             apr_pool_t *pool)
 {
   svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
   struct edit_baton *eb = apr_palloc (pool, sizeof (*eb));
