@@ -284,27 +284,6 @@ svn_txdelta (svn_txdelta_stream_t **stream,
 
 
 
-/* Pull the next delta window from a stream.
-
-   Our current algorithm for picking source and target views is one
-   step up from the dumbest algorithm of "compare corresponding blocks
-   of each file."  A problem with that algorithm is that an insertion
-   or deletion of N bytes near the beginning of the file will result
-   in N bytes of non-overlap in each window from then on.  Our
-   algorithm lessens this problem by "padding" the source view with
-   half a target view's worth of data on each side.
-
-   For example, suppose the target view size is 16K.  The dumbest
-   algorithm would use bytes 0-16K for the first source view, 16-32K
-   for the second source view, etc..  Our algorithm uses 0-24K for the
-   first source view, 8-40K for the second source view, etc..
-   Obviously, we're chewing some extra memory by doubling the source
-   view size, but small (less than 8K) insertions or deletions won't
-   result in non-overlap in every window.
-
-   If we run out of source data before we run out of target data, we
-   reuse the final chunk of data for the remaining windows.  No grand
-   scheme at work there; that's just how the code worked out. */
 svn_error_t *
 svn_txdelta_next_window (svn_txdelta_window_t **window,
                          svn_txdelta_stream_t *stream,
