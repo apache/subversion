@@ -24,15 +24,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r17665, r17666
-    Avoid corrupting WC when adding repos entry attribute, or when switching
-    with an inconsistent URL.
-    Branch: 1.3.x-r17665
-    Justifications:
-      Corrupting peoples' WCs is baaaaaaaad, even in strange corner cases.
-    Votes:
-      +1: lundblad, rooneg, kfogel
-
 Status of 1.3.1:
 ================
 
