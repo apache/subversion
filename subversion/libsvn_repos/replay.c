@@ -327,7 +327,7 @@ path_driver_cb_func (void **dir_baton,
            */
           if (copyfrom_path
               && (! src_readable 
-                  || ! is_within_base_path (copyfrom_path, base_path,
+                  || ! is_within_base_path (copyfrom_path+1, base_path,
                                             base_path_len)
                   || cb->low_water_mark > copyfrom_rev))
             {
@@ -351,7 +351,7 @@ path_driver_cb_func (void **dir_baton,
              all. */
           if (copyfrom_path
               && (! src_readable
-                  || ! is_within_base_path (copyfrom_path, base_path,
+                  || ! is_within_base_path (copyfrom_path+1, base_path,
                                             base_path_len)
                   || cb->low_water_mark > copyfrom_rev))
             {
