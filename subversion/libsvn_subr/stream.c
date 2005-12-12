@@ -631,7 +631,7 @@ read_handler_md5 (void *baton, char *buffer, apr_size_t *len)
     {
       apr_status_t apr_err = apr_md5_update (&btn->read_ctx, buffer, *len);
 
-      if (! APR_STATUS_IS_SUCCESS(apr_err))
+      if (apr_err)
         return svn_error_create (apr_err, NULL, NULL);
     }
 
@@ -648,7 +648,7 @@ write_handler_md5 (void *baton, const char *buffer, apr_size_t *len)
     {
       apr_status_t apr_err = apr_md5_update (&btn->write_ctx, buffer, *len);
 
-      if (! APR_STATUS_IS_SUCCESS(apr_err))
+      if (apr_err)
         return svn_error_create (apr_err, NULL, NULL);
     }
 
@@ -666,7 +666,7 @@ close_handler_md5 (void *baton)
       apr_status_t apr_err
         = apr_md5_final (btn->read_digest_buf, &btn->read_ctx);
 
-      if (! APR_STATUS_IS_SUCCESS(apr_err))
+      if (apr_err)
         return svn_error_create (apr_err, NULL, NULL);
 
       *btn->read_digest = btn->read_digest_buf;
@@ -677,7 +677,7 @@ close_handler_md5 (void *baton)
       apr_status_t apr_err
         = apr_md5_final (btn->write_digest_buf, &btn->write_ctx);
 
-      if (! APR_STATUS_IS_SUCCESS(apr_err))
+      if (apr_err)
         return svn_error_create (apr_err, NULL, NULL);
 
       *btn->write_digest = btn->write_digest_buf;
