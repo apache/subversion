@@ -828,14 +828,8 @@ svn_ebcdic_run_unix_type_script (const char *path,
         return NULL;
       else
         {
-          svn_error_t *child_err = SVN_NO_ERROR;
           if (script_output->len > 1)
-            {
-              const char* script_out_utf8;
-              svn_utf_cstring_to_netccsid (&script_out_utf8,
-                                           script_output->data, pool);
-              svn_stringbuf_appendcstr (*err_stream, script_out_utf8);
-            }
+            svn_stringbuf_appendcstr (*err_stream, script_output->data);
           return SVN_NO_ERROR;
         }
     }

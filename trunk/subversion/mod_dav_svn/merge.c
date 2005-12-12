@@ -28,6 +28,7 @@
 #include "svn_fs.h"
 #include "svn_props.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 #include "svn_xml.h"
@@ -241,7 +242,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* get the post-commit hook stderr, if any */
   if (post_commit_err)
     {
-      post_commit_header_info = apr_psprintf (pool,
+      post_commit_header_info = APR_PSPRINTF (pool,
                                               " xmlns:S=\"%s\"",
                                               SVN_XML_NAMESPACE);
       post_commit_err_elem = apr_psprintf (pool,
