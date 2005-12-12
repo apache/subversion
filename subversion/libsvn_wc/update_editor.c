@@ -656,7 +656,7 @@ prep_directory (struct dir_baton *db,
   /* Make sure the directory exists. */
   SVN_ERR (svn_wc__ensure_directory (db->path, pool));
 
-  /* Use the repository root of the anchor, but only if it acutally is an
+  /* Use the repository root of the anchor, but only if it actually is an
      ancestor of the URL of this directory. */
   if (db->edit_baton->repos
       && svn_path_is_ancestor (db->edit_baton->repos, ancestor_url))
@@ -1176,7 +1176,7 @@ open_directory (const char *path,
   tmp_entry.revision = *(eb->target_revision);
   tmp_entry.url = db->new_URL;
   /* In some situations, the URL of this directory does not have the same
-     repository root as the anchor of the update; we can't just blindingly
+     repository root as the anchor of the update; we can't just blindly
      use the that repository root here, so make sure it is really an
      ancestor. */
   if (eb->repos && svn_path_is_ancestor (eb->repos, db->new_URL))
