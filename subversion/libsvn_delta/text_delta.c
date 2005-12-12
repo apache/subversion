@@ -37,6 +37,7 @@ struct svn_txdelta_stream_t {
   svn_stream_t *target;
 
   /* Private data */
+  svn_boolean_t more_source;    /* FALSE if source stream hit EOF. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
@@ -272,8 +273,9 @@ svn_txdelta (svn_txdelta_stream_t **stream,
              apr_pool_t *pool)
 {
   *stream = apr_palloc (pool, sizeof (**stream));
-  (*stream)->source = source; 
+  (*stream)->source = source;
   (*stream)->target = target;
+  (*stream)->more_source = TRUE;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
   (*stream)->buf = apr_palloc (pool, 2 * SVN_DELTA_WINDOW_SIZE);
@@ -289,21 +291,23 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                          svn_txdelta_stream_t *stream,
                          apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_size_t source_len = SVN_DELTA_WINDOW_SIZE;
   apr_size_t target_len = SVN_DELTA_WINDOW_SIZE;
-  
+
   /* Read the source stream. */
-  err = svn_stream_read (stream->source, stream->buf, &source_len);
-  
+  if (stream->more_source)
+    {
+      SVN_ERR (svn_stream_read (stream->source, stream->buf, &source_len));
+      stream->more_source = (source_len == SVN_DELTA_WINDOW_SIZE);
+    }
+  else
+    source_len = 0;
+
   /* Read the target stream. */
-  if (err == SVN_NO_ERROR)
-    err = svn_stream_read (stream->target, stream->buf + source_len,
-                           &target_len);
-  if (err != SVN_NO_ERROR)
-    return err;
+  SVN_ERR (svn_stream_read (stream->target, stream->buf + source_len,
+                            &target_len));
   stream->pos += source_len;
-  
+
   /* ### The apr_md5 functions always return APR_SUCCESS.  At one
      point, we proposed to APR folks that the interfaces change to
      return void, but for some people that was apparently not a good
