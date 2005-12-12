@@ -21,7 +21,7 @@ Candidate changes:
     Justifications:
       Corrupting peoples' WCs is baaaaaaaad, even in strange corner cases.
     Votes:
-      +1: lundblad, rooneg
+      +1: lundblad, rooneg, kfogel
 
   * r17631, r17663
     Fix building APR resource files for VS.NET.
