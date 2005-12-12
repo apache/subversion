@@ -16,7 +16,7 @@
 <body>
 <div class="app">
 
-<p style="font-style: italic;"><b>WARNING:</b></p> 
+<p class="warningmark" style="font-style: italic;"><b>WARNING:</b></p> 
 
 <p style="font-style: italic;">This document is not complete yet.
 When this warning disappears, that will mean the document is ready.</p>
@@ -78,7 +78,85 @@ CollabNet administrators who run the buildmaster server.</p>
 <div class="h2" id="buildslave" title="buildslave">
 <h2>Buildslave</h2>
 
-<p class="todo">...working here...</p>
+<ol>
+
+<li><p>Install all the dependencies required to build Subversion from
+       working copy source.  That's outside the scope of this
+       document, but see <a
+       href="http://svn.collab.net/repos/svn/trunk/INSTALL"
+       >http://svn.collab.net/repos/svn/trunk/INSTALL</a> for
+       details.</p>
+</li>
+
+<li><p>Create a user <b>buildslave</b> on your system.  The buildslave
+       client will use this user, instead of your regular development
+       user.  This is partly for security reasons, but also because
+       part of the point of the build farm is to make sure things work
+       in a relatively untweaked environment.</p>
+</li>
+
+<li><p>Create a directory in ~buildslave/ to be the base directory for
+       Subversion builds, hereinafter known as the "BASEDIR".  For
+       example, ~buildslave/subversion-builds/.  The buildslave will
+       touch nothing outside this directory.</p> </li>
+
+<li><p>Write a script that checks out a copy of trunk (or whatever
+       branch or tag you want to build), runs configure, make,
+       make&nbsp;check, make&nbsp;davcheck, make&nbsp;svncheck, etc.
+       Make sure the build works without manual intervention.
+       Otherwise, it will not work when BuildBot attempts to do it
+       automatically.</p>
+
+    <p>We recommend having that script live in BASEDIR, and having it
+       check out the working copy such that it creates a new
+       subdirectory within BASEDIR.</p>
+
+    <p class="todo"><li><p>As rooneg pointed out, we should just
+       advise people to use <a
+       href="http://svn.collab.net/repos/svn/trunk/tools/test-scripts/svntest"
+       >http://svn.collab.net/repos/svn/trunk/tools/test-scripts/svntest</a>
+       instead.  But first, need to make sure that works... it may
+       need some modifications to cooperate with the build farm
+       system, as opposed to the breakage list.</p>
+</li>
+
+<li><p>Obtain your slavename and password from the central
+       administrator.</p>
+
+    <p class="todo">Document exactly who to contact and how.</p>
+</li>
+
+<li><p>Initialize the buildslave (the BuildBot docs call this
+       "creating" the buildslave):</p>
+
+    <pre>   buildbot slave BASEDIR MASTERHOST:PORT SLAVENAME PASSWORD</pre>
+</li>
+
+<li><p>Fill in your "hostinfo files", so other people can see the
+       environment your builds run in, and can contact you if something
+       appears to be wrong.  <b>BASEDIR/info/admin</b> should contain
+       your name and email address.  This will be visible from the
+       build status page; you can munge it to protect from spam
+       address harvesters.  <b>BASEDIR/info/host</b> should contain a
+       description of the host: OS, version, memory size, CPU speed,
+       versions of relevant libraries installed, and the version of
+       the buildbot code which is running the buildslave.</p>
+
+    <p class="todo">Give examples of these files.</p>
+
+    <p>If you run many buildslaves, you may want to create a single
+       ~buildslave/info file and share it among all the buildslaves
+       with symlinks.</p>
+
+</li>
+
+<li><p>
+    </p>
+</li>
+
+<li><p>
+    </p>
+</li>
 
 </div>
 
