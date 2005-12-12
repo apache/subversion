@@ -1018,12 +1018,19 @@ translate_chunk (svn_stream_t *dst,
   else
     {
       if (b->newline_off)
-        SVN_ERR (translate_newline (b->eol_str, b->eol_str_len, b->src_format,
-                                    &b->src_format_len, b->newline_buf,
-                                    b->newline_off, dst, b->repair));
+        {
+          SVN_ERR (translate_newline (b->eol_str, b->eol_str_len,
+                                      b->src_format, &b->src_format_len,
+                                      b->newline_buf, b->newline_off,
+                                      dst, b->repair));
+          b->newline_off = 0;
+        }
 
       if (b->keyword_off)
-        SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
+        {
+          SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
+          b->keyword_off = 0;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1076,6 +1083,7 @@ translated_stream_read (void *baton,
   while (readlen == SVN__STREAM_CHUNK_SIZE && unsatisfied > 0)
     {
       apr_size_t to_copy;
+      apr_size_t buffer_remainder;
 
       svn_pool_clear (iterpool);
       /* fill read buffer, if necessary */
@@ -1099,8 +1107,9 @@ translated_stream_read (void *baton,
         }
 
       /* Satisfy from the read buffer */
-      to_copy = (b->readbuf->len > unsatisfied)
-        ? unsatisfied : b->readbuf->len;
+      buffer_remainder = b->readbuf->len - b->readbuf_off;
+      to_copy = (buffer_remainder > unsatisfied)
+        ? unsatisfied : buffer_remainder;
       memcpy (buffer + off, b->readbuf->data + b->readbuf_off, to_copy);
       off += to_copy;
       b->readbuf_off += to_copy;
