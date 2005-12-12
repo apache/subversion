@@ -903,19 +903,6 @@ svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
                                    void **edit_baton,
                                    apr_pool_t *pool);
 
-/** Return a debug editor that wraps @a wrapped_editor.
- *
- * The debug editor simply prints an indication of what callbacks are being
- * called to @c stderr, and is only intended for use in debugging subversion
- * editors.
- */
-svn_error_t *
-svn_delta_get_debug_editor (const svn_delta_editor_t *wrapped_editor,
-                            void *wrapped_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            apr_pool_t *pool);
-
 /** @} */
 
 
@@ -953,6 +940,27 @@ typedef svn_error_t *
                                     const char *path,
                                     apr_pool_t *pool);
   
+
+/** Drive @a editor (with its @a edit_baton) in such a way that
+ * each path in @a paths is traversed in a depth-first fashion.  As
+ * each path is hit as part of the editor drive, use @a
+ * callback_func and @a callback_baton to allow the caller to handle
+ * the portion of the editor drive related to that path.  
+ *
+ * Use @a revision as the revision number passed to intermediate
+ * directory openings.  
+ *
+ * Use @a pool for all necessary allocations. 
+ */
+svn_error_t *
+svn_delta_path_driver (const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       svn_revnum_t revision,
+                       apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool);
+
 /** @} */
 
 
