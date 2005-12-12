@@ -15,7 +15,7 @@
 # that conditions above are met.
 #
 # The script will find Apache and all necessary modules including mod_dav_svn,
-# create a temporary directory in subversion/tests/svn, create
+# create a temporary directory in subversion/tests/cmdline, create
 # Apache 2 configuration file in this directory, start Apache 2 on a random
 # port number higher than 1024, and execute Subversion command-line client
 # test suites against this instance of HTTPD. Every vital configuration
@@ -26,17 +26,17 @@
 # temporary directory.
 #
 # Run this script without parameters to execute the full battery of tests:
-#   subversion/tests/svn/davautocheck.sh
+#   subversion/tests/cmdline/davautocheck.sh
 # Run this script with the name of a test suite to run this suite:
-#   subversion/tests/svn/davautocheck.sh basic
+#   subversion/tests/cmdline/davautocheck.sh basic
 # Run this script with the test suite name and test number to execute just this
 # test:
-#   subversion/tests/svn/davautocheck.sh basic 4
+#   subversion/tests/cmdline/davautocheck.sh basic 4
 #
 # If the temporary directory is not deleted, it can be reused for further
 # manual DAV protocol interoperation testing. HTTPD must be started by
 # specifying configuration file on the command line:
-#   httpd -f subversion/tests/svn/<httpd-...>/cfg
+#   httpd -f subversion/tests/cmdline/<httpd-...>/cfg
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
@@ -168,7 +168,7 @@ LOAD_MOD_AUTHN="$(get_loadmodule_config mod_authn_file)" \
 }
 
 HTTPD_PORT=$(($RANDOM+1024))
-HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/svn/httpd-$(date '+%Y%m%d-%H%M%S')"
+HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_LOG="$HTTPD_ROOT/log"
@@ -226,7 +226,7 @@ CustomLog           "$HTTPD_ROOT/req" format
 
 <Location /svn-test-work/repositories>
   DAV               svn
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/svn/svn-test-work/repositories"
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
@@ -234,7 +234,7 @@ CustomLog           "$HTTPD_ROOT/req" format
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
-  SVNPath           "$ABS_BUILDDIR/subversion/tests/svn/svn-test-work/local_tmp/repos"
+  SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/repos"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
@@ -265,7 +265,7 @@ if [ $# == 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else
-  pushd "$ABS_BUILDDIR/subversion/tests/svn/" >/dev/null
+  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
   time "./${TEST}_tests.py" "--url=$BASE_URL" $*
