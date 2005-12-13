@@ -709,8 +709,15 @@ close_edit (void *edit_baton,
          passing back the post-commit error message as a string to
          be displayed as a warning. */
       if (err->child && err->child->message)
-        post_commit_err = apr_pstrdup (pool, err->child->message) ;
-  
+#if !APR_CHARSET_EBCDIC
+        post_commit_err = apr_pstrdup (pool, err->child->message);
+#else
+        /* Only you can prevent malformed data!  child->message is natively
+           encoded (i.e. ebcdic) and must be conveted to utf-8 before being
+           passed back to the client. */
+        SVN_ERR (svn_utf_cstring_to_utf8(&post_commit_err,
+                                         err->child->message, pool));
+#endif
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
