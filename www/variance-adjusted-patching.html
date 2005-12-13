@@ -51,7 +51,7 @@ for differences that have arisen in the target text since the patch
 was generated, so that the new patch will be applicable to the new
 target text and yet still have the "same" effect as the old patch.  It
 is, in essence, patching a patch.  For example, suppose a branch B
-diverges from a trunk T, and in an engineer wants to merge the change
+diverges from a trunk T, and an engineer wants to merge the change
 from revision T:18 to T:19 into B:10, creating B:11.  If B:10 is too
 dissimilar to T:18, the merge may fail due to textual conflicts, even
 though there is no logical conflict.  Variance adjustment is about
@@ -157,7 +157,7 @@ Some terminology:
 
    <dl>
       <dt><i>insertion</i></dt>
-      <dd>A new line, one that has been added in either source or
+      <dd>A new line that has been added in either source or
       target since the common ancestor.</dd>
       <dt><i>deletion</i></dt>
       <dd>A line that has been deleted from either source or target
