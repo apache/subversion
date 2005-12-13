@@ -90,8 +90,7 @@ encode_int (char *p, svn_filesize_t val)
 
 /* Append an encoded integer to a string.  */
 static void
-append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val,
-                    apr_pool_t *pool)
+append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val)
 {
   char buf[128], *p;
 
@@ -162,11 +161,11 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     }
 
   /* Encode the header.  */
-  append_encoded_int (header, window->sview_offset, pool);
-  append_encoded_int (header, window->sview_len, pool);
-  append_encoded_int (header, window->tview_len, pool);
-  append_encoded_int (header, instructions->len, pool);
-  append_encoded_int (header, window->new_data->len, pool);
+  append_encoded_int (header, window->sview_offset);
+  append_encoded_int (header, window->sview_len);
+  append_encoded_int (header, window->tview_len);
+  append_encoded_int (header, instructions->len);
+  append_encoded_int (header, window->new_data->len);
 
   /* Write out the window.  */
   len = header->len;
