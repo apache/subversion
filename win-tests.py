@@ -184,7 +184,7 @@ class Svnserve:
     self.path = os.path.join(abs_objdir,
                              'subversion', 'svnserve', self.name)
     self.root = os.path.join(abs_builddir,
-                             'subversion', 'tests', 'svn')
+                             'subversion', 'tests', 'cmdline')
     self.proc_handle = None
 
   def __del__(self):
