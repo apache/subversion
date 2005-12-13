@@ -34,7 +34,7 @@ version_header = os.path.join('subversion', 'include', 'svn_version.h')
 gen_obj = gen_win.GeneratorBase('build.conf', version_header, [])
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = filter(lambda x: x.startswith('subversion/tests/svn/'),
+client_tests = filter(lambda x: x.startswith('subversion/tests/cmdline/'),
                       all_tests)
 
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
@@ -234,7 +234,7 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     os.path.walk('subversion', copy_execs, baton)
-    create_target_dir('subversion/tests/svn')
+    create_target_dir('subversion/tests/cmdline')
   except:
     os.chdir(old_cwd)
     raise
