@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>              /* for EINVAL */
 #include <ctype.h>
 #include <assert.h>
 
