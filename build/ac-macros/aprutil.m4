@@ -48,8 +48,8 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
   AC_MSG_RESULT([$apu_version])
 
-  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0 \
-       -a `expr $apu_version : $APRUTIL_WANTED_REGEX_TOO` -eq 0; then
+  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0 &&
+     test `expr $apu_version : $APRUTIL_WANTED_REGEX_TOO` -eq 0; then
     echo "wanted regex is $APRUTIL_WANTED_REGEX or $APRUTIL_WANTED_REGEX_TOO"
     AC_MSG_ERROR([invalid apr-util version found])
   fi

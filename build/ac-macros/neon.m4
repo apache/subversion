@@ -56,7 +56,8 @@ AC_DEFUN(SVN_LIB_NEON,
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do
-        if test "$NEON_VERSION" = "$svn_allowed_neon" -o $svn_allowed_neon = "any"; then
+        if test "$NEON_VERSION" = "$svn_allowed_neon" ||
+           test "$svn_allowed_neon" = "any"; then
           echo "Using neon found in source directory."
           svn_allowed_neon_in_srcdir="yes"
           SVN_NEON_INCLUDES=-'I$(abs_srcdir)/neon/src'
@@ -128,7 +129,8 @@ AC_DEFUN(SVN_NEON_CONFIG,
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do
-        if test "$NEON_VERSION" = "$svn_allowed_neon" -o $svn_allowed_neon = "any"; then
+        if test "$NEON_VERSION" = "$svn_allowed_neon" ||
+           test "$svn_allowed_neon" = "any"; then
             svn_allowed_neon_on_system="yes"
             SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
             NEON_LIBS=`$neon_config --la-file`
