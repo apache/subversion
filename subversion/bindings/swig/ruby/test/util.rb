@@ -14,7 +14,7 @@ module SvnTestUtil
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_path = File.join("test", "wc")
+    @wc_path = File.join("test", "wc-tmp", "wc")
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = File.join("test", "tmp")
     @config_path = File.join("test", "config")
