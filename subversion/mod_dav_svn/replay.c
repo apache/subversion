@@ -399,12 +399,16 @@ dav_svn__replay_report(const dav_resource *resource,
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   const svn_delta_editor_t *editor;
   svn_boolean_t send_deltas = TRUE;
+  dav_svn_authz_read_baton arb;
   const char *base_dir = "";
   apr_bucket_brigade *bb;
   apr_xml_elem *child;
   svn_fs_root_t *root;
   svn_error_t *err;
   void *edit_baton;
+
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
 
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
@@ -463,20 +467,23 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR, "XXX",
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                               "Couldn't retrieve revision root",
                                resource->pool);
 
   make_editor(&editor, &edit_baton, bb, output, resource->pool);;
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,
                                send_deltas, editor, edit_baton,
-                               NULL, NULL, /* XXX authz func/baton */
+                               dav_svn_authz_read, &arb,
                                resource->pool)))
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR, "XXX",
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                               "Problem replaying revision",
                                resource->pool);
 
   if ((err = editor->close_edit(edit_baton, resource->pool)))
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR, "XXX",
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                               "Problem closing editor drive",
                                resource->pool);
 
   ap_fflush(output, bb);
