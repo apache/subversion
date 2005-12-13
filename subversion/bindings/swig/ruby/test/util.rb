@@ -14,7 +14,8 @@ module SvnTestUtil
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_path = File.join("test", "wc-tmp", "wc")
+    @wc_base_dir = File.join("test", "wc-tmp")
+    @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = File.join("test", "tmp")
     @config_path = File.join("test", "config")
@@ -117,7 +118,7 @@ module SvnTestUtil
   end
 
   def teardown_wc
-    FileUtils.rm_rf(@wc_path)
+    FileUtils.rm_rf(@wc_base_dir)
   end
   
   def setup_config
