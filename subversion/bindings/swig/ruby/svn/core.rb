@@ -72,7 +72,11 @@ module Svn
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
-      CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      if Core.const_defined?(:STREAM_CHUNK_SIZE)
+        CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      else
+        CHUNK_SIZE = 8192
+      end
 
       def write(data)
         Core.stream_write(self, data)
