@@ -75,6 +75,8 @@
 # (RAM based) filesystem -- watching ten xterms scroll irregularly
 # can be quite hypnotic!
 
+use strict;
+my $stress = 'stress.pl';
 
 use IPC::Open3;
 use Getopt::Std;
@@ -83,7 +85,7 @@ use File::Path;
 use Cwd;
 
 # Repository check/create
-sub init_repo
+sub init_repo( $$$$ )
   {
     my ( $repo, $create, $no_sync, $fsfs ) = @_;
     if ( $create )
@@ -92,35 +94,35 @@ sub init_repo
         my $svnadmin_cmd = "svnadmin create $repo";
         $svnadmin_cmd .= " --fs-type bdb" if not $fsfs;
         $svnadmin_cmd .= " --bdb-txn-nosync" if $no_sync;
-        system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
+        system( $svnadmin_cmd) and die "$stress: $svnadmin_cmd: failed: $?\n";
         open ( CONF, ">>$repo/conf/svnserve.conf")
-          or die "open svnserve.conf: $!\n";
+          or die "$stress: open svnserve.conf: $!\n";
         print CONF "[general]\nanon-access = write\n";
-        close CONF or die "close svnserve.conf: $!\n";
+        close CONF or die "$stress: close svnserve.conf: $!\n";
       }
     $repo = getcwd . "/$repo" if not $repo =~ m[^/];
     return $repo;
   }
 
 # Check-out a working copy
-sub check_out
+sub check_out( $ )
   {
     my ( $url ) = @_;
     my $wc_dir = "wcstress.$$";
-    mkdir "$wc_dir", 0755 or die "mkdir wcstress.$$: $!\n";
+    mkdir "$wc_dir", 0755 or die "$stress: mkdir wcstress.$$: $!\n";
     my $svn_cmd = "svn co $url $wc_dir";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
     return $wc_dir;
   }
 
 # Print status and update. The update is to do any required merges.
-sub status_update
+sub status_update( $$$$ )
   {
     my ( $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts ) = @_;
     my $svn_cmd = "svn st -u $wc_dir";
     if ( not $disable_status ) {
       print "Status:\n";
-      system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+      system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
     }
     print "Press return to update/commit\n" if $wait_for_key;
     read STDIN, $wait_for_key, 1 if $wait_for_key;
@@ -145,20 +147,20 @@ sub status_update
     print while ( <UPDATE_ERR_READ> );
 
     # Close up the streams.
-    close UPDATE_ERR_READ or die "close UPDATE_ERR_READ: $!\n";
-    close UPDATE_WRITE or die "close UPDATE_WRITE: $!\n";
-    close UPDATE_READ or die "close UPDATE_READ: $!\n";
+    close UPDATE_ERR_READ or die "$stress: close UPDATE_ERR_READ: $!\n";
+    close UPDATE_WRITE or die "$stress: close UPDATE_WRITE: $!\n";
+    close UPDATE_READ or die "$stress: close UPDATE_READ: $!\n";
 
     # Get commit subprocess exit status
-    die "waitpid: $!\n" if $pid != waitpid $pid, 0;
-    die "unexpected update fail: exit status: $?\n" if $? != 0;
+    die "$stress: waitpid: $!\n" if $pid != waitpid $pid, 0;
+    die "$stress: unexpected update fail: exit status: $?\n" if $? != 0;
 
     if ($resolve_conflicts)
       {
         foreach my $conflict (@conflicts)
           {
             $svn_cmd = "svn resolved $conflict";
-            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+            system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
           }
       }
   }
@@ -166,7 +168,7 @@ sub status_update
 # Print status, update and commit. The update is to do any required
 # merges.  Returns 0 if the commit succeeds and 1 if it fails due to a
 # conflict.
-sub status_update_commit
+sub status_update_commit( $$$$ )
   {
     my ( $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts ) = @_;
     status_update $wc_dir, $wait_for_key, $disable_status, $resolve_conflicts;
@@ -199,18 +201,18 @@ sub status_update_commit
                                     Baseline[ ]incorrect
                                     |
                                     Your[ ]file[ ]or[ ]directory[ ]
-                                    '[^']+'
+                                    \'[^\']+\'
                                     [ ]is[ ]probably[ ]out-of-date
                                    )
                                    /x );
       }
-    close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
-    close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
-    close COMMIT_READ or die "close COMMIT_READ: $!\n";
+    close COMMIT_ERR_READ or die "$stress: close COMMIT_ERR_READ: $!\n";
+    close COMMIT_WRITE or die "$stress: close COMMIT_WRITE: $!\n";
+    close COMMIT_READ or die "$stress: close COMMIT_READ: $!\n";
 
     # Get commit subprocess exit status
-    die "waitpid: $!\n" if $pid != waitpid $pid, 0;
-    die "unexpected commit fail: exit status: $?\n"
+    die "$stress: waitpid: $!\n" if $pid != waitpid $pid, 0;
+    die "$stress: unexpected commit fail: exit status: $?\n"
       if ( $? != 0 and $? != 256 ) or ( $? == 256 and $acceptable_error != 1 );
 
     return $? == 256 ? 1 : 0;
@@ -219,13 +221,13 @@ sub status_update_commit
 # Get a list of all versioned files in the working copy
 {
   my @get_list_of_files_helper_array;
-  sub GetListOfFilesHelper
+  sub GetListOfFilesHelper()
     {
       $File::Find::prune = 1 if $File::Find::name =~ m[/.svn];
       return if $File::Find::prune or -d;
       push @get_list_of_files_helper_array, $File::Find::name;
     }
-  sub GetListOfFiles
+  sub GetListOfFiles( $ )
     {
       my ( $wc_dir ) = @_;
       @get_list_of_files_helper_array = ();
@@ -235,7 +237,7 @@ sub status_update_commit
 }
 
 # Populate a working copy
-sub populate
+sub populate( $$$$$$ )
   {
     my ( $dir, $dir_width, $file_width, $depth, $pad, $props ) = @_;
     return if not $depth--;
@@ -243,27 +245,29 @@ sub populate
     for $nfile ( 1..$file_width )
       {
         my $filename = "$dir/foo$nfile";
-        open( FOO, ">$filename" ) or die "open $filename: $!\n";
+        open( FOO, ">$filename" ) or die "$stress: open $filename: $!\n";
 
         for $line ( 0..9 )
           {
-            print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
+            print FOO "A$line\n$line\n"
+                or die "$stress: write to $filename: $!\n";
             map { print FOO $_ x 255, "\n"; } ("a", "b", "c", "d")
               foreach (1..$pad);
           }
-        print FOO "\$HeadURL: \$\n" or die "write to $filename: $!\n" if $props;
-        close FOO or die "close $filename: $!\n";
+        print FOO "\$HeadURL: \$\n"
+            or die "$stress: write to $filename: $!\n" if $props;
+        close FOO or die "$stress: close $filename: $!\n";
 
         my $svn_cmd = "svn add $filename";
-        system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+        system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
 
         if ( $props )
           {
             $svn_cmd = "svn propset svn:eol-style native $filename";
-            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+            system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
 
             $svn_cmd = "svn propset svn:keywords HeadURL $filename";
-            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+            system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
           }
       }
 
@@ -273,7 +277,7 @@ sub populate
           {
             my $dirname = "$dir/bar$ndir";
             my $svn_cmd = "svn mkdir $dirname";
-            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+            system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
 
             populate( "$dirname", $dir_width, $file_width, $depth, $pad,
                       $props );
@@ -282,22 +286,22 @@ sub populate
   }
 
 # Modify a versioned file in the working copy
-sub ModFile
+sub ModFile( $$$ )
   {
     my ( $filename, $mod_number, $id ) = @_;
 
     # Read file into memory replacing the line that starts with our ID
-    open( FOO, "<$filename" ) or die "open $filename: $!\n";
+    open( FOO, "<$filename" ) or die "$stress: open $filename: $!\n";
     @lines = map { s[(^$id.*)][$1,$mod_number]; $_ } <FOO>;
-    close FOO or die "close $filename: $!\n";
+    close FOO or die "$stress: close $filename: $!\n";
 
     # Write the memory back to the file
-    open( FOO, ">$filename" ) or die "open $filename: $!\n";
-    print FOO or die "print $filename: $!\n" foreach @lines;
-    close FOO or die "close $filename: $!\n";
+    open( FOO, ">$filename" ) or die "$stress: open $filename: $!\n";
+    print FOO or die "$stress: print $filename: $!\n" foreach @lines;
+    close FOO or die "$stress: close $filename: $!\n";
   }
 
-sub ParseCommandLine
+sub ParseCommandLine()
   {
     my %cmd_opts;
     my $usage = "
@@ -345,7 +349,8 @@ where
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'cdfhi:n:prs:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdfhi:n:prs:x:D:F:N:P:R:U:W', \%cmd_opts )
+        or die $usage;
 
     # print help info (and exit nicely) if requested
     if ( $cmd_opts{'h'} )
@@ -395,14 +400,16 @@ my $wc_dir = check_out $cmd_opts{'U'};
 if ( $cmd_opts{'c'} )
   {
     my $svn_cmd = "svn mkdir $wc_dir/trunk";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
     populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
               $cmd_opts{'P'}, $cmd_opts{'p'} );
-    status_update_commit $wc_dir, 0, 1 and die "populate checkin failed\n";
+    status_update_commit $wc_dir, 0, 1
+        and die "$stress: populate checkin failed\n";
   }
 
 my @wc_files = GetListOfFiles $wc_dir;
-die "not enough files in repository\n" if $#wc_files + 1 < $cmd_opts{'x'};
+die "$stress: not enough files in repository\n"
+    if $#wc_files + 1 < $cmd_opts{'x'};
 
 my $wait_for_key = $cmd_opts{'s'} < 0;
 
