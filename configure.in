@@ -137,21 +137,7 @@ SVN_LT_CCTAG=
 SVN_LT_CXXTAG=
 AC_MSG_CHECKING([whether libtool accepts --tag=XXX])
 
-cat > conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-int
-main ()
-{ 
-  ;
-  return 0;
-}
-_ACEOF
-
+AC_LANG_CONFTEST([AC_LANG_PROGRAM()])
 if $sh_libtool --tag=CC --mode=compile \
   $CC -c $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext >&5
 then
