@@ -237,17 +237,18 @@ sub status_update_commit( $$$$ )
 }
 
 # Populate a working copy
+sub populate( $$$$$$ );
 sub populate( $$$$$$ )
   {
     my ( $dir, $dir_width, $file_width, $depth, $pad, $props ) = @_;
     return if not $depth--;
 
-    for $nfile ( 1..$file_width )
+    for my $nfile ( 1..$file_width )
       {
         my $filename = "$dir/foo$nfile";
         open( FOO, ">$filename" ) or die "$stress: open $filename: $!\n";
 
-        for $line ( 0..9 )
+        for my $line ( 0..9 )
           {
             print FOO "A$line\n$line\n"
                 or die "$stress: write to $filename: $!\n";
@@ -273,7 +274,7 @@ sub populate( $$$$$$ )
 
     if ( $depth )
       {
-        for $ndir ( 1..$dir_width )
+        for my $ndir ( 1..$dir_width )
           {
             my $dirname = "$dir/bar$ndir";
             my $svn_cmd = "svn mkdir $dirname";
@@ -292,7 +293,7 @@ sub ModFile( $$$ )
 
     # Read file into memory replacing the line that starts with our ID
     open( FOO, "<$filename" ) or die "$stress: open $filename: $!\n";
-    @lines = map { s[(^$id.*)][$1,$mod_number]; $_ } <FOO>;
+    my @lines = map { s[(^$id.*)][$1,$mod_number]; $_ } <FOO>;
     close FOO or die "$stress: close $filename: $!\n";
 
     # Write the memory back to the file
@@ -403,7 +404,7 @@ if ( $cmd_opts{'c'} )
     system( $svn_cmd ) and die "$stress: $svn_cmd: failed: $?\n";
     populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
               $cmd_opts{'P'}, $cmd_opts{'p'} );
-    status_update_commit $wc_dir, 0, 1
+    status_update_commit( $wc_dir, 0, 1, 0)
         and die "$stress: populate checkin failed\n";
   }
 
@@ -415,7 +416,7 @@ my $wait_for_key = $cmd_opts{'s'} < 0;
 
 my $stop_file = $cmd_opts{'S'};
 
-for $mod_number ( 1..$cmd_opts{'n'} )
+for my $mod_number ( 1..$cmd_opts{'n'} )
   {
     my @chosen;
     for ( 1..$cmd_opts{'x'} )
