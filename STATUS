@@ -16,14 +16,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r17631, r17663
-    Fix building APR resource files for VS.NET.
-    Justifications:
-      Without this change Subversion cannot be build against packaged APR
-      (0.9.7) using VS.NET.
-    Votes:
-      +1: zhakov, rooneg, dlr
-
 Status of 1.3.1:
 ================
 
