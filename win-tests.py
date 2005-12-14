@@ -26,6 +26,9 @@ try:
 except AttributeError:
     my_getopt = getopt.getopt
 
+CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
+CMDLINE_TEST_SCRIPT_NATIVE_PATH = CMDLINE_TEST_SCRIPT_PATH.replace('/', os.sep)
+
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
@@ -34,7 +37,7 @@ version_header = os.path.join('subversion', 'include', 'svn_version.h')
 gen_obj = gen_win.GeneratorBase('build.conf', version_header, [])
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = filter(lambda x: x.startswith('subversion/tests/cmdline/'),
+client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
@@ -183,8 +186,7 @@ class Svnserve:
     self.kind = objdir
     self.path = os.path.join(abs_objdir,
                              'subversion', 'svnserve', self.name)
-    self.root = os.path.join(abs_builddir,
-                             'subversion', 'tests', 'cmdline')
+    self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH)
     self.proc_handle = None
 
   def __del__(self):
@@ -234,7 +236,7 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     os.path.walk('subversion', copy_execs, baton)
-    create_target_dir('subversion/tests/cmdline')
+    create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
   except:
     os.chdir(old_cwd)
     raise
