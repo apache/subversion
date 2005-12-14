@@ -20,7 +20,7 @@ Candidate changes:
       Without this change Subversion cannot be build against packaged APR
       (0.9.7) using VS.NET.
     Votes:
-      +1: zhakov
+      +1: zhakov, rooneg
 
 Approved changes:
 
