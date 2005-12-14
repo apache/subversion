@@ -3539,13 +3539,20 @@ svn_fs_fs__dup_perms (const char *filename,
 #ifndef WIN32
   apr_status_t status;
   apr_finfo_t finfo;
+  const char *filename_apr, *perms_reference_apr;
   
-  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
+  SVN_ERR (svn_path_cstring_from_utf8 (&filename_apr, filename, pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&perms_reference_apr, perms_reference,
+                                       pool));
+
+  status = apr_stat (&finfo, perms_reference_apr, APR_FINFO_PROT, pool);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
-  status = apr_file_perms_set (filename, finfo.protection);
+    return svn_error_wrap_apr (status, _("Can't stat '%s'"),
+                               svn_path_local_style (perms_reference, pool));
+  status = apr_file_perms_set (filename_apr, finfo.protection);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), filename);
+    return svn_error_wrap_apr (status, _("Can't chmod '%s'"),
+                               svn_path_local_style (filename, pool));
 #endif
   return SVN_NO_ERROR;
 }
