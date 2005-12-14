@@ -23,8 +23,8 @@ AC_CONFIG_AUX_DIR(ac-helpers)
 
 AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 
-abs_srcdir="`cd $srcdir && pwd`"
-abs_builddir="`pwd`"
+AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
+AC_SUBST([abs_builddir], ["`pwd`"])
 
 dnl ### should we ever bother with the system install?
 dnl use abs_srcdir. sometimes during installation, libtool will relink the
@@ -737,9 +737,6 @@ AC_SUBST(JAVA_CLASSPATH)
 AC_SUBST(JAVAHL_TESTS_TARGET)
 
 dnl Pass some config data ----------------------------
-
-AC_SUBST(abs_builddir)
-AC_SUBST(abs_srcdir)
 
 dnl
 dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
