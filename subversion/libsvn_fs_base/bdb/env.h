@@ -22,6 +22,7 @@
 #include <apu_want.h>
 
 #include <apr_pools.h>
+#include <apr_file_io.h>
 
 #include "bdb_compat.h"
 
@@ -30,21 +31,42 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
+/* The name of the Berkeley DB config file.  */
+#define BDB_CONFIG_FILE "DB_CONFIG"
+
+/* The cache key for a Berkeley DB environment descriptor.  This is a
+   combination of the device ID and INODE number of the Berkeley DB
+   config file.
+
+   XXX FIXME: Although the dev+inode combination is supposed do be
+   unique, apparently that's not always the case with some remote
+   filesystems.  We /should/ be safe using this as a unique hash key,
+   because the database must be on a local filesystem.  We can hope,
+   anyway. */
+typedef struct
+{
+  apr_dev_t device;
+  apr_ino_t inode;
+} bdb_env_key_t;
+
+/* Prefix string for BDB errors. */
+#define BDB_ERRPFX_STRING "svn (bdb): "
 
 /* The Berkeley DB environment descriptor. */
 typedef struct
 {
+  /* XXX TODO: Make this structure thread-safe. */
+
+  /**************************************************************************/
+  /* Error Reporting */
+
   /* Berkeley DB returns extended error info by callback before returning
      an error code from the failing function.  The callback baton type is a
      string, not an arbitrary struct, so we prefix our struct with a valid
      string, to avoid problems should BDB ever try to interpret our baton as
      a string.  Initializers of this structure must strcpy the value of
-     BDB_ERRCALL_BATON_ERRPFX_STRING into this array.  */
-  char errpfx_string[sizeof(BDB_ERRCALL_BATON_ERRPFX_STRING)];
-
-  /* The Berkeley DB environment. */
-  DB_ENV *env;
+     BDB_ERRPFX_STRING into this array.  */
+  char errpfx_string[sizeof(BDB_ERRPFX_STRING)];
 
   /* We hold the extended info here until the Berkeley DB function returns.
      It usually returns an error code, triggering the collection and
@@ -62,6 +84,55 @@ typedef struct
      Since we now use the errcall ourselves, we must store and invoke a user
      errcall, to maintain our API guarantees. */
   void (*user_callback) (const char *errpfx, char *msg);
+
+  /**************************************************************************/
+  /* BDB Environment Cache */
+
+  /* The Berkeley DB environment. */
+  DB_ENV *env;
+
+  /* The home path of this environment; a canonical SVN path ecoded in
+     UTF-8 and allocated from this decriptor's pool. */
+  const char *path;
+
+  /* The home path of this environment, in the form expected by BDB. */
+  const char *path_bdb;
+
+  /* The reference count for this environment handle; this is
+     essentially the difference between the number of calls to
+     svn_fs_bdb__open and svn_fs_bdb__close. */
+  unsigned refcount;
+
+  /* If this flag is TRUE, the environment descriptor is stored in the
+     cache. */
+  svn_boolean_t cached;
+
+  /* The key for the environment descriptor cache. */
+  bdb_env_key_t key;
+
+  /* The handle of the open DB_CONFIG file.
+
+     We keep the DB_CONFIG file open in this process as long as the
+     environment handle itself is open.  On Windows, this guarantees
+     that the cache key remains unique; here's what the Windows SDK
+     docs have to say about the file index (interpreted as the INODE
+     number by APR):
+
+        "This value is useful only while the file is open by at least
+        one process.  If no processes have it open, the index may
+        change the next time the file is opened."
+
+     Now, we certainly don't want a unique key to change while it's
+     being used, do we... */
+  apr_file_t *dbconfig_file;
+
+  /* The pool associated with this environment descriptor.
+
+     Because the descriptor has a life of its own, the structure and
+     any data associated with it are allocated from their own global
+     pool. */
+  apr_pool_t *pool;
+
 } bdb_env_t;
 
 
@@ -92,6 +163,9 @@ typedef struct
  * Note: This function may return a pointer to an existing
  * @c bdb_env_t object with a previously opened environment.
  */
+  /* XXX FIXME: Forbid multiple open of private environment!
+     (flags & DB_PRIVATE) */
+
 svn_error_t *svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
                                u_int32_t flags, int mode,
                                apr_pool_t *pool);
@@ -107,8 +181,6 @@ svn_error_t *svn_fs_bdb__close (bdb_env_t *bdb);
 /* Remove the Berkeley DB environment at PATH.
  *
  * Use POOL for temporary allocation.
- *
- * This function will fail if the environment is already open.
  */
 svn_error_t *svn_fs_bdb__remove (const char *path, apr_pool_t *pool);
 

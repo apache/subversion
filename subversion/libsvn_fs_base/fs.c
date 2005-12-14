@@ -170,7 +170,7 @@ cleanup_fs (svn_fs_t *fs)
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
-#if 0                           /* FIXME: */
+#if 0                           /* FIXME: error reporting @@@@ */
   SVN_ERR (BDB_WRAP (fs, "closing environment",
                      svn_fs_bdb__close_env (bdb)));
 
@@ -289,7 +289,7 @@ cleanup_fs_apr (void *data)
 }
 
 
-#if 0                           /* FIXME: */
+#if 0                           /* FIXME: error reporting @@@@ */
 /* Allocate a Berkeley DB environment object for the filesystem FS,
    and set up its default parameters appropriately.  */
 static svn_error_t *
@@ -329,7 +329,7 @@ static svn_error_t *
 bdb_write_config  (svn_fs_t *fs)
 {
   const char *dbconfig_file_name =
-    svn_path_join (fs->path, "DB_CONFIG", fs->pool);
+    svn_path_join (fs->path, BDB_CONFIG_FILE, fs->pool);
   apr_file_t *dbconfig_file = NULL;
   int i;
 
@@ -538,7 +538,7 @@ open_databases (svn_fs_t *fs, svn_boolean_t create,
     SVN_ERR (bdb_write_config (fs));
 
   /* Create the Berkeley DB environment.  */
-#if 0                           /* FIXME: */
+#if 0                           /* FIXME: error reporting @@@@ */
   SVN_ERR (BDB_WRAP (fs, (create
                           ? "creating environment"
                           : "opening environment"),
