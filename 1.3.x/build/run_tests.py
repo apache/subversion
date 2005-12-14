@@ -191,8 +191,11 @@ class TestHarness:
 
     failed = 0
     for line in solines:
-      # Send output to log file, skipping leading space
-      print >> self.log, line[1:],
+      # Send output to log file, skipping leading space on .py tests
+      if progbase[-3:] == '.py':
+        print >> self.log, line[1:],
+      else:
+        print >> self.log, line,
       if line.find('FAIL:  ') != -1 and line.find('XFAIL:  ') == -1:
         failed = 1
 

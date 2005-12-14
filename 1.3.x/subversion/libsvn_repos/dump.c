@@ -60,6 +60,9 @@
         "\x3a\x20\x74\x72\x75\x65\x0a"
         /* ": true\n" */
 
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
 /*----------------------------------------------------------------------*/
 
 /** A variant of our hash-writing routine in libsvn_subr;  this one
@@ -176,7 +179,7 @@ store_delta (apr_file_t **tempfile, svn_filesize_t *len,
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
   SVN_ERR (svn_io_open_unique_file (tempfile, &name,
                                     APR_PSPRINTF2 (pool, "%s/dump", tempdir),
-                                    ".tmp", TRUE, pool));
+                                    DOT_TMP_STR, TRUE, pool));
 
   temp_stream = svn_stream_from_aprfile (*tempfile, pool);
 

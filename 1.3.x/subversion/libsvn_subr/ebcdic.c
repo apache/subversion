@@ -828,7 +828,6 @@ svn_ebcdic_run_unix_type_script (const char *path,
         return NULL;
       else
         {
-          svn_error_t *child_err = SVN_NO_ERROR;
           if (script_output->len > 1)
             {
               const char* script_out_utf8;
