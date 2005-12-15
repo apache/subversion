@@ -505,6 +505,8 @@ def create_python_hook_script (hook_path, hook_script_code):
      HOOK_SCRIPT_CODE."""
 
   if sys.platform == 'win32':
+    # Use an absolute path since the working directory is not guaranteed
+    hook_path = os.path.abspath(hook_path)
     # Fill the python file.
     file_append ("%s.py" % hook_path, hook_script_code)
     # Fill the batch wrapper file.
