@@ -330,10 +330,10 @@ local-extraclean: local-distclean extraclean-swig
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
-              $(top_srcdir)/ac-helpers/config.guess \
-              $(top_srcdir)/ac-helpers/config.sub \
-              $(top_srcdir)/ac-helpers/libtool.m4 \
-              $(top_srcdir)/ac-helpers/ltmain.sh
+              $(top_srcdir)/build/config.guess \
+              $(top_srcdir)/build/config.sub \
+              $(top_srcdir)/build/libtool.m4 \
+              $(top_srcdir)/build/ltmain.sh
 
 # clean everything, including test output.
 local-clean: fast-clean check-clean clean-swig

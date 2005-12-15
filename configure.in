@@ -19,7 +19,7 @@ AC_INIT([subversion],
         [http://subversion.tigris.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
-AC_CONFIG_AUX_DIR(ac-helpers)
+AC_CONFIG_AUX_DIR([build])
 
 AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 
@@ -30,7 +30,7 @@ dnl ### should we ever bother with the system install?
 dnl use abs_srcdir. sometimes during installation, libtool will relink the
 dnl library. when it does this, it does a "cd", so a relative use of
 dnl install-sh will not work.
-INSTALL="$abs_srcdir/ac-helpers/install-sh -c"
+INSTALL="$abs_srcdir/build/install-sh -c"
 AC_SUBST(INSTALL)
 
 MKDIR="$INSTALL -d"
