@@ -19,5 +19,5 @@ sinclude(build/ac-macros/java.m4)
 sinclude(build/ac-macros/swig.m4)
 
 # Include the libtool macros
-sinclude(ac-helpers/libtool.m4)
+sinclude(build/libtool.m4)
 

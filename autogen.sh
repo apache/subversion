@@ -58,7 +58,7 @@ if [ ! -f $ltfile ]; then
 fi
 
 echo "Copying libtool helper: $ltfile"
-cp $ltfile ac-helpers/libtool.m4
+cp $ltfile build/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.
 #
