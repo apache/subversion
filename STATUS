@@ -12,6 +12,12 @@ Soak period:
   2005-12-21 - Final week commences - critical backports only.
   2005-12-28 - Soak period elapsed!
 
+Blocker:
+
+  Wording specifically mentioning 'the plan for 1.3' is in the template
+  post-lock and post-unlock hooks.  This would look ridiculous in a final
+  1.3 release.
+
 Candidate changes:
 
   * r17525
