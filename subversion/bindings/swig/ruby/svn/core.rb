@@ -59,13 +59,20 @@ module Svn
     AuthCredSSLServerTrust = AuthCredSslServerTrust
     
     
-    Pool = Svn::Ext::Core::Apr_pool_t
+    Pool = Svn::Ext::Core::Apr_pool_wrapper_t
     
     class Pool
       class << self
         def number_of_pools
           ObjectSpace.each_object(Pool) {}
         end
+      end
+
+      alias _initialize initialize
+      private :_initialize
+      def initialize(parent=nil)
+        _initialize(parent)
+        @parent = parent
       end
     end
 
