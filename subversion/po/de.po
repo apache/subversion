@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-12-15 13:28+0100\n"
+"PO-Revision-Date: 2005-12-15 13:35+0100\n"
 "Last-Translator: Lübbe Onken <luebbe@tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -7697,7 +7697,7 @@ msgstr "Zeige vollständige Pfade anstatt sie einzurücken"
 
 #: svnlook/main.c:129
 msgid "show details for copies"
-msgstr "Zeige Details für Kopiel"
+msgstr "Zeige Details für Kopien"
 
 #: svnlook/main.c:142
 msgid ""
