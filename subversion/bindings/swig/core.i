@@ -709,22 +709,79 @@ SubversionException = _core.SubversionException
 %}
 
 /* Dummy declaration */
-struct apr_pool_t 
+struct apr_pool_wrapper_t
 {
 };
 
 /* Leave memory administration to ruby's GC */
-%extend apr_pool_t
+%extend apr_pool_wrapper_t
 {
-  apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
-    /* Disable parent pool. */
-    return svn_pool_create_ex(NULL, NULL);
+  apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
+    apr_pool_wrapper_t *self;
+    apr_pool_t *parent_pool;
+
+    self = ALLOC(apr_pool_wrapper_t);
+    if (parent) {
+      parent_pool = parent->pool;
+      APR_ARRAY_PUSH(parent->children, apr_pool_wrapper_t *) = self;
+    } else {
+      parent_pool = NULL;
+    }
+    self->pool = svn_pool_create_ex(parent_pool, NULL);
+    self->destroyed = FALSE;
+    self->parent = parent;
+    self->children = apr_array_make(self->pool, 0,
+                                    sizeof(apr_pool_wrapper_t *));
+    return self;
   }
 
-  ~apr_pool_t() {
-    apr_pool_destroy(self);
+  ~apr_pool_wrapper_t() {
+    if (!self->destroyed) {
+      apr_pool_wrapper_destroy_children(self);
+      apr_pool_wrapper_remove_from_parent(self);
+      apr_pool_destroy(self->pool);
+    }
+    free(self);
   }
 };
+
+%ignore apr_pool_wrapper_destroy_children;
+%ignore apr_pool_wrapper_remove_from_parent;
+%inline %{
+static void
+apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self)
+{
+  if (!self->destroyed) {
+    apr_pool_wrapper_t **child;
+
+    self->destroyed = TRUE;
+    while (child = apr_array_pop(self->children)) {
+      if (*child) {
+        apr_pool_wrapper_destroy_children(*child);
+      }
+    }
+  }
+}
+
+static void
+apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self)
+{
+  if (self->parent) {
+    apr_pool_wrapper_t *child;
+    int i, len;
+
+    len = self->parent->children->nelts;
+    for (i = 0; i < len; i++) {
+      child = APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *);
+      if (child == self) {
+        APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *) = NULL;
+        break;
+      }
+    }
+  }
+}
+%}
+
 
 %include svn_diff_h.swg
 
