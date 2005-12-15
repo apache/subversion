@@ -717,18 +717,14 @@ dnl Pass some config data ----------------------------
 dnl
 dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
 dnl
+INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
 case "$host" in
-*bsdi*)
+  *bsdi*)
     # Check whether they've installed GNU make
-    if make --version > /dev/null 2>&1; then 
-	INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
-    else
-	# BSDi make
-	INCLUDE_OUTPUTS=".include \"\$(top_srcdir)/build-outputs.mk\""
+    if ! make --version > /dev/null 2>&1; then 
+      # BSDi make
+      INCLUDE_OUTPUTS=".include \"\$(top_srcdir)/build-outputs.mk\""
     fi
-    ;;
-*)
-    INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
     ;;
 esac
 AC_SUBST(INCLUDE_OUTPUTS)
