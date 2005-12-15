@@ -26,17 +26,6 @@ AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
 AC_SUBST([abs_builddir], ["`pwd`"])
 
-dnl ### should we ever bother with the system install?
-dnl use abs_srcdir. sometimes during installation, libtool will relink the
-dnl library. when it does this, it does a "cd", so a relative use of
-dnl install-sh will not work.
-INSTALL="$abs_srcdir/build/install-sh -c"
-AC_SUBST(INSTALL)
-
-MKDIR="$INSTALL -d"
-AC_SUBST(MKDIR)
-
-
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
 
@@ -52,8 +41,9 @@ AC_PROG_CPP
 dnl Look for an extended grep, this macro appeared in autoconf-2.53b
 ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
 
-dnl See if 'ln -s' works
 AC_PROG_LN_S
+AC_PROG_INSTALL
+AC_SUBST([MKDIR], ["$INSTALL -d"])
 
 dnl Configure APR --------------------------
 
