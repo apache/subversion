@@ -1,19 +1,10 @@
+dnl configure.in: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
-dnl Autoconfiscation for Subversion
-
-dnl General Setup -----------------------
-
-dnl Ensure that subversion is configured with autoconf 2.50 or newer
-dnl Don't even think about removing this check!
 AC_PREREQ(2.50)
 
-dnl Get the version number of Subversion, using m4's esyscmd() command to run
-dnl the command at m4-generation time. This allows us to create an m4
-dnl symbol holding the correct version number. AC_INIT() requires the
-dnl version number at m4-time, rather than when ./configure is run, so
-dnl all this must happen as part of m4, not as part of the shell code
-dnl contained in ./configure.
+dnl Get the version of Subversion, using m4's esyscmd() command to do this
+dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
         [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
         [http://subversion.tigris.org/])
@@ -26,19 +17,19 @@ AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
 AC_SUBST([abs_builddir], ["`pwd`"])
 
-dnl Generate config.nice early (before the args are munged)
+# Generate config.nice early (before the arguments are munged)
 SVN_CONFIG_NICE(config.nice)
 
+# ==== Check for programs ====================================================
 
-dnl Check for programs ---------------------
-
-dnl Look for a C compiler (before anything can set CFLAGS)
+# Look for a C compiler (before anything can set CFLAGS)
 AC_PROG_CC
 
-dnl Look for a C pre-processor
+# Look for a C pre-processor
 AC_PROG_CPP
 
-dnl Look for an extended grep, this macro appeared in autoconf-2.53b
+# Look for an extended grep, this macro appeared in autoconf-2.53b,
+# before that, the search for an EGREP was always performed.
 ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
 
 AC_PROG_LN_S
@@ -49,7 +40,7 @@ AC_SUBST([MKDIR], ["$INSTALL -d"])
 dnl find Apache with a recent-enough magic module number.
 SVN_FIND_APACHE(20020903)
 
-dnl Configure APR --------------------------
+# ==== Libraries, for which we may have source to build ======================
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
@@ -628,6 +619,7 @@ AC_SUBST(SVN_FS_LIB_DEPS)
 AC_SUBST(SVN_FS_LIB_INSTALL_DEPS)
 AC_SUBST(SVN_FS_LIB_LINK)
 
+# ==== JavaHL ================================================================
 
 dnl Possibly compile JavaHL (experimental)
 do_javahl_build=no
@@ -700,7 +692,7 @@ AC_HELP_STRING([--with-junit=PATH],
 AC_SUBST(JAVA_CLASSPATH)
 AC_SUBST(JAVAHL_TESTS_TARGET)
 
-dnl Pass some config data ----------------------------
+# ==== Miscellaneous bits ====================================================
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
@@ -713,9 +705,7 @@ DEFAULT_FS_TYPE="fsfs"
 AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
                    [The fs type to use by default])
 
-dnl
-dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
-dnl
+# BSD/OS (BSDi) needs to use a different include syntax in Makefile
 INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
 case "$host" in
   *bsdi*)
@@ -728,7 +718,7 @@ case "$host" in
 esac
 AC_SUBST(INCLUDE_OUTPUTS)
 
-dnl Final step:  create the Makefile ----------------------------
+# ==== Detection complete - output and run config.status =====================
 
 AC_CONFIG_HEADER(subversion/svn_private_config.h)
 AC_CONFIG_FILES([Makefile])
@@ -746,8 +736,12 @@ AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 AC_OUTPUT
 
-dnl  Print warning messages about what we did and didn't configure at the 
-dnl  end, where people will actually see them.
+# ==== Print final messages to user ==========================================
+
+dnl Configure is long - users tend to miss warnings printed during it.
+dnl Hence, print a warnings about what we did and didn't configure at the 
+dnl end, where people will actually see them.
+
 case "$svn_lib_berkeley_db" in
   "no" )
     db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
