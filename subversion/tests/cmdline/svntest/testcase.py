@@ -70,12 +70,15 @@ class TestCase:
 
   def _check_name(self):
     name = self.pred.func.__doc__
+    if not name:
+      raise Exception(self.pred.func.__name__ + ' lacks required doc string')
+
     if len(name) > 50:
-      print 'WARNING: Test docstring exceeds 50 characters'
+      print 'WARNING: Test doc string exceeds 50 characters'
     if name[-1] == '.':
-      print 'WARNING: Test docstring ends in a period (.)'
+      print 'WARNING: Test doc string ends in a period (.)'
     if not string.lower(name[0]) == name[0]:
-      print 'WARNING: Test docstring is capitalized'
+      print 'WARNING: Test doc string is capitalized'
     
   def func_code(self):
     return self.pred.func.func_code
