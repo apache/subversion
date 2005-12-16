@@ -21,7 +21,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="./include,../apr/include"
-				PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS"
+				PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS"
 				RuntimeLibrary="3"
 				PrecompiledHeaderFile=".\Debug/libapriconv.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -78,7 +78,7 @@
 				Optimization="2"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="./include,../apr/include"
-				PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS"
+				PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS"
 				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -144,7 +144,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -152,7 +152,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -163,7 +163,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -171,7 +171,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -182,7 +182,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -190,7 +190,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -201,7 +201,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -209,7 +209,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -220,7 +220,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -228,7 +228,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -239,7 +239,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -247,7 +247,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -258,7 +258,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_DEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32">
@@ -266,7 +266,7 @@
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions="NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+							PreprocessorDefinitions="_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;NDEBUG;API_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 					</FileConfiguration>
 				</File>
 			</Filter>
