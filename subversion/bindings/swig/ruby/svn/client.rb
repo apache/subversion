@@ -115,11 +115,11 @@ module Svn
       end
 
       def update(paths, rev="HEAD", recurse=true, ignore_externals=false)
-        if paths.is_a?(Array)
-          Client.update2(paths, rev, recurse, ignore_externals, self)
-        else
-          Client.update(paths, rev, recurse, self)
-        end
+        paths_is_array = paths.is_a?(Array)
+        paths = [paths] unless paths_is_array
+        result = Client.update2(paths, rev, recurse, ignore_externals, self)
+        result = result.first unless paths_is_array
+        result
       end
       alias up update
 
