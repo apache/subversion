@@ -36,10 +36,10 @@ Item = svntest.wc.StateItem
 def build_repos(sbox):
   """Avoid the use sbox.build() because we're working with a repos
   other than the Greek tree."""
-  # Cleanup the last run by removing repository.
+  # Cleanup after the last run by removing any left-over repository.
   svntest.main.safe_rmtree(sbox.repo_dir)
 
-  # Create the empty repository.
+  # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
   svntest.main.set_repos_paths(sbox.repo_dir)
 
