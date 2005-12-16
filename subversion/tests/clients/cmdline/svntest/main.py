@@ -346,6 +346,10 @@ def run_svnlook(*varargs):
   "Run svnlook with VARARGS, returns stdout, stderr as list of lines."
   return run_command(svnlook_binary, 1, 0, *varargs)
 
+def run_svnsync(*varargs):
+  "Run svnsync with VARARGS, returns stdout, stderr as list of lines."
+  return run_command(svnsync_binary, 1, 0, *varargs)
+
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
   return run_command(svnversion_binary, 1, 0, *varargs)
