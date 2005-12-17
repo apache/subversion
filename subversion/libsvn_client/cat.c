@@ -173,6 +173,7 @@ svn_client_cat2 (svn_stream_t *out,
   svn_string_t *keywords;
   apr_hash_t *props;
   const char *url;
+  svn_stream_t *output = out;
 
   if (! svn_path_is_url (path_or_url)
       && (peg_revision->kind == svn_opt_revision_base
@@ -214,43 +215,21 @@ svn_client_cat2 (svn_stream_t *out,
   eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
   keywords = apr_hash_get (props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
 
-  if (! eol_style && ! keywords)
+  if (eol_style || keywords)
     {
       /* It's a file with no special eol style or keywords. */
-      SVN_ERR (svn_ra_get_file (ra_session, "", rev, out, NULL, NULL, pool));
-    }
-  else
-    {
-      apr_hash_t *kw = NULL;
-      svn_subst_eol_style_t style;
-      const char *temp_dir;
-      const char *tmp_filename;
-      svn_stream_t *tmp_stream;
-      apr_file_t *tmp_file;
-      apr_status_t apr_err;
-      apr_off_t off = 0;
-      const char *eol = NULL;
-
-      /* grab a temporary file to write the target to. */
-      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_io_open_unique_file2
-               (&tmp_file, &tmp_filename,
-                svn_path_join (temp_dir, "tmp", pool), ".tmp",
-                svn_io_file_del_on_close, pool));
-
-      tmp_stream = svn_stream_from_aprfile (tmp_file, pool);
-
-      SVN_ERR (svn_ra_get_file (ra_session, "", rev, tmp_stream, 
-                                NULL, NULL, pool));
-
-      /* rewind our stream. */
-      apr_err = apr_file_seek (tmp_file, APR_SET, &off);
-      if (apr_err)
-        return svn_error_wrap_apr (apr_err, _("Can't seek in '%s'"),
-                                   svn_path_local_style (tmp_filename, pool));
+      svn_subst_eol_style_t eol;
+      const char *eol_str;
+      apr_hash_t *kw;
 
       if (eol_style)
-        svn_subst_eol_style_from_value (&style, &eol, eol_style->data);
+        svn_subst_eol_style_from_value (&eol, &eol_str, eol_style->data);
+      else
+        {
+          eol = svn_subst_eol_style_none;
+          eol_str = NULL;
+        }
+
 
       if (keywords)
         {
@@ -267,20 +246,26 @@ svn_client_cat2 (svn_stream_t *out,
             SVN_ERR (svn_time_from_cstring (&when, cmt_date->data, pool));
 
           SVN_ERR (svn_subst_build_keywords2
-                   (&kw, keywords->data, 
+                   (&kw, keywords->data,
                     cmt_rev->data,
                     url,
                     when,
                     cmt_author ? cmt_author->data : NULL,
                     pool));
         }
+      else
+        kw = NULL;
 
-      SVN_ERR (svn_subst_translate_stream3 (tmp_stream, out, eol, FALSE, kw,
-                                            TRUE, pool));
-
-      SVN_ERR (svn_stream_close (tmp_stream));
-      SVN_ERR (svn_io_file_close (tmp_file, pool));
+      /* Interject a translating stream */
+      output = svn_subst_stream_translated (svn_stream_disown (out, pool),
+                                            eol_str, FALSE, kw, TRUE, pool);
     }
+
+  SVN_ERR (svn_ra_get_file (ra_session, "", rev, out, NULL, NULL, pool));
+
+  if (out != output)
+    /* Close the interjected stream */
+    SVN_ERR (svn_stream_close (output));
 
   return SVN_NO_ERROR;
 }
