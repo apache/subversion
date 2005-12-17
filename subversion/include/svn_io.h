@@ -550,6 +550,14 @@ void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 /** Convenience function to create a generic stream which is empty.  */
 svn_stream_t *svn_stream_empty (apr_pool_t *pool);
 
+/** Returns a stream allocated in @a pool which forwards all requests
+ * to @a stream.  Destruction is explicitly excluded from forwarding.
+ *
+ * @see notes/destruction-of-stacked-resources
+ *
+ * @since New in 1.4.
+ */
+svn_stream_t *svn_stream_disown (svn_stream_t *stream, apr_pool_t *pool);
 
 /** Convenience function for creating streams which operate on APR
  * files.  For convenience, if @a file is NULL then svn_stream_empty(pool) 
