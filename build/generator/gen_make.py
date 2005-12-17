@@ -445,11 +445,13 @@ class Generator(gen_base.GeneratorBase):
           dirname, fname = build_path_splitfile(file)
           if area == 'locale':
             lang, objext = os.path.splitext(fname)
-            self.ofile.write('\tcd %s ; $(INSTALL_%s) %s '
-                             '$(DESTDIR)%s/%s/LC_MESSAGES/$(PACKAGE_NAME)%s\n'
-                             % (dirname, upper_var, fname,
-                                build_path_join('$(%sdir)' % area_var), lang,
-                                objext))
+            installdir = '$(DESTDIR)$(%sdir)/%s/LC_MESSAGES' % (area_var, lang)
+            self.ofile.write('\t$(MKDIR) %s\n'
+                             '\tcd %s ; $(INSTALL_%s) %s '
+                             '%s/$(PACKAGE_NAME)%s\n'
+                             % (installdir,
+                                dirname, upper_var, fname,
+                                installdir, objext))
           else:
             self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                              % (dirname, upper_var, fname,
