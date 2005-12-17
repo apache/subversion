@@ -145,8 +145,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-12-15 06:47+0900\n"
-"PO-Revision-Date: 2005-12-15 06:47+0900\n"
+"POT-Creation-Date: 2005-12-17 16:54+0900\n"
+"PO-Revision-Date: 2005-12-17 16:53+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2592,12 +2592,12 @@ msgstr "'%s' 用の URL スキームを認識できません"
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "'%s' は '%s' と同じリポジトリにありません"
 
-#: libsvn_ra/ra_loader.c:696
+#: libsvn_ra/ra_loader.c:708
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:782
+#: libsvn_ra/ra_loader.c:794
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -2827,6 +2827,47 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "1 つ以上の属性を変更できませんでした。リポジトリに変更は加えられていません"
 
+#: libsvn_ra_dav/replay.c:135
+msgid "Missing revision attr in target-revision element"
+msgstr "対象リビジョン要素にリビジョン属性がありません"
+
+#: libsvn_ra_dav/replay.c:152
+msgid "Missing revision attr in open-root element"
+msgstr "ルート解放要素にリビジョン属性がありません"
+
+#: libsvn_ra_dav/replay.c:170
+msgid "Missing name attr in delete-entry element"
+msgstr "エントリ削除要素に名前属性がありません"
+
+#: libsvn_ra_dav/replay.c:174
+msgid "Missing rev attr in delete-entry element"
+msgstr "エントリ削除要素にリビジョン属性がありません"
+
+#: libsvn_ra_dav/replay.c:221
+msgid "Missing name attr in open-directory element"
+msgstr "ディレクトリ解放要素に名前要素がありません"
+
+#: libsvn_ra_dav/replay.c:273 libsvn_ra_dav/replay.c:349
+#, c-format
+msgid "Missing name attr in %s element"
+msgstr "%s 要素に名前属性がありません"
+
+#: libsvn_ra_dav/replay.c:319
+msgid "Got apply-textdelta element without preceding add-file or open-file"
+msgstr ""
+"add-file や open-file が先に行われていないのに apply-textdelta 要素が使われて"
+"います"
+
+#: libsvn_ra_dav/replay.c:459
+#, c-format
+msgid "Error writing stream: unexpected EOF"
+msgstr "ストリームへの書き込み中にエラーが発生しました: 予想外の EOF です"
+
+#: libsvn_ra_dav/replay.c:466
+#, c-format
+msgid "Got cdata content for a prop delete"
+msgstr "属性削除用の cdata コンテキストがあります"
+
 #: libsvn_ra_dav/session.c:442
 msgid "Invalid URL: illegal character in proxy port number"
 msgstr "不正な URL です: プロキシのポート番号の値が不正な文字です"
@@ -2904,7 +2945,7 @@ msgstr "ロック解除のリクエストが失敗しました"
 msgid "Failed to fetch lock information"
 msgstr "ロックの情報を取得できませんでした"
 
-#: libsvn_ra_dav/session.c:1618
+#: libsvn_ra_dav/session.c:1619
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr ""
@@ -2986,7 +3027,7 @@ msgstr "ローカルディスク上のリポジトリにアクセスするモジ
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL に対し ra_local セッションを開始できません"
 
-#: libsvn_ra_local/ra_plugin.c:1318
+#: libsvn_ra_local/ra_plugin.c:1342
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr ""
@@ -3192,7 +3233,11 @@ msgstr "ロック取得 (get-lock) コマンドをサーバがサポートして
 msgid "Lock element not a list"
 msgstr "lock 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1997
+#: libsvn_ra_svn/client.c:1960
+msgid "Server doesn't support the replay command"
+msgstr "再生 (replay) コマンドをサーバがサポートしていません"
+
+#: libsvn_ra_svn/client.c:2024
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -3548,7 +3593,7 @@ msgstr ""
 msgid "'%s' not found in filesystem"
 msgstr "'%s' はファイルシステムに見つかりません"
 
-#: libsvn_repos/replay.c:159
+#: libsvn_repos/replay.c:293
 #, c-format
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "ファイルシステムのパス '%s' はファイルでもディレクトリでもありません"
@@ -5255,7 +5300,7 @@ msgstr ""
 "Subversion はバージョン管理用のツールです。\n"
 "さらに詳しい情報は、http://subversion.tigris.org/ をご覧ください。\n"
 
-#: svn/help-cmd.c:63
+#: svn/help-cmd.c:63 svnsync/main.c:1048
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5506,11 +5551,11 @@ msgstr ""
 "ログメッセージを含むファイルを強制的に有効にしま\n"
 "                             す"
 
-# * Description for 'svn{,admin,dumpfilter,look} --help'.
+# * Description for 'svn{,admin,dumpfilter,look,sync} --help'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:66 svn/main.c:67 svnadmin/main.c:229 svnadmin/main.c:232
 #: svndumpfilter/main.c:781 svndumpfilter/main.c:784 svnlook/main.c:93
-#: svnlook/main.c:96
+#: svnlook/main.c:96 svnsync/main.c:95 svnsync/main.c:97
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
@@ -5617,15 +5662,15 @@ msgstr "付加的な情報を表示します"
 msgid "display update information"
 msgstr "更新情報を表示します"
 
-# * Description for 'svn --username'.
+# * Description for 'svn{,sync} --username'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:93
+#: svn/main.c:93 svnsync/main.c:87
 msgid "specify a username ARG"
 msgstr "ユーザ名を <引数> と指定します"
 
-# * Description for 'svn --password'.
+# * Description for 'svn{,sync} --password'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:95
+#: svn/main.c:95 svnsync/main.c:89
 msgid "specify a password ARG"
 msgstr "パスワードを <引数> と指定します"
 
@@ -5671,15 +5716,15 @@ msgstr ""
 "デフォルトや svn:ignore 属性が無視するような項目\n"
 "                             を無視しません"
 
-# * Description for 'svn --no-auth-cache'.
+# * Description for 'svn{,sync} --no-auth-cache'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:107
+#: svn/main.c:107 svnsync/main.c:85
 msgid "do not cache authentication tokens"
 msgstr "認証情報をキャッシュしません"
 
-# * Description for 'svn --non-interactive'.
+# * Description for 'svn{,sync} --non-interactive'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:109
+#: svn/main.c:109 svnsync/main.c:83
 msgid "do no interactive prompting"
 msgstr "対話式の認証用プロンプト表示をしません"
 
@@ -5755,9 +5800,9 @@ msgstr "リビジョン属性に作用します (-r と共に用います)"
 msgid "relocate via URL-rewriting"
 msgstr "URL を書き換え、参照するリポジトリを変更します"
 
-# * Description for 'svn --config-dir'.
+# * Description for 'svn{,sync} --config-dir'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:135 svnadmin/main.c:271
+#: svn/main.c:135 svnadmin/main.c:271 svnsync/main.c:91
 msgid "read user configuration files from directory ARG"
 msgstr ""
 "ディレクトリ <引数> からユーザ設定ファイルを読み\n"
@@ -6914,7 +6959,7 @@ msgstr ""
 "は、\n"
 "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
-#: svn/main.c:755 svnadmin/main.c:78 svnlook/main.c:288
+#: svn/main.c:755 svnadmin/main.c:78 svnlook/main.c:288 svnsync/main.c:127
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
@@ -7430,10 +7475,10 @@ msgstr "リポジトリの引数が必要です"
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' は URL です。そこはパスで指定するべきです"
 
-# * Description for 'svn{admin,dumpfilter,look,serve,version} --version'.
+# * Description for 'svn{admin,dumpfilter,look,serve,sync,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:235 svndumpfilter/main.c:787 svnlook/main.c:99
-#: svnserve/main.c:112 svnversion/main.c:181
+#: svnserve/main.c:112 svnsync/main.c:93 svnversion/main.c:181
 msgid "show version information"
 msgstr "バージョン情報を表示します"
 
@@ -8757,6 +8802,73 @@ msgstr "独立した状態を設定できません"
 #, c-format
 msgid "Can't create thread"
 msgstr "スレッドを作成できません"
+
+# * Description for 'svnsync initialize'.
+# * "initialize (init): " is displayed at the head of the first line.
+#: svnsync/main.c:63
+msgid ""
+"usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+"Initialize a destination repository."
+msgstr ""
+"使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
+"同期先のリポジトリを初期化します。"
+
+# * Description for 'svnsync synchronize'.
+# * "synchronize (sync): " is displayed at the head of the first line.
+#: svnsync/main.c:68
+msgid ""
+"usage: svnsync synchronize DEST_URL\n"
+"Transfer all pending revisions from source to destination.\n"
+msgstr ""
+"使用方法: svnsync synchronize <同期先 URL>\n"
+"同期元から同期先へ、未同期のリビジョンを転送します。\n"
+
+# * Description for 'svnsync --source-url'.
+# * "help: " is displayed at the head of the first line.
+#: svnsync/main.c:72
+msgid ""
+"usage: svnsync help [SUBCOMMAND...]\n"
+"Describe the usage of this program or its subcommands.\n"
+msgstr ""
+"使用方法: svnsync help [<サブコマンド>...]\n"
+"\n"
+"このプログラムやそのサブコマンドの使用方法を説明します。\n"
+
+# * Description for 'svnsync --source-url'.
+# * 29 half-size characters are displayed on the left.
+#: svnsync/main.c:81
+msgid "The url to synchronize from"
+msgstr "同期元の URL"
+
+#: svnsync/main.c:269
+#, c-format
+msgid "Session is rooted at '%s' but the repos root is '%s'"
+msgstr "セッションのルートは '%s' ですが、リポジトリのルートは '%s' です"
+
+# * Description for svnsync.
+#: svnsync/main.c:1042
+msgid ""
+"general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+"Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"一般的な使用方法: svnsync <サブコマンド> <同期先 URL> [<引数やオプション"
+"> ...]\n"
+"特定のサブコマンドに関するヘルプを読みたいときは 'svnsync help <サブコマンド"
+">'\n"
+"と打ってください。\n"
+"\n"
+"利用可能なサブコマンド:\n"
+
+#: svnsync/main.c:1214
+#, c-format
+msgid ""
+"subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svnsync help %s' for usage.\n"
+msgstr ""
+"サブコマンド '%s' にはオプション '%s' をつけられません。\n"
+"使用方法を知りたいときは 'svnsync help %s' と打ってください。\n"
 
 #: svnversion/main.c:90
 #, c-format
