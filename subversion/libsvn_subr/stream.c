@@ -259,6 +259,35 @@ svn_stream_empty (apr_pool_t *pool)
 }
 
 
+
+
+/*** Ownership detaching stream ***/
+
+static svn_error_t *
+read_handler_disown (void *baton, char *buffer, apr_size_t *len)
+{
+  return svn_stream_read ((svn_stream_t *)baton, buffer, len);
+}
+
+static svn_error_t *
+write_handler_disown (void *baton, const char *buffer, apr_size_t *len)
+{
+  return svn_stream_write ((svn_stream_t *)baton, buffer, len);
+}
+
+
+svn_stream_t *
+svn_stream_disown (svn_stream_t *stream, apr_pool_t *pool)
+{
+  svn_stream_t *s = svn_stream_create (stream, pool);
+
+  svn_stream_set_read (s, read_handler_disown);
+  svn_stream_set_write (s, write_handler_disown);
+
+  return s;
+}
+
+
 
 /*** Generic stream for APR files ***/
 struct baton_apr {
