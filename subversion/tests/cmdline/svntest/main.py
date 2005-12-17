@@ -108,6 +108,7 @@ except ImportError:
 svn_binary = os.path.abspath('../../svn/svn' + _exe)
 svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
+svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
 # Username and password used by the working copies
@@ -344,6 +345,10 @@ def run_svnadmin(*varargs):
 def run_svnlook(*varargs):
   "Run svnlook with VARARGS, returns stdout, stderr as list of lines."
   return run_command(svnlook_binary, 1, 0, *varargs)
+
+def run_svnsync(*varargs):
+  "Run svnsync with VARARGS, returns stdout, stderr as list of lines."
+  return run_command(svnsync_binary, 1, 0, *varargs)
 
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."

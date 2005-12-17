@@ -711,7 +711,12 @@ enum {
   ELEM_lock_owner,
   ELEM_lock_comment,
   ELEM_lock_creationdate,
-  ELEM_lock_expirationdate
+  ELEM_lock_expirationdate,
+  ELEM_editor_report,
+  ELEM_open_root,
+  ELEM_apply_textdelta,
+  ELEM_change_file_prop,
+  ELEM_change_dir_prop
 };
 
 /* ### docco */
@@ -862,6 +867,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
                      const char *path,
                      apr_pool_t *pool);
 
+svn_error_t *
+svn_ra_dav__replay(svn_ra_session_t *session,
+                   svn_revnum_t revision,
+                   svn_revnum_t low_water_mark,
+                   svn_boolean_t send_deltas,
+                   const svn_delta_editor_t *editor,
+                   void *edit_baton,
+                   apr_pool_t *pool);
 
 /* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
    values into a stringbuf allocated in POOL.  The string will be of

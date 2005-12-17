@@ -604,28 +604,58 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * skeletal changes made in a particular filesystem @a root
  * (revision or transaction).
  *
+ * Changes will be limited to those within @a base_dir, and if 
+ * @a low_water_mark is set to something other than @c SVN_INVALID_REVISION
+ * it is assumed that the client has no knowledge of revisions prior to
+ * @a low_water_mark.  Together, these two arguments define the portion of
+ * the tree that the client is assumed to have knowledge of, and thus any
+ * copies of data from outside that part of the tree will be sent in their
+ * entirety, not as simple copies or deltas against a previous version.
+ *
  * The @a editor passed to this function should be aware of the fact
  * that calls to its change_dir_prop(), change_file_prop(), and
  * apply_textdelta() functions will not contain meaningful data, and
  * merely serve as indications that properties or textual contents
  * were changed. 
  *
+ * If @a send_deltas is @c TRUE, the text and property deltas for changes
+ * will be sent, otherwise null text deltas and empty prop changes will be
+ * used.
+ *
+ * If @a authz_read_func is non-NULL, it will be used to determine if the
+ * user has read access to the data being accessed.  Data that the user
+ * cannot access will be skipped.
+ *
  * @note This editor driver passes SVN_INVALID_REVNUM for all
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
  *
- * ### TODO: This ought to take an svn_repos_authz_func_t too.
- * The only reason it doesn't yet is the difficulty of implementing
- * that correctly, plus lack of strong present need -- it's currently
- * only used in creating a DAV MERGE response, in 'svnadmin dump', and
- * in svnlook.
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_repos_replay2 (svn_fs_root_t *root,
+                   const char *base_dir,
+                   svn_revnum_t low_water_mark,
+                   svn_boolean_t send_deltas,
+                   const svn_delta_editor_t *editor,
+                   void *edit_baton,
+                   svn_repos_authz_func_t authz_read_func,
+                   void *authz_read_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_replay2(), but with @a base_dir set to @c "",
+ * @a low_water_mark set to @c SVN_INVALID_REVNUM, @a send_deltas
+ * set to @c FALSE, and @a authz_read_func and @a authz_read_baton
+ * set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_repos_replay (svn_fs_root_t *root,
                   const svn_delta_editor_t *editor,
                   void *edit_baton,
                   apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------*/
 
