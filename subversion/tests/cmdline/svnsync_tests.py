@@ -63,8 +63,11 @@ def run_test(sbox, dump_file_name):
   # Create the empty master repository.
   build_repos(sbox)
 
+  # This directory contains all the dump files
+  svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnsync_tests_data')
   # Load the specified dump file into the master repository.
-  master_dumpfile_contents = file(os.path.join("svnsync_tests_data",
+  master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
                                                dump_file_name)).readlines()
   run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
