@@ -275,6 +275,7 @@ static svn_error_t *apply_textdelta(void *file_baton,
                                     void **handler_baton)
 {
   dav_svn_edit_baton_t *eb = file_baton;
+  svn_stream_t* stream;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
 
@@ -284,9 +285,7 @@ static svn_error_t *apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
 
-  svn_stream_t *stream = dav_svn_make_base64_output_stream(eb->bb,
-                                                           eb->output,
-                                                           pool);
+  stream = dav_svn_make_base64_output_stream(eb->bb, eb->output, pool);
 
   svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
 
@@ -406,11 +405,12 @@ dav_svn__replay_report(const dav_resource *resource,
   svn_fs_root_t *root;
   svn_error_t *err;
   void *edit_baton;
+  int ns;
 
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
-  int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "The request does not contain the 'svn:' "
