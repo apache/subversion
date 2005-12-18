@@ -107,6 +107,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
+- Figured out how to disable module configuration with --disable-mod-activation.
+
 * Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
 - Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
   NFS server/client.
@@ -392,15 +395,12 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-
-# Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/redhat-7.x/install.patch
-
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
 
 %configure \
+	--disable-mod-activation \
 	--with-swig=/usr/bin/swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
@@ -607,9 +607,7 @@ rm -rf $RPM_BUILD_ROOT
 %files server
 %defattr(-,root,root)
 %config(noreplace) %{apache_dir}/conf/subversion.conf
-%{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
-%{apache_dir}/modules/mod_authz_svn.la
 %{apache_dir}/modules/mod_authz_svn.so
 
 %if %{perl_bindings}
