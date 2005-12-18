@@ -47,8 +47,7 @@ enum {
   svnsync_opt_auth_username,
   svnsync_opt_auth_password,
   svnsync_opt_config_dir,
-  svnsync_opt_version,
-  svnsync_opt_help
+  svnsync_opt_version
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -68,7 +67,7 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
       N_("usage: svnsync synchronize DEST_URL\n"
          "Transfer all pending revisions from source to destination.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
-    { "help", help, { 0 },
+    { "help", help, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
          "Describe the usage of this program or its subcommands.\n"),
       { svnsync_opt_version } },
@@ -91,9 +90,9 @@ static const apr_getopt_option_t svnsync_options[] =
                        N_("read user configuration files from directory ARG")},
     {"version",        svnsync_opt_version, 0,
                        N_("show version information")},
-    {"help",           svnsync_opt_help, 0,
+    {"help",           'h', 0,
                        N_("show help on a subcommand")},
-    {NULL,             svnsync_opt_help, 0,
+    {NULL,             '?', 0,
                        N_("show help on a subcommand")},
     { 0, 0, 0, 0 }
   };
@@ -1158,7 +1157,8 @@ main (int argc, const char * const argv[])
             opt_baton.help = TRUE;
             break;
 
-          case svnsync_opt_help:
+          case '?':
+          case 'h':
             opt_baton.help = TRUE;
             break;
 
