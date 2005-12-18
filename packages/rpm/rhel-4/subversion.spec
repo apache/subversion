@@ -526,8 +526,8 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 doxygen doc/doxygen.conf
 
 # Fix RPATH
-chrpath -r /usr/lib $RPM_BUILD_ROOT/usr//lib/httpd/modules/mod_authz_svn.so
-chrpath -r /usr/lib $RPM_BUILD_ROOT/usr//lib/httpd/modules/mod_dav_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
 
 %post -n mod_dav_svn
 # Restart apache server if needed.
