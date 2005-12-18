@@ -50,4 +50,12 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r17829, r17831
+    Fix issue # 1456: Subversion RedHat RPMs have bad interaction with NFS
+    server/client.
+    Justification:
+      Prevents spurious NFS and AUTOMOUNT messages in log files.
+    Votes:
+      +1: david
+
 Approved changes:
