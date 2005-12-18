@@ -965,11 +965,10 @@ repos_to_wc_copy (const char *src_url,
                (&fp, &new_text_path, dst_path, ".tmp",
                 svn_io_file_del_none, pool));
 
-      fstream = svn_stream_from_aprfile (fp, pool);
+      fstream = svn_stream_from_aprfile2 (fp, pool);
       SVN_ERR (svn_ra_get_file (ra_session, "", src_revnum, fstream, &real_rev,
                                 &new_props, pool));
       SVN_ERR (svn_stream_close (fstream));
-      SVN_ERR (svn_io_file_close (fp, pool));
 
       /* If SRC_REVNUM is invalid (HEAD), then REAL_REV is now the
          revision that was actually retrieved.  This is the value we

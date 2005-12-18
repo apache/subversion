@@ -339,6 +339,24 @@ svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
   return stream;
 }
 
+
+static svn_error_t *
+close_handler_apr (void *baton)
+{
+  struct baton_apr *btn = baton;
+
+  return svn_io_file_close (btn->file, btn->pool);
+}
+
+svn_stream_t *
+svn_stream_from_aprfile2 (apr_file_t *file, apr_pool_t *pool)
+{
+  svn_stream_t *stream = svn_stream_from_aprfile (file, pool);
+
+  svn_stream_set_close (stream, close_handler_apr);
+  return stream;
+}
+
 
 /* Compressed stream support */
 
