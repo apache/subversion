@@ -1949,8 +1949,8 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_fs_root_t *root;
   void *edit_baton;
 
-  SVN_ERR (svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
-                                  &send_deltas));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
+                                 &send_deltas));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
@@ -1958,11 +1958,11 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
 
-  SVN_CMD_ERR (svn_repos_replay2(root, b->fs_path->data, low_water_mark,
-                                 send_deltas, editor, edit_baton,
-                                 authz_check_access_cb, b, pool));
+  SVN_CMD_ERR(svn_repos_replay2(root, b->fs_path->data, low_water_mark,
+                                send_deltas, editor, edit_baton,
+                                authz_check_access_cb, b, pool));
 
-  SVN_CMD_ERR (editor->close_edit(edit_baton, pool));
+  SVN_CMD_ERR(editor->close_edit(edit_baton, pool));
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 
