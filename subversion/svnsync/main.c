@@ -285,6 +285,7 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   apr_hash_t *revprops;
   apr_hash_index_t *hi;
   svn_revnum_t latest;
+  apr_pool_t *subpool;
   const char *uuid;
 
   /* First, sanity check to see that we're copying into a brand new repos. */
@@ -331,6 +332,8 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   SVN_ERR (svn_ra_rev_proplist (from_session, 0, &revprops, pool));
 
+  subpool = svn_pool_create (pool);
+
   for (hi = apr_hash_first (pool, revprops);
        hi;
        hi = apr_hash_next (hi))
@@ -340,13 +343,16 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       const void *key;
       void *val;
 
+      svn_pool_clear (subpool);
+
       apr_hash_this (hi, &key, NULL, &val);
 
       pname = key;
       pval = val;
 
       if (strncmp (pname, PROP_PREFIX, sizeof (PROP_PREFIX) - 1) != 0)
-        SVN_ERR (svn_ra_change_rev_prop (to_session, 0, pname, pval, pool));
+        SVN_ERR (svn_ra_change_rev_prop (to_session, 0, pname, pval,
+                                         subpool));
     }
 
   /* It would be nice if we could set the dest repos UUID to be equal to the
