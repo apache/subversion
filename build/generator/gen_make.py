@@ -178,13 +178,8 @@ class Generator(gen_base.GeneratorBase):
       lang_deps = string.join(swig_lang_deps[lang])
       self.ofile.write(
         'autogen-swig-%s: swig-headers %s\n' % (short[lang], lang_deps) +
-        'swig-%s: autogen-swig-%s\n' % (short[lang], short[lang]) +
         'autogen-swig: autogen-swig-%s\n' % short[lang] +
-        'clean-swig: clean-swig-%s\n' % short[lang] +
-        'extraclean-swig: extraclean-swig-%s\n' % short[lang] +
         '\n')
-    self.ofile.write('clean-swig: clean-swig-headers\n')
-    self.ofile.write('extraclean-swig: extraclean-swig-headers\n')
     self.ofile.write('\n')
     
     ########################################
