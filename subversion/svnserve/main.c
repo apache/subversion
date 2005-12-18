@@ -42,6 +42,10 @@
 
 #include "svn_private_config.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>   /* For getpid() */
+#endif
+
 #include "server.h"
 
 /* The strategy for handling incoming connections.  Some of these may be
@@ -97,6 +101,7 @@ enum run_mode {
 #define SVNSERVE_OPT_FOREGROUND  258
 #define SVNSERVE_OPT_TUNNEL_USER 259
 #define SVNSERVE_OPT_VERSION     260
+#define SVNSERVE_OPT_PID_FILE    261
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -121,6 +126,8 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, N_("use threads instead of fork")},
 #endif
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
+    {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
+     N_("write server process ID to file arg")},
     {0,                  0,   0, 0}
   };
 
@@ -214,6 +221,25 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 }
 #endif
 
+/* Write the PID of the current process as a decimal number, followed by a
+   newline to the file FILENAME, using POOL for temporary allocations. */
+static svn_error_t *write_pid_file(const char *filename, apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *contents = apr_psprintf(pool, "%" APR_PID_T_FMT "\n",
+                                             getpid());
+
+  SVN_ERR(svn_io_file_open(&file, filename,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_write_full(file, contents, strlen(contents), NULL,
+                                 pool));
+
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions(void)
@@ -261,6 +287,7 @@ int main(int argc, const char *const *argv)
   const char *host = NULL;
   int family = APR_INET;
   int mode_opt_count = 0;
+  const char *pid_filename = NULL;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -362,6 +389,14 @@ int main(int argc, const char *const *argv)
         case 'T':
           handling_mode = connection_mode_thread;
           break;
+
+        case SVNSERVE_OPT_PID_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
+          pid_filename = svn_path_internal_style(pid_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&pid_filename, pid_filename,
+                                            pool));
+          break;
+
         }
     }
   if (os->ind != argc)
@@ -482,6 +517,9 @@ int main(int argc, const char *const *argv)
   /* Disable SIGPIPE generation for the platforms that have it. */
   apr_signal(SIGPIPE, SIG_IGN);
 #endif
+
+  if (pid_filename)
+    SVN_INT_ERR(write_pid_file(pid_filename, pool));
 
   while (1)
     {
