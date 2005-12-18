@@ -23,7 +23,7 @@ class Generator(generator.swig.Generator):
     self.header_files = map(native_path, self.includes)
     self.header_basenames = map(os.path.basename, self.header_files)
 
-  # Ignore svn_md5.h because SWIG can't parse it
+  # Ignore svn_repos_parse_fns_t because SWIG can't parse it
   _ignores = ["svn_repos_parse_fns_t"]
 
   def proxy_filename(self, include_filename):
