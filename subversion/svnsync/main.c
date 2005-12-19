@@ -157,7 +157,7 @@ get_lock (svn_ra_session_t *session, apr_pool_t *pool)
 
   apr_err = apr_gethostname (hostname_str, sizeof (hostname_str), pool);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't get local hostname");
+    return svn_error_wrap_apr (apr_err, _("Can't get local hostname"));
 
   apr_uuid_get (&uuid);
 
@@ -182,10 +182,10 @@ get_lock (svn_ra_session_t *session, apr_pool_t *pool)
             return SVN_NO_ERROR;
           else
             {
-              SVN_ERR (svn_cmdline_printf (pool,
-                                           "Failed to get lock on destination "
-                                           "repos, currently held by '%s'\n",
-                                           reposlocktoken->data));
+              SVN_ERR (svn_cmdline_printf
+                       (pool, _("Failed to get lock on destination "
+                                "repos, currently held by '%s'\n"),
+                        reposlocktoken->data));
 
               apr_sleep (apr_time_from_sec (1));
             }
@@ -294,7 +294,8 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   if (latest != 0)
     return svn_error_create
-      (APR_EINVAL, NULL, "Cannot initialize a repository with content in it");
+      (APR_EINVAL, NULL,
+       _("Cannot initialize a repository with content in it"));
 
   /* And check to see if anyone's run initialize on it before...
    * We may want a --force option to override this check. */
@@ -304,7 +305,7 @@ do_initialize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   if (from_url)
     return svn_error_createf
       (APR_EINVAL, NULL,
-       "Destination repository is already synchronizing from %s",
+       _("Destination repository is already synchronizing from '%s'"),
        from_url->data);
 
   /* Now fill in our bookkeeping info in the dest repository. */
@@ -415,7 +416,7 @@ commit_callback (const svn_commit_info_t *commit_info,
 {
   sync_baton_t *sb = baton;
 
-  SVN_ERR (svn_cmdline_printf (pool, "Committing rev %ld\n",
+  SVN_ERR (svn_cmdline_printf (pool, _("Committing rev %ld\n"),
                                commit_info->revision));
 
   sb->committed_rev = commit_info->revision;
@@ -845,7 +846,7 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   if (! from_url || ! from_uuid || ! last_merged_rev)
     return svn_error_create
-      (APR_EINVAL, NULL, "destination repository has not been initialized");
+      (APR_EINVAL, NULL, _("Destination repository has not been initialized"));
 
   SVN_ERR (svn_ra_open2 (&from_session, from_url->data, baton->callbacks,
                          baton, baton->config, pool));
@@ -860,8 +861,8 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   if (strcmp (uuid, from_uuid->data) != 0)
     return svn_error_createf (APR_EINVAL, NULL,
-                              "UUID of destination repository (%s) does not "
-                              "match expected UUID (%s)",
+                              _("UUID of destination repository (%s) does not "
+                                "match expected UUID (%s)"),
                               uuid, from_uuid->data);
 
   /* Now, check to see if we have revprops that still need to be copied for
@@ -906,8 +907,8 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
         else if (copying < to_latest)
           return svn_error_createf
                    (APR_EINVAL, NULL,
-                    "Currently copying rev '%ld' in source is less than "
-                    "latest rev in destination (%ld)",
+                    _("Currently copying rev %ld in source is less than "
+                      "latest rev in destination (%ld)"),
                     copying, to_latest);
       }
   }
@@ -975,7 +976,7 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       if (baton->committed_rev != current)
         return svn_error_createf
                  (APR_EINVAL, NULL,
-                  "Commit created rev %ld but should have created %ld",
+                  _("Commit created rev %ld but should have created %ld"),
                   baton->committed_rev, current);
 
       /* Ok, we're done with the data, now we just need to do the revprops
