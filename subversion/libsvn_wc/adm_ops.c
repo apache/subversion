@@ -1178,7 +1178,7 @@ svn_wc_add2 (const char *path,
       else
         {
           /* When we are called with the copyfrom arguments set and with
-             the admin directory already in existance, then the dir will
+             the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
           SVN_ERR (svn_wc_ensure_adm2 (path, NULL, copyfrom_url,

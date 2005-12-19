@@ -758,7 +758,7 @@ class GenError(Exception):
 # Build paths specified in build.conf are assumed to be always separated
 # by forward slashes, regardless of the current running os.
 #
-# Native paths are paths seperated by os.sep.
+# Native paths are paths separated by os.sep.
 
 def native_path(path):
   """Convert a build path to a native path"""

@@ -3504,7 +3504,7 @@ write_final_changed_path_info (apr_off_t *offset_p,
       id = change->node_rev_id;
 
       /* If this was a delete of a mutable node, then it is OK to
-         leave the change entry pointing to the non-existant temporary
+         leave the change entry pointing to the non-existent temporary
          node, since it will never be used. */
       if ((change->change_kind != svn_fs_path_change_delete) &&
           (! svn_fs_fs__id_txn_id (id)))
