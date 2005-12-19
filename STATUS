@@ -20,6 +20,16 @@ Blocker:
 
 Candidate changes:
 
+  * r17844
+    Fix a bug in the assignment of out of date info to svn_wc_status2_t string
+    members.  This problem has only been found with url, but it appears just as
+    likely to affect ood_last_cmt_author.
+    Justification:
+      Without this change, the url and ood_last_cmt_author members of
+      svn_wc_status2_t can be corrupted for out of date working copy items.
+    Votes:
+      +1 (non-binding): pburba
+
 Approved changes:
 
 Status of 1.3.1:
