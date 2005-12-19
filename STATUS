@@ -29,6 +29,7 @@ Candidate changes:
       svn_wc_status2_t can be corrupted for out of date working copy items.
     Votes:
       +1 (non-binding): pburba
+      +1: lundblad
 
 Approved changes:
 
