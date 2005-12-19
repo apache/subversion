@@ -302,4 +302,4 @@ svncopy.pl comes with a script to do some basic testing, called testsvncopy.pl.
 Installation is similar to svncopy.pl - update @SVN_BINDIR@.  You also have to
 supply a scratch repository location for the test script to use.  Either update
 @SVN_TEST_REPOSITORY@ in testsvncopy.pl.in or pass in the location using the
---test-repostiroy parameter when running the script.
+--test-repository parameter when running the script.

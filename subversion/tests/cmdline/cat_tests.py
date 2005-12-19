@@ -72,8 +72,8 @@ def cat_base(sbox):
     raise svntest.Failure ('Cat failed: expected "%s", but received "%s"' % \
       (expected_output, outlines[0]))
 
-def cat_nonexistant_file(sbox):
-  "cat a nonexistant file"
+def cat_nonexistent_file(sbox):
+  "cat a nonexistent file"
   sbox.build()
 
   wc_dir = sbox.wc_dir
@@ -147,7 +147,7 @@ test_list = [ None,
               cat_local_directory,
               cat_remote_directory,
               cat_base,
-              cat_nonexistant_file,
+              cat_nonexistent_file,
               cat_skip_uncattable,
              ]
 

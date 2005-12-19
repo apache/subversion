@@ -1092,7 +1092,7 @@ def basic_delete(sbox):
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
-  # Deleting non-existant unversioned item
+  # Deleting non-existent unversioned item
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--force', foo_path)
 

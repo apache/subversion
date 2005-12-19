@@ -312,8 +312,8 @@ def export_native_eol_option(sbox):
                                         None, None, None, None,
                                         '--native-eol','CR')
 
-def export_nonexistant_file(sbox):
-  "export nonexistant file"
+def export_nonexistent_file(sbox):
+  "export nonexistent file"
   sbox.build()
 
   wc_dir = sbox.wc_dir
@@ -387,7 +387,7 @@ test_list = [ None,
               export_working_copy_with_property_mods,
               export_working_copy_at_base_revision,
               export_native_eol_option,
-              export_nonexistant_file,
+              export_nonexistent_file,
               export_unversioned_file,
               export_with_state_deleted,
              ]

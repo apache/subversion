@@ -172,7 +172,7 @@ public class SVNAdmin
     public native void lstxns(String path, MessageReceiver receiver)
             throws ClientException;
     /**
-     * recover the berkeley db of a repostory, returns youngest revision
+     * recover the berkeley db of a repository, returns youngest revision
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
      */
