@@ -326,6 +326,8 @@ static svn_error_t *
 install_committed_file (svn_boolean_t *overwrote_working,
                         svn_wc_adm_access_t *adm_access,
                         const char *name,
+                        svn_boolean_t remove_executable,
+                        svn_boolean_t remove_read_only,
                         apr_pool_t *pool)
 {
   const char *filepath;
@@ -361,19 +363,30 @@ install_committed_file (svn_boolean_t *overwrote_working,
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
   SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
 
-  SVN_ERR (svn_wc_translated_file2 (&tmp_wfile,
-                                    (kind == svn_node_file)
-                                       ? tmp_text_base : filepath,
-                                    filepath, adm_access,
-                                    SVN_WC_TRANSLATE_FROM_NF
-                                    | SVN_WC_TRANSLATE_FORCE_COPY,
-                                    pool));
+  {
+    const char *tmp = (kind == svn_node_file) ? tmp_text_base : filepath;
 
-  SVN_ERR (svn_wc__get_special (&special, filepath, adm_access, pool));
-  if (! special)
-    SVN_ERR (svn_io_files_contents_same_p (&same, tmp_wfile, filepath, pool));
-  else
+    SVN_ERR (svn_wc_translated_file2 (&tmp_wfile,
+                                      tmp,
+                                      filepath, adm_access,
+                                      SVN_WC_TRANSLATE_FROM_NF,
+                                      pool));
+
+    /* If the translation is a no-op, the text base and the working copy
+     * file contain the same content, because we use the same props here
+     * as were used to detranslate from working file to text base.
+     *
+     * In that case: don't replace the working file, but make sure
+     * it has the right executable and read_write attributes set.
+     */
+
+    SVN_ERR (svn_wc__get_special (&special, filepath, adm_access, pool));
+    if (! special && tmp != tmp_wfile)
+      SVN_ERR (svn_io_files_contents_same_p (&same, tmp_wfile,
+                                             filepath, pool));
+    else
       same = TRUE;
+  }
 
   if (! same)
     {
@@ -381,18 +394,43 @@ install_committed_file (svn_boolean_t *overwrote_working,
       *overwrote_working = TRUE;
     }
 
-  SVN_ERR (svn_wc__maybe_set_read_only (&did_set, filepath, adm_access, pool));
-  if (did_set)
-    /* the file may have been overwritten or its timestamp changed by
-       setting it read-only */
-    *overwrote_working = TRUE;
+  if (remove_executable)
+    {
+      /* No need to chmod -x on a new file: new files don't have it. */
+      if (same)
+        SVN_ERR (svn_io_set_file_executable (filepath,
+                                             FALSE, /* chmod -x */
+                                             FALSE, pool));
+      *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
+    }
+  else
+    {
+      /* Set the working file's execute bit if props dictate. */
+      SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath,
+                                             adm_access, pool));
+      if (did_set)
+        /* okay, so we didn't -overwrite- the working file, but we changed
+           its timestamp, which is the point of returning this flag. :-) */
+        *overwrote_working = TRUE;
+    }
 
-  /* Set the working file's execute bit if props dictate. */
-  SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
-  if (did_set)
-    /* okay, so we didn't -overwrite- the working file, but we changed
-       its timestamp, which is the point of returning this flag. :-) */
-    *overwrote_working = TRUE;
+  if (remove_read_only)
+    {
+      /* No need to make a new file read_write: new files already are. */
+      if (same)
+      SVN_ERR (svn_io_set_file_read_write_carefully (filepath, TRUE,
+                                                     FALSE, pool));
+      *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
+    }
+  else
+    {
+      SVN_ERR (svn_wc__maybe_set_read_only (&did_set, filepath,
+                                            adm_access, pool));
+      if (did_set)
+        /* okay, so we didn't -overwrite- the working file, but we changed
+           its timestamp, which is the point of returning this flag. :-) */
+        *overwrote_working = TRUE;
+    }
 
   /* Install the new text base if one is waiting. */
   if (kind == svn_node_file)  /* tmp_text_base exists */
@@ -1158,9 +1196,10 @@ log_do_committed (struct log_runner *loggy,
     if (kind == svn_node_file)
       {
         /* Examine propchanges here before installing the new
-           propbase.  If the executable prop was -deleted-, then set a
-           flag that will remind us to run -x after our call to
-           install_committed_file(). */
+           propbase.  If the executable prop was -deleted-, then
+           tell install_committed_file() so.
+
+           The same applies to the needs-lock property. */
         if (! is_this_dir)
           {
             int i;
@@ -1208,30 +1247,11 @@ log_do_committed (struct log_runner *loggy,
     {
       /* Install the new file, which may involve expanding keywords. */
       if ((err = install_committed_file
-           (&overwrote_working, loggy->adm_access, name, pool)))
+           (&overwrote_working, loggy->adm_access, name,
+            remove_executable, set_read_write, pool)))
         return svn_error_createf
           (pick_error_code (loggy), err,
            _("Error replacing text-base of '%s'"), name);
-
-      /* The previous call will have run +x if the executable property
-         was added or already present.  But if this property was
-         -removed-, (detected earlier), then run -x here on the new
-         working file.  */
-      if (remove_executable)
-        {
-          SVN_ERR (svn_io_set_file_executable (full_path,
-                                               FALSE, /* chmod -x */
-                                               FALSE, pool));
-          overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
-        }
-
-      if (set_read_write)
-        {
-          SVN_ERR (svn_io_set_file_read_write_carefully (full_path, TRUE, 
-                                                         FALSE, pool));
-          overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
-        }
-
 
       
       /* If the working file was overwritten (due to re-translation)
