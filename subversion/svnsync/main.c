@@ -938,6 +938,19 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
       svn_pool_clear (subpool);
 
+      /* We set this property so that if we error out for some reason we can
+       * later determine where we were in the process of merging a revision.
+       * If we had committed the change, but we hadn't finished copying the
+       * revprops we need to know that, so we can go back and finish the job
+       * before we move on.
+       *
+       * Note: We have to set this before we start the commit editor, because
+       *       ra_svn doesn't let you change rev props during a commit. */
+      SVN_ERR (svn_ra_change_rev_prop (to_session, 0, CURRENTLY_COPYING_PROP,
+                                       svn_string_createf (subpool, "%ld",
+                                                           current),
+                                       subpool));
+
       /* The actual copy is just a replay hooked up to a commit. */
 
       SVN_ERR (svn_ra_get_commit_editor2 (to_session, &commit_editor,
@@ -958,16 +971,6 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                                                   &cancel_editor,
                                                   &cancel_baton,
                                                   pool));
-
-      /* We set this property so that if we error out for some reason we can
-       * later determine where we were in the process of merging a revision.
-       * If we had committed the change, but we hadn't finished copying the
-       * revprops we need to know that, so we can go back and finish the job
-       * before we move on. */
-      SVN_ERR (svn_ra_change_rev_prop (to_session, 0, CURRENTLY_COPYING_PROP,
-                                       svn_string_createf (subpool, "%ld",
-                                                           current),
-                                       subpool));
 
       SVN_ERR (svn_ra_replay (from_session, current, 0, TRUE,
                               cancel_editor, cancel_baton, subpool));
@@ -1139,6 +1142,7 @@ main (int argc, const char * const argv[])
           case svnsync_opt_source_url:
             opt_baton.source_url = opt_arg;
             break;
+
           case svnsync_opt_non_interactive:
             opt_baton.non_interactive = TRUE;
             break;
