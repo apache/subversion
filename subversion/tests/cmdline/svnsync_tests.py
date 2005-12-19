@@ -87,7 +87,9 @@ def run_test(sbox, dump_file_name):
 
   # Initialize the mirror repository from the master.
   output, errput = svntest.main.run_svnsync(
-    "initialize", dest_sbox.repo_url, "--source-url", sbox.repo_url)
+    "initialize", dest_sbox.repo_url, "--source-url", sbox.repo_url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
   if output:
     raise svntest.actions.SVNUnexpectedStdout(output)
   if errput:
@@ -95,7 +97,9 @@ def run_test(sbox, dump_file_name):
 
   # Synchronize the mirror repository with the master.
   output, errput = svntest.main.run_svnsync(
-    "synchronize", dest_sbox.repo_url)
+    "synchronize", dest_sbox.repo_url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
   if not output:
     # should be: ['Committing rev 1\n', 'Committing rev 2\n']
     raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
@@ -106,9 +110,10 @@ def run_test(sbox, dump_file_name):
   # mirror repository in preparation for the comparison dump.
   for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
                     "svn:sync-last-merged-rev"):
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       "propdel", "--revprop", "-r", "0",
-                                       prop_name, dest_sbox.repo_url)
+    svntest.actions.run_and_verify_svn(
+      None, None, [], "propdel", "--username", svntest.main.wc_author,
+      "--password", svntest.main.wc_passwd, "--revprop", "-r", "0",
+      prop_name, dest_sbox.repo_url)
 
   # Create a dump file from the mirror repository.
   output, errput = svntest.main.run_svnadmin("dump", dest_sbox.repo_dir)
