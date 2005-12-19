@@ -156,6 +156,7 @@ here are its responsibilities:
            svn_repos_fs_revision_prop()
            svn_repos_fs_revision_proplist()
            svn_repos_get_commit_editor3()
+           svn_repos_replay2()
    
    2. Manually implement authz for incoming network requests that
       represent calls to:
