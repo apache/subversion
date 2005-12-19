@@ -20,6 +20,21 @@ class Generator(generator.swig.Generator):
     self.write_external_runtime()
     self.write_long_long_fix()
 
+  def write_makefile_rules(self, makefile):
+    """Write the makefile rules for generating external runtimes"""
+    makefile.write(
+      'GEN_SWIG_RUNTIME = cd $(top_srcdir) && $(PYTHON)' +
+      ' build/generator/swig/external_runtime.py build.conf $(SWIG)\n\n'
+    )
+    for lang in self.langs:
+      out = self._output_file(lang)
+      makefile.write(
+        'autogen-swig-%s: %s\n' % (self.short[lang], out) +
+        '%s:\n' % out +
+        '\t$(GEN_SWIG_RUNTIME)\n\n'
+      )
+    makefile.write('\n')
+
   def write_external_runtime(self):
     """Generate external runtime header files for each SWIG language"""
 
@@ -94,9 +109,10 @@ class Generator(generator.swig.Generator):
     file.write(python_swg)
     file.close()
 
-  def write(self):
-    self.write_external_runtime()
-    self.write_long_long_fix()
+  def _output_file(self, lang):
+    """Return the output filename of the runtime for the given language""" 
+    return '%s/swig_%s_external_runtime.swg' % (self.proxy_dir, lang)
+
 
 if __name__ == "__main__":
   if len(sys.argv) < 3:

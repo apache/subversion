@@ -9,7 +9,7 @@ import os, re, string, sys, glob, shutil
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
-from gen_base import unique, native_path, build_path_basename
+from gen_base import unique, native_path, build_path_basename, build_path_join
 import generator.swig
 
 class Generator(generator.swig.Generator):
@@ -25,6 +25,26 @@ class Generator(generator.swig.Generator):
 
   # Ignore svn_repos_parse_fns_t because SWIG can't parse it
   _ignores = ["svn_repos_parse_fns_t"]
+
+  def write_makefile_rules(self, makefile):
+    """Write makefile rules for generating SWIG wrappers for Subversion
+    header files."""
+    wrapper_fnames = []
+    python_script = '$(abs_srcdir)/build/generator/swig/header_wrappers.py'
+    makefile.write('GEN_SWIG_WRAPPER = cd $(top_srcdir) && $(PYTHON)' +
+                   ' %s build.conf $(SWIG)\n\n'  % python_script)
+    for fname in self.includes:
+      wrapper_fname = build_path_join(self.proxy_dir,
+        self.proxy_filename(build_path_basename(fname)))
+      wrapper_fnames.append(wrapper_fname)
+      makefile.write(
+        '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
+        '\t$(GEN_SWIG_WRAPPER) %s\n\n' % fname
+      )
+    makefile.write('SWIG_WRAPPERS = %s\n\n' % string.join(wrapper_fnames))
+    for short_name in self.short.values():
+      makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
+    makefile.write('\n\n')
 
   def proxy_filename(self, include_filename):
     """Convert a .h filename into a _h.swg filename"""
