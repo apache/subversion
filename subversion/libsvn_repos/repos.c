@@ -1094,9 +1094,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# of Subversion 1.2, only one path is passed per invocation, but the"
       APR_EOL_STR
-      "# plan is to pass all locked paths at once in Subversion 1.3 and"
+      "# plan is to pass all locked paths at once, so the hook program"
       APR_EOL_STR
-      "# later)."
+      "# should be written accordingly)."
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -1200,9 +1200,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# (as of Subversion 1.2, only one path is passed per invocation, but"
       APR_EOL_STR
-      "# the plan is to pass all locked paths at once in Subversion 1.3 and"
+      "# the plan is to pass all unlocked paths at once, so the hook program"
       APR_EOL_STR
-      "# later)."
+      "# should be written accordingly)."
       APR_EOL_STR
       "#"
       APR_EOL_STR
