@@ -42,6 +42,7 @@ Candidate changes:
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=109776
     Votes:
       +1: kou
+      +1: blair (for the idea, implementation not reviewed)
 
   * r17851
     Remove wording about 'the plan for 1.3' from the template post-lock and
