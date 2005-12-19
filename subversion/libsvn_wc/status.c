@@ -1054,7 +1054,7 @@ tweak_statushash (void *baton,
     {
       struct dir_baton *b = baton;
       if (b->url)
-        statstruct->url = b->url;
+        statstruct->url = apr_pstrdup (pool, b->url);
       statstruct->ood_kind = b->ood_kind;
       /* The last committed rev, date, and author for deleted items
          isn't available. */
@@ -1062,18 +1062,22 @@ tweak_statushash (void *baton,
         {
           statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
           statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
-          statstruct->ood_last_cmt_author = b->ood_last_cmt_author;
+          if (b->ood_last_cmt_author)
+            statstruct->ood_last_cmt_author =
+              apr_pstrdup (pool, b->ood_last_cmt_author);
         }
     }
   else
     {
       struct file_baton *b = baton;
       if (b->url)
-        statstruct->url = b->url;
+        statstruct->url = apr_pstrdup (pool, b->url);
       statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
       statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
       statstruct->ood_kind = b->ood_kind;
-      statstruct->ood_last_cmt_author = b->ood_last_cmt_author;
+      if (b->ood_last_cmt_author)
+        statstruct->ood_last_cmt_author =
+          apr_pstrdup (pool, b->ood_last_cmt_author);
     }
   return SVN_NO_ERROR;
 }
