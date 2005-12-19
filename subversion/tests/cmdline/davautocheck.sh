@@ -109,9 +109,9 @@ PATH="/usr/sbin:/usr/local/sbin:$PATH"
 
 say "Using '$APXS'..."
 
-if [ -x svn-config ]; then
+if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
-elif [ -x $SCRIPTDIR/../../../svn-config ]; then
+elif [ -x $SCRIPTDIR/../../svn/svn ]; then
   pushd $SCRIPTDIR/../../../ >/dev/null
   ABS_BUILDDIR=$(pwd)
   popd >/dev/null
