@@ -145,7 +145,7 @@ SENDMAIL="/usr/sbin/sendmail"
 #
 #    Uncomment here if you use this base64 encoder:
 #
-#    BASE64="$USRBIN/base64"
+#    BASE64="$LOCALBIN/base64"
 #    BASE64_E="$BASE64 -e - -"
 
 # Other stuff
