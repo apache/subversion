@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Make sure messages are not translated.
+export LC_MESSAGES=C
+
 #
 # Root of the test tree
 #
