@@ -25,14 +25,6 @@ Candidate changes:
       +1 (non-binding): pburba
       +1: lundblad, malcolm
 
-  * r17851
-    Remove wording about 'the plan for 1.3' from the template post-lock and
-    post-unlock hook scripts.
-    Justification:
-      Trivial change, and maxb says the current text looks ridiculous.
-    Votes:
-      +1: malcolm, lundblad, maxb
-
 Approved changes:
 
 Status of 1.3.1:
