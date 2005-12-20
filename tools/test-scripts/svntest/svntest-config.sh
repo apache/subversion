@@ -19,16 +19,16 @@ INST_DIR="$TEST_ROOT/inst"
 # by installation procedure. See svntest-rebuild-generic.sh
 
 SVN_NAME=${SVN_NAME:="svn"}
-SVN_REPO=${SVN_REPO:="$TEST_ROOT/$SVN_NAME"}
+SVN_SOURCE=${SVN_SOURCE:="$TEST_ROOT/$SVN_NAME"}
 
 APR_NAME=${APR_NAME:="apr-0.9"}
-APR_REPO=${APR_REPO:="$TEST_ROOT/$APR_NAME"}
+APR_SOURCE=${APR_SOURCE:="$TEST_ROOT/$APR_NAME"}
 
 APU_NAME=${APU_NAME:="apr-util-0.9"}
-APU_REPO=${APU_REPO:="$TEST_ROOT/$APU_NAME"}
+APU_SOURCE=${APU_SOURCE:="$TEST_ROOT/$APU_NAME"}
 
 HTTPD_NAME=${HTTPD_NAME:="httpd-2.0"}
-HTTPD_REPO=${HTTPD_REPO:="$TEST_ROOT/$HTTPD_NAME"}
+HTTPD_SOURCE=${HTTPD_SOURCE:="$TEST_ROOT/$HTTPD_NAME"}
 
 
 # Forced update revision for SVN
@@ -180,12 +180,12 @@ XARGS="$USRBIN/xargs"
 #
 # Branch prefix for the e-mail subject
 #
-REVPREFIX=`$SVN info $SVN_REPO | $SED -ne 's@^URL:.*/repos/svn/\(branches/\)*\(.*\)$@\2 r@p'`
+REVPREFIX=`$SVN info $SVN_SOURCE | $SED -ne 's@^URL:.*/repos/svn/\(branches/\)*\(.*\)$@\2 r@p'`
 
 #
 # Revision number for the e-mail subject
 #
-REVISION=`$SVN info $SVN_REPO | $SED -ne 's@^Revision: \(.*\)$@\1@p'`
+REVISION=`$SVN info $SVN_SOURCE | $SED -ne 's@^Revision: \(.*\)$@\1@p'`
 
 #
 # Helper functions
