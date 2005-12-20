@@ -48,6 +48,8 @@ Candidate changes:
     Votes:
       +1: david
 
+Approved changes:
+
   * r17870
     Improve Ruby bindings memory management by supporting subpool. This change
     solves a program which uses Ruby bindings grows fat because making subpool
@@ -59,6 +61,4 @@ Candidate changes:
     Votes:
       +1: kou
       +0: blair
-      -0: lundblad (not critical, there is a workaround, so can wait for 1.3.1)
 
-Approved changes:
