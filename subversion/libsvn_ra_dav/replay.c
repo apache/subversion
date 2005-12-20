@@ -82,8 +82,8 @@ push_dir(replay_baton_t *rb, void *baton, const char *path, apr_pool_t *pool)
   di->pool = pool;
 }
 
-/* If there is an open file baton from the previous file close it, otherwise
- * do nothing. */
+/* If there is an open file baton from the previous file close it and
+ * set RB->FILE_BATON to NULL.  Otherwise, do nothing. */
 static svn_error_t *
 maybe_close_file (replay_baton_t *rb)
 {
