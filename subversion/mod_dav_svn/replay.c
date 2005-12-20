@@ -275,7 +275,7 @@ static svn_error_t *apply_textdelta(void *file_baton,
                                     void **handler_baton)
 {
   dav_svn_edit_baton_t *eb = file_baton;
-  svn_stream_t* stream;
+  svn_stream_t *stream;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
 
