@@ -12,10 +12,10 @@ CVS_UPDATE_REGEXP_1='^[UPARMC] \(\(docs\)\|\(STATUS\)\|\(CHANGES\)\)'
 CVS_UPDATE_REGEXP_2='^[UPARMC] [A-Za-z]'
 
 SVN_UPDATE_REGEXP_1=\
-'^[ADUCG]\([ADUCG]\| \) \(\(doc\)\|\(notes\)\|\(www\)\|\(contrib\)'\
+'^[ADUCG]\([ADUCG]\| \) \(  \)\?\(\(doc\)\|\(notes\)\|\(www\)\|\(contrib\)'\
 '\|\(tools\)\|\(packages\)\|\(STATUS\)\)'
 
-SVN_UPDATE_REGEXP_2='^[ADUCG]\([ADUCG]\| \) [A-Za-z]'
+SVN_UPDATE_REGEXP_2='^[ADUCG]\([ADUCG]\| \) \(  \)\?[A-Za-z]'
 
 #
 # Possible values of the status file:
