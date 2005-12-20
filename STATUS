@@ -50,10 +50,11 @@ Candidate changes:
 
 Approved changes:
 
-  * r17870
+  * r17795, r17811 (testcase)
     Improve Ruby bindings memory management by supporting subpool. This change
     solves a program which uses Ruby bindings grows fat because making subpool
     each svn function call causes Ruby's GC at high frequency.
+    Branch: swig-rb-subpool
     Justification:
       Without this change, a program which uses Ruby bindings grows over a
       hundred MB easily. Here is a problem case:
