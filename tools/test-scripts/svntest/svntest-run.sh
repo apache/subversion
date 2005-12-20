@@ -59,15 +59,15 @@ PASS
 START "check object directory" "Checking object directory..."
 test -d $TEST_ROOT/$OBJ || FAIL; PASS
 START "check svn executable" "Checking svn executable..."
-test -x $TEST_ROOT/$OBJ/subversion/svn/svn || FAIL; PASS
+test -x $INST_DIR/$SVN_NAME/bin/svn || FAIL; PASS
 START "check svnadmin executable" "Checking svnadmin executable..."
-test -x $TEST_ROOT/$OBJ/subversion/svnadmin/svnadmin || FAIL; PASS
+test -x $INST_DIR/$SVN_NAME/bin/svnadmin || FAIL; PASS
 START "check svnlook executable" "Checking svnlook executable..."
-test -x $TEST_ROOT/$OBJ/subversion/svnlook/svnlook || FAIL; PASS
+test -x $INST_DIR/$SVN_NAME/bin/svnlook || FAIL; PASS
 START "check svnserve executable" "Checking svnserve executable..."
-test -x $TEST_ROOT/$OBJ/subversion/svnserve/svnserve || FAIL; PASS
+test -x $INST_DIR/$SVN_NAME/bin/svnserve || FAIL; PASS
 START "check svnversion executable" "Checking svnversion executable..."
-test -x $TEST_ROOT/$OBJ/subversion/svnversion/svnversion || FAIL; PASS
+test -x $INST_DIR/$SVN_NAME/bin/svnversion || FAIL; PASS
 
 # Build has initially mounted ramdisk for us, but this
 # script will at the end to do unmount, so check if it is mounted or not
@@ -93,7 +93,7 @@ case $CHECK_TARGET in
         START "run svnserve" "Running svnserve..."
         $TEST_ROOT/$OBJ/subversion/svnserve/svnserve -d \
             --listen-port $SVNSERVE_PORT \
-            -r $TEST_ROOT/$OBJ/subversion/tests/cmdline \
+            -r $TEST_ROOT/$OBJ/$RA_SVN_REPO_ROOT \
             >> $LOG_FILE 2>&1
         test $? = 0 || FAIL
         PASS
