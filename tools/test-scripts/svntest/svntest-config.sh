@@ -80,6 +80,9 @@ RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:52080"
 SVNSERVE_PORT=52069
 RA_SVN_CHECK_ARGS="BASE_URL=svn://localhost:$SVNSERVE_PORT"
 
+# Root of test repositories for ra_svn, path is relative to the current 
+# object (build) directory
+RA_SVN_REPO_ROOT=${RA_SVN_REPO_ROOT:="subversion/tests/cmdline"}
 
 #
 # Log file name prefix
