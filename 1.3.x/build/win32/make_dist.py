@@ -243,7 +243,7 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                         ),
 
              'share': None,
-             'share/locale': InstallMoFiles('%(svndir)s/po'),
+             'share/locale': InstallMoFiles('%(srcdir)s/%(svnrel)s/mo'),
              }
 
 # Define Perl module DLLs
