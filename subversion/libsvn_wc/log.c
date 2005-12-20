@@ -418,8 +418,8 @@ install_committed_file (svn_boolean_t *overwrote_working,
     {
       /* No need to make a new file read_write: new files already are. */
       if (same)
-      SVN_ERR (svn_io_set_file_read_write_carefully (filepath, TRUE,
-                                                     FALSE, pool));
+        SVN_ERR (svn_io_set_file_read_write_carefully (filepath, TRUE,
+                                                       FALSE, pool));
       *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
     }
   else
