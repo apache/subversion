@@ -153,7 +153,7 @@ Usage
    http://subversion.tigris.org/faq.html#ramdisk-tests for further
    information.
    
-7) Run svntest.sh to get the latest versions of ARP, APR-UTIL, HTTPPD and
+7) Run svntest.sh to get the latest versions of APR, APR-UTIL, HTTPPD and
    Subversion, build and test all the configurations. 
 
 8) If you like force rebuilding of some component, you could do:
