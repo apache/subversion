@@ -11,7 +11,7 @@ FS_TYPE="$3"
 # Compute local vars
 LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE.$RA_TYPE.$FS_TYPE"
 TEST="`$GUESS` $BUILD_TYPE $RA_TYPE $FS_TYPE"
-REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
+REV="`$SVN st -v $SVN_SOURCE/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 
 # Prime and initialize the log file
 $CP_F "$LOG_FILE_PREFIX.$BUILD_TYPE" $LOG_FILE

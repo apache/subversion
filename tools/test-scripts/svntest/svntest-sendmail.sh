@@ -12,7 +12,7 @@ BUILD_STAT="$4"
 # Compute local vars
 LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE"
 TEST="`$GUESS` $BUILD_TYPE"
-REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
+REV="`$SVN st -v $SVN_SOURCE/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 test -z "$RA_TYPE" || {
     LOG_FILE="$LOG_FILE.$RA_TYPE"
     TEST="$TEST $RA_TYPE"
