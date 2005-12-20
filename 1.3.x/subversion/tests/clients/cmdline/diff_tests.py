@@ -1957,14 +1957,14 @@ def diff_schedule_delete(sbox):
   try:
     diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
     if err_output: raise svntest.Failure
-    svntest.main.file_append('foo', "xxx")
+    svntest.main.file_append('foo', "xxx".encode('utf-8'))
     svntest.main.run_svn(None, 'add', 'foo')
     diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
     if err_output: raise svntest.Failure
     svntest.main.run_svn(None, 'rm', 'foo')
     expected_output = [
-    "Index: foo\n", 
-    "===================================================================\n"
+    "Index: foo\n".encode('utf-8'), 
+    "===================================================================\n".encode('utf-8')
     ]
     diff_output, err = svntest.actions.run_and_verify_svn(None, expected_output, [],
                                                           'diff', '-r', '1' )

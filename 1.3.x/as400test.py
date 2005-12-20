@@ -80,7 +80,7 @@ if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
 run_svnserve = None
-svnserve_lib = None
+svnserve_lib = '*LIBL'
 base_url = None
 fs_type = None
 verbose = None
