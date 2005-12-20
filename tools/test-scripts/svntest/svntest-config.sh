@@ -123,33 +123,29 @@ GUESS="/usr/share/libtool/config.guess"
 # Path to sendmail
 SENDMAIL="/usr/sbin/sendmail"
 
-# A program used to base64 encode standard input.  Two choices are
-# 1) The encode-base64 script that comes with the Perl MIME::Base64
-#    module on CPAN at
-#    ftp://ftp.funet.fi/pub/CPAN/modules/by-module/MIME/
+# A program that base64-encodes stdin and writes the result to stdout.
+# The default is a simple Python program in this directory.
 #
-#    To install, get the latest MIME-Base64-X.YY.tar.gz and run
-#    perl Makefile.PL
-#    make
-#    make test
-#    make install UNINST=1
+# If you don't have Python installed, two other choices are:
 #
-#    Uncomment here if you use this base64 encoder:
+#    1. The encode-base64 script that comes with the Perl MIME::Base64
+#       CPAN module (ftp://ftp.funet.fi/pub/CPAN/modules/by-module/MIME/).
+#       Get the latest MIME-Base64-X.YY.tar.gz and run
 #
-#    BASE64="$PERLBIN/encode-base64"
-#    BASE64_E="$BASE64"
+#          $ perl Makefile.PL
+#          $ make
+#          $ make test
+#          # make install UNINST=1
 #
-# 2) A pre-compiled Windows base64.exe binary for Windows users.  C
-#    source code for other OSes.  Available at
-#    http://www.fourmilab.ch/webtools/base64/
+#       Then set BASE64="$PERLBIN/encode-base64".
 #
-#    No instructions needed.  If you can compile and test Subversion,
-#    then you can compile this :)
+#    2) A pre-compiled Windows base64.exe binary for Windows users,
+#       available as C source code for other OSes.  Grab it from
+#       http://www.fourmilab.ch/webtools/base64/.  No instructions; if
+#       you can compile and test Subversion, then you can build this :-).
+#       After installing, set BASE64="$LOCALBIN/base64 -e - -".
 #
-#    Uncomment here if you use this base64 encoder:
-#
-#    BASE64="$LOCALBIN/base64"
-#    BASE64_E="$BASE64 -e - -"
+BASE64="`dirname $0`/encode-base64.py"
 
 # Other stuff
 CAT="$BIN/cat"
