@@ -42,8 +42,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-12-21 20:37+0100\n"
-"PO-Revision-Date: 2005-12-12 08:34+0100\n"
+"POT-Creation-Date: 2005-12-21 21:18+0100\n"
+"PO-Revision-Date: 2005-12-21 21:18+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2654,46 +2654,44 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr "Åtminstone en egenskapsändring misslyckades; arkivet är oförändrat"
 
 #: libsvn_ra_dav/replay.c:154
-#, fuzzy
 msgid "Missing revision attr in target-revision element"
-msgstr "Attributet \"revision\" saknas för \"%s\""
+msgstr "Attributet \"revision\" saknas på target-revision-elementet"
 
 #: libsvn_ra_dav/replay.c:171
-#, fuzzy
 msgid "Missing revision attr in open-root element"
-msgstr "Attributet \"revision\" saknas för \"%s\""
+msgstr "Attributet \"revision\" saknas på open-root-elementet"
 
 #: libsvn_ra_dav/replay.c:189
 msgid "Missing name attr in delete-entry element"
-msgstr ""
+msgstr "Attributet name saknas på delete-entry-elementet"
 
 #: libsvn_ra_dav/replay.c:193
 msgid "Missing rev attr in delete-entry element"
-msgstr ""
+msgstr "Attributet rev saknas på delete-entry-elementet"
 
 #: libsvn_ra_dav/replay.c:244
-#, fuzzy
 msgid "Missing name attr in open-directory element"
-msgstr "Egenskapsnamns- och arkivsökvägsargument saknas"
+msgstr "Attributet name saknas på open-directory-elementet"
 
 #: libsvn_ra_dav/replay.c:296 libsvn_ra_dav/replay.c:376
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in %s element"
-msgstr "Egenskapsargument saknas"
+msgstr "Attributet name saknas på %s-elementet"
 
 #: libsvn_ra_dav/replay.c:346
 msgid "Got apply-textdelta element without preceding add-file or open-file"
 msgstr ""
+"Erhöll apply-textdelta-element utan att ha erhållit add-file eller open-file"
 
 #: libsvn_ra_dav/replay.c:485
-#, fuzzy, c-format
+#, c-format
 msgid "Error writing stream: unexpected EOF"
-msgstr "Fel vid skrivning till \"%s\": oväntat filslut"
+msgstr "Fel vid skrivning till ström: oväntat filslut"
 
 #: libsvn_ra_dav/replay.c:492
 #, c-format
 msgid "Got cdata content for a prop delete"
-msgstr ""
+msgstr "Egenskapsradering hade textinnehåll"
 
 #: libsvn_ra_dav/session.c:442
 msgid "Invalid URL: illegal character in proxy port number"
@@ -3053,9 +3051,8 @@ msgid "Lock element not a list"
 msgstr "Element med lås är ingen lista"
 
 #: libsvn_ra_svn/client.c:1960
-#, fuzzy
 msgid "Server doesn't support the replay command"
-msgstr "Servern stöder ej lock-kommandot"
+msgstr "Servern stöder ej replay-kommandot"
 
 #: libsvn_ra_svn/client.c:2024
 #, c-format
@@ -8062,7 +8059,7 @@ msgstr "lyssna en gång (användbart för felsökning)"
 
 #: svnserve/main.c:130
 msgid "write server process ID to file arg"
-msgstr ""
+msgstr "Skriv serverns process-ID till filen arg"
 
 #: svnserve/main.c:141
 #, c-format
@@ -8124,70 +8121,72 @@ msgid "Can't create thread"
 msgstr "Kan inte skapa tråd"
 
 #: svnsync/main.c:62
+#, fuzzy
 msgid ""
 "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-"Initialize a destination repository."
+"Initialize a destination repository.\n"
 msgstr ""
+"användning: svnsync initialize DEST_URL --source-url KÄLL_URL\n"
+"Initiera ett destinationsarkiv."
 
 #: svnsync/main.c:67
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
+"användning: svnsync synchronize DEST_URL\n"
+"Överför väntande revisioner från källa till destination.\n"
 
 #: svnsync/main.c:71
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"användning: svnadmin help [UNDERKOMMANDO...]\n"
-"\n"
-"Beskriver hur det här programmet och dess underkommandon används.\n"
+"användning: svnsync help [UNDERKOMMANDO...]\n"
+"Visa hur detta program eller dess underkommandon används.\n"
 
 #: svnsync/main.c:80
 msgid "The url to synchronize from"
-msgstr ""
+msgstr "URL:en att synkronisera från"
 
 #: svnsync/main.c:160
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get local hostname"
-msgstr "Kan inte erhålla filnamn"
+msgstr "Kan inte erhålla lokalt värdnamn"
 
 #: svnsync/main.c:186
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
-msgstr ""
+msgstr "Kunde inte låsa destinationsarkivet; det är för närvarande låst av \"%s\"\n"
 
 #: svnsync/main.c:268
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
-msgstr ""
+msgstr "Sessionens rot är \"%s\", men arkivets rot är \"%s\""
 
 #: svnsync/main.c:298
 msgid "Cannot initialize a repository with content in it"
-msgstr ""
+msgstr "Kan inte initiera ett arkiv som redan har innehåll"
 
 #: svnsync/main.c:308
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
-msgstr ""
+msgstr "Destinationsarkivet synkroniseras redan från \"%s\""
 
 #: svnsync/main.c:419
-#, fuzzy, c-format
+#, c-format
 msgid "Committing rev %ld\n"
-msgstr ""
-"\n"
-"Arkiverade revision %ld.\n"
+msgstr "Arkiverar revision %ld\n"
 
 #: svnsync/main.c:849
 msgid "Destination repository has not been initialized"
-msgstr ""
+msgstr "Destinationsarkivet har ej initierats"
 
 #: svnsync/main.c:864
 #, c-format
 msgid "UUID of destination repository (%s) does not match expected UUID (%s)"
 msgstr ""
+"UUID:n på destinationsarkivet (%s) matchar inte den förväntade UUID:n (%s)"
 
 #: svnsync/main.c:910
 #, c-format
@@ -8195,35 +8194,35 @@ msgid ""
 "Currently copying rev %ld in source is less than latest rev in destination (%"
 "ld)"
 msgstr ""
+"Den revision %ld i källan som nu kopieras är mindre än den senaste "
+"revisionen i destinationen (%ld)"
 
 #: svnsync/main.c:982
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
-msgstr ""
+msgstr "Arkiveringen skapade revision %ld, men den borde ha skapat %ld"
 
 #: svnsync/main.c:1051
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnadmin UNDERKOMMANDO ARKIV_SÖKVÄG\n"
-"                   [ ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svnadmin help <UNDERKOMMANDO>\" för att få hjälp om ett specifikt\n"
+"allmän användning: svnsync UNDERKOMMANDO DEST_URL  [ARGUMENT & FLAGGOR ...]\n"
+"Skriv \"svnsync help <underkommando>\" för hjälp med ett visst "
 "underkommando.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
 #: svnsync/main.c:1225
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnsync help %s' for usage.\n"
 msgstr ""
 "Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
-"Skriv \"svn help %s\" för användning.\n"
+"Skriv \"svnsync help %s\" för användning.\n"
 
 #: svnversion/main.c:90
 #, c-format
@@ -8306,6 +8305,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Can't seek in '%s'"
-#~ msgstr "Kan inte flytta filpositionen i \"%s\""
