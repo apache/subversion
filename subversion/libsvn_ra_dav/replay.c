@@ -82,25 +82,6 @@ push_dir(replay_baton_t *rb, void *baton, const char *path, apr_pool_t *pool)
   di->pool = pool;
 }
 
-/* If there is an open file baton from the previous file close it and
- * set RB->FILE_BATON to NULL.  Otherwise, do nothing. */
-static svn_error_t *
-maybe_close_file (replay_baton_t *rb)
-{
-  svn_error_t *err;
-
-  if (! rb->file_baton)
-    return SVN_NO_ERROR;
-
-  err = rb->editor->close_file(rb->file_baton,
-                               NULL /* XXX text checksum */,
-                               rb->file_pool);
-
-  rb->file_baton = NULL;
-
-  return err;
-}
-
 static const svn_ra_dav__xml_elm_t editor_report_elements[] =
 {
   { SVN_XML_NAMESPACE, "editor-report",    ELEM_editor_report, 0 },
@@ -111,6 +92,7 @@ static const svn_ra_dav__xml_elm_t editor_report_elements[] =
   { SVN_XML_NAMESPACE, "add-directory",    ELEM_add_directory, 0 },
   { SVN_XML_NAMESPACE, "open-file",        ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file",         ELEM_add_file, 0 },
+  { SVN_XML_NAMESPACE, "close-file",       ELEM_close_file, 0 },
   { SVN_XML_NAMESPACE, "apply-textdelta",  ELEM_apply_textdelta, 0 },
   { SVN_XML_NAMESPACE, "change-file-prop", ELEM_change_file_prop, 0 },
   { SVN_XML_NAMESPACE, "change-dir-prop",  ELEM_change_dir_prop, 0 },
@@ -207,10 +189,6 @@ start_element(void *baton, int parent_state, const char *nspace,
         const char *crev = svn_xml_get_attr_value("rev", atts);
         const char *path = svn_xml_get_attr_value("path", atts);
 
-        rb->err = maybe_close_file (rb);
-        if (rb->err)
-          break;
-
         /* If a file pool is in use, destroy it and NULL it out, since it
          * applies to the previous directory's files, not this one.  If we
          * need one for this directory we'll create one later on. */
@@ -298,10 +276,6 @@ start_element(void *baton, int parent_state, const char *nspace,
             break;
           }
 
-        rb->err = maybe_close_file (rb);
-        if (rb->err)
-          break;
-
         /* If there's already a file pool, clear it out, since it was used
          * for the previous file.  If not, create a new one so we can use it
          * for this file. */
@@ -365,6 +339,21 @@ start_element(void *baton, int parent_state, const char *nspace,
         }
       break;
 
+    case ELEM_close_file:
+      if (! rb->file_baton)
+        rb->err = svn_error_create
+                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                     _("Got close-file element without preceding "
+                       "add-file or open-file"));
+      else
+        {
+          rb->err = rb->editor->close_file (rb->file_baton,
+                                            NULL, /* XXX text checksum */
+                                            rb->file_pool);
+          rb->file_baton = NULL;
+        }
+      break;
+
     case ELEM_change_file_prop:
     case ELEM_change_dir_prop:
       {
@@ -411,10 +400,6 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
   switch (elm->id)
     {
     case ELEM_editor_report:
-      rb->err = maybe_close_file (rb);
-      if (rb->err)
-        break;
-
       if (rb->dirs->nelts)
         svn_pool_destroy(APR_ARRAY_IDX(rb->dirs, 0, dir_item_t).pool);
 
