@@ -716,7 +716,8 @@ enum {
   ELEM_open_root,
   ELEM_apply_textdelta,
   ELEM_change_file_prop,
-  ELEM_change_dir_prop
+  ELEM_change_dir_prop,
+  ELEM_close_file
 };
 
 /* ### docco */
