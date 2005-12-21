@@ -70,7 +70,7 @@ def cat_traces_renames(sbox):
 
   # svn cat -r1 rho  --> should show pi's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'.\n"], [],
+                                      [ "This is the file 'pi'.\n".encode('utf-8')], [],
                                       'cat',  '-r', '1', rho_path)
   
   expected_output = svntest.wc.State(wc_dir, {
@@ -98,10 +98,10 @@ def cat_traces_renames(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G/pi', 'A/D/G/rho')
   expected_disk.add({
-    'A/D/G/rho' : Item("This is the file 'pi'.\n"),
+    'A/D/G/rho' : Item("This is the file 'pi'.\n".encode('utf-8')),
     })
   expected_disk.add({
-    'A/D/G/bloo' : Item("This is the file 'rho'.\n"),
+    'A/D/G/bloo' : Item("This is the file 'rho'.\n".encode('utf-8')),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -110,17 +110,17 @@ def cat_traces_renames(sbox):
 
   # 'svn cat bloo' --> should show rho's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'.\n"], [],
+                                      [ "This is the file 'rho'.\n".encode('utf-8')], [],
                                       'cat',  bloo_path)
   
   # svn cat -r1 bloo --> should still show rho's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'.\n"], [],
+                                      [ "This is the file 'rho'.\n".encode('utf-8')], [],
                                       'cat',  '-r', '1', bloo_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'.\n"], [],
+                                      [ "This is the file 'pi'.\n".encode('utf-8')], [],
                                       'cat',  '-r', '1', rho_path)
   
   # svn up -r1
@@ -180,7 +180,7 @@ def cat_avoids_false_identities(sbox):
 
   # r2
   svntest.main.run_svn(None, 'del', iota_path)
-  svntest.main.file_append(iota_path, "YOU SHOULD NOT SEE THIS\n")
+  svntest.main.file_append(iota_path, "YOU SHOULD NOT SEE THIS\n".encode('utf-8'))
   svntest.main.run_svn(None, 'add', iota_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg',
                        '--username', svntest.main.wc_author,

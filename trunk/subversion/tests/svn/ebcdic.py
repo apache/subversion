@@ -326,7 +326,7 @@ def os400_split_utf8_lines(one_big_line):
       lines.append(line + '\n'.encode('utf-8'))
   return lines
 
-def os400_spool_print(s, size=80):
+def os400_spool_print(s, size=80, newline=True):
   # Print string s inserting a newline after every size chars.
   # Prevents errors when print(ing) long lines to spool files.
   remaining = len(s)
@@ -336,7 +336,10 @@ def os400_spool_print(s, size=80):
     print s[start:start + size]
     start += size
     remaining = len(s) - start
-  print s[start:end]
+  if newline:
+    print s[start:end]
+  else:
+    print s[start:end],
 
 def os400_tagtree(root_path, ccsid, rootonly=0):
   # Recursively tag files in a directory tree rooted at root_path with CCSID,

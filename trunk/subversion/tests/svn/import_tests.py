@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, re, os.path
+import string, re, os.path, sys
 
 # Our testing module
 import svntest
@@ -51,7 +51,7 @@ def import_executable(sbox):
   other_path = os.path.join(wc_dir, "XT/other_exe")
 
   for path in [all_path, none_path, user_path, group_path, other_path]:
-    svntest.main.file_append(path, "some text")
+    svntest.main.file_append(path, "some text".encode('utf-8'))
 
   # set executable bits
   os.chmod(all_path, 0777)
@@ -81,11 +81,11 @@ def import_executable(sbox):
   # Create expected disk tree for the update (disregarding props)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'all_exe' :   Item('some text', props={'svn:executable' : ''}),
-    'none_exe' :  Item('some text'),
-    'user_exe' :  Item('some text', props={'svn:executable' : ''}),
-    'group_exe' : Item('some text'),
-    'other_exe' : Item('some text'),
+    'all_exe' :   Item('some text'.encode('utf-8'), props={'svn:executable' : ''}),
+    'none_exe' :  Item('some text'.encode('utf-8')),
+    'user_exe' :  Item('some text'.encode('utf-8'), props={'svn:executable' : ''}),
+    'group_exe' : Item('some text'.encode('utf-8')),
+    'other_exe' : Item('some text'.encode('utf-8')),
     })
 
   # Create expected status tree for the update (disregarding props).
@@ -137,8 +137,8 @@ def import_ignores(sbox):
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
   os.mkdir(dir_path, 0755)
-  open(foo_c_path, 'w')
-  open(foo_o_path, 'w')
+  open(foo_c_path, 'wb')
+  open(foo_o_path, 'wb')
 
   # import new dir into repository
   url = svntest.main.current_repo_url + '/dir'
@@ -298,7 +298,7 @@ def import_avoid_empty_revision(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(import_executable, (os.name != 'posix')),
+              Skip(import_executable, (os.name != 'posix' or sys.platform == 'AS/400')),
               import_ignores,
               import_avoid_empty_revision,
               import_no_ignores,

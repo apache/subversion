@@ -20,6 +20,8 @@ import os.path, shutil, string, re, sys
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
+if sys.platform == 'AS/400':
+  import ebcdic
 
 class SVNUnexpectedOutput(Failure):
   """Exception raised if an invocation of svn results in unexpected
@@ -700,23 +702,64 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(actual)
 
 
+def display_lines_as400(out_list):
+  is_ebcdic = False
+  for line in out_list:
+    try:
+      line.decode('utf-8')
+    except:
+      # If any line can't be decoded we assume it's ebcdic
+      is_ebcdic = True
+      break
+  
+  # Let the log reader know what how this output was encoded...
+  if is_ebcdic == False:
+    print '[UTF-8 OUTPUT]:'
+  else:
+    print '[EBCDIC OUTPUT]:' 
+
+  for line in out_list:
+    #...But print it in ebcdic so they can read it.
+    if is_ebcdic:
+      ebcdic.os400_spool_print(line, 80, False)
+    else:
+      ebcdic.os400_spool_print(line.decode('utf-8').encode('cp500'), 80, False)
+
+
 def display_lines(message, label, expected, actual, expected_is_regexp=None):
   """Print MESSAGE, unless it is None, then print EXPECTED (labeled
   with LABEL) followed by ACTUAL (also labeled with LABEL).
   Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
     print message
+
+  if expected is not None:
+    print 'len(EXPECTED) = ' + str(len(expected))
+  if actual is not None:
+    print 'len(ACTUAL) = ' + str(len(actual)) 
+
   if expected is not None:
     if expected_is_regexp:
       print 'EXPECTED', label + ' (regexp):'
     else:
-      print 'EXPECTED', label + ':'
-    map(sys.stdout.write, expected)
+      if sys.platform != 'AS/400':
+        print 'EXPECTED', label + ':'
+      else:
+        print 'EXPECTED', label + ':',
+    if sys.platform != 'AS/400':
+      map(sys.stdout.write, expected)
+    else:
+      display_lines_as400(expected)   
     if expected_is_regexp:
       map(sys.stdout.write, '\n')
   if actual is not None:
-    print 'ACTUAL', label + ':'
-    map(sys.stdout.write, actual)
+    if sys.platform != 'AS/400':
+      print 'ACTUAL', label + ':'
+      map(sys.stdout.write, actual)
+    else: 
+      print 'ACTUAL', label + ':',
+      display_lines_as400(actual) 
+
 
 def compare_and_display_lines(message, label, expected, actual):
   'Compare two sets of output lines, and print them if they differ.'
@@ -783,7 +826,8 @@ def duplicate_dir(wc_name, wc_copy_name):
 
   main.safe_rmtree(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
-  
+  if sys.platform == 'AS/400':
+    ebcdic.os400_tagtree(wc_copy_name, 1208)
 
 
 def get_virginal_state(wc_dir, rev):
@@ -806,21 +850,28 @@ def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
-  main.file_append(path, "stop looking!")
+  main.file_append(path, "stop looking!".encode('utf-8'))
 
 def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a
 pre-revprop-change hook script and (if appropriate) making it executable."""
 
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
-  main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
+  if sys.platform != 'AS/400':
+    main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
+  else:
+    main.create_python_hook_script (hook_path, "#!/bin/sh\nexit 0".encode('utf-8'))
 
 def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
 script which always reports errors."""
 
   hook_path = main.get_post_commit_hook_path (repo_dir)
-  main.create_python_hook_script (hook_path, 'import sys; '
-    'sys.stderr.write("Post-commit hook failed"); '
-    'sys.exit(1)')
-### End of file.
+  if sys.platform != 'AS/400':
+    main.create_python_hook_script (hook_path, 'import sys; '
+      'sys.stderr.write("Post-commit hook failed"); '
+      'sys.exit(1)')
+  else:
+    main.create_python_hook_script (hook_path,
+                                    "#!/bin/sh\necho Post-commit hook failed >&2\nexit 1".encode('utf-8'))  
+### End of file.  

@@ -60,9 +60,9 @@ def add_files(sbox):
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
   epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
   
-  svntest.main.file_append(delta_path, "This is the file 'delta'.")
-  svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
-  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
+  svntest.main.file_append(delta_path, "This is the file 'delta'.".encode('utf-8'))
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.".encode('utf-8'))
+  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.".encode('utf-8'))
   
   svntest.main.run_svn(None, 'add', delta_path, zeta_path, epsilon_path)
   
@@ -137,10 +137,10 @@ def nested_adds(sbox):
   upsilon_path = os.path.join(Y_path, 'upsilon')
   zeta_path = os.path.join(Z_path, 'zeta')
 
-  svntest.main.file_append(delta_path, "This is the file 'delta'.")
-  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
-  svntest.main.file_append(upsilon_path, "This is the file 'upsilon'.")
-  svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
+  svntest.main.file_append(delta_path, "This is the file 'delta'.".encode('utf-8'))
+  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.".encode('utf-8'))
+  svntest.main.file_append(upsilon_path, "This is the file 'upsilon'.".encode('utf-8'))
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.".encode('utf-8'))
 
   # Finally, let's try adding our new files and directories
   svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
@@ -461,8 +461,8 @@ def unschedule_missing_added(sbox):
   dir1_path = os.path.join(wc_dir, 'dir1')
   dir2_path = os.path.join(wc_dir, 'dir2')
   
-  svntest.main.file_append(file1_path, "This is the file 'file1'.")
-  svntest.main.file_append(file2_path, "This is the file 'file2'.")
+  svntest.main.file_append(file1_path, "This is the file 'file1'.".encode('utf-8'))
+  svntest.main.file_append(file2_path, "This is the file 'file2'.".encode('utf-8'))
   svntest.main.run_svn(None, 'add', file1_path, file2_path)
   svntest.main.run_svn(None, 'mkdir', dir1_path, dir2_path)
   
@@ -615,9 +615,9 @@ def add_recursive_already_versioned(sbox):
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
   epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
   
-  svntest.main.file_append(delta_path, "This is the file 'delta'.")
-  svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
-  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
+  svntest.main.file_append(delta_path, "This is the file 'delta'.".encode('utf-8'))
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.".encode('utf-8'))
+  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.".encode('utf-8'))
   
   saved_wd = os.getcwd()
   try:
@@ -665,19 +665,19 @@ test_list = [ None,
               add_files,
               add_directories,
               nested_adds,
-              Skip(add_executable, (os.name != 'posix')),
+              Skip(add_executable, (os.name != 'posix' or sys.platform == 'AS/400')),
               delete_files,
               delete_dirs,
               revert_add_files,
               revert_add_directories,
               revert_nested_adds,
-              Skip(revert_add_executable, (os.name != 'posix')),
+              Skip(revert_add_executable, (os.name != 'posix' or sys.platform == 'AS/400')),
               revert_delete_files,
               revert_delete_dirs,
               XFail(commit_add_files),
               XFail(commit_add_directories),
               XFail(commit_nested_adds),
-              Skip(XFail(commit_add_executable), (os.name != 'posix')),
+              Skip(XFail(commit_add_executable), (os.name != 'posix' or sys.platform == 'AS/400')),
               XFail(commit_delete_files),
               XFail(commit_delete_dirs),
               unschedule_missing_added,

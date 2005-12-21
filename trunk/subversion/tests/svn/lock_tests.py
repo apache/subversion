@@ -55,7 +55,7 @@ def lock_file(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   file_path_b = os.path.join(wc_b, fname)
 
-  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.file_append(file_path, "This represents a binary file\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -71,7 +71,7 @@ def lock_file(sbox):
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
   # change the locked file
-  svntest.main.file_append(file_path_b, "Covert tweak\n")
+  svntest.main.file_append(file_path_b, "Covert tweak\n".encode('utf-8'))
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
@@ -124,7 +124,7 @@ def commit_file_keep_lock(sbox):
                                      '-m', 'some lock comment', file_path)
 
   # make a change and commit it, holding lock
-  svntest.main.file_append(file_path, "Tweak!\n")
+  svntest.main.file_append(file_path, "Tweak!\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock', file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -152,7 +152,7 @@ def commit_file_unlock(sbox):
                                      '-m', 'some lock comment', file_path)
 
   # make a change and commit it, allowing lock to be released
-  svntest.main.file_append(file_path, "Tweak!\n")
+  svntest.main.file_append(file_path, "Tweak!\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit', '-m', '', file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -452,7 +452,7 @@ def update_while_needing_lock(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path)
-  svntest.main.file_append(iota_path, "This line added in r2.\n")
+  svntest.main.file_append(iota_path, "This line added in r2.\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit', '-m', '', iota_path) # auto-unlocks
 
   # Backdate to r2.
@@ -619,7 +619,7 @@ def lock_status(sbox):
   fname = 'iota'
   file_path = os.path.join(sbox.wc_dir, fname)
 
-  svntest.main.file_append(file_path, "This is a spreadsheet\n")
+  svntest.main.file_append(file_path, "This is a spreadsheet\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -638,7 +638,7 @@ def lock_status(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify status again after modifying the file
-  svntest.main.file_append(file_path, "check stat output after mod")
+  svntest.main.file_append(file_path, "check stat output after mod".encode('utf-8'))
 
   expected_status.tweak(fname, status='M ')
 
@@ -653,7 +653,7 @@ def lock_status(sbox):
 
 #----------------------------------------------------------------------
 # III.c : Steal lock on a file from another working copy with 'svn lock
-# --force', and check the status of lock in the repository from the 
+# --force', and check the status of lock in the repository from the
 # working copy in which the file was initially locked.
 def stolen_lock_status (sbox):
   "verify status of stolen lock"
@@ -669,7 +669,7 @@ def stolen_lock_status (sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   file_path_b = os.path.join(wc_b, fname)
 
-  svntest.main.file_append(file_path, "This is a spreadsheet\n")
+  svntest.main.file_append(file_path, "This is a spreadsheet\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -693,7 +693,7 @@ def stolen_lock_status (sbox):
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', '--force', file_path_b)
- 
+
   # Verify status from working copy where file was initially locked
   expected_status.tweak(fname, writelocked='T')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -716,7 +716,7 @@ def broken_lock_status (sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   file_path_b = os.path.join(wc_b, fname)
 
-  svntest.main.file_append(file_path, "This is a spreadsheet\n")
+  svntest.main.file_append(file_path, "This is a spreadsheet\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -784,7 +784,7 @@ def out_of_date(sbox):
   file_path_b = os.path.join(wc_b, fname)
 
   # Make a new revision of the file in the first WC.
-  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.file_append(file_path, "This represents a binary file\n".encode('utf-8'))
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -860,7 +860,7 @@ def revert_lock(sbox):
                        '-m', '', iota_path)
   
   # modify it
-  svntest.main.file_append(iota_path, "This line added\n")
+  svntest.main.file_append(iota_path, "This line added\n".encode('utf-8'))
 
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('iota', wc_rev=2)
@@ -989,7 +989,7 @@ def lock_uri_encoded(sbox):
   fname = 'amazing space'
   file_path = os.path.join(wc_dir, fname)
 
-  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.file_append(file_path, "This represents a binary file\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], "add", file_path)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -1056,18 +1056,18 @@ def lock_and_exebit1(sbox):
   mode_w = stat.S_IWUSR
   mode_x = stat.S_IXUSR
   mode_r = stat.S_IRUSR
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'ps',
                                      'svn:needs-lock', ' ', gamma_path)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'ps',
                                      'svn:executable', ' ', gamma_path)
-  
+
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
@@ -1089,41 +1089,41 @@ def lock_and_exebit1(sbox):
                                      '-m', '', gamma_path)
   # mode should be +r, +w, +x
   gamma_stat = os.stat (gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or not gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Locking a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-write, executable"
     raise svntest.Failure
 
   # modify
-  svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
-  
+  svntest.main.file_append(gamma_path, "check stat output after mod & unlock".encode('utf-8'))
+
   # unlock
   svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      gamma_path)
-  
+
   # Mode should be +r, -w, +x
   gamma_stat = os.stat (gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Unlocking a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-only, executable"
     raise svntest.Failure
-  
+
   # ci
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', gamma_path)
-  
+
   # Mode should be still +r, -w, +x
   gamma_stat = os.stat (gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Commiting a file with 'svn:needs-lock, svn:executable'"
     print "after unlocking modified file's permissions"
@@ -1138,18 +1138,18 @@ def lock_and_exebit2(sbox):
   mode_w = stat.S_IWUSR
   mode_x = stat.S_IXUSR
   mode_r = stat.S_IRUSR
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'ps',
                                      'svn:needs-lock', ' ', gamma_path)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'ps',
                                      'svn:executable', ' ', gamma_path)
-  
+
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
@@ -1171,26 +1171,26 @@ def lock_and_exebit2(sbox):
                                      '-m', '', gamma_path)
   # mode should be +r, +w, +x
   gamma_stat = os.stat (gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or not gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Locking a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-write, executable"
     raise svntest.Failure
 
   # modify
-  svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
-  
+  svntest.main.file_append(gamma_path, "check stat output after mod & unlock".encode('utf-8'))
+
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', gamma_path)
-  
+
   # Mode should be +r, -w, +x
   gamma_stat = os.stat (gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Commiting a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-only, executable"
@@ -1318,7 +1318,7 @@ def unlock_already_unlocked_files(sbox):
                                      '--no-auth-cache',
                                      '-m', 'lock several',
                                      iota_path, lambda_path, alpha_path)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1387,7 +1387,7 @@ def info_moved_path(sbox):
                                          wc_dir)
 
   # Create a new, unrelated iota, creating r3.
-  svntest.main.file_append(fname, "Another iota")
+  svntest.main.file_append(fname, "Another iota".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", fname)
   expected_output = svntest.wc.State(wc_dir, {

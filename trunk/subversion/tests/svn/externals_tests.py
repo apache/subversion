@@ -21,6 +21,9 @@ import shutil, string, sys, re, os
 import warnings
 
 # Our testing module
+if sys.platform == 'AS/400':
+  import ebcdic
+  import tempfile
 import svntest
 from svntest import SVNAnyOutput
 
@@ -98,22 +101,22 @@ def externals_test_setup(sbox):
   # Make revisions 2 through 5, but don't bother with pre- and
   # post-commit status checks.
 
-  svntest.main.file_append(mu_path, "Added to mu in revision 2.\n")
+  svntest.main.file_append(mu_path, "Added to mu in revision 2.\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
-  svntest.main.file_append(pi_path, "Added to pi in revision 3.\n")
+  svntest.main.file_append(pi_path, "Added to pi in revision 3.\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
-  svntest.main.file_append(lambda_path, "Added to lambda in revision 4.\n")
+  svntest.main.file_append(lambda_path, "Added to lambda in revision 4.\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
-  svntest.main.file_append(omega_path, "Added to omega in revision 5.\n")
+  svntest.main.file_append(omega_path, "Added to omega in revision 5.\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
@@ -132,8 +135,15 @@ def externals_test_setup(sbox):
            "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
            "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n"
 
-  tmp_f = os.tempnam(wc_init_dir, 'tmp')
-  svntest.main.file_append(tmp_f, externals_desc)
+  # iSeries Python doesn't implement os.tempnam
+  if not sys.platform == 'AS/400':
+    tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  else:
+    tmp_fd, tmp_f = tempfile.mkstemp('', 'tmp1', wc_init_dir)
+    os.close(tmp_fd)
+    ebcdic.os400_tagtree(tmp_f, 1208, 1) 
+
+  svntest.main.file_append(tmp_f, externals_desc.encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
@@ -150,7 +160,7 @@ def externals_test_setup(sbox):
            "x/y/z/blah        " + other_repo_url + "/A/B"    + \
            "\n"
 
-  svntest.main.file_append(tmp_f, externals_desc)
+  svntest.main.file_append(tmp_f, externals_desc.encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', D_path)
 
@@ -176,8 +186,15 @@ def externals_test_setup(sbox):
 def change_external(path, new_val):
   """Change the value of the externals property on PATH to NEW_VAL,
   and commit the change."""
-  tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
-  svntest.main.file_append(tmp_f, new_val)
+  # iSeries Python doesn't implement os.tempnam
+  if not sys.platform == 'AS/400':
+    tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  else:
+    tmp_fd, tmp_f = tempfile.mkstemp('', 'tmp2', svntest.main.temp_dir)
+    os.close(tmp_fd)
+    ebcdic.os400_tagtree(tmp_f, 1208, 1)  
+
+  svntest.main.file_append(tmp_f, new_val.encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', path)
   svntest.actions.run_and_verify_svn("", None, [], 'ci',
@@ -249,9 +266,12 @@ def checkout_with_externals(sbox):
     raise svntest.Failure("Probing for " + beta_path + " failed.")
 
   # Pick a file at random, make sure it has the expected contents.
-  fp = open(exdir_H_omega_path, 'r')
+  fp = open(exdir_H_omega_path, 'rb')
   lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines) 
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n".encode('utf-8'))):
+
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
 
@@ -471,10 +491,10 @@ def update_change_modified_external(sbox):
   # Make a couple of mods in the "x/y/z/blah/" external.
   alpha_path = os.path.join(other_wc_dir, "A", "D",
                             "x", "y", "z", "blah", "alpha")
-  svntest.main.file_append(alpha_path, "Some new text in alpha.\n")
+  svntest.main.file_append(alpha_path, "Some new text in alpha.\n".encode('utf-8'))
   new_file = os.path.join(other_wc_dir, "A", "D",
                           "x", "y", "z", "blah", "fish.txt")
-  svntest.main.file_append(new_file, "This is an unversioned file.\n")
+  svntest.main.file_append(new_file, "This is an unversioned file.\n".encode('utf-8'))
 
   # Change the "x/y/z/blah" external on A/D to point to a different
   # URL.  There are some local mods under the old checked-out external,
@@ -531,7 +551,7 @@ def update_receive_change_under_external(sbox):
 
   # Commit some modifications from the other_wc.
   other_gamma_path = os.path.join(other_wc_dir, 'A', 'D', 'gamma')
-  svntest.main.file_append(other_gamma_path, "New text in other gamma.\n")
+  svntest.main.file_append(other_gamma_path, "New text in other gamma.\n".encode('utf-8'))
 
   expected_output = svntest.wc.State(other_wc_dir, {
     'A/D/gamma' : Item(verb='Sending'),
@@ -555,18 +575,20 @@ def update_receive_change_under_external(sbox):
   svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
 
   external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
-  fp = open(external_gamma_path, 'r')
+  fp = open(external_gamma_path, 'rb')
   lines = fp.readlines()
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines) 
   if not ((len(lines) == 2)
-          and (lines[0] == "This is the file 'gamma'.\n")
-          and (lines[1] == "New text in other gamma.\n")):
+          and (lines[0] == "This is the file 'gamma'.\n".encode('utf-8'))
+          and (lines[1] == "New text in other gamma.\n".encode('utf-8'))):
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_gamma_path)
   fp.close()
 
   # Commit more modifications
   other_rho_path = os.path.join(other_wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append(other_rho_path, "New text in other rho.\n")
+  svntest.main.file_append(other_rho_path, "New text in other rho.\n".encode('utf-8'))
 
   expected_output = svntest.wc.State(other_wc_dir, {
     'A/D/G/rho' : Item(verb='Sending'),
@@ -584,11 +606,13 @@ def update_receive_change_under_external(sbox):
                                      'up', os.path.join(wc_dir, "A", "C"))
 
   external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
-  fp = open(external_rho_path, 'r')
+  fp = open(external_rho_path, 'rb')
   lines = fp.readlines()
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines) 
   if not ((len(lines) == 2)
-          and (lines[0] == "This is the file 'rho'.\n")
-          and (lines[1] == "New text in other rho.\n")):
+          and (lines[0] == "This is the file 'rho'.\n".encode('utf-8'))
+          and (lines[1] == "New text in other rho.\n".encode('utf-8'))):
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_rho_path)
   fp.close()
@@ -619,8 +643,15 @@ def modify_and_update_receive_new_external(sbox):
           "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n" + \
           "exdir_Z       " + other_repo_url + "/A/D/H" + "\n"
 
-  tmp_f = os.tempnam()
-  svntest.main.file_append(tmp_f, externals_desc)
+  # iSeries Python doesn't implement os.tempnam
+  if not sys.platform == 'AS/400':
+    tmp_f = os.tempnam()
+  else:
+    tmp_fd, tmp_f = tempfile.mkstemp()
+    os.close(tmp_fd)
+    ebcdic.os400_tagtree(tmp_f, 1208, 1)
+
+  svntest.main.file_append(tmp_f, externals_desc.encode('utf-8'))
   svntest.actions.run_and_verify_svn("", None, [],
                                      'pset', '-F', tmp_f,
                                      'svn:externals', B_path)
@@ -652,11 +683,18 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
 
   # Try to set illegal externals in the original WC.
   def set_externals_for_path_expect_error(path, val, dir):
-    tmp_f = os.tempnam(dir, 'tmp')
-    svntest.main.file_append(tmp_f, val)
+  # iSeries Python doesn't implement os.tempnam
+    if not sys.platform == 'AS/400':
+      tmp_f = os.tempnam(dir, 'tmp')
+    else:
+      tmp_fd, tmp_f = tempfile.mkstemp('', 'tmp3', dir)  
+      os.close(tmp_fd)
+      ebcdic.os400_tagtree(tmp_f, 1208, 1)
+
+    svntest.main.file_append(tmp_f, val.encode('utf-8'))
     svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
-                                       'pset', '-F', tmp_f,
-                                       'svn:externals', path)
+                                         'pset', '-F', tmp_f,
+                                         'svn:externals', path)
     os.remove(tmp_f)
 
   B_path = os.path.join(wc_dir, 'A', 'B')
@@ -736,16 +774,20 @@ def export_with_externals(sbox):
     raise svntest.Failure("Probing for " + beta_path + " failed.")
 
   # Pick some files, make sure their contents are as expected.
-  fp = open(exdir_G_pi_path, 'r')
+  fp = open(exdir_G_pi_path, 'rb')
   lines = fp.readlines()
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines) 
   if not ((len(lines) == 2) \
-          and (lines[0] == "This is the file 'pi'.\n") \
-          and (lines[1] == "Added to pi in revision 3.\n")):
+          and (lines[0] == "This is the file 'pi'.\n".encode('utf-8')) \
+          and (lines[1] == "Added to pi in revision 3.\n".encode('utf-8'))):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_G_pi_path)
-  fp = open(exdir_H_omega_path, 'r')
+  fp = open(exdir_H_omega_path, 'rb')
   lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines) 
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n".encode('utf-8'))):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
 

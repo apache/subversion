@@ -18,38 +18,75 @@
 
 import os, sys, shutil, string
 
+if sys.platform == 'AS/400':
+  sys.path.append(os.path.join(os.getcwd(),
+                               'subversion/tests/svn'))
+  import ebcdic
+
 # The list of test cases: [(name, params, expected) ...]
 cwd = os.getcwd().replace('\\', '/')    # Use forward slashes on Windows
-tests = [('normal use',
-          'z/A/B z/A z/A/C z/D/E z/D/F z/D z/G z/G/H z/G/I',
-          cwd + '/z: A, D, G, \n'),
-         ('identical dirs',
-          'z/A z/A z/A z/A',
-          cwd + '/z/A: \n'),
-         ('identical files',
-          'z/A/file z/A/file z/A/file z/A/file',
-          cwd + '/z/A/file: \n'),
-         ('single dir',
-          'z/A',
-          cwd + '/z/A: \n'),
-         ('single file',
-          'z/A/file',
-          cwd + '/z/A/file: \n'),
-         ('URLs',
-          'http://host/A/C http://host/A/C/D http://host/A/B/D',
-          'http://host/A: C, B/D, \n'),
-         ('URLs with no common prefix',
-          'http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
-          ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
-         ('file URLs with no common prefix',
-          'file:///A/C file:///B/D',
-          ': file:///A/C, file:///B/D, \n'),
-         ('URLs with mixed protocols',
-          'http://host/A/C file:///B/D gopher://host/A',
-          ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
-         ('mixed paths and URLs',
-          'z/A/B z/A http://host/A/C/D http://host/A/C',
-          ': ' + cwd + '/z/A, http://host/A/C, \n')]
+if sys.platform != 'AS/400':
+  tests = [('normal use',
+            'z/A/B z/A z/A/C z/D/E z/D/F z/D z/G z/G/H z/G/I',
+            cwd + '/z: A, D, G, \n'),
+           ('identical dirs',
+            'z/A z/A z/A z/A',
+            cwd + '/z/A: \n'),
+           ('identical files',
+            'z/A/file z/A/file z/A/file z/A/file',
+            cwd + '/z/A/file: \n'),
+           ('single dir',
+            'z/A',
+            cwd + '/z/A: \n'),
+           ('single file',
+            'z/A/file',
+            cwd + '/z/A/file: \n'),
+           ('URLs',
+            'http://host/A/C http://host/A/C/D http://host/A/B/D',
+            'http://host/A: C, B/D, \n'),
+           ('URLs with no common prefix',
+            'http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
+            ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
+           ('file URLs with no common prefix',
+            'file:///A/C file:///B/D',
+            ': file:///A/C, file:///B/D, \n'),
+           ('URLs with mixed protocols',
+            'http://host/A/C file:///B/D gopher://host/A',
+            ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
+           ('mixed paths and URLs',
+            'z/A/B z/A http://host/A/C/D http://host/A/C',
+            ': ' + cwd + '/z/A, http://host/A/C, \n')]
+else:
+  tests = [('normal use',
+            ['z/A/B', 'z/A', 'z/A/C', 'z/D/E', 'z/D/F', 'z/D', 'z/G', 'z/G/H', 'z/G/I'],
+            cwd + '/z: A, D, G, \n'),
+           ('identical dirs',
+            ['z/A', 'z/A', 'z/A', 'z/A'],
+            cwd + '/z/A: \n'),
+           ('identical files',
+            ['z/A/file', 'z/A/file', 'z/A/file', 'z/A/file'],
+            cwd + '/z/A/file: \n'),
+           ('single dir',
+            ['z/A'],
+            cwd + '/z/A: \n'),
+           ('single file',
+            ['z/A/file'],
+            cwd + '/z/A/file: \n'),
+           ('URLs',
+            ['http://host/A/C', 'http://host/A/C/D', 'http://host/A/B/D'],
+            'http://host/A: C, B/D, \n'),
+           ('URLs with no common prefix',
+            ['http://host1/A/C', 'http://host2/A/C/D', 'http://host3/A/B/D'],
+            ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
+           ('file URLs with no common prefix',
+            ['file:///A/C', 'file:///B/D'],
+            ': file:///A/C, file:///B/D, \n'),
+           ('URLs with mixed protocols',
+            ['http://host/A/C', 'file:///B/D', 'gopher://host/A'],
+            ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
+           ('mixed paths and URLs',
+            ['z/A/B', 'z/A', 'http://host/A/C/D', 'http://host/A/C'],
+            ': ' + cwd + '/z/A, http://host/A/C, \n')]
 
 # (re)Create the test directory
 if os.path.exists('z'):
@@ -69,18 +106,28 @@ open('z/A/file', 'w').close()
 def _run_test(cmdline):
   if sys.platform == 'win32':
     progname = '.\\target-test.exe'
+  elif sys.platform == 'AS/400':
+    progname = os.path.join(os.getcwd(), 'subversion/tests/libsvn_subr', 'TEST_TARGT')
   else:
     progname = './target-test'
 
-#  infile, outfile, errfile = os.popen3(progname + ' ' + cmdline)
-  infile, outfile = os.pipe()
-  errfile = outfile 
-  stdout_lines = outfile.readlines()
-  stderr_lines = errfile.readlines()
+  if sys.platform != 'AS/400':
+    infile, outfile, errfile = os.popen3(progname + ' ' + cmdline)
+    infile, outfile = os.pipe()
+    errfile = outfile
+  else:
+    stdout_lines, stderr_lines, outfile, errfile = ebcdic.os400_run_cmd_list(progname,
+                                                                             None,
+                                                                             0, 0,
+                                                                             cmdline)
 
-  outfile.close()
-  infile.close()
-  errfile.close()
+  if sys.platform != 'AS/400':
+    stdout_lines = outfile.readlines()
+    stderr_lines = errfile.readlines()
+
+    outfile.close()
+    infile.close()
+    errfile.close()
 
   map(sys.stdout.write, stderr_lines)
   return len(stderr_lines), string.join(stdout_lines, '')

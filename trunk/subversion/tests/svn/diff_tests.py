@@ -23,6 +23,9 @@ import string, sys, re, os.path
 import svntest
 from svntest import SVNAnyOutput
 
+if sys.platform == 'AS/400':
+  import ebcdic
+
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
@@ -37,6 +40,10 @@ Item = svntest.wc.StateItem
 
 def check_diff_output(diff_output, name, diff_type):
   "check diff output"
+
+  # Convert iSeries diff output to ebcdic
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
 
 # On Windows, diffs still display / rather than \ in paths
   if svntest.main.windows == 1:
@@ -84,6 +91,10 @@ def check_diff_output(diff_output, name, diff_type):
 def count_diff_output(diff_output):
   "count the number of file diffs in the output"
 
+  # Convert iSeries diff output to ebcdic
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+
   i_re = re.compile('Index:')
   diff_count = 0
   i = 0
@@ -98,6 +109,11 @@ def count_diff_output(diff_output):
 
 def verify_expected_output(diff_output, expected):
   "verify given line exists in diff output"
+
+  # Convert iSeries diff output to ebcdic
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+
   for line in diff_output:
     if line.find(expected) != -1:
       break
@@ -106,6 +122,11 @@ def verify_expected_output(diff_output, expected):
 
 def verify_excluded_output(diff_output, excluded):
   "verify given line does not exist in diff output as diff line"
+
+  # Convert iSeries diff output to ebcdic
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+
   for line in diff_output:
     if re.match("^(\\+|-)%s" % re.escape(excluded), line):
       print 'Sought: %s' % excluded
@@ -148,8 +169,7 @@ def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
 
 def update_a_file():
   "update a file"
-  open(os.path.join('A', 'B', 'E', 'alpha'), 'w').write("new atext")
-  # svntest.main.file_append(, "new atext")
+  open(os.path.join('A', 'B', 'E', 'alpha'), 'wb').write("new atext".encode('utf-8'))
   return 0
 
 def check_update_a_file(diff_output):
@@ -176,7 +196,7 @@ def diff_check_update_a_file_repo_subset(wc_dir):
 
 def add_a_file():
   "add a file"
-  svntest.main.file_append(os.path.join('A', 'B', 'E', 'theta'), "theta")
+  svntest.main.file_append(os.path.join('A', 'B', 'E', 'theta'), "theta".encode('utf-8'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E', 'theta'))
   return 0
 
@@ -205,7 +225,7 @@ def diff_check_add_a_file_repo_subset(wc_dir):
     return 1
 
 def update_added_file():
-  svntest.main.file_append(os.path.join('A', 'B', 'E', 'theta'), "net ttext")
+  svntest.main.file_append(os.path.join('A', 'B', 'E', 'theta'), "net ttext".encode('utf-8'))
   "update added file"
   return 0
 
@@ -221,7 +241,7 @@ def add_a_file_in_a_subdir():
   "add a file in a subdir"
   os.mkdir(os.path.join('A', 'B', 'T'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'T'))
-  svntest.main.file_append(os.path.join('A', 'B', 'T', 'phi'), "phi")
+  svntest.main.file_append(os.path.join('A', 'B', 'T', 'phi'), "phi".encode('utf-8'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'T', 'phi'))
   return 0
 
@@ -257,7 +277,7 @@ def diff_check_add_a_file_in_a_subdir_repo_subset(wc_dir):
 def replace_a_file():
   "replace a file"
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'G', 'rho'))
-  svntest.main.file_append(os.path.join('A', 'D', 'G', 'rho'), "new rho")
+  svntest.main.file_append(os.path.join('A', 'D', 'G', 'rho'), "new rho".encode('utf-8'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'G', 'rho'))
   return 0
 
@@ -271,9 +291,9 @@ def check_replace_a_file(diff_output):
 
 def update_three_files():
   "update three files"
-  open(os.path.join('A', 'D', 'gamma'), 'w').write("new gamma")
-  open(os.path.join('A', 'D', 'G', 'tau'), 'w').write("new tau")
-  open(os.path.join('A', 'D', 'H', 'psi'), 'w').write("new psi")
+  open(os.path.join('A', 'D', 'gamma'), 'wb').write("new gamma".encode('utf-8'))
+  open(os.path.join('A', 'D', 'G', 'tau'), 'wb').write("new tau".encode('utf-8'))
+  open(os.path.join('A', 'D', 'H', 'psi'), 'wb').write("new psi".encode('utf-8'))
   return 0
 
 def check_update_three_files(diff_output):
@@ -535,7 +555,7 @@ def diff_non_version_controlled_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'foo'), "a new file")
+  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'foo'), "a new file".encode('utf-8'))
 
   diff_output, err_output = svntest.main.run_svn(1, 'diff', 
                                                  os.path.join(wc_dir, 
@@ -644,15 +664,15 @@ def diff_only_property_change(sbox):
   wc_dir = sbox.wc_dir
 
   expected_output = [
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Name: svn:eol-style\n",
-    "   + native\n",
-    "\n" ]
+    "\n".encode('utf-8'),
+    "Property changes on: iota\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: svn:eol-style\n".encode('utf-8'),
+    "   + native\n".encode('utf-8'),
+    "\n".encode('utf-8') ]
 
   expected_reverse_output = list(expected_output)
-  expected_reverse_output[4] = "   - native\n"
+  expected_reverse_output[4] = "   - native\n".encode('utf-8')
 
 
   current_dir = os.getcwd()
@@ -694,12 +714,12 @@ def dont_diff_binary_file(sbox):
   wc_dir = sbox.wc_dir
   
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
+  fp = open(theta_path, 'wb')
   fp.write(theta_contents)    # write png filedata into 'A/theta'
   fp.close()
   
@@ -744,7 +764,7 @@ def dont_diff_binary_file(sbox):
                                         1)  # verify props, too.
 
   # Make a local mod to the binary file.
-  svntest.main.file_append(theta_path, "some extra junk")
+  svntest.main.file_append(theta_path, "some extra junk".encode('utf-8'))
 
   # First diff use-case: plain old 'svn diff wc' will display any
   # local changes in the working copy.  (diffing working
@@ -753,6 +773,10 @@ def dont_diff_binary_file(sbox):
   re_nodisplay = re.compile('^Cannot display:')
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', wc_dir)
+
+  # Convert iSeries diff output to ebcdic
+  if sys.platform == 'AS/400':
+    stdout = ebcdic.os400_list_from_utf8(stdout)
 
   for line in stdout:
     if (re_nodisplay.match(line)):
@@ -764,6 +788,9 @@ def dont_diff_binary_file(sbox):
   # the first revision in the repository.
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r', '1', wc_dir)
+
+  if sys.platform == 'AS/400':
+    stdout = ebcdic.os400_list_from_utf8(stdout)
 
   for line in stdout:
     if (re_nodisplay.match(line)):
@@ -790,6 +817,9 @@ def dont_diff_binary_file(sbox):
   # repository trees.
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r', '2:3', wc_dir)
+
+  if sys.platform == 'AS/400':
+    stdout = ebcdic.os400_list_from_utf8(stdout)
 
   for line in stdout:
     if (re_nodisplay.match(line)):
@@ -833,7 +863,7 @@ def diff_head_of_moved_file(sbox):
   svntest.main.run_svn(None, 'mv', mu_path, new_mu_path)
 
   # Modify the file to ensure that the diff is non-empty.
-  svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.")
+  svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.".encode('utf-8'))
 
   svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'diff', '-r', 'HEAD', new_mu_path)
@@ -856,7 +886,7 @@ def diff_base_to_repos(sbox):
   mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
 
   # Make changes to iota, commit r2, update to HEAD (r2).
-  svntest.main.file_append(iota_path, "some rev2 iota text.\n")
+  svntest.main.file_append(iota_path, "some rev2 iota text.\n".encode('utf-8'))
 
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
@@ -874,13 +904,13 @@ def diff_base_to_repos(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak ('iota',
                        contents=\
-                       "This is the file 'iota'.\nsome rev2 iota text.\n")
+                       "This is the file 'iota'.\nsome rev2 iota text.\n".encode('utf-8'))
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
   
   # Now make another local mod to iota.
-  svntest.main.file_append(iota_path, "an iota local mod.\n")
+  svntest.main.file_append(iota_path, "an iota local mod.\n".encode('utf-8'))
 
   # If we run 'svn diff -r 1', we should see diffs that include *both*
   # the rev2 changes and local mods.  That's because the working files
@@ -888,6 +918,10 @@ def diff_base_to_repos(sbox):
   diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                         'diff',
                                                         '-r', '1', wc_dir)
+
+  # Convert iSeries diff output to ebcdic
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
 
   # Makes diff output look the same on all platforms.
   def strip_eols(lines):
@@ -921,6 +955,9 @@ def diff_base_to_repos(sbox):
     " This is the file 'iota'.\n",
     "-some rev2 iota text.\n"]
 
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+
   if strip_eols(diff_output) != strip_eols(expected_output_lines):
     raise svntest.Failure
 
@@ -933,6 +970,9 @@ def diff_base_to_repos(sbox):
   diff_output2, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                          'diff', '-r', '2:1',
                                                          wc_dir)
+
+  if sys.platform == 'AS/400':
+    diff_output2 = ebcdic.os400_list_from_utf8(diff_output2)
 
   diff_output[2:4] = []
   diff_output2[2:4] = []
@@ -950,6 +990,10 @@ def diff_base_to_repos(sbox):
                                                          '-r', '1:BASE',
                                                          wc_dir)
 
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+    diff_output2 = ebcdic.os400_list_from_utf8(diff_output2)
+
   diff_output[2:4] = []
   diff_output2[2:4] = []
 
@@ -957,7 +1001,7 @@ def diff_base_to_repos(sbox):
     raise svntest.Failure
 
   # Now we schedule an addition and a deletion.
-  svntest.main.file_append(newfile_path, "Contents of newfile\n")
+  svntest.main.file_append(newfile_path, "Contents of newfile\n".encode('utf-8'))
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None, 'rm', mu_path)
 
@@ -987,6 +1031,12 @@ def diff_base_to_repos(sbox):
   diff_output4, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                          'diff', '-r',
                                                          'BASE:1', wc_dir)
+
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+    diff_output2 = ebcdic.os400_list_from_utf8(diff_output2)
+    diff_output3 = ebcdic.os400_list_from_utf8(diff_output3)
+    diff_output4 = ebcdic.os400_list_from_utf8(diff_output4)
 
   diff_output[2:4] = []
   diff_output2[2:4] = []
@@ -1020,9 +1070,9 @@ def diff_base_to_repos(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
-                      contents="This is the file 'iota'.\n" + \
-                      "some rev2 iota text.\nan iota local mod.\n")
-  expected_disk.add({'A/D/newfile' : Item("Contents of newfile\n")})
+                      contents="This is the file 'iota'.\n".encode('utf-8') + \
+                      "some rev2 iota text.\nan iota local mod.\n".encode('utf-8'))
+  expected_disk.add({'A/D/newfile' : Item("Contents of newfile\n".encode('utf-8'))})
   expected_disk.remove ('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
@@ -1042,6 +1092,10 @@ def diff_base_to_repos(sbox):
   diff_output2, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                          'diff', '-r',
                                                          'BASE:2', wc_dir)
+
+  if sys.platform == 'AS/400':
+    diff_output = ebcdic.os400_list_from_utf8(diff_output)
+    diff_output2 = ebcdic.os400_list_from_utf8(diff_output2)
 
   # to do the comparison, remove all output lines starting with +++ or ---
   re_infoline = re.compile('^(\+\+\+|---).*$')
@@ -1074,7 +1128,7 @@ def diff_deleted_in_head(sbox):
   mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
 
   # Make a change to mu, commit r2, update.
-  svntest.main.file_append(mu_path, "some rev2 mu text.\n")
+  svntest.main.file_append(mu_path, "some rev2 mu text.\n".encode('utf-8'))
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -1090,7 +1144,7 @@ def diff_deleted_in_head(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak ('A/mu',
-                       contents="This is the file 'mu'.\nsome rev2 mu text.\n")
+                       contents="This is the file 'mu'.\nsome rev2 mu text.\n".encode('utf-8'))
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -1218,15 +1272,15 @@ def diff_branches(sbox):
   A_alpha = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
   A2_alpha = os.path.join(sbox.wc_dir, 'A2', 'B', 'E', 'alpha')
 
-  svntest.main.file_append(A_alpha, "\nfoo\n")
+  svntest.main.file_append(A_alpha, "\nfoo\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', sbox.wc_dir)
 
-  svntest.main.file_append(A2_alpha, "\nbar\n")
+  svntest.main.file_append(A2_alpha, "\nbar\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', sbox.wc_dir)
 
-  svntest.main.file_append(A_alpha, "zig\n")
+  svntest.main.file_append(A_alpha, "zig\n".encode('utf-8'))
 
   # Compare repository file on one branch against repository file on
   # another branch
@@ -1264,7 +1318,7 @@ def diff_branches(sbox):
 
   # Compare identical files on different branches
   diff_output, err = svntest.actions.run_and_verify_svn(
-    None, [], [],
+    None, None, [],
     'diff', A_url + '/B/E/alpha@2', A2_url + '/B/E/alpha@3')
 
 
@@ -1287,15 +1341,15 @@ def diff_repos_and_wc(sbox):
   A_alpha = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
   A2_alpha = os.path.join(sbox.wc_dir, 'A2', 'B', 'E', 'alpha')
 
-  svntest.main.file_append(A_alpha, "\nfoo\n")
+  svntest.main.file_append(A_alpha, "\nfoo\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', sbox.wc_dir)
 
-  svntest.main.file_append(A2_alpha, "\nbar\n")
+  svntest.main.file_append(A2_alpha, "\nbar\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', sbox.wc_dir)
 
-  svntest.main.file_append(A_alpha, "zig\n")
+  svntest.main.file_append(A_alpha, "zig\n".encode('utf-8'))
 
   # Compare working file on one branch against repository file on
   # another branch
@@ -1333,8 +1387,8 @@ def diff_file_urls(sbox):
 
   # Put some different text into iota, and commit.
   os.remove(iota_path)
-  svntest.main.file_append(iota_path, "foo\nbar\nsnafu\n")
-  
+  svntest.main.file_append(iota_path, "foo\nbar\nsnafu\n".encode('utf-8'))
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', iota_path)
 
@@ -1353,7 +1407,7 @@ def diff_file_urls(sbox):
 
   # Now, make edits to one of the copies of iota, and commit.
   os.remove(iota_copy_path)
-  svntest.main.file_append(iota_copy_path, "foo\nsnafu\nabcdefg\nopqrstuv\n")
+  svntest.main.file_append(iota_copy_path, "foo\nsnafu\nabcdefg\nopqrstuv\n".encode('utf-8'))
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', iota_copy_path)
@@ -1392,7 +1446,7 @@ def diff_prop_change_local_edit(sbox):
                                      'ci', '-m', 'log msg', iota_path)
 
   # Make local edits to iota.
-  svntest.main.file_append(iota_path, "\nMore text.\n")
+  svntest.main.file_append(iota_path, "\nMore text.\n".encode('utf-8'))
 
   # diff r1:COMMITTED should show the property change but not the local edit.
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -1434,8 +1488,8 @@ def check_for_omitted_prefix_in_path_component(sbox):
 
 
   file_path = os.path.join(prefix_path, "test.txt")
-  f = open(file_path, "w")
-  f.write("Hello\nThere\nIota\n")
+  f = open(file_path, "wb")
+  f.write("Hello\nThere\nIota\n".encode('utf-8'))
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1451,8 +1505,8 @@ def check_for_omitted_prefix_in_path_component(sbox):
                                      'cp', '-m', 'log msg', prefix_url,
                                      other_prefix_url)
 
-  f = open(file_path, "w")
-  f.write("Hello\nWorld\nIota\n")
+  f = open(file_path, "wb")
+  f.write("Hello\nWorld\nIota\n".encode('utf-8'))
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1462,6 +1516,9 @@ def check_for_omitted_prefix_in_path_component(sbox):
                                                 'diff', prefix_url,
                                                 other_prefix_url)
 
+  if sys.platform == 'AS/400':
+    out = ebcdic.os400_list_from_utf8(out)
+
   src = extract_diff_path(out[2])
   dest = extract_diff_path(out[3])
 
@@ -1469,8 +1526,14 @@ def check_for_omitted_prefix_in_path_component(sbox):
   good_dest = ".../prefix_other/mytag"
 
   if ((src != good_src) or (dest != good_dest)):
-    print("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
-          (src, good_src, dest, good_dest))
+    if sys.platform('AS/400'):
+      print("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
+            (src, good_src, dest, good_dest))
+    else:
+      ebcdic.os400_spool_print("src is '" + src +
+                               "' instead of '" + good_src +
+                               "' and dest is '" + dest +
+                               "' instead of '" + good_dest + "'")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1485,12 +1548,9 @@ def diff_renamed_file(sbox):
   try:
     pi_path = os.path.join('A', 'D', 'G', 'pi')
     pi2_path = os.path.join('A', 'D', 'pi2')
-    open(pi_path, 'w').write("new pi")
+    open(pi_path, 'wb').write("new pi".encode('utf-8'))
 
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log msg')
-
-    svntest.main.file_append(pi_path, "even more pi")
+    svntest.main.file_append(pi_path, "even more pi".encode('utf-8'))
 
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log msg')
@@ -1506,7 +1566,7 @@ def diff_renamed_file(sbox):
                          'M') :
       raise svntest.Failure
 
-    svntest.main.file_append(pi2_path, "new pi")
+    svntest.main.file_append(pi2_path, "new pi".encode('utf-8'))
 
     # Repos->WC of the directory
     diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
@@ -1566,7 +1626,7 @@ def diff_within_renamed_dir(sbox):
     svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
                                      os.path.join('A', 'D', 'I'))
     # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
-    open(os.path.join('A', 'D', 'I', 'pi'), 'w').write("new pi")
+    open(os.path.join('A', 'D', 'I', 'pi'), 'wb').write("new pi".encode('utf-8'))
 
     # Check a repos->wc diff
     diff_output, err_output = svntest.main.run_svn(None, 'diff',
@@ -1652,19 +1712,29 @@ def diff_keywords(sbox):
                                      'Id Rev Date',
                                      iota_path)
 
-  fp = open(iota_path, 'w')
-  fp.write("$Date$\n")
-  fp.write("$Id$\n")
-  fp.write("$Rev$\n")
-  fp.write("$Date::%s$\n" % (' ' * 80))
-  fp.write("$Id::%s$\n"   % (' ' * 80))
-  fp.write("$Rev::%s$\n"  % (' ' * 80))
+  fp = open(iota_path, 'wb')
+  # iSeries Python doesn't convert a handful of characters to utf-8 correctly,
+  # '$' among them.  So we use a custom conversion functions here.
+  if not sys.platform == 'AS/400':
+    fp.write("$Date$\n")
+    fp.write("$Id$\n")
+    fp.write("$Rev$\n")
+    fp.write("$Date::%s$\n" % (' ' * 80))
+    fp.write("$Id::%s$\n"   % (' ' * 80))
+    fp.write("$Rev::%s$\n"  % (' ' * 80))
+  else:
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Date$\n"))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Id$\n"))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Rev$\n"))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Date::%s$\n" % (' ' * 80)))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Id::%s$\n"   % (' ' * 80)))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Rev::%s$\n"  % (' ' * 80)))
   fp.close()
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'keywords', sbox.wc_dir)
 
-  svntest.main.file_append(iota_path, "bar\n")
+  svntest.main.file_append(iota_path, "bar\n".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'added bar', sbox.wc_dir)
 
@@ -1691,13 +1761,21 @@ def diff_keywords(sbox):
 
   # Check fixed length keywords will show up
   # when the length of keyword has changed
-  fp = open(iota_path, 'w')
-  fp.write("$Date$\n")
-  fp.write("$Id$\n")
-  fp.write("$Rev$\n")
-  fp.write("$Date::%s$\n" % (' ' * 79))
-  fp.write("$Id::%s$\n"   % (' ' * 79))
-  fp.write("$Rev::%s$\n"  % (' ' * 79))
+  fp = open(iota_path, 'wb')
+  if not sys.platform == 'AS/400':
+    fp.write("$Date$\n")
+    fp.write("$Id$\n")
+    fp.write("$Rev$\n")
+    fp.write("$Date::%s$\n" % (' ' * 79))
+    fp.write("$Id::%s$\n"   % (' ' * 79))
+    fp.write("$Rev::%s$\n"  % (' ' * 79))
+  else:
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Date$\n"))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Id$\n"))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Rev$\n"))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Date::%s$\n" % (' ' * 79)))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Id::%s$\n"   % (' ' * 79)))
+    fp.write(ebcdic.os400_convert_string_to_utf8("$Rev::%s$\n"  % (' ' * 79)))
   fp.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1731,7 +1809,7 @@ def diff_force(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   
   # Append a line to iota and make it binary.
-  svntest.main.file_append(iota_path, "new line")
+  svntest.main.file_append(iota_path, "new line".encode('utf-8'))
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', iota_path)  
 
@@ -1753,7 +1831,7 @@ def diff_force(sbox):
                                         None, None, None, None, wc_dir)
 
   # Add another line, while keeping he file as binary.
-  svntest.main.file_append(iota_path, "another line")
+  svntest.main.file_append(iota_path, "another line".encode('utf-8'))
 
   # Commit creating rev 3.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1777,6 +1855,9 @@ def diff_force(sbox):
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r1:2', iota_path,
                                         '--force')
+  # Convert diff output to ebcdic
+  if sys.platform == 'AS/400':
+    stdout = ebcdic.os400_list_from_utf8(stdout)
 
   for line in stdout:
     if (re_nodisplay.match(line)):
@@ -1785,12 +1866,18 @@ def diff_force(sbox):
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r2:1', iota_path,
                                         '--force')
 
+  if sys.platform == 'AS/400':
+    stdout = ebcdic.os400_list_from_utf8(stdout)
+
   for line in stdout:
     if (re_nodisplay.match(line)):
       raise svntest.Failure
 
   stdout, stderr = svntest.main.run_svn(None, 'diff', '-r2:3', iota_path,
                                         '--force')
+
+  if sys.platform == 'AS/400':
+    stdout = ebcdic.os400_list_from_utf8(stdout)
 
   for line in stdout:
     if (re_nodisplay.match(line)):
@@ -1875,23 +1962,22 @@ def diff_property_changes_to_base(sbox):
   wc_dir = sbox.wc_dir
 
   expected_output_r1_r2 = [
-    "\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Name: dirprop\n",
-    "   + r2value\n",
-    "\n",
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Name: fileprop\n",
-    "   + r2value\n",
-    "\n" ]
+    "\n".encode('utf-8'),
+    "Property changes on: A\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: dirprop\n".encode('utf-8'),
+    "   + r2value\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "Property changes on: iota\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: fileprop\n".encode('utf-8'),
+    "   + r2value\n".encode('utf-8'),
+    "\n".encode('utf-8') ]
 
   expected_output_r2_r1 = list(expected_output_r1_r2)
-  expected_output_r2_r1[4] = "   - r2value\n"
-  expected_output_r2_r1[10] = "   - r2value\n"
-
+  expected_output_r2_r1[4] = "   - r2value\n".encode('utf-8')
+  expected_output_r2_r1[10] = "   - r2value\n".encode('utf-8')
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -1960,14 +2046,14 @@ def diff_schedule_delete(sbox):
   os.chdir(wc_dir)
 
   try:
-    svntest.main.file_append('foo', "xxx")
+    svntest.main.file_append('foo', "xxx".encode('utf-8'))
     svntest.main.run_svn(None, 'add', 'foo')
     svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
     svntest.main.run_svn(None, 'rm', 'foo')
     expected_output = [
-    "Index: foo\n", 
-    "===================================================================\n"
+    "Index: foo\n".encode('utf-8'), 
+    "===================================================================\n".encode('utf-8')
     ]
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1' )
@@ -1982,29 +2068,29 @@ def diff_mime_type_changes(sbox):
   sbox.build()
 
   expected_output_r1_wc = [
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 1)\n",
-    "+++ iota\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'iota'.\n",
-    "+revision 2 text.\n" ]
+    "Index: iota\n".encode('utf-8'),
+    "===================================================================\n".encode('utf-8'),
+    "--- iota\t(revision 1)\n".encode('utf-8'),
+    "+++ iota\t(working copy)\n".encode('utf-8'),
+    "@@ -1 +1,2 @@\n".encode('utf-8'),
+    " This is the file 'iota'.\n".encode('utf-8'),
+    "+revision 2 text.\n".encode('utf-8') ]
 
   expected_output_wc_r1 = [
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(working copy)\n",
-    "+++ iota\t(revision 1)\n",
-    "@@ -1,2 +1 @@\n",
-    " This is the file 'iota'.\n",
-    "-revision 2 text.\n" ]
+    "Index: iota\n".encode('utf-8'),
+    "===================================================================\n".encode('utf-8'),
+    "--- iota\t(working copy)\n".encode('utf-8'),
+    "+++ iota\t(revision 1)\n".encode('utf-8'),
+    "@@ -1,2 +1 @@\n".encode('utf-8'),
+    " This is the file 'iota'.\n".encode('utf-8'),
+    "-revision 2 text.\n".encode('utf-8') ]
 
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
   try:
     # Append some text to iota (r2).
-    svntest.main.file_append('iota', "revision 2 text.\n")
+    svntest.main.file_append('iota', "revision 2 text.\n".encode('utf-8'))
 
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log_msg')
@@ -2055,20 +2141,20 @@ def diff_prop_change_local_propmod(sbox):
   sbox.build()
 
   expected_output_r2_wc = [
-    "\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Name: dirprop\n",
-    "   - r2value\n",
-    "   + workingvalue\n",
-    "\n",
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Name: fileprop\n",
-    "   - r2value\n",
-    "   + workingvalue\n",
-    "\n" ]
+    "\n".encode('utf-8'),
+    "Property changes on: A\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: dirprop\n".encode('utf-8'),
+    "   - r2value\n".encode('utf-8'),
+    "   + workingvalue\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "Property changes on: iota\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: fileprop\n".encode('utf-8'),
+    "   - r2value\n".encode('utf-8'),
+    "   + workingvalue\n".encode('utf-8'),
+    "\n".encode('utf-8') ]
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)

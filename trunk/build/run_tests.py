@@ -164,11 +164,7 @@ class TestHarness:
 
       qshcmd = "PYTHON233/PYTHON PROGRAM('" + prog + "') PARM('--verbose')"
       parm_str = "'--verbose' '--cleanup'"
-      failed, test_out, test_err = ebcdic.os400_py_via_qshsys(prog, cmdline)
-
-      for line in test_out:
-        # Send output to log file, skipping leading space
-        print >> self.log, line[1:],
+      result, solines, selines = ebcdic.os400_py_via_qshsys(prog, cmdline)
 
       sys.stdout.flush()
       sys.stderr.flush()
@@ -194,12 +190,15 @@ class TestHarness:
       else:
         os.chdir(old_cwd)
 
-      failed = 0
-
-      for line in solines:
+    failed = 0
+    for line in solines:
+      # Send output to log file, skipping leading space on .py tests
+      if progbase[-3:] == '.py':
+        print >> self.log, line[1:],
+      else:
         print >> self.log, line,
-        if line.find('FAIL:  ') != -1 and line.find('XFAIL:  ') == -1:
-          failed = 1
+      if line.find('FAIL:  ') != -1 and line.find('XFAIL:  ') == -1:
+        failed = 1    
 
     if failed:
       print 'FAILURE'

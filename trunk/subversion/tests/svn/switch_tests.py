@@ -76,9 +76,9 @@ def get_routine_disk_state(wc_dir):
   # A/B/* no longer exist, but have been replaced by copies of A/D/G/*
   disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   disk.add({
-    'A/B/pi' : Item("This is the file 'pi'.\n"),
-    'A/B/rho' : Item("This is the file 'rho'.\n"),
-    'A/B/tau' : Item("This is the file 'tau'.\n"),
+    'A/B/pi' : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'A/B/rho' : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'A/B/tau' : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
 
   return disk
@@ -168,11 +168,11 @@ def commit_routine_switching(wc_dir, verify):
   Z_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
 
-  svntest.main.file_append(iota_path, "apple")
-  svntest.main.file_append(Bpi_path, "melon")
-  svntest.main.file_append(Gpi_path, "banana")
+  svntest.main.file_append(iota_path, "apple".encode('utf-8'))
+  svntest.main.file_append(Bpi_path, "melon".encode('utf-8'))
+  svntest.main.file_append(Gpi_path, "banana".encode('utf-8'))
   os.mkdir(Z_path)
-  svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n")
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n".encode('utf-8'))
   svntest.main.run_svn(None, 'add', Z_path)
 
   # Try to commit.  We expect this to fail because, if all the
@@ -289,15 +289,15 @@ def full_update(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n".encode('utf-8')),
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -398,12 +398,11 @@ def update_switched_things(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
-
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -456,11 +455,11 @@ def rev_update_switched_things(sbox):
 
   # Create expected disk tree
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
     
   # Create expected status tree for the update.
@@ -568,9 +567,9 @@ def relocate_deleted_missing_copied(sbox):
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D/H2'       : Item(),
-    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
-    'A/D/H2/omega' : Item("This is the file 'omega'.\n"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n".encode('utf-8')),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
@@ -684,7 +683,7 @@ def nonrecursive_switching(sbox):
   svntest.main.run_svn(None, 'mkdir', '-m', '', branch_url)
   svntest.main.run_svn(None, 'cp', '-m', '', trunk_url, version1_url)
   svntest.main.run_svn(None, 'up', wc1_dir)
-  svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.\n")
+  svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.\n".encode('utf-8'))
   svntest.main.run_svn(None, 'add', wc1_new_file)
   svntest.main.run_svn(None, 'ci', '-m', '', wc1_dir)
 
@@ -742,7 +741,7 @@ def failed_anchor_is_target(sbox):
 
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   psi_path = os.path.join(H_path, 'psi')
-  svntest.main.file_append(psi_path, "more text")
+  svntest.main.file_append(psi_path, "more text".encode('utf-8'))
 
   # This switch leaves psi unversioned, because of the local mods,
   # then fails because it tries to add a directory of the same name.
@@ -817,7 +816,7 @@ def bad_intermediate_urls(sbox):
   # Now, we'll drop a conflicting path under the root.
   A_path = os.path.join(wc_dir, 'A')
   A_Z_path = os.path.join(A_path, 'Z')
-  svntest.main.file_append(A_Z_path, 'Look, Mom, no ... switch success.')
+  svntest.main.file_append(A_Z_path, 'Look, Mom, no ... switch success.'.encode('utf-8'))
 
   # This switch should fail for reasons of obstruction.
   out, err = svntest.main.run_svn(1, 'switch',
@@ -864,7 +863,7 @@ def obstructed_switch(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
-  svntest.main.file_append(alpha_path, "hello")
+  svntest.main.file_append(alpha_path, "hello".encode('utf-8'))
   out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
   for line in err:
     if line.find("object of the same name already exists") != -1:
@@ -899,10 +898,10 @@ def commit_mods_below_switch(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/C/E'       : Item(),
-    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
-    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n".encode('utf-8')),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n".encode('utf-8')),
     'A/C/F'       : Item(),
-    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/C', switched='S')

@@ -17,7 +17,10 @@
 ######################################################################
 
 # General modules
-import os.path
+import os.path, sys
+
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # Our testing module
 import svntest
@@ -49,7 +52,7 @@ def svnversion_test(sbox):
                                             [ "1S\n" ], [])
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append (mu_path, 'appended mu text')
+  svntest.main.file_append (mu_path, 'appended mu text'.encode('utf-8'))
 
   # Text modified
   svntest.actions.run_and_verify_svnversion("Modified text", wc_dir, repo_url,
@@ -87,7 +90,7 @@ def svnversion_test(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
+                      + 'appended mu text'.encode('utf-8'))
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
   if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
@@ -132,7 +135,14 @@ def ignore_externals(sbox):
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
   externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
-  tmp_f = os.tempnam(wc_dir, 'tmp')
+  if sys.platform != 'AS/400':
+    tmp_f = os.tempnam(wc_dir, 'tmp')
+  else:
+    externals_desc = externals_desc.encode('utf-8')
+    import tempfile
+    handle, tmp_f = tempfile.mkstemp('', 'tmp', wc_dir)
+    os.close(handle)
+    ebcdic.os400_tagtree(tmp_f, 1208, True)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn("", None, [],
                                      'pset',

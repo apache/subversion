@@ -17,7 +17,10 @@
 ######################################################################
 
 # General modules
-import os
+import os, sys
+
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # Our testing module
 import svntest
@@ -42,7 +45,7 @@ def blame_space_in_name(sbox):
   sbox.build()
   
   file_path = os.path.join(sbox.wc_dir, 'space in name')
-  svntest.main.file_append(file_path, "Hello\n")
+  svntest.main.file_append(file_path, "Hello\n".encode('utf-8'))
   svntest.main.run_svn(None, 'add', file_path)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
@@ -59,7 +62,7 @@ def blame_binary(sbox):
 
   # First, make a new revision of iota.
   iota = os.path.join(wc_dir, 'iota')
-  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.file_append(iota, "New contents for iota\n".encode('utf-8'))
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -67,7 +70,7 @@ def blame_binary(sbox):
 
   # Then do it again, but this time we set the mimetype to binary.
   iota = os.path.join(wc_dir, 'iota')
-  svntest.main.file_append(iota, "More new contents for iota\n")
+  svntest.main.file_append(iota, "More new contents for iota\n".encode('utf-8'))
   svntest.main.run_svn(None, 'propset', 'svn:mime-type', 'image/jpeg', iota)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
@@ -76,7 +79,7 @@ def blame_binary(sbox):
 
   # Once more, but now let's remove that mimetype.
   iota = os.path.join(wc_dir, 'iota')
-  svntest.main.file_append(iota, "Still more new contents for iota\n")
+  svntest.main.file_append(iota, "Still more new contents for iota\n".encode('utf-8'))
   svntest.main.run_svn(None, 'propdel', 'svn:mime-type', iota)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
@@ -145,8 +148,12 @@ def blame_in_xml(sbox):
                                                      '--xml', '-r1:2')
   date1 = None
   date2 = None
+
+  if sys.platform == 'AS/400':
+    line = ebcdic.os400_split_utf8_lines(line)
+
   for line in output:
-    if line.find("<date>") >= 0:
+    if line.find("<date>".encode('utf-8')) >= 0:
       if date1 is None:
         date1 = line
         continue
@@ -179,6 +186,15 @@ def blame_in_xml(sbox):
               '</target>\n',
               '</blame>\n']
 
+  if sys.platform == 'AS/400':
+    # Due to various AS/400 workarounds, the output returned by
+    # svntest.actions.run_and_verify_svn always has an empty string
+    #as the last line, which also need to be accounted for.
+    template.append("")
+
+  for i in range(0, len(template)):
+    template[i] = template[i].encode('utf-8')
+
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'blame', file_path,
                                                      '--xml')
@@ -201,7 +217,8 @@ def blame_on_unknown_revision(sbox):
   file_path = os.path.join(wc_dir, file_name)
 
   for i in range (1,3):
-    svntest.main.file_append(file_path, "\nExtra line %d" % (i))
+    line_to_append = "\nExtra line %d" % (i)
+    svntest.main.file_append(file_path, line_to_append.encode('utf-8'))
     expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
       })
@@ -213,7 +230,7 @@ def blame_on_unknown_revision(sbox):
                                                      'blame', file_path,
                                                      '-rHEAD:HEAD')
 
-  if output[0].find(" - This is the file 'iota'.") == -1:
+  if output[0].find(" - This is the file 'iota'.".encode('utf-8')) == -1:
     raise svntest.Failure
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
@@ -221,7 +238,7 @@ def blame_on_unknown_revision(sbox):
                                                      '--verbose',
                                                      '-rHEAD:HEAD')
 
-  if output[0].find(" - This is the file 'iota'.") == -1:
+  if output[0].find(" - This is the file 'iota'.".encode('utf-8')) == -1:
     raise svntest.Failure
 
 

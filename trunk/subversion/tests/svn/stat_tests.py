@@ -47,7 +47,7 @@ def status_unversioned_file_in_current_dir(sbox):
   try:
     os.chdir(wc_dir)
 
-    svntest.main.file_append('foo', 'a new file')
+    svntest.main.file_append('foo', 'a new file'.encode('utf-8'))
 
     svntest.actions.run_and_verify_svn(None, [ "?      foo\n" ], [],
                                        'stat', 'foo')
@@ -72,7 +72,7 @@ def status_update_with_nested_adds(sbox):
   newdir_path = os.path.join(wc_dir, 'newdir')
   newfile_path = os.path.join(wc_dir, 'newdir', 'newfile')
   os.makedirs(newdir_path)
-  svntest.main.file_append (newfile_path, 'new text')
+  svntest.main.file_append (newfile_path, 'new text'.encode('utf-8'))
 
   # Schedule newdir and newfile for addition (note that the add is recursive)
   svntest.main.run_svn(None, 'add', newdir_path)
@@ -280,7 +280,7 @@ def status_with_new_files_pending(sbox):
 
   os.chdir(wc_dir)
   try:
-    svntest.main.file_append('newfile', 'this is a new file')
+    svntest.main.file_append('newfile', 'this is a new file'.encode('utf-8'))
     svntest.main.run_svn(None, 'add', 'newfile')
     svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
     svntest.main.run_svn(None, 'up', '-r', '1')
@@ -318,19 +318,33 @@ def status_for_unignored_file(sbox):
   try:
     # use a temp file to set properties with wildcards in their values
     # otherwise Win32/VS2005 will expand them
-    svntest.main.file_append ('proptmp', 'new*')
-    svntest.main.file_append('newfile', 'this is a new file')
+    svntest.main.file_append ('proptmp', 'new*'.encode('utf-8'))
+    svntest.main.file_append('newfile', 'this is a new file'.encode('utf-8'))
     os.makedirs('newdir')
     svntest.main.run_svn(None, 'propset', 'svn:ignore', '-F', 'proptmp', '.')
     os.remove('proptmp')
 
-    # status on the directory with --no-ignore
-    svntest.actions.run_and_verify_svn(None,
-                                       ['I      newdir\n',
-                                        'I      newfile\n',
-                                        ' M     .\n'],
-                                       [],
-                                       'status', '--no-ignore', '.')
+    # apr_dir_open on the iSeries returns a apr_dir_t structure which is
+    # operated on by apr_dir_read to get the contents of the directory.
+    # Problem is that, as the header comment says "...No ordering is
+    # guaranteed for the entries read".  And you guessed it, the iSeries
+    # differs from apparently every other platform on earth.
+    if not sys.platform == 'AS/400':
+      # status on the directory with --no-ignore
+      svntest.actions.run_and_verify_svn(None,
+                                         ['I      newdir\n',
+                                          'I      newfile\n',
+                                          ' M     .\n'],
+                                         [],
+                                         'status', '--no-ignore', '.')
+    else:
+      # status on the directory with --no-ignore
+      svntest.actions.run_and_verify_svn(None,
+                                         ['I      newfile\n',
+                                          'I      newdir\n',
+                                          ' M     .\n'],
+                                         [],
+                                         'status', '--no-ignore', '.')
 
     # status specifying the file explicitly on the command line
     svntest.actions.run_and_verify_svn(None,
@@ -408,7 +422,7 @@ def status_file_needs_update(sbox):
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
-  svntest.main.file_append('crontab.root', 'New file crontab.root.\n')
+  svntest.main.file_append('crontab.root', 'New file crontab.root.\n'.encode('utf-8'))
   svntest.main.run_svn(None, 'add', 'crontab.root')
   svntest.main.run_svn(None, 'ci', '-m', 'log msg')
   os.chdir(was_cwd)
@@ -417,7 +431,7 @@ def status_file_needs_update(sbox):
 
   os.chdir(was_cwd)
   os.chdir(wc_dir)
-  svntest.main.file_append('crontab.root', 'New line in crontab.root.\n')
+  svntest.main.file_append('crontab.root', 'New line in crontab.root.\n'.encode('utf-8'))
   svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
   # The `svntest.actions.run_and_verify_*_status' routines all pass
@@ -471,13 +485,13 @@ def status_uninvited_parent_directory(sbox):
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
-  svntest.main.file_append('newfile', 'New file.\n')
+  svntest.main.file_append('newfile', 'New file.\n'.encode('utf-8'))
   svntest.main.run_svn(None, 'add', 'newfile')
   svntest.main.run_svn(None, 'ci', '-m', 'log msg')
 
   os.chdir(was_cwd)
   os.chdir(other_wc)
-  svntest.main.file_append('newfile', 'New file.\n')
+  svntest.main.file_append('newfile', 'New file.\n'.encode('utf-8'))
   svntest.main.run_svn(None, 'add', 'newfile')
 
   os.chdir(was_cwd)
@@ -567,7 +581,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   pre_text_time = get_text_timestamp(wc_path)
 
   # Modifying the text does not affect text-time
-  svntest.main.file_append (wc_path, "some mod")
+  svntest.main.file_append (wc_path, "some mod".encode('utf-8'))
   expected_status.tweak(status_path, status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   text_time = get_text_timestamp(wc_path)
@@ -720,7 +734,7 @@ def status_on_partially_nonrecursive_wc(sbox):
   # Commit a change to A/D/G/rho.  This will be our equivalent of
   # whatever change it was that happened between r213 and HEAD in the
   # reproduction recipe.  For us, it's r2.
-  svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n')
+  svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n'.encode('utf-8'))
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho)
 
   # Make the working copy weird in the right way, then try status -u.
@@ -763,42 +777,81 @@ def status_in_xml(sbox):
 
   file_name = "iota"
   file_path = os.path.join (wc_dir, file_name)
-  svntest.main.file_append(file_path, "test status --xml\n")
+  svntest.main.file_append(file_path, "test status --xml\n".encode('utf-8'))
 
   # Retrieve last changed date from svn log
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'log', file_path,
                                                      '--xml', '-rHEAD')
-  info_msg = "<date>"
+  info_msg = "<date>".encode('utf-8')
   for line in output:
     if line.find(info_msg) >= 0:
-      time_str = line[:len(line)]
-      break
+      if not sys.platform == 'AS/400':
+        time_str = line[:len(line)]
+      else:
+        # Utf-8 output from --xml option will come as one long line
+        # so pick out the desired <date> element.
+        time_str = line[line.find("<date>".encode('utf-8')):line.find("</date>".encode('utf-8')) + len("</date>")].decode('utf-8').encode('cp500') + '\n'
+        break
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   item=\"modified\"\n",
-              "   revision=\"1\">\n",
-              "<commit\n",
-              "   revision=\"1\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              time_str,
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-              "<against\n",
-              "   revision=\"1\"/>\n",
-              "</target>\n",
-              "</status>\n",
-             ]
+  if sys.platform != 'AS/400':
+    template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+                "<status>\n",
+                "<target\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<entry\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<wc-status\n",
+                "   props=\"none\"\n",
+                "   item=\"modified\"\n",
+                "   revision=\"1\">\n",
+                "<commit\n",
+                "   revision=\"1\">\n",
+                "<author>%s</author>\n" % svntest.main.wc_author,
+                time_str,
+                "</commit>\n",
+                "</wc-status>\n",
+                "</entry>\n",
+                "<against\n",
+                "   revision=\"1\"/>\n",
+                "</target>\n",
+                "</status>\n",
+               ]
+  else:
+    # Due to APR hashing differences on the iSeries the order of the items in
+    # the wc-status element vary from other platforms and the expected output
+    # template below reflects these differences.  Also, due to various AS/400
+    # workarounds, the output returned by svntest.actions.run_and_verify_svn
+    # always has an empty string as the last line, which also need to be
+    # accounted for.
+    template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+                "<status>\n",
+                "<target\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<entry\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<wc-status\n",
+                "   revision=\"1\"\n",
+                "   item=\"modified\"\n",
+                "   props=\"none\">\n",
+                "<commit\n",
+                "   revision=\"1\">\n",
+                "<author>%s</author>\n" % svntest.main.wc_author,
+                time_str,
+                "</commit>\n",
+                "</wc-status>\n",
+                "</entry>\n",
+                "<against\n",
+                "   revision=\"1\"/>\n",
+                "</target>\n",
+                "</status>\n",
+                "",
+               ]
+
+  for i in range(0, len(template)):
+    template[i] = template[i].encode('utf-8')
 
   output, error = svntest.actions.run_and_verify_svn (None, None, [],
                                                       'status', file_path,
@@ -806,10 +859,15 @@ def status_in_xml(sbox):
 
   for i in range(0, len(output)):
     if output[i] != template[i]:
-      print "ERROR: expected:", template[i], "actual:", output[i]
+      print 'line no: ' + str(i)
+      print "ERROR: expected:",
+      print template[i].decode('utf-8').encode('cp500'),
+      print "actual:",
+      print output[i]
+      #print output[i].decode('utf-8').encode('cp500')
       raise svntest.Failure
 
-#----------------------------------------------------------------------  
+#----------------------------------------------------------------------
 
 
 ########################################################################

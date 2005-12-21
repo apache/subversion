@@ -83,9 +83,9 @@ def make_standard_slew_of_changes(wc_dir):
   svntest.main.run_svn(None, 'propset', 'foo2', 'bar2', os.path.join('A', 'D'))
   
   # Add three files
-  svntest.main.file_append(os.path.join('A', 'B', 'E', 'bloo'), "hi")
-  svntest.main.file_append(os.path.join('A', 'D', 'H', 'gloo'), "hello")
-  svntest.main.file_append(os.path.join('Q', 'floo'), "yo")
+  svntest.main.file_append(os.path.join('A', 'B', 'E', 'bloo'), "hi".encode('utf-8'))
+  svntest.main.file_append(os.path.join('A', 'D', 'H', 'gloo'), "hello".encode('utf-8'))
+  svntest.main.file_append(os.path.join('Q', 'floo'), "yo".encode('utf-8'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E', 'bloo'))
   svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'gloo'))
   svntest.main.run_svn(None, 'add', os.path.join('Q', 'floo'))
@@ -100,8 +100,8 @@ def make_standard_slew_of_changes(wc_dir):
   svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'chi'))
   
   # Make textual mods to two files
-  svntest.main.file_append(os.path.join('A', 'B', 'lambda'), "new ltext")
-  svntest.main.file_append(os.path.join('A', 'D', 'H', 'omega'), "new otext")
+  svntest.main.file_append(os.path.join('A', 'B', 'lambda'), "new ltext".encode('utf-8'))
+  svntest.main.file_append(os.path.join('A', 'D', 'H', 'omega'), "new otext".encode('utf-8'))
   
   # Make property mods to three files
   svntest.main.run_svn(None, 'propset', 'blue', 'azul',
@@ -242,11 +242,11 @@ def commit_multiple_targets(sbox):
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
-  svntest.main.file_append (lambda_path, 'new appended text for lambda')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
-  svntest.main.file_append (pi_path, 'new appended text for pi')
-  svntest.main.file_append (omega_path, 'new appended text for omega')
-  svntest.main.file_append (psi_path, 'new appended text for psi')
+  svntest.main.file_append (lambda_path, 'new appended text for lambda'.encode('utf-8'))
+  svntest.main.file_append (rho_path, 'new appended text for rho'.encode('utf-8'))
+  svntest.main.file_append (pi_path, 'new appended text for pi'.encode('utf-8'))
+  svntest.main.file_append (omega_path, 'new appended text for omega'.encode('utf-8'))
+  svntest.main.file_append (psi_path, 'new appended text for psi'.encode('utf-8'))
 
   # Just for kicks, add a property to A/D/G as well.  We'll make sure
   # that it *doesn't* get committed.
@@ -299,11 +299,11 @@ def commit_multiple_targets_2(sbox):
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
-  svntest.main.file_append (lambda_path, 'new appended text for lambda')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
-  svntest.main.file_append (pi_path, 'new appended text for pi')
-  svntest.main.file_append (omega_path, 'new appended text for omega')
-  svntest.main.file_append (psi_path, 'new appended text for psi')
+  svntest.main.file_append (lambda_path, 'new appended text for lambda'.encode('utf-8'))
+  svntest.main.file_append (rho_path, 'new appended text for rho'.encode('utf-8'))
+  svntest.main.file_append (pi_path, 'new appended text for pi'.encode('utf-8'))
+  svntest.main.file_append (omega_path, 'new appended text for omega'.encode('utf-8'))
+  svntest.main.file_append (psi_path, 'new appended text for psi'.encode('utf-8'))
 
   # Just for kicks, add a property to A/D/G as well.  We'll make sure
   # that it *doesn't* get committed.
@@ -473,7 +473,7 @@ def commit_unversioned_thing(sbox):
   wc_dir = sbox.wc_dir
 
   # Create an unversioned file in the wc.
-  svntest.main.file_append(os.path.join(wc_dir, 'blorg'), "nothing to see")
+  svntest.main.file_append(os.path.join(wc_dir, 'blorg'), "nothing to see".encode('utf-8'))
 
   # Commit a non-existent file and *expect* failure:
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -500,7 +500,7 @@ def nested_dir_replacements(sbox):
   svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D', 'H'))
                        
   # For kicks, add new file A/D/bloo.
-  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
+  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi".encode('utf-8'))
   svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
   
   # Verify pre-commit status:
@@ -694,7 +694,7 @@ def hudson_part_1_variation_2(sbox):
 
   # Now gamma should be marked as `deleted' under the hood.
   # Go ahead and re-add gamma, so that is *also* scheduled for addition.
-  svntest.main.file_append(gamma_path, "added gamma")
+  svntest.main.file_append(gamma_path, "added gamma".encode('utf-8'))
   svntest.main.run_svn(None, 'add', gamma_path)
 
   # For sanity, examine status: it should show a revision 2 tree with
@@ -836,13 +836,13 @@ def hudson_part_2_1(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/G/chi' : Item("This is the file 'chi'.\n"),
+    'A/D/G/chi' : Item("This is the file 'chi'.\n".encode('utf-8')),
     })
   expected_disk.add({
-    'A/D/G/omega' : Item("This is the file 'omega'.\n"),
+    'A/D/G/omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
     })
   expected_disk.add({
-    'A/D/G/psi' : Item("This is the file 'psi'.\n"),
+    'A/D/G/psi' : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -865,24 +865,24 @@ def hook_test(sbox):
   start_commit_hook = svntest.main.get_start_commit_hook_path (repo_dir)
   svntest.main.file_append (start_commit_hook,
                             """#!/bin/sh
-                            echo $1""")
+                            echo $1""".encode('utf-8'))
   os.chmod (start_commit_hook, 0755)
 
   pre_commit_hook = svntest.main.get_pre_commit_hook_path (repo_dir)
   svntest.main.file_append (pre_commit_hook,
                             """#!/bin/sh
-                            echo $1 $2 """)
+                            echo $1 $2 """.encode('utf-8'))
   os.chmod (pre_commit_hook, 0755)
 
   post_commit_hook = svntest.main.get_post_commit_hook_path (repo_dir)
   svntest.main.file_append (post_commit_hook,
                             """#!/bin/sh
-                            echo $1 $2 """)
+                            echo $1 $2 """.encode('utf-8'))
   os.chmod (post_commit_hook, 0755)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join (wc_dir, "iota")
-  svntest.main.file_append (iota_path, "More stuff in iota")
+  svntest.main.file_append (iota_path, "More stuff in iota".encode('utf-8'))
 
   # Now, commit and examine the output (we happen to know that the
   # filesystem will report an absolute path because that's the way the
@@ -919,8 +919,8 @@ def merge_mixed_revisions(sbox):
   # Hoo, what a buildup of state!
   
   # 1. echo "moo" >> iota; echo "moo" >> A/D/H/chi; svn ci
-  svntest.main.file_append(iota_path, "moo")
-  svntest.main.file_append(chi_path, "moo")
+  svntest.main.file_append(iota_path, "moo".encode('utf-8'))
+  svntest.main.file_append(chi_path, "moo".encode('utf-8'))
 
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
@@ -946,9 +946,9 @@ def merge_mixed_revisions(sbox):
     'A/D/H/psi' : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.wc.State('', {
-    'omega' : Item("This is the file 'omega'.\n"),
-    'chi' : Item("This is the file 'chi'.\nmoo"),
-    'psi' : Item("This is the file 'psi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
+    'chi' : Item("This is the file 'chi'.\nmoo".encode('utf-8')),
+    'psi' : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
   expected_output = svntest.wc.State(wc_dir, { })
   svntest.actions.run_and_verify_update (H_path,
@@ -958,7 +958,7 @@ def merge_mixed_revisions(sbox):
 
 
   # 3. echo "moo" >> iota; svn ci iota
-  svntest.main.file_append(iota_path, "moo2")
+  svntest.main.file_append(iota_path, "moo2".encode('utf-8'))
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
     })
@@ -976,7 +976,7 @@ def merge_mixed_revisions(sbox):
 
 
   # 4. echo "moo" >> A/D/H/chi; svn ci A/D/H/chi
-  svntest.main.file_append(chi_path, "moo3")
+  svntest.main.file_append(chi_path, "moo3".encode('utf-8'))
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/chi' : Item(verb='Sending'),
     })
@@ -992,7 +992,7 @@ def merge_mixed_revisions(sbox):
                                          wc_dir)
 
   # 5. echo "moo" >> iota; svn ci iota
-  svntest.main.file_append(iota_path, "moomoo")
+  svntest.main.file_append(iota_path, "moomoo".encode('utf-8'))
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
     })
@@ -1033,8 +1033,8 @@ def merge_mixed_revisions(sbox):
   # At this point, we're ready to modify omega and iota, and commit
   # from the top.  We should *not* get a conflict!
 
-  svntest.main.file_append(iota_path, "finalmoo")
-  svntest.main.file_append(omega_path, "finalmoo")
+  svntest.main.file_append(iota_path, "finalmoo".encode('utf-8'))
+  svntest.main.file_append(omega_path, "finalmoo".encode('utf-8'))
 
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
@@ -1082,14 +1082,14 @@ def commit_uri_unsafe(sbox):
 
   os.mkdir(hash_dir)
   os.mkdir(nasty_dir)
-  svntest.main.file_append(space_path, "This path has a space in it.")
-  svntest.main.file_append(bang_path, "This path has a bang in it.")
-  svntest.main.file_append(bracket_path, "This path has a bracket in it.")
-  svntest.main.file_append(brace_path, "This path has a brace in it.")
-  svntest.main.file_append(angle_path, "This path has angle brackets in it.")
-  svntest.main.file_append(paren_path, "This path has parentheses in it.")
-  svntest.main.file_append(percent_path, "This path has a percent in it.")
-  svntest.main.file_append(nasty_path, "This path has all sorts of ick in it.")
+  svntest.main.file_append(space_path, "This path has a space in it.".encode('utf-8'))
+  svntest.main.file_append(bang_path, "This path has a bang in it.".encode('utf-8'))
+  svntest.main.file_append(bracket_path, "This path has a bracket in it.".encode('utf-8'))
+  svntest.main.file_append(brace_path, "This path has a brace in it.".encode('utf-8'))
+  svntest.main.file_append(angle_path, "This path has angle brackets in it.".encode('utf-8'))
+  svntest.main.file_append(paren_path, "This path has parentheses in it.".encode('utf-8'))
+  svntest.main.file_append(percent_path, "This path has a percent in it.".encode('utf-8'))
+  svntest.main.file_append(nasty_path, "This path has all sorts of ick in it.".encode('utf-8'))
 
   add_list = [hash_dir,
               nasty_dir, # not xml-safe
@@ -1147,8 +1147,8 @@ def commit_deleted_edited(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # Edit the files.
-  svntest.main.file_append(iota_path, "This file has been edited.")
-  svntest.main.file_append(mu_path, "This file has been edited.")
+  svntest.main.file_append(iota_path, "This file has been edited.".encode('utf-8'))
+  svntest.main.file_append(mu_path, "This file has been edited.".encode('utf-8'))
 
   # Schedule the files for removal.
   svntest.main.run_svn(None, 'remove', '--force', iota_path)
@@ -1200,7 +1200,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   bloo_path = os.path.join(Q_path, 'bloo')
 
   os.mkdir(Q_path)
-  svntest.main.file_append(bloo_path, "New contents.")
+  svntest.main.file_append(bloo_path, "New contents.".encode('utf-8'))
   svntest.main.run_svn(None, 'add', Q_path)
   
   # Commit a regular added thing inside an added directory,
@@ -1242,7 +1242,7 @@ def commit_add_file_twice(sbox):
 
   # Create a file
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
-  svntest.main.file_append(gloo_path, "hello")
+  svntest.main.file_append(gloo_path, "hello".encode('utf-8'))
   svntest.main.run_svn(None, 'add', gloo_path)
 
   # Create expected output tree.
@@ -1271,7 +1271,7 @@ def commit_add_file_twice(sbox):
 
   # Create the file again
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
-  svntest.main.file_append(gloo_path, "hello")
+  svntest.main.file_append(gloo_path, "hello".encode('utf-8'))
   svntest.main.run_svn(None, 'add', gloo_path)
 
   # Commit and *expect* a failure:
@@ -1299,7 +1299,7 @@ def commit_from_long_dir(sbox):
   abs_wc_dir = os.path.join(was_dir, wc_dir)
   
   # something to commit
-  svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
+  svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota".encode('utf-8'))
 
   # Create expected output tree.
   expected_output = svntest.wc.State('', {
@@ -1337,7 +1337,7 @@ def commit_with_lock(sbox):
 
   D_path = os.path.join(wc_dir, 'A', 'D')
   gamma_path = os.path.join(D_path, 'gamma')
-  svntest.main.file_append(gamma_path, "modified gamma")
+  svntest.main.file_append(gamma_path, "modified gamma".encode('utf-8'))
   svntest.actions.lock_admin_dir(D_path)
 
   # this commit should fail
@@ -1420,10 +1420,10 @@ def failed_commit(sbox):
 
   # Make different changes in the two working copies
   iota_path = os.path.join (wc_dir, "iota")
-  svntest.main.file_append (iota_path, "More stuff in iota")
+  svntest.main.file_append (iota_path, "More stuff in iota".encode('utf-8'))
 
   other_iota_path = os.path.join (other_wc_dir, "iota")
-  svntest.main.file_append (other_iota_path, "More different stuff in iota")
+  svntest.main.file_append (other_iota_path, "More different stuff in iota".encode('utf-8'))
 
   # Commit both working copies. The second commit should fail.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
@@ -1470,9 +1470,9 @@ def commit_multiple_wc(sbox):
 
   # Modify both working copies
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, 'appended mu text')
+  svntest.main.file_append(mu_path, 'appended mu text'.encode('utf-8'))
   lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
-  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
+  svntest.main.file_append(lambda2_path, 'appended lambda2 text'.encode('utf-8'))
 
   # Verify modified status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1527,12 +1527,12 @@ def commit_nonrecursive(sbox):
   file4_path = os.path.join('dir1', 'dir2', 'file4')
 
   # Create the new files and directories.
-  svntest.main.file_append(os.path.join(wc_dir, file1_path), 'this is file1')
+  svntest.main.file_append(os.path.join(wc_dir, file1_path), 'this is file1'.encode('utf-8'))
   os.mkdir(os.path.join(wc_dir, dir1_path))
-  svntest.main.file_append(os.path.join(wc_dir, file2_path), 'this is file2')
-  svntest.main.file_append(os.path.join(wc_dir, file3_path), 'this is file3')
+  svntest.main.file_append(os.path.join(wc_dir, file2_path), 'this is file2'.encode('utf-8'))
+  svntest.main.file_append(os.path.join(wc_dir, file3_path), 'this is file3'.encode('utf-8'))
   os.mkdir(os.path.join(wc_dir, dir2_path))
-  svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
+  svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4'.encode('utf-8'))
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
@@ -1629,11 +1629,11 @@ def commit_nonrecursive(sbox):
 
   # Create the new files and directories.
   os.mkdir(os.path.join(wc_dir, dirA_path))
-  svntest.main.file_append(os.path.join(wc_dir, fileA_path), 'fileA')
-  svntest.main.file_append(os.path.join(wc_dir, fileB_path), 'fileB')
+  svntest.main.file_append(os.path.join(wc_dir, fileA_path), 'fileA'.encode('utf-8'))
+  svntest.main.file_append(os.path.join(wc_dir, fileB_path), 'fileB'.encode('utf-8'))
   os.mkdir(os.path.join(wc_dir, dirB_path))
-  svntest.main.file_append(os.path.join(wc_dir, fileC_path), 'fileC')
-  svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
+  svntest.main.file_append(os.path.join(wc_dir, fileC_path), 'fileC'.encode('utf-8'))
+  svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit'.encode('utf-8'))
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
@@ -1708,7 +1708,7 @@ def commit_out_of_date_deletions(sbox):
   # Change omega's text, and make a propchange to A/C directory
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
   C_path = os.path.join(wc_dir, 'A', 'C')
-  svntest.main.file_append (omega_path, 'appended omega text')
+  svntest.main.file_append (omega_path, 'appended omega text'.encode('utf-8'))
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', C_path)
 
   # Commit revision 2.
@@ -1808,6 +1808,7 @@ def from_wc_top_with_bad_editor(sbox):
                                      'pset', 'fish', 'food', wc_dir)
   was_cwd = os.getcwd()
   try:
+    failed = 0
     os.chdir(wc_dir)
     out, err = svntest.actions.run_and_verify_svn(
       "Commit succeeded when should have failed.",
@@ -1815,8 +1816,19 @@ def from_wc_top_with_bad_editor(sbox):
       'ci', '--editor-cmd', 'no_such-editor')
 
     err = string.join(map(string.strip, err), ' ')
-    if not (re.match(".*no_such-editor.*", err)
-            and re.match(".*Commit failed.*", err)):
+    
+    if not sys.platform == 'AS/400':
+      if not (re.match(".*no_such-editor.*", err)
+              and re.match(".*Commit failed.*", err)):
+        failed = 1
+    else:
+      # iSeries port doesn't support --editor-cmd so 
+      # failure message should always be consistent.
+      if not err == ("Subcommand 'commit' doesn't accept option '--editor-cmd " +
+                     "arg' Type 'svn help commit' for usage."):
+        failed = 1
+
+    if failed:
       print "Commit failed, but not in the way expected."
       raise svntest.Failure
 
@@ -1834,7 +1846,7 @@ def mods_in_schedule_delete(sbox):
   C_path = os.path.join(wc_dir, 'A', 'C')
   svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [], 'rm', C_path)
   foo_path = os.path.join(C_path, 'foo')
-  foo_contents = 'zig\nzag\n'
+  foo_contents = 'zig\nzag\n'.encode('utf-8')
   svntest.main.file_append(foo_path, foo_contents)
 
   # Commit should succeed
@@ -1848,7 +1860,7 @@ def mods_in_schedule_delete(sbox):
                                         None, None, None, None, None, wc_dir)
 
   # Unversioned file still exists
-  fp = open(foo_path)
+  fp = open(foo_path, 'rb')
   if fp.read() != foo_contents:
     raise svntest.Failure
   fp.close()
@@ -1868,7 +1880,7 @@ def tab_test(sbox):
   source_url = svntest.main.current_repo_url + "/source_dir"
   tab_url = svntest.main.current_repo_url + "/tab%09dir"
 
-  svntest.main.file_append(tab_file, "This file has a tab in it.")
+  svntest.main.file_append(tab_file, "This file has a tab in it.".encode('utf-8'))
   os.mkdir(tab_dir)
 
   def match_bad_tab_path(path, errlines):
@@ -1973,19 +1985,28 @@ def post_commit_hook_test(sbox):
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join (wc_dir, "iota")
-  svntest.main.file_append (iota_path, "lakalakalakalaka")
+  svntest.main.file_append (iota_path, "lakalakalakalaka".encode('utf-8'))
 
   # Now, commit and examine the output (we happen to know that the
   # filesystem will report an absolute path because that's the way the
   # filesystem is created by this test suite.
-  expected_output = [ "Sending        "+ iota_path + "\n",
-                      "Transmitting file data .\n",
-                      "Committed revision 2.\n",
-                      "\n",
-                      "Warning: 'post-commit' hook failed with error output:\n",
-                      "Post-commit hook failed\n",
-                    ]
-
+  if sys.platform != 'AS/400':
+    expected_output = [ "Sending        "+ iota_path + "\n",
+                        "Transmitting file data .\n",
+                        "Committed revision 2.\n",
+                        "\n",
+                        "Warning: 'post-commit' hook failed with error output:\n",
+                        "Post-commit hook failed\n",
+                      ]
+  else:
+    expected_output = [ "Sending        "+ iota_path + "\n",
+                        "Transmitting file data .\n",
+                        "Committed revision 2.\n",
+                        "\n",
+                        "Warning: 'post-commit' hook failed with error output:\n",
+                        "Post-commit hook failed\n",
+                        "\n"
+                      ]
   svntest.actions.run_and_verify_svn (None, expected_output, [],
                                       'ci', '-m', 'log msg', iota_path)
 

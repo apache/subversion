@@ -22,6 +22,8 @@ import string, sys, re, os.path
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -36,6 +38,22 @@ Item = svntest.wc.StateItem
 def run_svnlook(*varargs):
   output, dummy_errput = svntest.main.run_command(svntest.main.svnlook_binary,
       0, 0, *varargs)
+
+  # Make life easier in tests below by converting svnlook output from
+  # utf-8 now.  Also, due to various AS/400 workarounds, the output
+  # returned by  svntest.main.run_command always has an empty string
+  # appended to the actual svn output list iff output's final element
+  # ended with a \n, we remove that here if it was added.
+  if sys.platform == 'AS/400':
+    output = ebcdic.os400_list_from_utf8(output)
+    for line in output:
+    if output:
+      if output[len(output) - 1] == '':
+        # Remove added empty string
+        output.pop()
+      else:
+        # Remove trailing newline in final element
+        output[len(output) - 1] = output[len(output) - 1].rstrip('\n')
   return output
 
 
@@ -59,8 +77,8 @@ def test_misc(sbox):
   # Make a couple of local mods to files
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append (mu_path, 'appended mu text'.encode('utf-8'))
+  svntest.main.file_append (rho_path, 'new appended text for rho'.encode('utf-8'))
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -85,9 +103,10 @@ def test_misc(sbox):
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
   svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 1,
-                           ["SVN-fs-dump-format-version: 2\n",
-                            "\n",
-                            "UUID: ", uuid, "\n",
+                           ["SVN-fs-dump-format-version: 2\n".encode('utf-8'),
+                            "\n".encode('utf-8'),
+                            "UUID: ".encode('utf-8'), uuid.encode('utf-8'),
+                            "\n".encode('utf-8'),
                            ],
                            'load', '--force-uuid', repo_dir)
 
@@ -206,6 +225,11 @@ def delete_file_in_moved_dir(sbox):
   if errput:
     raise svntest.Failure
 
+  if sys.platform == 'AS/400':
+    output = ebcdic.os400_list_from_utf8(output)
+    if output and output[len(output) - 1] == '':
+      output.pop()
+
   # Okay.  No failure, but did we get the right output?
   if len(output) != 2:
     raise svntest.Failure
@@ -248,7 +272,7 @@ def test_print_property_diffs(sbox):
 
   # replace wcdir/iota with iota in expected_output
   for i in xrange(len(expected_output)):
-    expected_output[i] = string.replace(expected_output[i], iota_path, 'iota')
+    expected_output[i] = string.replace(expected_output[i], iota_path.encode('utf-8'), 'iota'.encode('utf-8'))
 
   svntest.actions.compare_and_display_lines('', '', expected_output, output)
 
@@ -302,7 +326,7 @@ PROPS-END
 text
 
 
-"""
+""".encode('utf-8')
 
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)

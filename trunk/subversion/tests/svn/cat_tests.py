@@ -62,8 +62,8 @@ def cat_base(sbox):
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, 'Appended text')
-  
+  svntest.main.file_append(mu_path, 'Appended text'.encode('utf-8'))
+
   outlines, errlines = svntest.main.run_svn(0, 'cat', mu_path)
 
   # Verify the expected output
@@ -116,13 +116,15 @@ def cat_skip_uncattable(sbox):
                                          expected_err, 'cat', item_to_cat)
     else:
       svntest.actions.run_and_verify_svn(None,
-                                         ["This is the file '"+file+"'.\n"],
+                                         ["This is the file '".encode('utf-8') +
+                                          file.encode('utf-8') +
+                                          "'.\n".encode('utf-8')],
                                          [], 'cat', item_to_cat)
 
   G_path = os.path.join(dir_path, 'G')
   rho_path = os.path.join(G_path, 'rho')
 
-  expected_out = ["This is the file 'rho'.\n"]
+  expected_out = ["This is the file 'rho'.\n".encode('utf-8')]
   expected_err1 = ["svn: warning: '" + G_path + "'"
                    + " refers to a directory\n"]
   svntest.actions.run_and_verify_svn(None, expected_out, expected_err1,

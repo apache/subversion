@@ -22,6 +22,8 @@ import shutil, string, sys, stat, re, os
 # Our testing module
 import svntest
 from svntest import wc
+if sys.platform == 'AS/400':
+  import ebcdic
 
 
 # (abbreviation)
@@ -46,7 +48,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   # Use a temp file to set properties with wildcards in their values
   # otherwise Win32/VS2005 will expand them
   prop_path = os.path.join(wc_dir, 'proptmp')
-  svntest.main.file_append (prop_path, '*')
+  svntest.main.file_append (prop_path, '*'.encode('utf-8'))
 
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
@@ -106,7 +108,7 @@ def revert_replacement_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'pi'.\n",
+                      contents="This is the file 'pi'.\n".encode('utf-8'),
                       props={ 'phony-prop': '*' })
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
@@ -162,10 +164,10 @@ def revert_from_wc_root(sbox):
     iota_path = 'iota'
     rho_path = os.path.join('A', 'D', 'G', 'rho')
     zeta_path = os.path.join('A', 'D', 'H', 'zeta')
-    svntest.main.file_append(beta_path, "Added some text to 'beta'.\n")
-    svntest.main.file_append(iota_path, "Added some text to 'iota'.\n")
-    svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
-    svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n")
+    svntest.main.file_append(beta_path, "Added some text to 'beta'.\n".encode('utf-8'))
+    svntest.main.file_append(iota_path, "Added some text to 'iota'.\n".encode('utf-8'))
+    svntest.main.file_append(rho_path, "Added some text to 'rho'.\n".encode('utf-8'))
+    svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n".encode('utf-8'))
 
     svntest.actions.run_and_verify_svn("Add command", None, [],
                                        'add', zeta_path)
@@ -243,36 +245,44 @@ def revert_reexpand_keyword(sbox):
   wc_dir = sbox.wc_dir
   newfile_path = os.path.join(wc_dir, "newfile")
   unexpanded_contents = "This is newfile: $Rev$.\n"
+  if sys.platform == 'AS/400':
+    unexpanded_contents = ebcdic.os400_convert_string_to_utf8(unexpanded_contents)
 
   # Put an unexpanded keyword into iota.
-  fp = open(newfile_path, 'w')
+  fp = open(newfile_path, 'wb')
   fp.write(unexpanded_contents)
   fp.close()
+  if sys.platform == 'AS/400':
+    ebcdic.os400_tagtree(newfile_path, 1208, 1)
 
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None, 'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
-  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Rev', newfile_path)
   svntest.main.run_svn(None, 'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
   def check_expanded(path):
-    fp = open(path, 'r')
+    fp = open(path, 'rb')
     lines = fp.readlines()
     fp.close()
-    if lines[0] != "This is newfile: $Rev: 3 $.\n":
-      raise svntest.Failure
+    if sys.platform != 'AS/400':
+      if lines[0] != "This is newfile: $Rev: 3 $.\n":
+        raise svntest.Failure
+    else:
+      if lines[0] != ebcdic.os400_convert_string_to_utf8("This is newfile: $Rev: 3 $.\n"):
+        raise svntest.Failure
 
   check_expanded(newfile_path)
 
   # Now un-expand the keyword again.
-  fp = open(newfile_path, 'w')
+  fp = open(newfile_path, 'wb')
   fp.write(unexpanded_contents)
   fp.close()
 
-  fp = open(newfile_path, 'r')
+  fp = open(newfile_path, 'rb')
   lines = fp.readlines()
   fp.close()
 
@@ -280,6 +290,7 @@ def revert_reexpand_keyword(sbox):
   svntest.main.run_svn(None, 'revert', newfile_path)
 
   # Verify that the keyword got re-expanded.
+
   check_expanded(newfile_path)
   
 
@@ -295,7 +306,7 @@ def revert_replaced_file_without_props(sbox):
   file1_path = os.path.join(wc_dir, 'file1')
 
   # Add a new file, file1, that has no prop-base
-  svntest.main.file_append(file1_path, "This is the file 'file1' revision 2.")
+  svntest.main.file_append(file1_path, "This is the file 'file1' revision 2.".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
 
   # commit file1
@@ -320,8 +331,8 @@ def revert_replaced_file_without_props(sbox):
   expected_status.tweak('file1', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # recreate and add file1 
-  svntest.main.file_append(file1_path, "This is the file 'file1' revision 3.")
+  # recreate and add file1
+  svntest.main.file_append(file1_path, "This is the file 'file1' revision 3.".encode('utf-8'))
   svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
 
   # Test to see if file1 is schedule for replacement 
@@ -401,8 +412,8 @@ def revert_file_merge_replace_with_history(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
   # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
+  fp = open(rho_path, 'wb')
+  fp.write("new rho\n".encode('utf-8'))
   fp.close()
 
   # Add the new file
@@ -426,7 +437,7 @@ def revert_file_merge_replace_with_history(sbox):
   # Update working copy
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk   = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho', contents='new rho\n' )
+  expected_disk.tweak('A/D/G/rho', contents='new rho\n'.encode('utf-8') )
   expected_status.tweak(wc_rev='3')
   expected_status.tweak('A/D/G/rho', status='  ')
 
@@ -441,7 +452,7 @@ def revert_file_merge_replace_with_history(sbox):
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
-  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n".encode('utf-8'))
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -459,7 +470,7 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  expected_disk.tweak('A/D/G/rho', contents="new rho\n")
+  expected_disk.tweak('A/D/G/rho', contents="new rho\n".encode('utf-8'))
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
 
