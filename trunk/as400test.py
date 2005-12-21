@@ -25,33 +25,33 @@ test_scripts = [
                 'subversion/tests/libsvn_wc/TEST_XLATE',
                 'subversion/tests/libsvn_subr/TEST_UTF',
                 'subversion/tests/libsvn_subr/target-test.py',
-                'subversion/tests/clients/cmdline/basic_tests.py',
-                'subversion/tests/clients/cmdline/commit_tests.py',
-                'subversion/tests/clients/cmdline/getopt_tests.py',
-                'subversion/tests/clients/cmdline/update_tests.py',
-                'subversion/tests/clients/cmdline/switch_tests.py',
-                'subversion/tests/clients/cmdline/prop_tests.py',
-                'subversion/tests/clients/cmdline/schedule_tests.py',
-                'subversion/tests/clients/cmdline/log_tests.py',
-                'subversion/tests/clients/cmdline/copy_tests.py',
-                'subversion/tests/clients/cmdline/diff_tests.py',
-                'subversion/tests/clients/cmdline/export_tests.py',
-                'subversion/tests/clients/cmdline/externals_tests.py',
-                'subversion/tests/clients/cmdline/merge_tests.py',
-                'subversion/tests/clients/cmdline/revert_tests.py',
-                'subversion/tests/clients/cmdline/stat_tests.py',
-                'subversion/tests/clients/cmdline/trans_tests.py'
-                'subversion/tests/clients/cmdline/autoprop_tests.py'
-                'subversion/tests/clients/cmdline/blame_tests.py',
-                'subversion/tests/clients/cmdline/special_tests.py',
-                'subversion/tests/clients/cmdline/svnadmin_tests.py',
-                'subversion/tests/clients/cmdline/svnlook_tests.py',
-                'subversion/tests/clients/cmdline/svnversion_tests.py',
-                'subversion/tests/clients/cmdline/utf8_tests.py'
-                'subversion/tests/clients/cmdline/history_tests.py',
-                'subversion/tests/clients/cmdline/lock_tests.py',
-                'subversion/tests/clients/cmdline/cat_tests.py',
-                'subversion/tests/clients/cmdline/import_tests.py'
+                'subversion/tests/svn/basic_tests.py',
+                'subversion/tests/svn/commit_tests.py',
+                'subversion/tests/svn/getopt_tests.py',
+                'subversion/tests/svn/update_tests.py',
+                'subversion/tests/svn/switch_tests.py',
+                'subversion/tests/svn/prop_tests.py',
+                'subversion/tests/svn/schedule_tests.py',
+                'subversion/tests/svn/log_tests.py',
+                'subversion/tests/svn/copy_tests.py',
+                'subversion/tests/svn/diff_tests.py',
+                'subversion/tests/svn/export_tests.py',
+                'subversion/tests/svn/externals_tests.py',
+                'subversion/tests/svn/merge_tests.py',
+                'subversion/tests/svn/revert_tests.py',
+                'subversion/tests/svn/stat_tests.py',
+                'subversion/tests/svn/trans_tests.py',
+                'subversion/tests/svn/autoprop_tests.py'
+                'subversion/tests/svn/blame_tests.py',
+                'subversion/tests/svn/special_tests.py',
+                'subversion/tests/svn/svnadmin_tests.py',
+                'subversion/tests/svn/svnlook_tests.py',
+                'subversion/tests/svn/svnversion_tests.py',
+                'subversion/tests/svn/utf8_tests.py'
+                'subversion/tests/svn/history_tests.py',
+                'subversion/tests/svn/lock_tests.py',
+                'subversion/tests/svn/cat_tests.py',
+                'subversion/tests/svn/import_tests.py'
                ]
 
 import os, sys, re
@@ -70,7 +70,7 @@ except AttributeError:
 
 all_tests = test_scripts
 
-client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
+client_tests = filter(lambda x: x.startswith('subversion/tests/svn/'),
                       all_tests)
 
 opts, args = my_getopt(sys.argv[1:], 'vcu:l:',
@@ -80,7 +80,7 @@ if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
 run_svnserve = None
-svnserve_lib = None
+svnserve_lib = '*LIBL'
 base_url = None
 fs_type = None
 verbose = None
@@ -126,7 +126,7 @@ else:
   create_dirs = 1
 
 sys.path.insert(0, os.path.join(abs_builddir, 'build'))
-sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/clients/cmdline'))
+sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/svn'))
 sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/libsvn_subr'))
 import run_tests
 import ebcdic
