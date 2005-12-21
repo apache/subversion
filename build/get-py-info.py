@@ -11,7 +11,7 @@ import sys
 import os
 
 def usage():
-  print 'USAGE: %s WHAT' % sys.argv[0]
+  print 'USAGE: python %s WHAT' % sys.argv[0]
   print '  Returns information about how to build Python extensions.'
   print '  WHAT may be one of:'
   print "    --includes : return -I include flags"
