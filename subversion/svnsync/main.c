@@ -60,7 +60,7 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
   {
     { "initialize", initialize, { "init" },
       N_("usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-         "Initialize a destination repository."),
+         "Initialize a destination repository.\n"),
       { SVNSYNC_OPTS_DEFAULT,
         svnsync_opt_source_url } },
     { "synchronize", synchronize, { "sync" },
