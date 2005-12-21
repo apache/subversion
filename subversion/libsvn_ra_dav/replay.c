@@ -208,11 +208,13 @@ start_element(void *baton, int parent_state, const char *nspace,
               {
                 dir_item_t *di = &TOP_DIR(rb);
 
-                if (strcmp(path, di->path) != 0)
+                if (strncmp(path, di->path, strlen(di->path)) != 0)
                   {
                     svn_pool_destroy(di->pool);
                     apr_array_pop(rb->dirs);
                   }
+                else
+                  break;
               }
           }
 
