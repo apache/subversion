@@ -813,12 +813,17 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
+  const char *uri_hostname_utf8 = uri->hostname;
+#if APR_CHARSET_EBCDIC
+  if (uri->hostname)
+    SVN_ERR(svn_utf_cstring_to_utf8(&uri_hostname_utf8, uri->hostname, pool));
+#endif
 
   if (tunnel_argv)
     SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
   else
     {
-      SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
+      SVN_ERR(make_connection(uri_hostname_utf8, uri->port, &sock, pool));
       conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
     }
 
@@ -841,9 +846,12 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
 #if !APR_CHARSET_EBCDIC
   sess->user = uri->user;
 #else
+  if (uri->user)
     SVN_ERR(svn_utf_cstring_to_utf8(&sess->user, uri->user, pool));
+  else
+    sess->user = NULL;
 #endif
-  sess->realm_prefix = APR_PSPRINTF2(pool, "<svn://%s:%d>", uri->hostname,
+  sess->realm_prefix = APR_PSPRINTF2(pool, "<svn://%s:%d>", uri_hostname_utf8,
                                      uri->port);
   sess->tunnel_argv = tunnel_argv;
 

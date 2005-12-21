@@ -53,11 +53,23 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_NAME \
         "\x6e\x61\x6d\x65"
         /* "name" */
-#define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
-#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
-#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
-#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 
+#define SVN_WC__ENTRY_ATTR_HAS_PROPS \
+        "\x68\x61\x73\x2d\x70\x72\x6f\x70\x73"
+        /* "has-props" */
+
+#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS \
+        "\x68\x61\x73\x2d\x70\x72\x6f\x70\x2d\x6d\x6f\x64\x73"
+        /* "has-prop-mods" */
+
+#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS \
+        "\x63\x61\x63\x68\x61\x62\x6c\x65\x2d\x70\x72\x6f\x70\x73"
+        /* "cachable-props" */
+
+#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS \
+        "\x70\x72\x65\x73\x65\x6e\x74\x2d\x70\x72\x6f\x70\x73"
+        /* "present-props" */
+        
 #define SVN_WC__ENTRY_ATTR_REVISION \
         "\x72\x65\x76\x69\x73\x69\x6f\x6e"
         /* "revision" */

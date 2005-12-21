@@ -31,6 +31,7 @@
 #include "svn_subst.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -75,9 +76,40 @@ svn_cl__propset (apr_getopt_t *os,
   
   /* We only want special Subversion property values to be in UTF-8
      and LF line endings.  All other propvals are taken literally. */
+#if !APR_CHARSET_EBCDIC
   if (svn_prop_needs_translation (pname_utf8))
+#else
+  /* On ebcdic platforms a file used to set the value of a property
+   * may be encoded in ebcdic.  This presents a host of problems re how
+   * to detect this case.  Obtaining the file's CCSID is not easy, and
+   * even if it were it may not always be accurate (e.g. a CCSID 37 file
+   * copied via a mapped drive in Windows Explorer has a 1252 CCSID).
+   * To avoid problems and keep things relatively simple, the ebcdic port
+   * currently requires that file data used to set svn:* property values be
+   * encoded in utf-8 only.
+   * 
+   * With -F args restricted to utf-8 there's nothing to translate re
+   * encoding, but line endings may be inconsistent so translation is still
+   * needed.  The problem is if opt_state->encoding is passed,
+   * svn_subst_translate_string will attempt to convert propval from a
+   * native string to utf-8, corrupting it on the iSeries where
+   * native == ebcdic != subset of utf-8.  So "1208" is passed causing no
+   * encoding conversion, but producing uniform LF line endings.
+   * 
+   * See svn_utf_cstring_to_utf8_ex for why a string representation of a
+   * CCSID is used rather than "UTF-8". */
+  if (opt_state->filedata && svn_prop_needs_translation (pname_utf8))
+    SVN_ERR (svn_subst_translate_string (&propval, propval, "1208", pool));
+  else if (svn_prop_needs_translation (pname_utf8))
+#endif
     SVN_ERR (svn_subst_translate_string (&propval, propval,
                                          opt_state->encoding, pool));
+#if APR_CHARSET_EBCDIC
+  else if(!opt_state->filedata)
+    /* On ebcdic platforms all other propvals are *not* taken
+     * literally; these too are converted to utf-8. */
+    SVN_ERR (svn_utf_string_to_utf8 (&propval, propval, pool));
+#endif
   else 
     if (opt_state->encoding)
       return svn_error_create 
@@ -107,7 +139,7 @@ svn_cl__propset (apr_getopt_t *os,
       if (! opt_state->quiet) 
         {
           SVN_ERR
-            (svn_cmdline_printf
+            (SVN_CMDLINE_PRINTF2
              (pool, _("property '%s' set on repository revision %ld\n"),
               pname_utf8, rev));
         }      
@@ -117,7 +149,12 @@ svn_cl__propset (apr_getopt_t *os,
       return svn_error_createf
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
          _("Cannot specify revision for setting versioned property '%s'"),
+#if !APR_CHARSET_EBCDIC
          pname);
+#else
+         /* ebcdic port assumes var string args to svn_error_creatf are utf-8 */
+         pname_utf8);
+#endif
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
@@ -178,12 +215,21 @@ svn_cl__propset (apr_getopt_t *os,
 
           if (success && (! opt_state->quiet))
             {
+#if !APR_CHARSET_EBCDIC
               SVN_ERR
                 (svn_cmdline_printf
                  (pool, opt_state->recursive
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
                   pname, svn_path_local_style (target, pool)));
+#else
+              SVN_ERR
+                (svn_cmdline_printf_ebcdic2
+                 (pool, opt_state->recursive
+                  ? _("property '%s' set (recursively) on '%s'\n")
+                  : _("property '%s' set on '%s'\n"),
+                  pname_utf8, svn_path_local_style (target, pool)));
+#endif
             }
         }
       svn_pool_destroy (subpool);

@@ -55,6 +55,10 @@
 #include "svn_private_config.h"
 
 
+#define FALSE_STR \
+        "\x66\x61\x6c\x73\x65"
+        /*"false"*/
+
 /*** Finishing updates and commits. ***/
 
 
@@ -1414,7 +1418,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (entry->schedule == svn_wc_schedule_replace
       && entry->copied)
     apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPIED,
-                  APR_HASH_KEY_STRING, "false");
+                  APR_HASH_KEY_STRING, FALSE_STR);
 
   /* Deal with the contents. */
 

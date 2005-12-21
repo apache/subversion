@@ -29,6 +29,7 @@
 #include "svn_subst.h"
 #include "svn_props.h"
 #include "svn_opt.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -92,6 +93,12 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       if (svn_prop_needs_translation (pname))
         SVN_ERR (svn_subst_detranslate_string (&propval, propval,
                                                TRUE, pool));
+#if APR_CHARSET_EBCDIC
+      else if (svn_utf_is_valid_utf (propval->data, propval->len))
+        /* If propval is valid utf-8 convert it before outputting it to the
+         * console.  If it's not valid utf-8 only then do we give up*/
+        SVN_ERR (svn_utf_string_from_utf8 (&propval, propval, pool));
+#endif
 
       SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout, pname, pool));
 

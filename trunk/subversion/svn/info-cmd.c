@@ -29,9 +29,163 @@
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_ebcdic.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
+
+#define ADD_STR \
+        "\x61\x64\x64"
+        /* "add" */
+
+#define AUTHOR_STR \
+        "\x61\x75\x74\x68\x6f\x72"
+        /* "author" */
+
+#define CHECKSUM_STR \
+        "\x63\x68\x65\x63\x6b\x73\x75\x6d"
+        /* "checksum" */
+
+#define COMMENT_STR \
+        "\x63\x6f\x6d\x6d\x65\x6e\x74"
+        /* "comment" */
+
+#define COMMIT_STR \
+        "\x63\x6f\x6d\x6d\x69\x74"
+        /* "commit" */
+
+#define COMMIT_STR \
+        "\x63\x6f\x6d\x6d\x69\x74"
+        /* "commit" */
+
+#define CONFLICT_STR \
+        "\x63\x6f\x6e\x66\x6c\x69\x63\x74"
+        /* "conflict" */
+
+#define COPY_FROM_REV_STR \
+        "\x63\x6f\x70\x79\x2d\x66\x72\x6f\x6d\x2d\x72\x65\x76"
+        /* "copy-from-rev" */
+
+#define COPY_FROM_URL_STR \
+        "\x63\x6f\x70\x79\x2d\x66\x72\x6f\x6d\x2d\x75\x72\x6c"
+        /* "copy-from-url" */
+
+#define CREATED_STR \
+        "\x63\x72\x65\x61\x74\x65\x64"
+        /* "created" */
+
+#define CUR_BASE_FILE_STR \
+        "\x63\x75\x72\x2d\x62\x61\x73\x65\x2d\x66\x69\x6c\x65"
+        /* "cur-base-file" */
+
+#define DATE_STR \
+        "\x64\x61\x74\x65"
+        /* "date" */
+
+#define DELETE_STR \
+        "\x64\x65\x6c\x65\x74\x65"
+        /* "delete" */
+
+#define ENTRY_STR \
+        "\x65\x6e\x74\x72\x79"
+        /* "entry" */
+
+#define EXPIRES_STR \
+        "\x65\x78\x70\x69\x72\x65\x73"
+        /* "expires" */
+
+#define INFO_STR \
+        "\x69\x6e\x66\x6f"
+        /* "info" */
+
+#define KIND_STR \
+        "\x6b\x69\x6e\x64"
+        /* "kind" */
+
+#define LOCK_STR \
+        "\x6c\x6f\x63\x6b"
+        /* "lock" */
+
+#define NONE_STR \
+        "\x6e\x6f\x6e\x65"
+        /* "none" */
+
+#define NORMAL_STR \
+        "\x6e\x6f\x72\x6d\x61\x6c"
+        /* "normal" */
+
+#define OWNER_STR \
+        "\x6f\x77\x6e\x65\x72"
+        /* "owner" */
+
+#define PATH_STR \
+        "\x70\x61\x74\x68"
+        /* "path" */
+
+#define PREV_BASE_FILE_STR \
+        "\x70\x72\x65\x76\x2d\x62\x61\x73\x65\x2d\x66\x69\x6c\x65"
+        /* "prev-base-file" */
+
+#define PREV_WC_FILE_STR \
+        "\x70\x72\x65\x76\x2d\x77\x63\x2d\x66\x69\x6c\x65"
+        /* "prev-wc-file" */
+
+#define PROP_FILE_STR \
+        "\x70\x72\x6f\x70\x2d\x66\x69\x6c\x65"
+        /* "prop-file" */
+
+#define PROP_UPDATED_STR \
+        "\x70\x72\x6f\x70\x2d\x75\x70\x64\x61\x74\x65\x64"
+        /* "prop-updated" */
+
+#define REPLACE_STR \
+        "\x72\x65\x70\x6c\x61\x63\x65"
+        /* "replace" */
+
+#define REPOSITORY_STR \
+        "\x72\x65\x70\x6f\x73\x69\x74\x6f\x72\x79"
+        /* "repository" */
+
+#define REVISION_STR \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define REVISION_STR \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define ROOT_STR \
+        "\x72\x6f\x6f\x74"
+        /* "root" */
+
+#define SCHEDULE_STR \
+        "\x73\x63\x68\x65\x64\x75\x6c\x65"
+        /* "schedule" */
+
+#define TEXT_UPDATED_STR \
+        "\x74\x65\x78\x74\x2d\x75\x70\x64\x61\x74\x65\x64"
+        /* "text-updated" */
+
+#define TOKEN_STR \
+        "\x74\x6f\x6b\x65\x6e"
+        /* "token" */
+
+#define URL_STR \
+        "\x75\x72\x6c"
+        /* "url" */
+
+#define UUID_STR \
+        "\x75\x75\x69\x64"
+        /* "uuid" */
+
+#define WC_INFO_STR \
+        "\x77\x63\x2d\x69\x6e\x66\x6f"
+        /* "wc-info" */
+
+#define WC_INFO_STR \
+        "\x77\x63\x2d\x69\x6e\x66\x6f"
+        /* "wc-info" */
 
 
 /*** Code. ***/
@@ -44,7 +198,13 @@ svn_cl__info_print_time (apr_time_t atime,
   const char *time_utf8;
 
   time_utf8 = svn_time_to_human_cstring (atime, pool);
-  SVN_ERR (svn_cmdline_printf (pool, "%s: %s\n", desc, time_utf8));
+#if APR_CHARSET_EBCDIC
+  /* A variation from the ebcdic port's normal approach that string args are
+   * utf-8: Allow ebcdic encoded desc rather than resorting to ascii
+   * hex-escaped symbolic constants. */
+  SVN_ERR (svn_utf_cstring_to_utf8(&desc, desc, pool));
+#endif
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, "%s: %s\n", desc, time_utf8));
   return SVN_NO_ERROR;
 }
 
@@ -57,7 +217,7 @@ print_header_xml (apr_pool_t *pool)
   svn_xml_make_header (&sb, pool);
 
   /* "<info>" */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "info", NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, INFO_STR, NULL);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -69,7 +229,7 @@ print_footer_xml (apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
   /* "</info>" */
-  svn_xml_make_close_tag (&sb, pool, "info");
+  svn_xml_make_close_tag (&sb, pool, INFO_STR);
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
 
@@ -81,15 +241,15 @@ schedule_str (svn_wc_schedule_t schedule)
   switch (schedule)
     {
     case svn_wc_schedule_normal:
-      return "normal";
+      return NORMAL_STR;
     case svn_wc_schedule_add:
-      return "add";
+      return ADD_STR;
     case svn_wc_schedule_delete:
-      return "delete";
+      return DELETE_STR;
     case svn_wc_schedule_replace:
-      return "replace";
+      return REPLACE_STR;
     default:
-      return "none";
+      return NONE_STR;
     }
 }
 
@@ -112,63 +272,63 @@ print_info_xml (const char *target,
                               svn_path_local_style (target, pool));
 
   /* "<entry ...>" */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "entry",
-                         "path", svn_path_local_style (target, pool),
-                         "kind", svn_cl__node_kind_str (info->kind),
-                         "revision", rev_str,
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, ENTRY_STR,
+                         PATH_STR, svn_path_local_style (target, pool),
+                         KIND_STR, svn_cl__node_kind_str (info->kind),
+                         REVISION_STR, rev_str,
                          NULL);
 
-  svn_cl__xml_tagged_cdata (&sb, pool, "url", info->URL);
+  svn_cl__xml_tagged_cdata (&sb, pool, URL_STR, info->URL);
 
   if (info->repos_root_URL || info->repos_UUID)
     {
       /* "<repository>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "repository", NULL);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, REPOSITORY_STR, NULL);
 
       /* "<root> xx </root>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "root", info->repos_root_URL);
+      svn_cl__xml_tagged_cdata (&sb, pool, ROOT_STR, info->repos_root_URL);
 
       /* "<uuid> xx </uuid>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "uuid", info->repos_UUID);
+      svn_cl__xml_tagged_cdata (&sb, pool, UUID_STR, info->repos_UUID);
 
       /* "</repository>" */
-      svn_xml_make_close_tag (&sb, pool, "repository");
+      svn_xml_make_close_tag (&sb, pool, REPOSITORY_STR);
     }
 
   if (info->has_wc_info)
     {
       /* "<wc-info>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "wc-info", NULL);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, WC_INFO_STR, NULL);
 
       /* "<schedule> xx </schedule>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "schedule",
+      svn_cl__xml_tagged_cdata (&sb, pool, SCHEDULE_STR,
                                 schedule_str (info->schedule));
 
       /* "<copy-from-url> xx </copy-from-url>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "copy-from-url",
+      svn_cl__xml_tagged_cdata (&sb, pool, COPY_FROM_URL_STR,
                                 info->copyfrom_url);
 
       /* "<copy-from-rev> xx </copy-from-rev>" */
       if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
-        svn_cl__xml_tagged_cdata (&sb, pool, "copy-from-rev",
+        svn_cl__xml_tagged_cdata (&sb, pool, COPY_FROM_REV_STR,
                                   apr_psprintf (pool, "%ld",
                                                 info->copyfrom_rev));
 
       /* "<text-updated> xx </text-updated>" */
       if (info->text_time)
-        svn_cl__xml_tagged_cdata (&sb, pool, "text-updated",
+        svn_cl__xml_tagged_cdata (&sb, pool, TEXT_UPDATED_STR,
                                   svn_time_to_cstring (info->text_time, pool));
 
       /* "<prop-updated> xx </prop-updated>" */
       if (info->prop_time)
-        svn_cl__xml_tagged_cdata (&sb, pool, "prop-updated",
+        svn_cl__xml_tagged_cdata (&sb, pool, PROP_UPDATED_STR,
                                   svn_time_to_cstring (info->prop_time, pool));
 
       /* "<checksum> xx </checksum>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "checksum", info->checksum);
+      svn_cl__xml_tagged_cdata (&sb, pool, CHECKSUM_STR, info->checksum);
 
       /* "</wc-info>" */
-      svn_xml_make_close_tag (&sb, pool, "wc-info");
+      svn_xml_make_close_tag (&sb, pool, WC_INFO_STR);
     }
 
   if (info->last_changed_author
@@ -176,80 +336,80 @@ print_info_xml (const char *target,
       || info->last_changed_date)
     {
       /* "<commit ...>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "commit",
-                             "revision", apr_psprintf (pool, "%ld",
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, COMMIT_STR,
+                             REVISION_STR, apr_psprintf (pool, "%ld",
                                                        info->last_changed_rev),
                              NULL);
 
       /* "<author> xx </author>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "author",
+      svn_cl__xml_tagged_cdata (&sb, pool, AUTHOR_STR,
                                 info->last_changed_author);
 
       /* "<date> xx </date>" */
       if (info->last_changed_date)
-        svn_cl__xml_tagged_cdata (&sb, pool, "date",
+        svn_cl__xml_tagged_cdata (&sb, pool, DATE_STR,
                                   svn_time_to_cstring
                                     (info->last_changed_date, pool));
 
       /* "</commit>" */
-      svn_xml_make_close_tag (&sb, pool, "commit");
+      svn_xml_make_close_tag (&sb, pool, COMMIT_STR);
     }
 
   if (info->conflict_old || info->conflict_wrk
       || info->conflict_new || info->prejfile)
     {
       /* "<conflict>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "conflict", NULL);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, CONFLICT_STR, NULL);
 
       /* "<prev-base-file> xx </prev-base-file>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "prev-base-file",
+      svn_cl__xml_tagged_cdata (&sb, pool, PREV_BASE_FILE_STR,
                                 info->conflict_old);
 
       /* "<prev-wc-file> xx </prev-wc-file>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "prev-wc-file",
+      svn_cl__xml_tagged_cdata (&sb, pool, PREV_WC_FILE_STR,
                                 info->conflict_wrk);
 
       /* "<cur-base-file> xx </cur-base-file>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "cur-base-file",
+      svn_cl__xml_tagged_cdata (&sb, pool, CUR_BASE_FILE_STR,
                                 info->conflict_new);
 
       /* "<prop-file> xx </prop-file>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "prop-file", info->prejfile);
+      svn_cl__xml_tagged_cdata (&sb, pool, PROP_FILE_STR, info->prejfile);
 
       /* "</conflict>" */
-      svn_xml_make_close_tag (&sb, pool, "conflict");
+      svn_xml_make_close_tag (&sb, pool, CONFLICT_STR);
     }
 
   if (info->lock)
     {
       /* "<lock>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lock", NULL);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, LOCK_STR, NULL);
 
       /* "<token> xx </token>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "token", info->lock->token);
+      svn_cl__xml_tagged_cdata (&sb, pool, TOKEN_STR, info->lock->token);
 
       /* "<owner> xx </owner>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "owner", info->lock->owner);
+      svn_cl__xml_tagged_cdata (&sb, pool, OWNER_STR, info->lock->owner);
 
       /* "<comment ...> xxxx </comment>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "comment", info->lock->comment);
+      svn_cl__xml_tagged_cdata (&sb, pool, COMMENT_STR, info->lock->comment);
 
       /* "<created> xx </created>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "created",
+      svn_cl__xml_tagged_cdata (&sb, pool, CREATED_STR,
                                 svn_time_to_cstring
                                   (info->lock->creation_date, pool));
 
       /* "<expires> xx </expires>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "expires",
+      svn_cl__xml_tagged_cdata (&sb, pool, EXPIRES_STR,
                                 svn_time_to_cstring
                                   (info->lock->expiration_date, pool));
 
       /* "</lock>" */
-      svn_xml_make_close_tag (&sb, pool, "lock");
+      svn_xml_make_close_tag (&sb, pool, LOCK_STR);
     }
 
   /* "</entry>" */
-  svn_xml_make_close_tag (&sb, pool, "entry");
+  svn_xml_make_close_tag (&sb, pool, ENTRY_STR);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -260,46 +420,46 @@ print_info (const char *target,
             const svn_info_t *info,
             apr_pool_t *pool)
 {
-  SVN_ERR (svn_cmdline_printf (pool, _("Path: %s\n"),
-                               svn_path_local_style (target, pool)));
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Path: %s\n"),
+                                svn_path_local_style (target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
   if (info->kind != svn_node_dir)
-    SVN_ERR (svn_cmdline_printf (pool, _("Name: %s\n"),
-                                 svn_path_basename(target, pool)));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Name: %s\n"),
+                                  svn_path_basename(target, pool)));
  
   if (info->URL) 
-    SVN_ERR (svn_cmdline_printf (pool, _("URL: %s\n"), info->URL));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("URL: %s\n"), info->URL));
            
   if (info->repos_root_URL) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Repository Root: %s\n"),
-                                 info->repos_root_URL));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Repository Root: %s\n"),
+                                  info->repos_root_URL));
  
   if (info->repos_UUID) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Repository UUID: %s\n"),
-                                 info->repos_UUID));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Repository UUID: %s\n"),
+                                  info->repos_UUID));
  
   if (SVN_IS_VALID_REVNUM (info->rev))
-    SVN_ERR (svn_cmdline_printf (pool, _("Revision: %ld\n"), info->rev));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Revision: %ld\n"), info->rev));
 
   switch (info->kind) 
     {
     case svn_node_file:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: file\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: file\n")));
       break;
           
     case svn_node_dir:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: directory\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: directory\n")));
       break;
           
     case svn_node_none:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: none\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: none\n")));
       break;
           
     case svn_node_unknown:
     default:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: unknown\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: unknown\n")));
       break;
     }
 
@@ -308,19 +468,19 @@ print_info (const char *target,
       switch (info->schedule) 
         {
         case svn_wc_schedule_normal:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: normal\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: normal\n")));
           break;
           
         case svn_wc_schedule_add:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: add\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: add\n")));
           break;
           
         case svn_wc_schedule_delete:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: delete\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: delete\n")));
           break;
           
         case svn_wc_schedule_replace:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: replace\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: replace\n")));
           break;
           
         default:
@@ -328,21 +488,21 @@ print_info (const char *target,
         }
       
       if (info->copyfrom_url) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Copied From URL: %s\n"),
-                                     info->copyfrom_url));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Copied From URL: %s\n"),
+                                      info->copyfrom_url));
       
       if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
-        SVN_ERR (svn_cmdline_printf (pool, _("Copied From Rev: %ld\n"),
-                                     info->copyfrom_rev));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Copied From Rev: %ld\n"),
+                                      info->copyfrom_rev));
     }
       
   if (info->last_changed_author) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Author: %s\n"),
-                                 info->last_changed_author));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Last Changed Author: %s\n"),
+                                  info->last_changed_author));
   
   if (SVN_IS_VALID_REVNUM (info->last_changed_rev))
-    SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Rev: %ld\n"),
-                                 info->last_changed_rev));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Last Changed Rev: %ld\n"),
+                                  info->last_changed_rev));
   
   if (info->last_changed_date)
     SVN_ERR (svn_cl__info_print_time (info->last_changed_date, 
@@ -359,41 +519,41 @@ print_info (const char *target,
                                           _("Properties Last Updated"), pool));
       
       if (info->checksum) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Checksum: %s\n"),
-                                     info->checksum));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Checksum: %s\n"),
+                                      info->checksum));
       
       if (info->conflict_old) 
-        SVN_ERR (svn_cmdline_printf (pool,
-                                     _("Conflict Previous Base File: %s\n"),
-                                     svn_path_local_style (info->conflict_old,
-                                                           pool)));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                      _("Conflict Previous Base File: %s\n"),
+                                      svn_path_local_style (info->conflict_old,
+                                                            pool)));
  
       if (info->conflict_wrk) 
-        SVN_ERR (svn_cmdline_printf
+        SVN_ERR (SVN_CMDLINE_PRINTF2
                  (pool, _("Conflict Previous Working File: %s\n"),
                   svn_path_local_style (info->conflict_wrk, pool)));
       
       if (info->conflict_new) 
-        SVN_ERR (svn_cmdline_printf (pool,
-                                     _("Conflict Current Base File: %s\n"),
-                                     svn_path_local_style (info->conflict_new,
-                                                           pool)));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                      _("Conflict Current Base File: %s\n"),
+                                      svn_path_local_style (info->conflict_new,
+                                                            pool)));
  
       if (info->prejfile) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Conflict Properties File: %s\n"),
-                                     svn_path_local_style (info->prejfile,
-                                                           pool)));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Conflict Properties File: %s\n"),
+                                      svn_path_local_style (info->prejfile,
+                                                            pool)));
     }      
 
   if (info->lock)
     {
       if (info->lock->token)
-        SVN_ERR (svn_cmdline_printf (pool, _("Lock Token: %s\n"),
-                                     info->lock->token));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Lock Token: %s\n"),
+                                      info->lock->token));
 
       if (info->lock->owner)
-        SVN_ERR (svn_cmdline_printf (pool, _("Lock Owner: %s\n"),
-                                     info->lock->owner));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Lock Owner: %s\n"),
+                                      info->lock->owner));
 
       if (info->lock->creation_date)
         SVN_ERR (svn_cl__info_print_time (info->lock->creation_date,
@@ -408,17 +568,17 @@ print_info (const char *target,
           int comment_lines;
           /* NOTE: The stdio will handle newline translation. */
           comment_lines = svn_cstring_count_newlines (info->lock->comment) + 1;
-          SVN_ERR (svn_cmdline_printf (pool,
-                                       (comment_lines != 1)
-                                       ? _("Lock Comment (%i lines):\n%s\n")
-                                       : _("Lock Comment (%i line):\n%s\n"),
-                                       comment_lines, 
-                                       info->lock->comment));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                        (comment_lines != 1)
+                                        ? _("Lock Comment (%i lines):\n%s\n")
+                                        : _("Lock Comment (%i line):\n%s\n"),
+                                        comment_lines, 
+                                        info->lock->comment));
         }
     }
 
   /* Print extra newline separator. */
-  SVN_ERR (svn_cmdline_printf (pool, "\n"));
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, "\n"));
 
   return SVN_NO_ERROR;
 }
@@ -500,7 +660,7 @@ svn_cl__info (apr_getopt_t *os,
       if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_fprintf
+          SVN_ERR (SVN_CMDLINE_FPRINTF2
                    (stderr, subpool,
                     _("%s:  (Not a versioned resource)\n\n"),
                     svn_path_local_style (target, pool)));
@@ -509,7 +669,7 @@ svn_cl__info (apr_getopt_t *os,
       else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_fprintf
+          SVN_ERR (SVN_CMDLINE_FPRINTF2
                    (stderr, subpool,
                     _("%s:  (Not a valid URL)\n\n"),
                     svn_path_local_style (target, pool)));

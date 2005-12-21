@@ -49,6 +49,9 @@
 
 
 
+#define DOT_TMP_STR \
+        "\x2E\x74\x6D\x70"
+        /* ".tmp" */
 
 svn_error_t *
 svn_cl__print_commit_info (svn_commit_info_t *commit_info,
@@ -179,7 +182,8 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   /* Ask the working copy for a temporary file that starts with
      PREFIX. */
   err = svn_io_open_unique_file2 (&tmp_file, &tmpfile_name,
-                                  prefix, ".tmp", svn_io_file_del_none, pool);
+                                  prefix, DOT_TMP_STR, svn_io_file_del_none,
+                                  pool);
 
   if (err && APR_STATUS_IS_EACCES (err->apr_err))
     {
@@ -198,7 +202,7 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
         }
 
       err = svn_io_open_unique_file2 (&tmp_file, &tmpfile_name,
-                                      prefix, ".tmp",
+                                      prefix, DOT_TMP_STR,
                                       svn_io_file_del_none, pool);
     }
 
@@ -362,7 +366,14 @@ svn_cl__make_log_msg_baton (void **baton,
     }      
   else
     {
-      lmb->message = opt_state->message;
+#if APR_CHARSET_EBCDIC
+      /* On ebcdic platforms we assume strings are utf-8 whenever possible. */
+      if (opt_state->message)
+        SVN_ERR (svn_utf_cstring_to_utf8(&lmb->message, opt_state->message, 
+                                         pool));
+      else
+#endif
+        lmb->message = opt_state->message;
     }
 
   lmb->editor_cmd = opt_state->editor_cmd;
@@ -492,8 +503,11 @@ svn_cl__get_log_message (const char **log_msg,
     {
       svn_string_t *log_msg_string = svn_string_create (lmb->message, pool);
 
+#if !APR_CHARSET_EBCDIC
+      /* On ebcdic platforms log_msg_string is already utf-8. */
       SVN_ERR (svn_subst_translate_string (&log_msg_string, log_msg_string,
                                            lmb->message_encoding, pool));
+#endif
 
       *log_msg = log_msg_string->data;
 
@@ -519,6 +533,13 @@ svn_cl__get_log_message (const char **log_msg,
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup (default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
       svn_string_t *msg_string = svn_string_create ("", pool);
+
+#if AS400
+      return svn_error_create 
+        (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
+         _("Use of an external editor is not supported on this platform.  Use "
+           "the --message (-m) or --file (-F) options"));
+#endif
 
       for (i = 0; i < commit_items->nelts; i++)
         {

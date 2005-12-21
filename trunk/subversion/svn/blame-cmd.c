@@ -26,6 +26,7 @@
 #include "svn_cmdline.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -37,6 +38,49 @@ typedef struct
   svn_stringbuf_t *sbuf;
 } blame_baton_t;
 
+#define AUTHOR_STR \
+        "\x61\x75\x74\x68\x6f\x72"
+        /* "author" */
+
+#define BLAME_STR \
+        "\x62\x6c\x61\x6d\x65"
+        /* "blame" */
+
+#define COMMIT_STR \
+        "\x63\x6f\x6d\x6d\x69\x74"
+        /* "commit" */
+
+#define DATE_STR \
+        "\x64\x61\x74\x65"
+        /* "date" */
+
+#define ENTRY_STR \
+        "\x65\x6e\x74\x72\x79"
+        /* "entry" */
+
+#define FIVE_SPACE_MINUS_STR \
+        "\x20\x20\x20\x20\x20\x2d"
+        /* "     -" */
+
+#define LINE_NUMBER_STR \
+        "\x6c\x69\x6e\x65\x2d\x6e\x75\x6d\x62\x65\x72"
+        /* "line-number" */
+
+#define NINE_SPACE_MINUS_STR \
+        "\x20\x20\x20\x20\x20\x20\x20\x20\x20\x2d"
+        /* "         -" */
+
+#define PATH_STR \
+        "\x70\x61\x74\x68"
+        /* "path" */
+
+#define REVISION_STR \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define TARGET_STR \
+        "\x74\x61\x72\x67\x65\x74"
+        /* "target" */
 
 /*** Code. ***/
 
@@ -56,31 +100,31 @@ blame_receiver_xml (void *baton,
   /* "<entry ...>" */
   /* line_no is 0-based, but the rest of the world is probably Pascal
      programmers, so we make them happy and output 1-based line numbers. */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "entry",
-                         "line-number",
-                         apr_psprintf (pool, "%" APR_INT64_T_FMT,
-                                       line_no + 1),
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, ENTRY_STR,
+                         LINE_NUMBER_STR,
+                         APR_PSPRINTF2 (pool, "%" APR_INT64_T_FMT,
+                                        line_no + 1),
                          NULL);
 
   if (SVN_IS_VALID_REVNUM (revision))
     {
       /* "<commit ...>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "commit",
-                             "revision",
-                             apr_psprintf (pool, "%ld", revision), NULL);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, COMMIT_STR,
+                             REVISION_STR,
+                             APR_PSPRINTF2 (pool, "%ld", revision), NULL);
 
       /* "<author>xx</author>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "author", author);
+      svn_cl__xml_tagged_cdata (&sb, pool, AUTHOR_STR, author);
 
       /* "<date>xx</date>" */
-      svn_cl__xml_tagged_cdata (&sb, pool, "date", date);
+      svn_cl__xml_tagged_cdata (&sb, pool, DATE_STR, date);
 
       /* "</commit>" */
-      svn_xml_make_close_tag (&sb, pool, "commit");
+      svn_xml_make_close_tag (&sb, pool, COMMIT_STR);
     }
 
   /* "</entry>" */
-  svn_xml_make_close_tag (&sb, pool, "entry");
+  svn_xml_make_close_tag (&sb, pool, ENTRY_STR);
 
   SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
   svn_stringbuf_setempty (sb);
@@ -106,8 +150,11 @@ blame_receiver (void *baton,
   const char *time_utf8;
   const char *time_stdout;
   const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
-                        ? apr_psprintf (pool, "%6ld", revision)
-                        : "     -";
+                        ? APR_PSPRINTF2 (pool, "%6ld", revision)
+                        : FIVE_SPACE_MINUS_STR;
+#if APR_CHARSET_EBCDIC
+  static svn_error_t *err;
+#endif
   
   if (opt_state->verbose)
     {
@@ -115,22 +162,58 @@ blame_receiver (void *baton,
         {
           SVN_ERR (svn_time_from_cstring (&atime, date, pool));
           time_utf8 = svn_time_to_human_cstring (atime, pool);
+#if !APR_CHARSET_EBCDIC
           SVN_ERR (svn_cmdline_cstring_from_utf8 (&time_stdout, time_utf8,
                                                   pool));
+#else
+          time_stdout = time_utf8;
+#endif
         } else
           /* ### This is a 44 characters long string. It assumes the current
              format of svn_time_to_human_cstring and also 3 letter
              abbreviations for the month and weekday names.  Else, the
              line contents will be misaligned. */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
           time_stdout = "                                           -";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
+#if !APR_CHARSET_EBCDIC
       return svn_stream_printf (out, pool, "%s %10s %s %s\n", rev_str, 
-                                author ? author : "         -", 
+                                author ? author : NINE_SPACE_MINUS_STR, 
                                 time_stdout , line);
+#else
+      /* On ebcdic platforms a versioned text file may be in ebcdic.  In those
+       * cases line is obviously ebcdic encoded too.  We can't simply pass
+       * line to svn_stream_printf_ebcdic since it expects utf-8 encoded var
+       * string args.  For now we simply output the ebcdic line after the
+       * blame info.  Note that since svn_client_blame2 parses each line
+       * based on SVN_UTF8_NEWLINE_STR that there will only be one big ebcdic
+       * line for the blamed file.  After some investigation there does not
+       * appear to be an obvious/easy fix for this.
+       * 
+       * TODO: Handle ebcdic encoded text files properly. */
+      err = svn_stream_printf_ebcdic (out, pool, "%s %10s %s ", rev_str, 
+                                      author ? author : NINE_SPACE_MINUS_STR, 
+                                      time_stdout);
+      return err ? err : svn_stream_printf (out, pool, "%s%s", line,
+                                            SVN_UTF8_NEWLINE_STR);
+#endif
     }
   else
     {
+#if !APR_CHARSET_EBCDIC
       return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
-                                author ? author : "         -", line);
+                                author ? author : NINE_SPACE_MINUS_STR, line);
+#else
+      /* On ebcdic platforms line may be encoded in ebcdic - see above. */
+      err = svn_stream_printf_ebcdic (out, pool, "%s %10s ", rev_str, 
+                                      author ? author : NINE_SPACE_MINUS_STR);
+      return err ? err : svn_stream_printf (out, pool, "%s%s", line,
+                                            SVN_UTF8_NEWLINE_STR);
+#endif
     }
 }
  
@@ -145,7 +228,7 @@ print_header_xml (apr_pool_t *pool)
   svn_xml_make_header (&sb, pool);
 
   /* "<blame>" */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "blame", NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, BLAME_STR, NULL);
 
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -158,7 +241,7 @@ print_footer_xml (apr_pool_t *pool)
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
 
   /* "</blame>" */
-  svn_xml_make_close_tag (&sb, pool, "blame");
+  svn_xml_make_close_tag (&sb, pool, BLAME_STR);
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
 
@@ -182,7 +265,7 @@ svn_cl__blame (apr_getopt_t *os,
 
   /* Blame needs a file on which to operate. */
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
     {
@@ -277,8 +360,8 @@ svn_cl__blame (apr_getopt_t *os,
           const char *outpath = truepath;
           if (! svn_path_is_url (target))
             outpath = svn_path_local_style (truepath, subpool);
-          svn_xml_make_open_tag (&bl.sbuf, pool, svn_xml_normal, "target",
-                                 "path", outpath, NULL);
+          svn_xml_make_open_tag (&bl.sbuf, pool, svn_xml_normal, TARGET_STR,
+                                 PATH_STR, outpath, NULL);
 
           err = svn_client_blame2 (truepath,
                                    &peg_revision,
@@ -303,9 +386,9 @@ svn_cl__blame (apr_getopt_t *os,
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
             {
               svn_error_clear (err);
-              SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                            _("Skipping binary file: '%s'\n"),
-                                            target));
+              SVN_ERR (SVN_CMDLINE_FPRINTF2 (stderr, subpool,
+                                             _("Skipping binary file: '%s'\n"),
+                                             target));
             }
           else
             {
@@ -315,7 +398,7 @@ svn_cl__blame (apr_getopt_t *os,
       else if (opt_state->xml)
         {
           /* "</target>" */
-          svn_xml_make_close_tag (&(bl.sbuf), pool, "target");
+          svn_xml_make_close_tag (&(bl.sbuf), pool, TARGET_STR);
           SVN_ERR (svn_cl__error_checked_fputs (bl.sbuf->data, stdout));
         }
 

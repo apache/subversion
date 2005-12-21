@@ -27,7 +27,6 @@ Available subcommands:
    mkdir
    move (mv, rename, ren)
    propdel (pdel, pd)
-   propedit (pedit, pe)
    propget (pget, pg)
    proplist (plist, pl)
    propset (pset, ps)

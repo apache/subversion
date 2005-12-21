@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_path.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -73,10 +74,10 @@ svn_cl__propdel (apr_getopt_t *os,
                                        &rev, FALSE, ctx, pool));
       if (! opt_state->quiet) 
         {
-          SVN_ERR (svn_cmdline_printf (pool,
-                                       _("property '%s' deleted from"
-                                         " repository revision %ld\n"),
-                                       pname_utf8, rev));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                        _("property '%s' deleted from"
+                                          " repository revision %ld\n"),
+                                        pname_utf8, rev));
         }      
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
@@ -84,7 +85,12 @@ svn_cl__propdel (apr_getopt_t *os,
       return svn_error_createf
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
          _("Cannot specify revision for deleting versioned property '%s'"),
+#if !APR_CHARSET_EBCDIC
          pname);
+#else
+         /* ebcdic port assumes var string args to svn_error_creatf are utf-8 */
+         pname_utf8);
+#endif
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
@@ -111,7 +117,7 @@ svn_cl__propdel (apr_getopt_t *os,
           
           if (success && (! opt_state->quiet))
             {
-              SVN_ERR (svn_cmdline_printf
+              SVN_ERR (SVN_CMDLINE_PRINTF2
                        (subpool, opt_state->recursive
                         ? _("property '%s' deleted (recursively) from '%s'.\n")
                         : _("property '%s' deleted from '%s'.\n"),

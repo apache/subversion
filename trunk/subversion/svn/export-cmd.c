@@ -71,7 +71,11 @@ svn_cl__export (apr_getopt_t *os,
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE, TRUE,
                           FALSE, pool);
-
+#if APR_CHARSET_EBCDIC
+  if (opt_state->native_eol)
+    SVN_ERR (svn_utf_cstring_to_utf8(&opt_state->native_eol,
+                                     opt_state->native_eol, pool));
+#endif
   /* Do the export. */
   err = svn_client_export3 (NULL, truefrom, to, &peg_revision,
                             &(opt_state->start_revision),

@@ -27,6 +27,7 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -116,8 +117,8 @@ svn_cl__proplist (apr_getopt_t *os,
               else
                 name_local = item->node_name->data;
 
-              SVN_ERR (svn_cmdline_printf(subpool, "Properties on '%s':\n",
-                                          name_local));
+              SVN_ERR (SVN_CMDLINE_PRINTF2(subpool, "Properties on '%s':\n",
+                                           name_local));
               SVN_ERR (svn_cl__print_prop_hash
                        (item->prop_hash, (! opt_state->verbose), subpool));
             }

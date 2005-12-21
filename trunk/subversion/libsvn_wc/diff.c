@@ -59,6 +59,10 @@
         "\x75\x6e\x69\x6d\x70\x6f\x72\x74\x61\x6e\x74"
         /* "unimportant" */
 
+#define TMP_STR \
+        "\x74\x6d\x70"
+        /* "tmp" */
+        
 /*-------------------------------------------------------------------------*/
 /* A little helper function.
 
@@ -359,7 +363,7 @@ get_empty_file (struct edit_baton *b,
       SVN_ERR (svn_io_temp_dir (&temp_dir, b->pool));
       SVN_ERR (svn_io_open_unique_file2
                (NULL, &(b->empty_file),
-                svn_path_join (temp_dir, "tmp", b->pool),
+                svn_path_join (temp_dir, TMP_STR, b->pool),
                 "", svn_io_file_del_on_pool_cleanup,
                 b->pool));
     }

@@ -166,7 +166,19 @@ svn_cl__propget (apr_getopt_t *os,
                   SVN_ERR (svn_subst_detranslate_string (&propval, propval,
                                                          TRUE, subpool));
                 }
-              
+#if APR_CHARSET_EBCDIC
+              /* Even if this is not a special svn: prop, on ebcdic platforms
+               * if the propval is valid utf-8 it's converted to ebcdic before
+               * sending it to the out stream.  This does leave the highly
+               * unlikely possibility that a binary or ebcdic propval
+               * (*not* that we are encouraging ebcdic propvals) that happens
+               * to be valid utf-8 would be converted to "ebcdic" and therefore
+               * corrupted.  Don't see any easy way around this however, and it
+               * seems terribly unlikely to be a problem for anyone.
+               */
+              else if (svn_utf_is_valid_utf (propval->data, propval->len))
+                SVN_ERR (svn_utf_string_from_utf8(&propval, propval, pool));
+#endif              
               if (print_filenames) 
                 {
                   const char *filename_stdout;

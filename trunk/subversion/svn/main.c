@@ -179,11 +179,18 @@ const apr_getopt_option_t svn_cl__options[] =
  * also includes SVN_CL__AUTH_OPTIONS, which of course already
  * contains svn_cl__non_interactive_opt, so we get it for free.
  */
+#if !AS400
 #define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
                                 svn_cl__force_log_opt, \
                                 svn_cl__editor_cmd_opt, \
                                 svn_cl__encoding_opt
-
+#else
+/* No --encoding: Specification of the log message encoding is not supported
+ * on the IBM iSeries. */
+#define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
+                                svn_cl__force_log_opt
+#endif
+ 
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
   { "add", svn_cl__add, {0}, N_
@@ -230,16 +237,31 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     ("Recursively clean up the working copy, removing locks, resuming\n"
      "unfinished operations, etc.\n"
      "usage: cleanup [PATH...]\n"),
+#if !AS400
     {svn_cl__merge_cmd_opt, svn_cl__config_dir_opt} },
-
-  { "commit", svn_cl__commit, {"ci"}, N_
-    ("Send changes from your working copy to the repository.\n"
-     "usage: commit [PATH...]\n"
-     "\n"
-     "  A log message must be provided, but it can be empty.  If it is not\n"
-     "  given by a --message or --file option, an editor will be started.\n"
-     "  If any targets are (or contain) locked items, those will be\n"
-     "  unlocked after a successful commit.\n"),
+#else
+    {svn_cl__config_dir_opt} },
+#endif
+  
+  { "commit", svn_cl__commit, {"ci"},
+#if !AS400
+    N_("Send changes from your working copy to the repository.\n"
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.  If it is not\n"
+       "  given by a --message or --file option, an editor will be started.\n"
+       "  If any targets are (or contain) locked items, those will be\n"
+       "  unlocked after a successful commit.\n"),
+#else
+    N_("Send changes from your working copy to the repository.\n"
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.\n"
+       "  The iSeries port does not support the starting of an editor,\n"
+       "  so --message or --file must be used. If any targets are\n"
+       "  (or contain) locked items, those will be unlocked after a\n"
+       "  successful commit.\n"),
+#endif
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -297,10 +319,17 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
+#if !AS400
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
+#else
+    {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
+     svn_cl__no_diff_deleted,
+     svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
+#endif
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -385,7 +414,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "\n"
      "  Use --force to steal the lock from another user or working copy.\n"),
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
+#if !AS400
       svn_cl__encoding_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+#else
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+#endif
       svn_cl__force_opt } },
   { "log", svn_cl__log, {0}, N_
     ("Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -440,9 +473,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
      "  the sources have identical basenames that match a file within '.':\n"
      "  in which case, the differences will be applied to that file.\n"),
+#if !AS400
     {'r', 'c', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+#else
+    {'r', 'c', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
+     svn_cl__ignore_ancestry_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+#endif
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -485,6 +524,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
+#if !AS400  
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
     ("Edit a property with an external editor.\n"
      "usage: 1. propedit PROPNAME PATH...\n"
@@ -496,6 +536,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
+#endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
     ("Print the value of a property on files, dirs, or revisions.\n"
@@ -568,7 +609,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
      "  attempt will fail, and a recursive attempt will set the property\n"
      "  only on the file children of the directory.\n"),
+#if !AS400
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
+#else
+    {'F', 'q', 'r', svn_cl__targets_opt, 'R',
+#endif
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
 
@@ -678,9 +723,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "     This is used when repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
      "     directory within the same repository.\n"),
+#if !AS400
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-
+#else
+    { 'r', 'N', 'q', svn_cl__relocate_opt,
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+#endif
+ 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
      "usage: unlock TARGET...\n"
@@ -709,7 +759,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  while updates to the file's properties are shown in the second column.\n"
      "  A 'B' in the third column signifies that the lock for the file has\n"
      "  been broken or stolen.\n"),
-    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS,
+#if !AS400
+    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
+#else
+    {'r', 'N', 'q', SVN_CL__AUTH_OPTIONS, 
+#endif
      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -917,11 +971,20 @@ main (int argc, const char * const *argv)
                  "try '-r N:M' instead of '-r N -r M'"));
             return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
+#if APR_CHARSET_EBCDIC
+        err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
+        if (err)
+          return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+#endif
         if (svn_opt_parse_revision (&(opt_state.start_revision),
                                     &(opt_state.end_revision),
                                     opt_arg, pool) != 0)
           {
+#if !APR_CHARSET_EBCDIC
             err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
+#else
+            utf8_opt_arg = opt_arg;
+#endif
             if (! err)
               err = svn_error_createf
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -967,11 +1030,19 @@ main (int argc, const char * const *argv)
 
           if (! err)
             err = svn_stringbuf_from_file (&buffer, utf8_opt_arg, pool);
+#if !APR_CHARSET_EBCDIC
+          /* The ebcdic port assumes --targets file is already utf-8 encoded.
+           * So no need to convert it's contents. */
           if (! err)
             err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
+#else
+          buffer_utf8 = svn_stringbuf_dup (buffer, pool);
+#endif
           if (err)
             return svn_cmdline_handle_exit_error (err, pool, "svn: ");
-          opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
+          opt_state.targets = svn_cstring_split (buffer_utf8->data,
+                                                 SVN_UTF8_NEWLINE_STR \
+                                                 SVN_UTF8_CR_STR,
                                                  TRUE, pool);
         }
         break;
@@ -1060,10 +1131,20 @@ main (int argc, const char * const *argv)
         opt_state.editor_cmd = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__old_cmd_opt:
+#if !APR_CHARSET_EBCDIC
         opt_state.old_target = apr_pstrdup (pool, opt_arg);
+#else
+        SVN_INT_ERR (svn_utf_cstring_to_utf8(&opt_state.old_target, opt_arg,
+                                             pool));
+#endif
         break;
       case svn_cl__new_cmd_opt:
+#if !APR_CHARSET_EBCDIC
         opt_state.new_target = apr_pstrdup (pool, opt_arg);
+#else
+        SVN_INT_ERR (svn_utf_cstring_to_utf8(&opt_state.new_target, opt_arg,
+                                             pool));
+#endif
         break;
       case svn_cl__config_dir_opt:
         err = svn_utf_cstring_to_utf8 (&path_utf8, opt_arg, pool);
@@ -1165,7 +1246,12 @@ main (int argc, const char * const *argv)
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
+#if !APR_CHARSET_EBCDIC
                                       first_arg_utf8));
+#else
+              /* Can't send utf-8 to an ebcdic console. */
+                                      first_arg));
+#endif
               svn_cl__help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1199,7 +1285,12 @@ main (int argc, const char * const *argv)
             (svn_cmdline_fprintf
              (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                               "Type 'svn help %s' for usage.\n"),
+#if !APR_CHARSET_EBCDIC
               cmdname_utf8, optstr_utf8, cmdname_utf8));
+#else
+              /* Can't send utf-8 to an ebcdic console. */
+              subcommand->name, optstr, subcommand->name));
+#endif
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1223,7 +1314,13 @@ main (int argc, const char * const *argv)
         {
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
-          const char *fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
+          const char *fname_utf8;
+#if APR_CHARSET_EBCDIC
+          err = svn_utf_cstring_to_utf8(&dash_F_arg, dash_F_arg, pool);
+          if (err)
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+#endif
+          fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
           err = svn_wc_adm_probe_open3 (&adm_access, NULL, fname_utf8,
                                         FALSE, 0, NULL, NULL, pool);
           if (! err)
