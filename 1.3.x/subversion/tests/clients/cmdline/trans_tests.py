@@ -187,7 +187,10 @@ def setup_working_copy(wc_dir, value_len):
     else:
       svntest.main.file_append (fixed_length_keywords_path, ebcdic.os400_convert_string_to_utf8(i))
 
-  svntest.main.file_append (id_with_space_path, "$Id$")
+  if sys.platform != 'AS/400':
+    svntest.main.file_append (id_with_space_path, "$Id$")
+  else:
+    svntest.main.file_append (id_with_space_path, ebcdic.os400_convert_string_to_utf8("$Id$"))
 
 
 ### Helper functions for setting/removing properties
