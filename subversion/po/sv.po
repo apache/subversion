@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-12-21 21:18+0100\n"
-"PO-Revision-Date: 2005-12-21 21:18+0100\n"
+"PO-Revision-Date: 2005-12-22 22:40+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -8036,8 +8036,8 @@ msgstr "serverns rotkatalog"
 #: svnserve/main.c:121
 msgid "force read only, overriding repository config file"
 msgstr ""
-"tillåt endast läsning; överskuggar värdet i arkivets\n"
-"                             konfigurationsfil"
+"tillåt endast läsning; överskuggar värdet i\n"
+"                             arkivets konfigurationsfil"
 
 #: svnserve/main.c:122
 msgid "tunnel mode"
@@ -8059,7 +8059,7 @@ msgstr "lyssna en gång (användbart för felsökning)"
 
 #: svnserve/main.c:130
 msgid "write server process ID to file arg"
-msgstr "Skriv serverns process-ID till filen arg"
+msgstr "skriv serverns process-ID till filen arg"
 
 #: svnserve/main.c:141
 #, c-format
