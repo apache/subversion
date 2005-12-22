@@ -208,7 +208,7 @@ test_list = [ None,
               tag_trunk_with_file2,
               tag_trunk_with_file,
               tag_with_modified_file,
-              XFail(dir_prop_change),
+              dir_prop_change,
              ]
 
 if __name__ == '__main__':

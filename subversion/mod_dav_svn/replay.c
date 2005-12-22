@@ -335,6 +335,17 @@ static svn_error_t *close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *close_directory(void *dir_baton,
+                                    apr_pool_t *pool)
+{
+  dav_svn_edit_baton_t *eb = dir_baton;
+
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "<S:close-directory/>" DEBUG_CR));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *close_edit(void *edit_baton,
                                apr_pool_t *pool)
 {
@@ -371,6 +382,7 @@ static void make_editor(const svn_delta_editor_t **editor,
   e->apply_textdelta = apply_textdelta;
   e->change_file_prop = change_file_prop;
   e->close_file = close_file;
+  e->close_directory = close_directory;
   e->close_edit = close_edit;
 
   *editor = e;
