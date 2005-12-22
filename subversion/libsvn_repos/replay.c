@@ -183,6 +183,8 @@ add_subdir (svn_fs_root_t *source_root,
                                               subpool),
                                authz_read_func, authz_read_baton,
                                subpool, &new_dir_baton));
+
+          SVN_ERR (editor->close_directory (new_dir_baton, subpool));
         }
       else if (dent->kind == svn_node_file)
         {
