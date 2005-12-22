@@ -27,6 +27,18 @@ Candidate changes:
     Votes:
       +1: david
 
+  * r17910
+    Fix the ability to link libsvn_swig_py on Solaris 10 when
+    compiling with GCC 3.4.2.
+    Justification:
+      Allows successful builds of the Python bindings in a relatively
+      common situation on Solaris via a minor tweak to our build
+      machinery which restores its behavior from Subversion 1.2.3 and
+      earlier.  The new behavior is required only for Cygwin, and this
+      change makes that (conditionally) so.
+    Votes:
+      +1: dlr
+
 Approved changes:
 
   * r17795, r17811 (testcase)
