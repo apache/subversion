@@ -326,7 +326,7 @@ def os400_split_utf8_lines(one_big_line):
       lines.append(line + '\n'.encode('utf-8'))
   return lines
 
-def os400_spool_print(s, size=80):
+def os400_spool_print(s, size=80, newline=True):
   # Print string s inserting a newline after every size chars.
   # Prevents errors when print(ing) long lines to spool files.
   remaining = len(s)
@@ -336,7 +336,10 @@ def os400_spool_print(s, size=80):
     print s[start:start + size]
     start += size
     remaining = len(s) - start
-  print s[start:end]
+  if newline:
+    print s[start:end]
+  else:
+    print s[start:end],
 
 def os400_tagtree(root_path, ccsid, rootonly=0):
   # Recursively tag files in a directory tree rooted at root_path with CCSID,
@@ -438,14 +441,16 @@ def os400_run_cmd_list(command, stdin_lines=None, out_utf8=0, err_utf8=0, va=[])
   if (out_utf8):
     so_contents = solog.read()
     if so_contents.endswith('\n'.encode('utf-8')):
-      ends_w_newline = False
-    else:
       ends_w_newline = True
+    else:
+      ends_w_newline = False
     solines_tmp = so_contents.split('\n'.encode('utf-8'))
     solines = []
     for line in solines_tmp:
       solines.append(line + '\n'.encode('utf-8'))
     if not ends_w_newline:
+      solines[len(solines) - 1] = (solines[len(solines) - 1]).rstrip('\n'.encode('utf-8'))
+    else:
       solines.pop()
   else:
     solines = solog.readlines()
@@ -453,17 +458,19 @@ def os400_run_cmd_list(command, stdin_lines=None, out_utf8=0, err_utf8=0, va=[])
   if (err_utf8):
     se_contents = selog.read()
     if se_contents.endswith('\n'.encode('utf-8')):
-      ends_w_newline = False
-    else:
       ends_w_newline = True
+    else:
+      ends_w_newline = False
     selines_tmp = se_contents.split('\n'.encode('utf-8'))
     selines = []
     for line in selines_tmp:
       selines.append(line + '\n'.encode('utf-8'))
     if not ends_w_newline:
+      selines[len(selines) - 1] = (selines[len(selines) - 1]).rstrip('\n'.encode('utf-8'))
+    else:
       selines.pop()
   else:
-    selines = selog.readlines()
+    selines = selog.readlines() 
 
   solog.close()
   selog.close()
