@@ -186,6 +186,11 @@ def tag_with_modified_file(sbox):
   "tag with a modified file"
   run_test(sbox, "tag-with-modified-file.dump")
 
+#----------------------------------------------------------------------
+
+def dir_prop_change(sbox):
+  "directory property changes"
+  run_test(sbox, "dir_prop_change.dump")
 
 
 ########################################################################
@@ -203,6 +208,7 @@ test_list = [ None,
               tag_trunk_with_file2,
               tag_trunk_with_file,
               tag_with_modified_file,
+              XFail(dir_prop_change),
              ]
 
 if __name__ == '__main__':
