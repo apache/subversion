@@ -93,6 +93,7 @@ static const svn_ra_dav__xml_elm_t editor_report_elements[] =
   { SVN_XML_NAMESPACE, "open-file",        ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file",         ELEM_add_file, 0 },
   { SVN_XML_NAMESPACE, "close-file",       ELEM_close_file, 0 },
+  { SVN_XML_NAMESPACE, "close-directory",  ELEM_close_directory, 0 },
   { SVN_XML_NAMESPACE, "apply-textdelta",  ELEM_apply_textdelta, 0 },
   { SVN_XML_NAMESPACE, "change-file-prop", ELEM_change_file_prop, 0 },
   { SVN_XML_NAMESPACE, "change-dir-prop",  ELEM_change_dir_prop, 0 },
@@ -196,27 +197,6 @@ start_element(void *baton, int parent_state, const char *nspace,
           {
             svn_pool_destroy(rb->file_pool);
             rb->file_pool = NULL;
-          }
-
-        /* Pop off any dirs we're done with, i.e. anything our path isn't
-         * under */
-        for (;;)
-          {
-            if (rb->dirs->nelts == 1)
-              break;
-            else
-              {
-                dir_item_t *di = &TOP_DIR(rb);
-                apr_size_t len = strlen(di->path);
-
-                if (strncmp(path, di->path, len) == 0 && path[len] == '/')
-                  break;
-                else
-                  {
-                    svn_pool_destroy(di->pool);
-                    apr_array_pop(rb->dirs);
-                  }
-              }
           }
 
         if (! path)
@@ -354,6 +334,24 @@ start_element(void *baton, int parent_state, const char *nspace,
                                             NULL, /* XXX text checksum */
                                             rb->file_pool);
           rb->file_baton = NULL;
+        }
+      break;
+
+    case ELEM_close_directory:
+      if (rb->dirs->nelts == 0)
+        rb->err = svn_error_create
+                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                     _("Got close-directory element without ever opening "
+                       "a directory"));
+      else
+        {
+          dir_item_t *di = &TOP_DIR(rb);
+
+          rb->err = rb->editor->close_directory (di->baton, di->pool);
+
+          svn_pool_destroy(di->pool);
+
+          apr_array_pop(rb->dirs);
         }
       break;
 
