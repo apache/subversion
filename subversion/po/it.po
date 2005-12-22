@@ -83,8 +83,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-12-21 11:48+0100\n"
-"PO-Revision-Date: 2005-12-21 15:22+0100\n"
+"POT-Creation-Date: 2005-12-22 05:05+0100\n"
+"PO-Revision-Date: 2005-12-22 14:11+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2737,40 +2737,50 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "Almeno una modifica di proprietà è fallita; il repository è rimaso immutato"
 
-#: libsvn_ra_dav/replay.c:154
+#: libsvn_ra_dav/replay.c:137
 msgid "Missing revision attr in target-revision element"
 msgstr "Attributo 'revision' mancante nell'elemento target-revision"
 
-#: libsvn_ra_dav/replay.c:171
+#: libsvn_ra_dav/replay.c:154
 msgid "Missing revision attr in open-root element"
 msgstr "Attributo 'revision' mancante per l'elemento open-root"
 
-#: libsvn_ra_dav/replay.c:189
+#: libsvn_ra_dav/replay.c:172
 msgid "Missing name attr in delete-entry element"
 msgstr "Attributo 'name' mancante nell'elemento delete-entry"
 
-#: libsvn_ra_dav/replay.c:193
+#: libsvn_ra_dav/replay.c:176
 msgid "Missing rev attr in delete-entry element"
 msgstr "Attributo 'rev' mancante nell'elemento delete-entry"
 
-#: libsvn_ra_dav/replay.c:244
+#: libsvn_ra_dav/replay.c:205
 msgid "Missing name attr in open-directory element"
 msgstr "Atttributo 'name' mancante nell'elemento 'open-directory'"
 
-#: libsvn_ra_dav/replay.c:296 libsvn_ra_dav/replay.c:376
+#: libsvn_ra_dav/replay.c:257 libsvn_ra_dav/replay.c:366
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "Attributo 'name' mancante nell'elemento %s"
 
-#: libsvn_ra_dav/replay.c:346
+#: libsvn_ra_dav/replay.c:303
 msgid "Got apply-textdelta element without preceding add-file or open-file"
-msgstr "Ricevuto elemento apply-textdelta senza che fosse preceduto da add-file o open-file"
+msgstr ""
+"Ricevuto elemento apply-textdelta senza che fosse preceduto da add-file o "
+"open-file"
 
-#: libsvn_ra_dav/replay.c:485
+#: libsvn_ra_dav/replay.c:329
+msgid "Got close-file element without preceding add-file or open-file"
+msgstr "Ricevuto elemento close-file senza che fosse preceduto da add-file o open-file"
+
+#: libsvn_ra_dav/replay.c:344
+msgid "Got close-directory element without ever opening a directory"
+msgstr "Ricevuto elemento close-directory senza aver mai aperto una directory"
+
+#: libsvn_ra_dav/replay.c:471
 msgid "Error writing stream: unexpected EOF"
 msgstr "Errore in scrittura: EOF inatteso"
 
-#: libsvn_ra_dav/replay.c:492
+#: libsvn_ra_dav/replay.c:478
 msgid "Got cdata content for a prop delete"
 msgstr "Ricevuto un contenuto cdata per la cancellazione di una proprieta'"
 
@@ -8180,10 +8190,10 @@ msgstr "Non riesco a creare il thread"
 #: svnsync/main.c:62
 msgid ""
 "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-"Initialize a destination repository."
+"Initialize a destination repository.\n"
 msgstr ""
 "utilizzo: svnsync inizializza URL_DEST --source-url URL_SRG\n"
-"Inizializza una repository di destinazione."
+"Inizializza una repository di destinazione.\n"
 
 #: svnsync/main.c:67
 msgid ""
@@ -8250,7 +8260,9 @@ msgstr "l'UUID del repository di destinazione (%s) non è quello atteso (%s)"
 msgid ""
 "Currently copying rev %ld in source is less than latest rev in destination (%"
 "ld)"
-msgstr "La revisione %ld in copia dalla sorgente è inferiore all'ultima revisione della destinazione (%ld)"
+msgstr ""
+"La revisione %ld in copia dalla sorgente è inferiore all'ultima revisione "
+"della destinazione (%ld)"
 
 #: svnsync/main.c:982
 #, c-format
