@@ -298,7 +298,7 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
     # For commands that produce utf-8 output tag the
     # temporary output file accordingly.
-    re_utf8_output = re.compile(r'(svn "diff")|(svn.*--xml)|(^svnlook)')
+    re_utf8_output = re.compile(r'(svn "cat")|(svn "diff")|(svn.*--xml)|(^svnlook)')
 
     if re_utf8_output.search(os.path.basename(command) + args):
       out_utf8 = 1
