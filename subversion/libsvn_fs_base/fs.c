@@ -120,7 +120,10 @@ check_already_open (svn_fs_t *fs)
 static svn_error_t *
 cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
 {
-  if (*db_ptr)
+  /* If the BDB environment is panicked, don't do anything, since
+     attempting to close the database will fail anyway. */
+  base_fs_data_t *bfd = fs->fsap_data;
+  if (*db_ptr && !apr_atomic_read(&bfd->bdb->panic))
     {
       DB *db = *db_ptr;
       char *msg = apr_psprintf (fs->pool, "closing '%s' database", name);
@@ -128,6 +131,17 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
 
       *db_ptr = 0;
       db_err = db->close (db, 0);
+      if (db_err == DB_RUNRECOVERY)
+        {
+          /*FIXME:*/fprintf(stderr, "cleanup_fs_db(%s): PANIC\n",
+                            bfd->bdb->path_bdb);
+          /* We can ignore DB_RUNRECOVERY errors from DB->close, but
+             must set the panic flag in the environment baton.  The
+             error will be propagated appropriately from
+             svn_fs_bdb__close. */
+          apr_atomic_set(&bfd->bdb->panic, TRUE);
+          db_err = 0;
+        }
 
 #if SVN_BDB_HAS_DB_INCOMPLETE
       /* We can ignore DB_INCOMPLETE on db->close and db->sync; it

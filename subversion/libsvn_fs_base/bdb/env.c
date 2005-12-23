@@ -190,36 +190,87 @@ bdb_cache_key (bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
 
 
 /* Find a BDB environment in the cache.
-
-   If the environment is in the cache but is in a paniced state,
-   remove it from the cache and return NULL. Otherwise increment the
-   descriptor's reference count.
+   Return the environment's panic state in *PANICP.
 
    Note: You MUST acquire the cache mutex before calling this function.
 */
 static bdb_env_t *
-bdb_cache_get (const bdb_env_key_t *keyp)
+bdb_cache_get (const bdb_env_key_t *keyp, svn_boolean_t *panicp)
 {
   bdb_env_t *bdb = apr_hash_get(bdb_cache, keyp, sizeof *keyp);
   if (bdb && bdb->env)
     {
       u_int32_t flags;
-      if (bdb->env->get_flags(bdb->env, &flags)
-          || (flags & DB_PANIC_ENVIRONMENT))
+      *panicp = !!apr_atomic_read(&bdb->panic);
+      if (!*panicp
+          && (bdb->env->get_flags(bdb->env, &flags)
+              || (flags & DB_PANIC_ENVIRONMENT)))
         {
           /*FIXME:*/fprintf(stderr, "bdb_cache_get(%s): PANIC\n",
                             bdb->path_bdb);
 
-          /* Something is wrong with the environment. Remove it from
-             the cache to give BDB a chance to recover it. */
-          apr_hash_set(bdb_cache, keyp, sizeof *keyp, NULL);
-          bdb->cached = FALSE;
+          /* Something is wrong with the environment. */
+          apr_atomic_set(&bdb->panic, TRUE);
+          *panicp = TRUE;
           bdb = NULL;
         }
     }
-  if (bdb)
-    ++bdb->refcount;
+  else
+    {
+      *panicp = FALSE;
+    }
   return bdb;
+}
+
+
+
+/* Close and destroy a BDB environment descriptor. */
+static svn_error_t *
+bdb_close (bdb_env_t *bdb)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* This bit is delcate; we must propagate the error from
+     DB_ENV->close to the caller, and always destroy the pool. */
+  int db_err = bdb->env->close(bdb->env, 0);
+
+  /* If automatic database recovery is enabled, ignore DB_RUNRECOVERY
+     errors, since they're dealt with eventually by BDB itself. */
+  if (db_err && (!SVN_BDB_AUTO_RECOVER || db_err != DB_RUNRECOVERY))
+    err = svn_fs_bdb__dberr(bdb, db_err);
+
+  apr_pool_destroy(bdb->pool);
+  return err;
+}
+
+
+svn_error_t *
+svn_fs_bdb__close (bdb_env_t *bdb)
+{
+  /* FIXME: ACQUIRE CACHE MUTEX */
+
+  if (--bdb->refcount != 0)
+    {
+      /* FIXME: RELEASE CACHE MUTEX */
+
+      /* If the environment is panicked and automatic recovery is not
+         enabled, return an appropriate error. */
+      if (!SVN_BDB_AUTO_RECOVER && apr_atomic_read(&bdb->panic))
+        {
+          /*FIXME:*/fprintf(stderr, "svn_fs_bdb__close(%s): PANIC\n",
+                            bdb->path_bdb);
+          return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                                  db_strerror(DB_RUNRECOVERY));
+        }
+      else
+        return SVN_NO_ERROR;
+    }
+
+  apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
+
+  /* FIXME: RELEASE CACHE MUTEX */
+
+  return bdb_close(bdb);
 }
 
 
@@ -245,23 +296,6 @@ bdb_open (bdb_env_t *bdb, u_int32_t flags, int mode)
 }
 
 
-/* Close and destroy a BDB environment descriptor. */
-static svn_error_t *
-bdb_close (bdb_env_t *bdb)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-
-  /* This bit is delcate; we must propagate the error from
-     DB_ENV->close to the caller, and always destroy the pool. */
-  int db_err = bdb->env->close(bdb->env, 0);
-  if (db_err)
-    err = svn_fs_bdb__dberr(bdb, db_err);
-
-  apr_pool_destroy(bdb->pool);
-  return err;
-}
-
-
 svn_error_t *
 svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
                   u_int32_t flags, int mode,
@@ -273,6 +307,7 @@ svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
   svn_error_t *err = SVN_NO_ERROR;
   bdb_env_key_t key;
   bdb_env_t *bdb;
+  svn_boolean_t panic;
 
   bdb_cache_init();
   /* FIXME: ACQUIRE CACHE MUTEX */
@@ -289,7 +324,7 @@ svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
       /* FIXME: RELEASE CACHE MUTEX */
       return err;
     }
-  bdb = bdb_cache_get(&key);
+  bdb = bdb_cache_get(&key, &panic);
 
   if (!bdb)
     {
@@ -301,7 +336,6 @@ svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
             {
               apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, bdb);
               bdb->refcount = 1;
-              bdb->cached = TRUE;
             }
           else
             {
@@ -310,37 +344,25 @@ svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
             }
         }
     }
+  else if (!panic)
+    {
+      ++bdb->refcount;
+    }
 
   /* FIXME: RELEASE CACHE MUTEX */
+
+  /* If the environment is panicked, return an appropriate error. */
+  if (panic)
+    {
+      /*FIXME:*/fprintf(stderr, "svn_fs_bdb__open(%s): PANIC\n",
+                        bdb->path_bdb);
+      err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                             db_strerror(DB_RUNRECOVERY));
+    }
 
   if (!err)
     *bdbp = bdb;
   return err;
-}
-
-
-svn_error_t *
-svn_fs_bdb__close (bdb_env_t *bdb)
-{
-  bdb_cache_init();
-
-  /* FIXME: ACQUIRE CACHE MUTEX */
-
-  if (--bdb->refcount != 0)
-    {
-      /* FIXME: RELEASE CACHE MUTEX */
-      return SVN_NO_ERROR;
-    }
-
-  if (bdb->cached)
-    {
-      apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
-      bdb->cached = FALSE;
-    }
-
-  /* FIXME: RELEASE CACHE MUTEX */
-
-  return bdb_close(bdb);
 }
 
 

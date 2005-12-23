@@ -21,6 +21,7 @@
 #define APU_WANT_DB
 #include <apu_want.h>
 
+#include <apr_atomic.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
@@ -103,9 +104,16 @@ typedef struct
      svn_fs_bdb__open and svn_fs_bdb__close. */
   unsigned refcount;
 
-  /* If this flag is TRUE, the environment descriptor is stored in the
-     cache. */
-  svn_boolean_t cached;
+  /* If this flag is TRUE, someone has detected that the environment
+     descriptor is in a panicked state and should be removed from the
+     cache.
+
+     Note 1: Once this flag is set, it must not be cleared again.
+
+     Note 2: Unlike other fields in this structure, this field is not
+             protected by the cache mutex on threaded platforms, and
+             should only be accesses via the apr_atomic functions. */
+  apr_atomic_t panic;
 
   /* The key for the environment descriptor cache. */
   bdb_env_key_t key;

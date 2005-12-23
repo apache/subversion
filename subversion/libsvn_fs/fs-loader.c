@@ -304,6 +304,7 @@ default_warning_func (void *baton, svn_error_t *err)
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
      processes, since those may both be equivalent to /dev/null.  */
+  /*FIXME:*/svn_handle_error2(err, stderr, FALSE, "fs->warning: ");
   abort ();
 }
 
