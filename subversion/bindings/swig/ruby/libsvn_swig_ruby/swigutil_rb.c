@@ -315,9 +315,9 @@ rb_set_pool(VALUE self, VALUE pool)
 }
 
 static VALUE
-rb_pool_new(void)
+rb_pool_new(VALUE parent)
 {
-  return rb_funcall(rb_svn_core_pool(), rb_id_new(), 0);
+  return rb_funcall(rb_svn_core_pool(), rb_id_new(), 1, parent);
 }
 
 static VALUE swig_type_re = Qnil;
@@ -355,41 +355,40 @@ void
 svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
                      VALUE *rb_pool, apr_pool_t **pool)
 {
+  VALUE target;
+  apr_pool_wrapper_t *pool_wrapper;
+  
   *rb_pool = Qnil;
   
   if (argc > 0) {
     if (POOL_P(argv[argc - 1])) {
-      *rb_pool = argv[argc - 1];
+      *rb_pool = rb_pool_new(argv[argc - 1]);
       argc -= 1;
     }
   }
 
+  target = find_swig_type_object(argc, argv);
+  
   if (!NIL_P(self)) {
     *rb_pool = rb_get_pool(self);
-    if (!POOL_P(*rb_pool)) {
+    if (POOL_P(*rb_pool)) {
+      *rb_pool = rb_pool_new(*rb_pool);
+    } else {
       *rb_pool = Qnil;
     }
   }
 
   if (NIL_P(*rb_pool)) {
-    VALUE target = find_swig_type_object(argc, argv);
-    *rb_pool = rb_get_pool(target);
-    if (!POOL_P(*rb_pool)) {
-      *rb_pool = Qnil;
-    }
+    *rb_pool = rb_pool_new(rb_get_pool(target));
+  }
+
+  if (!NIL_P(target) && !CONTEXT_P(target)) {
+    rb_set_pool(target, *rb_pool);
   }
   
-  if (NIL_P(*rb_pool)) {
-    *rb_pool = rb_pool_new();
-    {
-      VALUE target = find_swig_type_object(argc, argv);
-      if (!NIL_P(target)) {
-        rb_set_pool(target, *rb_pool);
-      }
-    }
-  }
-  
-  SWIG_ConvertPtr(*rb_pool, (void **)pool, SWIG_TypeQuery("apr_pool_t *"), 1);
+  SWIG_ConvertPtr(*rb_pool, (void **)&pool_wrapper,
+                  SWIG_TypeQuery("apr_pool_wrapper_t *"), 1);
+  *pool = pool_wrapper->pool;
 }
 
 static VALUE
@@ -1378,13 +1377,18 @@ svn_swig_rb_log_receiver(void *baton,
   
   if (!NIL_P(proc)) {
     VALUE args;
+    VALUE rb_changed_paths = Qnil;
+
+    if (changed_paths) {
+      rb_changed_paths =
+        svn_swig_rb_apr_hash_to_hash_swig_type(changed_paths,
+                                               "svn_log_changed_path_t *");
+    }
 
     args = rb_ary_new3(7,
                        proc,
                        rb_id_call(),
-                       changed_paths ? 
-                       svn_swig_rb_apr_hash_to_hash_string(changed_paths) :
-                       Qnil,
+                       rb_changed_paths,
                        c2r_long(&revision, NULL),
                        c2r_string2(author),
                        c2r_string2(date),
@@ -2368,12 +2372,13 @@ svn_swig_rb_make_stream(VALUE io)
   if (RTEST(rb_funcall(rb_svn_core_stream(), rb_id_eqq(), 1, io))) {
     SWIG_ConvertPtr(io, (void **)&stream, SWIG_TypeQuery("svn_stream_t *"), 1);
   } else {
-    VALUE rb_pool = rb_pool_new();
-    apr_pool_t *pool;
+    VALUE rb_pool = rb_pool_new(Qnil);
+    apr_pool_wrapper_t *pool_wrapper;
     
     rb_set_pool(io, rb_pool);
-    SWIG_ConvertPtr(rb_pool, (void **)&pool, SWIG_TypeQuery("apr_pool_t *"), 1);
-    stream = svn_stream_create((void *)io, pool);
+    SWIG_ConvertPtr(rb_pool, (void **)&pool_wrapper,
+                    SWIG_TypeQuery("apr_pool_wrapper_t *"), 1);
+    stream = svn_stream_create((void *)io, pool_wrapper->pool);
     svn_stream_set_read(stream, read_handler_rbio);
     svn_stream_set_write(stream, write_handler_rbio);
   }

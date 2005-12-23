@@ -93,7 +93,7 @@ case $CHECK_TARGET in
         START "run svnserve" "Running svnserve..."
         $TEST_ROOT/$OBJ/subversion/svnserve/svnserve -d \
             --listen-port $SVNSERVE_PORT \
-            -r $TEST_ROOT/$OBJ/subversion/tests/svn \
+            -r $TEST_ROOT/$OBJ/subversion/tests/cmdline \
             >> $LOG_FILE 2>&1
         test $? = 0 || FAIL
         PASS

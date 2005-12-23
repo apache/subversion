@@ -19,6 +19,7 @@ Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
+Patch0: apr.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -29,6 +30,7 @@ BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: autoconf253 >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -105,6 +107,13 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
+- Figured out how to disable module configuration with --disable-mod-activation.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
+  NFS server/client.
+
 * Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16236
 - Update do swig-1.3.25.  This makes it so that only the packager/developer
   needs to install the swig package.
@@ -376,6 +385,9 @@ Tools for Subversion.
 %prep
 %setup -q
 
+# APR patch
+%patch0 -p0
+
 if [ -f /usr/bin/autoconf-2.53 ]; then
    AUTOCONF="autoconf-2.53"
    AUTOHEADER="autoheader-2.53"
@@ -383,15 +395,12 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-
-# Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/redhat-7.x/install.patch
-
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
 
 %configure \
+	--disable-mod-activation \
 	--with-swig=/usr/bin/swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
@@ -521,6 +530,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/local/apache2/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/local/apache2/modules/mod_dav_svn.so
+
 %post server
 # Load subversion server into apache configuration.
 CONF=%{apache_dir}/conf/httpd.conf
@@ -569,6 +582,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnsync
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
@@ -593,9 +607,7 @@ rm -rf $RPM_BUILD_ROOT
 %files server
 %defattr(-,root,root)
 %config(noreplace) %{apache_dir}/conf/subversion.conf
-%{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
-%{apache_dir}/modules/mod_authz_svn.la
 %{apache_dir}/modules/mod_authz_svn.so
 
 %if %{perl_bindings}

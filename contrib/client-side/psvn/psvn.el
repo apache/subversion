@@ -48,7 +48,7 @@
 ;; A     - svn-status-add-file-recursively  run 'svn add'
 ;; +     - svn-status-make-directory        run 'svn mkdir'
 ;; R     - svn-status-mv                    run 'svn mv'
-;; C-d   - svn-status-rm                    run 'svn rm'
+;; D     - svn-status-rm                    run 'svn rm'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
 ;; b     - svn-status-blame                 run 'svn blame'
 ;; X e   - svn-status-export                run 'svn export'
@@ -1308,6 +1308,8 @@ A and B must be line-info's."
 
   (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
+  (define-key svn-status-mode-map (kbd "n") 'svn-status-next-line)
+  (define-key svn-status-mode-map (kbd "p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "<up>") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "C-x C-j") 'svn-status-dired-jump)

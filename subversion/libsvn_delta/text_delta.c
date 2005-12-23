@@ -37,6 +37,7 @@ struct svn_txdelta_stream_t {
   svn_stream_t *target;
 
   /* Private data */
+  svn_boolean_t more_source;    /* FALSE if source stream hit EOF. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
@@ -272,8 +273,9 @@ svn_txdelta (svn_txdelta_stream_t **stream,
              apr_pool_t *pool)
 {
   *stream = apr_palloc (pool, sizeof (**stream));
-  (*stream)->source = source; 
+  (*stream)->source = source;
   (*stream)->target = target;
+  (*stream)->more_source = TRUE;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
   (*stream)->buf = apr_palloc (pool, 2 * SVN_DELTA_WINDOW_SIZE);
@@ -284,47 +286,28 @@ svn_txdelta (svn_txdelta_stream_t **stream,
 
 
 
-/* Pull the next delta window from a stream.
-
-   Our current algorithm for picking source and target views is one
-   step up from the dumbest algorithm of "compare corresponding blocks
-   of each file."  A problem with that algorithm is that an insertion
-   or deletion of N bytes near the beginning of the file will result
-   in N bytes of non-overlap in each window from then on.  Our
-   algorithm lessens this problem by "padding" the source view with
-   half a target view's worth of data on each side.
-
-   For example, suppose the target view size is 16K.  The dumbest
-   algorithm would use bytes 0-16K for the first source view, 16-32K
-   for the second source view, etc..  Our algorithm uses 0-24K for the
-   first source view, 8-40K for the second source view, etc..
-   Obviously, we're chewing some extra memory by doubling the source
-   view size, but small (less than 8K) insertions or deletions won't
-   result in non-overlap in every window.
-
-   If we run out of source data before we run out of target data, we
-   reuse the final chunk of data for the remaining windows.  No grand
-   scheme at work there; that's just how the code worked out. */
 svn_error_t *
 svn_txdelta_next_window (svn_txdelta_window_t **window,
                          svn_txdelta_stream_t *stream,
                          apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_size_t source_len = SVN_DELTA_WINDOW_SIZE;
   apr_size_t target_len = SVN_DELTA_WINDOW_SIZE;
-  
+
   /* Read the source stream. */
-  err = svn_stream_read (stream->source, stream->buf, &source_len);
-  
+  if (stream->more_source)
+    {
+      SVN_ERR (svn_stream_read (stream->source, stream->buf, &source_len));
+      stream->more_source = (source_len == SVN_DELTA_WINDOW_SIZE);
+    }
+  else
+    source_len = 0;
+
   /* Read the target stream. */
-  if (err == SVN_NO_ERROR)
-    err = svn_stream_read (stream->target, stream->buf + source_len,
-                           &target_len);
-  if (err != SVN_NO_ERROR)
-    return err;
+  SVN_ERR (svn_stream_read (stream->target, stream->buf + source_len,
+                            &target_len));
   stream->pos += source_len;
-  
+
   /* ### The apr_md5 functions always return APR_SUCCESS.  At one
      point, we proposed to APR folks that the interfaces change to
      return void, but for some people that was apparently not a good

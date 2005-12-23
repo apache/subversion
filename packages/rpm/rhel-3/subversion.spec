@@ -20,6 +20,7 @@ Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -93,6 +94,13 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
+- Figured out how to disable module configuration with --disable-mod-activation.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMS have bad interaction with
+  NFS server/client.
+
 * Fri Sep 23 2005 David Summers <david@summersoft.fay.ar.us> r16222
 - Update to SWIG 1.3.25.  This makes it so that only the developer/packager
   needs the SWIG package installed.
@@ -382,9 +390,6 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-# Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/rhel-3/install.patch
-
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
    1)
@@ -407,6 +412,7 @@ rm -rf apr apr-util neon
 
 
 %configure \
+	--disable-mod-activation \
 	--without-berkeley-db \
 	--with-swig=/usr/bin/swig \
 	--with-python=/usr/bin/python2.2 \
@@ -491,6 +497,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
+
 %post -n mod_dav_svn
 # Restart apache server if needed.
 source /etc/init.d/functions
@@ -517,6 +527,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnsync
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
@@ -541,9 +552,7 @@ rm -rf $RPM_BUILD_ROOT
 %files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.la
 %{apache_dir}/lib/httpd/modules/mod_authz_svn.so
 
 %files perl

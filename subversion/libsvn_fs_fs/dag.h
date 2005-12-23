@@ -50,15 +50,6 @@ extern "C" {
      svn_fs.h interface use Subversion transactions.  */
 
 
-/* Initializing a filesystem.  */
-
-
-/* Given a filesystem FS, which contains all the necessary tables,
-   create the initial revision 0, and the initial root directory.  */
-svn_error_t *svn_fs_fs__dag_init_fs (svn_fs_t *fs);
-
-
-
 /* Generic DAG node stuff.  */
 
 typedef struct dag_node_t dag_node_t;
@@ -75,9 +66,8 @@ svn_fs_fs__dag_get_node (dag_node_t **node,
 
 /* Return a new dag_node_t object referring to the same node as NODE,
    allocated in POOL.  If you're trying to build a structure in a
-   trail that wants to refer to dag nodes that may have been allocated
-   elsewhere, you can call this function, passing "trail->pool", and
-   avoid inter-pool pointers.  */
+   pool that wants to refer to dag nodes that may have been allocated
+   elsewhere, you can call this function and avoid inter-pool pointers. */
 dag_node_t *svn_fs_fs__dag_dup (dag_node_t *node,
                                 apr_pool_t *pool);
 

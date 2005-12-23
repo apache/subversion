@@ -26,6 +26,7 @@
 #include <apr_strings.h>
 #include <apr_file_io.h>
 #include <apr_errno.h>
+#include <apr_md5.h>
 
 #ifdef SVN_HAVE_ZLIB
 #include <zlib.h>
@@ -258,6 +259,35 @@ svn_stream_empty (apr_pool_t *pool)
 }
 
 
+
+
+/*** Ownership detaching stream ***/
+
+static svn_error_t *
+read_handler_disown (void *baton, char *buffer, apr_size_t *len)
+{
+  return svn_stream_read ((svn_stream_t *)baton, buffer, len);
+}
+
+static svn_error_t *
+write_handler_disown (void *baton, const char *buffer, apr_size_t *len)
+{
+  return svn_stream_write ((svn_stream_t *)baton, buffer, len);
+}
+
+
+svn_stream_t *
+svn_stream_disown (svn_stream_t *stream, apr_pool_t *pool)
+{
+  svn_stream_t *s = svn_stream_create (stream, pool);
+
+  svn_stream_set_read (s, read_handler_disown);
+  svn_stream_set_write (s, write_handler_disown);
+
+  return s;
+}
+
+
 
 /*** Generic stream for APR files ***/
 struct baton_apr {
@@ -306,6 +336,24 @@ svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
   stream = svn_stream_create (baton, pool);
   svn_stream_set_read (stream, read_handler_apr);
   svn_stream_set_write (stream, write_handler_apr);
+  return stream;
+}
+
+
+static svn_error_t *
+close_handler_apr (void *baton)
+{
+  struct baton_apr *btn = baton;
+
+  return svn_io_file_close (btn->file, btn->pool);
+}
+
+svn_stream_t *
+svn_stream_from_aprfile2 (apr_file_t *file, apr_pool_t *pool)
+{
+  svn_stream_t *stream = svn_stream_from_aprfile (file, pool);
+
+  svn_stream_set_close (stream, close_handler_apr);
   return stream;
 }
 
@@ -605,6 +653,114 @@ svn_stream_compressed (svn_stream_t *stream, apr_pool_t *pool)
 
 #endif /* SVN_HAVE_ZLIB */
 }
+
+
+/* MD5 checked stream support */
+
+struct md5_stream_baton
+{
+  apr_md5_ctx_t read_ctx, write_ctx;
+  unsigned char **read_digest;
+  unsigned char **write_digest;
+  unsigned char read_digest_buf[APR_MD5_DIGESTSIZE];
+  unsigned char write_digest_buf[APR_MD5_DIGESTSIZE];
+  svn_stream_t *proxy;
+};
+
+static svn_error_t *
+read_handler_md5 (void *baton, char *buffer, apr_size_t *len)
+{
+  struct md5_stream_baton *btn = baton;
+
+  SVN_ERR (svn_stream_read (btn->proxy, buffer, len));
+
+  if (btn->read_digest)
+    {
+      apr_status_t apr_err = apr_md5_update (&btn->read_ctx, buffer, *len);
+
+      if (apr_err)
+        return svn_error_create (apr_err, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_handler_md5 (void *baton, const char *buffer, apr_size_t *len)
+{
+  struct md5_stream_baton *btn = baton;
+
+  if (btn->write_digest && *len > 0)
+    {
+      apr_status_t apr_err = apr_md5_update (&btn->write_ctx, buffer, *len);
+
+      if (apr_err)
+        return svn_error_create (apr_err, NULL, NULL);
+    }
+
+  return svn_stream_write (btn->proxy, buffer, len);
+}
+
+
+static svn_error_t *
+close_handler_md5 (void *baton)
+{
+  struct md5_stream_baton *btn = baton;
+
+  if (btn->read_digest)
+    {
+      apr_status_t apr_err
+        = apr_md5_final (btn->read_digest_buf, &btn->read_ctx);
+
+      if (apr_err)
+        return svn_error_create (apr_err, NULL, NULL);
+
+      *btn->read_digest = btn->read_digest_buf;
+    }
+
+  if (btn->write_digest)
+    {
+      apr_status_t apr_err
+        = apr_md5_final (btn->write_digest_buf, &btn->write_ctx);
+
+      if (apr_err)
+        return svn_error_create (apr_err, NULL, NULL);
+
+      *btn->write_digest = btn->write_digest_buf;
+    }
+
+  return svn_stream_close (btn->proxy);
+}
+
+
+svn_stream_t *
+svn_stream_checksummed (svn_stream_t *stream,
+                        unsigned char **read_digest,
+                        unsigned char **write_digest,
+                        apr_pool_t *pool)
+{
+  svn_stream_t *s;
+  struct md5_stream_baton *baton;
+
+  if (! read_digest && ! write_digest)
+    return stream;
+
+  baton = apr_palloc (pool, sizeof (*baton));
+  apr_md5_init (&baton->read_ctx);
+  apr_md5_init (&baton->write_ctx);
+  baton->read_digest = read_digest;
+  baton->write_digest = write_digest;
+  baton->proxy = stream;
+
+  s = svn_stream_create (baton, pool);
+  svn_stream_set_read (s, read_handler_md5);
+  svn_stream_set_write (s, write_handler_md5);
+  svn_stream_set_close (s, close_handler_md5);
+  return s;
+}
+
+
 
 
 /* Miscellaneous stream functions. */

@@ -1939,6 +1939,37 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 
+static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                           apr_array_header_t *params, void *baton)
+{
+  const svn_delta_editor_t *editor;
+  svn_revnum_t rev, low_water_mark;
+  svn_boolean_t send_deltas;
+  server_baton_t *b = baton;
+  svn_fs_root_t *root;
+  void *edit_baton;
+
+  SVN_ERR (svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
+                                  &send_deltas));
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
+
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+
+  SVN_CMD_ERR (svn_repos_replay2(root, b->fs_path->data, low_water_mark,
+                                 send_deltas, editor, edit_baton,
+                                 authz_check_access_cb, b, pool));
+
+  SVN_CMD_ERR (editor->close_edit(edit_baton, pool));
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "reparent", reparent },
   { "get-latest-rev",  get_latest_rev },
@@ -1964,6 +1995,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "unlock-many",     unlock_many },
   { "get-lock",        get_lock },
   { "get-locks",       get_locks },
+  { "replay",          replay },
   { NULL }
 };
 

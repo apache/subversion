@@ -162,8 +162,6 @@ svn_fs_fs__txn_prop (svn_string_t **value_p,
   return SVN_NO_ERROR;
 }
 
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
                       svn_fs_t *fs,

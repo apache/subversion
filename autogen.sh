@@ -33,9 +33,6 @@ done
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
-### temporary cleanup during transition to libtool 1.4
-(cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
-
 #
 # Handle some libtool helper files
 #
@@ -61,7 +58,7 @@ if [ ! -f $ltfile ]; then
 fi
 
 echo "Copying libtool helper: $ltfile"
-cp $ltfile ac-helpers/libtool.m4
+cp $ltfile build/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.
 #

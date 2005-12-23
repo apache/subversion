@@ -46,6 +46,7 @@ static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "get-locations" },
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
+  { SVN_XML_NAMESPACE, "replay-report" },
   { NULL },
 };
 
@@ -1363,6 +1364,10 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
       else if (strcmp(doc->root->name, "get-locks-report") == 0)
         {
           return dav_svn__get_locks_report(resource, doc, output);
+        }
+      else if (strcmp(doc->root->name, "replay-report") == 0)
+        {
+          return dav_svn__replay_report(resource, doc, output);
         }
 
       /* NOTE: if you add a report, don't forget to add it to the

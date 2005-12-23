@@ -1931,19 +1931,19 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
 
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
                   SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                  entry->conflict_old);
+                  entry->conflict_old ? entry->conflict_old : "");
 
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
                   SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                  entry->conflict_new);
+                  entry->conflict_new ? entry->conflict_new : "");
 
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                   SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                  entry->conflict_wrk);
+                  entry->conflict_wrk ? entry->conflict_wrk : "");
 
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PREJFILE,
                   SVN_WC__ENTRY_ATTR_PREJFILE,
-                  entry->prejfile);
+                  entry->prejfile ? entry->prejfile : "");
 
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                   SVN_WC__ENTRY_ATTR_TEXT_TIME,
@@ -2003,27 +2003,15 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
 
 #undef ADD_ENTRY_ATTR
 
-  return svn_wc__loggy_entry_modify_hash (log_accum, adm_access, name,
-                                          prop_hash, pool);
-}
-
-
-svn_error_t *
-svn_wc__loggy_entry_modify_hash (svn_stringbuf_t **log_accum,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const char *name,
-                                 apr_hash_t *props,
-                                 apr_pool_t *pool)
-{
-  if (apr_hash_count (props) == 0)
+  if (apr_hash_count (prop_hash) == 0)
     return SVN_NO_ERROR;
 
-  apr_hash_set (props, SVN_WC__LOG_ATTR_NAME, APR_HASH_KEY_STRING, name);
+  apr_hash_set (prop_hash, SVN_WC__LOG_ATTR_NAME, APR_HASH_KEY_STRING, name);
 
   svn_xml_make_open_tag_hash (log_accum, pool,
                               svn_xml_self_closing,
                               SVN_WC__LOG_MODIFY_ENTRY,
-                              props);
+                              prop_hash);
 
   return SVN_NO_ERROR;
 }

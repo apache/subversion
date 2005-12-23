@@ -22,6 +22,7 @@
 				Name="VCNMakeTool"
 				BuildCommandLine="cmd /c build_zlib.bat debug"
 				ReBuildCommandLine="cmd /c build_zlib.bat debug rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat debug clean"
 				Output="[zlib_path]\zlibstatD.lib"/>
 		</Configuration>
 		<Configuration
@@ -35,6 +36,7 @@
 				Name="VCNMakeTool"
 				BuildCommandLine="cmd /c build_zlib.bat release"
 				ReBuildCommandLine="cmd /c build_zlib.bat release rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat release clean"
 				Output="[zlib_path]\zlibstat.lib"/>
 		</Configuration>
 	</Configurations>

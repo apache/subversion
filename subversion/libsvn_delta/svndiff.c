@@ -94,8 +94,7 @@ encode_int (char *p, svn_filesize_t val)
 
 /* Append an encoded integer to a string.  */
 static void
-append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val,
-                    apr_pool_t *pool)
+append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val)
 {
   char buf[128], *p;
 
@@ -109,7 +108,7 @@ zlib_encode (svn_stringbuf_t *in, svn_stringbuf_t *out)
   unsigned long endlen;
   unsigned int intlen;
   
-  append_encoded_int (out, in->len, NULL);
+  append_encoded_int (out, in->len);
   intlen = out->len;
   
   if (in->len < MIN_COMPRESS_SIZE)
@@ -211,15 +210,15 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     }
 
   /* Encode the header.  */
-  append_encoded_int (header, window->sview_offset, pool);
-  append_encoded_int (header, window->sview_len, pool);
-  append_encoded_int (header, window->tview_len, pool);
+  append_encoded_int (header, window->sview_offset);
+  append_encoded_int (header, window->sview_len);
+  append_encoded_int (header, window->tview_len);
   if (eb->version == 1)
     {
       SVN_ERR (zlib_encode (instructions, i1));
       instructions = i1;
     }
-  append_encoded_int (header, instructions->len, pool);
+  append_encoded_int (header, instructions->len);
   if (eb->version == 1)
     {
       svn_stringbuf_t *temp;
@@ -228,7 +227,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       window->new_data = svn_string_create_from_buf (newdata, pool);
     }
 
-  append_encoded_int (header, window->new_data->len, pool);
+  append_encoded_int (header, window->new_data->len);
 
   /* Write out the window.  */
   len = header->len;

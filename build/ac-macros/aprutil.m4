@@ -28,8 +28,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
 
   if test $apu_found = "reconfig"; then
-    SVN_SUBDIR_CONFIG(apr-util, --with-apr=../apr)
-    SVN_SUBDIRS="$SVN_SUBDIRS apr-util"
+    SVN_EXTERNAL_PROJECT([apr-util], [--with-apr=../apr])
   fi
 
   dnl check APRUTIL version number against regex  
@@ -49,8 +48,8 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
   AC_MSG_RESULT([$apu_version])
 
-  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0 \
-       -a `expr $apu_version : $APRUTIL_WANTED_REGEX_TOO` -eq 0; then
+  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0 &&
+     test `expr $apu_version : $APRUTIL_WANTED_REGEX_TOO` -eq 0; then
     echo "wanted regex is $APRUTIL_WANTED_REGEX or $APRUTIL_WANTED_REGEX_TOO"
     AC_MSG_ERROR([invalid apr-util version found])
   fi
@@ -83,6 +82,12 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   AC_SUBST(SVN_APRUTIL_LIBS)
   AC_SUBST(SVN_APRUTIL_EXPORT_LIBS)
   AC_SUBST(SVN_APRUTIL_PREFIX)
+
+  dnl What version of Expat are we using? -----------------
+  SVN_HAVE_OLD_EXPAT="`$apu_config --old-expat`"
+  if test "$SVN_HAVE_OLD_EXPAT" = "yes"; then
+    AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
+  fi
 ])
 
 dnl SVN_DOWNLOAD_APRUTIL()

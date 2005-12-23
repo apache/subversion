@@ -709,22 +709,79 @@ SubversionException = _core.SubversionException
 %}
 
 /* Dummy declaration */
-struct apr_pool_t 
+struct apr_pool_wrapper_t
 {
 };
 
 /* Leave memory administration to ruby's GC */
-%extend apr_pool_t
+%extend apr_pool_wrapper_t
 {
-  apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
-    /* Disable parent pool. */
-    return svn_pool_create_ex(NULL, NULL);
+  apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
+    apr_pool_wrapper_t *self;
+    apr_pool_t *parent_pool;
+
+    self = ALLOC(apr_pool_wrapper_t);
+    if (parent) {
+      parent_pool = parent->pool;
+      APR_ARRAY_PUSH(parent->children, apr_pool_wrapper_t *) = self;
+    } else {
+      parent_pool = NULL;
+    }
+    self->pool = svn_pool_create_ex(parent_pool, NULL);
+    self->destroyed = FALSE;
+    self->parent = parent;
+    self->children = apr_array_make(self->pool, 0,
+                                    sizeof(apr_pool_wrapper_t *));
+    return self;
   }
 
-  ~apr_pool_t() {
-    apr_pool_destroy(self);
+  ~apr_pool_wrapper_t() {
+    if (!self->destroyed) {
+      apr_pool_wrapper_destroy_children(self);
+      apr_pool_wrapper_remove_from_parent(self);
+      apr_pool_destroy(self->pool);
+    }
+    free(self);
   }
 };
+
+%ignore apr_pool_wrapper_destroy_children;
+%ignore apr_pool_wrapper_remove_from_parent;
+%inline %{
+static void
+apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self)
+{
+  if (!self->destroyed) {
+    apr_pool_wrapper_t **child;
+
+    self->destroyed = TRUE;
+    while (child = apr_array_pop(self->children)) {
+      if (*child) {
+        apr_pool_wrapper_destroy_children(*child);
+      }
+    }
+  }
+}
+
+static void
+apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self)
+{
+  if (self->parent) {
+    apr_pool_wrapper_t *child;
+    int i, len;
+
+    len = self->parent->children->nelts;
+    for (i = 0; i < len; i++) {
+      child = APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *);
+      if (child == self) {
+        APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *) = NULL;
+        break;
+      }
+    }
+  }
+}
+%}
+
 
 %include svn_diff_h.swg
 
@@ -740,7 +797,72 @@ svn_locale_charset(void)
 {
   return INT2NUM((int)APR_LOCALE_CHARSET);
 }
+
+/* prompt providers return baton for protecting GC */
+static VALUE
+svn_swig_rb_auth_get_simple_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_simple_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_simple_prompt_provider(provider, prompt_func, prompt_baton,
+                                      retry_limit, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_prompt_provider(provider, prompt_func,
+                                               prompt_baton, retry_limit,
+                                               pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_pw_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_prompt_provider(provider, prompt_func,
+                                                  prompt_baton, retry_limit,
+                                                  pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_server_trust_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+  void *prompt_baton,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_server_trust_prompt_provider(provider, prompt_func,
+                                                prompt_baton, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_username_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_username_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_username_prompt_provider(provider, prompt_func, prompt_baton,
+                                        retry_limit, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
 %}
-
 #endif
-

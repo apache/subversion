@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>              /* for EINVAL */
 #include <ctype.h>
 #include <assert.h>
 
@@ -35,12 +34,12 @@
 #include "svn_hash.h"
 #include "svn_md5.h"
 #include "svn_sorts.h"
+#include "svn_time.h"
 
 #include "fs.h"
 #include "err.h"
 #include "tree.h"
 #include "lock.h"
-#include "dag.h"
 #include "revs-txns.h"
 #include "key-gen.h"
 #include "fs_fs.h"
@@ -229,6 +228,8 @@ get_file_offset (apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
 {
   apr_off_t offset;
 
+  /* Note that, for buffered files, one (possibly surprising) side-effect
+     of this call is to flush any unwritten data to disk. */
   offset = 0;
   SVN_ERR (svn_io_file_seek (file, APR_CUR, &offset, pool));
   *offset_p = offset;
@@ -1335,8 +1336,7 @@ read_window (svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
     {
       SVN_ERR (svn_txdelta_skip_svndiff_window (rs->file, rs->ver, pool));
       rs->chunk_index++;
-      rs->off = 0;
-      SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+      SVN_ERR (get_file_offset (&rs->off, rs->file, pool));
       if (rs->off >= rs->end)
         return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                  _("Reading one svndiff window read "
@@ -2407,8 +2407,6 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  apr_file_t *next_ids_file;
-  svn_stream_t *next_ids_stream;
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
 
@@ -2435,18 +2433,10 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   /* Create an empty changes file. */
   SVN_ERR (svn_io_file_create (path_txn_changes (fs, txn->id, pool), "",
                                pool));
-  
-  /* Write the next-ids file. */
-  SVN_ERR (svn_io_file_open (&next_ids_file,
-                             path_txn_next_ids (fs, txn->id, pool),
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
-                             APR_OS_DEFAULT, pool));
 
-  next_ids_stream = svn_stream_from_aprfile (next_ids_file, pool);
-
-  SVN_ERR (svn_stream_printf (next_ids_stream, pool, "0 0\n"));
-
-  SVN_ERR (svn_io_file_close (next_ids_file, pool));
+  /* Create the next-ids file. */
+  SVN_ERR (svn_io_file_create (path_txn_next_ids (fs, txn->id, pool), "0 0\n",
+                               pool));
 
   return SVN_NO_ERROR;
 }
@@ -3045,8 +3035,15 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   /* Open the prototype rev file and seek to its end. */
   txn_id = svn_fs_fs__id_txn_id (noderev->id);
   SVN_ERR (svn_io_file_open (&file, path_txn_proto_rev (fs, txn_id, b->pool),
-                             APR_WRITE | APR_CREATE | APR_BUFFERED,
+                             APR_WRITE | APR_BUFFERED,
                              APR_OS_DEFAULT, b->pool));
+  /* You might expect that we could dispense with this seek and achieve
+     the same thing by opening the file using APR_APPEND.  Unfortunately,
+     APR's buffered file implementation unconditionally places its initial
+     file pointer at the start of the file (even for files opened with
+     APR_APPEND), so we'd always need this seek to reconcile the APR
+     file pointer to the OS file pointer (since we need to be able to
+     read the current file position later). */
   offset = 0;
   SVN_ERR (svn_io_file_seek (file, APR_END, &offset, 0));
 
@@ -3552,13 +3549,20 @@ svn_fs_fs__dup_perms (const char *filename,
 #ifndef WIN32
   apr_status_t status;
   apr_finfo_t finfo;
+  const char *filename_apr, *perms_reference_apr;
   
-  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
+  SVN_ERR (svn_path_cstring_from_utf8 (&filename_apr, filename, pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&perms_reference_apr, perms_reference,
+                                       pool));
+
+  status = apr_stat (&finfo, perms_reference_apr, APR_FINFO_PROT, pool);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
-  status = apr_file_perms_set (filename, finfo.protection);
+    return svn_error_wrap_apr (status, _("Can't stat '%s'"),
+                               svn_path_local_style (perms_reference, pool));
+  status = apr_file_perms_set (filename_apr, finfo.protection);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), filename);
+    return svn_error_wrap_apr (status, _("Can't chmod '%s'"),
+                               svn_path_local_style (filename, pool));
 #endif
   return SVN_NO_ERROR;
 }
@@ -3844,9 +3848,11 @@ commit_body (void *baton, apr_pool_t *pool)
   /* Get a write handle on the proto revision file. */
   proto_filename = path_txn_proto_rev (cb->fs, cb->txn->id, pool);
   SVN_ERR (svn_io_file_open (&proto_file, proto_filename,
-                             APR_WRITE | APR_APPEND | APR_BUFFERED,
+                             APR_WRITE | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
-
+  /* Seek to the end of the proto revision file (we can't use
+     APR_APPEND to achieve the same thing; see the detailed comment
+     in rep_write_get_baton() above). */
   offset = 0;
   SVN_ERR (svn_io_file_seek (proto_file, APR_END, &offset, pool));
 
@@ -3950,6 +3956,32 @@ svn_fs_fs__reserve_copy_id (const char **copy_id_p,
   return SVN_NO_ERROR;
 }
 
+/* Write out the zeroth revision for filesystem FS. */
+static svn_error_t *
+write_revision_zero (svn_fs_t *fs)
+{
+  apr_hash_t *proplist;
+  svn_string_t date;
+
+  /* Write out a rev file for revision 0. */
+  SVN_ERR (svn_io_file_create (svn_fs_fs__path_rev (fs, 0, fs->pool),
+                               "PLAIN\nEND\nENDREP\n"
+                               "id: 0.0.r0/17\n"
+                               "type: dir\n"
+                               "count: 0\n"
+                               "text: 0 0 4 4 "
+                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                               "cpath: /\n"
+                               "\n\n17 107\n", fs->pool));
+
+  /* Set a date on revision 0. */
+  date.data = svn_time_to_cstring (apr_time_now(), fs->pool);
+  date.len = strlen (date.data);
+  proplist = apr_hash_make (fs->pool);
+  apr_hash_set (proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
+  return svn_fs_fs__set_revision_proplist (fs, 0, proplist, fs->pool);
+}
+
 svn_error_t *
 svn_fs_fs__create (svn_fs_t *fs,
                    const char *path,
@@ -3977,14 +4009,14 @@ svn_fs_fs__create (svn_fs_t *fs,
   apr_uuid_format (buffer, &uuid);
   svn_fs_fs__set_uuid (fs, buffer, pool);
   
-  SVN_ERR (svn_fs_fs__dag_init_fs (fs));
-  
   /* See if we had an explicitly requested no svndiff1.  */
   formatval = apr_hash_get (fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
                             APR_HASH_KEY_STRING);
   if (formatval)
     format = 1;
   
+  SVN_ERR (write_revision_zero (fs));
+
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR (svn_io_write_version_file
            (path_format (fs, pool), format, pool));
@@ -4024,24 +4056,6 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
 
   SVN_ERR (svn_io_file_close (uuid_file, pool));
   
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__write_revision_zero (svn_fs_t *fs)
-{
-  apr_pool_t *pool = fs->pool;
-
-  SVN_ERR (svn_io_file_create (svn_fs_fs__path_rev (fs, 0, pool), 
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/17\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 0 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n17 107\n", pool));
-
   return SVN_NO_ERROR;
 }
 

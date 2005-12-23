@@ -53,6 +53,7 @@ Commit access for specific areas:
   Bindings:
 
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
+      markphip   Mark Phippard <MarkP@softlanding.com>       (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)

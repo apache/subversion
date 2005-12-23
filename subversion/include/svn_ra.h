@@ -1195,6 +1195,34 @@ svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
                                const char *path,
                                apr_pool_t *pool);
 
+
+/**
+ * Replay the changes from @a revision through @a editor and @a edit_baton.
+ *
+ * Changes will be limited to those that occur under @a session's URL, and
+ * the server will assume that the client has no knowledge of revisions
+ * prior to @a low_water_mark.  These two limiting factors define the portion
+ * of the tree that the server will assume the client already has knowledge of,
+ * and thus any copies of data from outside that part of the tree will be
+ * sent in their entirety, not as simple copies or deltas against a previous
+ * version.
+ *
+ * If @a send_deltas is @c TRUE, the actual text and property changes in
+ * the revision will be sent, otherwise dummy text deltas and null property
+ * changes will be sent instead.
+ *
+ * @a pool is used for all allocation.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_ra_replay (svn_ra_session_t *session,
+                            svn_revnum_t revision,
+                            svn_revnum_t low_water_mark,
+                            svn_boolean_t send_deltas,
+                            const svn_delta_editor_t *editor,
+                            void *edit_baton,
+                            apr_pool_t *pool);
+
 /**
  * Append a textual list of all available RA modules to the stringbuf
  * @a output.

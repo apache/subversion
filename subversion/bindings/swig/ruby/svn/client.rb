@@ -26,6 +26,7 @@ module Svn
 
     class Info
       alias url URL
+      alias repos_root_url repos_root_URL
     end
 
     PropListItem = ProplistItem
@@ -60,6 +61,7 @@ module Svn
       alias _initialize initialize
       def initialize
         @prompts = []
+        @batons = []
         @providers = []
         @auth_baton = Svn::Core::AuthBaton.new
         self.auth_baton = @auth_baton
@@ -113,11 +115,11 @@ module Svn
       end
 
       def update(paths, rev="HEAD", recurse=true, ignore_externals=false)
-        if paths.is_a?(Array)
-          Client.update2(paths, rev, recurse, ignore_externals, self)
-        else
-          Client.update(paths, rev, recurse, self)
-        end
+        paths_is_array = paths.is_a?(Array)
+        paths = [paths] unless paths_is_array
+        result = Client.update2(paths, rev, recurse, ignore_externals, self)
+        result = result.first unless paths_is_array
+        result
       end
       alias up update
 
@@ -390,6 +392,12 @@ module Svn
         end
       end
       
+      if Core.respond_to?(:get_keychain_simple_provider)
+        def add_keychain_simple_provider
+          add_provider(Core.auth_get_keychain_simple_provider)
+        end
+      end
+      
       def add_username_provider
         add_provider(Core.auth_get_username_provider)
       end
@@ -425,18 +433,15 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
-        @log_msg_baton = callback
-        Client.set_log_msg_func2(self, callback)
+        @log_msg_baton = Client.set_log_msg_func2(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)
-        @notify_baton2 = callback
-        Client.set_notify_func2(self, callback)
+        @notify_baton = Client.set_notify_func2(self, callback)
       end
       
       def set_cancel_func(callback=Proc.new)
-        @cancel_baton = callback
-        Client.set_cancel_func(self, callback)
+        @cancel_baton = Client.set_cancel_func(self, callback)
       end
       
       private
@@ -460,8 +465,9 @@ module Svn
           prompt.call(cred, *prompt_args)
           cred
         end
-        method_name = "auth_get_#{name}_prompt_provider"
-        pro = Core.__send__(method_name, real_prompt, *args)
+        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
+        baton, pro = Core.__send__(method_name, real_prompt, *args)
+        @batons << baton
         @prompts << real_prompt
         add_provider(pro)
       end

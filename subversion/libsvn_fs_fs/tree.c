@@ -1591,8 +1591,6 @@ merge_changes (dag_node_t *ancestor_node,
 }
 
 
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_fs__commit_txn (const char **conflict_p,
                        svn_revnum_t *new_rev_p, 
@@ -2466,7 +2464,7 @@ struct text_baton_t
 };
 
 
-/* A trail-ready wrapper around svn_fs_fs__dag_finalize_edits, but for
+/* A wrapper around svn_fs_fs__dag_finalize_edits, but for
  * fulltext data, not text deltas.  Closes BATON->file_stream. 
  *
  * Note: If you're confused about how this function relates to another
@@ -2624,8 +2622,6 @@ fs_contents_changed (svn_boolean_t *changed_p,
 
 /* Public interface to computing file text deltas.  */
 
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
 static svn_error_t *
 fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
                           svn_fs_root_t *source_root,
@@ -3049,8 +3045,6 @@ fs_history_prev (svn_fs_history_t **prev_history_p,
 
       while (1)
         {
-          /* Get a trail, and get to work. */
-          
           args.prev_history_p = &prev_history;
           args.history = prev_history;
           args.cross_copies = cross_copies;

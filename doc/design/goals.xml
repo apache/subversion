@@ -81,7 +81,7 @@
     <itemizedlist mark="bullet">
       <listitem><para><firstterm>Keyword expansion</firstterm> is when CVS
           expands "$Revision$" into "$Revision: 1.1 $", for example.  There
-          are a number of keywords in CVS: "$Author: sussman $",i "$Date:
+          are a number of keywords in CVS: "$Author: sussman $", "$Date:
           2001/06/04 22:00:52 $", and so on.</para></listitem>
       <listitem><para><firstterm>Line-end conversion</firstterm> is when CVS
           gives plaintext files theappropriate line-ending conventions for the

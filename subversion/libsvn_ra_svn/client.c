@@ -138,26 +138,6 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_wrap_apr(status, _("Can't create socket"));
 
-  /* Setting a timeout does more than just cause the attempt to fail
-     automatically after 30 seconds without success (although that's
-     already preferable to the default timeout, which is around 3
-     minutes); it makes apr_socket_connect() interruptable, which it
-     otherwise would not be, at least on Mac OS X.  Also, on Mac OS X
-     you couldn't even SIGKILL, as that signal wouldn't be processed
-     until the program returned back to user process space.  See the
-     original report and its thread for more details:
-
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=104587
-     From: Yun Zheng Hu <yunzheng.hu@gmail.com>
-     To: dev@subversion.tigris.org
-     Subject: [PATCH] fix non interruptable hang in svn client when connecting
-     Date: Thu, 25 Aug 2005 00:40:07 +0200
-     Message-ID: <df84014e05082415405cdd9b13@mail.gmail.com>
-  */
-  status = apr_socket_timeout_set(*sock, 30 * APR_USEC_PER_SEC);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't set timeout"));
-
   status = apr_socket_connect(*sock, sa);
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
@@ -1963,6 +1943,32 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
 }
 
 
+static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
+                                  svn_revnum_t revision,
+                                  svn_revnum_t low_water_mark,
+                                  svn_boolean_t send_deltas,
+                                  const svn_delta_editor_t *editor,
+                                  void *edit_baton,
+                                  apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess = session->priv;
+
+  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay", "rrb", revision,
+                               low_water_mark, send_deltas));
+
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the replay "
+                                   "command")));
+
+  SVN_ERR(svn_ra_svn_drive_editor(sess->conn, pool, editor, edit_baton,
+                                  NULL));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(sess->conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
@@ -1992,6 +1998,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_unlock,
   ra_svn_get_lock,
   ra_svn_get_locks,
+  ra_svn_replay,
 };
 
 svn_error_t *

@@ -167,17 +167,6 @@ class WinGeneratorBase(GeneratorBase):
       bat = os.path.join('build', 'win32', 'build_zlib.bat')
       self.write_with_template(bat, 'build_zlib.ezt', data)
 
-    # Generate the build_neon.bat file
-    data = {'neon_path': os.path.abspath(self.neon_path),
-            'expat_path': os.path.join(os.path.abspath(self.apr_util_path),
-                                       'xml', 'expat', 'lib'),
-            'zlib_path': self.zlib_path
-                         and os.path.abspath(self.zlib_path),
-            'openssl_path': self.openssl_path
-                            and os.path.abspath(self.openssl_path)}
-    bat = os.path.join('build', 'win32', 'build_neon.bat')
-    self.write_with_template(bat, 'build_neon.ezt', data)
-
     # Generate the build_locale.bat file
     pofiles = []
     if self.enable_nls:
@@ -450,6 +439,8 @@ class WinGeneratorBase(GeneratorBase):
       path = self.apr_util_path + target.external_project[8:]
     elif target.external_project[:4] == 'apr/':
       path = self.apr_path + target.external_project[3:]
+    elif target.external_project[:5] == 'neon/':
+      path = self.neon_path + target.external_project[4:]
     else:
       path = target.external_project
 
@@ -521,6 +512,11 @@ class WinGeneratorBase(GeneratorBase):
       is_lib = isinstance(dep, gen_base.TargetLib)
       is_static = is_lib and dep.msvc_static
       deps.append((dep, (is_project, is_lib, is_static)))
+
+    for dep in self.graph.get_sources(gen_base.DT_SOURCELIB, target.name):
+      is_project = hasattr(dep, 'proj_name')
+      is_lib = isinstance(dep, gen_base.TargetLib)
+      deps.append((dep, (is_project, is_lib, 1)))
 
     return deps
 
@@ -696,29 +692,29 @@ class WinGeneratorBase(GeneratorBase):
         
     return gen_base.unique(nondeplibs)
 
-  def get_win_sources(self, target, reldir_prefix=''):
+  def get_win_sources(self, target):
     "Return the list of source files that need to be compliled for target"
 
     sources = { }
 
+    self.get_win_sources_impl(target, sources)
+    return sources.values()
+ 
+  def get_win_sources_impl(self, target, sources):
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if isinstance(obj, gen_base.Target):
         continue
 
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
         if isinstance(src, gen_base.SourceFile):
-          if reldir_prefix:
-            if src.reldir:
-              reldir = reldir_prefix + '\\' + src.reldir
-            else:
-              reldir = reldir_prefix
-          else:
-            reldir = src.reldir
+          reldir = src.reldir
         else:
           reldir = ''
         sources[src] = src, obj, reldir
 
-    return sources.values()
+    # toss in sources from "sourcelib" dependencies
+    for dep in self.graph.get_sources(gen_base.DT_SOURCELIB, target.name):
+      self.get_win_sources_impl(dep, sources)
 
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.
@@ -762,12 +758,19 @@ class WinGeneratorBase(GeneratorBase):
 
   def write_neon_project_file(self, name):
     neon_path = os.path.abspath(self.neon_path)
-    self.move_proj_file(os.path.join('build', 'win32'), name,
-                        (('neon_path', neon_path),
-                         ('neon_sources',
+    self.move_proj_file(self.neon_path, name,
+                        (('neon_sources',
                           glob.glob(os.path.join(neon_path, 'src', '*.c'))),
                          ('neon_headers',
                           glob.glob(os.path.join(neon_path, 'src', '*.h'))),
+                         ('expat_path',
+                          os.path.join(os.path.abspath(self.apr_util_path),
+                                       'xml', 'expat', 'lib')),
+                         ('zlib_path', self.zlib_path 
+                                       and os.path.abspath(self.zlib_path)),
+                         ('openssl_path',
+                          self.openssl_path
+                            and os.path.abspath(self.openssl_path)),
                         ))
 
   def move_proj_file(self, path, name, params=()):

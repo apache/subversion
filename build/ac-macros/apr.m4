@@ -23,8 +23,7 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   if test $apr_found = "reconfig"; then
-    SVN_SUBDIR_CONFIG(apr)
-    SVN_SUBDIRS="$SVN_SUBDIRS apr"
+    SVN_EXTERNAL_PROJECT([apr])
   fi
 
   dnl check APR version number against regex  
@@ -36,8 +35,8 @@ AC_DEFUN(SVN_LIB_APR,
   fi
   AC_MSG_RESULT([$apr_version])
 
-  if test `expr $apr_version : $APR_WANTED_REGEX` -eq 0 \
-       -a `expr $apr_version : $APR_WANTED_REGEX_TOO` -eq 0; then
+  if test `expr $apr_version : $APR_WANTED_REGEX` -eq 0 &&
+     test `expr $apr_version : $APR_WANTED_REGEX_TOO` -eq 0; then
     echo "wanted regex is $APR_WANTED_REGEX or $APR_WANTED_REGEX_TOO"
     AC_MSG_ERROR([invalid apr version found])
   fi

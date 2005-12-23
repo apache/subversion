@@ -74,7 +74,7 @@ AC_ARG_WITH(apxs,
     APXS_EXPLICIT=1
 ])
 
-if test "$BINNAME" = "" -a "$APXS" = ""; then
+if test -z "$BINNAME" && test -z "$APXS"; then
   for i in /usr/sbin /usr/local/apache/bin /usr/local/apache2/bin /usr/bin ; do
     if test -f "$i/apxs2"; then
       APXS="$i/apxs2"
@@ -87,7 +87,7 @@ if test "$BINNAME" = "" -a "$APXS" = ""; then
   done
 fi
 
-if test -n "$APXS" -a "$APXS" != "no"; then
+if test -n "$APXS" && test "$APXS" != "no"; then
     APXS_INCLUDE="`$APXS -q INCLUDEDIR`"
     if test -r $APXS_INCLUDE/mod_dav.h; then
         AC_MSG_RESULT(found at $APXS)
@@ -118,7 +118,7 @@ else
     AC_MSG_RESULT(no)
 fi
 
-if test -n "$APXS" -a "$APXS" != "no"; then
+if test -n "$APXS" && test "$APXS" != "no"; then
     BINNAME=mod_dav_svn.so
     INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
@@ -156,7 +156,7 @@ AC_SUBST(BUILD_APACHE_RULE)
 AC_SUBST(INSTALL_APACHE_RULE)
 
 # there aren't any flags that interest us ...
-#if test -n "$APXS" -a "$APXS" != "no"; then
+#if test -n "$APXS" && test "$APXS" != "no"; then
 #  CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"
 #fi
 

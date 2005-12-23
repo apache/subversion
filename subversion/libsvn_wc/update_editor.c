@@ -651,13 +651,23 @@ prep_directory (struct dir_baton *db,
                 svn_revnum_t ancestor_revision,
                 apr_pool_t *pool)
 {
+  const char *repos;
+
   /* Make sure the directory exists. */
   SVN_ERR (svn_wc__ensure_directory (db->path, pool));
+
+  /* Use the repository root of the anchor, but only if it actually is an
+     ancestor of the URL of this directory. */
+  if (db->edit_baton->repos
+      && svn_path_is_ancestor (db->edit_baton->repos, ancestor_url))
+    repos = db->edit_baton->repos;
+  else
+    repos = NULL;
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
   SVN_ERR (svn_wc_ensure_adm2 (db->path, NULL,
-                               ancestor_url, db->edit_baton->repos,
+                               ancestor_url, repos,
                                ancestor_revision, pool));
 
   if (! db->edit_baton->adm_access
@@ -696,7 +706,8 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
                         apr_pool_t *pool)
 {
   int i;
-  apr_hash_t *props = apr_hash_make (pool);
+  svn_wc_entry_t tmp_entry;
+  apr_uint32_t flags = 0;
 
   if (lock_state)
     *lock_state = svn_wc_notify_lock_state_unchanged;
@@ -704,7 +715,7 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
   for (i = 0; i < entry_props->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
-      const char *entry_field;
+      const char *val;
 
       /* The removal of the lock-token entryprop means that the lock was
          defunct. */
@@ -723,24 +734,33 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
       if (! prop->value)
         continue;
 
-      if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
-        entry_field = SVN_WC__ENTRY_ATTR_CMT_AUTHOR;
-      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
-        entry_field = SVN_WC__ENTRY_ATTR_CMT_REV;
-      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
-        entry_field = SVN_WC__ENTRY_ATTR_CMT_DATE;
-      else if (! strcmp (prop->name, SVN_PROP_ENTRY_UUID))
-        entry_field = SVN_WC__ENTRY_ATTR_UUID;
-      else
-        continue;
+      val = prop->value->data;
 
-      apr_hash_set (props, entry_field,
-                    APR_HASH_KEY_STRING, prop->value->data);
+      if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
+          tmp_entry.cmt_author = val;
+        }
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
+          tmp_entry.cmt_rev = SVN_STR_TO_REV (val);
+        }
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
+          SVN_ERR (svn_time_from_cstring (&tmp_entry.cmt_date, val, pool));
+        }
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_UUID))
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_UUID;
+          tmp_entry.uuid = val;
+        }
     }
 
-  if (apr_hash_count (props) > 0)
-    SVN_ERR (svn_wc__loggy_entry_modify_hash (&log_accum, adm_access,
-                                              base_name, props, pool));
+  if (flags)
+    SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access, base_name,
+                                         &tmp_entry, flags, pool));
 
   return SVN_NO_ERROR;
 }
@@ -808,20 +828,23 @@ open_root (void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
-
+      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
+        SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+                                     
       /* Mark directory as being at target_revision, but incomplete. */  
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = d->new_URL;
-      tmp_entry.repos = eb->repos;
+      /* See open_directory() for why this check is necessary. */
+      if (eb->repos && svn_path_is_ancestor (eb->repos, d->new_URL))
+        {
+          tmp_entry.repos = eb->repos;
+          flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+        }
       tmp_entry.incomplete = TRUE;
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                     d->path, pool));
       SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_REVISION |
-                                     SVN_WC__ENTRY_MODIFY_URL |
-                                     SVN_WC__ENTRY_MODIFY_REPOS |
-                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     &tmp_entry, flags,
                                      TRUE /* immediate write */,
                                      pool));
     }
@@ -1137,6 +1160,9 @@ open_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_entry_t tmp_entry;
+  apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
+    SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+                                 
   svn_wc_adm_access_t *adm_access;
 
   /* kff todo: check that the dir exists locally, find it somewhere if
@@ -1149,17 +1175,21 @@ open_directory (const char *path,
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
   tmp_entry.url = db->new_URL;
-  tmp_entry.repos = eb->repos;
+  /* In some situations, the URL of this directory does not have the same
+     repository root as the anchor of the update; we can't just blindly
+     use the that repository root here, so make sure it is really an
+     ancestor. */
+  if (eb->repos && svn_path_is_ancestor (eb->repos, db->new_URL))
+    {
+      tmp_entry.repos = eb->repos;
+      flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+    }
   tmp_entry.incomplete = TRUE;
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                 db->path, pool));  
   SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
-                                 &tmp_entry,
-                                 SVN_WC__ENTRY_MODIFY_REVISION |
-                                 SVN_WC__ENTRY_MODIFY_URL |
-                                 SVN_WC__ENTRY_MODIFY_REPOS |
-                                 SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                 &tmp_entry, flags,
                                  TRUE /* immediate write */,
                                  pool));
 
@@ -2332,6 +2362,16 @@ make_editor (svn_revnum_t *target_revision,
 
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
+
+  /* Disallow a switch operation to change the repository root of the target,
+     if that is known. */
+  if (switch_url && entry && entry->repos &&
+      ! svn_path_is_ancestor (entry->repos, switch_url))
+    return svn_error_createf 
+      (SVN_ERR_WC_INVALID_SWITCH, NULL,
+       _("'%s'\n"
+         "is not the same repository as\n"
+         "'%s'"), switch_url, entry->repos);
 
   /* Construct an edit baton. */
   eb = apr_pcalloc (subpool, sizeof (*eb));

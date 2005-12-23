@@ -834,45 +834,19 @@ wcprop_list (apr_hash_t **props,
              svn_wc_adm_access_t *adm_access,
              apr_pool_t *pool)
 {
-  svn_node_kind_t kind, pkind;
   const char *prop_path;
   const svn_wc_entry_t *entry;
 
   *props = apr_hash_make (pool);
 
   /* Check validity of PATH */
-  SVN_ERR( svn_io_check_path (path, &kind, pool) );
-  
-#if 0
-  if (kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                              _("'%s' does not exist"),
-                              svn_path_local_style (path, pool));
-  
-  if (kind == svn_node_unknown)
-    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              _("Unknown node kind: '%s'"),
-                              svn_path_local_style (path, pool));
-#endif
-
   /* Construct a path to the relevant property file */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  /*### Maybe assert (entry) here; calling wcprop_list
-    for an unversioned resource is bogus */
   if (! entry)
     /* No entry exists, therefore no wcprop-file can exist */
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_wc__wcprop_path (&prop_path, path, entry->kind, FALSE, pool));
-
-  /* Does the property file exist? */
-  SVN_ERR (svn_io_check_path (prop_path, &pkind, pool));
-  
-  if (pkind == svn_node_none)
-    /* No property file exists.  Just go home, with an empty hash. */
-    return SVN_NO_ERROR;
-  
-  /* else... */
 
   SVN_ERR (svn_wc__load_prop_file (prop_path, *props, pool));
 
