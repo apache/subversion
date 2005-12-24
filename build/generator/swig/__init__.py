@@ -20,8 +20,9 @@ class Generator:
 
     # Read configuration options
     self.proxy_dir = parser.get('options', 'swig-proxy-dir')
-    self.includes = \
-        _collect_paths(parser.get('options', 'includes'))
+    self.includes = _collect_paths(parser.get('options', 'includes'))
+    self.swig_checkout_files = \
+      _collect_paths(parser.get('options', 'swig-checkout-files'))
 
     # Calculate build options
     self.opts = {}
@@ -46,14 +47,4 @@ class Generator:
     except AssertionError:
       pass
     return 0
-
-  def checkout(self, dir, file):
-    """Checkout a specific header file from SWIG"""
-    out = "%s/%s" % (self.proxy_dir, file)
-    if os.path.exists(out):
-      os.remove(out)
-    if self.version() == 103024:
-      shutil.copy("%s/%s/%s" % (self.swig_libdir, dir, file), out)
-    else:
-      _exec.run("%s -o %s -co %s/%s" % (self.swig_path, out, dir, file))
 
