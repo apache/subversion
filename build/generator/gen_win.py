@@ -9,6 +9,7 @@ import fnmatch
 import re
 import glob
 import generator.swig.header_wrappers
+import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
 
 try:
