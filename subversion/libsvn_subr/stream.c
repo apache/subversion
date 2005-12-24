@@ -321,25 +321,6 @@ write_handler_apr (void *baton, const char *data, apr_size_t *len)
   return svn_io_file_write_full (btn->file, data, *len, len, btn->pool);
 }
 
-
-svn_stream_t *
-svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
-{
-  struct baton_apr *baton;
-  svn_stream_t *stream;
-
-  if (file == NULL)
-    return svn_stream_empty(pool);
-  baton = apr_palloc (pool, sizeof (*baton));
-  baton->file = file;
-  baton->pool = pool;
-  stream = svn_stream_create (baton, pool);
-  svn_stream_set_read (stream, read_handler_apr);
-  svn_stream_set_write (stream, write_handler_apr);
-  return stream;
-}
-
-
 static svn_error_t *
 close_handler_apr (void *baton)
 {
@@ -348,14 +329,37 @@ close_handler_apr (void *baton)
   return svn_io_file_close (btn->file, btn->pool);
 }
 
-svn_stream_t *
-svn_stream_from_aprfile2 (apr_file_t *file, apr_pool_t *pool)
-{
-  svn_stream_t *stream = svn_stream_from_aprfile (file, pool);
 
-  svn_stream_set_close (stream, close_handler_apr);
+svn_stream_t *
+svn_stream_from_aprfile2 (apr_file_t *file,
+                          svn_boolean_t disown,
+                          apr_pool_t *pool)
+{
+  struct baton_apr *baton;
+  svn_stream_t *stream;
+
+  if (file == NULL)
+    return svn_stream_empty(pool);
+
+  baton = apr_palloc (pool, sizeof (*baton));
+  baton->file = file;
+  baton->pool = pool;
+  stream = svn_stream_create (baton, pool);
+  svn_stream_set_read (stream, read_handler_apr);
+  svn_stream_set_write (stream, write_handler_apr);
+
+  if (! disown)
+    svn_stream_set_close (stream, close_handler_apr);
+
   return stream;
 }
+
+svn_stream_t *
+svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
+{
+  return svn_stream_from_aprfile2 (file, TRUE, pool);
+}
+
 
 
 /* Compressed stream support */
