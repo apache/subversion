@@ -144,7 +144,7 @@ cat_local_file (const char *path,
 
   SVN_ERR (svn_io_file_open (&input_file, base,
                              APR_READ, APR_OS_DEFAULT, pool));
-  input = svn_stream_from_aprfile2 (input_file, pool);
+  input = svn_stream_from_aprfile2 (input_file, FALSE, pool);
 
   if ( eol || kw )
     SVN_ERR (svn_subst_translate_stream3 (input, output, eol, FALSE, kw,
