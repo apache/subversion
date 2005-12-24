@@ -559,13 +559,16 @@ svn_stream_t *svn_stream_empty (apr_pool_t *pool);
  */
 svn_stream_t *svn_stream_disown (svn_stream_t *stream, apr_pool_t *pool);
 
-/** Function to create streams which operate on APR * files.
+/** Create a stream which operates on APR * files.
  * For convenience, if @a file is NULL then svn_stream_empty(pool)
  * is returned.
  *
  * @note The stream returned is not considered to "own" the underlying
  *       file, meaning that svn_stream_close() on the stream will not
  *       close the file.
+ *
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
@@ -578,7 +581,9 @@ svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
  *
  * @since New in 1.4.
  */
-svn_stream_t *svn_stream_from_aprfile2 (apr_file_t *file, apr_pool_t *pool);
+svn_stream_t * svn_stream_from_aprfile2 (apr_file_t *file,
+                                         svn_boolean_t disown,
+                                         apr_pool_t *pool);
 
 /** Set @a *out to a generic stream connected to stdout, allocated in 
  * @a pool.  The stream and its underlying APR handle will be closed
