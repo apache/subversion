@@ -357,6 +357,7 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
 {
   VALUE target;
   apr_pool_wrapper_t *pool_wrapper;
+  apr_pool_wrapper_t **pool_wrapper_p;
   
   *rb_pool = Qnil;
   
@@ -385,8 +386,9 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
   if (!NIL_P(target) && !CONTEXT_P(target)) {
     rb_set_pool(target, *rb_pool);
   }
-  
-  SWIG_ConvertPtr(*rb_pool, (void **)&pool_wrapper,
+
+  pool_wrapper_p = &pool_wrapper;
+  SWIG_ConvertPtr(*rb_pool, (void **)pool_wrapper_p,
                   SWIG_TypeQuery("apr_pool_wrapper_t *"), 1);
   *pool = pool_wrapper->pool;
 }
@@ -566,29 +568,42 @@ c2r_ ## type ## _dup(void *type, void *ctx)                                  \
                                                                              \
   return rb_copied_ ## type;                                                 \
 }                                                                            \
-                                                                             \
+
+#define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)        \
+DEFINE_DUP_BASE(type, dup_func, type_prefix)                                 \
 static VALUE                                                                 \
 c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
 {                                                                            \
   return c2r_ ## type ## _dup((void *)type, NULL);                           \
 }
 
-#define DEFINE_DUP(type, dup_func) DEFINE_DUP_BASE(type, dup_func, const)
-#define DEFINE_DUP2(type) DEFINE_DUP(type, type ## _dup)
-#define DEFINE_DUP_NO_CONST(type, dup_func) DEFINE_DUP_BASE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST2(type) DEFINE_DUP_NO_CONST(type, type ## _dup)
+#define DEFINE_DUP(type, dup_func) \
+  DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, const)
+#define DEFINE_DUP2(type) \
+  DEFINE_DUP(type, type ## _dup)
 
+#define DEFINE_DUP_NO_CONVENIENCE(type, dup_func) \
+  DEFINE_DUP_BASE(type, dup_func, const)
+#define DEFINE_DUP_NO_CONVENIENCE2(type) \
+  DEFINE_DUP_NO_CONVENIENCE(type, type ## _dup)
+
+#define DEFINE_DUP_NO_CONST(type, dup_func) \
+  DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func,)
+#define DEFINE_DUP_NO_CONST2(type) \
+  DEFINE_DUP_NO_CONST(type, type ## _dup)
+
+
+DEFINE_DUP(wc_notify, wc_dup_notify)
 DEFINE_DUP2(txdelta_window)
 DEFINE_DUP2(info)
 DEFINE_DUP2(lock)
 DEFINE_DUP2(auth_ssl_server_cert_info)
 DEFINE_DUP2(wc_entry)
-DEFINE_DUP2(prop)
-DEFINE_DUP2(client_commit_item2)
-DEFINE_DUP2(client_proplist_item)
-DEFINE_DUP2(wc_external_item)
-DEFINE_DUP2(log_changed_path)
-DEFINE_DUP(wc_notify, wc_dup_notify)
+DEFINE_DUP_NO_CONVENIENCE2(prop)
+DEFINE_DUP_NO_CONVENIENCE2(client_commit_item2)
+DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
+DEFINE_DUP_NO_CONVENIENCE2(wc_external_item)
+DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
 DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
 
@@ -2371,13 +2386,17 @@ svn_swig_rb_make_stream(VALUE io)
   svn_stream_t *stream;
   
   if (RTEST(rb_funcall(rb_svn_core_stream(), rb_id_eqq(), 1, io))) {
-    SWIG_ConvertPtr(io, (void **)&stream, SWIG_TypeQuery("svn_stream_t *"), 1);
+    svn_stream_t **stream_p;
+    stream_p = &stream;
+    SWIG_ConvertPtr(io, (void **)stream_p, SWIG_TypeQuery("svn_stream_t *"), 1);
   } else {
     VALUE rb_pool = rb_pool_new(Qnil);
     apr_pool_wrapper_t *pool_wrapper;
+    apr_pool_wrapper_t **pool_wrapper_p;
     
     rb_set_pool(io, rb_pool);
-    SWIG_ConvertPtr(rb_pool, (void **)&pool_wrapper,
+    pool_wrapper_p = &pool_wrapper;
+    SWIG_ConvertPtr(rb_pool, (void **)pool_wrapper_p,
                     SWIG_TypeQuery("apr_pool_wrapper_t *"), 1);
     stream = svn_stream_create((void *)io, pool_wrapper->pool);
     svn_stream_set_read(stream, read_handler_rbio);
@@ -2853,10 +2872,12 @@ svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                                                   apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t handler;
+  svn_txdelta_window_handler_t *handler_p;
   void *handler_baton;
 
+  handler_p = &handler;
   SWIG_ConvertPtr(rb_ivar_get(obj, rb_id_handler()),
-                  (void **)&handler,
+                  (void **)handler_p,
                   SWIG_TypeQuery("svn_txdelta_window_handler_t"),
                   1);
   SWIG_ConvertPtr(rb_ivar_get(obj, rb_id_handler_baton()),
