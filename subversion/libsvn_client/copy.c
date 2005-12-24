@@ -965,7 +965,7 @@ repos_to_wc_copy (const char *src_url,
                (&fp, &new_text_path, dst_path, ".tmp",
                 svn_io_file_del_none, pool));
 
-      fstream = svn_stream_from_aprfile2 (fp, pool);
+      fstream = svn_stream_from_aprfile2 (fp, FALSE, pool);
       SVN_ERR (svn_ra_get_file (ra_session, "", src_revnum, fstream, &real_rev,
                                 &new_props, pool));
       SVN_ERR (svn_stream_close (fstream));
