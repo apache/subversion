@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style type="text/css"> /* <![CDATA[ */
@@ -47,6 +47,8 @@ $LastChangedDate$
              >Coding style</a></li>
 <li><a href="#secure-coding"
              >Secure coding guidelines</a></li>
+<li><a href="#destruction-of-stacked-resources"
+             >Destruction of stacked resources</a></li>
 <li><a href="#documenting"
              >Document everything</a></li>
 <li><a href="#use-page-breaks"
@@ -87,6 +89,8 @@ $LastChangedDate$
              >Release numbering, compatibility, and deprecation</a></li>
 <li><a href="#release-stabilization"
              >Stabilizing and maintaining releases</a></li>
+<li><a href="#tarball-signing"
+             >Signing source distribution packages</a></li>
 <li><a href="#l10n"
              >Localization (l10n)</a></li>
 </ul>
@@ -344,7 +348,7 @@ to ask for review on the developer mailing list.</p>
 <li><p><tt>subversion/libsvn_client/</tt><br />
     Common code for client operations.</p>
 </li>
-<li><p><tt>subversion/clients/cmdline/</tt><br />
+<li><p><tt>subversion/svn/</tt><br />
     The command line client.</p>
 </li>
 <li><p><tt>subversion/tests/</tt><br />
@@ -473,6 +477,69 @@ risk of exposure.</p>
 
 <![CDATA[---------------------------------------------------------]]>
 
+<div class="h2" id="destruction-of-stacked-resources"
+     title="destruction-of-stacked-resources">
+<h2>Destruction of stacked resources</h2>
+
+<p>Some resources need destruction to ensure correct functioning of the
+application.  Such resources include files, especially since open
+files cannot be deleted on Windows.</p>
+
+<p>When writing an API which creates and returns a stream, in the
+background this stream may be stacked on a file or other stream.  To
+ensure correct destruction of the resources the stream is built upon,
+it must correctly call the destructors of the stream(s) it is built
+upon (owns).</p>
+
+<p>At first in <a href="http://svn.haxx.se/dev/archive-2005-12/0487.shtml">
+http://svn.haxx.se/dev/archive-2005-12/0487.shtml</a>
+and later in <a href="http://svn.haxx.se/dev/archive-2005-12/0633.shtml">
+http://svn.haxx.se/dev/archive-2005-12/0633.shtml</a> this
+was discussed in more general terms for files, streams, editors and
+window handlers.</p>
+
+<p>As Greg Hudson put it:</p>
+
+<blockquote>
+<p>On consideration, here is where I would like us to be:</p>
+
+<ul><li>Streams which read from or write to an underlying object own that
+object, i.e. closing the stream closes the underlying object, if
+applicable.</li>
+
+<li>The layer (function or data type) which created a stream is
+responsible for closing it, except when the above rule applies.</li>
+
+<li>Window handlers are thought of as an odd kind of stream, and passing
+the final NULL window is considered closing the stream.</li>
+</ul>
+
+<p>If you think of apply_textdelta as creating a window handler, then I
+don't think we're too far off.  svn_stream_from_aprfile isn't owning its
+subsidiary file, svn_txdelta_apply is erroneously taking responsibility
+for closing the window stream it is passed, and there may be some other
+deviations.</p>
+</blockquote>
+
+<p>There is one exception to the rules above though.  When a stream is passed
+to a function as an argument (for example: the 'out' parameter of
+svn_client_cat2()), that routine can't call the streams destructor, since
+it did not create that resource.</p>
+
+<p>If svn_client_cat2() creates a stream, it must also call the destructor
+for that stream.  By the above model, that stream will call the destructor
+for the 'out' parameter.  This is however wrong, because the responsibility
+to destruct the 'out' parameter lies elsewhere.</p>
+
+<p>To solve this problem, at least in the stream case, svn_stream_disown()
+has been introduced.  This function wraps a stream, making sure it's
+<em>not</em> destroyed, even though any streams stacked upon it may try
+to do so.</p>
+
+</div>
+
+<![CDATA[---------------------------------------------------------]]>
+
 <div class="h2" id="documenting" title="documenting">
 <h2>Document everything</h2>
 
@@ -593,7 +660,10 @@ conventions:</p>
 </li>
 
 <li><p>Restrict lines to 79 columns, so that code will display well in a
-      minimal standard display window.</p>
+      minimal standard display window.  (There can be exceptions, such
+      as when declaring a block of 80-column text with a few extra
+      columns taken up by indentation, quotes, etc., if splitting each
+      line in two would be unreasonably messy.)</p>
 </li>
 
 <li><p>Signify internal variables by two underscores after the prefix.
@@ -1213,7 +1283,7 @@ go to it.  If not, here's another way:</p>
 
    <pre>
     POOL DEBUG: [5383/1024] PCALLOC (      2763/      2763/      5419) \
-    0x08102D48 "subversion/clients/cmdline/main.c:612"                 \
+    0x08102D48 "subversion/svn/main.c:612"                             \
     &lt;subversion/libsvn_subr/auth.c:122&gt; (118/118/0)
    </pre>
 
@@ -1488,17 +1558,28 @@ committing the change.</p>
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>If someone pointed out a problem or suggested the fix, but did not
-actually write the patch, indicate the contribution with
-"Suggested&nbsp;by:&nbsp;":</p>
+<p>If someone found the bug or pointed out the problem, but didn't
+write the patch, indicate their contribution with
+"Found&nbsp;by:&nbsp;":</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
-   Suggested by: J. Random &lt;jrandom@example.com&gt;
+   Found by: J. Random &lt;jrandom@example.com&gt;
 
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
+</pre>
+
+<p>If someone suggested something useful, but didn't write the patch,
+indicate their contribution with "Suggested&nbsp;by:&nbsp;":</p>
+
+<pre>
+   Extend the Contribulyzer syntax to distinguish finds from ideas.
+
+   Suggested by: dlr
+
+   * www/hacking.html (crediting): Adjust accordingly.
 </pre>
 
 <p>If someone reviewed the change, use "Review&nbsp;by:&nbsp;":</p>
@@ -1521,7 +1602,7 @@ combination of fields:</p>
    Patch by: J. Random &lt;jrandom@example.com&gt;
              Enrico Caruso &lt;codingtenor@codingtenor.com&gt;
              me
-   Suggested by: J. Random &lt;jrandom@example.com&gt;
+   Found by: J. Random &lt;jrandom@example.com&gt;
    Review by: Eagle Eyes &lt;eeyes@example.com&gt;
               jcommitter
 
@@ -1549,11 +1630,12 @@ that the spacing is optional and not necessary for parseability:</p>
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>Currently, these three fields</p>
+<p>Currently, these fields</p>
 
 <pre>
    Patch by:
    Suggested by:
+   Found by:
    Review by:
 </pre>
 
@@ -2438,6 +2520,53 @@ voting, are always kept on the main release branch.</p>
 
 <![CDATA[---------------------------------------------------------]]>
 
+<div class="h2" id="tarball-signing">
+<h2>Signing source distribution packages (a.k.a tarballs)</h2>
+
+<p>Before a release or release candidate is officially made public, it is
+made available in a temporary location for committers to test and sign.
+The point is to have the tarballs tested on more systems than just that of the
+person who rolled the release.  When there are three signatures from full
+committers for each of the <tt>.tar.bz2</tt>, <tt>.tar.gz</tt> and
+<tt>.zip</tt> files, the release (candidate) can go public.</p>
+
+<p>Signing a tarball means that you assert certain things about it.  When
+sending your signature (see below), indicate in the mail what steps
+you've taken to verify that the tarball is correct.  Running
+<tt>make check</tt> over all RA layers and FS backends is a good idea,
+as well as building and testing the bindings.</p>
+
+<p>After having extracted and tested the tarball, you should sign it using
+<a href="http://www.gnupg.org">gpg</a>.  To do so, use a command like:</p>
+
+<pre>
+    gpg -ba subversion-1.3.0-rc4.tar.bz2
+</pre>
+
+<p>This will result in a file with the same name as the signed file, but with
+a <tt>.asc</tt> extension in the appropriate format for inclusion in the
+release announcement.  Include this file in a mail, typically in reply
+to the announcement of the unofficial tarball.</p>
+
+<p>If you've downloaded and tested a <tt>.tar.bz2</tt> file, it is possible to
+sign a <tt>.tar.gz</tt> file with the same contents without having
+to download and test it separately.  The trick is to extract the
+<tt>.bz2</tt> file, and pack it using <tt>gzip</tt> like this:</p>
+
+<pre>
+    bzip2 -cd subversion-1.3.0-rc4.tar.bz2 \
+    | gzip -9n > subversion-1.3.0-rc4.tar.gz
+</pre>
+
+<p>The resulting file should be identical to the file generated by the
+release manager, and thus can be signed as described above.
+To verify that the files are identical, you may use either the MD5 checksums
+or the release manager's signature, both of which should be provided with the
+tarballs.
+</p>
+</div>
+<![CDATA[---------------------------------------------------------]]>
+
 <div class="h2" id="l10n" title="l10n">
 <h2>Localization (l10n)</h2>
 
@@ -2456,7 +2585,7 @@ allowed (typically anything except static initializers).  The latter
 is used whenever _() isn't.  Strings marked with N_() need to be
 passed to gettext translation routines whenever referenced in the
 code.  For an example, look at how the header and footer are handled
-in subversion/clients/cmdline/help-cmd.c.</p>
+in subversion/svn/help-cmd.c.</p>
 
 <p>When using direct calls to gettext routines (*gettext or
 *dgettext), keep in mind that most of Subversion code is library code.
