@@ -40,18 +40,20 @@ Blanket commit access:
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
            djh   D.J. Heap <dj@shadyvale.net>
-          maxb   Max Bowsher <maxb@ukf.net>
+          maxb   Max Bowsher <maxb1@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
      danderson   David Anderson <david.anderson@calixo.net>
         zhakov   Ivan Zhakov <chemodax@gmail.com>
         djames   David James <james@cs.toronto.edu>
+       malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
 
 Commit access for specific areas:
 
   Bindings:
 
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
+      markphip   Mark Phippard <MarkP@softlanding.com>       (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
