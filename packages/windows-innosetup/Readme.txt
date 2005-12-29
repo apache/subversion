@@ -114,7 +114,7 @@ Dynamic build data
 
   Visible folders looks like this: [ ] and hidden folders like this: [h].
   
-  Do you think that is looks complicated? -Dont worry! The programs in the
+  Do you think that is looks complicated? Don't worry! The programs in the
   tools folder takes care of copying and preparing files when your 
   svn_dynamics.iss file are edited and set correctly.
 
