@@ -39,7 +39,7 @@ foreach my $keyid (keys %good_sigs) {
 		print $gpg_output;
 		die "UNABLE TO GET FINGERPRINT FOR $keyid";
 	}
-	my ($long_keyid, $name, $fingerprint) = $gpg_output =~ /^pub\s+(\w+\/\w+)\s+\d{4}-\d{2}-\d{2}\s([^<(]*)[^\n]+\n\s+Key\sfingerprint\s=\s(\w{4}\s+\w{4}\s+\w{4}\s+\w{4}\s+\w{4}\s+\w{4}\s+\w{4}\s+\w{4}\s+\w{4}\s+\w{4})/;
+	my ($long_keyid, $fingerprint, $null, $name) = $gpg_output =~ /^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s/;
 	unless (defined($long_keyid) && defined($name) && defined($fingerprint)) {
 		# Hmm some value didn't get filled in, error out.
 		die "Empty value, possible error in gpg output parsing.";
