@@ -235,26 +235,11 @@ install_dependency neon "$NEON_PATH"
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
-echo "Running ./autogen.sh in sandbox, to create ./configure ..."
-(cd "$DISTPATH" && ./autogen.sh --release) || exit 1
-
-if [ ! -f $DISTPATH/neon/configure ]; then
-  echo "Creating neon configure"
-  (cd "$DISTPATH/neon" && ./autogen.sh) || exit 1
-fi
-
-echo "Removing any autom4te.cache directories that might exist..."
-find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
-
-cat > "$DISTPATH/ChangeLog.CVS" <<EOF
-The old CVS ChangeLog is kept at 
-
-     http://subversion.tigris.org/
-
-If you want to see changes since Subversion went self-hosting,
-you probably want to use the "svn log" command -- and if it 
-does not do what you need, please send in a patch!
-EOF
+# Massage the new version number into svn_version.h.  We need to do
+# this before running autogen.sh --release on the subversion code,
+# because otherwise svn_version.h's mtime makes SWIG files regenerate
+# on end-user's systems, when they should just be compiled by the
+# Release Manager and left at that.
 
 ver_major=`echo $VERSION | cut -d '.' -f 1`
 ver_minor=`echo $VERSION | cut -d '.' -f 2`
@@ -275,6 +260,27 @@ sed \
 mv -f "$vsn_file.tmp" "$vsn_file"
 
 cp "$vsn_file" "svn_version.h.dist"
+
+echo "Running ./autogen.sh in sandbox, to create ./configure ..."
+(cd "$DISTPATH" && ./autogen.sh --release) || exit 1
+
+if [ ! -f $DISTPATH/neon/configure ]; then
+  echo "Creating neon configure"
+  (cd "$DISTPATH/neon" && ./autogen.sh) || exit 1
+fi
+
+echo "Removing any autom4te.cache directories that might exist..."
+find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
+
+cat > "$DISTPATH/ChangeLog.CVS" <<EOF
+The old CVS ChangeLog is kept at 
+
+     http://subversion.tigris.org/
+
+If you want to see changes since Subversion went self-hosting,
+you probably want to use the "svn log" command -- and if it 
+does not do what you need, please send in a patch!
+EOF
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
