@@ -50,6 +50,15 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r17956
+    Fix a regression which caused 'svn ci -m path_name' to no longer require
+    --force-log.
+    Justification:
+      Regression.
+    Votes:
+      +1: cmpilato
+
+
 Approved changes:
 
   * r17795, r17811 (testcase)
