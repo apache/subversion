@@ -35,7 +35,11 @@
 
 #include "svn_private_config.h"
 
-
+
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
 static svn_error_t *
 open_admin_tmp_file (apr_file_t **fp,
                      void *callback_baton,
@@ -68,7 +72,7 @@ open_tmp_file (apr_file_t **fp,
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    truepath, ".tmp", TRUE, pool));
+                                    truepath, DOT_TMP_STR, TRUE, pool));
 
   return SVN_NO_ERROR;
 }

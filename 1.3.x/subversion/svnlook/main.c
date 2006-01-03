@@ -56,6 +56,10 @@
         "\x44\x65\x6c\x65\x74\x65\x64"
         /* "Deleted" */
 
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
 #define INDEX_STR \
         "\x49\x6e\x64\x65\x78"
         /* "Index" */
@@ -731,7 +735,7 @@ prepare_tmpfiles (const char **tmpfile1,
 
   /* The second file is constructed from the first one's path. */
   SVN_ERR (svn_io_open_unique_file (&fh, tmpfile1, *tmpfile2, 
-                                    ".tmp", FALSE, pool));
+                                    DOT_TMP_STR, FALSE, pool));
   if (root1)
     SVN_ERR (dump_contents (fh, root1, path1, pool));
   apr_file_close (fh);

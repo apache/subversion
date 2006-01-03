@@ -48,6 +48,9 @@
 #include "cl.h"
 
 
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
 
 
 svn_error_t *
@@ -170,7 +173,7 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   /* Ask the working copy for a temporary file that starts with
      PREFIX. */
   err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
-                                 prefix, ".tmp", FALSE, pool);
+                                 prefix, DOT_TMP_STR, FALSE, pool);
 
   if (err && APR_STATUS_IS_EACCES (err->apr_err))
     {
@@ -189,7 +192,7 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
         }
 
       err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
-                                     prefix, ".tmp", FALSE, pool);
+                                     prefix, DOT_TMP_STR, FALSE, pool);
     }
 
   if (err)
