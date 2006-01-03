@@ -1040,7 +1040,7 @@ svn_ebcdic_dir_make_recursive(const char *path,
     char *dir;
          
     dir = path_remove_last_component(path, pool);
-    apr_err = apr_dir_make_recursive(dir, perm, pool);
+    apr_err = svn_ebcdic_dir_make_recursive(dir, perm, pool);
          
     if (!apr_err) 
       apr_err = apr_dir_make (path, perm, pool);
