@@ -1271,8 +1271,8 @@ main (int argc, const char * const *argv)
                     (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                      _("The lock comment is a pathname "
                        "(was -F intended?); use '--force-log' to override"));
-                  return svn_cmdline_handle_exit_error (err, pool, "svn: ");
                 }
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
             }
         }
     }
