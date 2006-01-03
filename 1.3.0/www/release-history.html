@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion Release History</title>
+</head>
+
+<body>
+<div class="app">
+
+<h2>Subversion Release History</h2>
+
+    <p>
+      This page provides historical release information for the
+      insanely curious...
+    </p>
+
+    <ul>
+      <li>
+	<b>Subversion 0.16.1</b> (6 January 2003): Interim bugfix release.
+      </li>
+      <li>
+	<b>Subversion 0.16</b> (3 December 2002): Interim 
+        release; <a
+        href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=0.16">see
+        issues marked with the "0.16" milestone</a>.
+      </li>
+      <li>
+	<b>Subversion 0.15</b> (7 November 2002): Interim
+        release; <a
+        href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=0.15">see
+        issues marked with the "0.15" milestone</a>.
+      </li>
+      <li>
+	<b>Subversion 0.14.5</b> (29 October 2002): Interim
+        release; fixed a configuration bug found in 0.14.4.  This is
+        the last release in the "0.14" series.  Later releases, even
+        interim releases, will increment the minor (middle) number;
+        and the patch (rightmost) number will indicate the iteration
+        of the release, for cases where we do post-release bugfixing.
+        See <a href="http://apr.apache.org/versioning.html"
+        >http://apr.apache.org/versioning.html</a> for more details.
+      </li>
+      <li>
+	<b>Subversion 0.14.4</b> (29 October 2002): Interim
+        release, again mostly general bugfixes.  Superseded
+        immediately by 0.14.5 (see above). 
+      </li>
+      <li>
+	<b>Subversion 0.14.3</b> (20 September 2002): Interim
+        release, mostly general bugfixes.
+      </li>
+      <li>
+	<span style="color: red"><b><i>Subversion 0.14.2</i></b></span>
+	(22 August 2002): Interim release;
+        see issues marked with the "0.14.2" milestone.
+      </li>
+      <li>
+	<b>Subversion 0.14.1</b> (9 August 2002):
+        Interim release after Alpha, mostly bugfixes, some feature
+        enhancements.
+      </li>
+      <li>
+	<span style="color: red"><b><i>Alpha (Subversion 0.14.0)</i></b></span>
+	(23 July 2002):
+        Most commonly used features completed.  Freeze on major
+        new features.
+      </li>
+      <li>
+        <b>Subversion 0.13.2</b> (28 June 2002): 
+          Fixes to regression test suite, filesystem improvements,
+          bring win32 build up-to-date and allow configuration files
+          under Win32
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=579"
+          >issue #579</a>),
+          fix various command line client outputs
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=728"
+          >issue #728</a>),
+          add a man page, and of course the usual bug fixes. 
+      </li>
+      <li>
+        <b>Subversion 0.13.1</b> (20 June 2002): continuing the
+      wrap-up for Alpha.
+          module system
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=517"
+          >issue #517</a>),
+          client feedback system rewrite
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=662"
+          >issue #662</a>), copy history traversal in many commands, a
+	new <tt>svn export</tt> command, versioned headers and libs,
+	improved test framework, more SWIG work, the delta combiner,
+	and the usual round of bug fixes.
+      </li>
+      <li>
+        <b>Subversion 0.13.0</b> (10 June 2002): Wrapping up
+           large work items in preparation for an Alpha release.
+           Primary issues fixed:
+
+          fs dump/load format
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=648"
+          >issue #648</a>);
+          new fs nodeID schema
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=654"
+          >issue #654</a>);
+          vsn-rsrc-urls use rev/path
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=652"
+          >issue #652</a>);
+          module system
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=517"
+          >issue #517</a>);
+	  reporting deleted entries to the server
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=658"
+          >issue #658</a>);
+          eliminate skel_t usage
+          (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=656"
+          >issue #656</a>).
+      </li>
+      <li>
+	<b>Subversion 0.12</b> (3 May 2002):
+        Updates to handle disjoint working copies
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=663"
+           >issue #663</a>);
+        version the execute bit on files
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=522"
+           >issue #522</a>);
+        use text-base checksums in working copies
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=549"
+           >issue #549</a>);
+        fix bug in keyword expansion (<a
+           href="http://subversion.tigris.org/issues/show_bug.cgi?id=646"
+           >issue #646</a>);
+        various fixes/improvements to the versioning filesystem (issues
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=648"
+           >#648</a>,
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=651"
+           >#651</a>, and
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=653"
+           >#653</a>, and
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=654"
+           >#654</a>), improvements to svn diff and svn rm.
+      </li>
+      <li>
+	<b>Subversion 0.11</b> (12 April 2002): 
+        Commits to handle disjoint working copies
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=575"
+           >issue #575</a>);
+        use 3-way merge in updates;
+        access to repository via http proxy
+           (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=579"
+           >issue #579</a>);
+        <tt>svn&nbsp;merge</tt> (<a
+           href="http://subversion.tigris.org/issues/show_bug.cgi?id=504"
+           >issue #504</a>);
+        various fixes for text editor invocation (issues
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=638"
+           >#638</a>,
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=633"
+           >#633</a>, and
+           <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=615"
+           >#615</a>).
+      </li>
+      <li> <b>Subversion 0.10</b> (8 March 2002): usability,
+         reliability, and performance: 
+         Delta-editor interface changes to promote better memory usage;
+         "streamy" writes into the FS (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=412"
+         >issue #412</a>); better pool management overall;
+         clearer error messages; configuration improvements.
+      </li>
+      <li> <b>Subversion 0.9</b> (18 February 2002):
+         "svn&nbsp;switch" (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=575"
+         >issue #575</a>); resolution of some repository db stability
+         issues (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=608">issue
+         #608</a>); and many small features and bugfixes since 0.8, all
+         praise to the Conquering Developer Hordes.  See the
+         <a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
+         file for details.
+      </li>
+      <li> <b>Subversion 0.8</b> (14 January 2002): Commit system rewrite (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=463">issue
+         #463</a>); diffs over the network in both directions (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=518">issue
+         #518</a>); newline conversion and keyword substitution (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=524">issue
+         #524</a>); and code migration from libsvn_fs to libsvn_repos (<a
+         href="http://subversion.tigris.org/issues/show_bug.cgi?id=428">issue
+         #428</a>).
+      </li>
+      <li> <b>Subversion 0.7</b> (3 December 2001): Branching and tagging.
+      </li>
+      <li> <b>Subversion 0.6 (Milestone 6)</b> (12 November 2001): Complete
+      "<tt>svn&nbsp;log</tt>", and have "<tt>svn&nbsp;mv</tt>",
+      "<tt>svn&nbsp;cp</tt>" working at least on files, with directory
+      support optional (for this milestone, that is, not in the long term).
+      </li>
+      <li> <b>Milestones 4 and 5</b> (19 October 2001): These milestones
+      were reached together, and fix various bugs related to properties,
+      networking, and filesystem deltification.
+      </li>
+      <li> <b>Milestone 3</b> (30 August 2001): Subversion is now
+      self-hosting.
+      </li>
+      <li><b>Milestone 2</b> (15 May 2001): Rudimentary working filesystem;
+           client can checkout/update/commit using WebDAV layer.
+      </li>
+      <li><b>Milestone 1</b> (20 October 2000): Basic working copy
+           manipulation;
+           client can checkout/update/commit using XML files.
+      </li>
+
+    </ul>
+
+</div>
+</body>
+</html>
