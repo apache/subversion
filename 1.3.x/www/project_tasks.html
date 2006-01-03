@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
   @import "tigris-branding/css/tigris.css";
@@ -174,19 +174,6 @@ just be implementation work.</p>
 
 </div>
 
-<div class="h3" id="svnserve_authz" title="svnserve_authz">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2316"
->Issue&nbsp;#2316</a>: Improve svnserve (svn://) authorization support</h3>
-
-<p>It would be nice if ra_svn/svnserve had some form of path based
-authorization, like mod_authz_svn provides when accessing repositories
-via Apache.  Access should be controlled on a per-user/per-group
-access with read and write access controllable for each user/group.
-This should use the same config files as mod_authz_svn unless there is
-a REALLY good reason not to.</p>
-
-</div>
-
 <div class="h3" id="ntlm-sspi" title="ntlm-sspi">
 <h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1844"
 >Issue&nbsp;#1844</a>: Subversion clients should be able to
@@ -266,16 +253,13 @@ href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/python/"
 >SWIG/Python bindings</a> are in pretty good shape, but their coverage
 is not yet complete.  Help is welcome.</p></li>
 
-<li><p>The <a
-href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/ruby/"
->SWIG/Ruby bindings</a> were just started, and could use a lot of
-help.</p></li>
-
 <li><p>Our <a
 href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/java/javahl/"
->Java</a> and <a
+>Java</a>, <a
 href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/perl/"
->SWIG/Perl</a> bindings are in pretty good shape, but maybe there are
+>SWIG/Perl</a>, and <a
+href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/ruby/"
+>SWIG/Ruby</a> bindings are in pretty good shape, but maybe there are
 other languages you'd like to call Subversion APIs from?  Lisp/Scheme?
 Feel free to start a new bindings project, if you don't see what you
 need here.</p></li>
