@@ -58,29 +58,31 @@ extern "C" {
 #if !APR_CHARSET_EBCDIC
   /* Substitution macros which facilitate handling of printf-style format
    * strings on an ebcdic platform. */
-  #define APR_PVSPRINTF        apr_pvsprintf
-  #define APR_PSPRINTF         apr_psprintf
-  #define APR_PVSPRINTF2       apr_pvsprintf
-  #define APR_PSPRINTF2        apr_psprintf
-  #define SVN_CMDLINE_FPRINTF  svn_cmdline_fprintf
-  #define SVN_CMDLINE_FPRINTF2 svn_cmdline_fprintf
-  #define SVN_CMDLINE_PRINTF   svn_cmdline_printf
-  #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf
-  #define SVN_STREAM_PRINTF    svn_stream_printf
-  #define SVN_STRING_CREATEF   svn_string_createf
-  #define APR_FILE_MTIME_SET   apr_file_mtime_set
+  #define APR_PVSPRINTF          apr_pvsprintf
+  #define APR_PSPRINTF           apr_psprintf
+  #define APR_PVSPRINTF2         apr_pvsprintf
+  #define APR_PSPRINTF2          apr_psprintf
+  #define SVN_CMDLINE_FPRINTF    svn_cmdline_fprintf
+  #define SVN_CMDLINE_FPRINTF2   svn_cmdline_fprintf
+  #define SVN_CMDLINE_PRINTF     svn_cmdline_printf
+  #define SVN_CMDLINE_PRINTF2    svn_cmdline_printf
+  #define SVN_STREAM_PRINTF      svn_stream_printf
+  #define SVN_STRING_CREATEF     svn_string_createf
+  #define APR_FILE_MTIME_SET     apr_file_mtime_set
+  #define APR_DIR_MAKE_RECURSIVE apr_dir_make_recursive
 #else
-  #define APR_PVSPRINTF        svn_ebcdic_pvsprintf
-  #define APR_PSPRINTF         svn_ebcdic_psprintf
-  #define APR_PVSPRINTF2       svn_ebcdic_pvsprintf2
-  #define APR_PSPRINTF2        svn_ebcdic_psprintf2
-  #define SVN_CMDLINE_FPRINTF  svn_cmdline_fprintf_ebcdic
-  #define SVN_CMDLINE_FPRINTF2 svn_cmdline_fprintf_ebcdic2
-  #define SVN_CMDLINE_PRINTF   svn_cmdline_printf_ebcdic
-  #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf_ebcdic2
-  #define SVN_STREAM_PRINTF    svn_stream_printf_ebcdic
-  #define SVN_STRING_CREATEF   svn_string_createf_ebcdic
-  #define APR_FILE_MTIME_SET   svn_ebcdic_set_file_mtime
+  #define APR_PVSPRINTF          svn_ebcdic_pvsprintf
+  #define APR_PSPRINTF           svn_ebcdic_psprintf
+  #define APR_PVSPRINTF2         svn_ebcdic_pvsprintf2
+  #define APR_PSPRINTF2          svn_ebcdic_psprintf2
+  #define SVN_CMDLINE_FPRINTF    svn_cmdline_fprintf_ebcdic
+  #define SVN_CMDLINE_FPRINTF2   svn_cmdline_fprintf_ebcdic2
+  #define SVN_CMDLINE_PRINTF     svn_cmdline_printf_ebcdic
+  #define SVN_CMDLINE_PRINTF2    svn_cmdline_printf_ebcdic2
+  #define SVN_STREAM_PRINTF      svn_stream_printf_ebcdic
+  #define SVN_STRING_CREATEF     svn_string_createf_ebcdic
+  #define APR_FILE_MTIME_SET     svn_ebcdic_set_file_mtime
+  #define APR_DIR_MAKE_RECURSIVE svn_ebcdic_dir_make_recursive
 /**
  * Write a string to a file using a printf format; similar to apr_file_printf
  * except that any character or string variable arguments are assumed to be in
@@ -267,6 +269,15 @@ svn_ebcdic_file_transfer_contents(const char *from_path,
                                   apr_int32_t flags,
                                   apr_fileperms_t to_perms,
                                   apr_pool_t *pool);
+
+
+/** Implementation of apr_dir_make_recursive, which see.
+ * Supports PTF's in which that function is not implemented.
+ */
+apr_status_t
+svn_ebcdic_dir_make_recursive(const char *path,
+                              apr_fileperms_t perm,
+                              apr_pool_t *pool);
 #endif /* AS400 */
 
 #ifdef __cplusplus

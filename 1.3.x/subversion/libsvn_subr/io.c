@@ -859,7 +859,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
-  apr_err = apr_dir_make_recursive (path_apr, APR_OS_DEFAULT, pool);
+  apr_err = APR_DIR_MAKE_RECURSIVE (path_apr, APR_OS_DEFAULT, pool);
 
   if (apr_err)
     return svn_error_wrap_apr (apr_err, _("Can't make directory '%s'"), 
