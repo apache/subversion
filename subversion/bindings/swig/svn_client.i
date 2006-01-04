@@ -485,7 +485,7 @@
 
 #ifdef SWIGRUBY
 %inline %{
-static VALUE
+static void
 svn_client_set_log_msg_func2(svn_client_ctx_t *ctx,
                              svn_client_get_commit_log2_t log_msg_func2,
                              void *log_msg_baton2,
@@ -493,10 +493,9 @@ svn_client_set_log_msg_func2(svn_client_ctx_t *ctx,
 {
   ctx->log_msg_func2 = log_msg_func2;
   ctx->log_msg_baton2 = log_msg_baton2;
-  return (VALUE)log_msg_baton2;
 }
  
-static VALUE
+static void
 svn_client_set_notify_func2(svn_client_ctx_t *ctx,
                             svn_wc_notify_func2_t notify_func2,
                             void *notify_baton2,
@@ -504,10 +503,9 @@ svn_client_set_notify_func2(svn_client_ctx_t *ctx,
 {
   ctx->notify_func2 = notify_func2;
   ctx->notify_baton2 = notify_baton2;
-  return (VALUE)notify_baton2;
 }
 
-static VALUE
+static void
 svn_client_set_cancel_func(svn_client_ctx_t *ctx,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
@@ -515,7 +513,6 @@ svn_client_set_cancel_func(svn_client_ctx_t *ctx,
 {
   ctx->cancel_func = cancel_func;
   ctx->cancel_baton = cancel_baton;
-  return (VALUE)cancel_baton;
 }
 %}
 #endif
