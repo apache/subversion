@@ -58,6 +58,13 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r17627
+    Protect a baton from Ruby's GC.
+    Justification:
+      Without this change, segmentation fault may be occurred.
+    Votes:
+      +1: kou
+
 
 Approved changes:
 
