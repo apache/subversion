@@ -58,6 +58,13 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r17726, r17925
+    Fix conversion bug.
+    Justification:
+      Without this change, copyfrom_path and copyfrom_rev can't be gotten.
+    Votes:
+      +1: kou
+
 
 Approved changes:
 
