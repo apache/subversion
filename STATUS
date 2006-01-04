@@ -64,6 +64,7 @@ Candidate changes:
       Without this change, segmentation fault may be occurred.
     Votes:
       +1: kou
+      +0: blair
 
 
 Approved changes:
