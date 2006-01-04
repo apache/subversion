@@ -3488,7 +3488,8 @@ Commands:
     (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
       (setq svn-status-temp-file-to-remove
             (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
-      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1)))
+      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
+    (bury-buffer))
   (if svn-log-edit-update-log-entry
       (when (y-or-n-p "Update the log entry? ")
         ;;   svn propset svn:log --revprop -r11672 -F file
