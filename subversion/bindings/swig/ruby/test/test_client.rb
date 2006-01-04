@@ -240,15 +240,17 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    assert_raises(Svn::Error::CLIENT_MODIFIED) do
-      ctx.delete(path)
-    end
-    assert_raises(Svn::Error::WC_LOCKED) do
+    gc_disable do
+      assert_raises(Svn::Error::CLIENT_MODIFIED) do
+        ctx.delete(path)
+      end
+      assert_raises(Svn::Error::WC_LOCKED) do
+        ctx.delete(path, true)
+      end
+      ctx.cleanup(@wc_path)
       ctx.delete(path, true)
+      ctx.commit(@wc_path)
     end
-    ctx.cleanup(@wc_path)
-    ctx.delete(path, true)
-    ctx.commit(@wc_path)
     assert(!File.exist?(path))
   end
  
@@ -278,15 +280,17 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    assert_raises(Svn::Error::CLIENT_MODIFIED) do
-      ctx.rm(path)
-    end
-    assert_raises(Svn::Error::WC_LOCKED) do
+    gc_disable do
+      assert_raises(Svn::Error::CLIENT_MODIFIED) do
+        ctx.rm(path)
+      end
+      assert_raises(Svn::Error::WC_LOCKED) do
+        ctx.rm_f(path)
+      end
+      ctx.cleanup(@wc_path)
       ctx.rm_f(path)
+      ctx.commit(@wc_path)
     end
-    ctx.cleanup(@wc_path)
-    ctx.rm_f(path)
-    ctx.commit(@wc_path)
     assert(!File.exist?(path))
 
     File.open(path, "w") {|f| f.print(src)}
@@ -771,30 +775,32 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx.up(@wc_path, rev - 1)
     File.open(path, "w") {|f| f.print(src)}
-    assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
-      ctx.up(@wc_path, rev)
-    end
+    
+    gc_disable do
+      assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
+        ctx.up(@wc_path, rev)
+      end
+      assert_raise(Svn::Error::WC_LOCKED) do
+        ctx.commit(@wc_path)
+      end
 
-    assert_raise(Svn::Error::WC_LOCKED) do
-      ctx.commit(@wc_path)
-    end
+      ctx.set_cancel_func do
+        raise Svn::Error::CANCELLED
+      end
+      assert_raise(Svn::Error::CANCELLED) do
+        ctx.cleanup(@wc_path)
+      end
+      assert_raise(Svn::Error::WC_LOCKED) do
+        ctx.commit(@wc_path)
+      end
 
-    ctx.set_cancel_func do
-      raise Svn::Error::CANCELLED
-    end
-    assert_raise(Svn::Error::CANCELLED) do
-      ctx.cleanup(@wc_path)
-    end
-    assert_raise(Svn::Error::WC_LOCKED) do
-      ctx.commit(@wc_path)
-    end
-
-    ctx.set_cancel_func(nil)
-    assert_nothing_raised do
-      ctx.cleanup(@wc_path)
-    end
-    assert_nothing_raised do
-      ctx.commit(@wc_path)
+      ctx.set_cancel_func(nil)
+      assert_nothing_raised do
+        ctx.cleanup(@wc_path)
+      end
+      assert_nothing_raised do
+        ctx.commit(@wc_path)
+      end
     end
   end
 
