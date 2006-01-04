@@ -1007,7 +1007,7 @@ print_diff_tree (svn_fs_root_t *root,
       if (! printed_header
           && (node->action != SVN_UTF8_R || node->text_mod))
         {
-          SVN_ERR (svn_cmdline_printf (pool, "%s: %s\n", 
+          SVN_ERR (SVN_CMDLINE_PRINTF (pool, "%s: %s\n", 
                                        ((node->action == SVN_UTF8_A) ? _(ADDED_STR) :
                                         ((node->action == SVN_UTF8_D) ? _(DELETED_STR) :
                                          ((node->action == SVN_UTF8_R) ? _(MODIFIED_STR)
@@ -1019,11 +1019,11 @@ print_diff_tree (svn_fs_root_t *root,
 
   if (do_diff)
     {
-      SVN_ERR (svn_cmdline_printf (pool, "%s\n", equal_string));
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, "%s\n", equal_string));
       SVN_ERR (svn_cmdline_fflush (stdout));
 
       if (binary)
-        SVN_ERR (svn_cmdline_printf (pool, _("(Binary files differ)\n")));
+        SVN_ERR (SVN_CMDLINE_PRINTF (pool, _("(Binary files differ)\n")));
       else
         {
           svn_diff_t *diff;
