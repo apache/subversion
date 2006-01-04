@@ -425,18 +425,15 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
-        @log_msg_baton = callback
-        Client.set_log_msg_func2(self, callback)
+        @log_msg_baton = Client.set_log_msg_func2(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)
-        @notify_baton2 = callback
-        Client.set_notify_func2(self, callback)
+        @notify_baton = Client.set_notify_func2(self, callback)
       end
       
       def set_cancel_func(callback=Proc.new)
-        @cancel_baton = callback
-        Client.set_cancel_func(self, callback)
+        @cancel_baton = Client.set_cancel_func(self, callback)
       end
       
       private
