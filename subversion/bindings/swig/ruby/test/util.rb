@@ -50,6 +50,26 @@ module SvnTestUtil
     end
   end
 
+  def change_gc_status(prev_disabled)
+    begin
+      yield
+    ensure
+      if prev_disabled
+        GC.disable
+      else
+        GC.enable
+      end
+    end
+  end
+  
+  def gc_disable(&block)
+    change_gc_status(GC.disable, &block)
+  end
+
+  def gc_enable(&block)
+    change_gc_status(GC.enable, &block)
+  end
+
   def setup_tmp(path=@tmp_path)
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(path)
@@ -201,5 +221,4 @@ exit 1
     auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
     auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
   end
-  
 end

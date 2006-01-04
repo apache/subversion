@@ -16,7 +16,6 @@ class SvnCoreTest < Test::Unit::TestCase
   end
 
   def teardown
-    GC.enable
     teardown_repository(@repos_path)
     teardown_config
   end
@@ -118,28 +117,29 @@ class SvnCoreTest < Test::Unit::TestCase
   end
   
   def test_pool_GC
-    GC.disable
-
-    made_number_of_pool = 100
-    pools = []
+    gc_disable do
+      made_number_of_pool = 100
+      pools = []
     
-    gc
-    before_number_of_pools = Svn::Core::Pool.number_of_pools
-    made_number_of_pool.times do
-      pools << used_pool
+      gc
+      before_number_of_pools = Svn::Core::Pool.number_of_pools
+      made_number_of_pool.times do
+        pools << used_pool
+      end
+      gc
+      current_number_of_pools = Svn::Core::Pool.number_of_pools
+      created_number_of_pools = current_number_of_pools - before_number_of_pools
+      assert_operator(made_number_of_pool, :<=, current_number_of_pools)
+      
+      gc
+      pools.clear
+      before_number_of_pools = Svn::Core::Pool.number_of_pools
+      gc
+      current_number_of_pools = Svn::Core::Pool.number_of_pools
+      recycled_number_of_pools =
+        before_number_of_pools - current_number_of_pools
+      assert_operator(made_number_of_pool * 0.8, :<=, recycled_number_of_pools)
     end
-    gc
-    current_number_of_pools = Svn::Core::Pool.number_of_pools
-    created_number_of_pools = current_number_of_pools - before_number_of_pools
-    assert_operator(made_number_of_pool, :<=, current_number_of_pools)
-
-    gc
-    pools.clear
-    before_number_of_pools = Svn::Core::Pool.number_of_pools
-    gc
-    current_number_of_pools = Svn::Core::Pool.number_of_pools
-    recycled_number_of_pools = before_number_of_pools - current_number_of_pools
-    assert_operator(made_number_of_pool * 0.8, :<=, recycled_number_of_pools)
   end
 
   def test_config
@@ -350,8 +350,8 @@ EOT
   end
 
   def gc
-    before_disabled = GC.enable
-    GC.start
-    GC.disable if before_disabled
+    gc_enable do
+      GC.start
+    end
   end
 end
