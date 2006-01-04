@@ -1,0 +1,23 @@
+<!-- XML DTD for Subversion command-line client output. -->
+
+<!-- Common attributes and elements -->
+<!ELEMENT author (#PCDATA)>  <!-- user name -->
+<!ELEMENT date (#PCDATA)>  <!-- date as "yyyy-mm-ddThh:mm:ss.ssssssZ" -->
+
+<!-- For "svn list" -->
+<!ELEMENT lists (list+)>
+<!ELEMENT list (entry*)>
+<!ATTLIST list path CDATA #REQUIRED>  <!-- local path or URL -->
+<!ELEMENT entry (name, size?, commit, lock?)>
+<!ATTLIST entry kind (dir | file) #REQUIRED>
+<!ELEMENT name (#PCDATA)>  <!-- name of file or directory -->
+<!ELEMENT size (#PCDATA)>  <!-- file size in bytes: integer -->
+<!ELEMENT commit (author, date)>
+<!ATTLIST commit revision CDATA #REQUIRED>  <!-- revision number: integer -->
+<!-- Lock info stored repos. -->
+<!ELEMENT lock (token, owner, comment?, created, expires?)>
+<!ELEMENT token (#PCDATA)>    <!-- lock token URI -->
+<!ELEMENT owner (#PCDATA)>    <!-- lock owner -->
+<!ELEMENT comment (#PCDATA)>  <!-- lock comment -->
+<!ELEMENT created (#PCDATA)>  <!-- creation date in ISO format -->
+<!ELEMENT expires (#PCDATA)>  <!-- expiration date in ISO format -->

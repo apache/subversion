@@ -1,0 +1,19 @@
+<!-- XML DTD for Subversion command-line client output. -->
+
+<!-- Common attributes and elements -->
+<!ELEMENT author (#PCDATA)>  <!-- user name -->
+<!ELEMENT date (#PCDATA)>  <!-- date as "yyyy-mm-ddThh:mm:ss.ssssssZ" -->
+
+<!-- For "svn log" -->
+<!ELEMENT log (logentry*)>
+<!ELEMENT logentry (author?, date?, paths?, msg?)>
+<!ATTLIST logentry revision CDATA #REQUIRED>  <!-- revision number: integer -->
+<!ELEMENT paths (path+)>
+<!ELEMENT path (#PCDATA)>  <!-- path within repository -->
+<!-- "action code": one character                   -->
+<!-- "copyfrom-path": the path within repository    -->
+<!-- "copyfrom-rev" : the revision number (integer) -->
+<!ATTLIST path action CDATA #REQUIRED
+               copyfrom-path CDATA #IMPLIED
+               copyfrom-rev CDATA #IMPLIED>
+<!ELEMENT msg (#PCDATA)>  <!-- log message -->

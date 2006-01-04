@@ -1,0 +1,392 @@
+#!/bin/bash
+#-------------------------------------------------------------------------
+#    Author:		Ross Mark (rossm@controllingedge.com.au)
+#    Date:		Tue Mar 11 10:02:57 EST 2003
+#
+#    Copyright (C) 2003-2004 Ross Mark
+#
+#-------------------------------------------------------------------------
+#
+#    Description:
+#    Archive SVN (asvn) will allow the recording of file types not
+#    normally handled by svn. Currently this includes devices,
+#    symlinks and file ownership/permissions.
+#
+#    Every file and directory has a 'file:permissions' property set and
+#    every directory has a 'dir:devices' and 'dir:symlinks' for
+#    recording the extra information.
+#	
+#    Run this script instead of svn with the normal svn arguments.
+#
+#
+#    Licensing:
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+#
+#-------------------------------------------------------------------------
+SVN=/usr/local/bin/svn
+ACTION=""
+DEV_PROP="dir:devices"
+SYM_PROP="dir:symlinks"
+FILE_PROP="file:permissions"
+TMPFILE=/tmp/asvn.tmp.$$
+TMPFILE1=/tmp/asvn.tmp1.$$
+TMPFILE2=/tmp/asvn.tmp2.$$
+PCWD=`/bin/pwd`
+SKIPSVN='\( -name .svn -prune -false \)'
+PRINTDETAILS="-printf \"file='%p' mode=%m user=%u(%U) group=%g(%G)\n\""
+
+trap cleanup 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+
+function cleanup()
+{
+    rm -f $TMPFILE $TMPFILE1 $TMPFILE2
+}
+
+function basedirname()
+{
+    refname="$1"
+    dir="`dirname $2`"
+    ref=`expr "$dir" : "$refname/\(.*\)"`
+    if [ -z "$ref" ]
+    then
+	echo .
+    else
+	echo $ref
+    fi
+}
+
+#
+# Modifies TMPFILE2
+#
+function addignorefile()
+{
+    file=`basename $1`
+    dir=`dirname $1`
+
+    efile="`echo $file |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
+    gefile="`echo $efile |sed -e 's!\(\\\\\)!\\\\\\\\\1!g'`"
+    if ! ($SVN propget svn:ignore "$dir" | grep -q "^$gefile\$")
+    then
+	$SVN propget svn:ignore "$dir"  |sed -e '/^$/d' >$TMPFILE2
+	echo "$efile" >>$TMPFILE2 
+	$SVN propset svn:ignore -F $TMPFILE2 "$dir"
+	echo setting ignore
+#cat $TMPFILE2 >&2
+    fi
+}
+
+function deleteignorefile()
+{
+    file=`basename $1`
+    dir=`dirname $1`
+    efile="`echo $file |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
+    gefile="`echo $efile |sed -e 's!\(\\\\\)!\\\\\\\\\1!g'`"
+    echo "deleting ignore setting for '$file'"
+    if ($SVN propget svn:ignore "$dir" | grep -q "^$gefile\$")
+    then
+	$SVN propget svn:ignore "$dir" |sed -e '/^$/d'  |grep -v "^$gefile\$" >$TMPFILE2
+	$SVN propset svn:ignore -F $TMPFILE2 "$dir"
+#cat $TMPFILE2 >&2
+    fi
+}
+
+function recorddirinfo
+{
+    eval "find $PCWD $SKIPSVN -o \( -type d ! -name .svn  -print \)" |while read dirlist
+    do
+	updatedirsymlinks $1 $dirlist
+	updatedirdevices $1 $dirlist
+    done
+}
+
+function updatedirdevices()
+{
+    CHECKIN=false
+    if [ "$1" = "-ci" ]
+    then
+	CHECKIN=true
+	shift
+    fi
+    dir="$1"
+
+    echo checking $dir for devices
+    #
+    # Obtain the list of devices in this directory
+    #
+    find "$dir" \( \( -type b -o -type c -o -type p \) -print \)  -o  -type d ! -name "`basename $dir`" -prune | while read file
+    do
+	echo -n `find $file -printf "file='%f' mode=%m user=%u(%U) group=%g(%G)"`
+	[ -b $file ] && echo -n ' type=b'
+	[ -c $file ] && echo -n ' type=c'
+	[ -p $file ] && echo ' type=p'
+	if [ -b $file -o -c $file ] 
+	then
+	    ls -l $file |
+		sed -e 's/^[-lcpbrdwxXstugoTS]* *[0-9] [^ ]* *[^ ]* *\([0-9]*\), *\([0-9]*\) .*/ major=\1 minor=\2/'
+	fi
+	# In this case file is the full path.
+	addignorefile "$file"
+
+    done | sort >$TMPFILE
+
+    #
+    # Obtain the currently defined devices
+    #
+    $SVN propget $DEV_PROP $dir >$TMPFILE1
+
+    #
+    # If the two list are the same then there is nothing to do.
+    #
+    if /usr/bin/cmp $TMPFILE1 $TMPFILE >/dev/null
+    then
+	return
+    fi
+
+    if [ -s $TMPFILE ]
+    then
+	# There are devices in this directory
+	if [ "$CHECKIN" = "true" ]
+	then
+	    # Add the current devices to the property
+	    $SVN propset $DEV_PROP $dir -F $TMPFILE
+	else
+	    # Delete all the unwanted devices ie not in TMPFILE1
+	    cat $TMPFILE |while read line
+	    do
+		file=`expr "$line" : "file='\(.*\)' mode"`
+		if ! grep -q "file='$file'" $TMPFILE1
+		then
+		    rm $file
+		    deleteignorefile $file
+		fi
+	    done
+	fi
+    else
+	# There are no devices in this directory
+	if [ "$CHECKIN" = "true" ]
+	then
+	    $SVN propdel $DEV_PROP $dir
+	fi
+    fi
+
+    #
+    # If we are not a checkin then make sure all the devices are defined
+    #
+    if [ "$CHECKIN" != "true" ]
+    then
+	cat $TMPFILE1 |while read info
+	do
+	    #echo info = $info
+	    [ -z "$info" ] && continue
+	    grep -q "$info" $TMPFILE && continue # This line still matches
+	    file=`expr "$info" : "file='\(.*\)' "`
+	    mode=`expr "$info" : ".*' mode=\([0-9]*\) "`
+	    user=`expr "$info" : ".* user=\([^(]*\)("`
+	    uid=`expr "$info" : ".* user=[^(]*(\([0-9]*\) "`
+	    group=`expr "$info" : ".* group=\([^(]*\)("`
+	    gid=`expr "$info" : ".* group=[^(]*(\([0-9]*\) "`
+	    type=`expr "$info" : ".* type=\(.\)"`
+	    major=`expr "$info" : ".* major=\([0-9]*\)"`
+	    minor=`expr "$info" : ".* minor=\([0-9]*\)"`
+	    #
+	    # This file is either missing or wrong
+	    # Delete the old and create it anew.
+	    #
+	    rm -f $dir/$file
+	    mknod --mode=$mode $dir/$file $type $major $minor
+	    chown $user:$group $dir/$file
+	    addignorefile $dir/$file
+	done
+    fi
+}
+
+function updatedirsymlinks()
+{
+    CHECKIN=false
+    if [ "$1" = "-ci" ]
+    then
+	CHECKIN=true
+	shift
+    fi
+    dir="$1"
+
+    echo checking $dir for symlinks
+    cp /dev/null $TMPFILE
+    #
+    # Obtain the list of symlinks in this directory
+    #
+    find "$dir" \( -type l -printf "file='%f' dest='%l'\n" \)  -o  -type d ! -name "`basename $dir`" -prune |
+	sort >$TMPFILE
+    
+    #
+    # Make sure all the symlinks are being ignored.
+    #
+    cat $TMPFILE |while read line
+    do
+	file=`expr "$line" : "file='\(.*\)' dest"`
+	addignorefile "$dir/$file"
+    done
+    
+    #
+    # Obtain the currently defined symlinks
+    #
+    $SVN propget $SYM_PROP $dir >$TMPFILE1
+
+    #
+    # If the two list are the same then there is nothing to do.
+    #
+    if cmp $TMPFILE1 $TMPFILE >/dev/null
+    then
+	return
+    fi
+
+    if [ -s $TMPFILE ]
+    then
+	# There are symlinks in this directory
+	if [ "$CHECKIN" = "true" ]
+	then
+	    # Add the current symlinks to the property
+	    $SVN propset $SYM_PROP $dir -F $TMPFILE
+	else
+	    # Delete all the unwanted symlinks
+	    cat $TMPFILE |while read line
+	    do
+		file=`expr "$line" : "file='\(.*\)' dest"`
+		efile="`echo $file |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
+		if ! grep -q "file='$efile'" $TMPFILE1
+		then
+		    rm $dir/$file
+		    deleteignorefile $dir/$file
+		fi
+	    done
+	fi
+    else
+	# There are no symlinks in this directory
+	if [ "$CHECKIN" = "true" ]
+	then
+	    $SVN propdel $SYM_PROP $dir
+	fi
+    fi
+
+    #
+    # If we are not a checkin then make sure all the symlinks are defined
+    #
+    if [ "$CHECKIN" != "true" ]
+    then
+	cat $TMPFILE1 |while read info
+	do
+	    [ -z "$info" ] && continue
+	    file=`expr "$info" : "file='\(.*\)' dest"`
+	    dest=`expr "$info" : ".*' dest='\(.*\)'$"`
+
+	    if [ -L $dir/$file  ]
+	    then
+		[ "`find $dir/$file -printf '%l'`" = "$dest" ] && continue
+	    fi 
+	    rm -f $dir/$file
+	    ln -s $dest $dir/$file
+	done
+    fi
+}
+
+function recordpermissions()
+{
+    CHECKIN=false
+    if [ "$1" = "-ci" ]
+    then
+	CHECKIN=true
+	shift
+    fi
+
+    # Find all the directories and files
+    cp /dev/null $TMPFILE
+    eval "find $PCWD $SKIPSVN -o \( \( -type d ! -name .svn  \) -o -type f \) $PRINTDETAILS" | while read info
+    do
+	device=`expr "$info" : "file='\(.*\)' mode"`
+	info=`expr "$info" : "file='.*' \(mode.*\)"`
+	if [ "$PCWD" = "$device" ]
+	then
+	    dir="."
+	    file=""
+	else
+	    dir="`basedirname $PCWD $device`"
+	    file="`basename $device`"
+	fi
+	# see if the properties have changed.
+	if [ "`$SVN propget $FILE_PROP $dir/$file`" != "$info" ]
+	then
+	    if [ "$CHECKIN" = "true" ]
+	    then
+		$SVN propset $FILE_PROP  "$info" $dir/$file
+	    else
+		info=`$SVN propget $FILE_PROP "$dir/$file"`
+		mode=`expr "$info" : "mode=\([0-9]*\) "`
+		user=`expr "$info" : ".* user=\([^(]*\)("`
+		uid=`expr "$info" : ".* user=[^(]*(\([0-9]*\) "`
+		group=`expr "$info" : ".* group=\([^(]*\)("`
+		gid=`expr "$info" : ".* group=[^(]*(\([0-9]*\) "`
+		if  [ "$user" = "" -o "$group" = ""  -o "$mode" = "" ]
+		then
+		    echo "property $FILE_PROP not set for $dir/$file"
+		else
+		    chown $user:$group  $dir/$file
+		    chmod $mode $dir/$file
+		fi
+	    fi
+	fi
+    done
+}
+
+
+function pre_checkin()
+{
+    echo this is the pre checkin process
+    recorddirinfo -ci
+    recordpermissions -ci
+}
+
+function post_checkout()
+{
+    echo this is the post checkout process
+    if [ "$CHDIR" = "true" ]
+    then
+	shift $(($# -1))
+	cd $1
+    PCWD="$PCWD/$1"
+    fi
+    recorddirinfo 
+    recordpermissions 
+}
+
+CHDIR=false
+case "$1" in
+checkout|co)	CHDIR=true; ACTION="post";;
+commit|ci)	ACTION="pre";;
+switch|sw)	ACTION="post";;
+update|up)	ACTION="post";;
+*);;
+esac
+
+[ "$ACTION" =  "pre" ] && pre_checkin $@
+
+$SVN $@
+
+[ $? = 0 -a "$ACTION" = "post" ] && post_checkout $@
+
+cleanup
+#
+# vim: set ai ts=8 sw=4
+#

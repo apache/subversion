@@ -1,0 +1,193 @@
+
+                                                        -*- text -*-
+
+                     ============================
+                     Writing tests for Subversion
+                     ============================
+
+
+
+ * Test structure
+ * Test results
+** C test coding
+** Python test coding
+ * On-disk state
+ * 'svn status' status
+ * Differences between on-disk and status trees
+ * 'svn ci' output
+ * Gotcha's
+
+
+Test structure
+==============
+
+Tests start with a clean repository and working copy.  For the
+purpose of testing, we use a versioned tree going by the name
+'greektree'.  See subversion/tests/greek-tree.txt for more.
+
+This tree is then modified to become in a state in which we want
+to test our program.  This can involve changing the working copy
+as well as the repository.  Several commands (add, rm, update,
+commit) can be required to bring the repository/working copy in
+the desired state.
+
+If the working copy and repository are in the required
+pre-condition, the command-to-be-tested is executed.  After
+execution, the output (stdout, stderr), on-disk state and
+'svn status' are checked to verify the command worked as expected.
+
+If you need commands to construct the working copy+repository state,
+checks as described above apply to each of the intermediate commands
+just as they do to the final command.  That way, failure of the final
+command can be narrowed down to just that command, because the
+working copy/respository combination was knowingly in the correct
+state.
+
+
+Test results
+============
+
+Tests can generate 2 results:
+
+  - Success, signalled by normal function termination
+  - Failure, signalled by raising an exception
+     In case of python tests: an exception of type SVNFailure
+     In case of C tests:      return an svn_error_t * != SVN_NO_ERROR
+
+Sometimes it's necessary to code tests which are supposed to fail,
+if Subversion should behave a certain way, but does not yet.  Tests
+like these are marked XFail (eXpected-to-FAIL).  If the program is
+changed to support the tested behaviour, but the the test is not
+adjusted, it will XPASS (uneXpectedly-PASS).
+
+Next to normal and XFAIL status tests, there's also conditional
+execution of tests, by marking them Skip().  A condition can be
+given for which the skip should take effect, executing the test
+otherwise.
+
+
+
+** C test coding
+================
+
+(Could someone fill in this section please?!)
+
+
+
+** Python test coding
+=====================
+
+The python tests abstract from ordering problems by storing status
+information in trees.  Comparing expected and actual status means
+comparing trees - there are routines to do the comparison for you.
+
+Every command you issue should use the
+svntest.actions.run_and_verify_* API. If there's no such function
+for the operation you want to execute, you can use
+svntest.main.run_svn.  Note that this is an escape route only:
+the results of this command are not checked meaning you should
+include any checks in your test yourself.
+
+
+On-disk state
+=============
+
+On-disk state objects can be generated with the
+svntest.tree.build_tree_from_wc() function which describe the actual
+state on disk.  If you need an object which describes the unchanged
+(virginal) state, you can use svntest.main.greek_state.copy().
+###Note: shouldn't this be svntest.main.get_virginal_state() nowadays?!
+
+Testing for on-disk states is required in several instances, among
+which:
+ - Checking for specific file contents (after a merge for example)
+ - Checking for properties and their values
+
+
+'svn status' status
+===================
+
+Normally any change is at least validated (pre- and post-processing)
+by running run_and_verify_status, or passing an expected_status to
+one of the other run_and_verify_* methods.
+
+A clean expected_status can be obtained by calling
+svntest.actions.get_virginal_state(<wc_dir>, <revision>).
+
+
+Differences between on-disk and status trees
+============================================
+
+Both on-disk and status information is recorded in equal structures,
+but there are some differences in the elements that are assigned to
+files in each case:
+
+    Fieldname                    On-disk         status
+
+    Contents                        X               -
+    Properties                      X               -
+    Status                          -               X
+
+###Note: maybe others?
+
+'svn ci' output
+===============
+
+Most methods in the run_and_verify_* API take an expected_output
+parameter.  This parameter describes which actions the command line
+client should report to be taking on each target.  So far there are:
+
+ - 'Adding'
+ - 'Deleting'
+ - 'Replacing'
+ - 'Sending'
+
+
+Gotcha's
+========
+
+ * Minimize the use of 'run_command' and 'run_svn'
+
+   The output of these commands is not checked by the test suite
+   itself, so if you really need to use them, be sure to check
+   any relevant output yourself.
+
+   If you have any choice at all not to use them, please don't.
+
+ * Tests which check for failure as expected behaviour should PASS
+
+   The XFAIL test status is *only* meant for tests which check for
+   not-yet-but-expected-to-be supported program behaviour.
+
+ * File accesses can't use hardcoded '/' characters
+
+   Because the tests need to run on platforms with different path
+   separators too (MS Windows), you need to use the os.path.join()
+   function to concatenate path strings.
+
+ * Paths within status structures *do* use '/' characters
+
+   Paths within expected_status or expected_disk structures use '/'
+   characters as path separators.
+
+ * Don't forget to check output for correct output
+
+   You need to check not only whether a command generated output, but
+   also if that output meets your expectations:
+
+     - If the program is supposed to generate an error, check
+       if it generates the error you expect it to.
+     - If the program does not generate an error, check that
+       it gives you the confirmation you expect it to.
+
+ * Don't forget to check pre- and post-command conditions
+
+   You need to verify that the status and on-disk structures are
+   actually what you think they are before invoking the command
+   you're testing.  Likewise, you need to verify that the command
+   resulted in expected output, status and on-disk structure.
+
+ * Don't forget to check!
+
+   Yes, just check anything you can check.  If you don't, your test
+   may be passing for all the wrong reasons.

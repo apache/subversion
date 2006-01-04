@@ -1,0 +1,13 @@
+<!-- XML DTD for Subversion command-line client output. -->
+
+<!-- For "svn blame" -->
+<!ELEMENT blame (target*)>
+<!ELEMENT target (entry*)>
+<!ATTLIST target path CDATA #REQUIRED>  <!-- path or URL -->
+<!-- NOTE: The order of entries in a target element is insignificant. -->
+<!ELEMENT entry (commit?)>
+<!ATTLIST entry line-number CDATA #REQUIRED>  <!-- line number: integer -->
+<!ELEMENT commit (author?, date?)>
+<!ATTLIST commit revision CDATA #REQUIRED>  <!-- revision number: integer -->
+<!ELEMENT author (#PCDATA)>  <!-- author -->
+<!ELEMENT date (#PCDATA)>  <!-- date as "yyyy-mm-ddThh:mm:ss.ssssssZ"-->
