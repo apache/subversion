@@ -58,6 +58,9 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+
+Approved changes:
+
   * r17627
     Protect a baton from Ruby's GC.
     Justification:
@@ -65,8 +68,3 @@ Candidate changes:
     Votes:
       +1: kou
       +0: blair
-
-
-Approved changes:
-
-(none)
