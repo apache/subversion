@@ -81,13 +81,19 @@ typedef struct
 /* Context for parsing <D:error> bodies, used when we call ne_copy(). */
 struct copy_baton
 {
-  /* The method neon is about to execute. */
-  const char *method;
+  /* An indication of whether we're currently processing a COPY request
+   * or not.
+   */
+  svn_boolean_t making_a_copy;
   
-  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  /* A parser for handling <D:error> responses from mod_dav_svn.  This
+   * will be NULL if we haven't processed a COPY request yet.
+   */
   ne_xml_parser *error_parser;
 
-  /* If <D:error> is returned, here's where the parsed result goes. */
+  /* If <D:error> is returned, here's where the parsed result goes, or
+   * NULL otherwise.
+   */
   svn_error_t *err;
 
   /* A place for allocating fields in this structure. */
@@ -918,9 +924,7 @@ create_request_hook(ne_request *req,
   struct copy_baton *cb = userdata;
 
   if (strcmp(method, "COPY") == 0)
-    cb->method = apr_pstrdup(cb->pool, method);
-  else
-    cb->method = NULL;
+    cb->making_a_copy = TRUE;
 }
 
 
@@ -933,10 +937,7 @@ pre_send_hook(ne_request *req,
 {
   struct copy_baton *cb = userdata;
 
-  if (! cb->method)
-    return;
-
-  if (strcmp(cb->method, "COPY") == 0)
+  if (cb->making_a_copy)
     {
       cb->error_parser = ne_xml_create();
       svn_ra_dav__add_error_handler(req, cb->error_parser,
