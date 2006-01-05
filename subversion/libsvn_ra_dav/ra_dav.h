@@ -173,6 +173,8 @@ typedef struct {
   
   struct lock_request_baton *lrb;       /* used by lock/unlock */
 
+  struct copy_baton *cb;                /* used by COPY */
+
 } svn_ra_dav__session_t;
 
 
