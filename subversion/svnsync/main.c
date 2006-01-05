@@ -970,7 +970,7 @@ do_synchronize (svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                                                   sync_editor, sync_baton,
                                                   &cancel_editor,
                                                   &cancel_baton,
-                                                  pool));
+                                                  subpool));
 
       SVN_ERR (svn_ra_replay (from_session, current, 0, TRUE,
                               cancel_editor, cancel_baton, subpool));
