@@ -667,7 +667,9 @@ erase_unversioned_from_wc (const char *path,
   switch (kind)
     {
     case svn_node_none:
-      /* Nothing to do. */
+      return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
+                                _("'%s' does not exist"),
+                                svn_path_local_style (path, pool));
       break;
 
     default:
