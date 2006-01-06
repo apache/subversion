@@ -1076,7 +1076,6 @@ msgstr ""
 "    URL -> URL: Komplett omdøping på server-siden.\n"
 
 #: clients/cmdline/main.c:506
-#, fuzzy
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -1086,15 +1085,15 @@ msgid ""
 "  2. Removes unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
-"Slett EGENSKAPSNAVN fra filer, kataloger eller revisjoner.\n"
+"Slett en egenskap fra filer, kataloger eller revisjoner.\n"
 "bruk: 1. propdel EGENSKAPSNAVN [STI...]\n"
-"      2. propdel EGENSKAPSNAVN --revprop -r REV [URL]\n"
+"      2. propdel EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Fjerner versjonerte egenskaper i arbeidskopien.\n"
 "  2. Fjerner en uversjonert fjerntliggende egenskap fra en depotrevisjon.\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: clients/cmdline/main.c:517
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -1104,16 +1103,15 @@ msgid ""
 "  2. Edits unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
-"Rediger egenskapen EGENSKAPSNAVN med en ekstern\n"
-"redigerer på angitte mål.\n"
+"Rediger en egenskap med en ekstern tekstbehandler.\n"
 "bruk: 1. propedit EGENSKAPSNAVN STI...\n"
-"      2. propedit EGENSKAPSNAVN --revprop -r REV [URL]\n"
+"      2. propedit EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Redigerer versjonerte egenskaper i arbeidskopien.\n"
-"  2. Redigerer uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
+"  2. Redigerer en uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: clients/cmdline/main.c:529
-#, fuzzy
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -1131,10 +1129,10 @@ msgid ""
 "  the --strict option to disable these beautifications (useful,\n"
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
-"Vis verdien til EGENSKAPSNAVN på filer, kataloger\n"
+"Vis verdien for en egenskap på filer, kataloger\n"
 "eller revisjoner.\n"
 "bruk: 1. propget EGENSKAPSNAVN [MÅL[@REV]...]\n"
-"      2. propget EGENSKAPSNAVN --revprop -r REV [URL]\n"
+"      2. propget EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Viser versjonerte egenskaper i arbeidskopien. Hvis REV er spesifisert,\n"
 "     angir dette i hvilken revisjon målet først blir lett opp.\n"
@@ -1143,11 +1141,10 @@ msgstr ""
 "  Som standard legger denne delkommandoen til et ekstra linjeskift bak\n"
 "  egenskapens verdi, slik at visningen ser penere ut. I tillegg har hver\n"
 "  egenskap filstien som forstavelse når flere stier vises. Du kan bruke\n"
-"  argumentet --strict for å ta bort forstavelsene (dette er nyttig\n"
+"  argumentet --strict for å ta bort disse forskjønnelsene (dette er nyttig\n"
 "  for eksempel når binære egenskaper sendes til en fil).\n"
 
 #: clients/cmdline/main.c:548
-#, fuzzy
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -1161,14 +1158,14 @@ msgstr ""
 "Vis alle egenskaper på filer, kataloger eller\n"
 "revisjoner.\n"
 "bruk: 1. proplist [MÅL[@REV]...]\n"
-"      2. proplist --revprop -r REV [URL]\n"
+"      2. proplist --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Lister versjonerte egenskaper i arbeidskopien. Hvis REV er spesifisert\n"
 "     angir dette i hvilken revisjon målet først blir lett opp.\n"
 "  2. Lister uversjonerte fjerntliggende egenskaper i en depotrevisjon.\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: clients/cmdline/main.c:560
-#, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -1212,11 +1209,12 @@ msgid ""
 "  attempt will fail, and a recursive attempt will set the property\n"
 "  only on the file children of the directory.\n"
 msgstr ""
-"Sett EGENSKAPSNAVN til EGENSKAPSVERDI på filer,\n"
-"kataloger eller revisjoner.\n"
-"bruk: 1. propset EGENSKAPSNAVN [EGENSKAPSVERDI | -F VERDIFIL] STI...\n"
-"      2. propset EGENSKAPSNAVN --revprop -r REV \\\n"
-"                 [EGENSKAPSVERDI | -F VERDIFIL] [URL]\n"
+"Sett verdien av en egenskap på filer, kataloger eller revisjoner.\n"
+"bruk: 1. propset EGENSKAPSNAVN EGENSKAPSVERDI STI...\n"
+"      2. propset EGENSKAPSNAVN --revprop -r REV EGENSKAPSVERDI [MÅL]\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
+"\n"
+"  Verdien kan angis med «--file»-valget istedenfor EGENSKAPSVERDI.\n"
 "\n"
 "  1. Lager en lokal versjonert egenskap i arbeidskopien.\n"
 "  2. Lager en uversjonert, fjerntliggende egenskapsforandring i en\n"
@@ -2304,9 +2302,8 @@ msgid "Invalid relocation"
 msgstr "Ugyldig forflytning"
 
 #: include/svn_error_codes.h:390
-#, fuzzy
 msgid "Invalid switch"
-msgstr "Ugyldig klargjøring"
+msgstr "Ugyldig valg"
 
 #: include/svn_error_codes.h:396
 msgid "General filesystem error"
@@ -4708,7 +4705,7 @@ msgstr "Minst en forandring av egenskap feilet. Depotet er uforandret"
 
 #: libsvn_ra_dav/session.c:442
 msgid "Invalid URL: illegal character in proxy port number"
-msgstr "Ugyldig adresse: Ulovlig tegn i mellomtjenerens port"
+msgstr "Ugyldig URL: Ulovlig tegn i mellomtjenerens portnummer"
 
 #: libsvn_ra_dav/session.c:446
 msgid "Invalid URL: negative proxy port number"
@@ -7975,9 +7972,8 @@ msgid "root of directory to serve"
 msgstr "roten til katalogen som deles ut"
 
 #: svnserve/main.c:116
-#, fuzzy
 msgid "force read only, overriding repository config file"
-msgstr "avlegs; bruk konfigurasjonsfil for depot"
+msgstr "bruk skrivebeskyttet tilgang, overstyr konfigurasjonsfila for depotet"
 
 #: svnserve/main.c:117
 msgid "tunnel mode"
