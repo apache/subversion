@@ -54,8 +54,11 @@ Candidate changes:
     --force-log.
     Justification:
       Regression.
+    Note:
+      subversion/clients/cmdline was moved to subversion/svn, which needs to be
+      compensated for in the merge command.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, lundblad
 
   * r17726, r17925
     Fix conversion bug.
