@@ -26,7 +26,7 @@ Candidate changes:
       This has also turned out to be the fix for recently seen crashes in
       TortoiseSVN.
     Votes:
-      +1: rooneg
+      +1: rooneg, lundblad
 
   * r17333, [and friends...]
     Fix issue #2306: modification of "svn:needs-lock" should adjust
