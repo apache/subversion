@@ -1271,6 +1271,7 @@ main (int argc, const char * const argv[])
   if (err)
     {
       svn_handle_error2 (err, stderr, FALSE, "svnsync: ");
+      svn_error_clear (err);
 
       return EXIT_FAILURE;
     }
