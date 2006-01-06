@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-01-05 17:47+0100\n"
-"PO-Revision-Date: 2005-11-21 19:12+0100\n"
+"PO-Revision-Date: 2006-01-06 21:24+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -282,9 +282,8 @@ msgid "Invalid relocation"
 msgstr "Ugyldig forflytning"
 
 #: include/svn_error_codes.h:390
-#, fuzzy
 msgid "Invalid switch"
-msgstr "Ugyldig klargjøring"
+msgstr "Ugyldig valg"
 
 #: include/svn_error_codes.h:396
 msgid "General filesystem error"
@@ -1982,9 +1981,9 @@ msgstr ""
 #. Helper macro that evaluates to an error message indicating that
 #. the representation referred to by X has an unknown node kind.
 #: libsvn_fs_base/reps-strings.c:56
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown node kind for representation '%s'"
-msgstr "Ukjent nodetype for «%s»"
+msgstr "Ukjent nodetype for representasjon «%s»"
 
 #: libsvn_fs_base/reps-strings.c:107
 msgid "Representation is not of type 'delta'"
@@ -2656,58 +2655,55 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr "Minst en forandring av egenskap feilet. Depotet er uforandret"
 
 #: libsvn_ra_dav/replay.c:137
-#, fuzzy
 msgid "Missing revision attr in target-revision element"
-msgstr "Mangler «revisjon»-attributt for «%s»"
+msgstr "Mangler revisjonsattributt i «target-revision»-element"
 
 #: libsvn_ra_dav/replay.c:154
-#, fuzzy
 msgid "Missing revision attr in open-root element"
-msgstr "Mangler «revisjon»-attributt for «%s»"
+msgstr "Mangler revisjonsattributt i «open-root»-element"
 
 #: libsvn_ra_dav/replay.c:172
 msgid "Missing name attr in delete-entry element"
-msgstr ""
+msgstr "Mangler navnattributt i «delete-entry»-element"
 
 #: libsvn_ra_dav/replay.c:176
 msgid "Missing rev attr in delete-entry element"
-msgstr ""
+msgstr "Mangler revisjonsattributt i «delete-entry»-element"
 
 #: libsvn_ra_dav/replay.c:205
-#, fuzzy
 msgid "Missing name attr in open-directory element"
-msgstr "Mangler navn på egenskap og argument til depotets filsti"
+msgstr "Mangler navnattributt i «open-directory»-element"
 
 #: libsvn_ra_dav/replay.c:257 libsvn_ra_dav/replay.c:366
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in %s element"
-msgstr "Mangler egenskapsnavn-argument"
+msgstr "Mangler navnattributt i «%s»-element"
 
 #: libsvn_ra_dav/replay.c:303
 msgid "Got apply-textdelta element without preceding add-file or open-file"
-msgstr ""
+msgstr "Fikk «apply-textdelta»-element uten innledende «add-file» eller «open-file»"
 
 #: libsvn_ra_dav/replay.c:329
 msgid "Got close-file element without preceding add-file or open-file"
-msgstr ""
+msgstr "Fikk «apply-textdelta»-element uten innledende «add-file» eller «open-file»"
 
 #: libsvn_ra_dav/replay.c:344
 msgid "Got close-directory element without ever opening a directory"
-msgstr ""
+msgstr "Fikk «close-directory»-element uten at en katalog er blitt åpnet"
 
 #: libsvn_ra_dav/replay.c:471
-#, fuzzy, c-format
+#, c-format
 msgid "Error writing stream: unexpected EOF"
-msgstr "Feil under skriving til «%s»: Uventet EOF"
+msgstr "Feil under skriving til strøm: Uventet filslutt"
 
 #: libsvn_ra_dav/replay.c:478
 #, c-format
 msgid "Got cdata content for a prop delete"
-msgstr ""
+msgstr "Mottok cdata (tekstdata) for sletting av egenskap"
 
 #: libsvn_ra_dav/session.c:442
 msgid "Invalid URL: illegal character in proxy port number"
-msgstr "Ugyldig adresse: Ulovlig tegn i mellomtjenerens port"
+msgstr "Ugyldig URL: Ulovlig tegn i mellomtjenerens portnummer"
 
 #: libsvn_ra_dav/session.c:446
 msgid "Invalid URL: negative proxy port number"
@@ -3063,9 +3059,8 @@ msgid "Lock element not a list"
 msgstr "Låseelement er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1960
-#, fuzzy
 msgid "Server doesn't support the replay command"
-msgstr "Tjeneren støtter ikke låsekommandoen"
+msgstr "Tjeneren støtter ikke replay-kommandoen"
 
 #: libsvn_ra_svn/client.c:2024
 #, c-format
@@ -4613,19 +4608,19 @@ msgstr ""
 "Filstien «%s» slutter på «%s» som ikke er støttet til denne operasjonen"
 
 #: libsvn_wc/lock.c:789 libsvn_wc/lock.c:820
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to check path existence for '%s'"
-msgstr "Klarer ikke å sjekke at stien eksisterer for %s"
+msgstr "Klarer ikke å sjekke at stien eksisterer for «%s»"
 
 #: libsvn_wc/lock.c:799
-#, fuzzy, c-format
+#, c-format
 msgid "Expected '%s' to be a directory but found a file"
-msgstr "Forventet at %s skulle være en katalog, men fant en fil"
+msgstr "Forventet at «%s» skulle være en katalog, men fant en fil"
 
 #: libsvn_wc/lock.c:806
-#, fuzzy, c-format
+#, c-format
 msgid "Expected '%s' to be a file but found a directory"
-msgstr "Forventet at %s skulle være en fil, men fant en katalog"
+msgstr "Forventet at «%s» skulle være en fil, men fant en katalog"
 
 #: libsvn_wc/lock.c:826
 #, c-format
@@ -4640,9 +4635,9 @@ msgstr ""
 "mangler"
 
 #: libsvn_wc/lock.c:836
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to lock '%s'"
-msgstr "Klarer ikke å låse %s"
+msgstr "Klarer ikke å låse «%s»"
 
 #: libsvn_wc/lock.c:841
 #, c-format
@@ -5372,7 +5367,6 @@ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
 msgstr "forandringen gjort av revisjon ARG (samme som -r ARG-1:ARG)"
 
 #: svn/main.c:74
-#, fuzzy
 msgid ""
 "ARG (some commands also take ARG1:ARG2 range)\n"
 "                             A revision argument can be one of:\n"
@@ -5384,7 +5378,7 @@ msgid ""
 "                                'COMMITTED'  last commit at or before BASE\n"
 "                                'PREV'       revision just before COMMITTED"
 msgstr ""
-"ARG (noen kommadoer tar også «ARG1:ARG2»-områder)\n"
+"ARG (noen kommadoer tar også ARG1:ARG2-område)\n"
 "                             Et revisjonsargument kan være en av:\n"
 "                                NUMMER       revisjonsnummer\n"
 "                                «{» DATO «}» revisjonen som begynner på\n"
@@ -5688,7 +5682,6 @@ msgstr ""
 "     umiddelbar innsending.\n"
 
 #: svn/main.c:275
-#, fuzzy
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5935,7 +5928,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:420
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6043,7 +6035,6 @@ msgstr ""
 "    URL -> URL: Komplett omdøping på server-siden.\n"
 
 #: svn/main.c:478
-#, fuzzy
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6053,15 +6044,15 @@ msgid ""
 "  2. Removes unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
-"Slett EGENSKAPSNAVN fra filer, kataloger eller revisjoner.\n"
+"Slett en egenskap fra filer, kataloger eller revisjoner.\n"
 "bruk: 1. propdel EGENSKAPSNAVN [STI...]\n"
-"      2. propdel EGENSKAPSNAVN --revprop -r REV [URL]\n"
+"      2. propdel EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Fjerner versjonerte egenskaper i arbeidskopien.\n"
 "  2. Fjerner en uversjonert fjerntliggende egenskap fra en depotrevisjon.\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: svn/main.c:489
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6071,16 +6062,15 @@ msgid ""
 "  2. Edits unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
-"Rediger egenskapen EGENSKAPSNAVN med en ekstern\n"
-"redigerer på angitte mål.\n"
+"Rediger en egenskap med en ekstern tekstbehandler.\n"
 "bruk: 1. propedit EGENSKAPSNAVN STI...\n"
-"      2. propedit EGENSKAPSNAVN --revprop -r REV [URL]\n"
+"      2. propedit EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Redigerer versjonerte egenskaper i arbeidskopien.\n"
-"  2. Redigerer uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
+"  2. Redigerer en uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: svn/main.c:501
-#, fuzzy
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6098,10 +6088,10 @@ msgid ""
 "  the --strict option to disable these beautifications (useful,\n"
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
-"Vis verdien til EGENSKAPSNAVN på filer, kataloger\n"
+"Vis verdien for en egenskap på filer, kataloger\n"
 "eller revisjoner.\n"
 "bruk: 1. propget EGENSKAPSNAVN [MÅL[@REV]...]\n"
-"      2. propget EGENSKAPSNAVN --revprop -r REV [URL]\n"
+"      2. propget EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Viser versjonerte egenskaper i arbeidskopien. Hvis REV er spesifisert,\n"
 "     angir dette i hvilken revisjon målet først blir lett opp.\n"
@@ -6110,11 +6100,10 @@ msgstr ""
 "  Som standard legger denne delkommandoen til et ekstra linjeskift bak\n"
 "  egenskapens verdi, slik at visningen ser penere ut. I tillegg har hver\n"
 "  egenskap filstien som forstavelse når flere stier vises. Du kan bruke\n"
-"  argumentet --strict for å ta bort forstavelsene (dette er nyttig\n"
+"  argumentet --strict for å ta bort disse forskjønnelsene (dette er nyttig\n"
 "  for eksempel når binære egenskaper sendes til en fil).\n"
 
 #: svn/main.c:520
-#, fuzzy
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6128,14 +6117,14 @@ msgstr ""
 "Vis alle egenskaper på filer, kataloger eller\n"
 "revisjoner.\n"
 "bruk: 1. proplist [MÅL[@REV]...]\n"
-"      2. proplist --revprop -r REV [URL]\n"
+"      2. proplist --revprop -r REV [MÅL]\n"
 "\n"
 "  1. Lister versjonerte egenskaper i arbeidskopien. Hvis REV er spesifisert\n"
 "     angir dette i hvilken revisjon målet først blir lett opp.\n"
 "  2. Lister uversjonerte fjerntliggende egenskaper i en depotrevisjon.\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: svn/main.c:532
-#, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6179,11 +6168,12 @@ msgid ""
 "  attempt will fail, and a recursive attempt will set the property\n"
 "  only on the file children of the directory.\n"
 msgstr ""
-"Sett EGENSKAPSNAVN til EGENSKAPSVERDI på filer,\n"
-"kataloger eller revisjoner.\n"
-"bruk: 1. propset EGENSKAPSNAVN [EGENSKAPSVERDI | -F VERDIFIL] STI...\n"
-"      2. propset EGENSKAPSNAVN --revprop -r REV \\\n"
-"                 [EGENSKAPSVERDI | -F VERDIFIL] [URL]\n"
+"Sett verdien av en egenskap på filer, kataloger eller revisjoner.\n"
+"bruk: 1. propset EGENSKAPSNAVN EGENSKAPSVERDI STI...\n"
+"      2. propset EGENSKAPSNAVN --revprop -r REV EGENSKAPSVERDI [MÅL]\n"
+"     MÅL angir bare hvilket depot som skal aksesseres.\n"
+"\n"
+"  Verdien kan angis med «--file»-valget istedenfor EGENSKAPSVERDI.\n"
 "\n"
 "  1. Lager en lokal versjonert egenskap i arbeidskopien.\n"
 "  2. Lager en uversjonert, fjerntliggende egenskapsforandring i en\n"
@@ -8012,9 +8002,8 @@ msgid "root of directory to serve"
 msgstr "roten til katalogen som deles ut"
 
 #: svnserve/main.c:121
-#, fuzzy
 msgid "force read only, overriding repository config file"
-msgstr "avlegs; bruk konfigurasjonsfil for depot"
+msgstr "bruk skrivebeskyttet tilgang, overstyr konfigurasjonsfila for depotet"
 
 #: svnserve/main.c:122
 msgid "tunnel mode"
@@ -8034,7 +8023,7 @@ msgstr "lytt én gang (nyttig for avlusing)"
 
 #: svnserve/main.c:130
 msgid "write server process ID to file arg"
-msgstr ""
+msgstr "skriv tjenerprosess-ID til filargument"
 
 #: svnserve/main.c:141
 #, c-format
@@ -8100,100 +8089,100 @@ msgid ""
 "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
 "Initialize a destination repository.\n"
 msgstr ""
+"bruk: svnsync initialize MÅLURL --source-url KILDEURL\n"
+"Initialiser et måldepot.\n"
 
 #: svnsync/main.c:67
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
+"bruk: svnsync synchronize MÅLURL\n"
+"Overfør alle utestående revisjoner fra kilde til mål.\n"
 
 #: svnsync/main.c:71
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"bruk: svnadmin help [DELKOMMANDO...]\n"
+"bruk: svnsync help [DELKOMMANDO...]\n"
 "\n"
 "Forklarer bruken for dette programmet og dets delkommandoer.\n"
 
 #: svnsync/main.c:80
 msgid "The url to synchronize from"
-msgstr ""
+msgstr "URL som det skal synkroniseres fra"
 
 #: svnsync/main.c:160
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get local hostname"
-msgstr "Kan ikke få tak i filnavn"
+msgstr "Kan ikke få tak i lokalt tjenernavn"
 
 #: svnsync/main.c:186
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
-msgstr ""
+msgstr "Klarte ikke å låse måldepot, holdes for øyeblikket av «%s»\n"
 
 #: svnsync/main.c:268
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
-msgstr ""
+msgstr "Økten har roten på «%s», men depotroten er «%s»"
 
 #: svnsync/main.c:298
 msgid "Cannot initialize a repository with content in it"
-msgstr ""
+msgstr "Kan ikke initialisere et depot som allerede har innhold"
 
 #: svnsync/main.c:308
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
-msgstr ""
+msgstr "Måldepotet synkroniserer allerede fra «%s»"
 
 #: svnsync/main.c:419
-#, fuzzy, c-format
+#, c-format
 msgid "Committing rev %ld\n"
-msgstr ""
-"\n"
-"La inn revisjon %ld.\n"
+msgstr "Legger inn revisjon %ld\n"
 
 #: svnsync/main.c:849
 msgid "Destination repository has not been initialized"
-msgstr ""
+msgstr "Måldepotet er ikke blitt initialisert"
 
 #: svnsync/main.c:864
 #, c-format
 msgid "UUID of destination repository (%s) does not match expected UUID (%s)"
-msgstr ""
+msgstr "UUID for måldepotet (%s) samsvarer ikke med forventet UUID (%s)"
 
 #: svnsync/main.c:910
 #, c-format
 msgid ""
 "Currently copying rev %ld in source is less than latest rev in destination (%"
 "ld)"
-msgstr ""
+msgstr "Kilderevisjonen %ld som kopieres er mindre enn den seneste revisjonen i målet (%ld)"
 
 #: svnsync/main.c:982
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
-msgstr ""
+msgstr "Innleggingen opprettet revisjon %ld, men skulle laget %ld"
 
 #: svnsync/main.c:1051
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"generell bruk: svnadmin DELKOMMANDO DEPOTSTI  [ARGUMENTER & VALG ...]\n"
-"Skriv «svnadmin help <delkommando>» for hjelp om en delkommando.\n"
+"generell bruk: svnsync DELKOMMANDO MÅLURL [ARGUMENTER & VALG ...]\n"
+"Skriv «svnsync help <delkommando>» for hjelp om en spesifikk delkommando.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
 #: svnsync/main.c:1225
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnsync help %s' for usage.\n"
 msgstr ""
 "Delkommandoen «%s» godtar ikke valget «%s»\n"
-"Skriv «svn help %s» for bruksområde.\n"
+"Skriv «svnsync help %s» for bruksanvisning.\n"
 
 #: svnversion/main.c:90
 #, c-format
