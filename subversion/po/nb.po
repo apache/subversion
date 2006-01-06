@@ -57,7 +57,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-10-31 23:12+0100\n"
+"POT-Creation-Date: 2006-01-06 21:53+0100\n"
 "PO-Revision-Date: 2005-08-17 03:22+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -4581,7 +4581,7 @@ msgstr "Minst en forandring av egenskap feilet. Depotet er uforandret"
 
 #: libsvn_ra_dav/session.c:441
 msgid "Invalid URL: illegal character in proxy port number"
-msgstr "Ugyldig adresse: Ulovlig tegn i mellomtjenerens port"
+msgstr "Ugyldig URL: Ulovlig tegn i mellomtjenerens portnummer"
 
 #: libsvn_ra_dav/session.c:445
 msgid "Invalid URL: negative proxy port number"
