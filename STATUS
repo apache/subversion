@@ -9,15 +9,6 @@ Status of 1.3.1:
 
 Candidate changes:
 
-  * r17242, r17243
-    Fix issue #2436, svn mv --force <unversioned file>, <unversiond file>
-    segfaults.
-    Justification:
-      This has also turned out to be the fix for recently seen crashes in
-      TortoiseSVN.
-    Votes:
-      +1: rooneg, lundblad
-
   * r17333, [and friends...]
     Fix issue #2306: modification of "svn:needs-lock" should adjust
     the native file system's read-only attribute within a WC.
@@ -49,17 +40,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r17956
-    Fix a regression which caused 'svn ci -m path_name' to no longer require
-    --force-log.
-    Justification:
-      Regression.
-    Note:
-      subversion/clients/cmdline was moved to subversion/svn, which needs to be
-      compensated for in the merge command.
-    Votes:
-      +1: cmpilato, lundblad
-
   * r17726, r17925
     Fix conversion bug.
     Justification:
@@ -70,4 +50,22 @@ Candidate changes:
 
 Approved changes:
 
-(none)
+  * r17242, r17243
+    Fix issue #2436, svn mv --force <unversioned file>, <unversioned file>
+    segfaults.
+    Justification:
+      This has also turned out to be the fix for recently seen crashes in
+      TortoiseSVN.
+    Votes:
+      +1: rooneg, lundblad, philip
+
+  * r17956
+    Fix a regression which caused 'svn ci -m path_name' to no longer require
+    --force-log.
+    Justification:
+      Regression.
+    Note:
+      subversion/clients/cmdline was moved to subversion/svn, which needs to be
+      compensated for in the merge command.
+    Votes:
+      +1: cmpilato, lundblad, philip
