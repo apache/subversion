@@ -19,6 +19,15 @@ Status of 1.3.1:
 
 Candidate changes:
 
+  * r17242, r17243
+    Fix issue #2436, svn mv --force <unversioned file>, <unversiond file>
+    segfaults.
+    Justification:
+      This has also turned out to be the fix for recently seen crashes in
+      TortoiseSVN.
+    Votes:
+      +1: rooneg
+
   * r17333, [and friends...]
     Fix issue #2306: modification of "svn:needs-lock" should adjust
     the native file system's read-only attribute within a WC.
