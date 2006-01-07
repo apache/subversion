@@ -459,12 +459,13 @@ def get_copyfrom(dir):
     rlpath = url_to_rlpath(target_to_url(dir))
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir, split_lines=False)
     out = out.replace("\n", " ")
-    m = re.search(r'(<path .*action="A".*>%s</path>)' % rlpath, out)
-    if not m:
+    try:
+        m = re.search(r'(<path .*action="A".*>%s</path>)' % rlpath, out)
+        head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
+        rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
+        return head,rev
+    except AttributeError:
         return None,None
-    head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
-    rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
-    return head,rev
 
 def get_latestrev(url):
     """Get the latest revision of the repository of which URL is part."""
