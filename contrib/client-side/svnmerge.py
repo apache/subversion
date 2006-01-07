@@ -234,9 +234,13 @@ def check_dir_clean(dir):
         report('skipping status check because of --force')
         return
     report('checking status of "%s"' % dir)
-    for L in launchsvn("status -q %s" % dir):
-        if L:
-            error('"%s" has local modifications; it must be clean' % dir)
+    # Checking with -q does not show unversioned files, or external directories.
+    # Though it displays a debug message for external directories, after a
+    # blank line. So, pratically, the first line matters: if it's non-empty
+    # there is a modification.
+    out = launchsvn("status -q %s" % dir)
+    if out and out[0]:
+        error('"%s" has local modifications; it must be clean' % dir)
     for L in launchsvn("status -u %s" % dir):
         if L[7] == '*':
             error('"%s" is not up to date; please "svn update" first' % dir)
