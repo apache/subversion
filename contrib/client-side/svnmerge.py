@@ -158,6 +158,12 @@ def console_width():
     except ImportError:
         pass
 
+    # Parse the output of stty -a
+    out = os.popen("stty -a").read()
+    m = re.search(r"columns (\d+);", out)
+    if m:
+        return int(m.group(1))
+
     # sensible default
     return 80
 
