@@ -985,30 +985,51 @@ class CommandOpts:
                 return o
         assert 0, fl
 
-    def _fancy_getopt(self, args, opts, state=None):
+    def _compute_flags(self, opts, check_conflicts=True):
         back = {}
         sfl = ""
         lfl = []
-        if state is None:
-            state= {}
         for o in opts:
             sapp = lapp = ""
-            if o.dest not in state:
-                state[o.dest] = o.default
             if isinstance(o, OptionArg):
                 sapp, lapp = ":", "="
             for s in o.sflags:
-                if back.has_key(s):
+                if check_conflicts and back.has_key(s):
                     raise RuntimeError, "option conflict: %s" % s
                 back[s] = o
                 sfl += s[1:] + sapp
             for l in o.lflags:
-                if back.has_key(l):
+                if check_conflicts and back.has_key(l):
                     raise RuntimeError, "option conflict: %s" % l
                 back[l] = o
                 lfl.append(l[2:] + lapp)
+        return sfl, lfl, back
 
-        lopts,args = getopt.getopt(args, sfl, lfl)
+    def _extract_command(self, args):
+        """
+        Try to extract the command name from the argument list. This is
+        non-trivial because we want to allow command-specific options even
+        before the command itself.
+        """
+        opts = self.gopts[:]
+        for cmd in self.ctable.values():
+            opts.extend(cmd.opts)
+        sfl, lfl, _ = self._compute_flags(opts, check_conflicts=False)
+
+        lopts,largs = getopt.getopt(args, sfl, lfl)
+        if not largs:
+            return None
+        return self._command(largs[0])
+
+    def _fancy_getopt(self, args, opts, state=None):
+        if state is None:
+            state= {}
+        for o in opts:
+            if not state.has_key(o.dest):
+                state[o.dest] = o.default
+
+        sfl, lfl, back = self._compute_flags(opts)
+        lopts,args = getopt.gnu_getopt(args, sfl, lfl)
         for o,v in lopts:
             back[o].apply(state, v)
         return state, args
@@ -1025,29 +1046,32 @@ class CommandOpts:
 
         cmd = None
         try:
-            opts, args = self._fancy_getopt(args, self.gopts)
-            if args:
-                cmd = self._command(args.pop(0))
-                opts, args = self._fancy_getopt(args, self.gopts + cmd.opts, opts)
+            cmd = self._extract_command(args)
+            opts = self.gopts[:]
+            if cmd:
+                opts.extend(cmd.opts)
+            state, args = self._fancy_getopt(args, opts)
         except getopt.GetoptError, e:
             self.error(e, cmd)
 
         # Handle builtins
-        if self.version is not None and opts["version"]:
+        if self.version is not None and state["version"]:
             self.print_version()
             sys.exit(0)
-        if opts["help"]: # --help
-            if cmd is None:
-                cmd = self.ctable["help"]
-            else:
+        if state["help"]: # special case for --help
+            if cmd:
                 self.print_command_help(cmd)
                 sys.exit(0)
-        if cmd is None:
-            self.error("command argument required")
+            cmd = self.ctable["help"]
+        else:
+            if cmd is None:
+                self.error("command argument required")
+            assert cmd.name == args[0]
+        args = args[1:]
         if str(cmd) == "help":
             cmd(*args)
             sys.exit(0)
-        return cmd, args, opts
+        return cmd, args, state
 
     def error(self, s, cmd=None):
         print >>sys.stderr, "%s: %s" % (self.progname, s)
