@@ -918,11 +918,11 @@ class CommandOpts:
         self.progname = NAME
         self.version = version.replace("%prog", self.progname)
         self.cwidth = console_width() - 2
-        self.ctable = command_table
-        self.gopts = global_opts
-        self.copts = common_opts
+        self.ctable = command_table.copy()
+        self.gopts = global_opts[:]
+        self.copts = common_opts[:]
         self._add_builtins()
-        for k in self.ctable:
+        for k in self.ctable.keys():
             cmd = self.Cmd(k, *self.ctable[k])
             opts = []
             for o in cmd.opts:
@@ -1014,7 +1014,7 @@ class CommandOpts:
         return state, args
 
     def _command(self, cmd):
-        if cmd not in self.ctable:
+        if not self.ctable.has_key(cmd):
             self.error("unknown command: '%s'" % cmd)
         return self.ctable[cmd]
 
