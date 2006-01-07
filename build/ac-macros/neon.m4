@@ -80,6 +80,19 @@ dnl Configure neon --------------------------
           # there, otherwise, neon is on its own to find expat. 
           if test -f "$abs_builddir/apr-util/xml/expat/lib/expat.h" ; then
             args="$args --with-expat='$abs_builddir/apr-util/xml/expat/lib/libexpat.la'"
+          else
+              # There is a difference in the way expat (actually expat.h) 
+              # is identified in the build systems of apr-util and neon.
+              # apr-util explicitly identifies the expat in /usr, and
+              # /usr/local whereas neon hands off the task to the
+              # AC_CHECK_HEADER autoconf macro which just relies on the
+              # $CC, $CFLAGS, and $CPPFLAGS environment variables.  Because
+              # of this difference apr-util and neon might find a different
+              # versions of expat.  To avoid this, we give neon apr-util's
+              # includes and ldflags.
+              apr_utils_includes=`$abs_builddir/apr-util/apu-config --includes`
+              apr_utils_ldflags=`$abs_builddir/apr-util/apu-config --ldflags`
+              args="$args CPPFLAGS='$apr_utils_includes $CPPFLAGS' LDFLAGS='$apr_utils_ldflags $LDFLAGS'"
           fi
           SVN_EXTERNAL_PROJECT([neon], [$args])
 
