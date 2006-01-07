@@ -49,7 +49,7 @@
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
 
-import sys, os, getopt, re, types, popen2
+import sys, os, getopt, re, types, popen2, tempfile
 
 NAME = "svnmerge"
 if not hasattr(sys, "version_info") or sys.version_info < (2, 0):
@@ -372,9 +372,28 @@ def format_merge_props(props, sep=" "):
         L.append(h + ":" + r)
     return sep.join(L)
 
+def _run_propset(dir, prop, value):
+    """Set the property 'prop' of directory 'dir' to value 'value'. We go
+    through a temporary file to not run into command line length limits."""
+    try:
+        fd, fname = tempfile.mkstemp()
+        f = os.fdopen(fd, "wb")
+    except AttributeError:
+        # Fallback for Python <= 2.3 which does not have mkstemp (mktemp
+        # suffers from race conditions. Not that we care...)
+        fname = tempfile.mktemp()
+        f = file(fname, "wb")
+
+    try:
+        f.write(value)
+        f.close()
+        report("property data written to temp file: %s" % value)
+        svn_command('propset "%s" -F "%s" "%s"' % (prop, fname, dir))
+    finally:
+        os.remove(fname)
+
 def set_merge_props(dir, props):
-    props = format_merge_props(props)
-    svn_command('propset "%s" "%s" "%s"' % (opts["prop"], props, dir))
+    _run_propset(dir, opts["prop"], format_merge_props(props))
 
 def set_blocked_revs(dir, head_path, revs):
     props = get_block_props(dir)
@@ -385,7 +404,7 @@ def set_blocked_revs(dir, head_path, revs):
             del props[head_path]
     props = format_merge_props(props)
     if props:
-        svn_command('propset "%s" "%s" "%s"' % (opts["block_prop"], props, dir))
+        _run_propset(dir, opts["block_prop"], format_merge_props(props))
     else:
         svn_command('propdel "%s" "%s"' % (opts["block_prop"], dir))
 
