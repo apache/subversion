@@ -22,6 +22,15 @@
 %include apr.swg
 %include exception.i
 
+#ifdef SWIGRUBY
+/* Remove compiler warning (break strict-aliasing rules) */
+%typemap(in) SWIGTYPE * (void *temp)
+{
+  SWIG_ConvertPtr($input, &temp, $1_descriptor, $disown);
+  $1 = ($1_ltype)temp;
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Create a typemap to define "type **" as OUT parameters.
 
