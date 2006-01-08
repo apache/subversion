@@ -50,13 +50,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r17956
-    Fix a regression which caused 'svn ci -m path_name' to no longer require
-    --force-log.
-    Justification:
-      Regression.
-    Note:
-      subversion/clients/cmdline was moved to subversion/svn, which needs to be
-      compensated for in the merge command.
-    Votes:
-      +1: cmpilato, lundblad, philip
