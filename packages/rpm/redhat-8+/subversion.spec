@@ -103,6 +103,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jan 07 2006 David Summers <david@summersoft.fay.ar.us> r18013
+- Simplify apache regression testing.
+
 * Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
 - Figured out how to disable module configuration with --disable-mod-activation.
 
@@ -424,25 +427,14 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
 %if %{make_ra_dav_bdb_check}
-echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=bdb
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -456,7 +448,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=fsfs
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -464,17 +456,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_fsfs_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=fsfs
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
