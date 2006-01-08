@@ -692,7 +692,7 @@
 */
 
 
-%typemap(ruby, in) apr_hash_t *config (apr_hash_t *temp)
+%typemap(ruby, in) apr_hash_t *config
 {
   if (NIL_P($input)) {
     $1 = NULL;
