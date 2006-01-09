@@ -517,7 +517,7 @@ print_changed_tree (svn_repos_node_t *node,
                     apr_pool_t *pool)
 {
   const char *full_path;
-  char status[3] = SVN_UTF8_UNDERSCORE_STR SVN_UTF8_SPACE_STR SVN_UTF8_SPACE_STR;
+  char status[4] = SVN_UTF8_UNDERSCORE_STR SVN_UTF8_SPACE_STR SVN_UTF8_SPACE_STR;
   int print_me = 1;
   apr_pool_t *subpool;
 
