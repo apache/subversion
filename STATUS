@@ -38,15 +38,13 @@ Candidate changes:
       earlier.  The new behavior is required only for Cygwin, and this
       change makes that (conditionally) so.
     Votes:
-      +1: dlr
+      +1: dlr, rooneg
+
+Approved changes:
 
   * r17726, r17925
     Fix conversion bug.
     Justification:
       Without this change, copyfrom_path and copyfrom_rev can't be gotten.
     Votes:
-      +1: kou
-
-
-Approved changes:
-
+      +1: kou, rooneg
