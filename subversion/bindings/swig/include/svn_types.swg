@@ -23,12 +23,18 @@
 %include exception.i
 
 #ifdef SWIGRUBY
+#  if SWIG_VERSION <= 0x010327
 /* Remove compiler warning (break strict-aliasing rules) */
 %typemap(in) SWIGTYPE * (void *temp)
 {
+#    if SWIG_VERSION <= 0x010325
+  SWIG_ConvertPtr($input, &temp, $1_descriptor, 1);
+#    else
   SWIG_ConvertPtr($input, &temp, $1_descriptor, $disown);
+#    endif
   $1 = ($1_ltype)temp;
 }
+#  endif
 #endif
 
 /* -----------------------------------------------------------------------
