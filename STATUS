@@ -48,7 +48,7 @@ Candidate changes:
     Votes:
       +1: dlr, rooneg
 
-  * r18032
+  * r18054, r18055
     Fix JavaHL compile error with Visual Studio 2005.
     Justification:
       Allows successful builds of the JavaHL bindings with VS2005.
