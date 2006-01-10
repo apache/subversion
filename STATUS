@@ -57,10 +57,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r18042
-    Fix crashes when users spell https:// with mixed case.
-    Justification:
-      Crashes bad!
-    Votes:
-      +1: rooneg, dlr, lundblad
-

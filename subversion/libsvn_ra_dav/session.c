@@ -601,6 +601,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
   svn_boolean_t compression;
   svn_config_t *cfg;
   const char *server_group;
+  char *itr;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
@@ -623,6 +624,15 @@ svn_ra_dav__open (svn_ra_session_t *session,
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
+
+  /* HACK!  Neon uses strcmp when checking for https, but RFC 2396 says
+   * we should be using case insensitive comparisons when checking for 
+   * URI schemes.  To allow our users to use WeIrd CasE HttPS we force
+   * the scheme to lower case before we pass it on to Neon, otherwise we
+   * would crash later on when we assume Neon has set up it's https stuff
+   * but it really didn't. */
+  for (itr = uri.scheme; *itr; ++itr)
+    *itr = tolower(*itr);
 
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
