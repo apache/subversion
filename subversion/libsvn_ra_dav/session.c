@@ -639,10 +639,10 @@ svn_ra_dav__open (svn_ra_session_t *session,
   /* ### not yet: http_redirect_register(sess, ... ); */
 
   /* HACK!  Neon uses strcmp when checking for https, but RFC 2396 says
-   * we should be using case insensitive comparisons when checking for 
+   * we should be using case-insensitive comparisons when checking for 
    * URI schemes.  To allow our users to use WeIrd CasE HttPS we force
    * the scheme to lower case before we pass it on to Neon, otherwise we
-   * would crash later on when we assume Neon has set up it's https stuff
+   * would crash later on when we assume Neon has set up its https stuff
    * but it really didn't. */
   for (itr = uri.scheme; *itr; ++itr)
     *itr = tolower(*itr);
