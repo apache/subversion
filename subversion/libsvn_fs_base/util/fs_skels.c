@@ -446,7 +446,7 @@ svn_fs_base__parse_transaction_skel (transaction_t **transaction_p,
       transaction->revision = atoi (apr_pstrmemdup (pool, base_id_or_rev->data,
                                                     base_id_or_rev->len));
       if (! SVN_IS_VALID_REVNUM (transaction->revision))
-        return skel_err ("tranaction");
+        return skel_err ("transaction");
 
     }
   else
@@ -885,7 +885,7 @@ svn_fs_base__unparse_proplist_skel (skel_t **skel_p,
           value = val;
 
           /* VALUE */
-          svn_fs_base__prepend (svn_fs_base__mem_atom (value->data, \
+          svn_fs_base__prepend (svn_fs_base__mem_atom (value->data,
                                                        value->len, pool),
                                 skel);
 
@@ -990,14 +990,14 @@ svn_fs_base__unparse_transaction_skel (skel_t **skel_p,
       /* Committed transactions have a revision number... */
       svn_fs_base__prepend (svn_fs_base__str_atom
                             (apr_psprintf (pool, "%ld",
-                                           transaction->revision), pool), \
+                                           transaction->revision), pool),
                             skel);
     }
   else
     {
       /* ...where other transactions have a base node revision ID. */
       id_str = svn_fs_base__id_unparse (transaction->base_id, pool);
-      svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data, id_str->len, \
+      svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data, id_str->len,
                                                    pool), skel);
     }
 
@@ -1034,9 +1034,8 @@ svn_fs_base__unparse_representation_skel (skel_t **skel_p,
   {
     skel_t *checksum_skel = svn_fs_base__make_empty_list (pool);
     svn_fs_base__prepend (svn_fs_base__mem_atom
-                     (rep->checksum,
-                      APR_MD5_DIGESTSIZE / sizeof (*(rep->checksum)), pool),
-                     checksum_skel);
+                            (rep->checksum, APR_MD5_DIGESTSIZE, pool),
+                          checksum_skel);
     svn_fs_base__prepend (svn_fs_base__str_atom ("md5", pool), checksum_skel);
     svn_fs_base__prepend (checksum_skel, header_skel);
   }

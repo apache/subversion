@@ -48,6 +48,12 @@ static svn_boolean_t rep_is_mutable (representation_t *rep,
   return TRUE;
 }
 
+/* Helper macro that evaluates to an error message indicating that
+   the representation referred to by X has an unknown node kind. */
+#define UNKNOWN_NODE_KIND(x)                                   \
+  svn_error_createf                                            \
+    (SVN_ERR_FS_CORRUPT, NULL,                                 \
+     _("Unknown node kind for representation '%s'"), x)
 
 /* Return a `fulltext' representation, allocated in POOL, which
  * references the string STR_KEY.
@@ -510,7 +516,7 @@ rep_read_range (svn_fs_t *fs,
           /* Right. We've either just read the fulltext rep, or a rep that's
              too short, in which case we'll undeltify without source data.*/
           if (rep->kind != rep_kind_delta && rep->kind != rep_kind_fulltext)
-            abort(); /* unknown kind */
+            return UNKNOWN_NODE_KIND (rep_key);
 
           if (rep->kind == rep_kind_delta)
             rep = NULL;         /* Don't use source data */
@@ -530,7 +536,7 @@ rep_read_range (svn_fs_t *fs,
         }
     }
   else /* unknown kind */
-    abort ();
+    return UNKNOWN_NODE_KIND (rep_key);
 
   return SVN_NO_ERROR;
 }
@@ -598,7 +604,7 @@ svn_fs_base__delete_rep_if_mutable (svn_fs_t *fs,
       SVN_ERR (delete_strings (keys, fs, trail, pool));
     }
   else /* unknown kind */
-    abort ();
+    return UNKNOWN_NODE_KIND (rep_key);
 
   SVN_ERR (svn_fs_bdb__delete_rep (fs, rep_key, trail, pool));
   return SVN_NO_ERROR;
@@ -730,7 +736,7 @@ svn_fs_base__rep_contents_size (svn_filesize_t *size_p,
       *size_p = last_chunk->offset + last_chunk->size;
     }
   else /* unknown kind */
-    abort ();
+    return UNKNOWN_NODE_KIND (rep_key);
 
   return SVN_NO_ERROR;
 }
@@ -1033,7 +1039,7 @@ rep_write (svn_fs_t *fs,
          _("Rep '%s' both mutable and non-fulltext"), rep_key);
     }
   else /* unknown kind */
-    abort ();
+    return UNKNOWN_NODE_KIND (rep_key);
 
   return SVN_NO_ERROR;
 }
@@ -1511,7 +1517,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
     else if (old_rep->kind == rep_kind_delta)
       SVN_ERR (delta_string_keys (&orig_str_keys, old_rep, pool));
     else /* unknown kind */
-      abort ();
+      return UNKNOWN_NODE_KIND (target);
 
     /* Save the checksum, since the new rep needs it. */
     memcpy (rep_digest, old_rep->checksum, APR_MD5_DIGESTSIZE);
