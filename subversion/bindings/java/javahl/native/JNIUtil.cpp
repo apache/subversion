@@ -193,8 +193,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         inwords = lstrlenW (ucs2_path);
         outbytes = outlength = 3 * (inwords + 1);
         utf8_path = (char *)apr_palloc (pool, outlength);
-        apr_err = apr_conv_ucs2_to_utf8 (ucs2_path, &inwords,
-                                         utf8_path, &outbytes);
+        apr_err = apr_conv_ucs2_to_utf8 ((const apr_wchar_t *_) ucs2_path,
+					 &inwords, utf8_path, &outbytes);
         if (!apr_err && (inwords > 0 || outbytes == 0))
           apr_err = APR_INCOMPLETE;
         if (apr_err)
