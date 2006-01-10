@@ -1091,7 +1091,7 @@ svn_wc_ensure_adm2 (const char *path,
                     svn_revnum_t revision,
                     apr_pool_t *pool)
 {
-  svn_boolean_t exists_already;
+  svn_boolean_t exists_already = FALSE;
 
   SVN_ERR (check_adm_exists (&exists_already, path, url, revision, pool));
   return (exists_already ? SVN_NO_ERROR :

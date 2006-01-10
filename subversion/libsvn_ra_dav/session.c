@@ -669,8 +669,8 @@ svn_ra_dav__open (svn_ra_session_t *session,
     unsigned int proxy_port;
     const char *proxy_username;
     const char *proxy_password;
-    int timeout;
-    int debug;
+    int timeout = 0;
+    int debug = 0;
     svn_error_t *err;
     
     err = get_server_settings(&proxy_host,
@@ -1218,7 +1218,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
      loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
-      svn_lock_t *lock;
+      svn_lock_t *lock = NULL;
       const void *key;
       const char *path;
       void *val;
