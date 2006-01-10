@@ -15,8 +15,7 @@ Candidate changes:
     Justification:
       Small change, definately broken, causing problems for TortoiseSVN.
     Votes:
-      +1: rooneg (not r18027)
-      +1: lundblad
+      +1: rooneg, lundblad
 
   * r17333, [and friends...]
     Fix issue #2306: modification of "svn:needs-lock" should adjust
