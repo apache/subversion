@@ -123,7 +123,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
   /* If the BDB environment is panicked, don't do anything, since
      attempting to close the database will fail anyway. */
   base_fs_data_t *bfd = fs->fsap_data;
-  if (*db_ptr && !apr_atomic_read(&bfd->bdb->panic))
+  if (*db_ptr && !svn_fs_bdb__get_panic(bfd->bdb))
     {
       DB *db = *db_ptr;
       char *msg = apr_psprintf (fs->pool, "closing '%s' database", name);
@@ -133,13 +133,12 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
       db_err = db->close (db, 0);
       if (db_err == DB_RUNRECOVERY)
         {
-          /*FIXME:*/fprintf(stderr, "cleanup_fs_db(%s): PANIC\n",
-                            bfd->bdb->path_bdb);
+          /*FIXME:*/fprintf(stderr, "cleanup_fs_db(%s): PANIC\n", fs->path);
           /* We can ignore DB_RUNRECOVERY errors from DB->close, but
              must set the panic flag in the environment baton.  The
              error will be propagated appropriately from
              svn_fs_bdb__close. */
-          apr_atomic_set(&bfd->bdb->panic, TRUE);
+          svn_fs_bdb__set_panic(bfd->bdb);
           db_err = 0;
         }
 
@@ -165,7 +164,7 @@ static svn_error_t *
 cleanup_fs (svn_fs_t *fs)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  bdb_env_t *bdb = (bfd ? bfd->bdb : NULL);
+  bdb_env_baton_t *bdb = (bfd ? bfd->bdb : NULL);
 
   if (!bdb)
     return SVN_NO_ERROR;
@@ -332,7 +331,7 @@ base_bdb_set_errcall (svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
-  bfd->bdb->user_callback = db_errcall_fcn;
+  bfd->bdb->error_info->user_callback = db_errcall_fcn;
 
   return SVN_NO_ERROR;
 }
@@ -538,9 +537,6 @@ open_databases (svn_fs_t *fs, svn_boolean_t create,
 
   SVN_ERR (check_already_open (fs));
 
-  apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
-                             apr_pool_cleanup_null);
-
   bfd = apr_pcalloc (fs->pool, sizeof (*bfd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
@@ -558,11 +554,18 @@ open_databases (svn_fs_t *fs, svn_boolean_t create,
                           : "opening environment"),
                      svn_fs_bdb__open (&(bfd->env), path,
                                        SVN_BDB_STANDARD_ENV_FLAGS,
-                                       0666, pool)));
+                                       0666, fs->pool)));
 #endif
   SVN_ERR (svn_fs_bdb__open (&(bfd->bdb), path,
                              SVN_BDB_STANDARD_ENV_FLAGS,
-                             0666, pool));
+                             0666, fs->pool));
+
+  /* We must register the FS cleanup function *after* opening the
+     environment, so that it's run before the environment baton
+     cleanup. */
+  apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
+                             apr_pool_cleanup_null);
+
 
   /* Create the databases in the environment.  */
   SVN_ERR (BDB_WRAP (fs, (create
@@ -720,7 +723,7 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 static svn_error_t *
 bdb_recover (const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 {
-  bdb_env_t *bdb;
+  bdb_env_baton_t *bdb;
 
   /* Here's the comment copied from db_recover.c:
 
@@ -764,7 +767,7 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
                    svn_boolean_t only_unused,
                    apr_pool_t *pool)
 {
-  bdb_env_t *bdb;
+  bdb_env_baton_t *bdb;
   char **filelist;
   char **filename;
   u_int32_t flags = only_unused ? 0 : DB_ARCH_LOG;
@@ -871,7 +874,7 @@ check_env_flags (svn_boolean_t *match,
                  const char *path,
                  apr_pool_t *pool)
 {
-  bdb_env_t *bdb;
+  bdb_env_baton_t *bdb;
   u_int32_t envflags;
 
   SVN_ERR (svn_fs_bdb__open (&bdb, path,
@@ -898,7 +901,7 @@ get_db_pagesize (u_int32_t *pagesize,
                  const char *path,
                  apr_pool_t *pool)
 {
-  bdb_env_t *bdb;
+  bdb_env_baton_t *bdb;
   DB *nodes_table;
 
   SVN_ERR (svn_fs_bdb__open (&bdb, path,

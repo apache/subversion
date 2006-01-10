@@ -44,7 +44,7 @@ typedef struct
 {
   /* A Berkeley DB environment for all the filesystem's databases.
      This establishes the scope of the filesystem's transactions.  */
-  bdb_env_t *bdb;
+  bdb_env_baton_t *bdb;
 
   /* The filesystem's various tables.  See `structure' for details.  */
   DB *changes;

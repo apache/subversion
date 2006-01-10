@@ -15,6 +15,8 @@
  * ====================================================================
  */
 
+#include <assert.h>
+
 #include <apr_strings.h>
 #include <apr_hash.h>
 
@@ -47,36 +49,145 @@
 */
 
 
+/* The cache key for a Berkeley DB environment descriptor.  This is a
+   combination of the device ID and INODE number of the Berkeley DB
+   config file.
+
+   XXX FIXME: Although the dev+inode combination is supposed do be
+   unique, apparently that's not always the case with some remote
+   filesystems.  We /should/ be safe using this as a unique hash key,
+   because the database must be on a local filesystem.  We can hope,
+   anyway. */
+typedef struct
+{
+  apr_dev_t device;
+  apr_ino_t inode;
+} bdb_env_key_t;
+
+
+/* The cached Berkeley DB environment descriptor. */
+struct bdb_env_t
+{
+  /* XXX TODO: Make this structure thread-safe. */
+
+  /**************************************************************************/
+  /* Error Reporting */
+
+  /* Berkeley DB returns extended error info by callback before returning
+     an error code from the failing function.  The callback baton type is a
+     string, not an arbitrary struct, so we prefix our struct with a valid
+     string, to avoid problems should BDB ever try to interpret our baton as
+     a string.  Initializers of this structure must strcpy the value of
+     BDB_ERRPFX_STRING into this array.  */
+  char errpfx_string[sizeof(BDB_ERRPFX_STRING)];
+
+  /* Extended error information. */
+  bdb_error_info_t error_info;
+
+  /**************************************************************************/
+  /* BDB Environment Cache */
+
+  /* The Berkeley DB environment. */
+  DB_ENV *env;
+
+  /* The home path of this environment; a canonical SVN path ecoded in
+     UTF-8 and allocated from this decriptor's pool. */
+  const char *path;
+
+  /* The home path of this environment, in the form expected by BDB. */
+  const char *path_bdb;
+
+  /* The reference count for this environment handle; this is
+     essentially the difference between the number of calls to
+     svn_fs_bdb__open and svn_fs_bdb__close. */
+  unsigned refcount;
+
+  /* If this flag is TRUE, someone has detected that the environment
+     descriptor is in a panicked state and should be removed from the
+     cache.
+
+     Note 1: Once this flag is set, it must not be cleared again.
+
+     Note 2: Unlike other fields in this structure, this field is not
+             protected by the cache mutex on threaded platforms, and
+             should only be accesses via the apr_atomic functions. */
+  apr_atomic_t panic;
+
+  /* The key for the environment descriptor cache. */
+  bdb_env_key_t key;
+
+  /* The handle of the open DB_CONFIG file.
+
+     We keep the DB_CONFIG file open in this process as long as the
+     environment handle itself is open.  On Windows, this guarantees
+     that the cache key remains unique; here's what the Windows SDK
+     docs have to say about the file index (interpreted as the INODE
+     number by APR):
+
+        "This value is useful only while the file is open by at least
+        one process.  If no processes have it open, the index may
+        change the next time the file is opened."
+
+     Now, we certainly don't want a unique key to change while it's
+     being used, do we... */
+  apr_file_t *dbconfig_file;
+
+  /* The pool associated with this environment descriptor.
+
+     Because the descriptor has a life of its own, the structure and
+     any data associated with it are allocated from their own global
+     pool. */
+  apr_pool_t *pool;
+
+};
+
+
+static svn_error_t *
+convert_bdb_error (bdb_env_t *bdb, int db_err)
+{
+  if (db_err)
+    {
+      bdb_env_baton_t bdb_baton;
+      bdb_baton.env = bdb->env;
+      bdb_baton.bdb = bdb;
+      bdb_baton.error_info = &bdb->error_info;
+      SVN_BDB_ERR(&bdb_baton, db_err);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Allocating an appropriate Berkeley DB environment object.  */
 
-/* BDB error callback.  See bdb_env_t in env.h for more info.
+/* BDB error callback.  See bdb_error_info_t in env.h for more info.
    Note: bdb_error_gatherer is a macro with BDB < 4.3, so be careful how
    you use it! */
 static void
 bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
 {
-  bdb_env_t *bdb = (bdb_env_t *) baton;
+  bdb_error_info_t *error_info =/*FIXME:*/&((bdb_env_t *) baton)->error_info;
   svn_error_t *new_err;
 
   SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
 
   new_err = svn_error_createf(SVN_NO_ERROR, NULL, "bdb: %s", msg);
-  if (bdb->pending_errors)
-    svn_error_compose(bdb->pending_errors, new_err);
+  if (error_info->pending_errors)
+    svn_error_compose(error_info->pending_errors, new_err);
   else
-    bdb->pending_errors = new_err;
+    error_info->pending_errors = new_err;
 
-  if (bdb->user_callback)
-    bdb->user_callback(NULL, (char *)msg); /* ### I hate this cast... */
+  if (error_info->user_callback)
+    error_info->user_callback(NULL, (char *)msg); /* ### I hate this cast... */
 }
 
 
-/* Pool cleanup for the environment descriptor. */
+/* Pool cleanup for the cached environment descriptor. */
 apr_status_t cleanup_env (void *data)
 {
   bdb_env_t *bdb = data;
 
-  svn_error_clear(bdb->pending_errors);
+  svn_error_clear(/*FIXME:*/bdb->error_info.pending_errors);
 
   if (bdb->dbconfig_file)
     apr_file_close(bdb->dbconfig_file);
@@ -126,8 +237,7 @@ create_env (bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
       if (!db_err)
         db_err = bdb->env->set_lk_detect(bdb->env, DB_LOCK_RANDOM);
     }
-  SVN_BDB_ERR(bdb, db_err);
-  return SVN_NO_ERROR;
+  return convert_bdb_error(bdb, db_err);
 }
 
 
@@ -224,6 +334,8 @@ bdb_cache_get (const bdb_env_key_t *keyp, svn_boolean_t *panicp)
 
 
 
+
+
 /* Close and destroy a BDB environment descriptor. */
 static svn_error_t *
 bdb_close (bdb_env_t *bdb)
@@ -237,7 +349,7 @@ bdb_close (bdb_env_t *bdb)
   /* If automatic database recovery is enabled, ignore DB_RUNRECOVERY
      errors, since they're dealt with eventually by BDB itself. */
   if (db_err && (!SVN_BDB_AUTO_RECOVER || db_err != DB_RUNRECOVERY))
-    err = svn_fs_bdb__dberr(bdb, db_err);
+    err = convert_bdb_error(bdb, db_err);
 
   apr_pool_destroy(bdb->pool);
   return err;
@@ -245,8 +357,16 @@ bdb_close (bdb_env_t *bdb)
 
 
 svn_error_t *
-svn_fs_bdb__close (bdb_env_t *bdb)
+svn_fs_bdb__close (bdb_env_baton_t *bdb_baton)
 {
+  /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
+     cleanup_env_baton(). */
+  bdb_env_t *bdb = bdb_baton->bdb;
+  bdb_baton->bdb = NULL;
+
+  assert(bdb_baton->env == bdb->env);
+  bdb_baton->env = NULL;
+
   /* FIXME: ACQUIRE CACHE MUTEX */
 
   if (--bdb->refcount != 0)
@@ -279,14 +399,16 @@ svn_fs_bdb__close (bdb_env_t *bdb)
 static svn_error_t *
 bdb_open (bdb_env_t *bdb, u_int32_t flags, int mode)
 {
-  SVN_BDB_ERR(bdb, bdb->env->open(bdb->env, bdb->path_bdb, flags, mode));
+  SVN_ERR(convert_bdb_error
+          (bdb, bdb->env->open(bdb->env, bdb->path_bdb, flags, mode)));
 
 #if SVN_BDB_AUTO_COMMIT
   /* Assert the BDB_AUTO_COMMIT flag on the opened environment. This
      will force all operations on the environment (and handles that
      are opened within the environment) to be transactional. */
 
-  SVN_BDB_ERR(bdb, bdb->env->set_flags(bdb->env, SVN_BDB_AUTO_COMMIT, 1));
+  SVN_ERR(convert_bdb_error
+          (bdb, bdb->env->set_flags(bdb->env, SVN_BDB_AUTO_COMMIT, 1)));
 #endif
 
   SVN_ERR(bdb_cache_key(&bdb->key, &bdb->dbconfig_file,
@@ -296,8 +418,24 @@ bdb_open (bdb_env_t *bdb, u_int32_t flags, int mode)
 }
 
 
+/* Pool cleanup for the environment baton. */
+apr_status_t cleanup_env_baton (void *data)
+{
+  bdb_env_baton_t *bdb_baton = data;
+
+  if (bdb_baton->bdb)
+    {
+      /*FIXME:*/fprintf(stderr, "cleanup_env_baton(%s)\n",
+                        bdb_baton->bdb->path_bdb);
+      svn_error_clear(svn_fs_bdb__close(bdb_baton));
+    }
+
+  return APR_SUCCESS;
+}
+
+
 svn_error_t *
-svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
+svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
                   u_int32_t flags, int mode,
                   apr_pool_t *pool)
 {
@@ -361,10 +499,29 @@ svn_fs_bdb__open (bdb_env_t **bdbp, const char *path,
     }
 
   if (!err)
-    *bdbp = bdb;
+    {
+      *bdb_batonp = apr_palloc(pool, sizeof **bdb_batonp);
+      (*bdb_batonp)->env = bdb->env;
+      (*bdb_batonp)->bdb = bdb;
+      (*bdb_batonp)->error_info = &bdb->error_info;
+      apr_pool_cleanup_register(pool, *bdb_batonp, cleanup_env_baton,
+                                apr_pool_cleanup_null);
+    }
   return err;
 }
 
+
+svn_boolean_t svn_fs_bdb__get_panic (bdb_env_baton_t *bdb_baton)
+{
+  assert(bdb_baton->env == bdb_baton->bdb->env);
+  return !!apr_atomic_read(&bdb_baton->bdb->panic);
+}
+
+void svn_fs_bdb__set_panic (bdb_env_baton_t *bdb_baton)
+{
+  assert(bdb_baton->env == bdb_baton->bdb->env);
+  apr_atomic_set(&bdb_baton->bdb->panic, TRUE);
+}
 
 
 /* This function doesn't actually open the environment, so it doesn't
@@ -376,7 +533,8 @@ svn_fs_bdb__remove (const char *path, apr_pool_t *pool)
   bdb_env_t *bdb;
 
   SVN_ERR(create_env(&bdb, path, pool));
-  SVN_BDB_ERR(bdb, bdb->env->remove(bdb->env, bdb->path_bdb, DB_FORCE));
+  return convert_bdb_error
+    (bdb, bdb->env->remove(bdb->env, bdb->path_bdb, DB_FORCE));
 
   return SVN_NO_ERROR;
 }
