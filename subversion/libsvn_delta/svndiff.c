@@ -407,7 +407,7 @@ decode_window (svn_txdelta_window_t *window, svn_filesize_t sview_offset,
                apr_size_t newlen, const unsigned char *data, apr_pool_t *pool)
 {
   const unsigned char *end;
-  int ninst;
+  int ninst = 0;
   apr_size_t npos;
   svn_txdelta_op_t *ops, *op;
   svn_string_t *new_data;
