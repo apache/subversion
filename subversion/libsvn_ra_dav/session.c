@@ -159,7 +159,8 @@ convert_neon_failures(int neon_failures)
 }
 
 /* A neon-session callback to validate the SSL certificate when the CA
-   is unknown or there are other SSL certificate problems. */
+   is unknown (e.g. a self-signed cert), or there are other SSL
+   certificate problems. */
 static int
 server_ssl_callback(void *userdata,
                     int failures,
