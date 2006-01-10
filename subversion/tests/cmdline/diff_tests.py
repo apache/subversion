@@ -2263,7 +2263,7 @@ test_list = [ None,
               diff_schedule_delete,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
-              XFail(diff_mime_type_changes),
+              diff_mime_type_changes,
               XFail(diff_prop_change_local_propmod),
               # Note: When the following two tests both pass, they should
               # be combined into one test, as they test essentially the same
