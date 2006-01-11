@@ -12,6 +12,7 @@ fi
 
 set -e  # Exit on error
 shopt -s extglob
+export LC_ALL=C
 
 # Execute the script which is to be tested.
 . "$1"
@@ -75,16 +76,16 @@ get_svn_subcommands() {
     # Remove simple abbreviations
     ( while read SYNONYMS; do
         for CMD in $SYNONYMS; do
-          for SYNONYM in $SYNONYMS; do
-            if [ $CMD != "?" ]; then
+          if [ "$CMD" != "?" ]; then
+            for SYNONYM in $SYNONYMS; do
               case $SYNONYM in
               $CMD) ;;
               $CMD*) CMD= ; break ;;
               esac
+            done
+            if [ $CMD ]; then
+              echo $CMD
             fi
-          done
-          if [ $CMD ]; then
-            echo $CMD
           fi
         done
       done
@@ -115,8 +116,6 @@ TESTS_FAILED=
 
 echo "Checking general completion"
 includes "he" "help"
-includes "" "?"
-includes "" "h"
 includes "" "help"
 includes "" "--version"
 
