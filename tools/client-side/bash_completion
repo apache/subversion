@@ -461,7 +461,8 @@ _svn()
 		;;
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
-		         $nOpts $pOpts --force --old --new --notice-ancestry"
+		         $nOpts $pOpts --force --old --new --notice-ancestry \
+		         -c --change"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
@@ -491,7 +492,7 @@ _svn()
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
-		         $pOpts --ignore-ancestry"
+		         $pOpts --ignore-ancestry -c --change"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
@@ -580,6 +581,8 @@ _svn()
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		-c)              cmdOpts=${cmdOpts/ --change / } ;;
+		--change)        cmdOpts=${cmdOpts/ -c / } ;;
 		--auto-props)    cmdOpts=${cmdOpts/ --no-auto-props / } ;;
 		--no-auto-props) cmdOpts=${cmdOpts/ --auto-props / } ;;
 
