@@ -105,7 +105,8 @@ begin_trail (trail_t **trail_p,
   trail->undo = 0;
   if (use_txn)
     {
-      /* If we're already inside a trail operation, abort() -- this is
+      /* [*]
+         If we're already inside a trail operation, abort() -- this is
          a coding problem (and will likely hang the repository anyway). */
       if (bfd->in_txn_trail)
         abort();
@@ -140,9 +141,20 @@ abort_trail (trail_t *trail)
 
   if (trail->db_txn)
     {
+      /* [**]
+         We have to reset the in_txn_trail flag *before* calling
+         DB_TXN->abort().  If we did it the other way around, the next
+         call to begin_trail() (e.g., as part of a txn retry) would
+         cause an abort, even though there's strictly speaking no
+         programming error involved (see comment [*] above).
+
+         In any case, if aborting the txn fails, restarting it will
+         most likely fail for the same reason, and so it's better to
+         see the returned error than to abort.  An obvious example is
+         when DB_TXN->abort() returns DB_RUNRECOVERY. */
+      bfd->in_txn_trail = FALSE;
       SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
                          trail->db_txn->abort (trail->db_txn)));
-      bfd->in_txn_trail = FALSE;
     }
   svn_pool_destroy (trail->pool);
 
@@ -169,9 +181,11 @@ commit_trail (trail_t *trail)
      earlier.  */
   if (trail->db_txn)
     {
+      /* See comment [**] in abort_trail() above.
+         An error during txn commit will abort the transaction anyway. */
+      bfd->in_txn_trail = FALSE;
       SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
                          trail->db_txn->commit (trail->db_txn, 0)));
-      bfd->in_txn_trail = FALSE;
     }
 
   /* Do a checkpoint here, if enough has gone on.
