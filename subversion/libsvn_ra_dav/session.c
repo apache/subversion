@@ -19,7 +19,6 @@
 
 
 #include <assert.h>
-#include <ctype.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -184,15 +183,6 @@ server_ssl_callback(void *userdata,
   /* Construct the realmstring, e.g. https://svn.collab.net:80 */
   realmstring = apr_psprintf (ras->pool, "%s://%s:%d", ras->root.scheme,
                               ras->root.host, ras->root.port);
-
-  /* When the --trust-server-cert is on, ignore the NE_SSL_UNTRUSTED
-     error from Neon.  This is useful in conjunction with
-     --non-interactive. */
-  if (0)
-    {
-      /* ### FIXME: Only return 0 when _only_ NE_SSL_UNTRUSTED is set. */
-      failures &= NE_SSL_UNTRUSTED ^ 1;
-    }
 
   *svn_failures = convert_neon_failures(failures);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
