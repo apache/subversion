@@ -27,7 +27,8 @@ Candidate changes:
 
   * r17829, r17831
     Fix issue # 1456: Subversion RedHat RPMs have bad interaction with NFS
-    server/client.
+    server/client.  This was easily accomplished by just making a package
+    change to set the -rpath correctly during package building.
     Justification:
       Prevents spurious NFS and AUTOMOUNT messages in log files.
     Votes:
