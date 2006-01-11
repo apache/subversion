@@ -1,0 +1,34 @@
+TODO for locking
+================
+
+
+NICE TO HAVE
+------------
+
+* put quotes around user names as well as around lock names when we error.
+
+* support cancellation during lock/unlock.
+
+-----------------------------------------------
+
+* Questions:
+
+   * Should propedit and propset reject to set a property an a file with
+     svn:needs-lock set?
+
+   * how do locks relate to dump/load?  file as an enhancement? 
+
+
+* Stuff to document in book:
+     
+       - 4 new hooks
+       - 'lock' and 'unlock' commands, svn:needs-lock property.
+       - svnadmin lslocks, rmlocks, lock
+       - svnlook lock
+       - 'svn info URL'
+       - 'svn st -u' additions
+       - new 'svn up' and 'svn commit' behaviors w.r.t. locktokens
+       - two new bdb tables in BDB section.
+       - update the description of autoversioning in appendix C!
+
+

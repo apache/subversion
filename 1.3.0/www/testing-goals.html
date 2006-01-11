@@ -1,0 +1,467 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion Testing Goals</title>
+</head>
+
+<body>
+<div class="app">
+
+    <h2>Design goals for the SVN test suite</h2>
+
+    <ul>
+      <li>
+	<a href="#WHY">Why Test?</a>
+      </li>
+      <li>
+	<a href="#AUDIENCE">Audience</a>
+      </li>
+      <li>
+	<a href="#REQUIREMENTS">Requirements</a>
+      </li>
+      <li>
+	<a href="#EASEOFUSE">Ease of Use</a>
+      </li>
+      <li>
+	<a href="#LOCATION">Location</a>
+      </li>
+      <li>
+	<a href="#EXTERNAL">External dependencies</a>
+      </li>
+    </ul>
+
+
+
+    <h3><a name="WHY">Why Test?</a></h3>
+
+    <p>
+      Regression testing is an essential element of high quality software.
+      Unfortunately, some developers have not had first hand exposure to a
+      high quality testing framework.  Lack of familiarity with the positive
+      effects of testing can be blamed for statements like:
+      <br/>
+    </p>
+    <blockquote>
+      <p>"I don't need to test my code, I know it works."</p>
+    </blockquote>
+    <p>
+      It is safe to say that the idea that developers do not introduce
+      bugs has been disproved.
+    </p>
+
+
+    <h3><a name="AUDIENCE">Audience</a></h3>
+
+    <p>
+      The test suite will be used by both developers and end users.
+    </p>
+
+    <p>
+      <b>Developers</b> need a test suite to help with:
+    </p>
+
+    <p>
+      <b><i>Fixing Bugs:</i></b>
+      <br/>
+      Each time a bug is fixed, a test case should be added to the test
+      suite. Creating a test case that reproduces a bug is a seemingly
+      obvious requirement. If a bug cannot be reproduced, there is no way to
+      be sure a given change will actually fix the problem. Once a test case
+      has been created, it can be used to validate the correctness of a
+      given patch.  Adding a new test case for each bug also ensures that
+      the same bug will not be introduced again in the future.
+    </p>
+
+    <p>
+      <b><i>Impact Analysis:</i></b>
+      <br/>
+      A developer fixing a bug or adding a new feature needs to know if a
+      given change breaks other parts of the code. It may seem obvious, but
+      keeping a developer from introducing new bugs is one of the primary
+      benefits of a using a regression test system.
+    </p>
+
+    <p>
+      <b><i>Regression Analysis:</i></b>
+      <br/>
+      When a test regression occurs, a developer will need to manually
+      determine what has caused the failure.  The test system is not able to
+      determine why a test case failed. The test system should simply report
+      exactly which test results changed and when the last results were
+      generated.
+    </p>
+
+    <p>
+      <b>Users</b> need a test suite to help with:
+    </p>
+
+    <p>
+      <b><i>Building:</i></b>
+      <br/>
+      Building software can be a scary process.  Users that have never built
+      software may be unwilling to try. Others may have tried to build a
+      piece of software in the past, only to be thwarted by a difficult
+      build process. Even if the build completed without an error, how can a
+      user be confident that the generated executable actually works?  The
+      only workable solution to this problem is to provide an easily
+      accessible set of tests that the user can run after building.
+    </p>
+
+    <p>
+      <b><i>Porting:</i></b>
+      <br/>
+      Often, users become porters when the need to run on a previously
+      unsupported system arises. This porting process typically require some
+      minor tweaking of include files.  It is absolutely critical that
+      testing be available when porting since the primary developers may not
+      have any way to test changes submitted by someone doing a port.
+    </p>
+
+
+    <p>
+      <b><i>Testing:</i></b>
+      <br/>
+      Different installations of the exact same OS can contain subtle
+      differences that cause software to operate incorrectly.  Only testing
+      on different systems will expose problems of this nature. A test suite
+      can help identify these sorts of problems before a program is actually
+      put to use.
+    </p>
+
+
+
+
+    <h3><a name="REQUIREMENTS">Requirements</a></h3>
+
+    <p>
+      Functional requirements of an acceptable test suite include:
+    </p>
+
+    <p>
+      <b><i>Unique Test Identifiers:</i></b>
+      <br/>
+      Each test case must have a globally unique test identifier, this
+      identifier is just a string. A globally unique string is
+      required so that test cases can be individually identified by
+      name, sorted, and even looked up on the web.  It seems simple,
+      perhaps even blatantly obvious, but some other test packages
+      have failed to maintain uniqueness in test identifiers and
+      developers have suffered because of it. It is even desirable for
+      the system actively enforces this uniqueness requirement.
+    </p>
+
+    <p>
+      <b><i>Exact Results:</i></b>
+      <br/>
+      A test case must have one expected result. If the result of
+      running the tests does not exactly match the expected result,
+      the test must fail.
+    </p>
+
+    <p>
+      <b><i>Reproducible Results:</i></b>
+      <br/>
+      Test results should be reproducible.  If a test result matches
+      the expected result, it should do so every time the test is
+      run. External factors like time stamps must not effect the
+      results of a test.
+    </p>
+
+    <p>
+      <b><i>Self-Contained Tests:</i></b>
+      <br/>
+      Each test should be self-contained.  Results for one test should
+      not depend on side effects of previous tests. This is obviously
+      a good practice, since one is able to understand everything a
+      test is doing without having to look at other tests. The test
+      system should also support random access so that a single test
+      or set of tests can be run. If a test is not self-contained, it
+      cannot be run in isolation.
+    </p>
+
+    <p>
+      <b><i>Selective Execution:</i></b>
+      <br/>
+      It may not be possible to run a given set of tests on certain
+      systems. The suite must provide a means of selectively running
+      tests cases based on the environment. The test system must also
+      provide a way to selectively run a given test case or set of
+      test cases on a per invocation basis. It would be incredibly
+      tedious to run the entire suite to see the results for a single
+      test.
+    </p>
+
+    <p>
+      <b><i>No Monitoring:</i></b>
+      <br/>
+      The tests must run from start to end without operator
+      intervention.  Test results must be generated automatically. It
+      is critical that an operator not need to manually compare test
+      results to figure out which tests failed and which ones passed.
+    </p>
+
+
+    <p>
+      <b><i>Automatic Logging of Results:</i></b>
+      <br/>
+      The system must store test results so that they can be compared
+      later. This applies to machine readable results as well as human
+      readable results. For example, assume we have a test named
+      <code>client-1</code>, it expects a result of 1 but instead 0 is
+      returned by the test case.  We should expect the system to store
+      two distinct pieces of information. First, that the test
+      failed. Second, how the test failed, meaning how the expected
+      result differed from the actual result.
+    </p>
+
+    <p>
+      This following example shows the kind of results we might record
+      in a results log file.
+    </p>
+
+      <pre><code>
+   client-1 FAILED
+   client-2 PASSED
+   client-3 PASSED
+    </code></pre>
+
+    <p>
+      <b><i>Automatic Recovery:</i></b>
+      <br/>
+      The test system must be able to recover from crashes and
+      unexpected delays.  For example, a child process might go into a
+      infinite loop and would need to be killed. The test shell itself
+      might also crash or go into an infinite loop. In these cases,
+      the test run must automatically recover and continue with the
+      tests directly after the one that crashed.
+    </p>
+
+    <p>
+      This is critical for a couple of reasons. Nasty crashes and
+      infinite loops most often appear on users (not developers)
+      systems. Users are not well equipped to deal with these sorts of
+      exceptional situations.  It is unrealistic to expect that users
+      will be able to manually recover from disaster and restart
+      crashed test cases. It is an accomplishment just to get them to
+      run the tests in the first place!
+    </p>
+
+    <p>
+      Ensuring that the test system actually runs each and every test
+      is critical, since a failing test near the end of the suite
+      might never be noticed if a crash halfway through kept all the
+      tests from being run.  This process must be completely
+      automated, no operator intervention should be required.
+    </p>
+
+
+    <p>
+      <b><i>Report Results Only:</i></b>
+      <br/>
+      When a regression is found, a developer will need to manually
+      determine the reason for the regression.  The system should tell
+      the developer exactly what tests have failed, when the last set
+      of results were generated, and what the previous results
+      actually were.  Any additional functionality is outside the
+      scope of the test system.
+    </p>
+
+    <p>
+      <b><i>Platform Specific Results:</i></b>
+      <br/>
+      Each supported platform should have an associated set of test
+      results. The naive approach would be to maintain a single set of
+      results and compare the output for any platform to the known
+      results. The problem with this approach is that is does not
+      provide a way to keep track of when changes differ from one
+      platform to another. The following example attempts to clarify
+      with an example.
+    </p>
+
+    <p>
+      Assume you have the following tests results generated on a
+      reference platform before and after a set of changes were
+      committed.
+    </p>
+
+    <table border="1" cellspacing="2" cellpadding="2">
+
+      <tr>
+	<td><b>Before</b> (Reference Platform)</td>
+
+	<td><b>After</b> (Reference Platform)</td>
+      </tr>
+
+      <tr>
+	<td><code>client-1 PASSED</code></td>
+	<td><code>client-1 PASSED</code></td>
+      </tr>
+
+      <tr>
+	<td><code>client-2 PASSED</code></td>
+	<td><code>client-2 FAILED</code></td>
+      </tr>
+
+    </table>
+
+    <p>
+      It is clear that the change you made introduced a regression in
+      the <code>client-2</code> test.  The problem shows up when you
+      try to compare results generated from this modified code on some
+      other platform. For example, assume you got the following
+      results:
+    </p>
+
+    <table border="1" cellspacing="2" cellpadding="2">
+
+      <tr>
+	<td><b>Before</b> (Reference Platform)</td>
+
+	<td><b>After</b> (Other Platform)</td>
+      </tr>
+
+      <tr>
+	<td><code>client-1 PASSED</code></td>
+	<td><code>client-1 FAILED</code></td>
+      </tr>
+
+      <tr>
+	<td><code>client-2 PASSED</code></td>
+	<td><code>client-2 PASSED</code></td>
+      </tr>
+
+    </table>
+
+    <p>
+      Now things are not at all clear. We know that
+      <code>client-1</code> is failing but we don't know if it is
+      related to the change we just made. We don't know if this test
+      failed the last time we ran the tests on this platform since we
+      only have results for the reference platform to compare to. We
+      might have fixed a bug in <code>client-2</code>, or we might
+      have done nothing to effect it.
+    </p>
+
+    <p>
+      If we instead keep track of test results on a platform by
+      platform basis, we can avoid much of this pain. It is easy to
+      imagine how this problem could get considerably worse if there
+      were 50 or 100 tests that behaved differently from one platform
+      to the next.
+    </p>
+
+    <p>
+      <b><i>Test Types:</i></b>
+      <br/>
+      The test suite should support two types of tests. The first
+      makes use of an external program like the svn client.  These
+      kinds of tests will need to exec an external program and check
+      the output and exit status of the child process. Note that it
+      will not be possible to run this sort of test on Mac OS.  The
+      second type of test will load subversion shared libraries and
+      invoke methods in-process.
+    </p>
+
+    <p>
+      This provides the ability to do extensive testing of the various
+      subversion APIs without using the svn client. This also has the
+      nice benefit that it will work on Mac OS, as well as Windows and
+      Unix.
+    </p>
+
+    <h3><a name="EASEOFUSE">Ease of Use</a></h3>
+
+    <p>
+      Developers will tend to avoid using a test suite if it is not
+      easy to add new tests and maintain old ones.  If developers are
+      uninterested in using the test suite, it will quickly fall into
+      disrepair and become a burden instead of an aide.
+    </p>
+
+    <p>
+      Users will simply avoid running the test suite if it is not
+      extremely simple to use. A user should be able to build the
+      software and then run:
+    </p>
+
+    <blockquote>
+      <p><code>
+	% make check
+      </code></p>
+    </blockquote>
+
+    <p>
+      This should run the test suite and provide a very high level set
+      of results that include how many tests results have changed
+      since the last run.
+    </p>
+
+    <p>
+      While this high level report is useful to developers, they will
+      often need to examine results in more detail.  The system should
+      provide a means to manually examine results, compare output,
+      invoke a debugger, and other sorts of low level operations.
+    </p>
+
+    <p>
+      The next example shows how a developer might run a specific
+      subset of tests from the command line. The pattern given would
+      be used to do a glob style match on the test case identifiers,
+      and run any that matched.
+    </p>
+
+    <blockquote>
+      <p><code>
+	% svntest "client-*"
+      </code></p>
+    </blockquote>
+
+    <h3><a name="LOCATION">Location</a></h3>
+
+    <p>
+      The test suite should be packaged along with the source code
+      instead of being made available as a separate download. This
+      significantly simplifies the process of running tests since they
+      are already incorporated into the build tree.
+    </p>
+
+    <p>
+      The test suite must support building and running inside and
+      outside of the source directory. For example, a developer might
+      want to run tests on both Solaris and Linux. The developer
+      should be able to run the tests concurrently in two different
+      build directories without having the tests interfere with each
+      other.
+    </p>
+
+
+    <h3><a name="EXTERNAL">External program dependencies</a></h3>
+
+    <p>
+      As much as possible, the test suite should avoid depending on
+      external programs or libraries.
+
+      Of course, there is a nasty bootstrap problem with a test suite
+      implemented in a scripting language. A wide variety of systems
+      provide no support for modern scripting languages. We will avoid
+      this issue for now and assume that the scripting language of
+      choice is supported by the system.
+    </p>
+
+    <p>
+      For example, the test suite should not depend on CVS to generate
+      test results. Many users will not have access to CVS on the
+      system they want to test subversion on.
+    </p>
+
+</div>
+</body>
+</html>

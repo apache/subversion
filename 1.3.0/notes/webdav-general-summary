@@ -1,0 +1,446 @@
+
+Ben's Quick Summary of WebDAV and DeltaV
+=========================================
+
+* WebDAV: RFC 2518.  Extends the standard HTTP methods to make web
+  servers behave as traditional fileservers, complete with a locking
+  model and meta-data properties.
+
+* DeltaV: RFC 3253.  Adds more HTTP methods to WebDAV, introducing
+  versioning concepts.  Provides a number of flexible versioning
+  models that servers can support, and some backwards-compatibility
+  modes for older WebDAV or HTTP/1.1 clients.
+
+
+----------------------------------------
+
+WebDAV
+======
+
+Key concepts introduced:  properties, collections, locking.
+
+New HTTP client request headers:  {Depth, Destination, If, ...}
+New HTTP server response headers: {DAV, ...}
+
+
+* Property:    a meta-data name/value.  every property exists in 
+               some unique "namespace", defined using xml namespaces.
+
+  - a "live" property is one that is controlled by the server, like a
+    file's content-length, for example, or a file's
+    checked-in/checked-out state.  often the property is read-only; if
+    not, the server enforces the propval's syntax/semantics.
+
+  - a "dead" property is one that is invented and controlled by a
+    user, just like file contents.
+
+  - new HTTP methods:  PROPFIND, PROPPATCH to change propval.
+
+
+* collection:  a directory.  contains a bunch of URIs and has props.
+
+  - each child is called a 'member' URI.  each internal member URI
+    must be relative to parent collection.
+                  
+  - collection URIs are supposed to end with trailing slashes.
+    servers should auto-append them if not present.
+
+  - new HTTP method:  MKCOL to create collection.
+
+
+* locking:  a way of serializing access to a resource.
+
+  - locking is totally optional -- the only 'flexible' part of the
+    WebDAV spec.  a WebDAV server may support locking to any degree:
+    either not at all, or some combination of exclusive or shared
+    locks.  An OPTIONS response can return a header of DAV: 1 or DAV:
+    2.  Level-2 support means locking is available.
+
+  - new HTTP method: LOCK.  creates a lock and attaches it to the
+    resource.  the server returns a 'lock token' to the client, which
+    is defined to be any universally unique URI.  the 'lock' attached
+    to the resource has these properties:
+
+      * owner:   some authenticated username
+      * token:   the specific lock identifier
+      * scope:   either "exclusive" or "shared"
+      * type:    "write".  [other types may exist someday]
+      * depth:   for a collection, either 0 or infinity.
+      * timeout: some value in seconds
+      
+       - exclusive locks behave how you think -- only one per resource
+         allowed.  shared locks, on the other hand, are just for
+         communication -- any number of them can be attached.
+
+       - lock tokens are *not* secret: anyone can query the
+         "DAV:lockdiscovery" property to see all the locks attached to
+         a resource, which includes detailed descriptions of every
+         field above.
+
+       - to remove a lock with UNLOCK, or to modify something with an
+         exclusive lock, the client must provide *two* things:
+
+            1. authentication/authorization.  prove you own and/or are
+               allowed to mess with the lock.  this happens via
+               existing HTTP methods.
+
+            2. the lock token, i.e. the "name" of the lock.  (this
+               requirement also prevents some non-DAV aware program
+               from using your auth credentials and accidentally doing
+               an ignorant PUT.  think of it as credentials for your
+               client sofware!)
+
+       - 'DAV:supportedlock' live property: indicates what kinds of
+          locking is allowed on a resource.
+
+       - the rfc defines an 'opaquelocktoken' scheme that all dav
+         servers must know how to understand: clients may generate and
+         post them in an If: header.
+
+       - a collection can have a lock of either Depth 0 or Infinity.
+         a lock on a collection prevents adding/removing member URIs.
+         if a lock-holder adds something to a deeply locked
+         collection, then the newly added member becomes part of the
+         same write lock.
+
+       - a 'null resource' (which normally returns 404) can be locked,
+         in order to reserve a name.  see section 7.4.
+
+
+* other methods added by WebDAV:
+
+   - COPY:  - copies resource to Destination: header.
+            - optional "Overwrite: [T | F]" header defaults to T.
+            - for collections, either Depth: [0 | infinity] allowed.
+            - client can specify how to behave when copying props.
+
+   - MOVE   - defined to be COPY + DELETE, but an atomic operation.
+
+
+-------------------------------------------------------------------------
+
+DeltaV
+======
+
+Models
+======
+
+A DeltaV server can support two different ways of working: server-side
+working copies, and client-side working copies.  These systems aren't
+mutually exclusive at all.  An OPTIONS request reveals which systems
+the server supports.
+
+
+The General Concepts
+====================
+
+If you understand this, everything will become really clear.  These
+are the fundamentals.
+
+DeltaV allows you version any kind of resource -- a file, a
+collection, whatever.
+
+ * If you take a resource on a server and put it under version control
+   (using the VERSION-CONTROL method), a "Version Controlled
+   Resource", or VCR, is created.  A VCR is a special thing: it's a
+   unique, permanent URL used to talk about an entity under version
+   control, no matter how many times it changes.
+
+ * Every time you change a VCR (discussed below), a new "Version
+   Resource" is created, or VR.  The VR is also a unique, permanent
+   URL, representing some immutable object on the server; it
+   represents the contents and (dead) properties of the VCR at one
+   particular moment in time.
+
+ * At any given time, a VCR has a "pointer" to some particular VR of
+   itself.  The pointer is just a property, called "DAV:checked-in".
+   By definition, the contents of the VCR are always equal to the
+   contents of the VR it points to.  If you change the pointer to a
+   different VR, the VCR's contents magically change to match.
+
+ * All of a VCR's VR objects need to be organized somehow.  And in
+   fact, they *are* organized into a little tree of predecessors and
+   successors.  It turns out that every VCR has a "history" resource
+   sitting in the background.  (The history resource may or may not be
+   directly accessible, depending on whether the server supports the
+   'Version History' feature.)  Regardless, a VCR's history resource
+   is a container that contains all of the VRs, organized into a
+   tree.  You might think of a history resource like an RCS
+   file... except that the history is allowed to contain 'forks',
+   i.e. a VR in the history might have multiple predecessors or
+   successors.  Also, each VR in a history can have a human-readable
+   "label" attached to it, so it's easier to talk about which VR you
+   want.
+
+
+Changing a VCR
+==============
+
+So, how do you make a change to VCR, then?  It all depends on what
+deltaV features the server supports.
+
+ * If the user is using the server-side working-copy model:
+
+     - The client creates something called a 'workspace', using
+       MKWORKSPACE.
+
+     - CHECKOUT a VCR into the workspace.  The VCR's 'DAV:checked-in'
+       property suddenly becomes a 'DAV:checked-out' property... but
+       it still points to the same VR.
+
+     - Use PUT and PROPATCH to change the contents or dead props of
+       the VCR.  If you want to revert everything, just UNCHECKOUT.
+
+     - CHECKIN the VCR.  A new VR is created in the VCR's history, and
+       the 'DAV:checked-out' property becomes a 'DAV:checked-in'
+       property, pointing to the new VR.
+
+ * If the user is using the client-side working-copy model:
+
+     - The client creates something called an 'activity', using
+       MKACTIVITY.
+
+     - CHECKOUT a VR into the activity.  This creates a temporary
+       'working resource' (WR) in the activity.  The VCR's
+       'DAV:checked-in' property suddenly becomes a 'DAV:checked-out'
+       property... but it still points to the same VR.  The WR has a
+       'DAV:checked-out' property that points to VR as well.
+
+     - Use PUT and PROPATCH to change the contents or dead props of
+       the WR.  If you want to revert everything, just UNCHECKOUT.
+
+     - CHECKIN the WR.  A new VR is created in the VCR's history, and
+       the VCR's 'DAV:checked-in' property points to it.  And
+       normally, the temporary WR is deleted.      
+
+See?  Not such a big deal.  Ahem.
+
+
+Auto-Versioning
+===============
+
+What if some regular WebDAV client tries to use a deltaV server?  Or
+an even dumber HTTP 1.1 client?  
+
+If the server supports the 'auto-versioning' feature, then all
+resources gain a new live property called 'DAV:auto-version'.  The
+value of this property indicates how the server should behave when a
+non-deltaV client does an ignorant PUT or PROPPATCH on a resource.  I
+won't go into detail, but there are many possible behaviors:
+
+  * do an implicit (auto-) CHECKOUT and CHECKIN.
+  * auto-CHECKOUT, and wait for a lock to vanish before auto-CHECKIN.
+  * same as above, but if not locked, wait for an explicit CHECKIN.
+  * require a lock.  LOCK causes auto-CHECKOUT, UNLOCK causes auto-CHECKIN.
+
+
+
+Basic Features
+==============
+
+DeltaV has a bunch of "basic features", and a bunch of "advanced
+features".  Here are the basic features, in a nutshell.
+
+
+* Version Control feature
+
+    * new VERSION-CONTROL method to create a VCR.
+
+    * resources gain a whole bunch of new live props (not all listed
+      here), such some of which include DAV:checked-[in|out],
+      DAV:auto-version, DAV:comment, the author.  VRs have properties
+      that describe lists of successor and predecessor VRs.
+
+    * new REPORT method.  two 'standard' reports are defined, but
+      custom reports can be created.
+
+
+* Checkout-in-place feature
+ 
+    * new CHECKOUT, CHECKIN, UNCHECKOUT methods, which are able to
+      modify VCRs in-place.
+
+
+* Version History feature
+
+    * version histories become tangible URLs.  introduce new dav
+      resourcetype called 'DAV:version-history'.
+
+    * all VCRs and VR's gain a 'DAV:version-history' prop that points
+      to their history resource.
+
+    * a version-history has a 'DAV:version-set' property that lists
+      all VRs it contains, and a 'DAV:root-version' that points to the
+      very first VR in the history.
+
+    * a special REPORT allows one to convert a version-history URL
+      into the VCR it represents.  (i.e. reverse-lookup.)
+
+
+* Workspace feature
+
+    * MKWORKSPACE creates a server-side working area.  an OPTIONS
+      request can tell you where the client is allowed to do this.
+
+    * the workspace resource has a property that lists all the
+      resources it contains.  regular resources have a property
+      indicating what workspace they're in.
+
+    * The workspace can hold unversioned items put there by PUT & MKCOL.
+      It can hold VCRs via CHECKOUT.
+
+    * Special:  the VERSION-CONTROL method can create a *new* VCR from
+      a history.  If two people both CHECKIN VCRs created from the
+      same history resource, then poof... the history develops forks!
+
+
+* Update feature
+
+    * UPDATE method is able to tweak a VCR to "point" to a new VR.
+      Very simple!
+
+
+* Label feature
+
+    * LABEL method allows you to attach a human-readable name to a
+      particular VR.  
+
+    * Each VR can have many names.  They're listed in a
+      'DAV:label-name-set' property.
+
+    * New http request header, "Label:", can be used to target
+      a specific VR of a VCR.  This works when doing a GET of a VCR.
+      It also works as you think on COPY, CHECKOUT, UDPATE, etc.
+
+
+* Working Resource feature
+
+    * This feature essentially allows client-side working copies to
+      synchronize their data with the server.
+
+    * all VRs gain two properties that control whether or not
+      histories can (or should) contain forks.
+
+    * a CHECKOUT of a VR creates a temporary 'working resource' (WR),
+      which can then be modified.  When the WR is checked in, a new VR
+      is created as usual, the WR vanishes, and the VCR is updated to
+      point to the VR as usual.
+
+    * note that this technique is an alternative to the
+      Checkout-in-place feature, whereby VCRs are directly checked out
+      and modified.
+
+
+
+Advanced Features
+=================
+
+The advanced features of deltaV introduce a bunch of new concepts.
+Here are the fundamentals.
+
+[Whenever I say, "points to", I'm talking about some object leading to
+another object via a specific property.]
+
+* A "configuration" is a set of VCRs.  In particular, it contains a
+  "root collection" which organizes the VCRs in some way.
+
+  Note that this is _different_ than a versioned collection.  The main
+  difference is that a collection is a *single* resource which
+  contains dead-props and some directory-entries; its VRs just capture
+  various states of the props and dirents.  But it's just ONE
+  resource.  A configuration, however, is a SET of VCRs.  The VCRs may
+  not necessarily be related to each other, either.  A configuration
+  is a flexible thing -- it's VCRs can be tweaked to point to
+  different VRs, however you want, with no versioning happening in the
+  background.  A collection, on the other hand, has a static set of
+  dirents; to change them, you have to do a CHECKOUT, CHECKIN, which
+  results in a new, static collection VR.
+
+* A "baseline" is a special kind of resource which remembers this
+  state of a configuration... it knows exactly which VR each VCR in
+  the configuration should point to.  Just like a VR is a 'snapshot'
+  of a VCR, a baseline is a 'snapshot' of the configuration.  And just
+  like a VR, a baseline can have a human label too.
+  
+* Another kind of resource is a "version controlled configuration", or
+  VCC.  This resource floats out in space;  its sole purpose is to
+  magically connect a configuration to a baseline.   Specifically,
+  each VCR in the configuration points to the VCC, and the VCC points
+  to a baseline.
+
+  And here's the usual magic: if you make the VCC point to a different
+  baseline, then poof, the whole configuration suddenly switches to
+  the baseline.  (That is, all of the configuration's VCRs suddenly
+  point to the specific VRs of the baseline.)
+
+* Finally, it's worth mentioning that a baseline resource points to a
+  "baseline collection" resource.  This collection is a tree made up
+  of the VRs in the baseline, easily browseable.  You can think of it
+  as a "what-if" sort of preview -- i.e. "what would the configuration
+  look like if I made its VCC point to this baseline?"  It also means
+  people can view a baseline in action, *without* having to tweak a
+  VCC, which might require write access of some kind.
+
+
+Got all that?  Good.  Make some pictures.  :-)
+
+
+How to create new baselines
+===========================
+
+The "in-place" method:
+
+   Get this.  A VCC is really just a special kind of VCR!  But it's a
+   VCR which represents the *whole state* of a configuration.  Just
+   like a normal VCR, the VCC's "DAV:checked-in" property points to a
+   baseline, which just a special kind of VR.
+
+   That means you can do a CHECKOUT of the VCC in-place... then tweak
+   the configuration to point to a new set of VR's... then CHECKIN the
+   VCC.  Poof, a new baseline is created which captures your new
+   configuration state.  And the VCC now points to that new baseline.
+
+The "working resource" method:   
+
+   Okay, so a baseline is a special kind of VR.  Fine, so we do a
+   CHECKOUT of it, and get a "working baseline", which a special kind
+   of WR.  
+
+   Now, assuming you're using this method all around, you checkout the
+   configuration's various VRs as WRs, modify the WRs, and check them
+   back in to create new VRs.  Finally, you CHECKIN the working
+   baseline, which creates a new baseline that captures the state of
+   the configuration.  (The working baseline isn't something you tweak
+   directly;  it's more like a token used at CHECKIN time.)
+
+
+How Merging Works... at least for SVN.
+=================
+
+The deltaV MERGE command is very fancy.  It tracks merge ancestors in
+properties, and sets flags for clients to manually resolve conflicts
+on the server.
+
+Subversion uses MERGE in a simpler way:
+
+  1. We checkout a bunch of VRs into an activity, and patch them as a
+     bunch of WRs.
+
+  2. We checkout a "working baseline" into the activity, from whatever
+     baseline represents the HEAD svn revision.
+
+  3. We issue a MERGE request with the activity as the source.
+
+     By definition, this causes the whole activity to be
+     auto-checked-in.  First each WR in the activity is checked-in,
+     causing the configuration to morph.  Then the working-baseline in
+     the activity is checked-in, which creates a new baseline that
+     captures the configuration state.
+
+Of course, mod_dav_svn doesn't actually do all the checkin stuff;  but
+what's important is that the *result* of the MERGE is exactly as IF
+all this stuff had happened.  And that's all that matters.
+
+
+
+

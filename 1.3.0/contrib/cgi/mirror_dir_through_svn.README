@@ -1,0 +1,77 @@
+Introduction
+============
+
+This CGI script mirrors a source directory to a target directory using
+a Subversion repository as an intermediary.  It's written as a CGI
+script so that remote users making changes to a WebDAV folder can tell
+the server to mirror the WebDAV folder contents to another directory
+on the system.  See the example usage story below.
+
+This script could be easily changed to run as a normal script.
+
+Why do this?
+============
+
+1) You get versioning, diff emails, etc for the modifications to the
+   source directory.
+2) All changes to the source directory are backed by Subversion's
+   database.
+3) You have a directory remotely accessible by WebDAV and you want to
+   see what changes are made to the directory, plus the ability to get
+   older versions of the directory.
+
+Sample Usage
+============
+
+This script is used in this little story.
+
+A client has a staging and production web server.  The client wants to
+remotely update the content on the staging server and then push that
+content to the production server when the updated content is checked
+out and ready.  I didn't want to use FTP for security reasons.
+Additionally, I wanted to add the ability to track changes to the
+content and send out commit emails.  Also, I wanted to use WebDAV over
+HTTPS to allow the client's Microsoft Windows OS and FrontPage to
+modify the content.
+
+Since Subversion isn't a full WebDAV server that operates with
+Microsoft, I hacked together this solution.
+
+I set up a DAV directory using Apache 2's mod_dav that the clients
+connect to over HTTPS.  This directory is the DocumentRoot for an
+Apache 1 server (under a different username).  Any changes to this
+WebDAV directory are shown immediately in the staging server.  When
+everything looks fine, they use the attached CGI script which calls
+svn_load_dirs.pl to mirror the staging directory exactly into the
+Subversion repository.  The CGI script uses the REMOTE_USER as the
+name to perform the 'svn commit' as for tracking purposes.  The
+post-commit hooks then send out the diff email.  After the commit
+succeeds, the CGI script then checks out the repository into the
+production web server directory.
+
+How to use it
+=============
+
+1) Get a copy of svn_load_dirs.pl, revision 3787 or later.  You can
+   find it in:
+
+      http://svn.collab.net/repos/svn/trunk/tools/client-side/
+
+2) Edit the configuration variables in mirror_dirs_through_svn.cgi so
+   it knows the location of svn, the location of svn_load_dirs.pl, the
+   source directory, the target directory, and the URL to the
+   directory in the Subversion repository where the source directory
+   will be mirrored.
+
+   I don't recommend using the top URL of the Subversion repository,
+   because you can't create tags of the source directory.  For
+   example, you may want to use a URL like
+
+      http://svn.myserver.com/repos/trunk/mirror_this_dir
+
+   This way you can create a tag of the source directory at special
+   times.
+
+      http://svn.myserver.com/repos/tags/mirror_this_dir/something_special
+
+3) Set up CGI on your server and install this script.

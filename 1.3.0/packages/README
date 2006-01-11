@@ -1,0 +1,3 @@
+This directory contains material to help OS-specific packaging
+systems, such as RedHat's rpm, Debian's dpkg, Sun/BSD's pkg_add, and
+so on.
