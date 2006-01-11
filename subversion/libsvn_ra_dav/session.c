@@ -19,6 +19,7 @@
 
 
 #include <assert.h>
+#include <ctype.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
