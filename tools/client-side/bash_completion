@@ -41,7 +41,7 @@ _svn()
 
 	# Possible expansions, without pure-prefix abbreviations such as "up".
 	cmds='add blame annotate praise cat checkout co cleanup commit ci \
-              copy cp delete remove rm diff export help ? import info \
+              copy cp delete remove rm diff export help import info \
               list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
@@ -612,7 +612,7 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='create deltify dump help ? hotcopy list-dblogs \
+	cmds='create deltify dump help hotcopy list-dblogs \
 	      list-unused-dblogs load lslocks lstxns recover rmlocks \
 	      rmtxns setlog verify --version'
 
