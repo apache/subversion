@@ -62,10 +62,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r17485, r18027
-    Branch: 1.3.x-r17485
-    Fix issue #2442, verbose list broken with peg reivsions over ra_dav.
-    Justification:
-      Small change, definately broken, causing problems for TortoiseSVN.
-    Votes:
-      +1: rooneg, lundblad, dlr
