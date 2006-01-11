@@ -48,14 +48,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18054, r18055
-    Fix JavaHL compile error with Visual Studio 2005.
-    Justification:
-      Allows successful builds of the JavaHL bindings with VS2005.
-    Votes:
-      +1: dlr
-      +0: lundblad
-
   * r18065
     Fix compilation warning from use of tolower() without inclusion of
     ctype.h.
