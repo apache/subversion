@@ -60,5 +60,13 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r18065
+    Fix compilation warning from use of tolower() without inclusion of
+    ctype.h.
+    Justification:
+      Trivial tweak for a clean compile.
+    Votes:
+      +1: dlr
+
 Approved changes:
 
