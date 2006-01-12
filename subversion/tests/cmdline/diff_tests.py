@@ -2113,14 +2113,14 @@ def diff_prop_change_local_propmod(sbox):
 
 
 #----------------------------------------------------------------------
-# A repos->WORKING diff that adds a file or directory with properties
-# should show the added properties.
+# repos->WORKING and BASE->repos diffs that add files or directories with
+# properties should show the added properties.
 def diff_repos_wc_add_with_props(sbox):
-  "repos->wc diff showing added entries with props"
+  "repos-wc diff showing added entries with props"
 
   sbox.build()
 
-  expected_output_r1_wc = [
+  expected_output_r1_r3 = [
     "Index: foo\n",
     "===================================================================\n",
     "--- foo\t(revision 0)\n",
@@ -2160,8 +2160,17 @@ def diff_repos_wc_add_with_props(sbox):
 
     # Now, if we diff r1 to WORKING, we should see the content addition
     # for foo, and property additions for both X and foo.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
                                        'diff', '-r', '1')
+
+    # Update the BASE and WORKING revisions to r1.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'up', '-r', '1')
+
+    # If we diff BASE to r3, we should see the same output as above.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+                                       'diff', '-r', 'BASE:3')
+
 
   finally:
     os.chdir(current_dir)
