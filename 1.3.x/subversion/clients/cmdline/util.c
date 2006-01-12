@@ -45,6 +45,7 @@
 #include "svn_config.h"
 #include "svn_xml.h"
 #include "svn_private_config.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 
@@ -59,7 +60,7 @@ svn_cl__print_commit_info (svn_commit_info_t *commit_info,
 {
   if ((commit_info) 
       && (SVN_IS_VALID_REVNUM (commit_info->revision)))
-    SVN_ERR (svn_cmdline_printf (pool, _("\nCommitted revision %ld.\n"),
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("\nCommitted revision %ld.\n"),
                                  commit_info->revision));
 
   return SVN_NO_ERROR;

@@ -43,9 +43,6 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
-//#if APR_CHARSET_EBCDIC
-//  SVN_ERR(svn_utf_cstring_from_utf8(&fmt, fmt, pool));
-//#endif
   va_start (ap, fmt);
   msg = APR_PVSPRINTF2 (pool, fmt, ap);
   va_end (ap);
