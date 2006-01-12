@@ -45,6 +45,7 @@
 #include "svn_config.h"
 #include "svn_xml.h"
 #include "svn_private_config.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 
@@ -68,7 +69,7 @@ svn_cl__print_commit_info (svn_commit_info_t *commit_info,
        * OTOH, this is only of informational nature to the user as
        * the commit has succeeded. */
       if (commit_info->post_commit_err)
-        SVN_ERR (svn_cmdline_printf (pool, _("\nWarning: %s\n"),
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("\nWarning: %s\n"),
                                  commit_info->post_commit_err));
     }
 
