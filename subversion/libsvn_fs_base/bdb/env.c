@@ -19,6 +19,7 @@
 
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include <apr_version.h>
 
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -64,6 +65,10 @@ typedef struct
   apr_ino_t inode;
 } bdb_env_key_t;
 
+#if APR_MAJOR_VERSION == 0
+#define apr_atomic_read32 apr_atomic_read
+#define apr_atomic_set32  apr_atomic_set
+#endif
 
 /* The cached Berkeley DB environment descriptor. */
 struct bdb_env_t
@@ -111,7 +116,11 @@ struct bdb_env_t
      Note 2: Unlike other fields in this structure, this field is not
              protected by the cache mutex on threaded platforms, and
              should only be accesses via the apr_atomic functions. */
+#if APR_MAJOR_VERSION == 0
   apr_atomic_t panic;
+#else
+  apr_uint32_t panic;
+#endif
 
   /* The key for the environment descriptor cache. */
   bdb_env_key_t key;
@@ -311,7 +320,7 @@ bdb_cache_get (const bdb_env_key_t *keyp, svn_boolean_t *panicp)
   if (bdb && bdb->env)
     {
       u_int32_t flags;
-      *panicp = !!apr_atomic_read(&bdb->panic);
+      *panicp = !!apr_atomic_read32(&bdb->panic);
       if (!*panicp
           && (bdb->env->get_flags(bdb->env, &flags)
               || (flags & DB_PANIC_ENVIRONMENT)))
@@ -320,7 +329,7 @@ bdb_cache_get (const bdb_env_key_t *keyp, svn_boolean_t *panicp)
                             bdb->path_bdb);
 
           /* Something is wrong with the environment. */
-          apr_atomic_set(&bdb->panic, TRUE);
+          apr_atomic_set32(&bdb->panic, TRUE);
           *panicp = TRUE;
           bdb = NULL;
         }
@@ -375,7 +384,7 @@ svn_fs_bdb__close (bdb_env_baton_t *bdb_baton)
 
       /* If the environment is panicked and automatic recovery is not
          enabled, return an appropriate error. */
-      if (!SVN_BDB_AUTO_RECOVER && apr_atomic_read(&bdb->panic))
+      if (!SVN_BDB_AUTO_RECOVER && apr_atomic_read32(&bdb->panic))
         {
           /*FIXME:*/fprintf(stderr, "svn_fs_bdb__close(%s): PANIC\n",
                             bdb->path_bdb);
@@ -514,13 +523,13 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
 svn_boolean_t svn_fs_bdb__get_panic (bdb_env_baton_t *bdb_baton)
 {
   assert(bdb_baton->env == bdb_baton->bdb->env);
-  return !!apr_atomic_read(&bdb_baton->bdb->panic);
+  return !!apr_atomic_read32(&bdb_baton->bdb->panic);
 }
 
 void svn_fs_bdb__set_panic (bdb_env_baton_t *bdb_baton)
 {
   assert(bdb_baton->env == bdb_baton->bdb->env);
-  apr_atomic_set(&bdb_baton->bdb->panic, TRUE);
+  apr_atomic_set32(&bdb_baton->bdb->panic, TRUE);
 }
 
 
