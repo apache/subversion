@@ -191,8 +191,9 @@ harvest_committables (apr_hash_t *committables,
   svn_boolean_t tc, pc;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
-  const svn_string_t *propval;
+  const svn_string_t *propval, *new_prop;
   svn_boolean_t is_special;
+  apr_finfo_t finfo;
   apr_finfo_t finfo;
 
   /* Early out if the item is already marked as committable. */
@@ -437,12 +438,15 @@ harvest_committables (apr_hash_t *committables,
            * should be recorded, there's an property modification too. */
           if (propval)
             {
-              propval=svn_string_create( 
-                                        svn_time_to_cstring (finfo.mtime, pool),
-                                        pool );
-              SVN_ERR (svn_wc_prop_set (SVN_PROP_TEXT_TIME, 
-                                        propval, path, adm_access, pool) );
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+              new_prop=svn_string_create( 
+                                         svn_time_to_cstring (finfo.mtime, pool),
+                                         pool );
+              if (!svn_string_compare( new_prop, propval))
+                {
+                  SVN_ERR (svn_wc_prop_set (SVN_PROP_TEXT_TIME, 
+                                            new_prop, path, adm_access, pool) );
+                  state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+                }
             }
         }
 
@@ -451,30 +455,39 @@ harvest_committables (apr_hash_t *committables,
                                 pool));
       if (propval)
         {
-          propval=svn_io_file_owner_string(finfo.user, pool);
-          SVN_ERR (svn_wc_prop_set (SVN_PROP_OWNER, 
-                                    propval, path, adm_access, pool) );
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+          new_prop=svn_io_file_owner_string(finfo.user, pool);
+          if (!svn_string_compare( new_prop, propval))
+            {
+              SVN_ERR (svn_wc_prop_set (SVN_PROP_OWNER, 
+                                        new_prop, path, adm_access, pool) );
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+            }
         }
 
       SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_GROUP, path, adm_access,
                                 pool));
       if (propval)
         {
-          propval=svn_io_file_group_string(finfo.group, pool);
-          SVN_ERR (svn_wc_prop_set (SVN_PROP_GROUP, 
-                                    propval, path, adm_access, pool) );
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+          new_prop=svn_io_file_group_string(finfo.group, pool);
+          if (!svn_string_compare( new_prop, propval))
+            {
+              SVN_ERR (svn_wc_prop_set (SVN_PROP_GROUP, 
+                                        new_prop, path, adm_access, pool) );
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+            }
         }
 
       SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_UNIX_MODE, path, adm_access,
                                 pool));
       if (propval)
         {
-          propval=svn_io_file_mode_string(finfo.protection, pool);
-          SVN_ERR (svn_wc_prop_set (SVN_PROP_UNIX_MODE, 
-                                    propval, path, adm_access, pool) );
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+          new_prop=svn_io_file_mode_string(finfo.protection, pool);
+          if (!svn_string_compare( new_prop, propval))
+            {
+              SVN_ERR (svn_wc_prop_set (SVN_PROP_UNIX_MODE, 
+                                        new_prop, path, adm_access, pool) );
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+            }
         }
     }
 
