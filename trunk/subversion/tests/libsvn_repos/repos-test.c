@@ -710,12 +710,12 @@ revisions_changed (const char **msg,
         SVN_ERR (svn_repos_history (fs, path, history_to_revs_array, revs, 
                                     0, youngest_rev, TRUE, spool));
 
-        /* Are we at least looking at the right number of returned
-           revisions? */
-        if ((! revs) || (revs->nelts != num_revs))
 #if APR_CHARSET_EBCDIC
 #pragma convert(37)
 #endif
+        /* Are we at least looking at the right number of returned
+           revisions? */
+        if ((! revs) || (revs->nelts != num_revs))
           return svn_error_createf
             (SVN_ERR_FS_GENERAL, NULL,
              "Changed revisions differ from expected for '%s'\n%s",
@@ -809,9 +809,6 @@ node_locations (const char **msg,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev;
 
-#if APR_CHARSET_EBCDIC
-#pragma convert(37)
-#endif
   *msg = "test svn_repos_node_locations";
 #if APR_CHARSET_EBCDIC
 #pragma convert(1208)
@@ -902,10 +899,10 @@ rmlocks_change_prop (void *file_baton,
 
   if (strcmp (name, SVN_PROP_ENTRY_LOCK_TOKEN) == 0)
     {
-      if (value != NULL)
 #if APR_CHARSET_EBCDIC
 #pragma convert(37)
 #endif
+      if (value != NULL)
         return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                  "Value for lock-token property not NULL");
 
@@ -1016,9 +1013,6 @@ rmlocks (const char **msg,
   svn_fs_access_t *fs_access;
   apr_hash_t *removed;
 
-#if APR_CHARSET_EBCDIC
-#pragma convert(37)
-#endif
   *msg = "test removal of defunct locks";
 #if APR_CHARSET_EBCDIC
 #pragma convert(1208)
@@ -1278,8 +1272,14 @@ authz (const char **msg,
       if (access_granted != test_set[i].expected)
         {
           return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                                     "Authz incorrectly %s %s%s access "
                                     "to greek:%s for user %s",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                                     access_granted ?
                                     "grants" : "denies",
                                     test_set[i].required
@@ -1315,8 +1315,14 @@ authz (const char **msg,
   err = authz_get_handle (&authz_cfg, contents, subpool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_INVALID_CONFIG",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1332,8 +1338,14 @@ authz (const char **msg,
   err = authz_get_handle (&authz_cfg, contents, subpool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif    
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_INVALID_CONFIG",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1359,11 +1371,16 @@ authz (const char **msg,
                                          (svn_authz_read
                                           | svn_authz_recursive),
                                          &access_granted, subpool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (!access_granted)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Regression: incomplete ancestry test "
                              "for recursive access lookup.");
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif   
   /* That's a wrap! */
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -1503,8 +1520,14 @@ commit_editor_authz  (const char **msg,
   err = editor->delete_entry ("/iota", SVN_INVALID_REVNUM, root_baton, subpool);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNWRITABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1518,8 +1541,14 @@ commit_editor_authz  (const char **msg,
                                   subpool);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNWRITABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1528,8 +1557,14 @@ commit_editor_authz  (const char **msg,
                           subpool, &file_baton);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNWRITABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1538,8 +1573,14 @@ commit_editor_authz  (const char **msg,
                           youngest_rev, subpool, &file_baton);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNWRITABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1574,8 +1615,14 @@ commit_editor_authz  (const char **msg,
                           SVN_INVALID_REVNUM, subpool, &file_baton);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNWRITABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1603,8 +1650,14 @@ commit_editor_authz  (const char **msg,
                                 subpool, &dir2_baton);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNREADABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNREADABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
@@ -1617,8 +1670,14 @@ commit_editor_authz  (const char **msg,
                               subpool);
   if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
     return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
                               "Got %s error instead of expected "
                               "SVN_ERR_AUTHZ_UNWRITABLE",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                               err ? "unexpected" : "no");
   svn_error_clear (err);
 
