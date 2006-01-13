@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-01-13 11:15+0100\n"
-"PO-Revision-Date: 2005-12-22 22:40+0100\n"
+"PO-Revision-Date: 2006-01-13 11:23+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2684,14 +2684,12 @@ msgstr ""
 "Erhöll apply-textdelta-element utan att ha erhållit add-file eller open-file"
 
 #: libsvn_ra_dav/replay.c:329
-#, fuzzy
 msgid "Got close-file element without preceding add-file or open-file"
-msgstr ""
-"Erhöll apply-textdelta-element utan att ha erhållit add-file eller open-file"
+msgstr "Erhöll close-file-element utan att ha erhållit add-file eller open-file"
 
 #: libsvn_ra_dav/replay.c:344
 msgid "Got close-directory element without ever opening a directory"
-msgstr ""
+msgstr "Erhöll close-directory-element, utan att någonsin ha öppnat en katalog"
 
 #: libsvn_ra_dav/replay.c:471
 #, c-format
@@ -4037,7 +4035,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:746
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -4045,7 +4042,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2005 CollabNet.\n"
+"Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion är Open Source-programvara; se http://subversion.tigris.org/.\n"
 "Denna produkt innehåller programvara som är utvecklad av CollabNet\n"
 "(http://www.Collab.Net/).\n"
@@ -8132,13 +8129,12 @@ msgid "Can't create thread"
 msgstr "Kan inte skapa tråd"
 
 #: svnsync/main.c:62
-#, fuzzy
 msgid ""
 "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
 "Initialize a destination repository.\n"
 msgstr ""
 "användning: svnsync initialize DEST_URL --source-url KÄLL_URL\n"
-"Initiera ett destinationsarkiv."
+"Initiera ett destinationsarkiv.\n"
 
 #: svnsync/main.c:67
 msgid ""
