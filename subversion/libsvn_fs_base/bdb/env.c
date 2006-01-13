@@ -192,7 +192,7 @@ bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
 
 
 /* Pool cleanup for the cached environment descriptor. */
-apr_status_t cleanup_env (void *data)
+static apr_status_t cleanup_env (void *data)
 {
   bdb_env_t *bdb = data;
 
@@ -428,7 +428,7 @@ bdb_open (bdb_env_t *bdb, u_int32_t flags, int mode)
 
 
 /* Pool cleanup for the environment baton. */
-apr_status_t cleanup_env_baton (void *data)
+static apr_status_t cleanup_env_baton (void *data)
 {
   bdb_env_baton_t *bdb_baton = data;
 
