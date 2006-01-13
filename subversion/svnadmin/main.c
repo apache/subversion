@@ -271,7 +271,8 @@ static const apr_getopt_option_t options_table[] =
      N_("read user configuration files from directory ARG")},
 
     {"clean-logs",    svnadmin__clean_logs, 0,
-     N_("remove redundant log files from source repository")},
+     N_("remove redundant Berkeley DB log files\n"
+        "                             from source repository [Berkeley DB]")},
 
     {"use-pre-commit-hook", svnadmin__use_pre_commit_hook, 0,
      N_("call pre-commit hook before committing revisions")},
