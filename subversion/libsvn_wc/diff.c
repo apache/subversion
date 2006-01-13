@@ -211,9 +211,6 @@ struct file_baton {
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
 
-  /* Is this file scheduled to be deleted? */
-  svn_boolean_t schedule_delete;
-
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
@@ -309,7 +306,6 @@ make_file_baton (const char *path,
   file_baton->pool = pool;
   file_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   file_baton->path = path;
-  file_baton->schedule_delete = FALSE;
 
   /* If the parent directory is added rather than replaced it does not
      exist in the working copy.  Determine a working copy path whose
@@ -1067,12 +1063,6 @@ apply_textdelta (void *file_baton,
   if (entry && entry->copyfrom_url)
     b->added = FALSE;
 
-  /* Check to see if this entry is scheduled to be deleted, if so,
-     then we need to remember so that we don't attempt to open the
-     non-existent file when doing the final diff. */
-  if (entry && entry->schedule == svn_wc_schedule_delete)
-    b->schedule_delete = TRUE;
-
   if (b->added)
     {
       /* An empty file is the starting point if the file is being added */
@@ -1206,7 +1196,7 @@ close_file (void *file_baton,
         {
           if (eb->use_text_base)
             localfile = svn_wc__text_base_path (b->path, FALSE, b->pool);
-          else if (b->schedule_delete)
+          else if (entry && entry->schedule == svn_wc_schedule_delete)
             localfile = empty_file;
           else
             /* a detranslated version of the working file */
