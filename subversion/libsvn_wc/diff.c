@@ -795,6 +795,7 @@ delete_entry (const char *path,
       if (eb->reverse_order)
         {
           /* Whenever showing a deletion, we show the text-base vanishing. */
+          /* ### This is wrong if we're diffing WORKING->repos. */
           const char *textbase = svn_wc__text_base_path (full_path,
                                                          FALSE, pool);
           apr_hash_t *baseprops = NULL;
@@ -817,17 +818,25 @@ delete_entry (const char *path,
         }
       else
         {
+          /* Or normally, show the working file being added. */
+          /* ### This is wrong if we're diffing repos->BASE. */
           const char *secondpath = full_path;
+          apr_hash_t *emptyprops = apr_hash_make (pool),
+                     *workingprops = NULL;
+          apr_array_header_t *propchanges;
           const char *working_mimetype;
 
           if (entry->schedule == svn_wc_schedule_delete)
             secondpath = empty_file;
 
-          SVN_ERR (get_working_mimetype (&working_mimetype, NULL,
+          SVN_ERR (get_working_mimetype (&working_mimetype, &workingprops,
                                          adm_access, full_path, pool));
 
-          /* Or normally, show the working file being added. */
-          /* ### Show the properties as well. */
+          /* Calculate the propchanges necessary to create
+             workingprops. */
+          SVN_ERR (svn_prop_diffs (&propchanges,
+                                   workingprops, emptyprops, pool));
+
           SVN_ERR (pb->edit_baton->callbacks->file_added
                    (NULL, NULL, NULL, full_path,
                     empty_file,
@@ -835,7 +844,8 @@ delete_entry (const char *path,
                     0, entry->revision,
                     NULL,
                     working_mimetype,
-                    apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
+                    propchanges,
+                    emptyprops,
                     pb->edit_baton->callback_baton));
         }
 
