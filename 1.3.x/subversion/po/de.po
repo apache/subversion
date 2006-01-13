@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-12-15 13:35+0100\n"
+"PO-Revision-Date: 2006-01-05 09:28+0100\n"
 "Last-Translator: Lübbe Onken <luebbe@tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1056,7 +1056,7 @@ msgstr ""
 "  2. Jedes durch eine URL spezifizierte Verzeichnis wird mittels einer\n"
 "     sofortigen Übertragung im Projektarchiv angelegt.\n"
 "\n"
-"  In beiden Fällen müssen alle Zwischenverzeichnisse bereits exisitieren.\n"
+"  In beiden Fällen müssen alle Zwischenverzeichnisse bereits existieren.\n"
 
 #: clients/cmdline/main.c:494
 msgid ""
@@ -1130,7 +1130,7 @@ msgid ""
 "  the --strict option to disable these beautifications (useful,\n"
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
-"Gibt den Eigenschaftwert von Dateien, Verzeichnissen oder Revisionen aus.\n"
+"Gibt den Eigenschaftswert von Dateien, Verzeichnissen oder Revisionen aus.\n"
 "Aufruf: 1. propget PROPNAME [ZIEL[@REV]...]\n"
 "        2. propget PROPNAME --revprop -r REV [URL]\n"
 "\n"
@@ -2378,7 +2378,7 @@ msgstr "Name ist keine einzelne Pfadkomponente"
 
 #: include/svn_error_codes.h:472
 msgid "Attempt to change immutable filesystem node"
-msgstr "Versuch, nicht veränderlichen Knoten des Dateisystems zu ändern"
+msgstr "Versuch, *nicht-veränderlichen* Knoten des Dateisystems zu ändern"
 
 #: include/svn_error_codes.h:476
 msgid "Item already exists in filesystem"
@@ -2406,7 +2406,7 @@ msgstr "Eine Darstellung ist zwischen Lesezugriffen verschwunden oder hat sich v
 
 #: include/svn_error_codes.h:500
 msgid "Tried to change an immutable representation"
-msgstr "Versuch, eine nicht veränderliche Darstellung zu ändern"
+msgstr "Versuch, eine *nicht-veränderliche* Darstellung zu ändern"
 
 #: include/svn_error_codes.h:504
 msgid "Malformed skeleton data"
@@ -2434,7 +2434,7 @@ msgstr "Transaktion ist nicht tot"
 
 #: include/svn_error_codes.h:529
 msgid "Unknown FS type"
-msgstr "Unkannter Dateisystemtyp"
+msgstr "Unbekannter Dateisystemtyp"
 
 #: include/svn_error_codes.h:534
 msgid "No user associated with filesystem"
@@ -3564,7 +3564,7 @@ msgstr "Versionen in Dateisystemmodul '%s' stimmen nicht überein: gefunden %d.%
 #: libsvn_fs/fs-loader.c:163
 #, c-format
 msgid "Unknown FS type '%s'"
-msgstr "Unkannter Dateisystemtyp '%s'"
+msgstr "Unbekannter Dateisystemtyp '%s'"
 
 #: libsvn_fs/fs-loader.c:253
 #, c-format
@@ -3781,7 +3781,7 @@ msgstr "Versuchte, Eintrag in einem *nicht-veränderlichen* Knoten zu setzen"
 #: libsvn_fs_base/dag.c:615
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr "Kann keine Eigenschafen für nicht-veränderliche Knotenrevision %s setzen."
+msgstr "Kann keine Eigenschafen für *nicht-veränderliche* Knotenrevision %s setzen."
 
 #: libsvn_fs_base/dag.c:727
 #, c-format
@@ -3812,7 +3812,7 @@ msgstr "Löschen fehlgeschlagen: Verzeichnis hat keinen Eintrag '%s'"
 #: libsvn_fs_base/dag.c:962
 #, c-format
 msgid "Attempted removal of immutable node"
-msgstr "Versuch, unveränderlichen Knoten zu entfernen"
+msgstr "Versuchte, *nicht-veränderlichen* Knoten zu entfernen"
 
 #: libsvn_fs_base/dag.c:1082
 #, c-format
@@ -4285,7 +4285,7 @@ msgstr ""
 #: libsvn_fs_base/tree.c:3662
 #: libsvn_fs_fs/tree.c:2599
 msgid "Cannot compare file contents between two different filesystems"
-msgstr "Kann Dateiihnhalte nicht zwischen verschiedenen Dateisystemen vergleichen"
+msgstr "Kann Dateiinhalte nicht zwischen verschiedenen Dateisystemen vergleichen"
 
 #: libsvn_fs_base/tree.c:3671
 #: libsvn_fs_base/tree.c:3676
@@ -4610,7 +4610,7 @@ msgstr "Konnte keine DELETE Anfrage (%s) erzeugen"
 #: libsvn_ra_dav/commit.c:1310
 #, c-format
 msgid "Could not write svndiff to temp file"
-msgstr "Konte svndiff nicht in Temporärdatei schreiben"
+msgstr "Konnte svndiff nicht in Temporärdatei schreiben"
 
 #: libsvn_ra_dav/commit.c:1400
 #, c-format
@@ -4629,7 +4629,7 @@ msgstr "Konnte die URL der versionierten Ressource nicht speichern"
 #: libsvn_ra_dav/fetch.c:398
 #, c-format
 msgid "Could not get content-type from response."
-msgstr "Konte 'content-type' nicht aus der Antwort lesen."
+msgstr "Konnte 'content-type' nicht aus der Antwort lesen."
 
 #: libsvn_ra_dav/fetch.c:443
 #, c-format
@@ -5112,7 +5112,7 @@ msgstr "Antwort beim Sperren ist keine Liste"
 
 #: libsvn_ra_svn/client.c:1613
 msgid "Unknown status for lock command"
-msgstr "Umbekannter Status für Sperrbefehl"
+msgstr "Unbekannter Status für Sperrbefehl"
 
 #: libsvn_ra_svn/client.c:1635
 msgid "Didn't receive end marker for lock responses"
@@ -5124,7 +5124,7 @@ msgstr "Antwort beim Entsperren ist keine Liste"
 
 #: libsvn_ra_svn/client.c:1736
 msgid "Unknown status for unlock command"
-msgstr "Umbekannter Status für Entsperrbefehl"
+msgstr "Unbekannter Status für Entsperrbefehl"
 
 #: libsvn_ra_svn/client.c:1757
 msgid "Didn't receive end marker for unlock responses"
@@ -5610,12 +5610,12 @@ msgstr "Nichtlesbarer Pfad angetroffen; Zugriff verweigert"
 #: libsvn_subr/config.c:632
 #, c-format
 msgid "Config error: invalid boolean value '%s'"
-msgstr "Konfigurationsfehler: Ungüliger logischer Wert '%s'"
+msgstr "Konfigurationsfehler: Ungültiger logischer Wert '%s'"
 
 #: libsvn_subr/config.c:882
 #, c-format
 msgid "Config error: invalid integer value '%s'"
-msgstr "Konfigurationsfehler: Ungülige Ganzzahl '%s'"
+msgstr "Konfigurationsfehler: Ungültige Ganzzahl '%s'"
 
 #: libsvn_subr/config_auth.c:94
 msgid "Unable to open auth file for reading"
@@ -6078,7 +6078,7 @@ msgstr "Kann Namen der Moduldatei nicht ermitteln"
 #: libsvn_subr/nls.c:101
 #, c-format
 msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
-msgstr "Cann Modulpfad nicht von UTF-8 in UCS-2 konvertieren: '%s'"
+msgstr "Kann Modulpfad nicht von UTF-8 in UCS-2 konvertieren: '%s'"
 
 #: libsvn_subr/opt.c:146
 msgid ""
@@ -6118,7 +6118,7 @@ msgstr "URL '%s' ist nicht korrekt URI-kodiert"
 #: libsvn_subr/opt.c:613
 #, c-format
 msgid "URL '%s' contains a '..' element"
-msgstr "URL '%s' enhält ein '..' Element"
+msgstr "URL '%s' enthält ein '..' Element"
 
 #: libsvn_subr/opt.c:642
 #, c-format
@@ -6145,7 +6145,7 @@ msgid ""
 msgstr ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion ist Open Source Software, siehe http://subversion.tigris.org/\n"
-"Dieses Proukt enthält von CollabNet entwickelte Software.\n"
+"Dieses Produkt enthält von CollabNet entwickelte Software.\n"
 "(http://www.collab.net/)\n"
 "\n"
 
@@ -6838,7 +6838,7 @@ msgid ""
 "but property already exists with value '%s'."
 msgstr ""
 "Versuch, eine neue Eigenschaft '%s' mit dem Wert '%s' anzulegen,\n"
-"aber die Eigenschaft exisitert bereits mit dem Wert '%s'."
+"aber die Eigenschaft existiert bereits mit dem Wert '%s'."
 
 #: libsvn_wc/props.c:482
 #, c-format
@@ -6847,7 +6847,7 @@ msgid ""
 "but the property does not exist."
 msgstr ""
 "Versuch, die Eigenschaft '%s' von '%s' in '%s zu ändern,\n"
-"aber die Eigenschaft exisitert nicht."
+"aber die Eigenschaft existiert nicht."
 
 #: libsvn_wc/props.c:511
 #, c-format
@@ -6863,7 +6863,7 @@ msgid ""
 "but property already exists with value '%s'."
 msgstr ""
 "Versuch, die Eigenschaft '%s' von '%s' in '%s zu ändern,\n"
-"aber die Eigenschaft exisitert bereits mit dem Wert '%s'."
+"aber die Eigenschaft existiert bereits mit dem Wert '%s'."
 
 #: libsvn_wc/props.c:1222
 #, c-format
@@ -6902,7 +6902,7 @@ msgstr "Kann '%s' nicht für eine Datei setzen ('%s')"
 #: libsvn_wc/props.c:1415
 #, c-format
 msgid "'%s' is not a file or directory"
-msgstr "'%s' ist weder Datei noch Verzeichnis"
+msgstr "'%s' ist weder eine Datei noch ein Verzeichnis"
 
 #: libsvn_wc/props.c:1439
 #, c-format
@@ -7136,6 +7136,10 @@ msgid ""
 "Open the repository at REPOS_PATH, then abort, thus simulating\n"
 "a process that crashes while holding an open repository handle.\n"
 msgstr ""
+"Aufruf: svnadmin crashtest REPOS_PFAD\n"
+"\n"
+"Öffnet das Projektarchiv in REPOS_PFAD und bricht ab. Simuliert\n"
+"damit einen Prozess der bei geöffnetem Projektarchiv abstürzt.\n"
 
 #: svnadmin/main.c:301
 msgid ""
@@ -7143,7 +7147,7 @@ msgid ""
 "\n"
 "Create a new, empty repository at REPOS_PATH.\n"
 msgstr ""
-"Aufruf: svnadim create ARCHIV_PFAD\n"
+"Aufruf: svnadmin create ARCHIV_PFAD\n"
 "\n"
 "Erstellt ein neues, leeres Projektarchiv im ARCHIV_PFAD.\n"
 

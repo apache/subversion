@@ -22,7 +22,16 @@ extern "C" {
 
 #include <rubyio.h>
 
+typedef struct apr_pool_wrapper_t
+{
+  apr_pool_t *pool;
+  svn_boolean_t destroyed;
+  struct apr_pool_wrapper_t *parent;
+  apr_array_header_t *children;
+} apr_pool_wrapper_t;
+
 void svn_swig_rb_nls_initialize(void);
+void svn_swig_rb_initialize(void);
 
 VALUE svn_swig_rb_svn_delta_editor(void);
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
