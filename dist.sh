@@ -187,6 +187,11 @@ rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
 echo "Removed and recreated $DIST_SANDBOX"
 
+LC_ALL=C
+LANG=C
+export LC_ALL
+export LANG
+
 echo "Exporting revision $REVISION of Subversion into sandbox..."
 (cd "$DIST_SANDBOX" && \
  ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
