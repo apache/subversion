@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-01-08 23:18-0300\n"
-"PO-Revision-Date: 2006-01-08 23:20-0300\n"
+"POT-Creation-Date: 2006-01-13 23:10-0300\n"
+"PO-Revision-Date: 2006-01-13 23:19-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1535,15 +1535,15 @@ msgstr "crear cambio"
 msgid "deleting changes"
 msgstr "borrar cambios"
 
-#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1919
+#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1917
 msgid "Missing required node revision ID"
 msgstr "Falta el id de revisión del nodo"
 
-#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1929
+#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1927
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "Orden de cambios erróneo: nuevo ID de revisión de nodo sin delete"
 
-#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1940
+#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1938
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "Orden de cambios erróneo: cambio no aditivo en una ruta eliminada"
 
@@ -2257,7 +2257,7 @@ msgstr "Línea copyroot malformada en el node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Línea copyfrom malformada en el node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:879 libsvn_fs_fs/fs_fs.c:3139
+#: libsvn_fs_fs/fs_fs.c:879 libsvn_fs_fs/fs_fs.c:3137
 msgid "Attempted to write to non-transaction"
 msgstr "Intento de escribir en lo que no era una transacción"
 
@@ -2304,19 +2304,19 @@ msgstr ""
 "La lectura de una ventana de svndiff leyó más allá del fin de la "
 "representación"
 
-#: libsvn_fs_fs/fs_fs.c:1494
+#: libsvn_fs_fs/fs_fs.c:1492
 msgid "svndiff data requested non-existent source"
 msgstr "datos svndiff pidieron una fuente que no existe"
 
-#: libsvn_fs_fs/fs_fs.c:1500
+#: libsvn_fs_fs/fs_fs.c:1498
 msgid "svndiff requested position beyond end of stream"
 msgstr "la posición pedida por svndiff va más allá del final del flujo"
 
-#: libsvn_fs_fs/fs_fs.c:1523 libsvn_fs_fs/fs_fs.c:1540
+#: libsvn_fs_fs/fs_fs.c:1521 libsvn_fs_fs/fs_fs.c:1538
 msgid "svndiff window length is corrupt"
 msgstr "el largo de la ventana svndiff está corrupto"
 
-#: libsvn_fs_fs/fs_fs.c:1588
+#: libsvn_fs_fs/fs_fs.c:1586
 #, c-format
 msgid ""
 "Checksum mismatch while reading representation:\n"
@@ -2327,85 +2327,85 @@ msgstr ""
 "   esperada:  %s\n"
 "   presente:  %s\n"
 
-#: libsvn_fs_fs/fs_fs.c:1727 libsvn_fs_fs/fs_fs.c:1740
-#: libsvn_fs_fs/fs_fs.c:1746
+#: libsvn_fs_fs/fs_fs.c:1725 libsvn_fs_fs/fs_fs.c:1738
+#: libsvn_fs_fs/fs_fs.c:1744
 msgid "Directory entry corrupt"
 msgstr "Entrada corrupta de directorio"
 
-#: libsvn_fs_fs/fs_fs.c:2082 libsvn_fs_fs/fs_fs.c:2090
-#: libsvn_fs_fs/fs_fs.c:2122 libsvn_fs_fs/fs_fs.c:2142
-#: libsvn_fs_fs/fs_fs.c:2176 libsvn_fs_fs/fs_fs.c:2181
+#: libsvn_fs_fs/fs_fs.c:2080 libsvn_fs_fs/fs_fs.c:2088
+#: libsvn_fs_fs/fs_fs.c:2120 libsvn_fs_fs/fs_fs.c:2140
+#: libsvn_fs_fs/fs_fs.c:2174 libsvn_fs_fs/fs_fs.c:2179
 msgid "Invalid changes line in rev-file"
 msgstr "Línea de cambios inválida en archivo de rev"
 
-#: libsvn_fs_fs/fs_fs.c:2115
+#: libsvn_fs_fs/fs_fs.c:2113
 msgid "Invalid change kind in rev file"
 msgstr "Tipo de cambio inválido en archivo de rev"
 
-#: libsvn_fs_fs/fs_fs.c:2135
+#: libsvn_fs_fs/fs_fs.c:2133
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Bandera text-mod inválida en archivo de rev"
 
-#: libsvn_fs_fs/fs_fs.c:2155
+#: libsvn_fs_fs/fs_fs.c:2153
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Bandera prop-mod inválida en archivo de rev"
 
-#: libsvn_fs_fs/fs_fs.c:2338
+#: libsvn_fs_fs/fs_fs.c:2336
 msgid "Copying from transactions not allowed"
 msgstr "No se permite copiar desde transacciones"
 
-#: libsvn_fs_fs/fs_fs.c:2394
+#: libsvn_fs_fs/fs_fs.c:2392
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "Imposible crear directorio de transacción en '%s' para la revisión %ld"
 
-#: libsvn_fs_fs/fs_fs.c:2573 libsvn_fs_fs/fs_fs.c:2580
+#: libsvn_fs_fs/fs_fs.c:2571 libsvn_fs_fs/fs_fs.c:2578
 msgid "next-id file corrupt"
 msgstr "archivo next-id corrupto"
 
-#: libsvn_fs_fs/fs_fs.c:2665
+#: libsvn_fs_fs/fs_fs.c:2663
 msgid "Transaction cleanup failed"
 msgstr "La limpieza posterior a la transacción falló"
 
-#: libsvn_fs_fs/fs_fs.c:2832
+#: libsvn_fs_fs/fs_fs.c:2830
 msgid "Invalid change type"
 msgstr "Tipo de cambio inválido"
 
-#: libsvn_fs_fs/fs_fs.c:3158
+#: libsvn_fs_fs/fs_fs.c:3156
 msgid "Can't set text contents of a directory"
 msgstr "No se puede asignar contenido de tipo 'texto' a un directorio"
 
-#: libsvn_fs_fs/fs_fs.c:3248 libsvn_fs_fs/fs_fs.c:3253
-#: libsvn_fs_fs/fs_fs.c:3260
+#: libsvn_fs_fs/fs_fs.c:3246 libsvn_fs_fs/fs_fs.c:3251
+#: libsvn_fs_fs/fs_fs.c:3258
 msgid "Corrupt current file"
 msgstr "Archivo actual corrupto"
 
-#: libsvn_fs_fs/fs_fs.c:3550 libsvn_subr/io.c:2408 svn/util.c:237
+#: libsvn_fs_fs/fs_fs.c:3548 libsvn_subr/io.c:2408 svn/util.c:237
 #: svn/util.c:261
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "No se pudo obtener atributos del archivo '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3554
+#: libsvn_fs_fs/fs_fs.c:3552
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "No se pudo cambiar los permisos de '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3693
+#: libsvn_fs_fs/fs_fs.c:3691
 #, c-format
 msgid "Can't grab FSFS repository mutex"
 msgstr "No se pudo tomar el mutex del repositorio FSFS"
 
-#: libsvn_fs_fs/fs_fs.c:3707
+#: libsvn_fs_fs/fs_fs.c:3705
 #, c-format
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "No se pudo soltar el mutex del repositorio FSFS"
 
-#: libsvn_fs_fs/fs_fs.c:3823
+#: libsvn_fs_fs/fs_fs.c:3822
 msgid "Transaction out of date"
 msgstr "La transacción está obsoleta"
 
-#: libsvn_fs_fs/fs_fs.c:4105
+#: libsvn_fs_fs/fs_fs.c:4111
 msgid "No such transaction"
 msgstr "No existe tal transacción"
 
@@ -2549,8 +2549,8 @@ msgstr "Respuesta inválida del servidor a petición dated-rev"
 msgid "'get-locations' REPORT not implemented"
 msgstr "el REPORT 'get-locations' no está implementado"
 
-#: libsvn_ra_dav/fetch.c:1581 libsvn_ra_dav/session.c:1174
-#: libsvn_ra_dav/session.c:1460
+#: libsvn_ra_dav/fetch.c:1581 libsvn_ra_dav/session.c:1186
+#: libsvn_ra_dav/session.c:1472
 msgid "Incomplete lock data returned"
 msgstr "Se devolvieron datos de bloqueo incompletos"
 
@@ -2727,85 +2727,85 @@ msgstr "Error escribiendo en flujo: fin de archivo inesperado"
 msgid "Got cdata content for a prop delete"
 msgstr "Se obtuvo contenido cdata para un borrado de propiedad"
 
-#: libsvn_ra_dav/session.c:442
+#: libsvn_ra_dav/session.c:444
 msgid "Invalid URL: illegal character in proxy port number"
 msgstr "URL inválido: carácter ilegal en el número de puerto del proxy"
 
-#: libsvn_ra_dav/session.c:446
+#: libsvn_ra_dav/session.c:448
 msgid "Invalid URL: negative proxy port number"
 msgstr "URL inválido: número de puerto del proxy negativo"
 
-#: libsvn_ra_dav/session.c:449
+#: libsvn_ra_dav/session.c:451
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
 "URL inválido: el puerto del proxy es mayor al máximo puerto TCP posible 65535"
 
-#: libsvn_ra_dav/session.c:463
+#: libsvn_ra_dav/session.c:465
 msgid "Invalid config: illegal character in timeout value"
 msgstr "Configuración inválida: carácter ilegal en valor máximo de espera"
 
-#: libsvn_ra_dav/session.c:467
+#: libsvn_ra_dav/session.c:469
 msgid "Invalid config: negative timeout value"
 msgstr "Configuración inválida: valor máximo de espera negativo"
 
-#: libsvn_ra_dav/session.c:480
+#: libsvn_ra_dav/session.c:482
 msgid "Invalid config: illegal character in debug mask value"
 msgstr ""
 "Configuración inválida: carácter ilegal en el valor de la máscara de debug"
 
-#: libsvn_ra_dav/session.c:543
+#: libsvn_ra_dav/session.c:545
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "Módulo para acceder a un repositorio vía WebDAV (DeltaV)."
 
-#: libsvn_ra_dav/session.c:598
+#: libsvn_ra_dav/session.c:600
 msgid "Malformed URL for repository"
 msgstr "URL de repositorio no propiamente formada"
 
-#: libsvn_ra_dav/session.c:633
+#: libsvn_ra_dav/session.c:636
 msgid "Network socket initialization failed"
 msgstr "Falló la inicialización del 'socket' de red"
 
-#: libsvn_ra_dav/session.c:650
+#: libsvn_ra_dav/session.c:662
 msgid "SSL is not supported"
 msgstr "No se soporta SSL"
 
-#: libsvn_ra_dav/session.c:791
+#: libsvn_ra_dav/session.c:803
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "Configuración inválida: imposible cargar archivo de certificado '%s'"
 
-#: libsvn_ra_dav/session.c:897
+#: libsvn_ra_dav/session.c:909
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "La propiedad UUID no se encontró en el recurso ni en ninguno de sus padres"
 
-#: libsvn_ra_dav/session.c:905
+#: libsvn_ra_dav/session.c:917
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Por favor actualice el servidor a la versión 0.19 o posterior"
 
-#: libsvn_ra_dav/session.c:1146 libsvn_ra_dav/session.c:1283
+#: libsvn_ra_dav/session.c:1158 libsvn_ra_dav/session.c:1295
 msgid "Failed to parse URI"
 msgstr "Falló el análisis de un URI"
 
-#: libsvn_ra_dav/session.c:1169
+#: libsvn_ra_dav/session.c:1181
 msgid "Lock request failed"
 msgstr "El pedido de bloqueo falló"
 
-#: libsvn_ra_dav/session.c:1298
+#: libsvn_ra_dav/session.c:1310
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' no está bloqueado en el repositorio"
 
-#: libsvn_ra_dav/session.c:1335
+#: libsvn_ra_dav/session.c:1347
 msgid "Unlock request failed"
 msgstr "El pedido de desbloquear falló"
 
-#: libsvn_ra_dav/session.c:1546
+#: libsvn_ra_dav/session.c:1558
 msgid "Failed to fetch lock information"
 msgstr "El pedido de información de bloqueos falló"
 
-#: libsvn_ra_dav/session.c:1619
+#: libsvn_ra_dav/session.c:1631
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versión de cargador RA (%d) no soportada para ra_dav"
@@ -4080,13 +4080,13 @@ msgstr ""
 
 #: libsvn_subr/opt.c:746
 msgid ""
-"Copyright (C) 2000-2005 CollabNet.\n"
+"Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2005 CollabNet.\n"
+"Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion es software libre, vea http://subversion.tigris.org/\n"
 "Este producto contiene software desarrollado\n"
 "por CollabNet (http://www.Collab.Net/).\n"
@@ -5175,7 +5175,7 @@ msgstr "URL inválido '%s'"
 msgid "'%s' has invalid revision"
 msgstr "'%s' tiene una revisión inválida"
 
-#: svn/info-cmd.c:263 svnadmin/main.c:1032
+#: svn/info-cmd.c:263 svnadmin/main.c:1033
 #, c-format
 msgid "Path: %s\n"
 msgstr "Ruta: %s\n"
@@ -6602,7 +6602,7 @@ msgstr ""
 "Se encontraron múltiples indicaciones de revisiones; no se puede usar -r y -"
 "c, o intente '-r N:M' en vez de '-r N -r M'"
 
-#: svn/main.c:928 svnadmin/main.c:1227
+#: svn/main.c:928 svnadmin/main.c:1228
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Error de sintaxis en el parámetro de revisión '%s'"
@@ -6621,7 +6621,7 @@ msgstr "Error de sintaxis en el parámetro de native-eol '%s'"
 msgid "Subcommand argument required\n"
 msgstr "El subcomando requiere un parámetro\n"
 
-#: svn/main.c:1167 svnadmin/main.c:1335 svndumpfilter/main.c:1210
+#: svn/main.c:1167 svnadmin/main.c:1336 svndumpfilter/main.c:1210
 #: svnlook/main.c:2162
 #, c-format
 msgid "Unknown command: '%s'\n"
@@ -7148,24 +7148,26 @@ msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "desactivar borrado automático de los archivos de log [Berkeley DB]"
 
 #: svnadmin/main.c:274
-msgid "remove redundant log files from source repository"
+msgid ""
+"remove redundant Berkeley DB log files\n"
+"                             from source repository [Berkeley DB]"
 msgstr ""
-"remover archivos de log redundantes\n"
-"                             del repositorio fuente"
+"remover archivos de log de Berkeley DB redundantes\n"
+"                             del repositorio fuente [Berkeley DB]"
 
-#: svnadmin/main.c:277
+#: svnadmin/main.c:278
 msgid "call pre-commit hook before committing revisions"
 msgstr ""
 "llamar al hook pre-commit antes de hacer\n"
 "                             commit en las revisiones"
 
-#: svnadmin/main.c:280
+#: svnadmin/main.c:281
 msgid "call post-commit hook after committing revisions"
 msgstr ""
 "llamar al hook post-commit después de\n"
 "                             hacer commit en las revisiones"
 
-#: svnadmin/main.c:283
+#: svnadmin/main.c:284
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
@@ -7173,7 +7175,7 @@ msgstr ""
 "esperar en lugar de salir si el repositorio está en\n"
 "                             uso por otro proceso"
 
-#: svnadmin/main.c:296
+#: svnadmin/main.c:297
 msgid ""
 "usage: svnadmin crashtest REPOS_PATH\n"
 "\n"
@@ -7186,7 +7188,7 @@ msgstr ""
 "Esto simula la acción de un proceso que se cuelga mientras tiene abierto\n"
 "un 'handle' a un repositorio.\n"
 
-#: svnadmin/main.c:302
+#: svnadmin/main.c:303
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
 "\n"
@@ -7196,7 +7198,7 @@ msgstr ""
 "\n"
 "Crea un repositorio vacío en RUTA_REPOS.\n"
 
-#: svnadmin/main.c:308
+#: svnadmin/main.c:309
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
@@ -7214,7 +7216,7 @@ msgstr ""
 "diferencias o 'deltas' respecto de la revisión anterior.  Si no se\n"
 "especifican revisiones se deltificará la revisión HEAD.\n"
 
-#: svnadmin/main.c:317
+#: svnadmin/main.c:318
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -7234,7 +7236,7 @@ msgstr ""
 "revisión.  Si se usa --incremental la primera revisión volcada será la\n"
 "diferencia respecto de la versión previa, en vez del contenido completo.\n"
 
-#: svnadmin/main.c:327
+#: svnadmin/main.c:328
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
 "\n"
@@ -7244,7 +7246,7 @@ msgstr ""
 "\n"
 "Describe el uso de este programa o de sus subcomandos.\n"
 
-#: svnadmin/main.c:332
+#: svnadmin/main.c:333
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
@@ -7254,7 +7256,7 @@ msgstr ""
 "\n"
 "Hace una copia 'en caliente' de un repositorio.\n"
 
-#: svnadmin/main.c:337
+#: svnadmin/main.c:338
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
 "\n"
@@ -7270,7 +7272,7 @@ msgstr ""
 "AVISO: Modificar o borrar archivos de log que todavía estén en uso\n"
 "provocará que el repositorio se corrompa.\n"
 
-#: svnadmin/main.c:344
+#: svnadmin/main.c:345
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
 "\n"
@@ -7282,7 +7284,7 @@ msgstr ""
 "Lista los archivos de log de la base Berkeley no usados.\n"
 "\n"
 
-#: svnadmin/main.c:349
+#: svnadmin/main.c:350
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
 "\n"
@@ -7299,7 +7301,7 @@ msgstr ""
 "el flujo de entrada.  El feedback del progreso de la operación será\n"
 "enviado a la salida estándar.\n"
 
-#: svnadmin/main.c:359
+#: svnadmin/main.c:360
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
 "\n"
@@ -7309,7 +7311,7 @@ msgstr ""
 "\n"
 "Muestra las descripciones de todos los bloqueos.\n"
 
-#: svnadmin/main.c:364
+#: svnadmin/main.c:365
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
 "\n"
@@ -7319,7 +7321,7 @@ msgstr ""
 "\n"
 "Muestra los nombres de las transacciones en curso.\n"
 
-#: svnadmin/main.c:369
+#: svnadmin/main.c:370
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -7335,7 +7337,7 @@ msgstr ""
 "efectuar esta recuperación. Se requiere acceso exclusivo. El comando\n"
 "terminará sin hacer nada si el repositorio está en uso por otro proceso.\n"
 
-#: svnadmin/main.c:377
+#: svnadmin/main.c:378
 msgid ""
 "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
 "\n"
@@ -7345,7 +7347,7 @@ msgstr ""
 "\n"
 "Remueve incondicionalmente el bloqueo de cada RUTA_BLOQUEADA.\n"
 
-#: svnadmin/main.c:382
+#: svnadmin/main.c:383
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
@@ -7355,7 +7357,7 @@ msgstr ""
 "\n"
 "Borra las transacciones por nombre.\n"
 
-#: svnadmin/main.c:387
+#: svnadmin/main.c:388
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -7378,7 +7380,7 @@ msgstr ""
 "o porque la modificación de propiedades de revisión no fue activada en el\n"
 "hook pre-revprop-change).\n"
 
-#: svnadmin/main.c:399
+#: svnadmin/main.c:400
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -7388,30 +7390,30 @@ msgstr ""
 "\n"
 "Verifica los datos almacenados en el repositorio.\n"
 
-#: svnadmin/main.c:452
+#: svnadmin/main.c:453
 msgid "Invalid revision specifier"
 msgstr "Especificador de revisión inválido"
 
-#: svnadmin/main.c:457
+#: svnadmin/main.c:458
 #, c-format
 msgid "Revisions must not be greater than the youngest revision (%ld)"
 msgstr "El número de revisión no debe ser mayor que el de la última (%ld)"
 
-#: svnadmin/main.c:525 svnadmin/main.c:607
+#: svnadmin/main.c:526 svnadmin/main.c:608
 msgid "First revision cannot be higher than second"
 msgstr "La primera revisión no puede ser más alta que la segunda"
 
-#: svnadmin/main.c:534
+#: svnadmin/main.c:535
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "Deltificando revisión %ld..."
 
-#: svnadmin/main.c:538
+#: svnadmin/main.c:539
 #, c-format
 msgid "done.\n"
 msgstr "hecho.\n"
 
-#: svnadmin/main.c:638
+#: svnadmin/main.c:639
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7423,7 +7425,7 @@ msgstr ""
 "\n"
 "Subcomandos disponibles:\n"
 
-#: svnadmin/main.c:644 svnlook/main.c:1784 svnserve/main.c:167
+#: svnadmin/main.c:645 svnlook/main.c:1784 svnserve/main.c:167
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -7431,7 +7433,7 @@ msgstr ""
 "Los siguientes módulos de motor de repositorio (FS) están disponibles:\n"
 "\n"
 
-#: svnadmin/main.c:727
+#: svnadmin/main.c:728
 #, c-format
 msgid ""
 "Repository lock acquired.\n"
@@ -7441,7 +7443,7 @@ msgstr ""
 "Espere por favor: la recuperación del repositorio puede llevar algún "
 "tiempo...\n"
 
-#: svnadmin/main.c:762
+#: svnadmin/main.c:763
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -7449,13 +7451,13 @@ msgstr ""
 "Falló el obtener acceso exclusivo al repositorio; ¿será que otro proceso\n"
 "tal como httpd, svnserve o svn lo tiene abierto?"
 
-#: svnadmin/main.c:767
+#: svnadmin/main.c:768
 #, c-format
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
 "Esperando bloqueo del repositorio; ¿será que otro proceso lo tiene abierto?\n"
 
-#: svnadmin/main.c:774
+#: svnadmin/main.c:775
 #, c-format
 msgid ""
 "\n"
@@ -7464,52 +7466,52 @@ msgstr ""
 "\n"
 "Recuperación completa.\n"
 
-#: svnadmin/main.c:781
+#: svnadmin/main.c:782
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "La última versión de repositorio es %ld.\n"
 
-#: svnadmin/main.c:891
+#: svnadmin/main.c:892
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transacción '%s' eliminada.\n"
 
-#: svnadmin/main.c:915
+#: svnadmin/main.c:916
 #, c-format
 msgid "Missing revision"
 msgstr "Revisión faltante"
 
-#: svnadmin/main.c:918
+#: svnadmin/main.c:919
 #, c-format
 msgid "Only one revision allowed"
 msgstr "Sólo se permite una revisión"
 
-#: svnadmin/main.c:924
+#: svnadmin/main.c:925
 #, c-format
 msgid "Exactly one file argument required"
 msgstr "Se requiere exactamente un parámetro que sea un archivo"
 
-#: svnadmin/main.c:1033 svnlook/main.c:1849
+#: svnadmin/main.c:1034 svnlook/main.c:1849
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "Token UUID: %s\n"
 
-#: svnadmin/main.c:1034 svnlook/main.c:1850
+#: svnadmin/main.c:1035 svnlook/main.c:1850
 #, c-format
 msgid "Owner: %s\n"
 msgstr "Dueño: %s\n"
 
-#: svnadmin/main.c:1035 svnlook/main.c:1851
+#: svnadmin/main.c:1036 svnlook/main.c:1851
 #, c-format
 msgid "Created: %s\n"
 msgstr "Creado: %s\n"
 
-#: svnadmin/main.c:1036 svnlook/main.c:1852
+#: svnadmin/main.c:1037 svnlook/main.c:1852
 #, c-format
 msgid "Expires: %s\n"
 msgstr "Expira: %s\n"
 
-#: svnadmin/main.c:1038
+#: svnadmin/main.c:1039
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -7520,7 +7522,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1039
+#: svnadmin/main.c:1040
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -7531,29 +7533,29 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1096
+#: svnadmin/main.c:1097
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "La ruta '%s' no está bloqueada.\n"
 
-#: svnadmin/main.c:1108
+#: svnadmin/main.c:1109
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "Se removió el bloqueo sobre '%s'.\n"
 
-#: svnadmin/main.c:1213
+#: svnadmin/main.c:1214
 msgid ""
 "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr ""
 "Se encontraron múltiples indicaciones de revisiones; intente '-r N:M' en vez "
 "de '-r N -r M'"
 
-#: svnadmin/main.c:1318
+#: svnadmin/main.c:1319
 #, c-format
 msgid "subcommand argument required\n"
 msgstr "el subcomando requiere un parámetro\n"
 
-#: svnadmin/main.c:1399
+#: svnadmin/main.c:1400
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -8239,7 +8241,9 @@ msgstr "No se pudo obtener el nombre de la máquina local"
 #: svnsync/main.c:186
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
-msgstr "Falló la obtención de un bloqueo en el repositorio destino, el bloqueo lo tiene actualmente '%s'\n"
+msgstr ""
+"Falló la obtención de un bloqueo en el repositorio destino, el bloqueo lo "
+"tiene actualmente '%s'\n"
 
 #: svnsync/main.c:268
 #, c-format
@@ -8384,6 +8388,280 @@ msgstr "exportado%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s no es un recurso versionado, no se exporta\n"
 
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "Nodo con padre eliminado se escabulló dentro"
+
+#~ msgid "Move failed"
+#~ msgstr "Falló el mover"
+
+#~ msgid "Creating readme file"
+#~ msgstr "Creando archivo 'readme'"
+
+#~ msgid ""
+#~ "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
+#~ msgstr ""
+#~ "No hay cambios de borrado para la ruta '%s' en la transacción '%s' en el "
+#~ "sistema de archivos '%s'"
+
+#~ msgid "Asking props changed in two different filesystems"
+#~ msgstr ""
+#~ "Se piden propiedades cambiadas en dos sistemas de archivos diferentes"
+
+#~ msgid "Asking contents changed in two different filesystems"
+#~ msgstr ""
+#~ "Se piden contenidos cambiados en dos sistemas de archivos diferentes"
+
+#~ msgid "No URL target available"
+#~ msgstr "Ningún URL objetivo disponible"
+
+#~ msgid "'%s' is already a file/something else"
+#~ msgstr "'%s' ya es un archivo/otra cosa"
+
+#~ msgid "Print client version info\n"
+#~ msgstr "mostrar información de la versión del cliente\n"
+
+#~ msgid " | %d lines"
+#~ msgstr " | %d líneas"
+
+#~ msgid " | %d line"
+#~ msgstr " | %d línea"
+
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
+
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "Requerimiento 'get-locations' no implementado"
+
+#~ msgid "repository argument required\n"
+#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
+
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "comando desconocido: '%s'\n"
+
+#~ msgid ""
+#~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
+#~ "%s"
+#~ msgstr ""
+#~ "Conflicto de versiones en modulo de acceso a repositorio para '%s': se "
+#~ "encontró %d.%d.%d%s, se esperaba %d.%d.%d%s"
+
+#~ msgid "Working copy not locked"
+#~ msgstr "La copia de trabajo no tiene lock"
+
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
+
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
+
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr ""
+#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
+#~ "el módulo de acceso a repositorio para ra_svn."
+
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
+
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "No se puede limpiar '%s': no es un directorio"
+
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "pasar PAR como opciones a GNU diff"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "No hay commit para la revisión 0.\n"
+
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "URL relativo imposiblemente largo"
+
+#~ msgid "Path '%s' already exists."
+#~ msgstr "La ruta '%s' ya existe."
+
+#~ msgid "Unknown revision kind"
+#~ msgstr "Tipo de revisión desconocido"
+
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr ""
+#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
+
+#~ msgid "%s of %s"
+#~ msgstr "%s de %s"
+
+#~ msgid "'%s' is an url when it should be a path"
+#~ msgstr "'%s' es un URL cuando debería ser una ruta"
+
+#~ msgid ""
+#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
+#~ "committing first"
+#~ msgstr ""
+#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
+#~ "intente primero hacer commit"
+
+#~ msgid ""
+#~ "The '%s' library is not compatible with this program; found version %d.%d."
+#~ "%d%s, expected version %s"
+#~ msgstr ""
+#~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
+#~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
+
+#~ msgid "restoring props"
+#~ msgstr "restituyendo propiedades"
+
+#~ msgid "removing props"
+#~ msgstr "eliminando propiedades"
+
+#~ msgid "restoring text"
+#~ msgstr "restituyendo texto"
+
+#~ msgid "directory"
+#~ msgstr "directorio"
+
+#~ msgid "file"
+#~ msgstr "archivo"
+
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
+
+#~ msgid " (recursively) "
+#~ msgstr " (recursivamente) "
+
+#~ msgid " (recursively)"
+#~ msgstr " (recursivamente)"
+
+#~ msgid " (copied from %s:%ld)"
+#~ msgstr " (copiado de %s:%ld)"
+
+#~ msgid "   Opening : %s\n"
+#~ msgstr "   Abriendo: %s\n"
+
+#~ msgid "      Transmitting text...\n"
+#~ msgstr "      Transmitiendo texto...\n"
+
+#~ msgid "Lock comment has illegal characters."
+#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
+
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Su mensaje de bloqueo fue dejado en un archivo temporario:"
+
+#~ msgid "Can't get default file perms for file at '%s' (file close error)"
+#~ msgstr ""
+#~ "No se pudieron obtener los permisos por omisión del archivo en '%"
+#~ "s' (falló el cerrado)"
+
+#~ msgid "Finished"
+#~ msgstr "Terminado"
+
+#~ msgid "Error restoring props for '%s'"
+#~ msgstr "Error restituyendo propiedades de '%s'"
+
+#~ msgid "Error removing props for '%s'"
+#~ msgstr "Error sacando propiedades de '%s'"
+
+#~ msgid ""
+#~ "'%s' is scheduled for deletion; it must be committed before it can be "
+#~ "overwritten"
+#~ msgstr ""
+#~ "'%s' está agendado para ser borrado; se le debe hacer commit antes de que "
+#~ "pueda ser sobreescrito"
+
+#~ msgid "Wrong number of paths given"
+#~ msgstr "Incorrecto número de rutas"
+
+#~ msgid "Not enough args provided"
+#~ msgstr "No se dieron suficientes parámetros"
+
+#~ msgid "Can't seek in '%s'"
+#~ msgstr "No se pudo posicionarse en '%s'"
+
+#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
+#~ msgstr ""
+#~ "Registro clon corrupto para '%s' en la transacción '%s' en el sistema de "
+#~ "archivos '%s'"
+
+#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
+#~ msgstr ""
+#~ "ID malformado como llave en la tabla 'nodes' del sistema de archivos '%s'"
+
+#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
+#~ msgstr ""
+#~ "Valor corrupto para la llave 'next-id' en la tabla '%s' del sistema de "
+#~ "archivos '%s'"
+
+#~ msgid "Search for malformed path '%s' in filesystem '%s'"
+#~ msgstr "Búsqueda de la ruta malformada '%s' en el sistema de archivos '%s'"
+
+#~ msgid "Can't open file '%s' for reading"
+#~ msgstr "No se pudo abrir el archivo '%s' para leer"
+
+#~ msgid "Can't open file '%s' for writing"
+#~ msgstr "No se pudo abrir el archivo '%s' para escribir"
+
+#~ msgid "Error reading file '%s'"
+#~ msgstr "Error leyendo el archivo '%s'"
+
+#~ msgid "Error writing file '%s'"
+#~ msgstr "Error escribiendo al archivo '%s'"
+
+#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
+#~ msgstr ""
+#~ "Revisión de nodo corrupta para el nodo '%s' en el sistema de archivos '%s'"
+
+#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
+#~ msgstr ""
+#~ "Identificador de revisión de nodo corrupta '%s' aparece en el sistema de "
+#~ "archivos '%s'"
+
+#~ msgid "Can't set timeout"
+#~ msgstr "No se pudo establecer el tiempo de expiración"
+
+#~ msgid "Can't open config file '%s'"
+#~ msgstr "No se pudo abrir el archivo de configuración '%s'"
+
+#~ msgid "Can't find config file '%s'"
+#~ msgstr "No se pudo encontrar el archivo de configuración '%s'"
+
+#~ msgid "Can't stat new directory '%s'"
+#~ msgstr "No se pudo hacer 'stat' del nuevo directorio '%s'"
+
+#~ msgid "Too few arguments"
+#~ msgstr "Faltan parámetros"
+
+#~ msgid ""
+#~ "The entry '%s' is no longer a directory; remove the entry before updating"
+#~ msgstr ""
+#~ "La entrada '%s' ya no es un directorio; remueva la entrada antes de "
+#~ "actualizar"
+
+#~ msgid "Working copy '%s' is missing or not locked"
+#~ msgstr "La copia de trabajo '%s' falta o no tiene lock"
+
+#~ msgid "Unable to delete temporary file"
+#~ msgstr "No se pudo borrar un archivo temporario"
+
+#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
+#~ msgstr ""
+#~ "La propiedad '%s' localmente cambiada a '%s', pero la actualización la "
+#~ "borra\n"
+
+#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
+#~ msgstr ""
+#~ "La propiedad '%s' está borrada localmente, pero la actualización cambia "
+#~ "su valor a '%s'\n"
+
+#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
+#~ msgstr ""
+#~ "La propiedad '%s' está localmente cambiada a '%s', pero la actualización "
+#~ "cambia su valor a '%s'\n"
+
+#~ msgid "Unknown node kind: '%s'"
+#~ msgstr "Tipo de nodo desconocido: '%s'"
+
+#~ msgid "'%s' has unknown value for svn:eol-style property"
+#~ msgstr "'%s' tiene un valor desconocido para la propiedad svn:eol-style"
+
 #~ msgid ""
 #~ "Warning: -R is deprecated.\n"
 #~ "Anonymous access is now read-only by default.\n"
@@ -8400,277 +8678,3 @@ msgstr "%s no es un recurso versionado, no se exporta\n"
 #~ "  anon-access = read|write|none (por defecto 'read')\n"
 #~ "  auth-access = read|write|none (por defecto 'write')\n"
 #~ "Por ahora se fuerza todos los accesos a sólo-lectura\n"
-
-#~ msgid "'%s' has unknown value for svn:eol-style property"
-#~ msgstr "'%s' tiene un valor desconocido para la propiedad svn:eol-style"
-
-#~ msgid "Unknown node kind: '%s'"
-#~ msgstr "Tipo de nodo desconocido: '%s'"
-
-#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "La propiedad '%s' está localmente cambiada a '%s', pero la actualización "
-#~ "cambia su valor a '%s'\n"
-
-#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "La propiedad '%s' está borrada localmente, pero la actualización cambia "
-#~ "su valor a '%s'\n"
-
-#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-#~ msgstr ""
-#~ "La propiedad '%s' localmente cambiada a '%s', pero la actualización la "
-#~ "borra\n"
-
-#~ msgid "Unable to delete temporary file"
-#~ msgstr "No se pudo borrar un archivo temporario"
-
-#~ msgid "Working copy '%s' is missing or not locked"
-#~ msgstr "La copia de trabajo '%s' falta o no tiene lock"
-
-#~ msgid ""
-#~ "The entry '%s' is no longer a directory; remove the entry before updating"
-#~ msgstr ""
-#~ "La entrada '%s' ya no es un directorio; remueva la entrada antes de "
-#~ "actualizar"
-
-#~ msgid "Too few arguments"
-#~ msgstr "Faltan parámetros"
-
-#~ msgid "Can't stat new directory '%s'"
-#~ msgstr "No se pudo hacer 'stat' del nuevo directorio '%s'"
-
-#~ msgid "Can't find config file '%s'"
-#~ msgstr "No se pudo encontrar el archivo de configuración '%s'"
-
-#~ msgid "Can't open config file '%s'"
-#~ msgstr "No se pudo abrir el archivo de configuración '%s'"
-
-#~ msgid "Can't set timeout"
-#~ msgstr "No se pudo establecer el tiempo de expiración"
-
-#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-#~ msgstr ""
-#~ "Identificador de revisión de nodo corrupta '%s' aparece en el sistema de "
-#~ "archivos '%s'"
-
-#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-#~ msgstr ""
-#~ "Revisión de nodo corrupta para el nodo '%s' en el sistema de archivos '%s'"
-
-#~ msgid "Error writing file '%s'"
-#~ msgstr "Error escribiendo al archivo '%s'"
-
-#~ msgid "Error reading file '%s'"
-#~ msgstr "Error leyendo el archivo '%s'"
-
-#~ msgid "Can't open file '%s' for writing"
-#~ msgstr "No se pudo abrir el archivo '%s' para escribir"
-
-#~ msgid "Can't open file '%s' for reading"
-#~ msgstr "No se pudo abrir el archivo '%s' para leer"
-
-#~ msgid "Search for malformed path '%s' in filesystem '%s'"
-#~ msgstr "Búsqueda de la ruta malformada '%s' en el sistema de archivos '%s'"
-
-#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Valor corrupto para la llave 'next-id' en la tabla '%s' del sistema de "
-#~ "archivos '%s'"
-
-#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-#~ msgstr ""
-#~ "ID malformado como llave en la tabla 'nodes' del sistema de archivos '%s'"
-
-#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-#~ msgstr ""
-#~ "Registro clon corrupto para '%s' en la transacción '%s' en el sistema de "
-#~ "archivos '%s'"
-
-#~ msgid "Can't seek in '%s'"
-#~ msgstr "No se pudo posicionarse en '%s'"
-
-#~ msgid "Not enough args provided"
-#~ msgstr "No se dieron suficientes parámetros"
-
-#~ msgid "Wrong number of paths given"
-#~ msgstr "Incorrecto número de rutas"
-
-#~ msgid ""
-#~ "'%s' is scheduled for deletion; it must be committed before it can be "
-#~ "overwritten"
-#~ msgstr ""
-#~ "'%s' está agendado para ser borrado; se le debe hacer commit antes de que "
-#~ "pueda ser sobreescrito"
-
-#~ msgid "Error removing props for '%s'"
-#~ msgstr "Error sacando propiedades de '%s'"
-
-#~ msgid "Error restoring props for '%s'"
-#~ msgstr "Error restituyendo propiedades de '%s'"
-
-#~ msgid "Finished"
-#~ msgstr "Terminado"
-
-#~ msgid "Can't get default file perms for file at '%s' (file close error)"
-#~ msgstr ""
-#~ "No se pudieron obtener los permisos por omisión del archivo en '%"
-#~ "s' (falló el cerrado)"
-
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Su mensaje de bloqueo fue dejado en un archivo temporario:"
-
-#~ msgid "Lock comment has illegal characters."
-#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
-
-#~ msgid "      Transmitting text...\n"
-#~ msgstr "      Transmitiendo texto...\n"
-
-#~ msgid "   Opening : %s\n"
-#~ msgstr "   Abriendo: %s\n"
-
-#~ msgid " (copied from %s:%ld)"
-#~ msgstr " (copiado de %s:%ld)"
-
-#~ msgid " (recursively)"
-#~ msgstr " (recursivamente)"
-
-#~ msgid " (recursively) "
-#~ msgstr " (recursivamente) "
-
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
-
-#~ msgid "file"
-#~ msgstr "archivo"
-
-#~ msgid "directory"
-#~ msgstr "directorio"
-
-#~ msgid "restoring text"
-#~ msgstr "restituyendo texto"
-
-#~ msgid "removing props"
-#~ msgstr "eliminando propiedades"
-
-#~ msgid "restoring props"
-#~ msgstr "restituyendo propiedades"
-
-#~ msgid ""
-#~ "The '%s' library is not compatible with this program; found version %d.%d."
-#~ "%d%s, expected version %s"
-#~ msgstr ""
-#~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
-#~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
-
-#~ msgid ""
-#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
-#~ "committing first"
-#~ msgstr ""
-#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
-#~ "intente primero hacer commit"
-
-#~ msgid "'%s' is an url when it should be a path"
-#~ msgstr "'%s' es un URL cuando debería ser una ruta"
-
-#~ msgid "%s of %s"
-#~ msgstr "%s de %s"
-
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr ""
-#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
-
-#~ msgid "Unknown revision kind"
-#~ msgstr "Tipo de revisión desconocido"
-
-#~ msgid "Path '%s' already exists."
-#~ msgstr "La ruta '%s' ya existe."
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "URL relativo imposiblemente largo"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "No hay commit para la revisión 0.\n"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "pasar PAR como opciones a GNU diff"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "No se puede limpiar '%s': no es un directorio"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr ""
-#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
-#~ "el módulo de acceso a repositorio para ra_svn."
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "La copia de trabajo no tiene lock"
-
-#~ msgid ""
-#~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
-#~ "%s"
-#~ msgstr ""
-#~ "Conflicto de versiones en modulo de acceso a repositorio para '%s': se "
-#~ "encontró %d.%d.%d%s, se esperaba %d.%d.%d%s"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "comando desconocido: '%s'\n"
-
-#~ msgid "repository argument required\n"
-#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
-
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "Requerimiento 'get-locations' no implementado"
-
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
-
-#~ msgid " | %d line"
-#~ msgstr " | %d línea"
-
-#~ msgid " | %d lines"
-#~ msgstr " | %d líneas"
-
-#~ msgid "Print client version info\n"
-#~ msgstr "mostrar información de la versión del cliente\n"
-
-#~ msgid "'%s' is already a file/something else"
-#~ msgstr "'%s' ya es un archivo/otra cosa"
-
-#~ msgid "No URL target available"
-#~ msgstr "Ningún URL objetivo disponible"
-
-#~ msgid "Asking contents changed in two different filesystems"
-#~ msgstr ""
-#~ "Se piden contenidos cambiados en dos sistemas de archivos diferentes"
-
-#~ msgid "Asking props changed in two different filesystems"
-#~ msgstr ""
-#~ "Se piden propiedades cambiadas en dos sistemas de archivos diferentes"
-
-#~ msgid ""
-#~ "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-#~ msgstr ""
-#~ "No hay cambios de borrado para la ruta '%s' en la transacción '%s' en el "
-#~ "sistema de archivos '%s'"
-
-#~ msgid "Creating readme file"
-#~ msgstr "Creando archivo 'readme'"
-
-#~ msgid "Move failed"
-#~ msgstr "Falló el mover"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "Nodo con padre eliminado se escabulló dentro"
