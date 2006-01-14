@@ -21,7 +21,6 @@
 #define APU_WANT_DB
 #include <apu_want.h>
 
-#include <apr_atomic.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
@@ -108,10 +107,12 @@ typedef struct
  * Use POOL for temporary allocation.
  *
  * Note: This function may return a bdb_env_baton_t object that refers
- * to a previously opened environment.
+ *       to a previously opened environment.  If FLAGS contains
+ *       DB_PRIVATE and the environment is already open, the function
+ *       will fail (this isn't a problem in practice, because a caller
+ *       should obtain an exclusive lock on the repository before
+ *       opening the environment).
  */
-  /* XXX FIXME: Forbid multiple open of private environment!
-     (flags & DB_PRIVATE) */
 
 svn_error_t *svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp,
                                const char *path,
@@ -121,7 +122,7 @@ svn_error_t *svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp,
 /* Close the Berkeley DB descriptor BDB.
  *
  * Note: This function might not actually close the environment if it
- * has been opened more than once.
+ *       has been opened more than once.
  */
 svn_error_t *svn_fs_bdb__close (bdb_env_baton_t *bdb_baton);
 

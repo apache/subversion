@@ -122,7 +122,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
   /* If the BDB environment is panicked, don't do anything, since
      attempting to close the database will fail anyway. */
   base_fs_data_t *bfd = fs->fsap_data;
-  if (*db_ptr && !svn_fs_bdb__get_panic(bfd->bdb))
+  if (*db_ptr && !svn_fs_bdb__get_panic (bfd->bdb))
     {
       DB *db = *db_ptr;
       char *msg = apr_psprintf (fs->pool, "closing '%s' database", name);
@@ -132,12 +132,11 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
       db_err = db->close (db, 0);
       if (db_err == DB_RUNRECOVERY)
         {
-          /*FIXME:*/fprintf(stderr, "cleanup_fs_db(%s): PANIC\n", fs->path);
           /* We can ignore DB_RUNRECOVERY errors from DB->close, but
              must set the panic flag in the environment baton.  The
              error will be propagated appropriately from
              svn_fs_bdb__close. */
-          svn_fs_bdb__set_panic(bfd->bdb);
+          svn_fs_bdb__set_panic (bfd->bdb);
           db_err = 0;
         }
 

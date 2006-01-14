@@ -17,9 +17,9 @@
 
 #include <assert.h>
 
+#include <apr_atomic.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
-#include <apr_version.h>
 
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -50,6 +50,21 @@
 */
 
 
+/* The apr_atomic API changed somewhat between apr-0.x and apr-1.x.
+
+   ### Should we move these defines to svn_private_config.h? */
+#include <apr_version.h>
+#if APR_MAJOR_VERSION > 0
+# define svn__atomic_t apr_uint32_t
+# define svn__atomic_read(mem) apr_atomic_read32((mem))
+# define svn__atomic_set(mem, val) apr_atomic_set32((mem), (val))
+#else
+# define svn__atomic_t apr_atomic_t
+# define svn__atomic_read(mem) apr_atomic_read((mem))
+# define svn__atomic_set(mem, val) apr_atomic_set((mem), (val))
+#endif /* APR_MAJOR_VERSION */
+
+
 /* The cache key for a Berkeley DB environment descriptor.  This is a
    combination of the device ID and INODE number of the Berkeley DB
    config file.
@@ -64,11 +79,6 @@ typedef struct
   apr_dev_t device;
   apr_ino_t inode;
 } bdb_env_key_t;
-
-#if APR_MAJOR_VERSION == 0
-#define apr_atomic_read32 apr_atomic_read
-#define apr_atomic_set32  apr_atomic_set
-#endif
 
 /* The cached Berkeley DB environment descriptor. */
 struct bdb_env_t
@@ -95,7 +105,13 @@ struct bdb_env_t
   /* The Berkeley DB environment. */
   DB_ENV *env;
 
-  /* The home path of this environment; a canonical SVN path ecoded in
+  /* The flags with which this environment was opened.  Reopening the
+     environment with a different set of flags is not allowed.  Trying
+     to change the state of the DB_PRIVATE flag is an especially bad
+     idea, so svn_fs_bdb__open() forbids any flag changes. */
+  u_int32_t flags;
+
+  /* The home path of this environment; a canonical SVN path encoded in
      UTF-8 and allocated from this decriptor's pool. */
   const char *path;
 
@@ -116,11 +132,7 @@ struct bdb_env_t
      Note 2: Unlike other fields in this structure, this field is not
              protected by the cache mutex on threaded platforms, and
              should only be accesses via the apr_atomic functions. */
-#if APR_MAJOR_VERSION == 0
-  apr_atomic_t panic;
-#else
-  apr_uint32_t panic;
-#endif
+  svn__atomic_t panic;
 
   /* The key for the environment descriptor cache. */
   bdb_env_key_t key;
@@ -175,7 +187,7 @@ convert_bdb_error (bdb_env_t *bdb, int db_err)
 static void
 bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
 {
-  bdb_error_info_t *error_info =/*FIXME:*/&((bdb_env_t *) baton)->error_info;
+  bdb_error_info_t *error_info = &((bdb_env_t *) baton)->error_info;
   svn_error_t *new_err;
 
   SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
@@ -196,7 +208,7 @@ static apr_status_t cleanup_env (void *data)
 {
   bdb_env_t *bdb = data;
 
-  svn_error_clear(/*FIXME:*/bdb->error_info.pending_errors);
+  svn_error_clear(bdb->error_info.pending_errors);
 
   if (bdb->dbconfig_file)
     apr_file_close(bdb->dbconfig_file);
@@ -280,7 +292,7 @@ static svn_error_t *
 bdb_cache_key (bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
                const char *path, apr_pool_t *pool)
 {
-  const char *dbcfg_file_name = svn_path_join (path, BDB_CONFIG_FILE, pool);
+  const char *dbcfg_file_name = svn_path_join(path, BDB_CONFIG_FILE, pool);
   apr_file_t *dbcfg_file;
   apr_status_t apr_err;
   apr_finfo_t finfo;
@@ -291,7 +303,8 @@ bdb_cache_key (bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
   apr_err = apr_file_info_get(&finfo, APR_FINFO_DEV | APR_FINFO_INODE,
                               dbcfg_file);
   if (apr_err)
-    return svn_error_wrap_apr(apr_err, "FIXME:");
+    return svn_error_wrap_apr
+      (apr_err, "Can't create BDB environment cache key");
 
   /* Make sure that any padding in the key is always cleared, so that
      the key's hash deterministic. */
@@ -320,16 +333,13 @@ bdb_cache_get (const bdb_env_key_t *keyp, svn_boolean_t *panicp)
   if (bdb && bdb->env)
     {
       u_int32_t flags;
-      *panicp = !!apr_atomic_read32(&bdb->panic);
+      *panicp = !!svn__atomic_read(&bdb->panic);
       if (!*panicp
           && (bdb->env->get_flags(bdb->env, &flags)
               || (flags & DB_PANIC_ENVIRONMENT)))
         {
-          /*FIXME:*/fprintf(stderr, "bdb_cache_get(%s): PANIC\n",
-                            bdb->path_bdb);
-
           /* Something is wrong with the environment. */
-          apr_atomic_set32(&bdb->panic, TRUE);
+          svn__atomic_set(&bdb->panic, TRUE);
           *panicp = TRUE;
           bdb = NULL;
         }
@@ -384,13 +394,9 @@ svn_fs_bdb__close (bdb_env_baton_t *bdb_baton)
 
       /* If the environment is panicked and automatic recovery is not
          enabled, return an appropriate error. */
-      if (!SVN_BDB_AUTO_RECOVER && apr_atomic_read32(&bdb->panic))
-        {
-          /*FIXME:*/fprintf(stderr, "svn_fs_bdb__close(%s): PANIC\n",
-                            bdb->path_bdb);
-          return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
-                                  db_strerror(DB_RUNRECOVERY));
-        }
+      if (!SVN_BDB_AUTO_RECOVER && svn__atomic_read(&bdb->panic))
+        return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                                db_strerror(DB_RUNRECOVERY));
       else
         return SVN_NO_ERROR;
     }
@@ -433,11 +439,7 @@ static apr_status_t cleanup_env_baton (void *data)
   bdb_env_baton_t *bdb_baton = data;
 
   if (bdb_baton->bdb)
-    {
-      /*FIXME:*/fprintf(stderr, "cleanup_env_baton(%s)\n",
-                        bdb_baton->bdb->path_bdb);
-      svn_error_clear(svn_fs_bdb__close(bdb_baton));
-    }
+    svn_error_clear(svn_fs_bdb__close(bdb_baton));
 
   return APR_SUCCESS;
 }
@@ -473,6 +475,30 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
     }
   bdb = bdb_cache_get(&key, &panic);
 
+  /* Make sure that the environment's open flags haven't changed. */
+  if (bdb && bdb->flags != flags)
+    {
+      /* FIXME: RELEASE CACHE MUTEX */
+
+      /* Handle changes to the DB_PRIVATE flag specially */
+      if ((flags ^ bdb->flags) & DB_PRIVATE)
+        {
+          if (flags & DB_PRIVATE)
+            return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                                    "Reopening a public Berkeley DB"
+                                    " environment with private attributes");
+          else
+            return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                                    "Reopening a private Berkeley DB"
+                                    " environment with public attributes");
+        }
+
+      /* Otherwise return a generic "flags-mismatch" error. */
+      return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                              "Reopening a Berkeley DB environment"
+                              " with different attributes");
+    }
+
   if (!bdb)
     {
       err = create_env(&bdb, path, svn_pool_create(bdb_cache_pool));
@@ -482,6 +508,7 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
           if (!err)
             {
               apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, bdb);
+              bdb->flags = flags;
               bdb->refcount = 1;
             }
           else
@@ -500,12 +527,8 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
 
   /* If the environment is panicked, return an appropriate error. */
   if (panic)
-    {
-      /*FIXME:*/fprintf(stderr, "svn_fs_bdb__open(%s): PANIC\n",
-                        bdb->path_bdb);
-      err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
-                             db_strerror(DB_RUNRECOVERY));
-    }
+    err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                           db_strerror(DB_RUNRECOVERY));
 
   if (!err)
     {
@@ -523,13 +546,13 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
 svn_boolean_t svn_fs_bdb__get_panic (bdb_env_baton_t *bdb_baton)
 {
   assert(bdb_baton->env == bdb_baton->bdb->env);
-  return !!apr_atomic_read32(&bdb_baton->bdb->panic);
+  return !!svn__atomic_read(&bdb_baton->bdb->panic);
 }
 
 void svn_fs_bdb__set_panic (bdb_env_baton_t *bdb_baton)
 {
   assert(bdb_baton->env == bdb_baton->bdb->env);
-  apr_atomic_set32(&bdb_baton->bdb->panic, TRUE);
+  svn__atomic_set(&bdb_baton->bdb->panic, TRUE);
 }
 
 
