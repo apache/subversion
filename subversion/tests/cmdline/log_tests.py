@@ -477,6 +477,20 @@ def log_with_path_args(sbox):
     os.chdir (was_cwd)
 
 #----------------------------------------------------------------------
+def dynamic_revision(sbox):
+  "'svn log -r COMMITTED' of dynamic/local WC rev"
+
+  guarantee_repos_and_wc(sbox)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  try:
+    for rev in ('HEAD', 'BASE', 'COMMITTED', 'PREV'):
+      svntest.actions.run_and_verify_svn(None, None, [], 'log', '-r', rev)
+  finally:
+    os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
 def url_missing_in_head(sbox):
   "'svn log -r N URL' when URL is not in HEAD "
 
@@ -728,6 +742,7 @@ test_list = [ None,
               log_with_empty_repos,
               log_where_nothing_changed,
               log_to_revision_zero,
+              dynamic_revision,
               log_with_path_args,
               url_missing_in_head,
               log_through_copyfrom_history,
