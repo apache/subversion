@@ -605,6 +605,14 @@ svn_lock_create (apr_pool_t *pool);
 svn_lock_t *
 svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool);
 
+/**
+ * Return a formatted universal Universal Unique IDentifier (UUID) string.
+ *
+ * @since New in 1.4.
+ */
+const char *
+svn_uuid_generate (apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

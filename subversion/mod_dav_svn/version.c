@@ -251,8 +251,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
   if (auto_checkout)
     {
       dav_resource *res; /* ignored */
-      apr_uuid_t uuid;
-      char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
+      const char *uuid_buf;
       void *data;
       const char *shared_activity, *shared_txn_name = NULL;
 
@@ -298,8 +297,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       if (! shared_activity)
         {
           /* Build a shared activity for all auto-checked-out resources. */
-          apr_uuid_get(&uuid);
-          apr_uuid_format(uuid_buf, &uuid);
+          uuid_buf = svn_uuid_generate(resource->info->r->pool);
           shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
 
           derr = dav_svn_create_activity(resource->info->repos,

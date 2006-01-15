@@ -368,17 +368,13 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
                                      apr_pool_t *pool)
 {
   const svn_string_t * activity_collection;
-  apr_uuid_t uuid;
-  char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
+  const char *uuid_buf = svn_uuid_generate (pool);
   int code;
   const char *url;
 
-  /* the URL for our activity will be ACTIVITY_COLL/UUID */
-  apr_uuid_get(&uuid);
-  apr_uuid_format(uuid_buf, &uuid);
-
-  /* get the URL where we'll create activities, construct the URL
-     for the activity, and create the activity. */
+  /* get the URL where we'll create activities, construct the URL for
+     the activity, and create the activity.  The URL for our activity
+     will be ACTIVITY_COLL/UUID */
   SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE, pool) );
   url = svn_path_url_add_component(activity_collection->data, 
                                    uuid_buf, pool);
