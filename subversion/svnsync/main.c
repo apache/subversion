@@ -147,23 +147,19 @@ check_lib_versions (void)
 static svn_error_t *
 get_lock (svn_ra_session_t *session, apr_pool_t *pool)
 {
-  char uuid_str[APR_UUID_FORMATTED_LENGTH + 1] = { 0 };
+  const char *uuid_str;
   char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
   svn_string_t *mylocktoken, *reposlocktoken;
   apr_status_t apr_err;
   apr_pool_t *subpool;
-  apr_uuid_t uuid;
   int i;
 
   apr_err = apr_gethostname (hostname_str, sizeof (hostname_str), pool);
   if (apr_err)
     return svn_error_wrap_apr (apr_err, _("Can't get local hostname"));
 
-  apr_uuid_get (&uuid);
-
-  apr_uuid_format (uuid_str, &uuid);
-
-  mylocktoken = svn_string_createf (pool, "%s:%s", hostname_str, uuid_str);
+  mylocktoken = svn_string_createf (pool, "%s:%s", hostname_str, 
+                                    svn_uuid_generate (pool));
 
   subpool = svn_pool_create (pool);
 
