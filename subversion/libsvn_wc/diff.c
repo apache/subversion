@@ -1191,7 +1191,6 @@ close_file (void *file_baton,
          'reverse_order' is TRUE, then we do what the server says:
          show an add. */
       if (eb->reverse_order)
-        /* ### Show the properties as well. */
         SVN_ERR (b->edit_baton->callbacks->file_added
                  (NULL, NULL, NULL, b->path,
                   empty_file,
@@ -1200,7 +1199,8 @@ close_file (void *file_baton,
                   eb->revnum,
                   NULL,
                   repos_mimetype,
-                  apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
+                  b->propchanges,
+                  apr_hash_make (pool),
                   b->edit_baton->callback_baton));
       else
         {

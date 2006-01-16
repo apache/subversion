@@ -2277,7 +2277,7 @@ test_list = [ None,
               # Note: When the following two tests both pass, they should
               # be combined into one test, as they test essentially the same
               # thing, and share the same setup.  See note above.
-              XFail(diff_repos_wc_add_with_props),
+              diff_repos_wc_add_with_props,
               XFail(diff_repos_wc_add_with_props2),
               ]
 
