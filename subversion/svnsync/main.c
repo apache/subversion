@@ -147,7 +147,6 @@ check_lib_versions (void)
 static svn_error_t *
 get_lock (svn_ra_session_t *session, apr_pool_t *pool)
 {
-  const char *uuid_str;
   char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
   svn_string_t *mylocktoken, *reposlocktoken;
   apr_status_t apr_err;
