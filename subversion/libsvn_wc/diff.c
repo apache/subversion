@@ -637,24 +637,49 @@ directory_elements_diff (struct dir_baton *dir_baton,
   /* Check for property mods on this directory. */
   if (!in_anchor_not_target)
     {
-      svn_boolean_t modified;
-
-      SVN_ERR (svn_wc_props_modified_p (&modified, dir_baton->path, adm_access,
-                                        dir_baton->pool));
-      if (modified)
+      if (added)
         {
+          /* We need to simulate an addition of the WORKING properties. */
+          apr_hash_t *emptyprops = apr_hash_make (dir_baton->pool),
+                     *workingprops = NULL;
           apr_array_header_t *propchanges;
-          apr_hash_t *baseprops;
 
-          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
-                                          dir_baton->path, adm_access,
-                                          dir_baton->pool));
+          SVN_ERR (svn_wc_prop_list (&workingprops,
+                                     dir_baton->path, adm_access,
+                                     dir_baton->pool));
+
+          /* Calculate the propchanges necessary to create workingprops. */
+          SVN_ERR (svn_prop_diffs (&propchanges,
+                                   workingprops, emptyprops, dir_baton->pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->dir_props_changed
                    (adm_access, NULL,
                     dir_baton->path,
-                    propchanges, baseprops,
+                    propchanges, emptyprops,
                     dir_baton->edit_baton->callback_baton));
+        }
+      else
+        {
+          svn_boolean_t modified;
+
+          SVN_ERR (svn_wc_props_modified_p (&modified,
+                                            dir_baton->path, adm_access,
+                                            dir_baton->pool));
+          if (modified)
+            {
+              apr_array_header_t *propchanges;
+              apr_hash_t *baseprops;
+
+              SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
+                                              dir_baton->path, adm_access,
+                                              dir_baton->pool));
+
+              SVN_ERR (dir_baton->edit_baton->callbacks->dir_props_changed
+                       (adm_access, NULL,
+                        dir_baton->path,
+                        propchanges, baseprops,
+                        dir_baton->edit_baton->callback_baton));
+            }
         }
     }
 
