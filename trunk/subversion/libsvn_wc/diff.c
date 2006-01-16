@@ -211,9 +211,7 @@ struct file_baton {
   apr_file_t *temp_file;
   const char *temp_file_path;
 
-  /* The original WORKING property hash, and the list of incoming
-     BASE->repos propchanges. */
-  apr_hash_t *baseprops;
+  /* The list of incoming BASE->repos propchanges. */
   apr_array_header_t *propchanges;
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
@@ -662,9 +660,9 @@ directory_elements_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
                                           dir_baton->path, adm_access,
                                           dir_baton->pool));
-              
+
           SVN_ERR (dir_baton->edit_baton->callbacks->dir_props_changed
-                   (NULL, NULL,
+                   (adm_access, NULL,
                     dir_baton->path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
@@ -1132,7 +1130,7 @@ close_file (void *file_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  const char *repos_mimetype, *working_mimetype;
+  const char *repos_mimetype;
   const char *empty_file;
 
   /* The BASE and repository properties of the file. */
@@ -1167,9 +1165,6 @@ close_file (void *file_baton,
 
   repos_mimetype = get_prop_mimetype (repos_props);
 
-  SVN_ERR (get_working_mimetype (&working_mimetype, &b->baseprops,
-                                 adm_access, b->wc_path, pool));
-
 
   if (b->added)
     {
@@ -1184,7 +1179,7 @@ close_file (void *file_baton,
                   empty_file,
                   b->temp_file_path,
                   0,
-                  entry ? entry->revision : SVN_INVALID_REVNUM,
+                  eb->revnum,
                   NULL,
                   repos_mimetype,
                   apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
@@ -1210,6 +1205,9 @@ close_file (void *file_baton,
       const char *localfile;
       /* The path to the temporary copy of the pristine repository version. */
       const char *temp_file_path;
+      /* The working copy properties at the base of the wc->repos
+         comparison: either BASE or WORKING. */
+      apr_hash_t *originalprops;
 
       if (b->temp_file) /* A props-only change will not have opened a file */
         {
@@ -1230,26 +1228,25 @@ close_file (void *file_baton,
       else
         localfile = temp_file_path = NULL;
 
-      /* ### need to combine the BASE->repos changes in b->propchanges
-         with the WORKING->BASE propchanges, if any, so that
-         b->propchanges becomes WORKING->repos. */
+      if (eb->use_text_base)
+        {
+          originalprops = base_props;
+        }
+      else
+        {
+          SVN_ERR (svn_wc_prop_list (&originalprops,
+                                     b->path, adm_access, pool));
+
+          /* We have the repository properties in repos_props, and the
+             WORKING properties in originalprops.  Recalculate
+             b->propchanges as the change between WORKING and repos. */
+          SVN_ERR (svn_prop_diffs (&b->propchanges,
+                                   repos_props, originalprops, b->pool));
+        }
 
       if (localfile || b->propchanges->nelts > 0)
         {
-          /* The working copy properties at the base of the wc->repos
-             comparison: either BASE or WORKING. */
-          apr_hash_t *originalprops;
-
-          if (eb->use_text_base)
-            SVN_ERR (svn_wc_get_prop_diffs (NULL, &originalprops,
-                                            b->path, adm_access, pool));
-          else
-            originalprops = b->baseprops;
-
-          /* originalprops may be NULL if we have not encountered any
-             property changes, but that's okay, since the file_changed
-             callback makes no promises about the value of originalprops
-             in that case. */
+          const char *original_mimetype = get_prop_mimetype (originalprops);
 
           if (b->propchanges->nelts > 0
               && ! eb->reverse_order)
@@ -1262,8 +1259,8 @@ close_file (void *file_baton,
              eb->reverse_order ? temp_file_path : localfile,
              eb->reverse_order ? SVN_INVALID_REVNUM : b->edit_baton->revnum,
              eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
-             eb->reverse_order ? working_mimetype : repos_mimetype,
-             eb->reverse_order ? repos_mimetype : working_mimetype,
+             eb->reverse_order ? original_mimetype : repos_mimetype,
+             eb->reverse_order ? repos_mimetype : original_mimetype,
              b->propchanges, originalprops,
              b->edit_baton->callback_baton));
         }

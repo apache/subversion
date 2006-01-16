@@ -9,6 +9,7 @@ import fnmatch
 import re
 import glob
 import generator.swig.header_wrappers
+import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
 
 try:
@@ -195,17 +196,11 @@ class WinGeneratorBase(GeneratorBase):
     self.configs = ['Debug','Release']
 
     if self.swig_libdir:
-      
-      # Generate SWIG header wrappers
-      header_wrappers = \
-        generator.swig.header_wrappers.Generator("build.conf", self.swig_exe)
-      header_wrappers.write()
-      
-      # Generate external runtime
-      runtime = \
-        generator.swig.external_runtime.Generator("build.conf", self.swig_exe)
-      runtime.write()
-    
+      # Generate SWIG header wrappers and external runtime
+      for swig in (generator.swig.header_wrappers,
+                   generator.swig.checkout_swig_header,
+                   generator.swig.external_runtime):
+        swig.Generator(self.conf, self.swig_exe).write()
     else:
       print "%s not found; skipping SWIG file generation..." % self.swig_exe
       

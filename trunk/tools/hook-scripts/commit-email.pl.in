@@ -509,7 +509,7 @@ sub usage
       "\n",
       "This script supports a single repository with multiple projects,\n",
       "where each project receives email only for commits that modify that\n",
-      "project.  A project is identified by using the -m command line\n",
+      "project.  A project is identified by using the -m command line option\n",
       "with a regular expression argument.  If a commit has a path that\n",
       "matches the regular expression, then the entire commit matches.\n",
       "Any of the following -h, -l, -r and -s command line options and\n",
@@ -519,10 +519,10 @@ sub usage
       "\n",
       "To support a single project conveniently, the script initializes\n",
       "itself with an implicit -m . rule that matches any modifications\n",
-      "to the repository.  Therefore, to use the script for a single\n",
-      "project repository, just use the other comand line options and\n",
+      "to the repository.  Therefore, to use the script for a single-\n",
+      "project repository, just use the other command line options and\n",
       "a list of email addresses on the command line.  If you do not want\n",
-      "a project that matches the entire repository, then use a -m with a\n",
+      "a rule that matches the entire repository, then use -m with a\n",
       "regular expression before any other command line options or email\n",
       "addresses.\n";
 }

@@ -446,8 +446,9 @@ def commit_delete_dirs(sbox):
 # Suppose here is a scheduled-add file or directory which is
 # also missing.  If I want to make the working copy forget all
 # knowledge of the item ("unschedule" the addition), then either 'svn
-# revert' or 'svn rm' will make that happen, with no errors.  The
-# entry is simply removed from the entries file.
+# revert' or 'svn rm' will make that happen by removing the entry from 
+# .svn/entries file. While 'svn revert' does with no error, 
+# 'svn rm' does it with error. 
 
 def unschedule_missing_added(sbox):
   "unschedule addition on missing items"
@@ -484,7 +485,8 @@ def unschedule_missing_added(sbox):
   svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
-  svntest.main.run_svn(None, 'rm', file1_path, dir1_path)
+  svntest.main.run_svn(SVNAnyOutput, 'rm', file1_path)
+  svntest.main.run_svn(SVNAnyOutput, 'rm', dir1_path)
   svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
 
   # 'svn st' should now show absolutely zero local mods.
@@ -656,6 +658,21 @@ def fail_add_directory(sbox):
     os.chdir(saved_wd)
 
 
+#----------------------------------------------------------------------
+# Regression test for #2440
+# Ideally this test should test for the exit status of the 
+# 'svn rm non-existent' invocation.
+# As the corresponding change to get the exit code of svn binary invoked needs
+# a change in many testcase, for now this testcase checks the stderr.
+def delete_non_existent(sbox):
+  "'svn rm non-existent' should exit with an error"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput, 
+                                     'rm', '--force', 'non-existent')
+
+
 ########################################################################
 # Run the tests
 
@@ -686,6 +703,7 @@ test_list = [ None,
               status_add_deleted_directory,
               add_recursive_already_versioned,
               fail_add_directory,
+              delete_non_existent,
              ]
 
 if __name__ == '__main__':

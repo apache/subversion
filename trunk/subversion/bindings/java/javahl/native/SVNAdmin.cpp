@@ -400,7 +400,7 @@ void SVNAdmin::load(const char *path, Inputer &dataIn, Outputer &messageOut, boo
     }
     path = svn_path_internal_style(path, requestPool.pool());
     svn_repos_t *repos;
-    enum svn_repos_load_uuid uuid_action;
+    enum svn_repos_load_uuid uuid_action = svn_repos_load_uuid_default;
     if(ignoreUUID)
         uuid_action = svn_repos_load_uuid_ignore;
     else if(forceUUID)

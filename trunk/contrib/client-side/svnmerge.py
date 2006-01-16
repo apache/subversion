@@ -49,9 +49,9 @@
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
 
-import sys, os, getopt, re, types, popen2
+import sys, os, getopt, re, types, popen2, tempfile
 
-NAME="svnmerge"
+NAME = "svnmerge"
 if not hasattr(sys, "version_info") or sys.version_info < (2, 0):
     print "%s requires Python 2.0 or newer" % NAME
     sys.exit(1)
@@ -124,8 +124,8 @@ def kwextract(s):
     except IndexError:
         return "<unknown>"
 
-SRCREV=kwextract('$Rev$')
-SRCDATE=kwextract('$Date$')
+__revision__ = kwextract('$Rev$')
+__date__ = kwextract('$Date$')
 
 # Additional options, not (yet?) mapped to command line flags
 opts = {
@@ -150,11 +150,19 @@ def console_width():
         res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
         if res:
             import struct
-            (bufx, bufy, curx, cury, wattr,
-             left, top, right, bottom, maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
+            (bufx, bufy,
+             curx, cury, wattr,
+             left, top, right, bottom,
+             maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
             return right - left + 1
     except ImportError:
         pass
+
+    # Parse the output of stty -a
+    out = os.popen("stty -a").read()
+    m = re.search(r"columns (\d+);", out)
+    if m:
+        return int(m.group(1))
 
     # sensible default
     return 80
@@ -226,9 +234,13 @@ def check_dir_clean(dir):
         report('skipping status check because of --force')
         return
     report('checking status of "%s"' % dir)
-    for L in launchsvn("status -q %s" % dir):
-        if L:
-            error('"%s" has local modifications; it must be clean' % dir)
+    # Checking with -q does not show unversioned files, or external directories.
+    # Though it displays a debug message for external directories, after a
+    # blank line. So, pratically, the first line matters: if it's non-empty
+    # there is a modification.
+    out = launchsvn("status -q %s" % dir)
+    if out and out[0]:
+        error('"%s" has local modifications; it must be clean' % dir)
     for L in launchsvn("status -u %s" % dir):
         if L[7] == '*':
             error('"%s" is not up to date; please "svn update" first' % dir)
@@ -258,12 +270,16 @@ class RevisionList:
                 else:
                     self._revs[int(R)] = 1
 
+    def sorted(self):
+        revnums = self._revs.keys()
+        revnums.sort()
+        return revnums
+
     def normalized(self):
         """Returns a normalized version of the revision list, which is an
         ordered list of couples (start,end), with the minimum number of
         intervals."""
-        revnums = self._revs.keys()
-        revnums.sort()
+        revnums = self.sorted()
         revnums.reverse()
         ret = []
         while revnums:
@@ -303,12 +319,10 @@ class RevisionList:
         return RevisionList(revs)
 
     def __nonzero__(self):
-        return bool(self._revs)
+        return len(self._revs) != 0
 
     def __iter__(self):
-        revnums = self._revs.keys()
-        revnums.sort()
-        return iter(revnums)
+        return iter(self.sorted())
 
     def __or__(self, RL):
         """Compute set union."""
@@ -358,9 +372,28 @@ def format_merge_props(props, sep=" "):
         L.append(h + ":" + r)
     return sep.join(L)
 
+def _run_propset(dir, prop, value):
+    """Set the property 'prop' of directory 'dir' to value 'value'. We go
+    through a temporary file to not run into command line length limits."""
+    try:
+        fd, fname = tempfile.mkstemp()
+        f = os.fdopen(fd, "wb")
+    except AttributeError:
+        # Fallback for Python <= 2.3 which does not have mkstemp (mktemp
+        # suffers from race conditions. Not that we care...)
+        fname = tempfile.mktemp()
+        f = file(fname, "wb")
+
+    try:
+        f.write(value)
+        f.close()
+        report("property data written to temp file: %s" % value)
+        svn_command('propset "%s" -F "%s" "%s"' % (prop, fname, dir))
+    finally:
+        os.remove(fname)
+
 def set_merge_props(dir, props):
-    props = format_merge_props(props)
-    svn_command('propset "%s" "%s" "%s"' % (opts["prop"], props, dir))
+    _run_propset(dir, opts["prop"], format_merge_props(props))
 
 def set_blocked_revs(dir, head_path, revs):
     props = get_block_props(dir)
@@ -371,7 +404,7 @@ def set_blocked_revs(dir, head_path, revs):
             del props[head_path]
     props = format_merge_props(props)
     if props:
-        svn_command('propset "%s" "%s" "%s"' % (opts["block_prop"], props, dir))
+        _run_propset(dir, opts["block_prop"], format_merge_props(props))
     else:
         svn_command('propdel "%s" "%s"' % (opts["block_prop"], dir))
 
@@ -389,7 +422,7 @@ def get_svninfo(path):
     This function uses an internal cache to let clients query information
     many times."""
     global _cache_svninfo
-    if path in _cache_svninfo:
+    if _cache_svninfo.has_key(path):
         return _cache_svninfo[path]
     info = {}
     for L in launchsvn('info "%s"' % path):
@@ -445,12 +478,13 @@ def get_copyfrom(dir):
     rlpath = url_to_rlpath(target_to_url(dir))
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir, split_lines=False)
     out = out.replace("\n", " ")
-    m = re.search(r'(<path .*action="A".*>%s</path>)' % rlpath, out)
-    if not m:
+    try:
+        m = re.search(r'(<path .*action="A".*>%s</path>)' % rlpath, out)
+        head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
+        rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
+        return head,rev
+    except AttributeError:
         return None,None
-    head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
-    rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
-    return head,rev
 
 def get_latestrev(url):
     """Get the latest revision of the repository of which URL is part."""
@@ -480,7 +514,7 @@ def construct_merged_log_message(url, revnums):
     other merges."""
     logs = ['']
     longest_sep = ''
-    for r in revnums:
+    for r in revnums.sorted():
         message = get_commit_log(opts["head_url"], r)
         logs.append(message)
         for match in LOG_SEPARATOR_RE.findall(message):
@@ -509,7 +543,8 @@ def get_default_head(branch_dir, branch_props):
         del props[dir]
 
     if len(props) > 1:
-        error('multiple heads found. Explicit head argument (-S/--head) required.')
+        error('multiple heads found. '
+              'Explicit head argument (-S/--head) required.')
 
     return props.keys()[0]
 
@@ -656,8 +691,9 @@ def action_avail(branch_dir, branch_props):
 
     # Show them, either numerically, in log format, or as diffs
     if opts["avail_display"] == "revisions":
-        report("available revisions to be merged are:")
-        print revs
+        if revs:
+            report("available revisions to be merged are:")
+            print revs
     elif opts["avail_display"] == "logs":
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
@@ -668,7 +704,8 @@ def action_avail(branch_dir, branch_props):
             if start == end:
                 print "%s: changes in revision %d follow" % (NAME, start)
             else:
-                print "%s: changes in revisions %d-%d follow" % (NAME, start, end)
+                print "%s: changes in revisions %d-%d follow" % (NAME,
+                                                                 start, end)
             print
 
             # Note: the starting revision number to 'svn diff' is
@@ -694,9 +731,10 @@ def action_merge(branch_dir, branch_props):
     merged_revs = opts["merged_revs"]
 
     # Show what we're doing
-    if opts["verbose"]:  # just to avoid useless calculations if we don't need reports
+    if opts["verbose"]:  # just to avoid useless calculations
         if merged_revs & revs:
-            report('"%s" already contains revisions %s' % (branch_dir, merged_revs & revs))
+            report('"%s" already contains revisions %s' % (branch_dir,
+                                                           merged_revs & revs))
         if phantom_revs:
             report('memorizing phantom revision(s): %s' % phantom_revs)
         if blocked_revs & revs:
@@ -803,7 +841,8 @@ def action_unblock(branch_dir, branch_props):
 
 class OptBase:
     def __init__(self, *args, **kwargs):
-        self.help = kwargs.pop("help")
+        self.help = kwargs["help"]
+        del kwargs["help"]
         self.lflags = []
         self.sflags = []
         for a in args:
@@ -811,8 +850,9 @@ class OptBase:
             elif a.startswith("-"):  self.sflags.append(a)
             else:
                 raise TypeError, "invalid flag name: %s" % a
-        if "dest" in kwargs:
-            self.dest = kwargs.pop("dest")
+        if kwargs.has_key("dest"):
+            self.dest = kwargs["dest"]
+            del kwargs["dest"]
         else:
             if not self.lflags:
                 raise TypeError, "cannot deduce dest name without long options"
@@ -828,8 +868,10 @@ class OptBase:
 
 class Option(OptBase):
     def __init__(self, *args, **kwargs):
-        self.default = kwargs.pop("default", 0)
-        self.value = kwargs.pop("value", None)
+        self.default = kwargs.setdefault("default", 0)
+        del kwargs["default"]
+        self.value = kwargs.setdefault("value", None)
+        del kwargs["value"]
         OptBase.__init__(self, *args, **kwargs)
     def apply(self, state, value):
         assert value == ""
@@ -840,8 +882,10 @@ class Option(OptBase):
 
 class OptionArg(OptBase):
     def __init__(self, *args, **kwargs):
-        self.default = kwargs.pop("default")
-        self.metavar = kwargs.pop("metavar", None)
+        self.default = kwargs["default"]
+        del kwargs["default"]
+        self.metavar = kwargs.setdefault("metavar", None)
+        del kwargs["metavar"]
         OptBase.__init__(self, *args, **kwargs)
 
         if self.metavar is None:
@@ -874,15 +918,16 @@ class CommandOpts:
         self.progname = NAME
         self.version = version.replace("%prog", self.progname)
         self.cwidth = console_width() - 2
-        self.ctable = command_table
-        self.gopts = global_opts
-        self.copts = common_opts
+        self.ctable = command_table.copy()
+        self.gopts = global_opts[:]
+        self.copts = common_opts[:]
         self._add_builtins()
-        for k in self.ctable:
+        for k in self.ctable.keys():
             cmd = self.Cmd(k, *self.ctable[k])
             opts = []
             for o in cmd.opts:
-                if isinstance(o, types.StringTypes):
+                if isinstance(o, types.StringType) or \
+                   isinstance(o, types.UnicodeType):
                     o = self._find_common(o)
                 opts.append(o)
             cmd.opts = opts
@@ -940,36 +985,57 @@ class CommandOpts:
                 return o
         assert 0, fl
 
-    def _fancy_getopt(self, args, opts, state=None):
+    def _compute_flags(self, opts, check_conflicts=True):
         back = {}
         sfl = ""
         lfl = []
-        if state is None:
-            state= {}
         for o in opts:
             sapp = lapp = ""
-            if o.dest not in state:
-                state[o.dest] = o.default
             if isinstance(o, OptionArg):
                 sapp, lapp = ":", "="
             for s in o.sflags:
-                if back.has_key(s):
+                if check_conflicts and back.has_key(s):
                     raise RuntimeError, "option conflict: %s" % s
                 back[s] = o
                 sfl += s[1:] + sapp
             for l in o.lflags:
-                if back.has_key(l):
+                if check_conflicts and back.has_key(l):
                     raise RuntimeError, "option conflict: %s" % l
                 back[l] = o
                 lfl.append(l[2:] + lapp)
+        return sfl, lfl, back
 
-        lopts,args = getopt.getopt(args, sfl, lfl)
+    def _extract_command(self, args):
+        """
+        Try to extract the command name from the argument list. This is
+        non-trivial because we want to allow command-specific options even
+        before the command itself.
+        """
+        opts = self.gopts[:]
+        for cmd in self.ctable.values():
+            opts.extend(cmd.opts)
+        sfl, lfl, _ = self._compute_flags(opts, check_conflicts=False)
+
+        lopts,largs = getopt.getopt(args, sfl, lfl)
+        if not largs:
+            return None
+        return self._command(largs[0])
+
+    def _fancy_getopt(self, args, opts, state=None):
+        if state is None:
+            state= {}
+        for o in opts:
+            if not state.has_key(o.dest):
+                state[o.dest] = o.default
+
+        sfl, lfl, back = self._compute_flags(opts)
+        lopts,args = getopt.gnu_getopt(args, sfl, lfl)
         for o,v in lopts:
             back[o].apply(state, v)
         return state, args
 
     def _command(self, cmd):
-        if cmd not in self.ctable:
+        if not self.ctable.has_key(cmd):
             self.error("unknown command: '%s'" % cmd)
         return self.ctable[cmd]
 
@@ -980,29 +1046,32 @@ class CommandOpts:
 
         cmd = None
         try:
-            opts, args = self._fancy_getopt(args, self.gopts)
-            if args:
-                cmd = self._command(args.pop(0))
-                opts, args = self._fancy_getopt(args, self.gopts + cmd.opts, opts)
+            cmd = self._extract_command(args)
+            opts = self.gopts[:]
+            if cmd:
+                opts.extend(cmd.opts)
+            state, args = self._fancy_getopt(args, opts)
         except getopt.GetoptError, e:
             self.error(e, cmd)
 
         # Handle builtins
-        if self.version is not None and opts["version"]:
+        if self.version is not None and state["version"]:
             self.print_version()
             sys.exit(0)
-        if opts["help"]: # --help
-            if cmd is None:
-                cmd = self.ctable["help"]
-            else:
+        if state["help"]: # special case for --help
+            if cmd:
                 self.print_command_help(cmd)
                 sys.exit(0)
-        if cmd is None:
-            self.error("command argument required")
+            cmd = self.ctable["help"]
+        else:
+            if cmd is None:
+                self.error("command argument required")
+            assert cmd.name == args[0]
+        args = args[1:]
         if str(cmd) == "help":
             cmd(*args)
             sys.exit(0)
-        return cmd, args, opts
+        return cmd, args, state
 
     def error(self, s, cmd=None):
         print >>sys.stderr, "%s: %s" % (self.progname, s)
@@ -1016,7 +1085,8 @@ class CommandOpts:
     def print_usage_line(self):
         print "usage: %s <subcommand> [options...] [args...]\n" % self.progname
     def print_command_list(self):
-        print 'Available commands (use "%s help COMMAND" for more details):\n' % self.progname
+        print 'Available commands (use "%s help COMMAND" for more details):\n' \
+              % self.progname
         cmds = self.ctable.keys()
         cmds.sort()
         indent = max(map(len, cmds))
@@ -1028,7 +1098,7 @@ class CommandOpts:
         cmd = self.ctable[str(cmd)]
         print 'usage: %s %s\n' % (self.progname, cmd.usage)
         self._print_wrapped(cmd.help)
-        def print_opts(opts):
+        def print_opts(opts, self=self):
             if not opts: return
             flags = [o.repr_flags() for o in opts]
             indent = max(map(len, flags))
@@ -1054,7 +1124,8 @@ global_opts = [
     Option("-s", "--show-changes",
            help="show subversion commands that make changes"),
     Option("-n", "--dry-run",
-           help="don't actually change anything, just pretend; implies --show-changes"),
+           help="don't actually change anything, just pretend; "
+                "implies --show-changes"),
     Option("-F", "--force",
            help="force operation even if the working copy is not clean, or "
                 "there are pending updates"),
@@ -1064,7 +1135,8 @@ common_opts = [
     OptionArg("-r", "--revision", metavar="REVLIST", default="",
               help="specify a revision list, consisting of revision numbers "
                    'and ranges separated by commas, e.g., "534,537-539,540"'),
-    OptionArg("-f", "--commit-file", metavar="FILE", default="svnmerge-commit-message.txt",
+    OptionArg("-f", "--commit-file", metavar="FILE",
+              default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
                    "is written to"),
     OptionArg("-S", "--head", "--source", default=None,
@@ -1147,7 +1219,8 @@ def main(args):
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"
                                      "Copyright (C) 2004,2005 Awarix Inc.\n"
-                                     "Copyright (C) 2005, Giovanni Bajo" % (SRCREV, SRCDATE))
+                                     "Copyright (C) 2005, Giovanni Bajo"
+                                     % (__revision__, __date__))
 
     cmd, args, state = optsparser.parse(args)
     opts.update(state)
@@ -1206,7 +1279,8 @@ def main(args):
 
     # Sanity check head_url
     assert is_url(opts["head_url"])
-    # SVN does not support non-normalized URL (and we should not have created them)
+    # SVN does not support non-normalized URL (and we should not
+    # have created them)
     assert opts["head_url"].find("/..") < 0
 
     report('head is "%s"' % opts["head_url"])
@@ -1214,7 +1288,8 @@ def main(args):
     # Get previously merged revisions (except when command is init)
     if str(cmd) != "init":
         if not branch_props.has_key(opts["head_path"]):
-            error('no integration info available for repository path "%s"' % opts["head_path"])
+            error('no integration info available for repository path "%s"'
+                  % opts["head_path"])
 
         revs = branch_props[opts["head_path"]]
         opts["merged_revs"] = RevisionList(revs)

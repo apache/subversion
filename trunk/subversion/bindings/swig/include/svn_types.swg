@@ -22,6 +22,21 @@
 %include apr.swg
 %include exception.i
 
+#ifdef SWIGRUBY
+#  if SWIG_VERSION <= 0x010327
+/* Remove compiler warning (break strict-aliasing rules) */
+%typemap(in) SWIGTYPE * (void *temp)
+{
+#    if SWIG_VERSION <= 0x010325
+  SWIG_ConvertPtr($input, &temp, $1_descriptor, 1);
+#    else
+  SWIG_ConvertPtr($input, &temp, $1_descriptor, $disown);
+#    endif
+  $1 = ($1_ltype)temp;
+}
+#  endif
+#endif
+
 /* -----------------------------------------------------------------------
    Create a typemap to define "type **" as OUT parameters.
 
@@ -692,7 +707,7 @@
 */
 
 
-%typemap(ruby, in) apr_hash_t *config (apr_hash_t *temp)
+%typemap(ruby, in) apr_hash_t *config
 {
   if (NIL_P($input)) {
     $1 = NULL;

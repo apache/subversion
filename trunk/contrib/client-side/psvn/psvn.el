@@ -48,7 +48,7 @@
 ;; A     - svn-status-add-file-recursively  run 'svn add'
 ;; +     - svn-status-make-directory        run 'svn mkdir'
 ;; R     - svn-status-mv                    run 'svn mv'
-;; C-d   - svn-status-rm                    run 'svn rm'
+;; D     - svn-status-rm                    run 'svn rm'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
 ;; b     - svn-status-blame                 run 'svn blame'
 ;; X e   - svn-status-export                run 'svn export'
@@ -185,6 +185,7 @@
 ;;; Code:
 
 (require 'easymenu)
+(require 'diff-mode nil t)
 
 ;;; user setable variables
 (defcustom svn-status-verbose t
@@ -718,6 +719,15 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit))
+
+(defvar svn-status-diff-mode-map ()
+  "Keymap used in `svn-status-diff-mode' for additional commands that are not defined in diff-mode.")
+(put 'svn-status-diff-mode-map 'risky-local-variable t) ;for Emacs 20.7
+
+(when (not svn-status-diff-mode-map)
+  (setq svn-status-diff-mode-map (copy-keymap diff-mode-shared-map))
+  (define-key svn-status-diff-mode-map [?w] 'svn-status-diff-save-current-defun-as-kill))
+
 
 (defvar svn-global-trac-map ()
   "Subkeymap used in `svn-global-keymap' for trac issue tracker commands.")
@@ -1308,6 +1318,8 @@ A and B must be line-info's."
 
   (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
+  (define-key svn-status-mode-map (kbd "n") 'svn-status-next-line)
+  (define-key svn-status-mode-map (kbd "p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "<up>") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "C-x C-j") 'svn-status-dired-jump)
@@ -2582,7 +2594,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
       ;; the user would have marked them if he wanted them to be compared.
       ;; So we'll look for the "Index: foo" line that marks the first file
       ;; in the diff output, and delete it and everything that follows.
-      ;; This is made more complicated by the fact that `svn-status-diff-mode'
+      ;; This is made more complicated by the fact that `svn-status-activate-diff-mode'
       ;; expects the output to be left in the *svn-process* buffer.
       (unless recursive
         ;; Check `directory-p' relative to the `default-directory' of the
@@ -2594,17 +2606,39 @@ If ARG then prompt for revision to diff against, else compare working copy with 
               (when (re-search-forward "^Index: " nil t)
                 (delete-region (match-beginning 0) (point-max))))
             (goto-char (setq beginning (point-max))))))))
-  (svn-status-diff-mode))
+  (svn-status-activate-diff-mode))
 
-(defun svn-status-diff-mode ()
+(defun svn-status-diff-save-current-defun-as-kill ()
+  "Copy the function name for the change at point to the kill-ring.
+That function uses `add-log-current-defun'"
+  (interactive)
+  (let ((func-name (add-log-current-defun)))
+    (if func-name
+        (progn
+          (kill-new func-name)
+          (message "Copied %S" func-name))
+      (message "No current defun detected."))))
+
+
+(defun svn-status-activate-diff-mode ()
   "Show the *svn-process* buffer, using the diff-mode."
   (svn-status-show-process-output 'diff t)
   (save-excursion
     (set-buffer svn-status-last-output-buffer-name)
-    (when (fboundp 'diff-mode) ;not in GNU Emacs 20.7
-      (diff-mode)
-      (font-lock-fontify-buffer))
+    (svn-status-diff-mode)
     (setq buffer-read-only t)))
+
+
+(define-derived-mode svn-status-diff-mode fundamental-mode "svn-diff"
+  "Major mode to display svn diffs. Derives from `diff-mode'.
+
+Commands:
+\\{svn-status-diff-mode-map}
+"
+  (let ((diff-mode-shared-map (copy-keymap svn-status-diff-mode-map))
+        major-mode mode-name)
+    (diff-mode)))
+
 
 (defun svn-status-show-process-buffer ()
   "Show the content of the *svn-process* buffer"
@@ -3454,7 +3488,8 @@ Commands:
     (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
       (setq svn-status-temp-file-to-remove
             (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
-      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1)))
+      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
+    (bury-buffer))
   (if svn-log-edit-update-log-entry
       (when (y-or-n-p "Update the log entry? ")
         ;;   svn propset svn:log --revprop -r11672 -F file
@@ -3604,7 +3639,7 @@ When called with a prefix argument, ask the user for the revision."
     (when arg
       (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
     (svn-run-svn nil t 'diff "diff" (concat "-r" rev-arg))
-    (svn-status-diff-mode)))
+    (svn-status-activate-diff-mode)))
 
 (defun svn-log-edit-log-entry ()
   "Edit the given log entry."

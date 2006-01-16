@@ -81,13 +81,19 @@ typedef struct
 /* Context for parsing <D:error> bodies, used when we call ne_copy(). */
 struct copy_baton
 {
-  /* The method neon is about to execute. */
-  const char *method;
+  /* An indication of whether we're currently processing a COPY request
+   * or not.
+   */
+  svn_boolean_t making_a_copy;
   
-  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  /* A parser for handling <D:error> responses from mod_dav_svn.  This
+   * will be NULL if we haven't processed a COPY request yet.
+   */
   ne_xml_parser *error_parser;
 
-  /* If <D:error> is returned, here's where the parsed result goes. */
+  /* If <D:error> is returned, here's where the parsed result goes, or
+   * NULL otherwise.
+   */
   svn_error_t *err;
 
   /* A place for allocating fields in this structure. */
@@ -918,9 +924,7 @@ create_request_hook(ne_request *req,
   struct copy_baton *cb = userdata;
 
   if (strcmp(method, "COPY") == 0)
-    cb->method = apr_pstrdup(cb->pool, method);
-  else
-    cb->method = NULL;
+    cb->making_a_copy = TRUE;
 }
 
 
@@ -933,10 +937,7 @@ pre_send_hook(ne_request *req,
 {
   struct copy_baton *cb = userdata;
 
-  if (! cb->method)
-    return;
-
-  if (strcmp(cb->method, "COPY") == 0)
+  if (cb->making_a_copy)
     {
       cb->error_parser = ne_xml_create();
       svn_ra_dav__add_error_handler(req, cb->error_parser,
@@ -1580,11 +1581,22 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
-  struct copy_baton *cb;
 
-  /* Build a copy_baton for COPY requests. */
-  cb = apr_pcalloc(pool, sizeof(*cb));
-  cb->pool = pool;
+  /* Only initialize the baton the first time through. */
+  if (! ras->cb)
+    {
+      /* Build a copy_baton for COPY requests. */
+      ras->cb = apr_pcalloc(ras->pool, sizeof(*ras->cb));
+
+      /* Register request hooks in the neon session.  They specifically
+         allow any COPY requests (ne_copy()) to parse <D:error>
+         responses.  They're no-ops for other requests. */
+      ne_hook_create_request(ras->sess, create_request_hook, ras->cb);
+      ne_hook_pre_send(ras->sess, pre_send_hook, ras->cb);
+    }
+
+  /* Make sure the baton uses our current pool, so we don't leak. */
+  ras->cb->pool = pool;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1598,7 +1610,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   cc->callback_baton = callback_baton;
   cc->tokens = lock_tokens;
   cc->keep_locks = keep_locks;
-  cc->cb = cb;
+  cc->cb = ras->cb;
 
   /* If the caller didn't give us any way of storing wcprops, then
      there's no point in getting back a MERGE response full of VR's. */
@@ -1620,12 +1632,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   ** log message onto the thing.
   */
   SVN_ERR( apply_log_message(cc, log_msg, pool) );
-
-  /* Register request hooks in the neon session.  They specifically
-     allow any COPY requests (ne_copy()) to parse <D:error>
-     responses.  They're no-ops for other requests. */
-  ne_hook_create_request(ras->sess, create_request_hook, cb);
-  ne_hook_pre_send(ras->sess, pre_send_hook, cb);
 
   /*
   ** Set up the editor.

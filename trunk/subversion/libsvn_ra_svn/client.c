@@ -161,6 +161,10 @@
         "\x72\x65\x70\x61\x72\x65\x6e\x74"
         /* "reparent" */
 
+#define REPLAY_STR \
+        "\x72\x65\x70\x6c\x61\x79"
+        /* "replay" */
+
 #define REV_PROPLIST_STR \
         "\x72\x65\x76\x2d\x70\x72\x6f\x70\x6c\x69\x73\x74"
         /* "rev-proplist" */
@@ -789,7 +793,7 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
                                  apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess;
-  svn_ra_svn_conn_t *conn;
+  svn_ra_svn_conn_t *conn = NULL;
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
@@ -909,7 +913,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
 {
   apr_pool_t *sess_pool = svn_pool_create (pool);
   ra_svn_session_baton_t *sess;
-  const char *tunnel, **tunnel_argv;
+  const char *tunnel, **tunnel_argv = NULL;
   apr_uri_t uri;
   
   SVN_ERR(parse_url(url, &uri, sess_pool));
@@ -2143,6 +2147,32 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
 }
 
 
+static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
+                                  svn_revnum_t revision,
+                                  svn_revnum_t low_water_mark,
+                                  svn_boolean_t send_deltas,
+                                  const svn_delta_editor_t *editor,
+                                  void *edit_baton,
+                                  apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess = session->priv;
+
+  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, REPLAY_STR, "rrb", revision,
+                               low_water_mark, send_deltas));
+
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the replay "
+                                   "command")));
+
+  SVN_ERR(svn_ra_svn_drive_editor(sess->conn, pool, editor, edit_baton,
+                                  NULL));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(sess->conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
@@ -2172,6 +2202,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_unlock,
   ra_svn_get_lock,
   ra_svn_get_locks,
+  ra_svn_replay,
 };
 
 svn_error_t *

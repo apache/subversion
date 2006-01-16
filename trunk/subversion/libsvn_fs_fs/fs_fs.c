@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>              /* for EINVAL */
 #include <ctype.h>
 #include <assert.h>
 
@@ -1216,7 +1215,7 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
 {
   apr_file_t *revision_file;
   apr_off_t root_offset;
-  svn_fs_id_t *root_id;
+  svn_fs_id_t *root_id = NULL;
   svn_error_t *err;
 
   err = svn_io_file_open (&revision_file, svn_fs_fs__path_rev (fs, rev, pool),
@@ -1331,7 +1330,7 @@ build_rep_list (apr_array_header_t **list,
 {
   representation_t rep;
   struct rep_state *rs;
-  struct rep_args *rep_args;
+  struct rep_args *rep_args = NULL;
   apr_file_t *file;
   unsigned char buf[4];
 
@@ -1563,7 +1562,7 @@ get_contents (struct rep_read_baton *rb,
   apr_size_t copy_len, remaining = *len, tlen;
   char *sbuf, *tbuf, *cur = buf;
   struct rep_state *rs;
-  svn_txdelta_window_t *cwindow, *lwindow;
+  svn_txdelta_window_t *cwindow = NULL, *lwindow;
 
   /* Special case for when there are no delta reps, only a plain
      text. */
@@ -1614,8 +1613,6 @@ get_contents (struct rep_read_baton *rb,
           /* Get more buffered data by evaluating a chunk. */
           if (rb->rs_list->nelts > 1)
             SVN_ERR (get_combined_window (&cwindow, rb));
-          else
-            cwindow = NULL;
           if (!cwindow || cwindow->src_ops > 0)
             {
               rs = APR_ARRAY_IDX (rb->rs_list, rb->rs_list->nelts - 1,
@@ -3662,7 +3659,7 @@ write_final_changed_path_info (apr_off_t *offset_p,
       id = change->node_rev_id;
 
       /* If this was a delete of a mutable node, then it is OK to
-         leave the change entry pointing to the non-existant temporary
+         leave the change entry pointing to the non-existent temporary
          node, since it will never be used. */
       if ((change->change_kind != svn_fs_path_change_delete) &&
           (! svn_fs_fs__id_txn_id (id)))
@@ -3697,27 +3694,20 @@ svn_fs_fs__dup_perms (const char *filename,
 #ifndef WIN32
   apr_status_t status;
   apr_finfo_t finfo;
-#if APR_CHARSET_EBCDIC
-  /* Calls to apr_stat and apr_file_perms_set need to be in ebcdic. */
-  const char *filename_utf8 = apr_pstrdup(pool, filename);
-  const char *perms_reference_utf8 = apr_pstrdup(pool, perms_reference);
-  SVN_ERR (svn_utf_cstring_from_utf8 (&perms_reference, perms_reference, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&filename, filename, pool));
-#endif
+  const char *filename_apr, *perms_reference_apr;
   
-  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
+  SVN_ERR (svn_path_cstring_from_utf8 (&filename_apr, filename, pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&perms_reference_apr, perms_reference,
+                                       pool));
+
+  status = apr_stat (&finfo, perms_reference_apr, APR_FINFO_PROT, pool);
   if (status)
-    {
-#if APR_CHARSET_EBCDIC
-      perms_reference = perms_reference_utf8;
-#endif
-      return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
-    }
-  status = apr_file_perms_set (filename, finfo.protection);
+    return svn_error_wrap_apr (status, _("Can't stat '%s'"),
+                               svn_path_local_style (perms_reference, pool));
+  status = apr_file_perms_set (filename_apr, finfo.protection);
   if (status)
-    {
-#if APR_CHARSET_EBCDIC
-      filename = filename_utf8;
+    return svn_error_wrap_apr (status, _("Can't chmod '%s'"),
+                               svn_path_local_style (filename, pool));
 #endif
       return svn_error_wrap_apr (status, _("Can't chmod '%s'"), filename);
     }
@@ -3983,12 +3973,13 @@ commit_body (void *baton, apr_pool_t *pool)
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
-  const char *start_node_id, *start_copy_id;
+  const char *start_node_id = NULL, *start_copy_id = NULL;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   apr_off_t changed_path_offset, offset;
   char *buf;
   apr_hash_t *txnprops;
+  svn_string_t date;
 
   /* Get the current youngest revision. */
   SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, cb->fs, pool));
@@ -4066,6 +4057,13 @@ commit_body (void *baton, apr_pool_t *pool)
   rev_filename = svn_fs_fs__path_rev (cb->fs, new_rev, pool);
   SVN_ERR (svn_fs_fs__move_into_place (proto_filename, rev_filename, 
                                        old_rev_filename, pool));
+
+  /* Update commit time to ensure that svn:date revprops remain ordered. */
+  date.data = svn_time_to_cstring (apr_time_now (), pool);
+  date.len = strlen (date.data);
+
+  SVN_ERR (svn_fs_fs__change_txn_prop (cb->txn, SVN_PROP_REVISION_DATE,
+                                       &date, pool));
 
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props (cb->fs, cb->txn->id, pool);

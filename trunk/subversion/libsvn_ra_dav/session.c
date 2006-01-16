@@ -19,6 +19,7 @@
 
 
 #include <assert.h>
+#include <ctype.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -159,7 +160,8 @@ convert_neon_failures(int neon_failures)
 }
 
 /* A neon-session callback to validate the SSL certificate when the CA
-   is unknown or there are other SSL certificate problems. */
+   is unknown (e.g. a self-signed cert), or there are other SSL
+   certificate problems. */
 static int
 server_ssl_callback(void *userdata,
                     int failures,
@@ -619,6 +621,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
   svn_boolean_t compression;
   svn_config_t *cfg;
   const char *server_group;
+  char *itr;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
@@ -635,6 +638,15 @@ svn_ra_dav__open (svn_ra_session_t *session,
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
+
+  /* HACK!  Neon uses strcmp when checking for https, but RFC 2396 says
+   * we should be using case-insensitive comparisons when checking for 
+   * URI schemes.  To allow our users to use WeIrd CasE HttPS we force
+   * the scheme to lower case before we pass it on to Neon, otherwise we
+   * would crash later on when we assume Neon has set up its https stuff
+   * but it really didn't. */
+  for (itr = uri.scheme; *itr; ++itr)
+    *itr = tolower(*itr);
 
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
@@ -669,8 +681,8 @@ svn_ra_dav__open (svn_ra_session_t *session,
     unsigned int proxy_port;
     const char *proxy_username;
     const char *proxy_password;
-    int timeout;
-    int debug;
+    int timeout = 0;
+    int debug = 0;
     svn_error_t *err;
     
     err = get_server_settings(&proxy_host,
@@ -1218,7 +1230,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
      loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
-      svn_lock_t *lock;
+      svn_lock_t *lock = NULL;
       const void *key;
       const char *path;
       void *val;
@@ -1593,6 +1605,7 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__unlock,
   svn_ra_dav__get_lock,
   svn_ra_dav__get_locks,
+  svn_ra_dav__replay,
 };
 
 svn_error_t *

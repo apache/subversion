@@ -59,7 +59,7 @@ module Svn
     AuthCredSSLServerTrust = AuthCredSslServerTrust
     
     
-    Pool = Svn::Ext::Core::Apr_pool_t
+    Pool = Svn::Ext::Core::Apr_pool_wrapper_t
     
     class Pool
       class << self
@@ -67,12 +67,23 @@ module Svn
           ObjectSpace.each_object(Pool) {}
         end
       end
+
+      alias _initialize initialize
+      private :_initialize
+      def initialize(parent=nil)
+        _initialize(parent)
+        @parent = parent
+      end
     end
 
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
-      CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      if Core.const_defined?(:STREAM_CHUNK_SIZE)
+        CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      else
+        CHUNK_SIZE = 8192
+      end
 
       def write(data)
         Core.stream_write(self, data)

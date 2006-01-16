@@ -550,14 +550,40 @@ void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 /** Convenience function to create a generic stream which is empty.  */
 svn_stream_t *svn_stream_empty (apr_pool_t *pool);
 
+/** Returns a stream allocated in @a pool which forwards all requests
+ * to @a stream.  Destruction is explicitly excluded from forwarding.
+ *
+ * @see notes/destruction-of-stacked-resources
+ *
+ * @since New in 1.4.
+ */
+svn_stream_t *svn_stream_disown (svn_stream_t *stream, apr_pool_t *pool);
 
-/** Convenience function for creating streams which operate on APR
- * files.  For convenience, if @a file is NULL then svn_stream_empty(pool) 
- * is returned.  Note that the stream returned by these operations is not 
- * considered to "own" the underlying file, meaning that svn_stream_close() 
- * on the stream will not close the file.
+/** Create a stream which operates on APR * files.
+ * For convenience, if @a file is NULL then svn_stream_empty(pool)
+ * is returned.
+ *
+ * @note The stream returned is not considered to "own" the underlying
+ *       file, meaning that svn_stream_close() on the stream will not
+ *       close the file.
+ *
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
+
+
+/** Function to create a stream from an APR file.  For convenience, if @a
+ * file is @c NULL an empty stream created by svn_stream_empty() is returned.
+ *
+ * @note The stream is considered to own the underlying file, meaning that
+ *       svn_stream_close() will close the file.
+ *
+ * @since New in 1.4.
+ */
+svn_stream_t * svn_stream_from_aprfile2 (apr_file_t *file,
+                                         svn_boolean_t disown,
+                                         apr_pool_t *pool);
 
 /** Set @a *out to a generic stream connected to stdout, allocated in 
  * @a pool.  The stream and its underlying APR handle will be closed
@@ -581,6 +607,28 @@ svn_stream_t *svn_stream_from_stringbuf (svn_stringbuf_t *str,
  */
 svn_stream_t *svn_stream_compressed (svn_stream_t *stream, 
                                      apr_pool_t *pool);
+
+/** Return a stream that calculates checksums for all data read
+ * and written.  The stream @a stream is used to read and write all data.
+ * The stream and the resulting digests are allocated in @a pool.
+ *
+ * When the stream is closed, @a read_digest and @a write_digest
+ * are set to point to the resulting digests.
+ *
+ * Both @a read_digest and @a write_digest
+ * can be @c NULL, in which case the respective checksum isn't calculated.
+ *
+ * Read and write operations can be mixed without interfering.
+ *
+ * The @a stream passed into this function is closed when the created
+ * stream is closed.
+ *
+ * @since New in 1.4.
+ */
+svn_stream_t * svn_stream_checksummed (svn_stream_t *stream,
+                                       unsigned char **read_digest,
+                                       unsigned char **write_digest,
+                                       apr_pool_t *pool);
 
 /** Read from a generic stream. */
 svn_error_t *svn_stream_read (svn_stream_t *stream, char *buffer,

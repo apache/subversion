@@ -1117,10 +1117,6 @@ def basic_delete(sbox):
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
-  # Deleting non-existant unversioned item
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '--force', foo_path)
-
   # At one stage deleting an URL dumped core
   iota_URL = svntest.main.current_repo_url + '/iota'
 
@@ -1698,6 +1694,36 @@ def info_nonhead(sbox):
 
 
 #----------------------------------------------------------------------
+# Issue #2442.
+def ls_nonhead(sbox):
+  "ls a path no longer in HEAD"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete A/D/rho and commit.
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn("error scheduling A/D/G for deletion",
+                                     None, [], 'rm', G_path)
+  
+  expected_output = wc.State(wc_dir, {
+    'A/D/G' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Check that we can list a file in A/D/G at revision 1.
+  rho_url = sbox.repo_url + "/A/D/G/rho"
+  svntest.actions.run_and_verify_svn(None, '.* rho\n', [],
+                                     'ls', '--verbose', rho_url + '@1')
+  
+
 ########################################################################
 # Run the tests
 
@@ -1732,6 +1758,7 @@ test_list = [ None,
               repos_root,
               basic_peg_revision,
               info_nonhead,
+              ls_nonhead
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

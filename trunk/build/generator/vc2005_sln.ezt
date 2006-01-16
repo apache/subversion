@@ -1,0 +1,20 @@
+Microsoft Visual Studio Solution File, Format Version [version]
+# Visual Studio 2005
+[for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
+	ProjectSection(ProjectDependencies) = postProject
+[for targets.depends]		[targets.depends.guid] = [targets.depends.guid]
+[end]	EndProjectSection
+EndProject
+[end]Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+[for configs][for platforms]		[configs.name]|[platforms] = [configs.name]|[platforms]
+[end][end]	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+[for guids][for platforms][for configs]		[guids].[configs.name]|[platforms].ActiveCfg = [configs.name]|[platforms]
+[end][for configs]		[guids].[configs.name]|[platforms].Build.0 = [configs.name]|[platforms]
+[end][end][end]	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

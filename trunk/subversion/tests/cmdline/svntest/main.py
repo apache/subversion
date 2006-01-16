@@ -113,12 +113,14 @@ if sys.platform != 'AS/400':
   svn_binary = os.path.abspath('../../svn/svn' + _exe)
   svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
   svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
+  svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
   svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 else:
   # Paths to symbolic links for subversion binaries
   svn_binary = os.path.join(os.getcwd(), 'svn')
   svnadmin_binary = os.path.join(os.getcwd(), 'svnadmin')
   svnlook_binary = os.path.join(os.getcwd(), 'svnlook')
+  svnsync_binary = os.path.abspath(os.getcwd(), 'svnsync')  
   svnversion_binary = os.path.join(os.getcwd(), 'svnversion')
 
 # Username and password used by the working copies
@@ -387,6 +389,10 @@ def run_svnlook(*varargs):
   "Run svnlook with VARARGS, returns stdout, stderr as list of lines."
   return run_command(svnlook_binary, 1, 0, *varargs)
 
+def run_svnsync(*varargs):
+  "Run svnsync with VARARGS, returns stdout, stderr as list of lines."
+  return run_command(svnsync_binary, 1, 0, *varargs)
+
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
   return run_command(svnversion_binary, 1, 0, *varargs)
@@ -588,6 +594,8 @@ def create_python_hook_script (hook_path, hook_script_code):
      HOOK_SCRIPT_CODE."""
 
   if sys.platform == 'win32':
+    # Use an absolute path since the working directory is not guaranteed
+    hook_path = os.path.abspath(hook_path)
     # Fill the python file.
     file_append ("%s.py" % hook_path, hook_script_code)
     # Fill the batch wrapper file.

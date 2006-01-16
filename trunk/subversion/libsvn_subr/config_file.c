@@ -410,6 +410,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
                                             SVN_UTF8_NEWLINE_STR, TRUE, NULL,
                                             FALSE, pool);
   ctx.line = 1;
+  ctx.ungotten_char = '\0';
   ctx.have_ungotten_char = FALSE;
   ctx.section = svn_stringbuf_create("", pool);
   ctx.option = svn_stringbuf_create("", pool);

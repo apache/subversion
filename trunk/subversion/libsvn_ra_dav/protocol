@@ -113,3 +113,63 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
 
   * svn pset --revprop:  PROPPATCH
 
+
+Custom REPORTs
+==============
+
+We use a bunch of custom reports, here's a little info on what they look like.
+
+update-report
+-------------
+
+Purpose: Swiss army chainsaw.
+
+Target URL: XXX
+
+Request: XXX
+
+Response: XXX
+
+dated-rev-report
+----------------
+
+Purpose: Get the revision associated with a particular date.
+
+Target URL: VCC URL for repos.
+
+Request:
+
+  <S:dated-rev-report xmlns:S="svn:" xmlns:D="DAV:">
+    <D:creationdate>2005-12-07T13:06:26.034802Z</D:creationdate>
+  </S:dated-rev-report>
+
+Response:
+
+  <S:dated-rev-report xmlns:S="svn:" xmlns:D="DAV:">
+    <D:version-name>4747</D:version-name>
+  </S:dated-rev-report>
+
+get-locks-report
+----------------
+
+Purpose: Get the locks associated with a particular resource.
+
+Target URL: URL of item we're getting the locks for
+
+Request:
+
+  <S:get-locks-report xmlns:S="svn">
+  </S:get-locks-report>
+
+Response:
+
+  <S:get-locks-report xmlns:S="svn">
+    <S:lock>
+      <S:path>/foo/bar/baz</S:path>
+      <S:token>opaquelocktoken:706689a6-8cef-0310-9809-fb7545cbd44e</S:token>
+      <S:owner>fred</S:owner>
+      <S:comment encoding="base64">ET39IGCB93LL4M</S:comment>
+      <S:creationdate>2005-02-07T14:17:08Z</S:creationdate>
+      <S:expirationdate>2005-02-08T14:17:08Z</S:expirationdate>
+    </S:lock>
+  </S:get-locks-report>

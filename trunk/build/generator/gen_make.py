@@ -7,6 +7,9 @@ import sys
 import string
 
 import gen_base
+import generator.swig.header_wrappers
+import generator.swig.checkout_swig_header
+import generator.swig.external_runtime
 import generator.util.executable
 _exec = generator.util.executable
 
@@ -129,34 +132,12 @@ class Generator(gen_base.GeneratorBase):
     ########################################
     self.begin_section('SWIG headers (wrappers and external runtimes)')
 
-    wrapper_fnames = []
-    python_script = '$(abs_srcdir)/build/generator/swig/header_wrappers.py'
-    for fname in self.includes:
-      wrapper_fname = build_path_join(self.swig.proxy_dir,
-        string.replace(build_path_basename(fname),".h","_h.swg"))
-      wrapper_fnames.append(wrapper_fname)
-      if not self.release_mode:
-        self.ofile.write(
-          '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
-          '\tcd $(top_srcdir) && $(PYTHON) %s' % (python_script) +
-          ' build.conf $(SWIG) %s\n\n' % (fname)
-        )
-    self.ofile.write('\n')
-
-    swig_runtime_fnames = []
-    for lang in self.swig_lang:
-      fname = '%s/swig_%s_external_runtime.swg' % (self.swig.proxy_dir, lang)
-      swig_runtime_fnames.append(fname)
     if not self.release_mode:
-      self.ofile.write(
-        '%s:\n' % " ".join(swig_runtime_fnames) +
-        '\tcd $(top_srcdir) && $(PYTHON)' +
-        ' build/generator/swig/external_runtime.py build.conf "$(SWIG)"\n\n'
-      )
-
-    self.ofile.write(
-        'swig-headers: %s\n\n' % " ".join(wrapper_fnames + swig_runtime_fnames)
-    )
+      for swig in (generator.swig.header_wrappers,
+                   generator.swig.checkout_swig_header,
+                   generator.swig.external_runtime):
+        gen = swig.Generator(self.conf, "swig")
+        gen.write_makefile_rules(self.ofile)
 
     ########################################
     self.begin_section('SWIG autogen rules')
@@ -177,14 +158,9 @@ class Generator(gen_base.GeneratorBase):
     for lang in self.swig.langs:
       lang_deps = string.join(swig_lang_deps[lang])
       self.ofile.write(
-        'autogen-swig-%s: swig-headers %s\n' % (short[lang], lang_deps) +
-        'swig-%s: autogen-swig-%s\n' % (short[lang], short[lang]) +
+        'autogen-swig-%s: %s\n' % (short[lang], lang_deps) +
         'autogen-swig: autogen-swig-%s\n' % short[lang] +
-        'clean-swig: clean-swig-%s\n' % short[lang] +
-        'extraclean-swig: extraclean-swig-%s\n' % short[lang] +
         '\n')
-    self.ofile.write('clean-swig: clean-swig-headers\n')
-    self.ofile.write('extraclean-swig: extraclean-swig-headers\n')
     self.ofile.write('\n')
     
     ########################################
@@ -445,11 +421,13 @@ class Generator(gen_base.GeneratorBase):
           dirname, fname = build_path_splitfile(file)
           if area == 'locale':
             lang, objext = os.path.splitext(fname)
-            self.ofile.write('\tcd %s ; $(INSTALL_%s) %s '
-                             '$(DESTDIR)%s/%s/LC_MESSAGES/$(PACKAGE_NAME)%s\n'
-                             % (dirname, upper_var, fname,
-                                build_path_join('$(%sdir)' % area_var), lang,
-                                objext))
+            installdir = '$(DESTDIR)$(%sdir)/%s/LC_MESSAGES' % (area_var, lang)
+            self.ofile.write('\t$(MKDIR) %s\n'
+                             '\tcd %s ; $(INSTALL_%s) %s '
+                             '%s/$(PACKAGE_NAME)%s\n'
+                             % (installdir,
+                                dirname, upper_var, fname,
+                                installdir, objext))
           else:
             self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                              % (dirname, upper_var, fname,

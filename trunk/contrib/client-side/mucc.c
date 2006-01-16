@@ -272,7 +272,7 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
    Node type information is obtained for any copy source (to determine
    whether to create a file or directory) and for any deleted path (to
    ensure it exists since svn_delta_editor_t->delete_entry doesn't return
-   an error on non-existant nodes). */
+   an error on non-existent nodes). */
 static svn_error_t *
 build(const char *path,
       const char *url,

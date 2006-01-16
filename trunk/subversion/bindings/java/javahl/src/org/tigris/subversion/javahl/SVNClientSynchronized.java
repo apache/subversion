@@ -112,7 +112,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
@@ -129,7 +129,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
@@ -149,7 +149,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path            Path to explore.
-     * @param descend         Recurse into subdirectories if existant.
+     * @param descend         Recurse into subdirectories if they exist.
      * @param onServer        Request status information from server.
      * @param getAll          get status for uninteristing files (unchanged).
      * @param noIgnore        get status for normaly ignored files and

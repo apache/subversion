@@ -132,7 +132,7 @@ svn_fs_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
                         const char *txn_name,
                         apr_pool_t *pool)
 {
-  transaction_t *txn;
+  transaction_t *txn = NULL;
   
   SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, pool));
   if (txn->kind != transaction_kind_normal)
@@ -166,8 +166,6 @@ svn_fs_fs__txn_prop (svn_string_t **value_p,
   return SVN_NO_ERROR;
 }
 
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
                       svn_fs_t *fs,

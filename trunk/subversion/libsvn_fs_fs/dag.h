@@ -66,9 +66,8 @@ svn_fs_fs__dag_get_node (dag_node_t **node,
 
 /* Return a new dag_node_t object referring to the same node as NODE,
    allocated in POOL.  If you're trying to build a structure in a
-   trail that wants to refer to dag nodes that may have been allocated
-   elsewhere, you can call this function, passing "trail->pool", and
-   avoid inter-pool pointers.  */
+   pool that wants to refer to dag nodes that may have been allocated
+   elsewhere, you can call this function and avoid inter-pool pointers. */
 dag_node_t *svn_fs_fs__dag_dup (dag_node_t *node,
                                 apr_pool_t *pool);
 

@@ -330,10 +330,10 @@ local-extraclean: local-distclean extraclean-swig
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
-              $(top_srcdir)/ac-helpers/config.guess \
-              $(top_srcdir)/ac-helpers/config.sub \
-              $(top_srcdir)/ac-helpers/libtool.m4 \
-              $(top_srcdir)/ac-helpers/ltmain.sh
+              $(top_srcdir)/build/config.guess \
+              $(top_srcdir)/build/config.sub \
+              $(top_srcdir)/build/libtool.m4 \
+              $(top_srcdir)/build/ltmain.sh
 
 # clean everything, including test output.
 local-clean: fast-clean check-clean clean-swig
@@ -603,6 +603,10 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
+extraclean-swig: extraclean-swig-headers extraclean-swig-py \
+                 extraclean-swig-rb extraclean-swig-pl
+
 EXTRACLEAN_SWIG_HEADERS=rm -f $(SWIG_SRC_DIR)/proxy/*.swg
 
 clean-swig-headers:
@@ -623,6 +627,9 @@ swig-pl_DEPS = autogen-swig-pl libsvn_client libsvn_delta libsvn_diff \
   libsvn_fs libsvn_ra libsvn_repos libsvn_subr libsvn_wc libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
 swig-pl: $(swig-pl_DEPS)
+	if test "$(SWIG_PL_DIR)" != "$(SWIG_PL_SRC_DIR)"; then \
+	  ln -sf $(SWIG_PL_SRC_DIR)/native/*.c $(SWIG_PL_DIR)/native; \
+	fi
 	cd $(SWIG_PL_DIR)/native; $(MAKE)
 
 check-swig-pl: swig-pl swig-pl-lib

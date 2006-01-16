@@ -829,7 +829,7 @@ def dont_diff_binary_file(sbox):
 
 
 def diff_nonextant_urls(sbox):
-  "svn diff errors against a non-existant URL"
+  "svn diff errors against a non-existent URL"
 
   sbox.build()
   non_extant_url = sbox.repo_url + '/A/does_not_exist'
@@ -2198,6 +2198,131 @@ def diff_prop_change_local_propmod(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+# repos->WORKING and BASE->repos diffs that add files or directories with
+# properties should show the added properties.
+def diff_repos_wc_add_with_props(sbox):
+  "repos-wc diff showing added entries with props"
+
+  sbox.build()
+
+  expected_output_r1_r3 = [
+    "Index: foo\n".encode('utf-8'),
+    "===================================================================\n".encode('utf-8'),
+    "--- foo\t(revision 0)\n".encode('utf-8'),
+    "+++ foo\t(revision 3)\n".encode('utf-8'),
+    "@@ -0,0 +1 @@\n".encode('utf-8'),
+    "+content\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "Property changes on: foo\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: propname\n".encode('utf-8'),
+    "   + propvalue\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "Property changes on: X\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: propname\n".encode('utf-8'),
+    "   + propvalue\n".encode('utf-8'),
+    "\n".encode('utf-8') ]
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Create empty directory X and file foo, and commit them (r2).
+    os.makedirs('X')
+    svntest.main.file_append('foo', "content\n".encode('utf-8'))
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'add', 'X', 'foo')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Set a property on X and foo, and commit them (r3).
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'propname',
+                                       'propvalue', 'X', 'foo')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Now, if we diff r1 to WORKING, we should see the content addition
+    # for foo, and property additions for both X and foo.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+                                       'diff', '-r', '1')
+
+    # Update the BASE and WORKING revisions to r1.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'up', '-r', '1')
+
+    # If we diff BASE to r3, we should see the same output as above.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+                                       'diff', '-r', 'BASE:3')
+
+
+  finally:
+    os.chdir(current_dir)
+
+
+#----------------------------------------------------------------------
+# A repos->BASE diff that adds a file or directory with properties
+# should show the added properties.
+#
+# Note: this test is identical to the one above, except that the final
+#       diff is performed against BASE rather than WORKING.  The reason
+#       for this duplication is because the two cases will probably be
+#       fixed at different times.  Once both tests pass, this test
+#       should probably be combined with the one above.
+def diff_repos_wc_add_with_props2(sbox):
+  "repos->BASE diff showing added entries with props"
+
+  sbox.build()
+
+  expected_output_r1_wc = [
+    "Index: foo\n".encode('utf-8'),
+    "===================================================================\n".encode('utf-8'),
+    "--- foo\t(revision 0)\n".encode('utf-8'),
+    "+++ foo\t(revision 3)\n".encode('utf-8'),
+    "@@ -0,0 +1 @@\n".encode('utf-8'),
+    "+content\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "Property changes on: foo\n",
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: propname\n".encode('utf-8'),
+    "   + propvalue\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "\n".encode('utf-8'),
+    "Property changes on: X\n".encode('utf-8'),
+    "___________________________________________________________________\n".encode('utf-8'),
+    "Name: propname\n".encode('utf-8'),
+    "   + propvalue\n".encode('utf-8'),
+    "\n".encode('utf-8') ]
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Create empty directory X and file foo, and commit them (r2).
+    os.makedirs('X')
+    svntest.main.file_append('foo', "content\n".encode('utf-8'))
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'add', 'X', 'foo')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Set a property on X and foo, and commit them (r3).
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'propname',
+                                       'propvalue', 'X', 'foo')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Now, if we diff r1 to BASE, we should see the content addition
+    # for foo, and property additions for both X and foo.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
+                                       'diff', '-r', '1:BASE')
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -2233,8 +2358,13 @@ test_list = [ None,
               diff_schedule_delete,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
-              XFail(diff_mime_type_changes),
+              diff_mime_type_changes,
               XFail(diff_prop_change_local_propmod),
+              # Note: When the following two tests both pass, they should
+              # be combined into one test, as they test essentially the same
+              # thing, and share the same setup.  See note above.
+              XFail(diff_repos_wc_add_with_props),
+              XFail(diff_repos_wc_add_with_props2),
               ]
 
 if __name__ == '__main__':

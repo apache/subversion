@@ -194,7 +194,7 @@ _re_args = re.compile(r'"(?:[^\\"]|\\.)*"|[-\w.]+')
 _block_cmd_specs = { 'if-index':2, 'for':1, 'is':2 }
 _block_cmds = _block_cmd_specs.keys()
 
-# two regular expresssions for compressing whitespace. the first is used to
+# two regular expressions for compressing whitespace. the first is used to
 # compress any whitespace including a newline into a single newline. the
 # second regex is used to compress runs of whitespace into a single space.
 _re_newline = re.compile('[ \t\r\f\v]*\n\\s*')

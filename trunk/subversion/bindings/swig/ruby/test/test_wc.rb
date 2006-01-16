@@ -321,11 +321,25 @@ class SvnWcTest < Test::Unit::TestCase
 
     assert(!Svn::Wc.locked?(@wc_path))
     ctx = make_context(log)
-    assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
-      ctx.update(@wc_path, youngest_rev + 1)
+
+    gc_disable do
+      assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
+        ctx.update(@wc_path, youngest_rev + 1)
+      end
+      assert(Svn::Wc.locked?(@wc_path))
     end
-    assert(Svn::Wc.locked?(@wc_path))
-    ctx.cleanup(@wc_path)
-    assert(!Svn::Wc.locked?(@wc_path))
+    gc_enable do
+      GC.start
+      assert(!Svn::Wc.locked?(@wc_path))
+    end
+    
+    gc_disable do
+      assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
+        ctx.update(@wc_path, youngest_rev + 1)
+      end
+      assert(Svn::Wc.locked?(@wc_path))
+      ctx.cleanup(@wc_path)
+      assert(!Svn::Wc.locked?(@wc_path))
+    end
   end
 end

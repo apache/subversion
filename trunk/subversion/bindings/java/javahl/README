@@ -1,6 +1,6 @@
 This Software should compile and run under win32 and linux. The 
 integration into the subversion build system has been done by
-Justin Erenkrantz for non win32 systems. The intergration for win32
+Justin Erenkrantz for non win32 systems. The integration for win32
 system will be provided later.
 
 It will produce libsvnjavahl.so or libsvnjavahl.dll (the native

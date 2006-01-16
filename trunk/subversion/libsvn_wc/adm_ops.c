@@ -672,7 +672,9 @@ erase_unversioned_from_wc (const char *path,
   switch (kind)
     {
     case svn_node_none:
-      /* Nothing to do. */
+      return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
+                                _("'%s' does not exist"),
+                                svn_path_local_style (path, pool));
       break;
 
     default:
@@ -1183,7 +1185,7 @@ svn_wc_add2 (const char *path,
       else
         {
           /* When we are called with the copyfrom arguments set and with
-             the admin directory already in existance, then the dir will
+             the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
           SVN_ERR (svn_wc_ensure_adm2 (path, NULL, copyfrom_url,
@@ -1349,7 +1351,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   const char *fullpath;
   /* If true, force reinstallation of working file. */
   svn_boolean_t reinstall_working = FALSE;
-  apr_hash_t *modify_entry_atts = apr_hash_make (pool);
+  svn_wc_entry_t tmp_entry;
+  apr_uint32_t flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
   apr_hash_t *baseprops = NULL;
   const char *adm_path = svn_wc_adm_access_path (adm_access);
@@ -1417,8 +1420,10 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   /* Clean up the copied state if this is a replacement. */
   if (entry->schedule == svn_wc_schedule_replace
       && entry->copied)
-    apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPIED,
-                  APR_HASH_KEY_STRING, FALSE_STR);
+    {
+      flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+      tmp_entry.copied = FALSE;
+    }
 
   /* Deal with the contents. */
 
@@ -1483,8 +1488,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                       name, svn_time_to_cstring (entry->cmt_date, pool),
                       pool));
 
-          apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                        APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
+          SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
+                   (&log_accum, adm_access, name, SVN_WC__ENTRY_ATTR_TEXT_TIME,
+                    pool));
         }
     }
 
@@ -1492,24 +1498,24 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
      Handle the three possible text conflict files. */
   if (entry->conflict_old)
     {
-      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                    APR_HASH_KEY_STRING, "");
+      flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+      tmp_entry.conflict_old = NULL;
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                      entry->conflict_old, pool));
     }
 
   if (entry->conflict_new)
     {
-      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                    APR_HASH_KEY_STRING, "");
+      flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+      tmp_entry.conflict_new = NULL;
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                     entry->conflict_new, pool));
     }
 
   if (entry->conflict_wrk)
     {
-      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                    APR_HASH_KEY_STRING, "");
+      flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+      tmp_entry.conflict_wrk = NULL;
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                      entry->conflict_wrk, pool));
     }
@@ -1517,19 +1523,21 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   /* Remove the prej-file if the entry lists one (and it exists) */
   if (entry->prejfile)
     {
-      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PREJFILE,
-                    APR_HASH_KEY_STRING, "");
+      flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+      tmp_entry.prejfile = NULL;
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                      entry->prejfile, pool));
     }
 
   /* Reset schedule attribute to svn_wc_schedule_normal. */
   if (entry->schedule != svn_wc_schedule_normal)
-    apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_SCHEDULE,
-                  APR_HASH_KEY_STRING, "");
+    {
+      flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+      tmp_entry.schedule = svn_wc_schedule_normal;
+    }
 
-  SVN_ERR (svn_wc__loggy_entry_modify_hash (&log_accum, adm_access, name,
-                                            modify_entry_atts, pool));
+  SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access, name,
+                                       &tmp_entry, flags, pool));
 
   /* Don't run log if nothing to change. */
   if (!svn_stringbuf_isempty(log_accum))

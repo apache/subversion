@@ -668,7 +668,6 @@ msgstr ""
 "  2. 以 URL 指定的項目, 會透過立即送交自檔案庫中刪除.\n"
 
 #: clients/cmdline/main.c:279
-#, fuzzy
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -699,8 +698,9 @@ msgid ""
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
 "顯示兩個路徑之間的差異.\n"
-"用法: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
-"      2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
+"用法: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+"      2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT"
+"[@NEWREV]] \\\n"
 "              [PATH...]\n"
 "      3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
@@ -710,12 +710,14 @@ msgstr ""
 "     如果任何的 TARGET 是工作複本的話, N 預設為 BASE, 否則就必須加以指定.\n"
 "     如果任何的 TARGET 是工作複本路徑, M 預設為目前的工作版本, 否則預設為\n"
 "     HEAD.\n"
+"     \"-c M\" 選項與 \"-r N:M\" 相同, 其中 N = M-1.\n"
 "\n"
 "  2. 顯示於 OLDREV 修訂版的 OLD-TGT 與於 NEWREV 修訂版的 NEW-TGT 之間的\n"
 "     差異. 如果有指定 PATH 的話, 它們是相對於 OLD-TGT 與 NEW-TGT, 而差異\n"
 "     的輸出會限制在這些路徑中. OLD-TGT 與 NEW-TGT 可為工作路徑或\n"
 "     URL[@REV]. 沒有指定 NEW-TGT 時, 預設為 OLD-TGT. -r N 使得 OLDREV \n"
-"     預設為 N, 而 -r N:M 讓 OLDREV 預設為 N, NEWREV 預設為 M.\n"
+"     預設為 N, 而 -r N:M 讓 OLDREV 預設為 N, NEWREV 預設為 M,\n"
+"     -c M 使得 OLDREV 預設為 M-1, 並且 NEWREV 預設為 M.\n"
 "  3. 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]' 的便利寫法.\n"
 "\n"
 "  僅僅使用 'svn diff' 時, 會顯示工作複本中的本地修改.\n"
@@ -799,7 +801,6 @@ msgstr ""
 "  TARGET 可為工作複本路徑或是 URL.\n"
 
 #: clients/cmdline/main.c:381
-#, fuzzy
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -833,6 +834,7 @@ msgstr ""
 "\n"
 "    前次送交的修訂版號碼\n"
 "    前次送交的作者\n"
+"    如果被鎖定的話, 顯示字母 'O'.  (請利用 'svn info URL' 以取得更多的細節)\n"
 "    大小 (以位元組為單位)\n"
 "    前次送交的日期與時間\n"
 
@@ -901,7 +903,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: clients/cmdline/main.c:447
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -930,7 +931,7 @@ msgstr ""
 "將兩個來源之間的差異套用至工作複本路徑.\n"
 "用法: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "      2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"      3. merge -r N:M SOURCE[@REV] [WCPATH]\n"
+"      3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
 "\n"
 "  1. 第一種形式中, 來源 URL 各被指定到修訂版 N 與 M. 這兩個就是作為\n"
 "     比較的來源. 如果沒有指定修訂版的話, 預設為 HEAD.\n"
@@ -940,7 +941,8 @@ msgstr ""
 "\n"
 "  3. 第三種形式中, SOURCE 可為 URL 或工作複本項目, 後者會使用對應的\n"
 "     URL. 在修訂版 REV 的 URL 會以它存在於修訂版 N 與 M 的路徑來作\n"
-"     比較. 如果未指定 REV, 就會假設為 HEAD.\n"
+"     比較. 如果未指定 REV, 就會假設為 HEAD.  \"-c M\" 選項與 \n"
+"     \"-r N:M\" 相同, 其中 N = M-1.\n"
 "\n"
 "  WCPATH 是接受更動的工作複本路徑. 如果省略 WCPATH 的話, 預設值為\n"
 "  '.', 除非來源的主檔名符合 '.' 裡的某個檔案; 在這種情況下, 檔案\n"
@@ -976,7 +978,6 @@ msgstr ""
 "  在這兩個情況下, 所有的中介目錄都必須事先存在.\n"
 
 #: clients/cmdline/main.c:498
-#, fuzzy
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -992,6 +993,7 @@ msgstr ""
 "用法: move SRC DST\n"
 "\n"
 "  注意:  本子命令等同於 'copy' 然後 'delete'.\n"
+"  注意:  --revision 選項已無作用, 並不建議使用.\n"
 "\n"
 "  SRC 可同時為工作複本 (WC) 路徑或 URL:\n"
 "    WC  -> WC:   移動並排入新增時程 (連同歷史紀錄)\n"
@@ -1179,7 +1181,6 @@ msgstr ""
 "        被刪除的目錄\n"
 
 #: clients/cmdline/main.c:630
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1316,14 +1317,14 @@ msgstr ""
 "     M           965    wc/bar.c\n"
 "           *     965    wc/foo.c\n"
 "    A  +         965    wc/qax.c\n"
-"    Head revision:   981\n"
+"    Status against revision:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
 "     M           965       938 kfogel       wc/bar.c\n"
 "           *     965       922 sussman      wc/foo.c\n"
 "    A  +         965       687 joe          wc/qax.c\n"
 "                 965       687 joe          wc/zig.c\n"
-"    Head revision:   981\n"
+"    Status against revision:   981\n"
 
 #: clients/cmdline/main.c:707
 msgid ""
@@ -4691,9 +4692,9 @@ msgid "Can't create socket"
 msgstr "無法建立 socket"
 
 #: libsvn_ra_svn/client.c:159
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set timeout"
-msgstr "無法開啟標準輸出 (stdout)"
+msgstr "無法設定逾時"
 
 #: libsvn_ra_svn/client.c:163
 #, c-format
@@ -4849,13 +4850,12 @@ msgid "Lock response not a list"
 msgstr "Lock response not a list"
 
 #: libsvn_ra_svn/client.c:1748
-#, fuzzy
 msgid "Unknown status for lock command"
-msgstr "未知的 svn 通訊協定命令"
+msgstr "鎖定命令的未知狀態"
 
 #: libsvn_ra_svn/client.c:1770
 msgid "Didn't receive end marker for lock responses"
-msgstr ""
+msgstr "未收到鎖定回應的結束標記"
 
 # as-is
 #: libsvn_ra_svn/client.c:1857
@@ -4863,13 +4863,12 @@ msgid "Unlock response not a list"
 msgstr "Unlock response not a list"
 
 #: libsvn_ra_svn/client.c:1871
-#, fuzzy
 msgid "Unknown status for unlock command"
-msgstr "命令回應中的未知狀態 '%s'"
+msgstr "解鎖命令的未知狀態"
 
 #: libsvn_ra_svn/client.c:1892
 msgid "Didn't receive end marker for unlock responses"
-msgstr ""
+msgstr "未收到解鎖回應的結束標記"
 
 #: libsvn_ra_svn/client.c:1916 libsvn_ra_svn/client.c:1944
 msgid "Server doesn't support the get-lock command"
@@ -5258,9 +5257,8 @@ msgid "Not authorized to open root of edit operation"
 msgstr "Not authorized to open root of edit operation"
 
 #: libsvn_repos/reporter.c:843
-#, fuzzy
 msgid "Target path does not exist"
-msgstr "路徑 '%s' 不存在"
+msgstr "目標路徑不存在"
 
 #: libsvn_repos/reporter.c:850
 msgid "Cannot replace a directory from within"
@@ -5330,9 +5328,8 @@ msgid "Creating passwd file"
 msgstr "建立 passwd 檔案"
 
 #: libsvn_repos/repos.c:1527
-#, fuzzy
 msgid "Creating authz file"
-msgstr "建立 passwd 檔案"
+msgstr "建立 authz 檔案"
 
 #: libsvn_repos/repos.c:1560
 msgid "Could not create top-level directory"
@@ -5537,14 +5534,14 @@ msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "無法取得 '%s' 的預設檔案權限 (檔案 stat 錯誤)"
 
 #: libsvn_subr/io.c:1107
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open file at '%s'"
-msgstr "無法開啟檔案 '%s'"
+msgstr "無法於 '%s' 開啟檔案"
 
 #: libsvn_subr/io.c:1111
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
-msgstr "無法取得 '%s' 的預設檔案權限 (檔案 stat 錯誤)"
+msgstr "無法於 '%s' 取得檔案的權限 (檔案 stat 錯誤)"
 
 #: libsvn_subr/io.c:1144 libsvn_subr/io.c:1204
 #, c-format
@@ -5657,15 +5654,15 @@ msgstr "Can't set process '%s' child errfile"
 
 # as-is
 #: libsvn_subr/io.c:1943
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' child errfile for error handler"
-msgstr "Can't set process '%s' child errfile"
+msgstr "Can't set process '%s' child errfile for error handler"
 
 # as-is
 #: libsvn_subr/io.c:1949
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' error handler"
-msgstr "Can't set process '%s' child errfile"
+msgstr "Can't set process '%s' error handler"
 
 #: libsvn_subr/io.c:1972
 #, c-format
@@ -5802,7 +5799,7 @@ msgid "Can't remove directory '%s'"
 msgstr "無法移除目錄 '%s'"
 
 #: libsvn_subr/io.c:2739
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read directory"
 msgstr "無法讀取目錄"
 
@@ -5832,19 +5829,18 @@ msgid "First line of '%s' contains non-digit"
 msgstr "'%s' 的第一行包含非數字字元"
 
 #: libsvn_subr/nls.c:79
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string to UCS-2: '%s'"
-msgstr "無法將字串自 '%s' 轉換至 '%s'"
+msgstr "無法將字串轉換至 UCS-2: '%s'"
 
 #: libsvn_subr/nls.c:86
-#, fuzzy
 msgid "Can't get module file name"
-msgstr "無法取得檔案名稱"
+msgstr "無法取得模組的檔案名稱"
 
 #: libsvn_subr/nls.c:101
 #, c-format
 msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
-msgstr ""
+msgstr "無法將模組路徑自 UCS-2 轉換至 UTF-8: '%s'"
 
 #: libsvn_subr/opt.c:146
 msgid ""
@@ -6132,9 +6128,9 @@ msgid "Error opening local file"
 msgstr "開啟本地檔案時發生錯誤"
 
 #: libsvn_wc/adm_files.c:100
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid administrative directory name"
-msgstr "'%s' 不是檔案或目錄名稱"
+msgstr "'%s' 不是有效的管理目錄名稱"
 
 # plz leave this as-is
 #: libsvn_wc/adm_files.c:260
@@ -6219,9 +6215,9 @@ msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "無法新增 '%s' 至已預定要刪除的父目錄"
 
 #: libsvn_wc/adm_ops.c:1120
-#, fuzzy, c-format
+#, c-format
 msgid "The URL '%s' has a different repository root than its parent"
-msgstr "來源 URL '%s' 來自其它的檔案庫; 把它當作是脫離的 WC"
+msgstr "URL '%s' 的檔案庫根路徑與其父目錄的不同"
 
 #: libsvn_wc/adm_ops.c:1444
 #, c-format
@@ -6289,9 +6285,9 @@ msgid ""
 msgstr "無法複製或移動 '%s': 它尚未存在於檔案庫之中; 請試著先進行送交"
 
 #: libsvn_wc/copy.c:529
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
-msgstr "無法複製或移動 '%s': 它尚未存在於檔案庫之中; 請試著先進行送交"
+msgstr "無法複製至 '%s', 因為它不是來自檔案庫 '%s'; 它是來自 '%s'"
 
 #: libsvn_wc/copy.c:536
 #, c-format
@@ -6309,9 +6305,9 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "項目 '%s' 有無效的 '%s' 值"
 
 #: libsvn_wc/entries.c:252
-#, fuzzy, c-format
+#, c-format
 msgid "Entry for '%s' has invalid repository root"
-msgstr "項目 '%s' 有無效的節點種類"
+msgstr "項目 '%s' 有無效的檔案庫根目錄"
 
 #: libsvn_wc/entries.c:274
 #, c-format
@@ -6443,9 +6439,9 @@ msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路徑 '%s' 以 '%s' 結束, 本動作不支援"
 
 #: libsvn_wc/lock.c:704 libsvn_wc/lock.c:735
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to check path existence for %s"
-msgstr "無法為 '%s' 產生名稱"
+msgstr "無法檢查路徑 '%s' 是否存在"
 
 #: libsvn_wc/lock.c:714
 #, c-format
@@ -6453,14 +6449,14 @@ msgid "Expected %s to be a directory but found a file"
 msgstr ""
 
 #: libsvn_wc/lock.c:721
-#, fuzzy, c-format
+#, c-format
 msgid "Expected %s to be a file but found a directory"
-msgstr "URL '%s' 指向一個檔案, 而非目錄"
+msgstr "%s 預期為檔案, 但是結果為目錄"
 
 #: libsvn_wc/lock.c:741
-#, fuzzy, c-format
+#, c-format
 msgid "Directory '%s' is missing"
-msgstr "目錄 '%s' 沒有 URL"
+msgstr "找不到目錄 '%s'"
 
 #: libsvn_wc/lock.c:746
 #, c-format
@@ -6468,14 +6464,14 @@ msgid "Directory '%s' containing working copy admin area is missing"
 msgstr ""
 
 #: libsvn_wc/lock.c:751
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to lock %s"
-msgstr "無法找到 auth 檔案"
+msgstr "無法鎖定 %s"
 
 #: libsvn_wc/lock.c:756
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy '%s' is not locked"
-msgstr "工作複本 '%s' 被鎖定了"
+msgstr "工作複本 '%s' 未被鎖定了"
 
 #: libsvn_wc/lock.c:1157
 #, c-format
@@ -6832,9 +6828,9 @@ msgid "'%s' has no ancestry information"
 msgstr "'%s' 沒有演進歷程資訊"
 
 #: libsvn_wc/update_editor.c:2901
-#, fuzzy, c-format
+#, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
-msgstr "來源 URL '%s' 來自其它的檔案庫"
+msgstr "Copyfrom-url '%s' 與 '%s' 的檔案庫根目錄不同"
 
 #: libsvn_wc/util.c:83
 msgid "Unable to make any directories"
@@ -7279,10 +7275,10 @@ msgid "Removed lock on '%s'.\n"
 msgstr "移除 '%s' 的鎖定.\n"
 
 #: svnadmin/main.c:1218
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
-msgstr "遇到了多個修訂版引數; 請試著將 '-r M -r N' 改為 '-r M:N'"
+msgstr ""
+"遇到了多個修訂版引數; 請試著將 '-r M -r N' 改為 '-r M:N'"
 
 #: svnadmin/main.c:1323
 #, c-format
@@ -7465,9 +7461,8 @@ msgid "print differences against the copy source"
 msgstr ""
 
 #: svnlook/main.c:123
-#, fuzzy
 msgid "operate on a revision property (use with -r or -t)"
-msgstr "操作修訂版性質 (與 -r 一同使用)"
+msgstr "操作修訂版性質 (與 -r 或 -t 一同使用)"
 
 #: svnlook/main.c:126
 msgid "show full paths instead of indenting them"
@@ -7475,7 +7470,7 @@ msgstr "顯示完整路徑而非對其縮排"
 
 #: svnlook/main.c:129
 msgid "show details for copies"
-msgstr ""
+msgstr "顯示複本的細節"
 
 #: svnlook/main.c:142
 msgid ""
@@ -7908,41 +7903,41 @@ msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "選項 --tunnel-user 只有在 tunnel 模式才可以使用\n"
 
 #: svnserve/main.c:446
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get address info"
-msgstr "無法取得位址資訊: '%s'\n"
+msgstr "無法取得位址資訊"
 
 #: svnserve/main.c:462
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create server socket"
-msgstr "無法建立伺服器 socket: %s\n"
+msgstr "無法建立伺服器 socket"
 
 #: svnserve/main.c:475
-#, fuzzy, c-format
+#, c-format
 msgid "Can't bind server socket"
-msgstr "無法繫結伺服器 socket: '%s'\n"
+msgstr "無法繫結伺服器 socket"
 
 #: svnserve/main.c:518
-#, fuzzy, c-format
+#, c-format
 msgid "Can't accept client connection"
-msgstr "無法接受用戶連線: %s\n"
+msgstr "無法接受用戶連線"
 
 # as-is
 #: svnserve/main.c:572
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create threadattr"
-msgstr "Can't create threadattr: %s\n"
+msgstr "Can't create threadattr"
 
 # as-is
 #: svnserve/main.c:580
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set detached state"
-msgstr "Can't set detached state: %s\n"
+msgstr "Can't set detached state"
 
 #: svnserve/main.c:593
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create thread"
-msgstr "無法建立執行緒: %s\n"
+msgstr "無法建立執行緒"
 
 #: svnversion/main.c:90
 #, c-format
@@ -7950,7 +7945,7 @@ msgid "Type 'svnversion --help' for usage.\n"
 msgstr "請使用 'svnversion --help' 以了解用法.\n"
 
 #: svnversion/main.c:101
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -8000,6 +7995,8 @@ msgstr ""
 "\n"
 "  如果在非工作複本的目錄中, 例如匯出的目錄執行的話, 那麼\n"
 "  這個程式會輸出 '已匯出'.\n"
+"\n"
+"  如果執行時未指定引數, WC_PATH 為目前的目錄.\n"
 "\n"
 "有效選項:\n"
 

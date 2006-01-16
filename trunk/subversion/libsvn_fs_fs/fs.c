@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>              /* for EINVAL */
 
 #include <apr_general.h>
 #include <apr_pools.h>

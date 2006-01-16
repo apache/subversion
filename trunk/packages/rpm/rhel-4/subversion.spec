@@ -1,7 +1,7 @@
 %define apache_version 2.0.52
 %define apr_version 0.9.4
 %define neon_version 0.24.7
-%define swig_version 1.3.21
+%define swig_version 1.3.25
 %define apache_dir /usr
 # If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_bdb_check 1
@@ -27,6 +27,7 @@ Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.2.52
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel >= 4.2.52
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -85,7 +86,6 @@ the Apache directories and configuration.
 %package perl
 Group: Utilities/System
 Summary: Allows Perl scripts to directly use Subversion repositories.
-Requires: swig >= %{swig_version}
 Requires: perl
 %description perl
 Provides Perl (SWIG) support for Subversion.
@@ -93,7 +93,6 @@ Provides Perl (SWIG) support for Subversion.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig >= %{swig_version}
 Requires: python >= 2
 %description python
 Provides Python (SWIG) support for Subversion.
@@ -105,6 +104,24 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r18013
+- Simplify apache regression testing.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
+- Figured out how to disable module configuration with --disable-mod-activation.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
+  NFS server/client.
+
+* Wed Aug 31 2005 David Summers <david@summersoft.fay.ar.us> r16011
+- Update to SWIG 1.3.25.  This makes it so that only the developer/packager
+  needs the SWIG package installed.
+
+* Sun Aug 07 2005 David Summers <david@summersoft.fay.ar.us> r15615
+- Fix bug where RHEL4 version can't find Python bindings.
+  RHEL4 uses python 2.3 instead of python 2.2.
+
 * Sat Apr 30 2005 David Summers <david@summersoft.fay.ar.us> r14530
 - Make backend regression tests explicit and make sure we do them for both BDB
   and FSFS backends.
@@ -362,7 +379,7 @@ Tools for Subversion.
 - Release M3-r117: Initial Version.
 
 %define __perl_requires %{SOURCE3}
-%define perl_vendorarch %(eval "`perl -V:installvendorarch`"; echo $installvendorarch)
+%define perl_sitearch %(eval "`perl -V:installsitearch`"; echo $installsitearch)
 %define perl_version %(eval "`perl -V:version`"; echo $version)
 
 %prep
@@ -377,10 +394,6 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
    export AUTOCONF AUTOHEADER
 fi
 sh autogen.sh
-
-
-# Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/rhel-4/install.patch
 
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
@@ -404,9 +417,10 @@ rm -rf apr apr-util neon
 
 
 %configure \
+	--disable-mod-activation \
 	--with-swig \
 	--with-berkeley-db \
-	--with-python=/usr/bin/python2.2 \
+	--with-python=/usr/bin/python2.3 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
@@ -419,12 +433,8 @@ make
 make swig-py
 
 # Build PERL bindings
-make swig-pl-lib
-cd subversion/bindings/swig/perl/native
-env APR_CONFIG=/usr/bin/apr-config perl Makefile.PL INSTALLDIRS=vendor PREFIX=$RPM_BUILD_ROOT/%{_prefix}
-make all
-make test
-cd ../../../../..
+make swig-pl DESTDIR=$RPM_BUILD_ROOT
+make check-swig-pl
 
 %if %{make_ra_local_bdb_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
@@ -436,7 +446,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -444,17 +454,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_bdb_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-4/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=bdb
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -468,7 +468,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/svn/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=fsfs
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -478,15 +478,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-4/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=fsfs
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -501,15 +493,12 @@ cp packages/rpm/rhel-4/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
-mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.3/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.3/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Install PERL SWIG bindings.
-make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
-cd subversion/bindings/swig/perl/native
-make PREFIX=$RPM_BUILD_ROOT/%{_prefix} install
-cd ../../../../..
+make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 
 # Clean up unneeded files for package installation
 rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
@@ -520,6 +509,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
+
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
 
 %post -n mod_dav_svn
 # Restart apache server if needed.
@@ -547,6 +540,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnsync
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
@@ -571,22 +565,20 @@ rm -rf $RPM_BUILD_ROOT
 %files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.la
 %{apache_dir}/lib/httpd/modules/mod_authz_svn.so
 
 %files perl
 %defattr(-,root,root)
-%{perl_vendorarch}/SVN
-%{perl_vendorarch}/auto/SVN
+%{perl_sitearch}/SVN
+%{perl_sitearch}/auto/SVN
 /usr/lib/libsvn_swig_perl*so*
 /usr/share/man/man3/SVN*
 
 %files python
 %defattr(-,root,root)
-/usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/libsvn
+/usr/lib/python2.3/site-packages/svn
+/usr/lib/python2.3/site-packages/libsvn
 /usr/lib/libsvn_swig_py*so*
 
 %files tools

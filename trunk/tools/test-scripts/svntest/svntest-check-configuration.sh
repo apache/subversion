@@ -108,32 +108,32 @@ test -z "$SVN_NAME" && {
     echo "SVN_NAME: Empty value"
     exit 1
 }
-test -z "$SVN_REPO" && {
-    echo "SVN_REPO: Empty value"
+test -z "$SVN_SOURCE" && {
+    echo "SVN_SOURCE: Empty value"
     exit 1
 }
 test -z "$APR_NAME" && {
     echo "APR_NAME: Empty value"
     exit 1
 }
-test -z "$APR_REPO" && {
-    echo "APR_REPO: Empty value"
+test -z "$APR_SOURCE" && {
+    echo "APR_SOURCE: Empty value"
     exit 1
 }
 test -z "$APU_NAME" && {
     echo "APU_NAME: Empty value"
     exit 1
 }
-test -z "$APU_REPO" && {
-    echo "APU_REPO: Empty value"
+test -z "$APU_SOURCE" && {
+    echo "APU_SOURCE: Empty value"
     exit 1
 }
 test -z "$HTTPD_NAME" && {
     echo "HTTPD_NAME: Empty value"
     exit 1
 }
-test -z "$HTTPD_REPO" && {
-    echo "HTTPD_REPO: Empty value"
+test -z "$HTTPD_SOURCE" && {
+    echo "HTTPD_SOURCE: Empty value"
     exit 1
 }
 test -z "$RAMDISK" && {
