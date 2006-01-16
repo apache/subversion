@@ -620,7 +620,14 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
       release_cache_mutex();
       return err;
     }
+
   bdb = bdb_cache_get(&key, &panic);
+  if (panic)
+    {
+      release_cache_mutex();
+      return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                              db_strerror(DB_RUNRECOVERY));
+    }
 
   /* Make sure that the environment's open flags haven't changed. */
   if (bdb && bdb->flags != flags)
@@ -665,17 +672,12 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
             }
         }
     }
-  else if (!panic)
+  else
     {
       ++bdb->refcount;
     }
 
   release_cache_mutex();
-
-  /* If the environment is panicked, return an appropriate error. */
-  if (panic)
-    err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
-                           db_strerror(DB_RUNRECOVERY));
 
   if (!err)
     {
