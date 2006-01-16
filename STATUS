@@ -46,5 +46,12 @@ Candidate changes:
     Votes:
       +1: dlr, rooneg
 
+  * r18114
+    In mailer.py:
+    Fix bug: named substitutions gathered from defaults.for_repos were being
+    ignored for sections which contained a specific for_repos option.
+    Votes:
+      +1: maxb
+
 Approved changes:
 
