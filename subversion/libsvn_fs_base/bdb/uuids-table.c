@@ -71,6 +71,8 @@ svn_fs_bdb__open_uuids_table (DB **uuids_p,
       svn_fs_base__clear_dbt (&key);
       key.data = &recno;
       key.size = sizeof (recno);
+      key.ulen = key.size;
+      key.flags |= DB_DBT_USERMEM;
 
       svn_fs_base__clear_dbt (&value);
       value.data = buffer;
@@ -105,6 +107,8 @@ svn_error_t *svn_fs_bdb__get_uuid (svn_fs_t *fs,
   svn_fs_base__clear_dbt (&value);
   value.data = buffer;
   value.size = sizeof (buffer) - 1;
+  value.ulen = value.size;
+  value.flags |= DB_DBT_USERMEM;
 
   svn_fs_base__trail_debug (trail, "uuids", "get");
   SVN_ERR (BDB_WRAP (fs, _("get repository uuid"),
