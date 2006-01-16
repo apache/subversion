@@ -153,9 +153,10 @@ read_header_block (svn_stream_t *stream,
       while (header_str->data[i] != ':')
         {
           if (header_str->data[i] == '\0')
-            return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                     _("Found malformed header block "
-                                       "in dumpfile stream"));
+            return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                      _("Dump stream contains a malformed "
+                                        "header (with no ':') at '%.20s'"),
+                                      header_str->data);
           i++;
         }
       /* Create a 'name' string and point to it. */
@@ -165,9 +166,10 @@ read_header_block (svn_stream_t *stream,
       /* Skip over the NULL byte and the space following it.  */
       i += 2;
       if (i > header_str->len)
-        return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                 _("Found malformed header block "
-                                   "in dumpfile stream"));
+        return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                  _("Dump stream contains a malformed "
+                                    "header (with no value) at '%.20s'"),
+                                  header_str->data);
 
       /* Point to the 'value' string. */
       value = header_str->data + i;
