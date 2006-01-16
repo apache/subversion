@@ -1152,7 +1152,7 @@ class Config:
         match = re.match(sub.for_repos, repos_dir)
         if not match:
           continue
-        params = self._global_params.copy()
+        params = params.copy()
         params.update(match.groupdict())
 
       # if a matching rule hasn't been given, then use the empty string
