@@ -196,6 +196,40 @@ stream_malformed (void)
                            _("Dumpstream data appears to be malformed"));
 }
 
+/* Set *PBUF to a string of length LEN, allocated in POOL, read from STREAM.
+   Also read a newline from STREAM and increase *ACTUAL_LEN by the total
+   number of bytes read from STREAM.  */
+static svn_error_t *
+read_key_or_val (char **pbuf,
+                 svn_filesize_t *actual_length,
+                 svn_stream_t *stream,
+                 apr_size_t len,
+                 apr_pool_t *pool)
+{
+  char *buf = apr_pcalloc (pool, len + 1);
+  apr_size_t numread;
+  char c;
+
+  numread = len;
+  SVN_ERR (svn_stream_read (stream, buf, &numread));
+  *actual_length += numread;
+  if (numread != len)
+    return stream_ran_dry ();
+  buf[len] = '\0';
+
+  /* Suck up extra newline after key data */
+  numread = 1;
+  SVN_ERR (svn_stream_read (stream, &c, &numread));
+  *actual_length += numread;
+  if (numread != 1)
+    return stream_ran_dry ();
+  if (c != '\n')
+    return stream_malformed();
+
+  *pbuf = buf;
+  return SVN_NO_ERROR;
+}
+
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
    encoded Subversion properties hash, and making multiple calls to
    PARSE_FNS->set_*_property on RECORD_BATON (depending on the value
@@ -242,30 +276,10 @@ parse_property_block (svn_stream_t *stream,
 
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
-          apr_size_t numread;
           char *keybuf;
-          char c;
-          
-          /* Get the length of the key */
-          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
 
-          /* Now read that much into a buffer, + 1 byte for null terminator */
-          keybuf = apr_pcalloc (pool, keylen + 1);
-          numread = keylen;
-          SVN_ERR (svn_stream_read (stream, keybuf, &numread));
-          *actual_length += numread;
-          if (numread != keylen)
-            return stream_ran_dry ();
-          keybuf[keylen] = '\0';
-
-          /* Suck up extra newline after key data */
-          numread = 1;
-          SVN_ERR (svn_stream_read (stream, &c, &numread));
-          *actual_length += numread;
-          if (numread != 1)
-            return stream_ran_dry ();
-          if (c != '\n') 
-            return stream_malformed ();
+          SVN_ERR (read_key_or_val (&keybuf, actual_length,
+                                    stream, atoi (buf + 2), pool));
 
           /* Read a val length line */
           SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
@@ -275,31 +289,12 @@ parse_property_block (svn_stream_t *stream,
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
               svn_string_t propstring;
+              char *valbuf;
 
-              /* Get the length of the value */
-              apr_size_t vallen = atoi (buf + 2);
-
-              /* Again, 1 extra byte for the null termination. */
-              char *valbuf = apr_palloc (pool, vallen + 1);
-              numread = vallen;
-              SVN_ERR (svn_stream_read (stream, valbuf, &numread));
-              *actual_length += numread;
-              if (numread != vallen)
-                return stream_ran_dry ();
-              ((char *) valbuf)[vallen] = '\0';
-
-              /* Suck up extra newline after val data */
-              numread = 1;
-              SVN_ERR (svn_stream_read (stream, &c, &numread));
-              *actual_length += numread;
-              if (numread != 1)
-                return stream_ran_dry ();
-              if (c != '\n') 
-                return stream_malformed ();
-
-              /* Create final value string */
+              propstring.len = atoi (buf + 2);
+              SVN_ERR (read_key_or_val (&valbuf, actual_length,
+                                        stream, propstring.len, pool));
               propstring.data = valbuf;
-              propstring.len = vallen;
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
@@ -316,30 +311,10 @@ parse_property_block (svn_stream_t *stream,
         }
       else if ((buf[0] == 'D') && (buf[1] == ' '))
         {
-          apr_size_t numread;
           char *keybuf;
-          char c;
-          
-          /* Get the length of the key */
-          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
 
-          /* Now read that much into a buffer, + 1 byte for null terminator */
-          keybuf = apr_pcalloc (pool, keylen + 1);
-          numread = keylen;
-          SVN_ERR (svn_stream_read (stream, keybuf, &numread));
-          *actual_length += numread;
-          if (numread != keylen)
-            return stream_ran_dry ();
-          keybuf[keylen] = '\0';
-
-          /* Suck up extra newline after key data */
-          numread = 1;
-          SVN_ERR (svn_stream_read (stream, &c, &numread));
-          *actual_length += numread;
-          if (numread != 1)
-            return stream_ran_dry ();
-          if (c != '\n') 
-            return stream_malformed ();
+          SVN_ERR (read_key_or_val (&keybuf, actual_length,
+                                    stream, atoi (buf + 2), pool));
 
           /* We don't expect these in revision properties, and if we see
              one when we don't have a delete_node_property callback,
