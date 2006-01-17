@@ -162,6 +162,8 @@ sub status_update
             $acceptable_error = 1 if ( /^svn:[ ]
                                        (
                                         bdb:[ ]PANIC
+                                        |
+                                        DB_RUNRECOVERY
                                        )
                                        /x );
           }
@@ -230,6 +232,8 @@ sub status_update_commit
             or ( $dbrecover and  ( /^svn:[ ]
                                    (
                                     bdb:[ ]PANIC
+                                    |
+                                    DB_RUNRECOVERY
                                    )
                                    /x ));
 
