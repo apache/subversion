@@ -22,7 +22,9 @@ use Cwd;
 use File::Path;
 use Getopt::Long;
 use Pod::Usage;
-use SVN::Client;
+
+# Try to use SVN module if available.
+my $use_svn_module =  eval { require SVN::Client };
 
 my $CWD = getcwd;
 
@@ -46,11 +48,44 @@ pod2usage(1) if $help;
 pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
 $path = Cwd::abs_path( $ARGV[0] ) if @ARGV;
 
-# Create SVN client object. No need for connection to remote server.
-my $ctx = new SVN::Client;
+if ( $use_svn_module ) {
+    # Create SVN client object. No need for connection to remote server.
+    my $ctx = new SVN::Client;
 
-# Call handler function with status info for each file.
-$ctx->status( $path, undef, \&clean, !$nonrecursive, 1, 0, 1 );
+    # Call handler function with status info for each file.
+    $ctx->status( $path, undef, \&clean, !$nonrecursive, 1, 0, 1 );
+}
+else {
+    warn "Warning: Not using SVN Perl modules, this might be slow.\n" unless
+    $quiet;
+
+    # Build svn client command
+    my @command = qw(svn status --no-ignore -v);
+    if ($nonrecursive) {
+        push @command, '-N';
+    }
+
+    # Main file-wiping loop.
+    open SVN, "-|", @command, @ARGV
+      or die "Can't call program \"svn\": $!\n";
+    while (<SVN>) {
+        if (/^([\?ID])/) {
+            my $file = (split)[-1];
+            if ( $1 eq 'D' ) {
+                next unless -f $file;
+            }
+            else {
+                next unless -e $file;
+            }
+            if ($print) {
+                print "$file\n";
+            }
+            else {
+                rmtree( $file, !$quiet, !$force );
+            }
+        }
+    }
+}
 
 # Main file-wiping function.
 sub clean {
@@ -109,6 +144,9 @@ will be deleted.
 
 If no file or directory is given, B<svn-clean> defaults to the current directory
 (".").
+
+B<svn-clean> uses the SVN Perl modules if they are available. This is much
+faster than parsing the output of the B<svn> command-line client.
 
 =head1 OPTIONS
 
