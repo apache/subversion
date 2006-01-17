@@ -2278,7 +2278,7 @@ test_list = [ None,
               # be combined into one test, as they test essentially the same
               # thing, and share the same setup.  See note above.
               diff_repos_wc_add_with_props,
-              XFail(diff_repos_wc_add_with_props2),
+              diff_repos_wc_add_with_props2,
               ]
 
 if __name__ == '__main__':
