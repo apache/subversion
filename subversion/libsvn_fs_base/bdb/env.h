@@ -62,6 +62,10 @@ typedef struct
      errcall, to maintain our API guarantees. */
   void (*user_callback) (const char *errpfx, char *msg);
 
+  /* The reference count.  It counts the number of bdb_env_baton_t
+     instances that refer to this object. */
+  unsigned refcount;
+
 } bdb_error_info_t;
 
 

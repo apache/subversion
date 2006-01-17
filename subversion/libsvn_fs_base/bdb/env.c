@@ -178,16 +178,6 @@ struct bdb_env_t
 
 
 #if APR_HAS_THREADS
-/* The pool cleanup for the error info. */
-static apr_status_t
-cleanup_error_info (void *data)
-{
-  if (data)
-    svn_error_clear(((bdb_error_info_t *)data)->pending_errors);
-  return APR_SUCCESS;
-}
-
-
 /* Get the thread-specific error info from a bdb_env_t. */
 static bdb_error_info_t *
 get_error_info (bdb_env_t *bdb)
@@ -196,17 +186,7 @@ get_error_info (bdb_env_t *bdb)
   apr_threadkey_private_get(&priv, bdb->error_info);
   if (!priv)
     {
-      /* Unfortunately we can't rely on the threadkey destructor for
-         freeing the thread-specific errors related to the
-         environment; APR never calls it on Windows.
-
-         We *can* rely on pool cleanups, even though that means we'll
-         create a pool per thread per environment. We can only hope
-         that the lifetime of a bdb_env_t is moderately limited. */
-      apr_pool_t *pool = svn_pool_create(bdb->pool);
-      priv = apr_pcalloc(pool, sizeof(bdb_error_info_t));
-      apr_pool_cleanup_register(pool, priv, cleanup_error_info,
-                                apr_pool_cleanup_null);
+      priv = calloc(1, sizeof(bdb_error_info_t));
       apr_threadkey_private_set(priv, bdb->error_info);
     }
   return priv;
@@ -264,10 +244,6 @@ cleanup_env (void *data)
 
 #if APR_HAS_THREADS
   apr_threadkey_private_delete(bdb->error_info);
-#else
-  /* In a threaded environment, the error info is thread-specific and
-     has an associated destructor which clears the errors. */
-  svn_error_clear(bdb->error_info.pending_errors);
 #endif /* APR_HAS_THREADS */
 
   return APR_SUCCESS;
@@ -528,9 +504,6 @@ svn_fs_bdb__close (bdb_env_baton_t *bdb_baton)
 
   /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
      cleanup_env_baton(). */
-  bdb_baton->bdb = NULL;
-
-  assert(bdb_baton->env == bdb->env);
   bdb_baton->env = NULL;
 
   acquire_cache_mutex();
@@ -588,7 +561,17 @@ cleanup_env_baton (void *data)
 {
   bdb_env_baton_t *bdb_baton = data;
 
-  if (bdb_baton->bdb)
+  if (0 == --bdb_baton->error_info->refcount)
+    {
+      svn_error_clear(bdb_baton->error_info->pending_errors);
+#if APR_HAS_THREADS
+      free(bdb_baton->error_info);
+      if (bdb_baton->env)
+        apr_threadkey_private_set(NULL, bdb_baton->bdb->error_info);
+#endif
+    }
+
+  if (bdb_baton->env)
     svn_error_clear(svn_fs_bdb__close(bdb_baton));
 
   return APR_SUCCESS;
@@ -685,6 +668,7 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
       (*bdb_batonp)->env = bdb->env;
       (*bdb_batonp)->bdb = bdb;
       (*bdb_batonp)->error_info = get_error_info(bdb);
+      ++(*bdb_batonp)->error_info->refcount;
       apr_pool_cleanup_register(pool, *bdb_batonp, cleanup_env_baton,
                                 apr_pool_cleanup_null);
     }
