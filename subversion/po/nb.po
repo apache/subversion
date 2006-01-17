@@ -1,5 +1,5 @@
 # Norwegian Bokmål translations for the subversion package
-# Copyright (C) 2004–2005 Collab Net.
+# Copyright (C) 2004–2006 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
 # Dictionary:
@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-01-17 17:54+0000\n"
-"PO-Revision-Date: 2006-01-06 21:24+0100\n"
+"PO-Revision-Date: 2006-01-17 18:11+0000\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3304,12 +3304,12 @@ msgstr ""
 #: libsvn_repos/load.c:157
 #, c-format
 msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
-msgstr ""
+msgstr "Dumpstrømmen inneholder en misdannet header (uten noen «:») ved «%.20s»"
 
 #: libsvn_repos/load.c:170
 #, c-format
 msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
-msgstr ""
+msgstr "Dumpstrømmen inneholder en misdannet header (uten verdi) ved «%.20s»"
 
 #: libsvn_repos/load.c:189
 msgid "Premature end of content data in dumpstream"
@@ -4047,7 +4047,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:746
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -4055,7 +4054,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Opphavsrettighet (C) 2000-2005 CollabNet.\n"
+"Opphavsrettighet (C) 2000-2006 CollabNet.\n"
 "Programvaren Subversion er åpen kildekode, se http://subversion.tigris.org/\n"
 "Dette produktet inneholder programvare laget av CollabNet (http://www.Collab."
 "Net/).\n"
@@ -7055,11 +7054,11 @@ msgstr ""
 "                             [Berkeley DB]"
 
 #: svnadmin/main.c:271
-#, fuzzy
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
-msgstr "fjern overflødige loggfiler fra depotet"
+msgstr "fjern overflødige Berkeley DB-loggfiler\n"
+"                             fra kildedepotet [Berkeley DB]"
 
 #: svnadmin/main.c:275
 msgid "call pre-commit hook before committing revisions"
