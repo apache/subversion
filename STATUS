@@ -61,5 +61,12 @@ Candidate changes:
     Votes
       +1: rooneg
 
+  * r18127 (only build/win32/svn.rc)
+    Fix copyright dates shown in Subversion Windows binaries.
+    Justification:
+      Up to and including 1.3.0, those dates were still 2000-2004...
+    Votes:
+      +1 brane
+
 Approved changes:
 
