@@ -59,7 +59,7 @@ Candidate changes:
     Justification:
       Can result in out of order svn:date revprops with fsfs.  Simple fix.
     Votes
-      +1: rooneg
+      +1: rooneg, malcolm
 
   * r18127 (only build/win32/svn.rc)
     Fix copyright dates shown in Subversion Windows binaries.
