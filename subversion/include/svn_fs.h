@@ -1103,7 +1103,7 @@ svn_error_t *svn_fs_copied_from (svn_revnum_t *rev_p,
                                  apr_pool_t *pool);
 
 
-/* Set @a *root_p and @a *path_p to the revision root and path of the
+/** Set @a *root_p and @a *path_p to the revision root and path of the
  * destination of the most recent copy event that caused @a path to
  * exist where it does in @a root, or to null if no such copy exists.
  * When non-null, allocate @a *root_p and @a *path_p in @a pool.

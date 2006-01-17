@@ -343,7 +343,7 @@ svn_error_t *svn_io_set_file_read_write_carefully (const char *path,
  * the operating system allows.
  *
  * @a path is the utf8-encoded path to the file.  If @a executable
- * is @c TRUE, then make the file executable.  If @c FALSE, make in
+ * is @c TRUE, then make the file executable.  If @c FALSE, make it
  * non-executable.  If @a ignore_enoent is @c TRUE, don't fail if the target
  * file doesn't exist.
  */
@@ -838,7 +838,7 @@ svn_error_t *svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
 
 /** Run a command to completion, by first calling svn_io_start_cmd() and
  * then calling svn_io_wait_for_cmd().  The parameters correspond to
- * the the same-named parameters of those two functions.
+ * the same-named parameters of those two functions.
  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,

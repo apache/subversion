@@ -223,7 +223,7 @@ const char *svn_xml_get_attr_value (const char *name, const char **atts);
  *
  * The contents of @a ap are alternating <tt>char *</tt> keys and 
  * <tt>char *</tt> vals, terminated by a final @c NULL falling on an 
- * odd index (zero-based).
+ * even index (zero-based).
  */
 apr_hash_t *svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool);
 

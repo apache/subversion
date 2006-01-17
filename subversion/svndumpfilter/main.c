@@ -770,9 +770,6 @@ enum
 
 /* Option codes and descriptions.
  *
- * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
- * need more, increase that limit first.
- *
  * The entire list must be terminated with an entry of nulls.
  */
 static const apr_getopt_option_t options_table[] =

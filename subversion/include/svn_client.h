@@ -2219,7 +2219,7 @@ svn_client_ls3 (apr_hash_t **dirents,
                 apr_pool_t *pool);
 
 /**
- * Same as svn_client_ls3(), but always passes a NULL lock hash.
+ * Same as svn_client_ls3(), but without the ability to get locks.
  *
  * @since New in 1.2.
  *

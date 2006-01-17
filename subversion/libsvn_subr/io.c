@@ -2643,13 +2643,11 @@ svn_io_dir_walk (const char *dirname,
 
   wanted |= APR_FINFO_TYPE | APR_FINFO_NAME;
 
-  /* The documentation for apr_dir_read states that "." and ".." will be
-     returned as the first two files, which ties in nicely with the
-     ordering guarantees given by svn_io_dir_walk (and svn_repos_hotcopy
-     relies on those guarantees).  Unfortunately apr_dir_read doesn't
+  /* The documentation for apr_dir_read used to state that "." and ".."
+     will be returned as the first two files, but it doesn't
      work that way in practice, in particular ext3 on Linux-2.6 doesn't
      follow the rules.  For details see
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=56666 for
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=56666
 
      If APR ever does implement "dot-first" then it would be possible to
      remove the svn_io_stat and walk_func calls and use the walk_func

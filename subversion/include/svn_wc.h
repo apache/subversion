@@ -284,7 +284,7 @@ svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
                                   const char *path,
                                   apr_pool_t *pool);
 
-/** Checks the working copy to determine the node type of @a path.  If 
+/** Check the working copy to determine the node type of @a path.  If
  * @a path is a versioned directory then the behaviour is like that of
  * svn_wc_adm_retrieve(), otherwise, if @a path is a file, an unversioned
  * directory, or does not exist, then the behaviour is like that of

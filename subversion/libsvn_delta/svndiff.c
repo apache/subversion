@@ -323,8 +323,8 @@ decode_instruction (svn_txdelta_op_t *op,
 }
 
 /* Count the instructions in the range [P..END-1] and make sure they
-   are valid for the given window lengths.  Return -1 if the
-   instructions are invalid; otherwise return the number of
+   are valid for the given window lengths.  Return an error if the
+   instructions are invalid; otherwise set *NINST to the number of
    instructions.  */
 static svn_error_t *
 count_and_verify_instructions (int *ninst,

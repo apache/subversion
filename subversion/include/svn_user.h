@@ -30,7 +30,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Get the name of the current user, using POOL for any necessary
+/** Get the name of the current user, using @a pool for any necessary
  * allocation, returning NULL on error.
  *
  * @since New in 1.4.
@@ -38,7 +38,7 @@ extern "C" {
 const char *
 svn_user_get_name (apr_pool_t *pool);
 
-/* Get the path of the current user's home directory using POOL for
+/** Get the path of the current user's home directory, using @a pool for
  * any necessary allocation, returning NULL on error.
  *
  * @since New in 1.4.

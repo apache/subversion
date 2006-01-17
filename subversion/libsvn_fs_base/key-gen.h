@@ -59,7 +59,7 @@ extern "C" {
 
    We would like to use strtoul, but that family of functions is
    locale-dependent, whereas we're trying to parse data in a
-   local-independent format.  */
+   locale-independent format.  */
 
 apr_size_t svn_fs_base__getsize (const char *data, apr_size_t len,
                                  const char **endptr, apr_size_t max);

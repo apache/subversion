@@ -53,9 +53,6 @@
 
 /* Option codes and descriptions for the command line client.
  *
- * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
- * need more, increase that limit first. 
- *
  * The entire list must be terminated with an entry of nulls.
  */
 const apr_getopt_option_t svn_cl__options[] =
