@@ -143,7 +143,7 @@ svn_error_t *svn_utf_cstring_from_utf8_ex (const char **dest,
  *
  * Now for both cases, the caller can at least fall back on this
  * function, which converts the message as best it can, substituting
- * ?\\XXX escape codes for the non-ascii characters.
+ * "?\\XXX" escape codes for the non-ascii characters.
  *
  * Ultimately, some callers may prefer the iconv "//TRANSLIT" option,
  * so when we can detect that at configure time, things will change.

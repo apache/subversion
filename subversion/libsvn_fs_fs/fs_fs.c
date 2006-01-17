@@ -903,7 +903,7 @@ struct rep_args
 };
 
 /* Read the next line from file FILE and parse it as a text
-   representation entry.  Return the parsed entry in REP_ARGS_P.
+   representation entry.  Return the parsed entry in *REP_ARGS_P.
    Perform all allocations in POOL. */
 static svn_error_t *
 read_rep_line (struct rep_args **rep_args_p,

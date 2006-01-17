@@ -88,9 +88,6 @@ enum run_mode {
 
 /* Option codes and descriptions for svnserve.
  *
- * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
- * need more, increase that limit first.
- *
  * The entire list must be terminated with an entry of nulls.
  *
  * APR requires that options without abbreviations

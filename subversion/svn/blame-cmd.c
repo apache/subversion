@@ -205,7 +205,7 @@ svn_cl__blame (apr_getopt_t *os,
       opt_state->start_revision.value.number = 1;
     }
 
-  /* A comment abou the use of svn_stream_t for column-based output,
+  /* A comment about the use of svn_stream_t for column-based output,
      and stdio for XML output:
 
      stdio does newline translations for us.  Since our XML routines
@@ -216,7 +216,7 @@ svn_cl__blame (apr_getopt_t *os,
      For the column-based output, we output contents from the file, so
      we don't want stdio to mess with the newlines.  We finish lines
      by \n, but the file might contain \r characters at the end of
-     lines, since svn_client_blame() spit lines at \n characters.
+     lines, since svn_client_blame() splits lines at \n characters.
      That would lead to CRCRLF line endings on platforms with CRLF
      line endings. */
 
