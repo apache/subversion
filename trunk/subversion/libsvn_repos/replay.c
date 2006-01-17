@@ -229,7 +229,7 @@ is_within_base_path (const char *path, const char *base_path, int base_len)
     return TRUE;
 
   if (strncmp (base_path, path, base_len) == 0
-      && (path[base_len] == '/' || path[base_len] == '\0'))
+      && (path[base_len] == SVN_UTF8_FSLASH || path[base_len] == '\0'))
     return TRUE;
 
   return FALSE;
@@ -505,7 +505,7 @@ svn_repos_replay2 (svn_fs_root_t *root,
 
   if (! base_path)
     base_path = "";
-  else if (base_path[0] == '/')
+  else if (base_path[0] == SVN_UTF8_FSLASH)
     ++base_path;
 
   base_path_len = strlen (base_path);
@@ -534,7 +534,7 @@ svn_repos_replay2 (svn_fs_root_t *root,
 
       if (allowed)
         {
-          if (path[0] == '/')
+          if (path[0] == SVN_UTF8_FSLASH)
             {
               path++;
               keylen--;

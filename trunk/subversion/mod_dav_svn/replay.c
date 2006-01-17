@@ -36,6 +36,14 @@
 #include <http_request.h>
 #include <http_log.h>
 
+#if APR_CHARSET_EBCDIC
+       /* MOD_DAV_SVN needs this symbolic constant in ebcdic */
+#ifdef SVN_XML_NAMESPACE
+#undef SVN_XML_NAMESPACE
+#define SVN_XML_NAMESPACE "svn:"
+#endif
+#endif
+
 typedef struct {
   apr_bucket_brigade *bb;
   ap_filter_t *output;
@@ -115,7 +123,11 @@ static svn_error_t *delete_entry(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qname = apr_xml_quote_string(pool, path, 1);
+  const char *qname;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+#endif
+  qname = apr_xml_quote_string(pool, path, 1);
 
   SVN_ERR(maybe_close_textdelta(eb));
 
@@ -136,13 +148,15 @@ static svn_error_t *add_directory(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qpath = apr_xml_quote_string(pool, path, 1);
+  const char *qpath, *qcopy;
 
-  const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
-                                                           copyfrom_path,
-                                                           1)
-                                    : NULL;
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+  SVN_ERR (svn_utf_cstring_from_netccsid(&copyfrom_path, copyfrom_path, pool));
+#endif
+  qpath = apr_xml_quote_string(pool, path, 1);
+  qcopy = copyfrom_path ? apr_xml_quote_string(pool, copyfrom_path, 1) : NULL;
+                                    
   SVN_ERR(maybe_close_textdelta(eb));
 
   *child_baton = parent_baton;
@@ -170,8 +184,12 @@ static svn_error_t *open_directory(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qpath = apr_xml_quote_string(pool, path, 1);
-
+  const char *qpath;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+#endif
+  qpath = apr_xml_quote_string(pool, path, 1);
+  
   SVN_ERR(maybe_close_textdelta(eb));
 
   *child_baton = parent_baton;
@@ -190,6 +208,9 @@ static svn_error_t *change_dir_prop(void *baton,
 {
   dav_svn_edit_baton_t *eb = baton;
 
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&name, name, pool));
+#endif
   SVN_ERR(maybe_close_textdelta(eb));
 
   if (value)
@@ -221,12 +242,16 @@ static svn_error_t *add_file(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qname = apr_xml_quote_string(pool, path, 1);
+  const char *qname, *qcopy;
 
-  const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
-                                                           copyfrom_path,
-                                                           1)
-                                    : NULL;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+  if (copyfrom_path)
+    SVN_ERR (svn_utf_cstring_from_netccsid(&copyfrom_path, copyfrom_path,
+                                           pool));
+#endif
+  qname = apr_xml_quote_string(pool, path, 1);
+  qcopy = copyfrom_path ? apr_xml_quote_string(pool, copyfrom_path, 1) : NULL;
 
   SVN_ERR(maybe_close_textdelta(eb));
 
@@ -255,7 +280,12 @@ static svn_error_t *open_file(const char *path,
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
-  const char *qname = apr_xml_quote_string(pool, path, 1);
+  const char *qname;
+
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+#endif
+  qname = apr_xml_quote_string(pool, path, 1);
 
   SVN_ERR(maybe_close_textdelta(eb));
 
@@ -279,6 +309,10 @@ static svn_error_t *apply_textdelta(void *file_baton,
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
 
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&base_checksum, base_checksum,
+                                         pool));
+#endif
   if (base_checksum)
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\">",
                               base_checksum));
@@ -302,7 +336,9 @@ static svn_error_t *change_file_prop(void *baton,
   dav_svn_edit_baton_t *eb = baton;
 
   SVN_ERR(maybe_close_textdelta(eb));
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&name, name, pool));
+#endif
   if (value)
     {
       const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
