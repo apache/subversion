@@ -2113,7 +2113,7 @@ def diff_prop_change_local_propmod(sbox):
 
 
 #----------------------------------------------------------------------
-# repos->WORKING and BASE->repos diffs that add files or directories with
+# repos->wc and BASE->repos diffs that add files or directories with
 # properties should show the added properties.
 def diff_repos_wc_add_with_props(sbox):
   "repos-wc diff showing added entries with props"
@@ -2158,10 +2158,12 @@ def diff_repos_wc_add_with_props(sbox):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log_msg')
 
-    # Now, if we diff r1 to WORKING, we should see the content addition
-    # for foo, and property additions for both X and foo.
+    # Now, if we diff r1 to WORKING or BASE, we should see the content
+    # addition for foo, and property additions for both X and foo.
     svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
                                        'diff', '-r', '1')
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+                                       'diff', '-r', '1:BASE')
 
     # Update the BASE and WORKING revisions to r1.
     svntest.actions.run_and_verify_svn(None, None, [],
@@ -2171,67 +2173,6 @@ def diff_repos_wc_add_with_props(sbox):
     svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
                                        'diff', '-r', 'BASE:3')
 
-
-  finally:
-    os.chdir(current_dir)
-
-
-#----------------------------------------------------------------------
-# A repos->BASE diff that adds a file or directory with properties
-# should show the added properties.
-#
-# Note: this test is identical to the one above, except that the final
-#       diff is performed against BASE rather than WORKING.  The reason
-#       for this duplication is because the two cases will probably be
-#       fixed at different times.  Once both tests pass, this test
-#       should probably be combined with the one above.
-def diff_repos_wc_add_with_props2(sbox):
-  "repos->BASE diff showing added entries with props"
-
-  sbox.build()
-
-  expected_output_r1_wc = [
-    "Index: foo\n",
-    "===================================================================\n",
-    "--- foo\t(revision 0)\n",
-    "+++ foo\t(revision 3)\n",
-    "@@ -0,0 +1 @@\n",
-    "+content\n",
-    "\n",
-    "Property changes on: foo\n",
-    "___________________________________________________________________\n",
-    "Name: propname\n",
-    "   + propvalue\n",
-    "\n",
-    "\n",
-    "Property changes on: X\n",
-    "___________________________________________________________________\n",
-    "Name: propname\n",
-    "   + propvalue\n",
-    "\n" ]
-
-  current_dir = os.getcwd()
-  os.chdir(sbox.wc_dir)
-  try:
-    # Create empty directory X and file foo, and commit them (r2).
-    os.makedirs('X')
-    svntest.main.file_append('foo', "content\n")
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'add', 'X', 'foo')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
-
-    # Set a property on X and foo, and commit them (r3).
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'propset', 'propname',
-                                       'propvalue', 'X', 'foo')
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'ci', '-m', 'log_msg')
-
-    # Now, if we diff r1 to BASE, we should see the content addition
-    # for foo, and property additions for both X and foo.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
-                                       'diff', '-r', '1:BASE')
 
   finally:
     os.chdir(current_dir)
@@ -2274,11 +2215,7 @@ test_list = [ None,
               diff_property_changes_to_base,
               diff_mime_type_changes,
               XFail(diff_prop_change_local_propmod),
-              # Note: When the following two tests both pass, they should
-              # be combined into one test, as they test essentially the same
-              # thing, and share the same setup.  See note above.
               diff_repos_wc_add_with_props,
-              diff_repos_wc_add_with_props2,
               ]
 
 if __name__ == '__main__':
