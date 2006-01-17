@@ -435,8 +435,7 @@ get_working_mimetype (const char **mimetype,
  * stage we are dealing with a file that does exist in the working copy.
  *
  * DIR_BATON is the parent directory baton, PATH is the path to the file to
- * be compared. ENTRY is the working copy entry for the file. ADDED forces
- * the file to be treated as added.
+ * be compared. ENTRY is the working copy entry for the file.
  *
  * Do all allocation in POOL.
  *
@@ -447,7 +446,6 @@ static svn_error_t *
 file_diff (struct dir_baton *dir_baton,
            const char *path,
            const svn_wc_entry_t *entry,
-           svn_boolean_t added,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = dir_baton->edit_baton;
@@ -465,11 +463,6 @@ file_diff (struct dir_baton *dir_baton,
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
                                 dir_baton->path, pool));
-
-  /* If the directory is being added, then this file will need to be
-     added. */
-  if (added)
-    schedule = svn_wc_schedule_add;
 
   /* If the item is schedule-add *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
@@ -597,12 +590,10 @@ file_diff (struct dir_baton *dir_baton,
  * changes.  At this stage we are dealing with files/directories that do
  * exist in the working copy.
  *
- * DIR_BATON is the baton for the directory. ADDED forces the directory
- * to be treated as added.
+ * DIR_BATON is the baton for the directory.
  */
 static svn_error_t *
-directory_elements_diff (struct dir_baton *dir_baton,
-                         svn_boolean_t added)
+directory_elements_diff (struct dir_baton *dir_baton)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -612,9 +603,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
 
   /* This directory should have been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
-     already have been compared. (Note: the ADDED flag is used to simulate
-     added directories, these are *not* scheduled to be added in the
-     working copy.) */
+     already have been compared. */
   assert (!dir_baton->added);
 
   /* Everything we do below is useless if we are comparing to BASE. */
@@ -637,49 +626,25 @@ directory_elements_diff (struct dir_baton *dir_baton,
   /* Check for property mods on this directory. */
   if (!in_anchor_not_target)
     {
-      if (added)
+      svn_boolean_t modified;
+
+      SVN_ERR (svn_wc_props_modified_p (&modified,
+                                        dir_baton->path, adm_access,
+                                        dir_baton->pool));
+      if (modified)
         {
-          /* We need to simulate an addition of the WORKING properties. */
-          apr_hash_t *emptyprops = apr_hash_make (dir_baton->pool),
-                     *workingprops = NULL;
           apr_array_header_t *propchanges;
+          apr_hash_t *baseprops;
 
-          SVN_ERR (svn_wc_prop_list (&workingprops,
-                                     dir_baton->path, adm_access,
-                                     dir_baton->pool));
-
-          /* Calculate the propchanges necessary to create workingprops. */
-          SVN_ERR (svn_prop_diffs (&propchanges,
-                                   workingprops, emptyprops, dir_baton->pool));
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
+                                          dir_baton->path, adm_access,
+                                          dir_baton->pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->dir_props_changed
                    (adm_access, NULL,
                     dir_baton->path,
-                    propchanges, emptyprops,
+                    propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
-        }
-      else
-        {
-          svn_boolean_t modified;
-
-          SVN_ERR (svn_wc_props_modified_p (&modified,
-                                            dir_baton->path, adm_access,
-                                            dir_baton->pool));
-          if (modified)
-            {
-              apr_array_header_t *propchanges;
-              apr_hash_t *baseprops;
-
-              SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
-                                              dir_baton->path, adm_access,
-                                              dir_baton->pool));
-
-              SVN_ERR (dir_baton->edit_baton->callbacks->dir_props_changed
-                       (adm_access, NULL,
-                        dir_baton->path,
-                        propchanges, baseprops,
-                        dir_baton->edit_baton->callback_baton));
-            }
         }
     }
 
@@ -723,7 +688,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
       switch (entry->kind)
         {
         case svn_node_file:
-          SVN_ERR (file_diff (dir_baton, path, entry, added, subpool));
+          SVN_ERR (file_diff (dir_baton, path, entry, subpool));
           break;
 
         case svn_node_dir:
@@ -746,7 +711,185 @@ directory_elements_diff (struct dir_baton *dir_baton,
                                              FALSE,
                                              subpool);
 
-              SVN_ERR (directory_elements_diff (subdir_baton, added));
+              SVN_ERR (directory_elements_diff (subdir_baton));
+            }
+          break;
+
+        default:
+          break;
+        }
+    }
+
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Report an existing file in the working copy (either in BASE or WORKING)
+ * as having been added.
+ *
+ * DIR_BATON is the parent directory baton, ADM_ACCESS/PATH is the path
+ * to the file to be compared. ENTRY is the working copy entry for
+ * the file.
+ *
+ * Do all allocation in POOL.
+ */
+static svn_error_t *
+report_wc_file_as_added (struct dir_baton *dir_baton,
+                         svn_wc_adm_access_t *adm_access,
+                         const char *path,
+                         const svn_wc_entry_t *entry,
+                         apr_pool_t *pool)
+{
+  struct edit_baton *eb = dir_baton->edit_baton;
+  apr_hash_t *emptyprops;
+  const char *mimetype;
+  apr_hash_t *wcprops = NULL;
+  apr_array_header_t *propchanges;
+  const char *empty_file;
+  const char *source_file;
+  const char *translated_file;
+
+  /* If the file was added *with history*, then we don't want to
+     see a comparison to the empty file;  we want the usual working
+     vs. text-base comparision. */
+  if (entry->copied)
+    {
+      /* Don't show anything if we're comparing to BASE, since by
+         definition there can't be any local modifications. */
+      if (eb->use_text_base)
+        return SVN_NO_ERROR;
+
+      /* Otherwise show just the local modifications. */
+      return file_diff (dir_baton, path, entry, pool);
+    }
+
+
+  emptyprops = apr_hash_make (pool);
+
+  if (eb->use_text_base)
+    SVN_ERR (get_base_mimetype (&mimetype, &wcprops,
+                                adm_access, path, pool));
+  else
+    SVN_ERR (get_working_mimetype (&mimetype, &wcprops,
+                                   adm_access, path, pool));
+
+  SVN_ERR (svn_prop_diffs (&propchanges,
+                           wcprops, emptyprops, pool));
+
+
+  SVN_ERR (get_empty_file (eb, &empty_file));
+
+  if (eb->use_text_base)
+    source_file = svn_wc__text_base_path (path, FALSE, pool);
+  else
+    source_file = path;
+
+  SVN_ERR (svn_wc_translated_file2
+           (&translated_file,
+            source_file, path, adm_access,
+            SVN_WC_TRANSLATE_TO_NF,
+            pool));
+
+  SVN_ERR (eb->callbacks->file_added
+           (adm_access, NULL, NULL,
+            path,
+            empty_file, translated_file,
+            0, entry->revision,
+            NULL, mimetype,
+            propchanges, wcprops,
+            eb->callback_baton));
+
+  return SVN_NO_ERROR;
+}
+
+/* Report an existing directory in the working copy (either in BASE
+ * or WORKING) as having been added.  If recursing, also report any
+ * subdirectories as added.
+ *
+ * DIR_BATON is the baton for the directory.
+ *
+ * Do all allocation in POOL.
+ */
+static svn_error_t *
+report_wc_directory_as_added (struct dir_baton *dir_baton,
+                              apr_pool_t *pool)
+{
+  struct edit_baton *eb = dir_baton->edit_baton;
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *emptyprops = apr_hash_make (pool),
+             *wcprops = NULL;
+  apr_array_header_t *propchanges;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool;
+
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->anchor,
+                                dir_baton->path, pool));
+
+
+  /* Get the BASE or WORKING properties, as appropriate, and simulate
+     their addition. */
+  if (eb->use_text_base)
+    SVN_ERR (svn_wc_get_prop_diffs (NULL, &wcprops,
+                                    dir_baton->path, adm_access, pool));
+  else
+    SVN_ERR (svn_wc_prop_list (&wcprops,
+                               dir_baton->path, adm_access, pool));
+
+  SVN_ERR (svn_prop_diffs (&propchanges,
+                           wcprops, emptyprops, pool));
+
+  if (propchanges->nelts > 0)
+    SVN_ERR (eb->callbacks->dir_props_changed
+             (adm_access, NULL,
+              dir_baton->path,
+              propchanges, emptyprops,
+              eb->callback_baton));
+
+
+  /* Report the addition of the directory's contents. */
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+
+  subpool = svn_pool_create (pool);
+
+  for (hi = apr_hash_first (pool, entries); hi;
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *name, *path;
+      const svn_wc_entry_t *entry;
+
+      svn_pool_clear (subpool);
+
+      apr_hash_this (hi, &key, NULL, &val);
+      name = key;
+      entry = val;
+
+      /* Skip entry for the directory itself. */
+      if (strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      path = svn_path_join (dir_baton->path, name, subpool);
+
+      switch (entry->kind)
+        {
+        case svn_node_file:
+          SVN_ERR (report_wc_file_as_added (dir_baton,
+                                            adm_access, path, entry, subpool));
+          break;
+
+        case svn_node_dir:
+          if (eb->recurse)
+            {
+              struct dir_baton *subdir_baton = make_dir_baton (path,
+                                                               dir_baton,
+                                                               eb,
+                                                               FALSE,
+                                                               subpool);
+
+              SVN_ERR (report_wc_directory_as_added (subdir_baton, subpool));
             }
           break;
 
@@ -880,9 +1023,8 @@ delete_entry (const char *path,
     case svn_node_dir:
       b = make_dir_baton (full_path, pb, pb->edit_baton, FALSE, pool);
       /* A delete is required to change working-copy into requested
-         revision, so diff should show this as an add. Thus force the
-         directory diff to treat this as added. */
-      SVN_ERR (directory_elements_diff (b, TRUE));
+         revision, so diff should show this as an add. */
+      SVN_ERR (report_wc_directory_as_added (b, pool));
       break;
 
     default:
@@ -948,7 +1090,7 @@ close_directory (void *dir_baton,
   /* Skip added directories, they can only contain added elements all of
      which have already been diff'd. */
   if (!b->added)
-    SVN_ERR (directory_elements_diff (dir_baton, FALSE));
+    SVN_ERR (directory_elements_diff (dir_baton));
 
   /* Mark this directory as compared in the parent directory's baton. */
   if (b->dir_baton)
@@ -1336,7 +1478,7 @@ close_edit (void *edit_baton,
       struct dir_baton *b;
 
       b = make_dir_baton (eb->anchor_path, NULL, eb, FALSE, eb->pool);
-      SVN_ERR (directory_elements_diff (b, FALSE));
+      SVN_ERR (directory_elements_diff (b));
     }
 
   return SVN_NO_ERROR;
@@ -1599,7 +1741,7 @@ svn_wc_diff3 (svn_wc_adm_access_t *anchor,
   else
     b = make_dir_baton (eb->anchor_path, NULL, eb, FALSE, eb->pool);
 
-  SVN_ERR (directory_elements_diff (b, FALSE));
+  SVN_ERR (directory_elements_diff (b));
 
   return SVN_NO_ERROR;
 }
