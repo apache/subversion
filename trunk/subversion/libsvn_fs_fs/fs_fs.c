@@ -3709,9 +3709,6 @@ svn_fs_fs__dup_perms (const char *filename,
     return svn_error_wrap_apr (status, _("Can't chmod '%s'"),
                                svn_path_local_style (filename, pool));
 #endif
-      return svn_error_wrap_apr (status, _("Can't chmod '%s'"), filename);
-    }
-#endif
   return SVN_NO_ERROR;
 }
 

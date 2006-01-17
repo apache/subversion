@@ -39,6 +39,7 @@
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_version.h"
+#include "svn_ebcdic.h"
 
 #include "svn_private_config.h"
 

@@ -748,8 +748,12 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
         }
       else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
         {
+           const char *val_native = val;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8 (&val_native, val, pool));
+#endif
           flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
-          tmp_entry.cmt_rev = SVN_STR_TO_REV (val);
+          tmp_entry.cmt_rev = SVN_STR_TO_REV (val_native);
         }
       else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
         {
