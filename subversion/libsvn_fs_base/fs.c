@@ -181,13 +181,16 @@ cleanup_fs (svn_fs_t *fs)
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
-#if 0                           /* FIXME: error reporting @@@@ */
-  SVN_ERR (BDB_WRAP (fs, "closing environment",
-                     svn_fs_bdb__close_env (bdb)));
-
+  {
+    svn_error_t *err = svn_fs_bdb__close (bdb);
+    if (err)
+      return svn_error_createf
+        (err->apr_err, err,
+         _("Berkeley DB error for filesystem %s"
+           " while closing environment:\n"),
+         fs->path);
+  }
   return SVN_NO_ERROR;
-#endif
-  return svn_fs_bdb__close (bdb);
 }
 
 #if 0   /* Set to 1 for instrumenting. */
@@ -300,28 +303,6 @@ cleanup_fs_apr (void *data)
 }
 
 
-#if 0                           /* FIXME: error reporting @@@@ */
-/* Allocate a Berkeley DB environment object for the filesystem FS,
-   and set up its default parameters appropriately.  */
-static svn_error_t *
-allocate_env (svn_fs_t *fs)
-{
-  base_fs_data_t *bfd = fs->fsap_data;
-
-  /* Allocate a Berkeley DB environment object.  */
-  SVN_ERR (BDB_WRAP (fs, "allocating environment object",
-                     create_env (&bfd->env, &bfd->errcall_baton, fs->pool)));
-
-  /* If we detect a deadlock, select a transaction to abort at random
-     from those participating in the deadlock.  */
-  SVN_ERR (BDB_WRAP (fs, "setting deadlock detection policy",
-                     bfd->env->set_lk_detect (bfd->env, DB_LOCK_RANDOM)));
-
-  return SVN_NO_ERROR;
-}
-#endif
-
-
 static svn_error_t *
 base_bdb_set_errcall (svn_fs_t *fs,
                       void (*db_errcall_fcn) (const char *errpfx, char *msg))
@@ -546,17 +527,26 @@ open_databases (svn_fs_t *fs, svn_boolean_t create,
     SVN_ERR (bdb_write_config (fs));
 
   /* Create the Berkeley DB environment.  */
-#if 0                           /* FIXME: error reporting @@@@ */
-  SVN_ERR (BDB_WRAP (fs, (create
-                          ? "creating environment"
-                          : "opening environment"),
-                     svn_fs_bdb__open (&(bfd->env), path,
-                                       SVN_BDB_STANDARD_ENV_FLAGS,
-                                       0666, fs->pool)));
-#endif
-  SVN_ERR (svn_fs_bdb__open (&(bfd->bdb), path,
-                             SVN_BDB_STANDARD_ENV_FLAGS,
-                             0666, fs->pool));
+  {
+    svn_error_t *err = svn_fs_bdb__open (&(bfd->bdb), path,
+                                         SVN_BDB_STANDARD_ENV_FLAGS,
+                                         0666, fs->pool);
+    if (err)
+      {
+        if (create)
+          return svn_error_createf
+            (err->apr_err, err,
+             _("Berkeley DB error for filesystem %s"
+               " while creating environment:\n"),
+             fs->path);
+        else
+          return svn_error_createf
+            (err->apr_err, err,
+             _("Berkeley DB error for filesystem %s"
+               " while opening environment:\n"),
+             fs->path);
+      }
+  }
 
   /* We must register the FS cleanup function *after* opening the
      environment, so that it's run before the environment baton
