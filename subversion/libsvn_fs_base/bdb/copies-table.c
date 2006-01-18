@@ -44,9 +44,8 @@ svn_fs_bdb__open_copies_table (DB **copies_p,
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&copies, env, 0));
   BDB_ERR (copies->open (SVN_BDB_OPEN_PARAMS(copies, NULL),
-                        "copies", 0, DB_BTREE,
-                        open_flags | SVN_BDB_AUTO_COMMIT,
-                        0666));
+                         "copies", 0, DB_BTREE,
+                         open_flags, 0666));
 
   /* Create the initial `next-id' table entry.  */
   if (create)
@@ -54,8 +53,7 @@ svn_fs_bdb__open_copies_table (DB **copies_p,
     DBT key, value;
     BDB_ERR (copies->put (copies, 0,
                           svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
-                          svn_fs_base__str_to_dbt (&value, "0"),
-                          SVN_BDB_AUTO_COMMIT));
+                          svn_fs_base__str_to_dbt (&value, "0"), 0));
   }
 
   *copies_p = copies;

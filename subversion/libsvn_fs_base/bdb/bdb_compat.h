@@ -59,12 +59,18 @@ extern "C" {
 #define SVN_BDB_AUTO_RECOVER (0)
 #endif
 
+
+/* Explicit BDB version check. */
+#define SVN_BDB_VERSION_AT_LEAST(major,minor) \
+    (DB_VERSION_MAJOR > (major)) \
+     || (DB_VERSION_MAJOR == (major)) && (DB_VERSION_MINOR >= (minor))
+
+
 /* Parameter lists */
 
 /* In BDB 4.1, DB->open takes a transaction parameter. We'll ignore it
    when building with 4.0. */
-#if (DB_VERSION_MAJOR > 4) \
-    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 1)
+#if SVN_BDB_VERSION_AT_LEAST(4,1)
 #define SVN_BDB_OPEN_PARAMS(env,txn) (env), (txn)
 #else
 #define SVN_BDB_OPEN_PARAMS(env,txn) (env)
@@ -72,14 +78,21 @@ extern "C" {
 
 /* In BDB 4.3, the error gatherer function grew a new DBENV parameter,
    and the MSG parameter's type changed. */
-#if (DB_VERSION_MAJOR > 4) \
-    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)
+#if SVN_BDB_VERSION_AT_LEAST(4,3)
 /* Prevents most compilers from whining about unused parameters. */
 #define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)(varname))
 #else
 #define bdb_error_gatherer(param1, param2, param3) \
   bdb_error_gatherer (param2, char *msg)
 #define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)0)
+#endif
+
+/* In BDB 4.3 and later, the file names in DB_ENV->open and DB->open
+   are assumed to be encoded in UTF-8 on Windows. */
+#if defined(WIN32) && SVN_BDB_VERSION_AT_LEAST(4,3)
+#define SVN_BDB_PATH_UTF8 (1)
+#else
+#define SVN_BDB_PATH_UTF8 (0)
 #endif
 
 
