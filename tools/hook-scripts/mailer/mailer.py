@@ -8,8 +8,8 @@
 # $LastChangedRevision$
 #
 # USAGE: mailer.py commit      REPOS REVISION [CONFIG-FILE]
-#        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
-#        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
+#        mailer.py propchange  REPOS REVISION AUTHOR REVPROPNAME [CONFIG-FILE]
+#        mailer.py propchange2 REPOS REVISION AUTHOR REVPROPNAME ACTION \
 #                              [CONFIG-FILE]
 #        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
 #        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
@@ -1232,8 +1232,8 @@ if __name__ == '__main__':
     scriptname = os.path.basename(sys.argv[0])
     sys.stderr.write(
 """USAGE: %s commit      REPOS REVISION [CONFIG-FILE]
-       %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
-       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
+       %s propchange  REPOS REVISION AUTHOR REVPROPNAME [CONFIG-FILE]
+       %s propchange2 REPOS REVISION AUTHOR REVPROPNAME ACTION [CONFIG-FILE]
        %s lock        REPOS AUTHOR [CONFIG-FILE]
        %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
