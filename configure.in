@@ -621,7 +621,7 @@ AC_SUBST(SVN_FS_LIB_LINK)
 
 # ==== JavaHL ================================================================
 
-dnl Possibly compile JavaHL (experimental)
+dnl Possibly compile JavaHL
 do_javahl_build=no
 AC_ARG_ENABLE(javahl,
   AC_HELP_STRING([--enable-javahl],
