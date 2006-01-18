@@ -460,7 +460,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
   apr_pool_t *linepool = svn_pool_create (pool);
   apr_pool_t *revpool = svn_pool_create (pool);
   apr_pool_t *nodepool = svn_pool_create (pool);
-  int version = SVN_REPOS_DUMPFILE_FORMAT_VERSION;
+  int version;
 
   SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
   if (eof)
@@ -502,7 +502,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
       const char *prop_cl;
       const char *text_cl;
       const char *value;
-      svn_filesize_t actual_prop_length = 0;
+      svn_filesize_t actual_prop_length;
 
       /* Clear our per-line pool. */
       svn_pool_clear (linepool);

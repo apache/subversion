@@ -601,7 +601,7 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
                                  apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess;
-  svn_ra_svn_conn_t *conn = NULL;
+  svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
@@ -709,7 +709,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
 {
   apr_pool_t *sess_pool = svn_pool_create (pool);
   ra_svn_session_baton_t *sess;
-  const char *tunnel, **tunnel_argv = NULL;
+  const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
   
   SVN_ERR(parse_url(url, &uri, sess_pool));

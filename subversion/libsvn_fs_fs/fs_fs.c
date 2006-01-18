@@ -1082,7 +1082,7 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
 {
   apr_file_t *revision_file;
   apr_off_t root_offset;
-  svn_fs_id_t *root_id = NULL;
+  svn_fs_id_t *root_id;
   svn_error_t *err;
 
   err = svn_io_file_open (&revision_file, svn_fs_fs__path_rev (fs, rev, pool),
@@ -1193,7 +1193,7 @@ build_rep_list (apr_array_header_t **list,
 {
   representation_t rep;
   struct rep_state *rs;
-  struct rep_args *rep_args = NULL;
+  struct rep_args *rep_args;
   apr_file_t *file;
   unsigned char buf[4];
 
@@ -1423,7 +1423,7 @@ get_contents (struct rep_read_baton *rb,
   apr_size_t copy_len, remaining = *len, tlen;
   char *sbuf, *tbuf, *cur = buf;
   struct rep_state *rs;
-  svn_txdelta_window_t *cwindow = NULL, *lwindow;
+  svn_txdelta_window_t *cwindow, *lwindow;
 
   /* Special case for when there are no delta reps, only a plain
      text. */
@@ -1474,6 +1474,8 @@ get_contents (struct rep_read_baton *rb,
           /* Get more buffered data by evaluating a chunk. */
           if (rb->rs_list->nelts > 1)
             SVN_ERR (get_combined_window (&cwindow, rb));
+          else
+            cwindow = NULL;
           if (!cwindow || cwindow->src_ops > 0)
             {
               rs = APR_ARRAY_IDX (rb->rs_list, rb->rs_list->nelts - 1,
@@ -3804,7 +3806,7 @@ commit_body (void *baton, apr_pool_t *pool)
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
-  const char *start_node_id = NULL, *start_copy_id = NULL;
+  const char *start_node_id, *start_copy_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   apr_off_t changed_path_offset, offset;
