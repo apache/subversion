@@ -52,9 +52,8 @@ svn_fs_bdb__open_transactions_table (DB **transactions_p,
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&txns, env, 0));
   BDB_ERR (txns->open (SVN_BDB_OPEN_PARAMS(txns, NULL),
-                      "transactions", 0, DB_BTREE,
-                      open_flags | SVN_BDB_AUTO_COMMIT,
-                      0666));
+                       "transactions", 0, DB_BTREE,
+                       open_flags, 0666));
 
   /* Create the `next-id' table entry.  */
   if (create)
@@ -62,9 +61,8 @@ svn_fs_bdb__open_transactions_table (DB **transactions_p,
     DBT key, value;
 
     BDB_ERR (txns->put (txns, 0,
-                       svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
-                       svn_fs_base__str_to_dbt (&value, "0"),
-                       SVN_BDB_AUTO_COMMIT));
+                        svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
+                        svn_fs_base__str_to_dbt (&value, "0"), 0));
   }
 
   *transactions_p = txns;

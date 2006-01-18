@@ -26,6 +26,8 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 
+#include "env.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -33,12 +35,12 @@ extern "C" {
 
 /* Return an svn_error_t object that reports a Berkeley DB error.
    DB_ERR is the error value returned by the Berkeley DB routine.
-   Wrap and consume pending errors in EC_BATON.  */
-svn_error_t *svn_fs_bdb__dberr (bdb_errcall_baton_t *ec_baton, int db_err);
+   Wrap and consume pending errors in BDB.  */
+svn_error_t *svn_fs_bdb__dberr (bdb_env_baton_t *bdb_baton, int db_err);
 
 
 /* Allocate an error object for a Berkeley DB error, with a formatted message.
-   Wrap and consume pending errors in EC_BATON.
+   Wrap and consume pending errors in BDB.
 
    DB_ERR is the Berkeley DB error code.
    FMT is a printf-style format string, describing how to format any
@@ -50,9 +52,13 @@ svn_error_t *svn_fs_bdb__dberr (bdb_errcall_baton_t *ec_baton, int db_err);
 
    There is no separator between the two messages; if you want one,
    you should include it in FMT.  */
-svn_error_t *svn_fs_bdb__dberrf (bdb_errcall_baton_t *ec_baton, int db_err,
+svn_error_t *svn_fs_bdb__dberrf (bdb_env_baton_t *bdb_baton, int db_err,
                                  const char *fmt, ...)
        __attribute__((format(printf, 3, 4)));
+
+
+/* Clear errors associated with BDB. */
+void svn_fs_bdb__clear_err (bdb_env_t *bdb);
 
 
 /* Check the return status from the Berkeley DB operation.  If the
@@ -73,19 +79,19 @@ svn_error_t *svn_fs_bdb__wrap_db (svn_fs_t *fs,
    svn_fs_bdb__dberr and return that function's value.  This is like
    SVN_ERR, but is used by functions that return a Subversion error
    and call other functions that return a Berkeley DB error code. */
-#define SVN_BDB_ERR(ec_baton, expr)                           \
-  do {                                                        \
-    int db_err__temp = (expr);                                \
-    if (db_err__temp)                                         \
-      return svn_fs_bdb__dberr ((ec_baton), db_err__temp);    \
-    svn_error_clear ((ec_baton)->pending_errors);               \
-    (ec_baton)->pending_errors = NULL;                          \
+#define SVN_BDB_ERR(bdb, expr)                           \
+  do {                                                   \
+    int db_err__temp = (expr);                           \
+    if (db_err__temp)                                    \
+      return svn_fs_bdb__dberr ((bdb), db_err__temp);    \
+    svn_error_clear ((bdb)->error_info->pending_errors); \
+    (bdb)->error_info->pending_errors = NULL;            \
   } while (0)
 
 
 /* If EXPR returns a non-zero value, return it.  This is like SVN_ERR,
    but for functions that return a Berkeley DB error code.  */
-#define BDB_ERR(expr)                            \
+#define BDB_ERR(expr)                           \
   do {                                          \
     int db_err__temp = (expr);                  \
     if (db_err__temp)                           \

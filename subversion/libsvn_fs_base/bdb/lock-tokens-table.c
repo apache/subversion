@@ -45,8 +45,7 @@ svn_fs_bdb__open_lock_tokens_table (DB **lock_tokens_p,
   BDB_ERR (db_create (&lock_tokens, env, 0));
   error = lock_tokens->open (SVN_BDB_OPEN_PARAMS(lock_tokens, NULL),
                              "lock-tokens", 0, DB_BTREE,
-                             open_flags | SVN_BDB_AUTO_COMMIT,
-                             0666);
+                             open_flags, 0666);
 
   /* Create the table if it doesn't yet exist.  This is a form of
      automagical repository upgrading. */
