@@ -65,7 +65,16 @@ Candidate changes:
     Justification: Regression, sort of.
     Votes:
       +1: lundblad
-    
+
+  * r18021
+    Update copyright dates shown in the command-line clients.
+    Justification:
+      If we're updating the copyright dates shown in the Windows version
+      information dialog, we may as well be consistent and update the
+      output of the command-line clients too.
+    Votes:
+      +1: malcolm
+
 Approved changes:
 
   * r18078
