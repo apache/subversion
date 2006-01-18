@@ -68,5 +68,12 @@ Candidate changes:
     Votes:
       +1 brane, malcolm
 
+  * r18144, r18037, r18127 (only tools/dev/stress.pl)
+    Add support for BDB-4.4 and automatic recovery of wedged databases.
+    Justification:
+      See above about automatic recovery of wedged databases.
+    Votes:
+      +1 brane
+
 Approved changes:
 
