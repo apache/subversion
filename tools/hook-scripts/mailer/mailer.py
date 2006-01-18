@@ -951,22 +951,17 @@ class TextCommitRenderer:
         section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'A':
         w('\nAdded: %s\n' % diff.path)
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
+
+      if diff.diff_url:
+        w('Url: %s\n' % diff.diff_url)
 
       if not diff.diff:
         continue
