@@ -63,7 +63,7 @@ svn_fs_bdb__dberr (bdb_env_baton_t *bdb_baton, int db_err)
 
 svn_error_t *
 svn_fs_bdb__dberrf (bdb_env_baton_t *bdb_baton,
-					int db_err, const char *fmt, ...)
+                    int db_err, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
