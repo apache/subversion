@@ -504,7 +504,16 @@ svn_fs_bdb__close (bdb_env_baton_t *bdb_baton)
 
   /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
      cleanup_env_baton(). */
-  bdb_baton->env = NULL;
+  bdb_baton->bdb = NULL;
+
+  if (0 == --bdb_baton->error_info->refcount)
+    {
+      svn_error_clear(bdb_baton->error_info->pending_errors);
+#if APR_HAS_THREADS
+      free(bdb_baton->error_info);
+      apr_threadkey_private_set(NULL, bdb->error_info);
+#endif
+    }
 
   acquire_cache_mutex();
 
@@ -561,17 +570,7 @@ cleanup_env_baton (void *data)
 {
   bdb_env_baton_t *bdb_baton = data;
 
-  if (0 == --bdb_baton->error_info->refcount)
-    {
-      svn_error_clear(bdb_baton->error_info->pending_errors);
-#if APR_HAS_THREADS
-      free(bdb_baton->error_info);
-      if (bdb_baton->env)
-        apr_threadkey_private_set(NULL, bdb_baton->bdb->error_info);
-#endif
-    }
-
-  if (bdb_baton->env)
+  if (bdb_baton->bdb)
     svn_error_clear(svn_fs_bdb__close(bdb_baton));
 
   return APR_SUCCESS;
