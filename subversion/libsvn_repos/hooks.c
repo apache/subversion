@@ -66,6 +66,26 @@ run_hook_cmd (const char *name,
     return svn_error_wrap_apr
       (apr_err, _("Can't create pipe for hook '%s'"), cmd);
 
+  /* Pipes are inherited by default, but we don't want that, since
+     APR will duplicate the write end of the pipe for the child process.
+     Not closing the read end is harmless, but if the write end is inherited,
+     it will be inherited by grandchildren as well.  This causes problems
+     if a hook script puts long-running jobs in the background.  Even if
+     they redirect stderr to something else, the write end of our pipe will
+     still be open, causing us to block. */
+  apr_err = apr_file_inherit_unset (read_errhandle);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't make pipe read handle non-inherited for hook '%s'"),
+       cmd);
+
+  apr_file_inherit_unset (write_errhandle);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't make pipe write handle non-inherited for hook '%s'"),
+       cmd);
+
+
   /* Redirect stdout to the null device */
   apr_err = apr_file_open (&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
                            APR_OS_DEFAULT, pool);
