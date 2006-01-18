@@ -98,10 +98,10 @@ svn_client_ls4 (apr_hash_t **dirents,
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
                                              &url, path_or_url, peg_revision,
                                              revision, ctx, pool));
-  /* Getting repository root. */
+
   SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root, pool));
 
-  /* Getting relative path respective to repository root. */
+  /* Get path relative to repository root. */
   rel_path = svn_path_is_child (repos_root, url, pool);
 
   /* Decide if the URL is a file or directory. */
