@@ -75,5 +75,11 @@ Candidate changes:
     Votes:
       +1 brane
 
+  * r18146
+    Don't block waiting for background jobs of hook scripts.
+    Justification: Regression, sort of.
+    Votes:
+      +1: lundblad
+    
 Approved changes:
 
