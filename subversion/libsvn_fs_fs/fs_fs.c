@@ -3855,6 +3855,7 @@ commit_body (void *baton, apr_pool_t *pool)
   apr_off_t changed_path_offset, offset;
   char *buf;
   apr_hash_t *txnprops;
+  svn_string_t date;
 
   /* Get the current youngest revision. */
   SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, cb->fs, pool));
@@ -3929,6 +3930,13 @@ commit_body (void *baton, apr_pool_t *pool)
   rev_filename = svn_fs_fs__path_rev (cb->fs, new_rev, pool);
   SVN_ERR (svn_fs_fs__move_into_place (proto_filename, rev_filename, 
                                        old_rev_filename, pool));
+
+  /* Update commit time to ensure that svn:date revprops remain ordered. */
+  date.data = svn_time_to_cstring (apr_time_now (), pool);
+  date.len = strlen (date.data);
+
+  SVN_ERR (svn_fs_fs__change_txn_prop (cb->txn, SVN_PROP_REVISION_DATE,
+                                       &date, pool));
 
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props (cb->fs, cb->txn->id, pool);
