@@ -2146,7 +2146,7 @@ def diff_repos_wc_add_with_props(sbox):
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
-    "Property changes on: X/bar\n",
+    "Property changes on: " + os.path.join('X', 'bar') + "\n",
     "___________________________________________________________________\n",
     "Name: propname\n",
     "   + propvalue\n",
