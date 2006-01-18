@@ -311,12 +311,10 @@ class Contributor:
       s += ']'
     return s
 
-  def html_out(self, revision_url_pattern):
-    """Create an HTML file in the current directory, named
-    "`self.canonical_name()`.html", showing all the revisions in which
+  def html_out(self, revision_url_pattern, filename):
+    """Create an HTML file named FILENAME, showing all the revisions in which
     this contributor was active."""
-    canon = self.canonical_name()
-    out = open(canon + '.html', 'w')
+    out = open(filename, 'w')
     out.write(html_header(self.big_name()))
     unique_logs = { }
 
@@ -573,6 +571,10 @@ def drop(revision_url_pattern):
     pass
     # print LogMessage.all_logs[key]
 
+  detail_subdir = "detail"
+  if not os.path.exists(detail_subdir):
+    os.mkdir(detail_subdir)
+
   index = open('index.html', 'w')
   index.write(html_header('Contributors'))
   index.write(index_introduction)
@@ -596,11 +598,13 @@ def drop(revision_url_pattern):
           committerness = ''
           if c.is_committer:
             committerness = '&nbsp;(partial&nbsp;committer)'
-          index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%s]%s</p></li>\n'
-                      % (url_encode(c.canonical_name()),
+          urlpath = "%s/%s.html" % (detail_subdir, c.canonical_name())
+          fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
+          index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
+                      % (url_encode(urlpath),
                          escape_html(c.big_name()),
                          c.score_str(), committerness))
-          c.html_out(revision_url_pattern)
+          c.html_out(revision_url_pattern, fname)
     seen_contributors[c] = True
   index.write('</ol>\n')
   index.write(html_footer())
