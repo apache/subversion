@@ -2138,28 +2138,46 @@ def diff_repos_wc_add_with_props(sbox):
     "___________________________________________________________________\n",
     "Name: propname\n",
     "   + propvalue\n",
+    "\n",
+    "Index: X/bar\n",
+    "===================================================================\n",
+    "--- X/bar\t(revision 0)\n",
+    "+++ X/bar\t(revision 3)\n",
+    "@@ -0,0 +1 @@\n",
+    "+content\n",
+    "\n",
+    "Property changes on: X/bar\n",
+    "___________________________________________________________________\n",
+    "Name: propname\n",
+    "   + propvalue\n",
     "\n" ]
+  # The output from the BASE->repos diff is the same content, but in a
+  # different order.
+  expected_output_r1_r3_a = expected_output_r1_r3[:12] + \
+    expected_output_r1_r3[18:] + expected_output_r1_r3[12:18]
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
   try:
-    # Create empty directory X and file foo, and commit them (r2).
+    # Create directory X, file foo, and file X/bar, and commit them (r2).
     os.makedirs('X')
     svntest.main.file_append('foo', "content\n")
+    svntest.main.file_append(os.path.join('X', 'bar'), "content\n")
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'add', 'X', 'foo')
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log_msg')
 
-    # Set a property on X and foo, and commit them (r3).
+    # Set a property on all three items, and commit them (r3).
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'propset', 'propname',
-                                       'propvalue', 'X', 'foo')
+                                       'propvalue', 'X', 'foo',
+                                       os.path.join('X', 'bar'))
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log_msg')
 
     # Now, if we diff r1 to WORKING or BASE, we should see the content
-    # addition for foo, and property additions for both X and foo.
+    # addition for foo and X/bar, and property additions for all three.
     svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
                                        'diff', '-r', '1')
     svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
@@ -2170,7 +2188,7 @@ def diff_repos_wc_add_with_props(sbox):
                                        'up', '-r', '1')
 
     # If we diff BASE to r3, we should see the same output as above.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r3_a, [],
                                        'diff', '-r', 'BASE:3')
 
 

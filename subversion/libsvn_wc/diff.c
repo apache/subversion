@@ -797,7 +797,7 @@ report_wc_file_as_added (struct dir_baton *dir_baton,
             empty_file, translated_file,
             0, entry->revision,
             NULL, mimetype,
-            propchanges, wcprops,
+            propchanges, emptyprops,
             eb->callback_baton));
 
   return SVN_NO_ERROR;
