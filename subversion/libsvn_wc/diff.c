@@ -750,6 +750,20 @@ report_wc_file_as_added (struct dir_baton *dir_baton,
   const char *source_file;
   const char *translated_file;
 
+  SVN_ERR (get_empty_file (eb, &empty_file));
+
+  /* If the file is schedule-deleted, comparisons against WORKING will
+     just show the addition of an empty file. */
+  if (entry->schedule == svn_wc_schedule_delete && !eb->use_text_base)
+    return eb->callbacks->file_added
+             (adm_access, NULL, NULL,
+              path,
+              empty_file, empty_file,
+              0, entry->revision,
+              NULL, NULL,
+              apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
+              eb->callback_baton);
+
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
      vs. text-base comparision. */
@@ -777,8 +791,6 @@ report_wc_file_as_added (struct dir_baton *dir_baton,
   SVN_ERR (svn_prop_diffs (&propchanges,
                            wcprops, emptyprops, pool));
 
-
-  SVN_ERR (get_empty_file (eb, &empty_file));
 
   if (eb->use_text_base)
     source_file = svn_wc__text_base_path (path, FALSE, pool);
