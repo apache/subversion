@@ -59,15 +59,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18021
-    Update copyright dates shown in the command-line clients.
-    Justification:
-      If we're updating the copyright dates shown in the Windows version
-      information dialog, we may as well be consistent and update the
-      output of the command-line clients too.
-    Votes:
-      +1: malcolm, dlr, djames
-
   * r18078
     The svn:date property should be set at the end of a commit, while it's
     being finalized, not just at the beginning.
