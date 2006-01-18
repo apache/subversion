@@ -358,7 +358,7 @@ svn_client_info (const char *path_or_url,
   SVN_ERR (svn_ra_get_uuid (ra_session, &repos_UUID, pool));
   
   svn_path_split (url, &parent_url, &base_name, pool);
-  base_name = svn_path_uri_decode(base_name, pool);
+  base_name = svn_path_uri_decode (base_name, pool);
   
   /* Get the dirent for the URL itself. */
   err = svn_ra_stat (ra_session, "", rev, &the_ent, pool);
@@ -461,13 +461,13 @@ svn_client_info (const char *path_or_url,
                || err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
             {
               svn_error_clear(err);
-              locks = apr_hash_make(pool); /* use an empty hash */
+              locks = apr_hash_make (pool); /* use an empty hash */
             }
           else if (err)
             return err;
         }
       else
-        locks = apr_hash_make(pool); /* use an empty hash */
+        locks = apr_hash_make (pool); /* use an empty hash */
         
       SVN_ERR (push_dir_info (ra_session, url, "", rev,
                               repos_UUID, repos_root_URL,
