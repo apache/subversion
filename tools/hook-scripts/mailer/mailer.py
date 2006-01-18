@@ -600,9 +600,9 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, diffsels, diffurls, pool),
+                                group, params, diffsels, diffurls, pool)
   else:
-    other_diffs = [ ]
+    other_diffs = None
 
   data = _data(
     author=repos.author,
