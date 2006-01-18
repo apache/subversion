@@ -59,14 +59,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18078
-    The svn:date property should be set at the end of a commit, while it's
-    being finalized, not just at the beginning.
-    Justification:
-      Can result in out of order svn:date revprops with fsfs.  Simple fix.
-    Votes
-      +1: rooneg, malcolm, lundblad
-
   * r18127 (only build/win32/svn.rc)
     Fix copyright dates shown in Subversion Windows binaries.
     Justification:
