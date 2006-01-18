@@ -902,10 +902,11 @@ class TextCommitRenderer:
 
     w('\nLog:\n%s\n' % data.log)
 
-    self._render_diffs(data.diffs)
+    self._render_diffs(data.diffs, '')
     if data.other_diffs:
-      w('\nDiffs of changes in other areas also in this revision:\n')
-      self._render_diffs(data.other_diffs)
+      self._render_diffs(data.other_diffs,
+                         '\nDiffs of changes in other areas also'
+                         ' in this revision:\n')
 
   def _render_list(self, header, data_list):
     if not data_list:
@@ -936,12 +937,18 @@ class TextCommitRenderer:
         w('      - copied%s from r%d, %s%s\n'
           % (text, d.base_rev, d.base_path, is_dir))
 
-  def _render_diffs(self, diffs):
+  def _render_diffs(self, diffs, section_header):
+    """Render diffs. Write the SECTION_HEADER iff there are actually
+    any diffs to render."""
     w = self.output.write
+    section_header_printed = False
 
     for diff in diffs:
       if not diff.diff and not diff.diff_url:
         continue
+      if not section_header_printed:
+        w(section_header)
+        section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
         if diff.diff_url:
