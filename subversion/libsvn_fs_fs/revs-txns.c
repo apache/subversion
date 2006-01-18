@@ -128,7 +128,7 @@ svn_fs_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
                         const char *txn_name,
                         apr_pool_t *pool)
 {
-  transaction_t *txn = NULL;
+  transaction_t *txn;
   
   SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, pool));
   if (txn->kind != transaction_kind_normal)

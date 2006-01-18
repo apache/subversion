@@ -509,7 +509,7 @@ random_combine_test (const char **msg,
                      svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
-  apr_uint32_t seed = 0;
+  apr_uint32_t seed;
   svn_error_t *err = do_random_combine_test (msg, msg_only, pool, &seed);
   if (!msg_only)
     printf("SEED:  Last seen = %lu\n", (unsigned long) seed);

@@ -409,7 +409,6 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   ctx.stream = svn_subst_stream_translated (svn_stream_from_aprfile (f, pool),
                                             "\n", TRUE, NULL, FALSE, pool);
   ctx.line = 1;
-  ctx.ungotten_char = '\0';
   ctx.have_ungotten_char = FALSE;
   ctx.section = svn_stringbuf_create("", pool);
   ctx.option = svn_stringbuf_create("", pool);
