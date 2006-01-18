@@ -65,10 +65,10 @@ def complain(msg, fatal=False):
     sys.exit(1)
 
 
-def email_address_html_spam_guard(addr):
+def html_spam_guard(addr):
   """Return a spam-protected version of email ADDR that renders the
   same in HTML as the original address."""
-  return addr
+  return "".join(map(lambda x: "<span>&#%d;</span>" % ord(x), addr))
 
 
 def escape_html(str):
@@ -76,8 +76,17 @@ def escape_html(str):
   return str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
+_spam_guard_in_html_block_re = re.compile(r'&lt;([^&]*@[^&]*)&gt;')
+def _spam_guard_in_html_block_func(m):
+  return "&lt;%s&gt;" % html_spam_guard(m.group(1))
+def spam_guard_in_html_block(str):
+  """Take a block of HTML data, and run html_spam_guard() on parts of it."""
+  return _spam_guard_in_html_block_re.subn(_spam_guard_in_html_block_func,
+                                           str)[0]
+  
 def html_header(title):
-  title = escape_html(title)
+  """Write HTML file header.
+  TITLE parameter is expected to already by HTML-escaped if needed."""
   s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
   s += ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
   s += '<html><head>\n'
@@ -281,21 +290,27 @@ class Contributor:
       return ''.join(self.real_name.lower().split(' '))
     complain('Unable to construct a canonical name for Contributor.', True)
 
-  def big_name(self):
+  def big_name(self, html=False):
     """Return as complete a name as possible for this contributor."""
-    s = ''
-    if self.real_name: s += ' ' + self.real_name
+    name_bits = []
+    if self.real_name:
+      if html:
+        name_bits.append(escape_html(self.real_name))
+      else:
+        name_bits.append(self.real_name)
     if self.email:
       if not self.real_name and not self.username:
-        s += ' ' + self.email
+        name_bits.append(self.email)
+      elif html:
+        name_bits.append("&lt;%s&gt;" % html_spam_guard(self.email))
       else:
-        s += ' <' + self.email + '>'
+        name_bits.append("<%s>" % self.email)
     if self.username:
       if not self.real_name and not self.email:
-        s += ' ' + self.username
+        name_bits.append(self.username)
       else:
-        s += ' (' + self.username + ')'
-    return s[1:]
+        name_bits.append("(%s)" % self.username)
+    return " ".join(name_bits)
 
   def __str__(self):
     s = 'CONTRIBUTOR: '
@@ -315,7 +330,7 @@ class Contributor:
     """Create an HTML file named FILENAME, showing all the revisions in which
     this contributor was active."""
     out = open(filename, 'w')
-    out.write(html_header(self.big_name()))
+    out.write(html_header(self.big_name(html=True)))
     unique_logs = { }
 
     sorted_activities = self.activities.keys()
@@ -359,7 +374,7 @@ class Contributor:
       out.write('<b>%s | %s | %s</b>\n\n' % (revision,
                                              escape_html(log.committer),
                                              escape_html(log.date)))
-      out.write(escape_html(log.message))
+      out.write(spam_guard_in_html_block(escape_html(log.message)))
       out.write('</pre>\n')
       out.write('</div>\n\n')
     out.write('<hr />\n')
@@ -602,7 +617,7 @@ def drop(revision_url_pattern):
           fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
           index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
                       % (url_encode(urlpath),
-                         escape_html(c.big_name()),
+                         c.big_name(html=True),
                          c.score_str(), committerness))
           c.html_out(revision_url_pattern, fname)
     seen_contributors[c] = True
