@@ -356,7 +356,7 @@ def plain_log(sbox):
   os.chdir(sbox.wc_dir)
 
   try:
-    output, err = svntest.actions.run_and_verify_svn ("", None, [], 'log')
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
 
     log_chain = parse_log_output (output)
     check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
@@ -496,7 +496,7 @@ def url_missing_in_head(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  my_url = svntest.main.current_repo_url + "/A/B/E/alpha"
+  my_url = svntest.main.current_repo_url + "/A/B/E/alpha" + "@8"
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'log', '-r', '8', my_url)
@@ -567,23 +567,31 @@ def log_through_copyfrom_history(sbox):
 
   # First "oddity", the full log for mu2 doesn't include r3, but the -r3
   # log works!
+  peg_mu2_path = mu2_path + "@3"
   output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', '-r', '3', mu2_path)
+                                                    'log', '-r', '3', 
+                                                    peg_mu2_path)
   log_chain = parse_log_output (output)
   check_log_chain(log_chain, [3])
 
+  peg_mu2_URL = mu2_URL + "@3"
   output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', '-r', '3', mu2_URL)
+                                                    'log', '-r', '3', 
+                                                    peg_mu2_URL)
   log_chain = parse_log_output (output)
   check_log_chain(log_chain, [3])
+  output, err = svntest.actions.run_and_verify_svn (None, None, [],
+                                                    'log', '-r', '2', 
+                                                    mu2_path)
+  log_chain = parse_log_output (output)
+  check_log_chain (log_chain, [2])
 
-  # Second "oddity", the full log for mu2 includes r2, but the -r2 log
-  # fails!
-  svntest.actions.run_and_verify_svn (None, [], SVNAnyOutput,
-                                      'log', '-r', '2', mu2_path)
-  svntest.actions.run_and_verify_svn (None, [], SVNAnyOutput,
-                                      'log', '-r', '2', mu2_URL)
-  
+  output, err = svntest.actions.run_and_verify_svn (None, None, [],
+                                                    'log', '-r', '2', 
+                                                    mu2_URL)
+  log_chain = parse_log_output (output)
+  check_log_chain(log_chain, [2])
+
 #----------------------------------------------------------------------
 def escape_control_chars(sbox):
   "mod_dav_svn must escape invalid XML control chars"

@@ -389,6 +389,8 @@ svn_cl__log (apr_getopt_t *os,
   struct log_receiver_baton lb;
   const char *target;
   int i;
+  svn_opt_revision_t peg_revision;
+  const char *true_path;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
@@ -396,8 +398,11 @@ svn_cl__log (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  /* Retrieve the first target in the list. */
   target = APR_ARRAY_IDX (targets, 0, const char *);
+
+  /* Strip peg revision if targets contains an URI. */
+  SVN_ERR (svn_opt_parse_path (&peg_revision, &true_path, target, pool));
+  APR_ARRAY_IDX (targets, 0, const char *) = true_path;
 
   if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
       && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
@@ -477,7 +482,8 @@ svn_cl__log (apr_getopt_t *os,
           SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }
       
-      SVN_ERR (svn_client_log2 (targets,
+      SVN_ERR (svn_client_log3 (targets,
+                                &peg_revision,
                                 &(opt_state->start_revision),
                                 &(opt_state->end_revision),
                                 opt_state->limit,
@@ -507,7 +513,8 @@ svn_cl__log (apr_getopt_t *os,
        * is concerned, the result of 'svn log --quiet' is the same
        * either way.
        */
-      SVN_ERR (svn_client_log2 (targets,
+      SVN_ERR (svn_client_log3 (targets,
+                                &peg_revision,
                                 &(opt_state->start_revision),
                                 &(opt_state->end_revision),
                                 opt_state->limit,

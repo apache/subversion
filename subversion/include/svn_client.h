@@ -1177,7 +1177,11 @@ svn_client_status (svn_revnum_t *result_rev,
  * for which log messages are desired.  The repository info is
  * determined by taking the common prefix of the target entries' URLs.
  * @a receiver is invoked only on messages whose revisions involved a
- * change to some path in @a targets.
+ * change to some path in @a targets.  @a peg_revision indicates in
+ * which revision @a targets are valid.  If @peg_revision is @c
+ * svn_opt_revision_unspecified, it defaults to @c
+ * svn_opt_revision_head for URIs or @c svn_opt_revision_working for
+ * WC targets.
  *
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
@@ -1202,6 +1206,27 @@ svn_client_status (svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_log3 (const apr_array_header_t *targets,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 int limit,
+                 svn_boolean_t discover_changed_paths,
+                 svn_boolean_t strict_node_history,
+                 svn_log_message_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_log3(), but with the @c kind field of the @a
+ * peg_revision parameter set to @c svn_opt_revision_unspecified.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  * @since New in 1.2.
  */
 svn_error_t *

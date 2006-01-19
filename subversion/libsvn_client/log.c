@@ -45,7 +45,8 @@
 
 
 svn_error_t *
-svn_client_log2 (const apr_array_header_t *targets,
+svn_client_log3 (const apr_array_header_t *targets,
+                 const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *start,
                  const svn_opt_revision_t *end,
                  int limit,
@@ -58,9 +59,11 @@ svn_client_log2 (const apr_array_header_t *targets,
 {
   svn_ra_session_t *ra_session;
   const char *path;
-  const char *base_url;
+  const char *ignored_url;
   const char *base_name = NULL;
   apr_array_header_t *condensed_targets;
+  svn_revnum_t ignored_revnum;
+  svn_opt_revision_t session_opt_rev;
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
@@ -75,8 +78,6 @@ svn_client_log2 (const apr_array_header_t *targets,
   /* Use the passed URL, if there is one.  */
   if (svn_path_is_url (path))
     {
-      base_url = path;
-
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
 
@@ -142,7 +143,7 @@ svn_client_log2 (const apr_array_header_t *targets,
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR (svn_path_condense_targets (&base_url, &condensed_targets,
+      SVN_ERR (svn_path_condense_targets (&ignored_url, &condensed_targets,
                                           target_urls, TRUE, pool));
 
       if (condensed_targets->nelts == 0)
@@ -153,12 +154,20 @@ svn_client_log2 (const apr_array_header_t *targets,
       targets = real_targets;
     }
 
-  /* Open a repository session to the BASE_URL. */
-  SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
-  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, base_url, 
-                                                 base_name, NULL, NULL,
-                                                 (NULL != base_name), TRUE, 
-                                                 ctx, pool));
+  /* Determine the revision to open the RA session to. */
+  if (start->kind == svn_opt_revision_number &&
+      end->kind == svn_opt_revision_number)
+    session_opt_rev = (start->value.number > end->value.number ?
+                       *start : *end);
+  else if (start->kind == svn_opt_revision_date &&
+           end->kind == svn_opt_revision_date)
+    session_opt_rev = (start->value.date > end->value.date ? *start : *end);
+  else
+    session_opt_rev.kind = svn_opt_revision_unspecified;
+
+  SVN_ERR (svn_client__ra_session_from_path (&ra_session, &ignored_revnum,
+                                             &ignored_url, path, peg_revision,
+                                             &session_opt_rev, ctx, pool));
 
   /* It's a bit complex to correctly handle the special revision words
    * such as "BASE", "COMMITTED", and "PREV".  For example, if the
@@ -266,6 +275,25 @@ svn_client_log2 (const apr_array_header_t *targets,
   
     return err;
   }
+}
+
+svn_error_t *
+svn_client_log2 (const apr_array_header_t *targets,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 int limit,
+                 svn_boolean_t discover_changed_paths,
+                 svn_boolean_t strict_node_history,
+                 svn_log_message_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_opt_revision_t peg_revision;
+  peg_revision.kind = svn_opt_revision_unspecified;
+  return svn_client_log3 (targets, &peg_revision, start, end, limit,
+                          discover_changed_paths, strict_node_history,
+                          receiver, receiver_baton, ctx, pool);
 }
 
 svn_error_t *
