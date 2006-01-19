@@ -70,10 +70,14 @@
 # define svn__atomic_t apr_uint32_t
 # define svn__atomic_read(mem) apr_atomic_read32((mem))
 # define svn__atomic_set(mem, val) apr_atomic_set32((mem), (val))
+# define svn__atomic_cas(mem, with, cmp) \
+    apr_atomic_cas32((mem), (with), (cmp))
 #else
 # define svn__atomic_t apr_atomic_t
 # define svn__atomic_read(mem) apr_atomic_read((mem))
 # define svn__atomic_set(mem, val) apr_atomic_set((mem), (val))
+# define svn__atomic_cas(mem, with, cmp) \
+    apr_atomic_cas((mem), (with), (cmp))
 #endif /* APR_MAJOR_VERSION */
 
 
@@ -335,12 +339,12 @@ bdb_cache_init (void)
 {
   /* We have to initialize the cache exactly once.  Because APR
      doesn't have statically-initialized mutexes, we implement a poor
-     man's spinlock using apr_atomic_casptr. */
+     man's spinlock using svn__atomic_cas. */
 #if APR_HAS_THREADS
   apr_status_t apr_err;
-  apr_uint32_t cache_state = apr_atomic_cas(&bdb_cache_state,
-                                            BDB_CACHE_START_INIT,
-                                            BDB_CACHE_UNINITIALIZED);
+  apr_uint32_t cache_state = svn__atomic_cas(&bdb_cache_state,
+                                             BDB_CACHE_START_INIT,
+                                             BDB_CACHE_UNINITIALIZED);
 #endif /* APR_HAS_THREADS */
 
 #if APR_HAS_THREADS
@@ -358,17 +362,17 @@ bdb_cache_init (void)
       if (apr_err)
         {
           /* Tell other threads that the initialisation failed. */
-          apr_atomic_cas(&bdb_cache_state,
-                         BDB_CACHE_INIT_FAILED,
-                         BDB_CACHE_START_INIT);
+          svn__atomic_cas(&bdb_cache_state,
+                          BDB_CACHE_INIT_FAILED,
+                          BDB_CACHE_START_INIT);
           return svn_error_create(apr_err, NULL,
                                   "Couldn't initialize the cache of"
                                   " Berkeley DB environment descriptors");
         }
 
-      apr_atomic_cas(&bdb_cache_state,
-                     BDB_CACHE_INITIALIZED,
-                     BDB_CACHE_START_INIT);
+      svn__atomic_cas(&bdb_cache_state,
+                      BDB_CACHE_INITIALIZED,
+                      BDB_CACHE_START_INIT);
 #endif /* APR_HAS_THREADS */
     }
 #if APR_HAS_THREADS
@@ -383,9 +387,9 @@ bdb_cache_init (void)
                                 " Berkeley DB environment descriptors");
 
       apr_sleep(APR_USEC_PER_SEC / 1000);
-      cache_state = apr_atomic_cas(&bdb_cache_state,
-                                   BDB_CACHE_UNINITIALIZED,
-                                   BDB_CACHE_UNINITIALIZED);
+      cache_state = svn__atomic_cas(&bdb_cache_state,
+                                    BDB_CACHE_UNINITIALIZED,
+                                    BDB_CACHE_UNINITIALIZED);
     }
 #endif /* APR_HAS_THREADS */
 
