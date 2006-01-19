@@ -74,14 +74,16 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/rhel-3/subversion.spec
     #   packages/rpm/rhel-4/subversion.spec
-    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024" -a \
-               "$SWIG_VERSION" -le "103025"; then
+    if test -n "$SWIG_VERSION" &&
+       test "$SWIG_VERSION" -ge "103024" &&
+       test "$SWIG_VERSION" -le "103027"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([This is not compatible with Subversion])
-      AC_MSG_WARN([Subversion can use SWIG version 1.3.24 or later])
+      AC_MSG_WARN([Subversion is only compatible with versions of SWIG])
+      AC_MSG_WARN([between 1.3.24 and 1.3.27])
     fi
   fi
  
