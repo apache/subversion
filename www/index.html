@@ -10,15 +10,15 @@
   href="tigris-branding/css/print.css"/>
 <script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
 <title>subversion.tigris.org</title>
+<!-- Custom stylations to hide the obnoxious project info -->
 <style type="text/css">
 #projecthome .axial { display: none; }
-#apphead {
-  background: url('./subversion_logo_hor-468x64') no-repeat center center;
-  height: 70px;
-  text-align: bottom;
-}
 #apphead h1 { display: none; }
+#longdescription { border: none; }
+#longdescription h2 { display: none; }
+#customcontent h2 { display: block; }
 </style>
+<!-- End custom stylations -->
 </head>
 
 <body>
@@ -28,7 +28,11 @@
      Thus, we include one here so that the page looks right when previewed
      locally, *but* we override the border which the CSS assigns to that
      style, so that we do not get two borders on the live page. -->
-<div class="h2 app" style="border-left: 0px">
+<div class="h2 app" style="border-left: 0px" id="customcontent">
+
+<div style="text-align: center;">
+  <img src="./subversion_logo_hor-468x64.png" alt="Subversion" />
+</div>
 
 <p>The goal of the Subversion project is to build a <strong>version
    control system</strong> that is a compelling replacement for CVS in
