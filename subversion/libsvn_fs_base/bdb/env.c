@@ -321,10 +321,11 @@ static apr_hash_t *bdb_cache = NULL;
 static apr_thread_mutex_t *bdb_cache_lock = NULL;
 
 /* Magic values for atomic initialization of the environment cache. */
-static void *bdb_cache_start_init = &bdb_cache_start_init;
-static void *bdb_cache_init_failed = &bdb_cache_init_failed;
-static void *bdb_cache_initialized = &bdb_cache_initialized;
-static volatile void *bdb_cache_state = NULL;
+#define BDB_CACHE_UNINITIALIZED 0
+#define BDB_CACHE_START_INIT    1
+#define BDB_CACHE_INIT_FAILED   2
+#define BDB_CACHE_INITIALIZED   3
+static volatile apr_uint32_t bdb_cache_state = BDB_CACHE_UNINITIALIZED;
 #endif /* APR_HAS_THREADS */
 
 
@@ -337,13 +338,16 @@ bdb_cache_init (void)
      man's spinlock using apr_atomic_casptr. */
 #if APR_HAS_THREADS
   apr_status_t apr_err;
-  void *cache_state = apr_atomic_casptr(&bdb_cache_state,
-                                        bdb_cache_start_init, NULL);
-#else
-  void *cache_state = bdb_cache_pool;
+  apr_uint32_t cache_state = apr_atomic_cas(&bdb_cache_state,
+                                            BDB_CACHE_START_INIT,
+                                            BDB_CACHE_UNINITIALIZED);
 #endif /* APR_HAS_THREADS */
 
-  if (!cache_state)
+#if APR_HAS_THREADS
+  if (cache_state == BDB_CACHE_UNINITIALIZED)
+#else
+  if (!bdb_cache_pool)
+#endif /* APR_HAS_THREADS */
     {
       bdb_cache_pool = svn_pool_create(NULL);
       bdb_cache = apr_hash_make(bdb_cache_pool);
@@ -354,32 +358,34 @@ bdb_cache_init (void)
       if (apr_err)
         {
           /* Tell other threads that the initialisation failed. */
-          apr_atomic_casptr(&bdb_cache_state,
-                            bdb_cache_init_failed,
-                            bdb_cache_start_init);
+          apr_atomic_cas(&bdb_cache_state,
+                         BDB_CACHE_INIT_FAILED,
+                         BDB_CACHE_START_INIT);
           return svn_error_create(apr_err, NULL,
                                   "Couldn't initialize the cache of"
                                   " Berkeley DB environment descriptors");
         }
 
-      apr_atomic_casptr(&bdb_cache_state,
-                        bdb_cache_initialized,
-                        bdb_cache_start_init);
+      apr_atomic_cas(&bdb_cache_state,
+                     BDB_CACHE_INITIALIZED,
+                     BDB_CACHE_START_INIT);
 #endif /* APR_HAS_THREADS */
     }
 #if APR_HAS_THREADS
   /* Wait for whichever thread is initializing the cache to finish. */
   /* XXX FIXME: Should we have a maximum wait here, like we have in
                 the Windows file IO spinner? */
-  else while (cache_state != bdb_cache_initialized)
+  else while (cache_state != BDB_CACHE_INITIALIZED)
     {
-      if (cache_state == bdb_cache_init_failed)
+      if (cache_state == BDB_CACHE_INIT_FAILED)
         return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                                 "Couldn't initialize the cache of"
                                 " Berkeley DB environment descriptors");
 
       apr_sleep(APR_USEC_PER_SEC / 1000);
-      cache_state = apr_atomic_casptr(&bdb_cache_state, NULL, NULL);
+      cache_state = apr_atomic_cas(&bdb_cache_state,
+                                   BDB_CACHE_UNINITIALIZED,
+                                   BDB_CACHE_UNINITIALIZED);
     }
 #endif /* APR_HAS_THREADS */
 
