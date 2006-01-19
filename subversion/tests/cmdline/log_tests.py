@@ -295,7 +295,7 @@ def parse_log_output(log_lines):
 def check_log_chain (chain, revlist):
   """Verify that log chain CHAIN contains the right log messages for
   revisions START to END (see documentation for parse_log_output() for
-  more about log chains.)
+  more about log chains).
 
   Do nothing if the log chain's messages run from revision START to END
   and each log message contains a line of the form
@@ -307,10 +307,12 @@ def check_log_chain (chain, revlist):
   carefully.
   Also verify that even numbered commit messages have three lines.
 
-  Raise if anything looks wrong.
+  Raise an error if anything looks wrong.
   """
 
   for expect_rev in revlist:
+    if len(chain) == 0:
+      raise svntest.Failure('Empty log chain')
     log_item = chain.pop (0)
     saw_rev = string.atoi (log_item['revision'])
     date = log_item['date']
@@ -357,8 +359,7 @@ def plain_log(sbox):
     output, err = svntest.actions.run_and_verify_svn ("", None, [], 'log')
 
     log_chain = parse_log_output (output)
-    if check_log_chain (log_chain, range(max_revision, 1 - 1, -1)):
-      raise svntest.Failure
+    check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
     
   finally:
     os.chdir (was_cwd)
@@ -470,8 +471,7 @@ def log_with_path_args(sbox):
       'log', svntest.main.current_repo_url, 'A/D/G', 'A/D/H')
 
     log_chain = parse_log_output (output)
-    if check_log_chain (log_chain, [8, 6, 5, 3, 1]):
-      raise svntest.Failure
+    check_log_chain(log_chain, [8, 6, 5, 3, 1])
 
   finally:
     os.chdir (was_cwd)
@@ -558,28 +558,24 @@ def log_through_copyfrom_history(sbox):
   output, err = svntest.actions.run_and_verify_svn (None, None, [],
                                                     'log', mu2_path)
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [6, 5, 2, 1]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [6, 5, 2, 1])
 
   output, err = svntest.actions.run_and_verify_svn (None, None, [],
                                                     'log', mu2_URL)
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [6, 5, 2, 1]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [6, 5, 2, 1])
 
   # First "oddity", the full log for mu2 doesn't include r3, but the -r3
   # log works!
   output, err = svntest.actions.run_and_verify_svn (None, None, [],
                                                     'log', '-r', '3', mu2_path)
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [3]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [3])
 
   output, err = svntest.actions.run_and_verify_svn (None, None, [],
                                                     'log', '-r', '3', mu2_URL)
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [3]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [3])
 
   # Second "oddity", the full log for mu2 includes r2, but the -r2 log
   # fails!
@@ -702,16 +698,14 @@ def log_limit(sbox):
                                                 'log', '--limit', '2',
                                                 svntest.main.current_repo_url)
   log_chain = parse_log_output (out)
-  if check_log_chain (log_chain, [9, 8]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [9, 8])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
                                                 svntest.main.current_repo_url,
                                                 'A/B')
   log_chain = parse_log_output (out)
-  if check_log_chain (log_chain, [9, 6]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [9, 6])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
@@ -719,8 +713,7 @@ def log_limit(sbox):
                                                 svntest.main.current_repo_url,
                                                 'A/B')
   log_chain = parse_log_output (out)
-  if check_log_chain (log_chain, [3, 6]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [3, 6])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
@@ -728,8 +721,7 @@ def log_limit(sbox):
                                                 svntest.main.current_repo_url,
                                                 'A/B')
   log_chain = parse_log_output (out)
-  if check_log_chain (log_chain, [1]):
-    raise svntest.Failure
+  check_log_chain(log_chain, [1])
 
 ########################################################################
 # Run the tests
