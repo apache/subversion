@@ -244,7 +244,7 @@ class StandardOutput(OutputBase):
 
 
 class PipeOutput(MailedOutput):
-  "Deliver a mail message to an MDA via a pipe."
+  "Deliver a mail message to an MTA via a pipe."
 
   def __init__(self, cfg, repos, prefix_param):
     MailedOutput.__init__(self, cfg, repos, prefix_param)

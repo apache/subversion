@@ -20,10 +20,10 @@
 # line, and the message piped into it.
 #mail_command = /usr/sbin/sendmail
 
-# This option specifies the hostname for delivery via SMTP
+# This option specifies the hostname for delivery via SMTP.
 #smtp_hostname = localhost
 
-# Username and password for SMTP servers requiring authorisation
+# Username and password for SMTP servers requiring authorisation.
 #smtp_username = example
 #smtp_password = example
 
@@ -139,19 +139,19 @@
 
 # This is not passed to the shell, so do not use shell metacharacters.
 # The command is split around whitespace, so if you want to include
-# whitespace in the command, then ### something ###
+# whitespace in the command, then ### something ###.
 diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 
-# The default prefix for the Subject: header for commits
+# The default prefix for the Subject: header for commits.
 commit_subject_prefix =
 
-# The default prefix for the Subject: header for propchanges
+# The default prefix for the Subject: header for propchanges.
 propchange_subject_prefix =
 
-# The default prefix for the Subject: header for locks
+# The default prefix for the Subject: header for locks.
 lock_subject_prefix =
 
-# The default prefix for the Subject: header for unlocks
+# The default prefix for the Subject: header for unlocks.
 unlock_subject_prefix =
 
 
@@ -169,7 +169,7 @@ from_addr = invalid@example.com
 # separated by whitespace (no commas):
 to_addr = invalid@example.com
 
-# If this is set, then a Reply-To: will be inserted into the message
+# If this is set, then a Reply-To: will be inserted into the message.
 reply_to =
 
 # When set to one or more of the valid options, the mailer will create
@@ -198,7 +198,7 @@ generate_diffs = add copy modify
 # deletion is always mentioned in the message header, regardless of this
 # option's value.
 ### DEPRECATED (if generate_diffs is not empty, this option is ignored)
-suppress_deletes = yes
+#suppress_deletes = yes
 
 # When set to "yes", the mailer will suppress the creation of a diff which
 # adds all the lines in the file. If this is set to anything else, or
