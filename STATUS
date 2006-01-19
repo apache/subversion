@@ -40,15 +40,6 @@ Candidate changes:
     Votes:
       +1: david
 
-  * r17992
-    In the Python bindings, check more carefully whether the application_pool
-    is valid before allowing child pools to be destroyed.
-    Justification: Fixes warnings about assertion failures reported during
-    garbage collection when running Trac 0.9.x in CGI mode. See 
-      http://projects.edgewall.com/trac/ticket/2472
-    Votes:
-      +1: djames
-
   * r18114
     In mailer.py:
     Fix bug: named substitutions gathered from defaults.for_repos were being
@@ -73,4 +64,13 @@ Candidate changes:
       +1: lundblad, dlr
 
 Approved changes:
+
+  * r17992
+    In the Python bindings, check more carefully whether the application_pool
+    is valid before allowing child pools to be destroyed.
+    Justification: Fixes warnings about assertion failures reported during
+    garbage collection when running Trac 0.9.x in CGI mode. See 
+      http://projects.edgewall.com/trac/ticket/2472
+    Votes:
+      +1: djames, cmpilato
 
