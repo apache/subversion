@@ -61,8 +61,6 @@ svn_client_log2 (const apr_array_header_t *targets,
   const char *base_url;
   const char *base_name = NULL;
   apr_array_header_t *condensed_targets;
-  svn_revnum_t start_revnum, end_revnum;
-  svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
@@ -71,8 +69,6 @@ svn_client_log2 (const apr_array_header_t *targets,
         (SVN_ERR_CLIENT_BAD_REVISION, NULL,
          _("Missing required revision specification"));
     }
-
-  start_revnum = end_revnum = SVN_INVALID_REVNUM;
 
   path = (APR_ARRAY_IDX(targets, 0, const char *));
 
@@ -187,6 +183,9 @@ svn_client_log2 (const apr_array_header_t *targets,
    * every iteration.
    */
   {
+    svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
+    svn_revnum_t start_revnum, end_revnum;
+
     svn_boolean_t start_is_local = svn_client__revision_is_local (start);
     svn_boolean_t end_is_local = svn_client__revision_is_local (end);
 
@@ -264,9 +263,9 @@ svn_client_log2 (const apr_array_header_t *targets,
                               receiver_baton,
                               pool);
       }
-  }
   
-  return err;
+    return err;
+  }
 }
 
 svn_error_t *
