@@ -32,8 +32,9 @@
 #
 # CONFIGURATION GROUPS
 #
-# Any section other than [general] or [defaults] are considered to be
-# user-defined groups which override values in the [defaults] section.
+# Any sections other than [general], [defaults], [maps] and sections
+# referred to within [maps] are considered to be user-defined groups
+# which override values in the [defaults] section.
 # These groups are selected using the following two options:
 #
 #   for_repos
@@ -172,13 +173,14 @@ to_addr = invalid@example.com
 # If this is set, then a Reply-To: will be inserted into the message.
 reply_to =
 
-# When set to one or more of the valid options, the mailer will create
-# diffs for the corresponding types of changes in the repository.  If
-# no options are given, or if any invalid options are given, no diffs
-# will be created.  Note that the operation is always mentioned in the
-# message header, regardless of this option's value.
-#
-# Valid options: add copy modify delete
+# Specify which types of repository changes mailer.py will create
+# diffs for.  Valid options are any combination of
+# 'add copy modify delete', or 'none' to never create diffs.
+# If the generate_diffs option is empty, the selection is controlled
+# by the deprecated options suppress_deletes and suppress_adds.
+# Note that only affects the display of diffs - all changes are
+# mentioned in the summary of changed paths at the top of the message,
+# regardless of this option's value.
 generate_diffs = add copy modify
 
 # Diff URL construction.  For the configured diff URL types, the diff
