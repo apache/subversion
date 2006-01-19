@@ -2,7 +2,7 @@
  * ls.c:  list local and remote directory entries.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -85,10 +85,11 @@ svn_client_ls4 (apr_hash_t **dirents,
 {
   svn_ra_session_t *ra_session;
   svn_revnum_t rev;
-  svn_node_kind_t url_kind;
+  svn_dirent_t *dirent;
   const char *url;
   const char *repos_root;
   const char *rel_path;
+  svn_error_t *err;
 
   /* We use the kind field to determine if we should recurse, so we
      always need it. */
@@ -104,61 +105,88 @@ svn_client_ls4 (apr_hash_t **dirents,
   /* Get path relative to repository root. */
   rel_path = svn_path_is_child (repos_root, url, pool);
 
-  /* Decide if the URL is a file or directory. */
-  SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));
+  err = svn_ra_stat (ra_session, "", rev, &dirent, pool);
 
-  if (url_kind == svn_node_dir)
+  /* svnserve before 1.2 doesn't support the above, so fall back on
+     a less efficient method. */
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
-      *dirents = apr_hash_make (pool);
+      svn_node_kind_t url_kind;
 
-      SVN_ERR (get_dir_contents (dirent_fields, *dirents, "", rev, ra_session,
-                                 recurse, ctx, pool));
+      svn_error_clear (err);
+
+      SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));
+
+      if (url_kind == svn_node_dir)
+        {
+          /* Fake a dirent; we only use the kind field below. */
+          dirent = apr_palloc (pool, sizeof (*dirent));
+          dirent->kind = svn_node_dir;
+        }
+      else if (url_kind == svn_node_file)
+        {
+          svn_ra_session_t *parent_session;
+          apr_hash_t *parent_ents;
+          const char *parent_url, *base_name;
+
+          /* Open another session to the file's parent.
+             This server doesn't support svn_ra_reparent anyway, so don't
+             try it. */
+          svn_path_split (url, &parent_url, &base_name, pool);
+
+          /* 'base_name' is now the last component of an URL, but we want
+             to use it as a plain file name. Therefore, we must URI-decode
+             it. */
+          base_name = svn_path_uri_decode (base_name, pool);
+          SVN_ERR (svn_client__open_ra_session_internal (&parent_session,
+                                                         parent_url, NULL,
+                                                         NULL, NULL, FALSE,
+                                                         TRUE, ctx, pool));
+
+          /* Get all parent's entries, no props. */
+          SVN_ERR (svn_ra_get_dir2 (parent_session, "", rev, dirent_fields,
+                                    &parent_ents, NULL, NULL, pool));
+
+          /* Get the relevant entry. */
+          dirent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
+        }
+      else
+        dirent = NULL;
     }
-  else if (url_kind == svn_node_file)
-    {
-      apr_hash_t *parent_ents;
-      const char *parent_url, *base_name;
-      svn_dirent_t *the_ent;
+  else if (err)
+    return err;
 
-      /* Re-open the session to the file's parent instead. */
-      svn_path_split (url, &parent_url, &base_name, pool);
-
-      /* 'base_name' is now the last component of an URL, but we want
-         to use it as a plain file name. Therefore, we must URI-decode
-         it. */
-      base_name = svn_path_uri_decode(base_name, pool);
-      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, parent_url,
-                                                     NULL, NULL, NULL, FALSE,
-                                                     TRUE, ctx, pool));
-
-      /* Get all parent's entries, no props. */
-      SVN_ERR (svn_ra_get_dir2 (ra_session, "", rev, dirent_fields,
-                                &parent_ents, NULL, NULL, pool));
-
-      /* Copy the relevant entry into the caller's hash. */
-      *dirents = apr_hash_make (pool);
-      the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
-      if (the_ent == NULL)
-        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                                  _("URL '%s' non-existent in that revision"),
-                                  url);
-      svn_path_split (rel_path, &rel_path, NULL, pool);
-
-      apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
-    }
-  else
+  if (! dirent)
     return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                               _("URL '%s' non-existent in that revision"),
                               url);
+
+  *dirents = apr_hash_make (pool);
+
+  if (dirent->kind == svn_node_dir)
+    SVN_ERR (get_dir_contents (dirent_fields, *dirents, "", rev, ra_session,
+                               recurse, ctx, pool));
+  else if (dirent->kind == svn_node_file)
+    {
+      const char *base_name = svn_path_uri_decode (svn_path_basename (url,
+                                                                      pool),
+                                                   pool);
+      apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, dirent);
+    }
 
   if (locks)
     {
       apr_hash_t *new_locks;
       apr_hash_index_t *hi;
-      svn_error_t *err;
 
       /* Add a leading slash to match the paths from svn_ra_get_locks(). */
       rel_path = apr_psprintf (pool, "/%s", rel_path ? rel_path : "");
+
+      /* If we have a file, we want the lock added to the hash table
+         below to have the basename of the file, so strip off the basename
+         of rel_path. */
+      if (dirent->kind == svn_node_file)
+        rel_path = svn_path_dirname (rel_path, pool);
 
       /* Get locks. */
       err = svn_ra_get_locks (ra_session, locks, "", pool);
