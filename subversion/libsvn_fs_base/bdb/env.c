@@ -244,9 +244,9 @@ bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
 static apr_status_t
 cleanup_env (void *data)
 {
+#if APR_HAS_THREADS
   bdb_env_t *bdb = data;
 
-#if APR_HAS_THREADS
   apr_threadkey_private_delete(bdb->error_info);
 #endif /* APR_HAS_THREADS */
 
