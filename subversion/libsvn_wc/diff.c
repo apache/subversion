@@ -999,34 +999,8 @@ delete_entry (const char *path,
       else
         {
           /* Or normally, show the working file being added. */
-          /* ### This is wrong if we're diffing repos->BASE. */
-          const char *secondpath = full_path;
-          apr_hash_t *emptyprops = apr_hash_make (pool),
-                     *workingprops = NULL;
-          apr_array_header_t *propchanges;
-          const char *working_mimetype;
-
-          if (entry->schedule == svn_wc_schedule_delete)
-            secondpath = empty_file;
-
-          SVN_ERR (get_working_mimetype (&working_mimetype, &workingprops,
-                                         adm_access, full_path, pool));
-
-          /* Calculate the propchanges necessary to create
-             workingprops. */
-          SVN_ERR (svn_prop_diffs (&propchanges,
-                                   workingprops, emptyprops, pool));
-
-          SVN_ERR (pb->edit_baton->callbacks->file_added
-                   (NULL, NULL, NULL, full_path,
-                    empty_file,
-                    secondpath,
-                    0, entry->revision,
-                    NULL,
-                    working_mimetype,
-                    propchanges,
-                    emptyprops,
-                    pb->edit_baton->callback_baton));
+          SVN_ERR (report_wc_file_as_added (pb, adm_access, full_path, entry,
+                                            pool));
         }
 
       apr_hash_set (pb->compared, full_path, APR_HASH_KEY_STRING, "");
