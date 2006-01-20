@@ -36,6 +36,13 @@ that script:
 
    $ ./basic_tests.py list
 
+Note: if you are building Subversion in a directory other than the source
+directory (q.v. INSTALL), you will have to invoke the tests from within
+the build directory:
+
+   $ cd obj/subversion/tests/cmdline
+   $ ../../../../svn/subversion/tests/cmdline/basic_tests.py
+
 
 Running over ra_dav
 -------------------
