@@ -1226,7 +1226,7 @@ svn_client_log3 (const apr_array_header_t *targets,
  * Similar to svn_client_log3(), but with the @c kind field of the @a
  * peg_revision parameter set to @c svn_opt_revision_unspecified.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for compatibility with the 1.3 API.
  * @since New in 1.2.
  */
 svn_error_t *
