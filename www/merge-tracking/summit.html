@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>CollabNet Merge Tracking Summit</title>
+</head>
+
+<body>
+<!-- The class h2 is included on the main div, because the HTML which the
+     server will wrap around the page includes a <div class="h2">.
+     Thus, we include one here so that the page looks right when previewed
+     locally, *but* we override the border which the CSS assigns to that
+     style, so that we do not get two borders on the live page. -->
+<div class="h2 app" style="border-left: 0px" id="customcontent">
+
+<h2>CollabNet Merge Tracking Summit</h2>
+
+<p>On Tuesday, January 17th, CollabNet held a merge tracking summit
+for some of their Subversion-using customers to solicit use cases and
+requirements for the enterprise.  Enterprise level users have branches
+which last longer than a typical open source project (e.g. more than a
+decade). They tend to do merges more often, involving more files. They
+also have a greater need for auditability/traceability (e.g. FDA
+requirements, Sarbanes Oxley compliance, etc.).</p>
+
+<p>The pre-summit <a href="summit-survey.html">survey questionnaire
+and responses</a>, and the <a href="#summit-results">recorded
+results</a> of that summit are available here.</p>
+
+
+<div class="h3" id="summit-results">
+<h3>Summit Results</h3>
+
+<p>Partial results below.  Content is not yet in any particular
+order.</p>
+
+<!-- TODO: Incorporate feedback from rooneg, cmpilato, djames, and
+dlr.  Better organize and flesh out content. -->
+
+<ul>
+  <li>The ability to manually adjust any merge meta data is crucial.
+  For instance, someone may hand-edit one or more resources to achieve
+  the same result as a merge, or hand-edit the result of a merge in a
+  way which significantly alters the change.  Either way, one might
+  still want to represent that the change does still exist in the
+  target line.  In general, humans who claim that they know better
+  than the tool should be trusted.</li>
+
+  <li>The question "What branches contain this exact version of file
+  X?" is important.  (In Subversion, that would be "What paths contain
+  this exact version of X?")  This may imply exposing some sort of
+  unique object identifier, more than we offer so far.</li>
+
+  <li>Same as above, but for changes: "What branches include change
+  C?"</li>
+
+  <li>The ability to push a given change out to multiple branches.
+  Selection mechanisms for destinations should be sophisticated.  For
+  example, select all branches that have a common ancestor with the
+  source branch of the change, all branches except an exclusion set,
+  all branches matching a regular expression, etc.  The medical
+  systems manufacturer does this type of operation daily.</li>
+
+  <li>Surprisingly, <code>svn blame</code> improvements were not a high
+  priority.  The current output (which presumably would show the
+  revision in which a merge took place, rather than the original
+  source revision), was deemed generally okay.  Possibly, revisions
+  which are marked as merges should be displayed as such, so that the
+  user knows to drill down further.</li>
+
+  <li>A portable, human-readable change format for review would be
+  useful.  Programmatic parsability was not a high priority,
+  however.  An extended patch program was not considered crucial.</li>
+
+  <li>Visual interfaces to branch/merge management are <em>very</em>
+  useful.  TODO: Follow-up sessions via WebEx will add more detail
+  here.</li>
+
+  <li>The ability to do foreign branch is very good (for similar
+  reasons to those in the open source world -- many commercial
+  organizations are adopting open source-style practices
+  internally).</li>
+
+  <li>Partial change merging: The merge meta data itself should be
+  atomic.  We record that you either applied a whole change, or
+  not.  Of course, hand edits and the log message may tell a more
+  detailed story.</li>
+
+  <li>Edited merges should be disentanglable and viewable as separate
+  pieces, i.e. [merge] + [edits].  However, this was a nice-to-have
+  than a must-have.</li>
+
+  <li>An option to merging to say "If anything conflicted, then show
+  all merged regions in a conflicted style, even those which did not
+  conflict."</li>
+
+  <li>TortoiseSVN merge is apparently good (it has the Araxis
+  Merge-style take my version or their version), but needs a built-in
+  text editor for more involved conflict resolution.</li>
+
+  <li>Format-specific merge tools is an important need.</li>
+
+  <li>The ability to automate merges, including interfaces for
+  resolving conflicts and handling other errors, is important.
+  Customers who do multi-thousand file merges stress this.</li>
+
+  <li>Questions users want to ask: "Is this version of foo.c the
+  'latest' version?  Are there changes out there which are applicable
+  to foo.c, that have not been applied?  What are they?"</li>
+
+  <li>Any action that can be done to a tag/branch (e.g. merge a
+  change, remove a change, etc.) should be hook-protected.</li>
+
+  <li>The ability to "shadow" versioned resources: Make a branch, but
+  have most of the branch follow the original source, while only a few
+  files are selected for branch development (e.g. "unshadowed").  Is
+  this different from systems which allow you to branch individual
+  resources in the first place?  Can this be achieved with a
+  finer-grained <code>svn switch</code>?  Note: This is related to the
+  shared file storage issue in Subversion's own issue tracker (TODO:
+  link to issue).</li>
+
+  <li>Roll-back should be convenient, and should be recorded as a
+  subtraction event, visible as such in the meta data.  Roll-back was
+  common at Google, and more rare at other shops.</li>
+
+  <li>Asking change C to where it has been ported was not a strong
+  need (e.g. reporting).</li>
+</ul>
+
+</div>  <!-- summit-results -->
+
+</div>  <!-- h2 -->
+</body>
+</html>
