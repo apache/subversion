@@ -83,8 +83,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-01-18 05:04+0100\n"
-"PO-Revision-Date: 2006-01-18 14:59+0100\n"
+"POT-Creation-Date: 2006-01-20 05:02+0100\n"
+"PO-Revision-Date: 2006-01-22 09:05+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1060,7 +1060,7 @@ msgstr ""
 #: libsvn_client/diff.c:1394 libsvn_client/diff.c:2132
 #: libsvn_client/diff.c:2795 libsvn_client/diff.c:2904
 #: libsvn_client/locking_commands.c:250 libsvn_client/locking_commands.c:274
-#: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
+#: libsvn_client/log.c:126 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
 #: libsvn_client/revisions.c:89 libsvn_client/status.c:256
@@ -1389,21 +1389,21 @@ msgstr "'%s' non è bloccato"
 msgid "Lock comment has illegal characters"
 msgstr "Il commento al blocco contiene dei caratteri illegali"
 
-#: libsvn_client/log.c:72
+#: libsvn_client/log.c:73
 msgid "Missing required revision specification"
 msgstr "Specificazione di una revisione richiesta mancante"
 
-#: libsvn_client/log.c:135 libsvn_client/status.c:261
+#: libsvn_client/log.c:132 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "L'elemento '%s' non ha URL"
 
-#: libsvn_client/log.c:321
+#: libsvn_client/log.c:348
 msgid "No commits in repository"
 msgstr "Non vi sono commit nel repository."
 
-#: libsvn_client/ls.c:143 libsvn_client/ls.c:151
+#: libsvn_client/ls.c:161
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "L'URL '%s' non-esistente a quella revisione"
@@ -1619,17 +1619,17 @@ msgstr "sto creando le modifiche"
 msgid "deleting changes"
 msgstr "sto cancellando le modifiche"
 
-#: libsvn_fs_base/bdb/changes-table.c:145 libsvn_fs_fs/fs_fs.c:1917
+#: libsvn_fs_base/bdb/changes-table.c:145 libsvn_fs_fs/fs_fs.c:1919
 msgid "Missing required node revision ID"
 msgstr "L'ID di nodo di revisione richiesto è mancante"
 
-#: libsvn_fs_base/bdb/changes-table.c:156 libsvn_fs_fs/fs_fs.c:1927
+#: libsvn_fs_base/bdb/changes-table.c:156 libsvn_fs_fs/fs_fs.c:1929
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr ""
 "Ordine dei cambiamenti non valido: nuovo ID di revisione di nodo senza una "
 "cancellazione"
 
-#: libsvn_fs_base/bdb/changes-table.c:166 libsvn_fs_fs/fs_fs.c:1938
+#: libsvn_fs_base/bdb/changes-table.c:166 libsvn_fs_fs/fs_fs.c:1940
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr ""
 "Ordine dei cambiamenti non valido: operazione diversa da add su un percorso "
@@ -1999,17 +1999,23 @@ msgstr "L'oggetto del filesystem è già aperto"
 #: libsvn_fs_base/fs.c:189
 #, c-format
 msgid "Berkeley DB error for filesystem %s while closing environment:\n"
-msgstr "Errore del DB Berkeley per il filesystem '%s' durante la chiusura dell'ambiente:\n"
+msgstr ""
+"Errore del DB Berkeley per il filesystem '%s' durante la chiusura "
+"dell'ambiente:\n"
 
 #: libsvn_fs_base/fs.c:539
 #, c-format
 msgid "Berkeley DB error for filesystem %s while creating environment:\n"
-msgstr "Errore del DB Berkeley per il filesystem '%s' durante la creazione dell'ambiente:\n"
+msgstr ""
+"Errore del DB Berkeley per il filesystem '%s' durante la creazione "
+"dell'ambiente:\n"
 
 #: libsvn_fs_base/fs.c:545
 #, c-format
 msgid "Berkeley DB error for filesystem %s while opening environment:\n"
-msgstr "Errore del DB Berkeley per il filesystem '%s' durante l'apertura dell'ambiente:\n"
+msgstr ""
+"Errore del DB Berkeley per il filesystem '%s' durante l'apertura "
+"dell'ambiente:\n"
 
 #: libsvn_fs_base/fs.c:662 libsvn_fs_fs/fs_fs.c:273
 #, c-format
@@ -2329,7 +2335,7 @@ msgstr "Linea copyroot non conforme nel nodo di revisione"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Linea copyfrom non conforme nel nodo di revisione"
 
-#: libsvn_fs_fs/fs_fs.c:879 libsvn_fs_fs/fs_fs.c:3137
+#: libsvn_fs_fs/fs_fs.c:879 libsvn_fs_fs/fs_fs.c:3139
 msgid "Attempted to write to non-transaction"
 msgstr "Tentativo di scrittura in una non-transazione"
 
@@ -2374,19 +2380,19 @@ msgstr ""
 "La lettura di una finestra svndiff ha letto oltre la fine della "
 "rappresentazione"
 
-#: libsvn_fs_fs/fs_fs.c:1492
+#: libsvn_fs_fs/fs_fs.c:1494
 msgid "svndiff data requested non-existent source"
 msgstr "I dati svndiff hanno richiesto una sorgente inesistente"
 
-#: libsvn_fs_fs/fs_fs.c:1498
+#: libsvn_fs_fs/fs_fs.c:1500
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff ha richiesto una posizione oltre la fine dei dati"
 
-#: libsvn_fs_fs/fs_fs.c:1521 libsvn_fs_fs/fs_fs.c:1538
+#: libsvn_fs_fs/fs_fs.c:1523 libsvn_fs_fs/fs_fs.c:1540
 msgid "svndiff window length is corrupt"
 msgstr "La lunghezza della finestra svndiff è corrotta"
 
-#: libsvn_fs_fs/fs_fs.c:1586
+#: libsvn_fs_fs/fs_fs.c:1588
 #, c-format
 msgid ""
 "Checksum mismatch while reading representation:\n"
@@ -2397,84 +2403,84 @@ msgstr ""
 "    atteso:  %s\n"
 " effettivo:  %s\n"
 
-#: libsvn_fs_fs/fs_fs.c:1725 libsvn_fs_fs/fs_fs.c:1738
-#: libsvn_fs_fs/fs_fs.c:1744
+#: libsvn_fs_fs/fs_fs.c:1727 libsvn_fs_fs/fs_fs.c:1740
+#: libsvn_fs_fs/fs_fs.c:1746
 msgid "Directory entry corrupt"
 msgstr "Voce della directory corrotta"
 
-#: libsvn_fs_fs/fs_fs.c:2080 libsvn_fs_fs/fs_fs.c:2088
-#: libsvn_fs_fs/fs_fs.c:2120 libsvn_fs_fs/fs_fs.c:2140
-#: libsvn_fs_fs/fs_fs.c:2174 libsvn_fs_fs/fs_fs.c:2179
+#: libsvn_fs_fs/fs_fs.c:2082 libsvn_fs_fs/fs_fs.c:2090
+#: libsvn_fs_fs/fs_fs.c:2122 libsvn_fs_fs/fs_fs.c:2142
+#: libsvn_fs_fs/fs_fs.c:2176 libsvn_fs_fs/fs_fs.c:2181
 msgid "Invalid changes line in rev-file"
 msgstr "Linea di modifiche non valida nel file di revisione"
 
-#: libsvn_fs_fs/fs_fs.c:2113
+#: libsvn_fs_fs/fs_fs.c:2115
 msgid "Invalid change kind in rev file"
 msgstr "Tipo di cambiamento non valido nel file di revisione"
 
-#: libsvn_fs_fs/fs_fs.c:2133
+#: libsvn_fs_fs/fs_fs.c:2135
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Opzione text-mod non valida nel file di revisione"
 
-#: libsvn_fs_fs/fs_fs.c:2153
+#: libsvn_fs_fs/fs_fs.c:2155
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Opzione prop-mod non valida nel file di revisione"
 
-#: libsvn_fs_fs/fs_fs.c:2336
+#: libsvn_fs_fs/fs_fs.c:2338
 msgid "Copying from transactions not allowed"
 msgstr "La copia dalle transazioni non è consentita"
 
-#: libsvn_fs_fs/fs_fs.c:2392
+#: libsvn_fs_fs/fs_fs.c:2394
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr ""
 "Impossibile creare una directory di transazione in '%s' per la revisione %ld"
 
-#: libsvn_fs_fs/fs_fs.c:2571 libsvn_fs_fs/fs_fs.c:2578
+#: libsvn_fs_fs/fs_fs.c:2573 libsvn_fs_fs/fs_fs.c:2580
 msgid "next-id file corrupt"
 msgstr "file next-id corrotto"
 
-#: libsvn_fs_fs/fs_fs.c:2663
+#: libsvn_fs_fs/fs_fs.c:2665
 msgid "Transaction cleanup failed"
 msgstr "Ripulitura della transazione fallita"
 
-#: libsvn_fs_fs/fs_fs.c:2830
+#: libsvn_fs_fs/fs_fs.c:2832
 msgid "Invalid change type"
 msgstr "Tipo di cambiamento non valido"
 
-#: libsvn_fs_fs/fs_fs.c:3156
+#: libsvn_fs_fs/fs_fs.c:3158
 msgid "Can't set text contents of a directory"
 msgstr "Non è possibile impostare il contenuto testuale di una directory"
 
-#: libsvn_fs_fs/fs_fs.c:3246 libsvn_fs_fs/fs_fs.c:3251
-#: libsvn_fs_fs/fs_fs.c:3258
+#: libsvn_fs_fs/fs_fs.c:3248 libsvn_fs_fs/fs_fs.c:3253
+#: libsvn_fs_fs/fs_fs.c:3260
 msgid "Corrupt current file"
 msgstr "File corrente corrotto"
 
-#: libsvn_fs_fs/fs_fs.c:3548 libsvn_subr/io.c:2408 svn/util.c:237
+#: libsvn_fs_fs/fs_fs.c:3550 libsvn_subr/io.c:2408 svn/util.c:237
 #: svn/util.c:261
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Non riesco a eseguire stat() su '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3552
+#: libsvn_fs_fs/fs_fs.c:3554
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Non riesco ad eseguire chmod su '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3691
+#: libsvn_fs_fs/fs_fs.c:3693
 msgid "Can't grab FSFS repository mutex"
 msgstr "Non riesco a prendere il mutex per il filesystem"
 
-#: libsvn_fs_fs/fs_fs.c:3705
+#: libsvn_fs_fs/fs_fs.c:3707
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "Non posso abbandonare il mutex per il filesystem"
 
-#: libsvn_fs_fs/fs_fs.c:3822
+#: libsvn_fs_fs/fs_fs.c:3824
 msgid "Transaction out of date"
 msgstr "Transazione scaduta"
 
-#: libsvn_fs_fs/fs_fs.c:4111
+#: libsvn_fs_fs/fs_fs.c:4113
 msgid "No such transaction"
 msgstr "Transazione inesistente"
 
@@ -3354,21 +3360,31 @@ msgstr ""
 msgid "Can't create pipe for hook '%s'"
 msgstr "Non riesco ad aprire una pipe per l'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:74
+#: libsvn_repos/hooks.c:79
+#, c-format
+msgid "Can't make pipe read handle non-inherited for hook '%s'"
+msgstr "Non riesco a rendere la pipe in scrittura non-ereditata per l'aggancio '%s'"
+
+#: libsvn_repos/hooks.c:85
+#, c-format
+msgid "Can't make pipe write handle non-inherited for hook '%s'"
+msgstr "Non riesco a rendere la pipe in scrittura non ereditata per l'aggancio '%s'"
+
+#: libsvn_repos/hooks.c:94
 #, c-format
 msgid "Can't create null stdout for hook '%s'"
 msgstr "Non riesco a creare uno stdout nullo per l'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:86
+#: libsvn_repos/hooks.c:106
 msgid "Error closing write end of stderr pipe"
 msgstr "Errore nella chiusura del lato in scrittura per la pipe di stderr"
 
-#: libsvn_repos/hooks.c:91
+#: libsvn_repos/hooks.c:111
 #, c-format
 msgid "Failed to start '%s' hook"
 msgstr "Fallita l'esecuzione dell'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:113
+#: libsvn_repos/hooks.c:133
 #, c-format
 msgid ""
 "'%s' hook failed with error output:\n"
@@ -3377,25 +3393,25 @@ msgstr ""
 "L'aggancio '%s' ha fallito con questo errore:\n"
 "%s"
 
-#: libsvn_repos/hooks.c:120
+#: libsvn_repos/hooks.c:140
 #, c-format
 msgid "'%s' hook failed; no error output available"
 msgstr "L'aggancio '%s' ha fallito; nessun errore disponibile"
 
-#: libsvn_repos/hooks.c:139
+#: libsvn_repos/hooks.c:159
 msgid "Error closing read end of stderr pipe"
 msgstr "Errore nella chiusura del lato di lettura della pipe stderr"
 
-#: libsvn_repos/hooks.c:143
+#: libsvn_repos/hooks.c:163
 msgid "Error closing null file"
 msgstr "Errore nella chiusura del file nullo"
 
-#: libsvn_repos/hooks.c:225
+#: libsvn_repos/hooks.c:245
 #, c-format
 msgid "Failed to run '%s' hook; broken symlink"
 msgstr "Esecuzione dell'aggancio '%s' fallita; il link simbolico è rotto"
 
-#: libsvn_repos/hooks.c:366
+#: libsvn_repos/hooks.c:386
 msgid ""
 "Repository has not been enabled to accept revision propchanges;\n"
 "ask the administrator to create a pre-revprop-change hook"
@@ -5432,13 +5448,13 @@ msgstr "Percorsi cambiati:\n"
 msgid " (from %s:%ld)"
 msgstr " (da %s:%ld)"
 
-#: svn/log-cmd.c:437
+#: svn/log-cmd.c:442
 msgid "When specifying working copy paths, only one target may be given"
 msgstr ""
 "Nello specificare i percorsi della copia di lavoro, si può dare un solo "
 "target"
 
-#: svn/log-cmd.c:449
+#: svn/log-cmd.c:454
 msgid "Only relative paths can be specified after a URL"
 msgstr "Dopo un'URL possono essere specificati solo dei percorsi relativi"
 
