@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -628,10 +628,10 @@ svn_cl__get_log_message (const char **log_msg,
       if (! message)
         {
           const char *reply;
-          svn_cmdline_prompt_user
+          SVN_ERR (svn_cmdline_prompt_user
             (&reply,
              _("\nLog message unchanged or not specified\n"
-               "a)bort, c)ontinue, e)dit\n"), pool);
+               "a)bort, c)ontinue, e)dit\n"), pool));
           if (reply)
             {
               char letter = apr_tolower (reply[0]);
