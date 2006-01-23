@@ -1,7 +1,7 @@
 /* dump.c --- writing filesystem contents into a portable 'dumpfile' format.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -411,13 +411,13 @@ dump_node (struct edit_baton *eb,
       else
         {
           if (cmp_rev < eb->oldest_dumped_rev)
-            svn_stream_printf 
+            SVN_ERR (svn_stream_printf
               (eb->feedback_stream, pool,
                _("WARNING: Referencing data in revision %ld" 
                  ", which is older than the oldest\nWARNING: dumped revision "
                  "(%ld).  Loading this dump into an empty "
                  "repository\nWARNING: will fail.\n"),
-               cmp_rev, eb->oldest_dumped_rev);
+               cmp_rev, eb->oldest_dumped_rev));
 
           SVN_ERR (svn_stream_printf (eb->stream, pool,
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 

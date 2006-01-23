@@ -2,7 +2,7 @@
  * locking_commands.c:  Implementation of lock and unlock.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -454,7 +454,7 @@ svn_client_lock (const apr_array_header_t *targets,
 
   /* Unlock the wc. */
   if (adm_access)
-    svn_wc_adm_close (adm_access);
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
@@ -511,7 +511,7 @@ svn_client_unlock (const apr_array_header_t *targets,
 
   /* Unlock the wc. */
   if (adm_access)
-    svn_wc_adm_close (adm_access);
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
