@@ -56,12 +56,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r17992
-    In the Python bindings, check more carefully whether the application_pool
-    is valid before allowing child pools to be destroyed.
-    Justification: Fixes warnings about assertion failures reported during
-    garbage collection when running Trac 0.9.x in CGI mode. See 
-      http://projects.edgewall.com/trac/ticket/2472
-    Votes:
-      +1: djames, cmpilato
-
