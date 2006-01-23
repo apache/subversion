@@ -3986,9 +3986,6 @@ svn_fs_fs__create (svn_fs_t *fs,
                    const char *path,
                    apr_pool_t *pool)
 {
-  char buffer [APR_UUID_FORMATTED_LENGTH + 1];
-  apr_uuid_t uuid;
-  
   fs->path = apr_pstrdup (pool, path);
 
   SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path, PATH_REVS_DIR,
@@ -4000,12 +3997,10 @@ svn_fs_fs__create (svn_fs_t *fs,
   SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path, PATH_TXNS_DIR,
                                                        pool),
                                         pool));
+
   SVN_ERR (svn_io_file_create (path_current (fs, pool), "0 1 1\n", pool));
   SVN_ERR (svn_io_file_create (path_lock (fs, pool), "", pool));
-
-  apr_uuid_get (&uuid);
-  apr_uuid_format (buffer, &uuid);
-  SVN_ERR (svn_fs_fs__set_uuid (fs, buffer, pool));
+  SVN_ERR (svn_fs_fs__set_uuid (fs, svn_uuid_generate (pool), pool));
 
   SVN_ERR (write_revision_zero (fs));
 
