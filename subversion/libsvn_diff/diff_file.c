@@ -2,7 +2,7 @@
  * diff_file.c :  routines for doing diffs on files
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -699,6 +699,10 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
               ++curp;
               --length;
             }
+
+          baton->curp[idx] = curp;
+          baton->length[idx] = length;
+
           break;
         }
     }
