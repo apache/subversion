@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2180,26 +2180,37 @@ svn_client_export (svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
+/** Invoked by svn_client_list() for each @a path with its @a dirent and,
+ * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
+ * to which @a path is relative.  @a baton is the baton passed to the
+ * caller.  @a pool may be used for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *(svn_client_list_func_t) (void *baton,
+                                               const char *path,
+                                               const svn_dirent_t *dirent,
+                                               const svn_lock_t *lock,
+                                               const char *abs_path,
+                                               apr_pool_t *pool);
 
 /**
- * Set @a *dirents to a newly allocated hash of entries for @a
+ * Report the directory entry, and possibly children, for @a
  * path_or_url at @a revision.  The actual node revision selected is
  * determined by the path as it exists in @a peg_revision.  If @a
  * peg_revision->kind is @c svn_opt_revision_unspecified, then it defaults
  * to @c svn_opt_revision_head for URLs or @c svn_opt_revision_working
  * for WC targets.
  *
- * If @a path_or_url is a directory, return all dirents in the hash.  If
- * @a path_or_url is a file, return only the dirent for the file.  If @a
- * path_or_url is non-existent, return @c SVN_ERR_FS_NOT_FOUND.
+ * Report directory entries by invoking @a list_func/@a baton with @a path
+ * relative to @a path_or_url.  The dirent for @a path_or_url is reported
+ * using an empty @a path.  If @a path_or_url is a directory, also report
+ * its children.  If @a path_or_url is non-existent, return
+ * @c SVN_ERR_FS_NOT_FOUND.
  *
- * The @a dirents hash maps entry names (<tt>const char *</tt>) to
- * @c svn_dirent_t *'s. Do all allocation in @a pool.
+ * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
- * If @a locks is not @c NULL, set @a *locks to a hash table mapping
- * entry names (<tt>const char *</tt>) to @c svn_lock_t *'s,
- * allocating both @a *locks and everything inside it in @a pool.
- * This hash represents any existing repository locks on entries.
+ * Use @a pool for temporary allocations.
  *
  * Use authentication baton cached in @a ctx to authenticate against the 
  * repository.
@@ -2215,19 +2226,28 @@ svn_client_export (svn_revnum_t *result_rev,
  * @since New in 1.4.
  */
 svn_error_t *
-svn_client_ls4 (apr_hash_t **dirents,
-                apr_hash_t **locks,
-                const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_boolean_t recurse,
-                apr_uint32_t dirent_fields,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+svn_client_list (const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_boolean_t recurse,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_ctx_t *ctx,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 apr_pool_t *pool);
 
 /**
- * Same as svn_client_ls4(), but always passes @c SVN_DIRENT_ALL for
- * the @a dirent_fields argument.
+ * Same as svn_client_list(), but always passes @c SVN_DIRENT_ALL for
+ * the @a dirent_fields argument and returns all information in two
+ * hash tables instead of invoking a callback.
+ *
+ * Set @a *dirents to a newly allocated hash of directory entries.
+ * The @a dirents hash maps entry names (<tt>const char *</tt>) to
+ * @c svn_dirent_t *'s.
+ *
+ * If @a locks is not @c NULL, set @a *locks to a hash table mapping
+ * entry names (<tt>const char *</tt>) to @c svn_lock_t *'s.
  *
  * @since New in 1.3.
  *

@@ -2,7 +2,7 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -167,7 +167,7 @@ svn_opt_subcommand_t
   svn_cl__info,
   svn_cl__lock,
   svn_cl__log,
-  svn_cl__ls,
+  svn_cl__list,
   svn_cl__merge,
   svn_cl__mkdir,
   svn_cl__move,

@@ -253,8 +253,16 @@ typedef struct svn_dirent_t
   /** author of created_rev */
   const char *last_author;
 
+  /* IMPORTANT: If you extend this struct, check svn_dirent_dup(). */
 } svn_dirent_t;
 
+
+/** Return a deep copy of @a dirent, allocated in @a pool.
+ *
+ * @since New in 1.4.
+ */
+svn_dirent_t *svn_dirent_dup (const svn_dirent_t *dirent,
+                              apr_pool_t *pool);
 
 
 
