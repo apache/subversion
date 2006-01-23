@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -353,7 +353,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
-  { "list", svn_cl__ls, {"ls"}, N_
+  { "list", svn_cl__list, {"ls"}, N_
     ("List directory entries in the repository.\n"
      "usage: list [TARGET[@REV]...]\n"
      "\n"
