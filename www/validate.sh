@@ -45,7 +45,9 @@ fi
 test -r "$LOCAL_CATALOG" && export XML_CATALOG_FILES="$LOCAL_CATALOG"
 
 if [ $# -eq 0 ]; then echo "Usage: ./validate.sh <filename>..." >&2; exit 1; fi
-if [ "$1" = "all" ]; then set - "$WWWDIR"/*.html; fi
+if [ "$1" = "all" ]; then
+  set - "$WWWDIR"/*.html "$WWWDIR"/merge-tracking/*.html
+fi
 if [ $# -eq 1 ]; then xmllint --nonet --noout --valid "$1"; exit $?; fi
 
 for f in "$@"; do
