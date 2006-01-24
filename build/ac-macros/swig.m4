@@ -69,7 +69,6 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
-    #   subversion/bindings/swig/NOTES
     #   packages/rpm/redhat-8+/subversion.spec
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/rhel-3/subversion.spec
@@ -81,9 +80,8 @@ AC_DEFUN(SVN_FIND_SWIG,
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
-      AC_MSG_WARN([This is not compatible with Subversion])
-      AC_MSG_WARN([Subversion is only compatible with versions of SWIG])
-      AC_MSG_WARN([between 1.3.24 and 1.3.27])
+      AC_MSG_WARN([Subversion requires 1.3.24 or later, and is known to work])
+      AC_MSG_WARN([with versions up to 1.3.27])
     fi
   fi
  
