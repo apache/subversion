@@ -401,7 +401,7 @@ This can be set with \\[svn-status-set-module-name].")
 
 (defvar svn-status-coding-system nil
   "A special coding system is needed for the output of svn.
-svn-status-coding-system is used in svn-run-svn, if it is not nil.")
+svn-status-coding-system is used in svn-run, if it is not nil.")
 
 (defcustom svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
@@ -709,6 +709,9 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
                                          ,value-type)))))
     widget))
 
+
+;;; keymaps
+
 (defvar svn-global-keymap nil "Global keymap for psvn.el.
 To bind this to a different key, customize `svn-status-prefix-key'.")
 (put 'svn-global-keymap 'risky-local-variable t)
@@ -814,7 +817,7 @@ If ARG then pass the -u argument to `svn status'."
         (set-buffer proc-buf)
         (setq default-directory dir
               svn-status-remote (when arg t))
-        (svn-run-svn t t 'status "status" status-option)))))
+        (svn-run t t 'status "status" status-option)))))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"
@@ -850,7 +853,7 @@ the usual `process-environment'."
           and when has-value
             collect elt))
 
-(defun svn-run-svn (run-asynchron clear-process-buffer cmdtype &rest arglist)
+(defun svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
   "Run svn with arguments ARGLIST.
 
 If RUN-ASYNCHRON is t then run svn asynchronously.
@@ -878,7 +881,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                                           (mapconcat 'identity arglist " "))))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
-          (message "svn-run-svn %s: %S" cmdtype arglist))
+          (message "svn-run %s: %S" cmdtype arglist))
         (let* ((proc-buf (get-buffer-create "*svn-process*"))
                (svn-exe svn-status-svn-executable)
                (svn-proc))
@@ -1816,7 +1819,6 @@ When called with the prefix argument 0, use the full path name."
 ;; (svn-status-update-with-command-list '(("++ideas" committed) ("a.txt" committed) ("alf")))
 ;; (svn-status-update-with-command-list (svn-status-parse-commit-output))
 
-
 (defun svn-status-parse-commit-output ()
   "Parse the output of svn commit.
 Return a list that is suitable for `svn-status-update-with-command-list'"
@@ -2060,12 +2062,12 @@ Show the repository url after this call in the `svn-status-buffer-name' buffer.
 When called with the prefix argument 0, reset the information to nil.
 This hides the repository information again.
 
-When ARG is t, don't update the svn status buffer. This useful for
+When ARG is t, don't update the svn status buffer. This is useful for
 non-interactive use."
   (interactive "P")
   (if (eq arg 0)
       (setq svn-status-base-info nil)
-    (svn-run-svn nil t 'parse-info "info" ".")
+    (svn-run nil t 'parse-info "info" ".")
     (svn-status-parse-info-result))
   (unless (eq arg t)
     (svn-status-update-buffer)))
@@ -2506,7 +2508,6 @@ Consider svn-status-window-alist to choose the buffer name."
             (other-window 1))
         (svn-status-show-process-buffer-internal scroll-to-top)))))
 
-
 (defun svn-status-show-svn-log (arg)
   "Run `svn log' on selected files.
 The output is put into the *svn-log* buffer
@@ -2523,7 +2524,7 @@ See `svn-status-marked-files' for what counts as selected."
                         (arg         '("-v"))
                         (t           svn-status-default-log-arguments))))
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switches)
+    (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
@@ -2533,14 +2534,14 @@ See `svn-status-marked-files' for what counts as selected."
 See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-  (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
+  (svn-run t t 'info "info" "--targets" svn-status-temp-arg-file))
 
 ;; Todo: add possiblity to specify the revision
 (defun svn-status-blame ()
   "Run `svn blame' on the current file."
   (interactive)
-  ;;(svn-run-svn t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
-  (svn-run-svn t t 'blame "blame" (svn-status-line-info->filename (svn-status-get-line-information))))
+  ;;(svn-run t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
+  (svn-run t t 'blame "blame" (svn-status-line-info->filename (svn-status-get-line-information))))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -2580,7 +2581,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   (let ((clear-buf t)
         (beginning nil))
     (dolist (line-info line-infos)
-      (svn-run-svn nil clear-buf 'diff "diff" svn-status-default-diff-arguments
+      (svn-run nil clear-buf 'diff "diff" svn-status-default-diff-arguments
                    "-r" (if (eq revision :auto)
                             (if (svn-status-line-info->update-available line-info)
                                 "HEAD" "BASE")
@@ -2639,7 +2640,6 @@ Commands:
         major-mode mode-name)
     (diff-mode)))
 
-
 (defun svn-status-show-process-buffer ()
   "Show the content of the *svn-process* buffer"
   (interactive)
@@ -2653,7 +2653,7 @@ When this function is called with a prefix argument, use the actual file instead
   (interactive "P")
   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-  (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
+  (svn-run t t 'add "add" "--targets" svn-status-temp-arg-file))
 
 (defun svn-status-add-file (arg)
   "Run `svn add' on all selected files.
@@ -2664,7 +2664,7 @@ When this function is called with a prefix argument, use the actual file instead
   (interactive "P")
   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-  (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
+  (svn-run t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
 
 (defun svn-status-make-directory (dir)
   "Run `svn mkdir DIR'."
@@ -2674,7 +2674,7 @@ When this function is called with a prefix argument, use the actual file instead
                                      (svn-status-directory-containing-point t))))
   (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
     (setq dir (file-relative-name dir)))
-  (svn-run-svn t t 'mkdir "mkdir" "--" dir))
+  (svn-run t t 'mkdir "mkdir" "--" dir))
 
 ;;TODO: write a svn-status-cp similar to this---maybe a common
 ;;function to do both?
@@ -2716,7 +2716,7 @@ itself) before running mv."
 ;
     ;;do the move: svn mv only lets us move things once at a time, so
     ;;we need to run svn mv once for each file (hence second arg to
-    ;;svn-run-svn is nil.)
+    ;;svn-run is nil.)
 
     ;;TODO: before doing any moving, For every marked directory,
     ;;ensure none of its contents are also marked, since we dont want
@@ -2739,7 +2739,7 @@ itself) before running mv."
               (eq original-propmarks 77)) ;;original has local prop mods: maybe do `svn mv --force'
           (if (yes-or-no-p (format "%s has local modifications; use `--force' to really move it? "
                                    original-name))
-              (svn-run-svn nil t 'mv "mv" "--force" "--" original-name dest)
+              (svn-run nil t 'mv "mv" "--force" "--" original-name dest)
             (message "Not moving %s" original-name)))
          ((eq original-filemarks 63) ;;original is unversioned: maybe do plain `mv'
           (if (yes-or-no-p (format "%s is unversioned.  Use plain `mv -i %s %s'? "
@@ -2751,12 +2751,12 @@ itself) before running mv."
           (message "Not moving %s (try committing it first)" original-name))
 
          ((eq original-filemarks 32) ;;original is unmodified: can use `svn mv'
-          (svn-run-svn nil t 'mv "mv" "--" original-name dest))
+          (svn-run nil t 'mv "mv" "--" original-name dest))
 
          ;;file is conflicted in some way?
          (t
           (if (yes-or-no-p (format "The status of %s looks scary.  Risk moving it anyway? " original-name))
-              (svn-run-svn nil t 'mv "mv" "--" original-name dest)
+              (svn-run nil t 'mv "mv" "--" original-name dest)
             (message "Not moving %s" original-name))))))
         (svn-status-update)))
 
@@ -2772,7 +2772,7 @@ See `svn-status-marked-files' for what counts as selected."
              (format "Revert %d files? " num-of-files)))
       (message "reverting: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-      (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
+      (svn-run t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
 
 (defun svn-status-rm (force)
   "Run `svn rm' on all selected files.
@@ -2788,15 +2788,15 @@ When called with a prefix argument add the command line switch --force."
       (message "removing: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (if force
-          (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
-        (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
+          (svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+        (svn-run t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-status-update-cmd ()
   "Run svn update."
   (interactive)
   (message "Running svn-update for %s" default-directory)
   ;TODO: use file names also
-  (svn-run-svn t t 'update "update"))
+  (svn-run t t 'update "update"))
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -2835,7 +2835,7 @@ Ask the user for the destination path.
   (let* ((src default-directory)
          (dir1-name (nth 1 (nreverse (split-string src "/"))))
          (dest (read-file-name (format "Export %s to " src) (concat svn-status-default-export-directory dir1-name))))
-    (svn-run-svn t t 'export "export" (expand-file-name src) (expand-file-name dest))
+    (svn-run t t 'export "export" (expand-file-name src) (expand-file-name dest))
     (message "svn-status-export %s %s" src dest)))
 
 (defun svn-status-cleanup (arg)
@@ -2847,7 +2847,7 @@ When this function is called with a prefix argument, use the actual file instead
     (if file-names
         (progn
           (message "svn-status-cleanup %S" file-names)
-          (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
+          (svn-run t t 'cleanup (append (list "cleanup") file-names)))
       (message "No valid file selected - No status cleanup possible"))))
 
 (defun svn-status-resolved ()
@@ -2862,7 +2862,7 @@ See `svn-status-marked-files' for what counts as selected."
              (format "Resolve %d files? " num-of-files)))
       (message "resolving: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-      (svn-run-svn t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
+      (svn-run t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
 
 
 (defun svn-status-svnversion ()
@@ -3008,7 +3008,7 @@ names are relative to the directory where `svn-status' was run."
                                                    (file-name-nondirectory file-name)
                                                    ".svn-base"))
                    (progn
-                     (svn-run-svn nil t 'cat "cat" "-r" revision file-name)
+                     (svn-run nil t 'cat "cat" "-r" revision file-name)
                      ;;todo: error processing
                      ;;svn: Filesystem has no item
                      ;;svn: file not found: revision `15', path `/trunk/file.txt'
@@ -3098,12 +3098,12 @@ Note: use C-q C-j to send a line termination character."
   (let ((file-names (svn-status-marked-file-names)))
     (if file-names
         (progn
-          (svn-run-svn t t 'proplist (append (list "proplist" "-v") file-names)))
+          (svn-run t t 'proplist (append (list "proplist" "-v") file-names)))
       (message "No valid file selected - No property listing possible"))))
 
 (defun svn-status-proplist-start ()
   (svn-status-ensure-cursor-on-file)
-  (svn-run-svn t t 'proplist-parse "proplist" (svn-status-line-info->filename
+  (svn-run t t 'proplist-parse "proplist" (svn-status-line-info->filename
                                                (svn-status-get-line-information))))
 (defun svn-status-property-edit-one-entry (arg)
   "Edit a property.
@@ -3158,7 +3158,7 @@ When called with a prefix argument, it is possible to enter a new property."
                         (svn-status-marked-file-names))
                (let ((file-names (svn-status-marked-file-names)))
                  (when file-names
-                   (svn-run-svn nil t 'propset
+                   (svn-run nil t 'propset
                                 (append (list "propset" prop-name prop-value) file-names))
                    )
                  )
@@ -3173,7 +3173,7 @@ When called with a prefix argument, it is possible to enter a new property."
                (let ((file-names (svn-status-marked-file-names)))
                  (when file-names
                    (message "Going to delete prop %s for %s" prop-name file-names)
-                   (svn-run-svn t t 'propdel
+                   (svn-run t t 'propdel
                                 (append (list "propdel" prop-name) file-names))))))))))
 
 (defun svn-status-property-edit (file-info-list prop-name &optional new-prop-value)
@@ -3183,7 +3183,7 @@ When called with a prefix argument, it is possible to enter a new property."
          (file-name (svn-status-line-info->filename (car file-info-list)))
          (prop-value))
     (message "Edit property %s for file %s" prop-name file-name)
-    (svn-run-svn nil t 'propget-parse "propget" prop-name file-name)
+    (svn-run nil t 'propget-parse "propget" prop-name file-name)
     (save-excursion
       (set-buffer "*svn-process*")
       (setq prop-value (if (> (point-max) 1)
@@ -3388,7 +3388,7 @@ Commands:
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-propedit-file-list "")
     (setq svn-status-propedit-file-list nil)
-    (svn-run-svn async t 'propset "propset"
+    (svn-run async t 'propset "propset"
          svn-status-propedit-property-name
                  "--targets" svn-status-temp-arg-file
                  "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
@@ -3493,7 +3493,7 @@ Commands:
   (if svn-log-edit-update-log-entry
       (when (y-or-n-p "Update the log entry? ")
         ;;   svn propset svn:log --revprop -r11672 -F file
-        (svn-run-svn nil t 'propset "propset" "svn:log" "--revprop"
+        (svn-run nil t 'propset "propset" "svn:log" "--revprop"
                      (concat "-r" svn-log-edit-update-log-entry)
                      "-F" svn-status-temp-file-to-remove)
         (save-excursion
@@ -3505,7 +3505,7 @@ Commands:
                  (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
       (svn-status-create-arg-file svn-status-temp-arg-file ""
                                   svn-status-files-to-commit "")
-      (svn-run-svn t t 'commit "commit"
+      (svn-run t t 'commit "commit"
                    (unless svn-status-recursive-commit "--non-recursive")
                    "--targets" svn-status-temp-arg-file
                    "-F" svn-status-temp-file-to-remove
@@ -3638,7 +3638,7 @@ When called with a prefix argument, ask the user for the revision."
         (rev-arg (concat lower-rev ":" upper-rev)))
     (when arg
       (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
-    (svn-run-svn nil t 'diff "diff" (concat "-r" rev-arg))
+    (svn-run nil t 'diff "diff" (concat "-r" rev-arg))
     (svn-status-activate-diff-mode)))
 
 (defun svn-log-edit-log-entry ()
@@ -3646,7 +3646,7 @@ When called with a prefix argument, ask the user for the revision."
   (interactive)
   (let ((rev (svn-log-revision-at-point))
         (log-message))
-    (svn-run-svn nil t 'propget-parse "propget" "--revprop" (concat "-r" rev) "svn:log")
+    (svn-run nil t 'propget-parse "propget" "--revprop" (concat "-r" rev) "svn:log")
     (save-excursion
       (set-buffer "*svn-process*")
       (setq log-message (if (> (point-max) 1)
@@ -3677,6 +3677,7 @@ When called with a prefix argument, ask the user for the revision."
     base-dir))
 
 (defun svn-status-save-state ()
+  "Save psvn persistent options for this working copy to a file."
   (interactive)
   (let ((buf (find-file (concat (svn-status-base-dir) "++psvn.state"))))
     (erase-buffer)        ;Widen, because we'll save the whole buffer.
@@ -3691,6 +3692,7 @@ When called with a prefix argument, ask the user for the revision."
     (kill-buffer buf)))
 
 (defun svn-status-load-state (&optional no-error)
+  "Load psvn persistent options for this working copy from a file."
   (interactive)
   (let ((file (concat (svn-status-base-dir) "++psvn.state")))
     (if (file-readable-p file)
