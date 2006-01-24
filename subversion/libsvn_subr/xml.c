@@ -2,7 +2,7 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -88,6 +88,35 @@ svn_xml_is_xml_safe (const char *data, apr_size_t len)
   return TRUE;
 }
 
+svn_boolean_t
+svn_xml_is_xml_name_valid (const char *name)
+{
+  const char *p = name;
+
+  /* The characters we allow use identical representations in UTF8
+     and ASCII, so we can just test for the appropriate ASCII codes.
+     But we can't use standard C character notation ('A', 'B', etc)
+     because there's no guarantee that this C environment is using
+     ASCII. */
+
+
+  if (!(svn_ctype_isalpha (*p)
+        || *p == SVN_CTYPE_ASCII_COLON
+        || *p == SVN_CTYPE_ASCII_UNDERSCORE))
+    return FALSE;
+  p++;
+  for (; *p; p++)
+    {
+      if (!(svn_ctype_isalnum (*p)
+            || *p == SVN_CTYPE_ASCII_MINUS
+            || *p == SVN_CTYPE_ASCII_DOT
+            || *p == SVN_CTYPE_ASCII_COLON
+            || *p == SVN_CTYPE_ASCII_UNDERSCORE))
+        return FALSE;
+    }
+
+  return TRUE;
+}
 
 
 
