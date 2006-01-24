@@ -730,7 +730,7 @@ svn_auth_get_windows_simple_provider (svn_auth_provider_object_t **provider,
 /* keychain simple provider, puts passwords in the KeyChain              */
 /*-----------------------------------------------------------------------*/
 
-#if SVN_HAVE_KEYCHAIN_SERVICES
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
 #include <Security/Security.h>
 
 /*
