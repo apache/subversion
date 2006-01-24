@@ -43,6 +43,23 @@ dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
   return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
 }
 
+/* Build up a chain of DAV errors that correspond to the underlying SVN
+   errors that caused tihs problem. */
+static dav_error *build_error_chain(apr_pool_t *pool, svn_error_t *err,
+                                    int status)
+{
+  char *msg = err->message ? apr_pstrdup(pool, err->message) : NULL;
+
+  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err, msg,
+                                           SVN_DAV_ERROR_NAMESPACE,
+                                           SVN_DAV_ERROR_TAG);
+
+  if (err->child)
+    derr->prev = build_error_chain(pool, err->child, status);
+
+  return derr;
+}
+
 dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool)
 {
@@ -68,12 +85,7 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
         /* add other mappings here */
       }
 
-    derr = dav_svn__new_error_tag(pool, status, serr->apr_err,
-                                  (serr->message ?
-                                   apr_pstrdup(pool, serr->message) :
-                                   NULL),
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+    derr = build_error_chain(pool, serr, status);
     if (message != NULL)
       derr = dav_push_error(pool, status, serr->apr_err, message, derr);
 
