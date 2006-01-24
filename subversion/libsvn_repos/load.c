@@ -83,9 +83,9 @@ struct node_baton
 /*----------------------------------------------------------------------*/
 
 /** A conversion function between the two vtable types. **/
-static
-svn_repos_parse_fns2_t *fns2_from_fns (const svn_repos_parser_fns_t *fns,
-                                        apr_pool_t *pool)
+static svn_repos_parse_fns2_t *
+fns2_from_fns (const svn_repos_parser_fns_t *fns,
+               apr_pool_t *pool)
 {
   svn_repos_parse_fns2_t *fns2;
 

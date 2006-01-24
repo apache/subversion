@@ -1306,13 +1306,13 @@ authz (const char **msg,
 
 /* Callback for the commit editor tests that relays requests to
    authz. */
-static
-svn_error_t *commit_authz_cb (svn_repos_authz_access_t required,
-                              svn_boolean_t *allowed,
-                              svn_fs_root_t *root,
-                              const char *path,
-                              void *baton,
-                              apr_pool_t *pool)
+static svn_error_t *
+commit_authz_cb (svn_repos_authz_access_t required,
+                 svn_boolean_t *allowed,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 void *baton,
+                 apr_pool_t *pool)
 {
   svn_authz_t *authz_file = baton;
 

@@ -79,8 +79,7 @@ find_eol_start(char *buf, apr_size_t len)
   return NULL;
 }
       
-static
-int
+static int
 svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
 {
   switch (datasource)
@@ -116,8 +115,7 @@ svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
 /* Read a chunk from a FILE into BUFFER, starting from OFFSET, going for
  * *LENGTH.  The actual bytes read are stored in *LENGTH on return.
  */
-static APR_INLINE
-svn_error_t *
+static APR_INLINE svn_error_t *
 read_chunk(apr_file_t *file, const char *path,
            char *buffer, apr_size_t length,
            apr_off_t offset, apr_pool_t *pool)
@@ -145,8 +143,7 @@ read_chunk(apr_file_t *file, const char *path,
 #define MMAP_T_ARG(NAME)
 #endif
 
-static
-svn_error_t *
+static svn_error_t *
 map_or_read_file(apr_file_t **file,
                  MMAP_T_PARAM(mm)
                  char **buffer, apr_off_t *size,
@@ -195,8 +192,7 @@ map_or_read_file(apr_file_t **file,
 }
 
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_datasource_open(void *baton,
                                svn_diff_datasource_e datasource)
 {
@@ -234,8 +230,7 @@ svn_diff__file_datasource_open(void *baton,
 }
 
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
 {
@@ -247,8 +242,7 @@ svn_diff__file_datasource_close(void *baton,
 }
 
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
                                          void *baton,
                                          svn_diff_datasource_e datasource)
@@ -356,8 +350,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
 #define COMPARE_CHUNK_SIZE 4096
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_token_compare(void *baton,
                              void *token1,
                              void *token2,
@@ -450,8 +443,7 @@ svn_diff__file_token_compare(void *baton,
 }
 
 
-static
-void
+static void
 svn_diff__file_token_discard(void *baton,
                              void *token)
 {
@@ -463,8 +455,7 @@ svn_diff__file_token_discard(void *baton,
 }
 
 
-static
-void
+static void
 svn_diff__file_token_discard_all(void *baton)
 {
   svn_diff__file_baton_t *file_baton = baton;
@@ -587,8 +578,7 @@ typedef enum svn_diff__file_output_unified_type_e
 } svn_diff__file_output_unified_type_e;
 
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
                                    svn_diff__file_output_unified_type_e type,
                                    int idx)
@@ -735,8 +725,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
   return SVN_NO_ERROR;
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 {
   apr_off_t target_line;
@@ -813,8 +802,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   return SVN_NO_ERROR;
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__file_output_unified_diff_modified(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,
@@ -885,8 +873,7 @@ svn_diff__file_output_unified_diff_modified(void *baton,
   return SVN_NO_ERROR;
 }
 
-static
-const char *
+static const char *
 svn_diff__file_output_unified_default_hdr(apr_pool_t *pool,
                                           const char *path)
 {
@@ -1028,8 +1015,7 @@ typedef enum svn_diff3__file_output_type_e
 } svn_diff3__file_output_type_e;
 
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
                             svn_diff3__file_output_type_e type,
                             int idx)
@@ -1071,8 +1057,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   return SVN_NO_ERROR;
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_hunk(void *baton,
   int idx,
   apr_off_t target_line, apr_off_t target_length)
@@ -1097,8 +1082,7 @@ svn_diff3__file_output_hunk(void *baton,
   return SVN_NO_ERROR;
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_common(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,
@@ -1108,8 +1092,7 @@ svn_diff3__file_output_common(void *baton,
                                      original_start, original_length);
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_diff_modified(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,
@@ -1119,8 +1102,7 @@ svn_diff3__file_output_diff_modified(void *baton,
                                      modified_start, modified_length);
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_diff_latest(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,
@@ -1130,8 +1112,7 @@ svn_diff3__file_output_diff_latest(void *baton,
                                      latest_start, latest_length);
 }
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_conflict(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,
@@ -1147,8 +1128,7 @@ static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
   svn_diff3__file_output_conflict
 };
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff3__file_output_conflict(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,

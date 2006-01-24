@@ -102,8 +102,7 @@
 */
 
 
-static APR_INLINE
-void
+static APR_INLINE void
 svn_diff__adjust(svn_diff_t *diff, svn_diff_t *adjust)
 {
   svn_diff_t *hunk;
