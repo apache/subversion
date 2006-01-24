@@ -63,8 +63,7 @@ svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 }
 
 
-static
-svn_error_t *
+static svn_error_t *
 svn_diff__tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
                             void *diff_baton,
                             const svn_diff_fns_t *vtable,
