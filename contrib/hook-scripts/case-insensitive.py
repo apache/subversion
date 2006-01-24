@@ -85,11 +85,12 @@ for path in new_paths:
       clashes[canonical_path][join_path(dir, name_pair[1])] = True
 
 if (clashes):
+  utfeight='utf-8'
   for canonical_path in clashes.iterkeys():
-    sys.stderr.write(u'Clash:'.encode(native))
+    sys.stderr.write(u'Clash:'.encode(utfeight))
     for path in clashes[canonical_path].iterkeys():
-      sys.stderr.write(u' \''.encode(native) +
-                       str(path).decode('utf-8').encode(native, 'replace') +
-                       u'\''.encode(native))
-    sys.stderr.write(u'\n'.encode(native))
+      sys.stderr.write(u' \''.encode(utfeight) +
+                       str(path).decode('utf-8').encode(utfeight, 'replace') +
+                       u'\''.encode(utfeight))
+    sys.stderr.write(u'\n'.encode(utfeight))
   sys.exit(1)

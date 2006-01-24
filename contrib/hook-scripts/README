@@ -2,13 +2,15 @@ These are scripts that might be useful to run from repository hooks.
 Your Mileage May Vary.
 
    1. check-case-insensitive.pl
-      Superceded by check-case-insensitive.py.
+      Superceded by check-case-insensitive.py
+      in turn superceded by case-insensitive.py for Subversion 1.3.0 and later.
 
    2. check-case-insensitive.py
       This script makes your repository case insensitive.  It checks if a file
       with the same name but different case already exists in the repository
       and possibly aborts the commit.  This version of the script uses the
       Python language bindings.
+      Superceded by case-insensitive.py for Subversion 1.3.0 and later.
 
    3. check-mime-type.pl
       Force the svn:mime-type and - in case of text files - svn:eol-style
@@ -26,5 +28,9 @@ Your Mileage May Vary.
 
    7. svn2rss.py
       Generates a RSS 2.0 file containing commit information.
+
+   8. case-insensitive.py
+      This is *much* more efficient than the check-case-insensitive.* scripts
+      but it does require Subversion 1.3.0 or later.
 
 $Id$
