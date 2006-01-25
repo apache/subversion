@@ -364,11 +364,13 @@ def get_blocked_revs(dir, head_path):
     return RevisionList("")
 
 def format_merge_props(props, sep=" "):
+    """Formats the hash PROPS as a string suitable for use as a
+    Subversion property value."""
     assert sep in ["\t", "\n", " "]   # must be a whitespace
     props = props.items()
     props.sort()
     L = []
-    for h,r in props:
+    for h, r in props:
         L.append(h + ":" + r)
     return sep.join(L)
 
