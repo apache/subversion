@@ -558,7 +558,7 @@ static int test_tempdir(const char *temp_dir, apr_pool_t *p)
 
     if (apr_file_mktemp(&dummy_file, path, 0, p) == APR_SUCCESS)
 #if !APR_CHARSET_EBCDIC
-        if (apr_file_putc(SVN_UTF8_EXCLAMATION, dummy_file) == APR_SUCCESS)
+        if (apr_file_putc('!', dummy_file) == APR_SUCCESS)
 #else
         /* IBM's implmentation of apr_file_putc is broken and returns 1 even
          * when apr_file_putc is successful.  Until this is fixed, the work
