@@ -51,7 +51,7 @@ svn_error_t *svn_fs_bdb__reserve_copy_id (const char **copy_id_p,
    svn_fs__canonicalize_abspath).
 
    COPY_ID should generally come from a call to
-   svn_fs_base__reserve_copy_id().  */
+   svn_fs_bdb__reserve_copy_id().  */
 svn_error_t *svn_fs_bdb__create_copy (svn_fs_t *fs,
                                       const char *copy_id,
                                       const char *src_path,
