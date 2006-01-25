@@ -406,7 +406,7 @@ def set_blocked_revs(dir, head_path, revs):
             del props[head_path]
     props = format_merge_props(props)
     if props:
-        _run_propset(dir, opts["block_prop"], format_merge_props(props))
+        _run_propset(dir, opts["block_prop"], props)
     else:
         svn_command('propdel "%s" "%s"' % (opts["block_prop"], dir))
 
