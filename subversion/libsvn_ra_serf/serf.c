@@ -44,30 +44,29 @@ ra_serf_version (void)
 static const char *
 ra_serf_get_description (void)
 {
-    return _(RA_SERF_DESCRIPTION);
+  return _(RA_SERF_DESCRIPTION);
 }
 
 static const char * const *
 ra_serf_get_schemes (apr_pool_t *pool)
 {
-    static const char *serf_ssl[] = { "http", "https", NULL };
-    static const char *serf_no_ssl[] = { "http", NULL };
+  static const char *serf_ssl[] = { "http", "https", NULL };
+  static const char *serf_no_ssl[] = { "http", NULL };
 
-    /* TODO: Runtime detection. */
-    return serf_ssl;
+  /* TODO: Runtime detection. */
+  return serf_ssl;
 }
 
 typedef struct {
-    apr_pool_t *pool;
-    serf_bucket_alloc_t *bkt_alloc;
+  apr_pool_t *pool;
+  serf_bucket_alloc_t *bkt_alloc;
 
-    serf_context_t *context;
-    serf_ssl_context_t *ssl_context;
+  serf_context_t *context;
+  serf_ssl_context_t *ssl_context;
 
-    serf_connection_t *conn;
+  serf_connection_t *conn;
 
-    /* 0 or 1 */
-    int using_ssl;
+  svn_boolean_t using_ssl;
 } serf_session_t;
 
 static serf_bucket_t *
@@ -75,16 +74,17 @@ conn_setup(apr_socket_t *sock,
            void *baton,
            apr_pool_t *pool)
 {
-    serf_bucket_t *b;
-    serf_session_t *sess = baton;
+  serf_bucket_t *bucket;
+  serf_session_t *sess = baton;
 
-    b = serf_bucket_socket_create(sock, sess->bkt_alloc);
-    if (sess->using_ssl) {
-        b = serf_bucket_ssl_decrypt_create(b, sess->ssl_context,
-                                           sess->bkt_alloc);
+  bucket = serf_bucket_socket_create(sock, sess->bkt_alloc);
+  if (sess->using_ssl)
+    {
+      bucket = serf_bucket_ssl_decrypt_create(bucket, sess->ssl_context,
+                                              sess->bkt_alloc);
     }
 
-    return b;
+  return bucket;
 }
 
 static void
@@ -93,8 +93,9 @@ conn_closed (serf_connection_t *conn,
              apr_status_t why,
              apr_pool_t *pool)
 {
-    if (why) {
-        abort();
+  if (why)
+    {
+      abort();
     }
 }
 
@@ -106,46 +107,50 @@ svn_ra_serf__open (svn_ra_session_t *session,
                    apr_hash_t *config,
                    apr_pool_t *pool)
 {
-    apr_status_t status;
-    serf_session_t *serf_sess;
-    apr_uri_t url;
-    apr_sockaddr_t *address;
+  apr_status_t status;
+  serf_session_t *serf_sess;
+  apr_uri_t url;
+  apr_sockaddr_t *address;
 
-    serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-    /* todo: create a subpool? */
-    serf_sess->pool = pool;
-    serf_sess->bkt_alloc = serf_bucket_allocator_create(pool, NULL, NULL);
+  serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
+  /* todo: create a subpool? */
+  serf_sess->pool = pool;
+  serf_sess->bkt_alloc = serf_bucket_allocator_create(pool, NULL, NULL);
 
-    /* todo: reuse context across sessions */
-    serf_sess->context = serf_context_create(pool);
+  /* todo: reuse context across sessions */
+  serf_sess->context = serf_context_create(pool);
 
-    apr_uri_parse(serf_sess->pool, repos_URL, &url);
-    if (!url.port) {
+  apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  if (!url.port)
+    {
         url.port = apr_uri_port_of_scheme(url.scheme);
     }
-    if (strcasecmp(url.scheme, "https") == 0) {
-        serf_sess->using_ssl = 1;
+  if (strcasecmp(url.scheme, "https") == 0)
+    {
+      serf_sess->using_ssl = 1;
     }
-    else {
-        serf_sess->using_ssl = 0;
-    }
-
-    /* fetch the DNS record for this host */
-    status = apr_sockaddr_info_get(&address, url.hostname, APR_UNSPEC,
-                                   url.port, 0, pool);
-    if (status) {
-        return svn_error_createf(status, NULL,
-                                 _("Could not lookup hostname: %s://%s"),
-                                 url.scheme, url.hostname);
+  else
+    {
+      serf_sess->using_ssl = 0;
     }
 
-    /* go ahead and tell serf about the connection. */
-    serf_sess->conn = serf_connection_create(serf_sess->context, address,
-                                             conn_setup, &serf_sess,
-                                             conn_closed, &serf_sess, pool);
+  /* fetch the DNS record for this host */
+  status = apr_sockaddr_info_get(&address, url.hostname, APR_UNSPEC,
+                                 url.port, 0, pool);
+  if (status)
+    {
+      return svn_error_createf(status, NULL,
+                               _("Could not lookup hostname: %s://%s"),
+                               url.scheme, url.hostname);
+    }
 
-    session->priv = serf_sess;
-    return SVN_NO_ERROR;
+  /* go ahead and tell serf about the connection. */
+  serf_sess->conn = serf_connection_create(serf_sess->context, address,
+                                           conn_setup, &serf_sess,
+                                           conn_closed, &serf_sess, pool);
+
+  session->priv = serf_sess;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -153,7 +158,7 @@ svn_ra_serf__reparent (svn_ra_session_t *session,
                        const char *url,
                        apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -161,7 +166,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *session,
                                 svn_revnum_t *latest_revnum,
                                 apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -170,7 +175,7 @@ svn_ra_serf__get_dated_revision (svn_ra_session_t *session,
                                  apr_time_t tm,
                                  apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -180,7 +185,7 @@ svn_ra_serf__change_rev_prop (svn_ra_session_t *session,
                               const svn_string_t *value,
                               apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -189,7 +194,7 @@ svn_ra_serf__rev_proplist (svn_ra_session_t *session,
                            apr_hash_t **props,
                            apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -199,7 +204,7 @@ svn_ra_serf__rev_prop (svn_ra_session_t *session,
                        svn_string_t **value,
                        apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -213,7 +218,7 @@ svn_ra_serf__get_commit_editor (svn_ra_session_t *session,
                                 svn_boolean_t keep_locks,
                                 apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -225,7 +230,7 @@ svn_ra_serf__get_file (svn_ra_session_t *session,
                        apr_hash_t **props,
                        apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -238,7 +243,7 @@ svn_ra_serf__get_dir (svn_ra_session_t *session,
                       apr_hash_t **props,
                       apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -252,7 +257,7 @@ svn_ra_serf__do_update (svn_ra_session_t *session,
                         void *update_baton,
                         apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -267,7 +272,7 @@ svn_ra_serf__do_switch (svn_ra_session_t *session,
                         void *switch_baton,
                         apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -281,7 +286,7 @@ svn_ra_serf__do_status (svn_ra_session_t *session,
                         void *status_baton,
                         apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -298,7 +303,7 @@ svn_ra_serf__do_diff (svn_ra_session_t *session,
                       void *diff_baton,
                       apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -313,7 +318,7 @@ svn_ra_serf__get_log (svn_ra_session_t *session,
                       void *receiver_baton,
                       apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -323,7 +328,7 @@ svn_ra_serf__check_path (svn_ra_session_t *session,
                          svn_node_kind_t *kind,
                          apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -333,7 +338,7 @@ svn_ra_serf__stat (svn_ra_session_t *session,
                    svn_dirent_t **dirent,
                    apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -341,7 +346,7 @@ svn_ra_serf__get_uuid (svn_ra_session_t *session,
                        const char **uuid,
                        apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -349,7 +354,7 @@ svn_ra_serf__get_repos_root (svn_ra_session_t *session,
                              const char **url,
                              apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -360,7 +365,7 @@ svn_ra_serf__get_locations (svn_ra_session_t *session,
                             apr_array_header_t *location_revisions,
                             apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -372,7 +377,7 @@ svn_ra_serf__get_file_revs (svn_ra_session_t *session,
                             void *handler_baton,
                             apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -384,7 +389,7 @@ svn_ra_serf__lock (svn_ra_session_t *session,
                    void *lock_baton,
                    apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -395,7 +400,7 @@ svn_ra_serf__unlock (svn_ra_session_t *session,
                      void *lock_baton,
                      apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -404,7 +409,7 @@ svn_ra_serf__get_lock (svn_ra_session_t *session,
                        const char *path,
                        apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -413,7 +418,7 @@ svn_ra_serf__get_locks (svn_ra_session_t *session,
                         const char *path,
                         apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static svn_error_t *
@@ -425,7 +430,7 @@ svn_ra_serf__replay (svn_ra_session_t *session,
                      void *edit_baton,
                      apr_pool_t *pool)
 {
-    abort();
+  abort();
 }
 
 static const svn_ra__vtable_t serf_vtable = {
