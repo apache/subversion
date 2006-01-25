@@ -1190,6 +1190,7 @@ create_within_copy (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
+  int i;
   svn_revnum_t youngest_rev = 0;
   
   *msg = "create new items within a copied directory";
@@ -1249,37 +1250,50 @@ create_within_copy (const char **msg,
 
   {
     /* New items should have same CopyID as their parent */
-    struct {
-      const char *path;
-      const char *unparsed_id;
-    } new_nodes[] = {
-      { "A/D/G2",     "d.2.4" },
-      { "A/D/G2/I",   "l.2.4" },
-      { "A/D/G2/up",  "m.2.4" },
-      { "A/D2",       "b.3.4" },
-      { "A/D2/I",     "n.3.4" },
-      { "A/D2/up",    "o.3.4" },
-      { "A/D2/G2",    "d.4.4" },
-      { "A/D2/G2/I",  "p.4.4" },
-      { "A/D2/G2/up", "q.4.4" },
-      { "A/D3",       "b.1.5" },
-      { "A/D3/down",  "r.1.5" },
-      { "A/D3/J",     "s.1.5" },
-      { NULL, NULL }
-    }, *node = new_nodes; 
+    const char *pathgroup[4][3] =
+      {
+        { "A/D/G2",
+          "A/D/G2/I",
+          "A/D/G2/up" },
+        { "A/D2",
+          "A/D2/I",
+          "A/D2/up" },
+        { "A/D2/G2",
+          "A/D2/G2/I",
+          "A/D2/G2/up" },
+        { "A/D3",
+          "A/D3/down",
+          "A/D3/J" }
+      };
 
     SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-    while (node->path)
+
+    for (i = 0; i < 4; i++)
       {
-        const svn_fs_id_t *id;
-        svn_string_t *s;
-        SVN_ERR (svn_fs_node_id (&id, rev_root, node->path, spool));
-        s = svn_fs_unparse_id (id, spool);
-        if (strcmp (s->data, node->unparsed_id) != 0)
-          return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                    "'%s' id: expected '%s'; got '%s'",
-                                    node->path, node->unparsed_id, s->data);
-        ++node;
+        const svn_fs_id_t *lead_id;
+        const char *lead_copy_id;
+
+        /* Get the FSIdentifier for the first path in each group... */
+        SVN_ERR (svn_fs_node_id (&lead_id, rev_root, pathgroup[i][0], spool));
+        lead_copy_id = svn_fs_base__id_copy_id (lead_id);
+
+        for (int j = 1; j < 3; j++)
+          {
+            const svn_fs_id_t *id;
+            const char *copy_id;
+
+            /* ... and make sure the other members of the group have
+               the same copy_id component as the 'lead' member. */
+
+            SVN_ERR (svn_fs_node_id (&id, rev_root, pathgroup[i][j], spool));
+            copy_id = svn_fs_base__id_copy_id (id);
+
+            if (strcmp (copy_id, lead_copy_id != 0)
+              return svn_error_createf
+                (SVN_ERR_TEST_FAILED, NULL,
+                 "'%s' id: expected copy_id '%s'; got copy_id '%s'",
+                 pathgroup[i][j], lead_copy_id, copy_id);
+          }
       }
     svn_pool_clear (spool);
   }
