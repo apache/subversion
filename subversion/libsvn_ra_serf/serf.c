@@ -125,14 +125,7 @@ svn_ra_serf__open (svn_ra_session_t *session,
     {
         url.port = apr_uri_port_of_scheme(url.scheme);
     }
-  if (strcasecmp(url.scheme, "https") == 0)
-    {
-      serf_sess->using_ssl = 1;
-    }
-  else
-    {
-      serf_sess->using_ssl = 0;
-    }
+  serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&address, url.hostname, APR_UNSPEC,
