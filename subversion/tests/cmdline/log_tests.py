@@ -292,6 +292,27 @@ def parse_log_output(log_lines):
   return chain
 
 
+class SVNUnexpectedLogs(svntest.Failure):
+  "Exception raised if a set of log messages doesn't meet expectations."
+
+  def __init__(self, msg, chain, field_selector = 'revision'):
+    """Stores the log chain for later use.  When set, FIELD_SELECTOR
+    indicates which individual field to display when turning the
+    exception into text."""
+    svntest.Failure.__init__(self, msg)
+    self.chain = chain
+    self.field_selector = field_selector
+
+  def __str__(self):
+    msg = svntest.Failure.__str__(self)
+    if self.chain:
+      chain_data = list(self.chain)
+      for i in range(0, len(self.chain)):
+        chain_data[i] = self.chain[i][self.field_selector]
+      msg = msg + ': %s list was %s' % (self.field_selector, chain_data)
+    return msg
+
+
 def check_log_chain (chain, revlist):
   """Verify that log chain CHAIN contains the right log messages for
   revisions START to END (see documentation for parse_log_output() for
@@ -310,35 +331,51 @@ def check_log_chain (chain, revlist):
   Raise an error if anything looks wrong.
   """
 
-  for expect_rev in revlist:
-    if len(chain) == 0:
-      raise svntest.Failure('Empty log chain')
-    log_item = chain.pop (0)
+  nbr_expected = len(revlist)
+  if len(chain) != nbr_expected:
+    raise SVNUnexpectedLogs('Number of elements in log chain and revision ' +
+                            'list %s not equal' % revlist, chain)
+  missing_revs = []
+  for i in range(0, nbr_expected):
+    expect_rev = revlist[i]
+    log_item = chain[i]
     saw_rev = string.atoi (log_item['revision'])
     date = log_item['date']
     author = log_item['author']
     msg = log_item['msg']
     # The most important check is that the revision is right:
-    if expect_rev != saw_rev: raise svntest.Failure
+    if expect_rev != saw_rev:
+      missing_revs.append(expect_rev)
+      continue
     # Check that date looks at least vaguely right:
     date_re = re.compile ('[0-9]+')
-    if (not date_re.search (date)): raise svntest.Failure
+    if not date_re.search(date):
+      raise SVNUnexpectedLogs('Malformed date', chain, 'date')
     # Authors are a little harder, since they might not exist over ra-dav.
     # Well, it's not much of a check, but we'll do what we can.
     author_re = re.compile ('[a-zA-Z]+')
     if (not (author_re.search (author)
              or author == ''
-             or author == '(no author)')): raise svntest.Failure
+             or author == '(no author)')):
+      raise SVNUnexpectedLogs('Malformed author', chain, 'author')
 
     # Check for multiline log messages.
     # If revision is an even number then it should have 
     # a three line log message.
     if (saw_rev % 2 == 0 and log_item['lines'] != 3):
-      raise svntest.Failure
+      raise SVNUnexpectedLogs('Malformed lines', chain, 'lines')
        
     # Check that the log message looks right:
-    msg_re = re.compile ('Log message for revision ' + `saw_rev`)
-    if (not msg_re.search (msg)): raise svntest.Failure
+    pattern = 'Log message for revision ' + `saw_rev`
+    msg_re = re.compile(pattern)
+    if not msg_re.search(msg):
+      raise SVNUnexpectedLogs("Malformed log message, expected '%s'" % msg,
+                              chain)
+
+  nbr_missing_revs = len(missing_revs)
+  if nbr_missing_revs > 0:
+    raise SVNUnexpectedLogs('Unable to find expected revision(s) %s' %
+                            missing_revs, chain)
 
 
 
