@@ -204,10 +204,8 @@ class Generator(gen_base.GeneratorBase):
       header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
-      sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name) \
-              + self.graph.get_sources(gen_base.DT_SOURCELIB, target_ob.name)
 
-      for link_dep in sources:
+      for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
         if isinstance(link_dep, gen_base.TargetJava):
           deps.append(link_dep.name)
         elif isinstance(link_dep, gen_base.TargetLinked):

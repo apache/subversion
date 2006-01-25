@@ -508,11 +508,6 @@ class WinGeneratorBase(GeneratorBase):
       is_static = is_lib and dep.msvc_static
       deps.append((dep, (is_project, is_lib, is_static)))
 
-    for dep in self.graph.get_sources(gen_base.DT_SOURCELIB, target.name):
-      is_project = hasattr(dep, 'proj_name')
-      is_lib = isinstance(dep, gen_base.TargetLib)
-      deps.append((dep, (is_project, is_lib, 1)))
-
     return deps
 
   def get_static_win_depends(self, target, deps):
@@ -687,29 +682,29 @@ class WinGeneratorBase(GeneratorBase):
         
     return gen_base.unique(nondeplibs)
 
-  def get_win_sources(self, target):
+  def get_win_sources(self, target, reldir_prefix=''):
     "Return the list of source files that need to be compliled for target"
 
     sources = { }
 
-    self.get_win_sources_impl(target, sources)
-    return sources.values()
- 
-  def get_win_sources_impl(self, target, sources):
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if isinstance(obj, gen_base.Target):
         continue
 
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
         if isinstance(src, gen_base.SourceFile):
-          reldir = src.reldir
+          if reldir_prefix:
+            if src.reldir:
+              reldir = reldir_prefix + '\\' + src.reldir
+            else:
+              reldir = reldir_prefix
+          else:
+            reldir = src.reldir
         else:
           reldir = ''
         sources[src] = src, obj, reldir
 
-    # toss in sources from "sourcelib" dependencies
-    for dep in self.graph.get_sources(gen_base.DT_SOURCELIB, target.name):
-      self.get_win_sources_impl(dep, sources)
+    return sources.values()
 
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.
