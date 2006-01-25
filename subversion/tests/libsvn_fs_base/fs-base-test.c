@@ -28,8 +28,8 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
+#include "../../libsvn_fs_base/id.h"
 #include "../../libsvn_fs_base/trail.h"
-
 #include "../../libsvn_fs_base/bdb/txn-table.h"
 #include "../../libsvn_fs_base/bdb/nodes-table.h"
 
@@ -1272,12 +1272,13 @@ create_within_copy (const char **msg,
       {
         const svn_fs_id_t *lead_id;
         const char *lead_copy_id;
+        int j;
 
         /* Get the FSIdentifier for the first path in each group... */
         SVN_ERR (svn_fs_node_id (&lead_id, rev_root, pathgroup[i][0], spool));
         lead_copy_id = svn_fs_base__id_copy_id (lead_id);
 
-        for (int j = 1; j < 3; j++)
+        for (j = 1; j < 3; j++)
           {
             const svn_fs_id_t *id;
             const char *copy_id;
@@ -1288,7 +1289,7 @@ create_within_copy (const char **msg,
             SVN_ERR (svn_fs_node_id (&id, rev_root, pathgroup[i][j], spool));
             copy_id = svn_fs_base__id_copy_id (id);
 
-            if (strcmp (copy_id, lead_copy_id != 0)
+            if (strcmp (copy_id, lead_copy_id) != 0)
               return svn_error_createf
                 (SVN_ERR_TEST_FAILED, NULL,
                  "'%s' id: expected copy_id '%s'; got copy_id '%s'",
