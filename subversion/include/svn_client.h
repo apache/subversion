@@ -1178,7 +1178,7 @@ svn_client_status (svn_revnum_t *result_rev,
  * determined by taking the common prefix of the target entries' URLs.
  * @a receiver is invoked only on messages whose revisions involved a
  * change to some path in @a targets.  @a peg_revision indicates in
- * which revision @a targets are valid.  If @peg_revision is @c
+ * which revision @a targets are valid.  If @a peg_revision is @c
  * svn_opt_revision_unspecified, it defaults to @c
  * svn_opt_revision_head for URIs or @c svn_opt_revision_working for
  * WC targets.
