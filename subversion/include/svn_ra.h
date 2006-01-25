@@ -1545,6 +1545,12 @@ svn_error_t * svn_ra_svn_init (int abi_version,
                                apr_pool_t *pool,
                                apr_hash_t *hash);
 
+/** Initialize libsvn_ra_serf.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API. */
+svn_error_t * svn_ra_serf_init (int abi_version,
+                                apr_pool_t *pool,
+                                apr_hash_t *hash);
 
 
 /**

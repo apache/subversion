@@ -89,6 +89,15 @@ static const struct ra_lib_defn {
 #endif
   },
 
+  {
+    "serf",
+    dav_schemes,
+#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SERF
+    svn_ra_serf__init,
+    svn_ra_serf_init
+#endif
+  },
+
   /* ADD NEW RA IMPLEMENTATIONS HERE (as they're written) */
 
   /* sentinel */
