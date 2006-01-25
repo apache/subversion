@@ -296,9 +296,9 @@ class SVNUnexpectedLogs(svntest.Failure):
   "Exception raised if a set of log messages doesn't meet expectations."
 
   def __init__(self, msg, chain, field_selector = 'revision'):
-    """Stores the log chain for later use.  When set, FIELD_SELECTOR
-    indicates which individual field to display when turning the
-    exception into text."""
+    """Stores the log chain for later use.  FIELD_SELECTOR indicates
+    which individual field to display when turning the exception into
+    text."""
     svntest.Failure.__init__(self, msg)
     self.chain = chain
     self.field_selector = field_selector
