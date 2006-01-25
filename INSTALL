@@ -139,7 +139,7 @@ I.    BUILD REQUIREMENTS
       newer. The autogen.sh script knows about that.
 
 
-      4.  Neon library 0.24.7 or 0.25.3 (http://www.webdav.org/neon/)
+      4.  Neon library 0.24.7 or 0.25.5 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you
@@ -151,7 +151,7 @@ I.    BUILD REQUIREMENTS
 
           http://www.webdav.org/neon/neon-0.24.7.tar.gz
             -or-
-          http://www.webdav.org/neon/neon-0.25.3.tar.gz
+          http://www.webdav.org/neon/neon-0.25.5.tar.gz
 
       Building Neon inside the subversion build:
 
