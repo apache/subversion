@@ -293,6 +293,7 @@ store_dirent (void *baton, const char *path, const svn_dirent_t *dirent,
     }
   else
     {
+      path = apr_pstrdup (lb->pool, path);
       apr_hash_set (lb->dirents, path, APR_HASH_KEY_STRING, dirent);
       if (lock)
         apr_hash_set (lb->locks, path, APR_HASH_KEY_STRING, lock);
