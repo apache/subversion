@@ -1266,6 +1266,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   int had_slash;
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
+  void *userdata;
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
@@ -1403,7 +1404,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   
   /* Retrieve/cache open repository */
   repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
-  apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);
+  apr_pool_userdata_get(&userdata, repos_key, r->connection->pool);
+  repos->repos = userdata;
   if (repos->repos == NULL)
     {
       serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
