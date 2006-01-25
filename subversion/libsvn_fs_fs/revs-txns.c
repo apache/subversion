@@ -57,7 +57,7 @@ get_txn (transaction_t **txn_p,
     return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
                               _("Transaction is not dead: '%s'"), txn_id);
   if ((! expect_dead) && (txn->kind == transaction_kind_dead))
-    return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
+    return svn_error_createf (SVN_ERR_FS_TRANSACTION_DEAD, 0,
                               _("Transaction is dead: '%s'"), txn_id);
   *txn_p = txn;
   return SVN_NO_ERROR;
