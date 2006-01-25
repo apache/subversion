@@ -25,33 +25,34 @@ test_scripts = [
                 'subversion/tests/libsvn_wc/TEST_XLATE',
                 'subversion/tests/libsvn_subr/TEST_UTF',
                 'subversion/tests/libsvn_subr/target-test.py',
-                'subversion/tests/svn/basic_tests.py',
-                'subversion/tests/svn/commit_tests.py',
-                'subversion/tests/svn/getopt_tests.py',
-                'subversion/tests/svn/update_tests.py',
-                'subversion/tests/svn/switch_tests.py',
-                'subversion/tests/svn/prop_tests.py',
-                'subversion/tests/svn/schedule_tests.py',
-                'subversion/tests/svn/log_tests.py',
-                'subversion/tests/svn/copy_tests.py',
-                'subversion/tests/svn/diff_tests.py',
-                'subversion/tests/svn/export_tests.py',
-                'subversion/tests/svn/externals_tests.py',
-                'subversion/tests/svn/merge_tests.py',
-                'subversion/tests/svn/revert_tests.py',
-                'subversion/tests/svn/stat_tests.py',
-                'subversion/tests/svn/trans_tests.py',
-                'subversion/tests/svn/autoprop_tests.py'
-                'subversion/tests/svn/blame_tests.py',
-                'subversion/tests/svn/special_tests.py',
-                'subversion/tests/svn/svnadmin_tests.py',
-                'subversion/tests/svn/svnlook_tests.py',
-                'subversion/tests/svn/svnversion_tests.py',
-                'subversion/tests/svn/utf8_tests.py'
-                'subversion/tests/svn/history_tests.py',
-                'subversion/tests/svn/lock_tests.py',
-                'subversion/tests/svn/cat_tests.py',
-                'subversion/tests/svn/import_tests.py'
+                'subversion/tests/cmdline/basic_tests.py',
+                'subversion/tests/cmdline/commit_tests.py',
+                'subversion/tests/cmdline/getopt_tests.py',
+                'subversion/tests/cmdline/update_tests.py',
+                'subversion/tests/cmdline/switch_tests.py',
+                'subversion/tests/cmdline/prop_tests.py',
+                'subversion/tests/cmdline/schedule_tests.py',
+                'subversion/tests/cmdline/log_tests.py',
+                'subversion/tests/cmdline/copy_tests.py',
+                'subversion/tests/cmdline/diff_tests.py',
+                'subversion/tests/cmdline/export_tests.py',
+                'subversion/tests/cmdline/externals_tests.py',
+                'subversion/tests/cmdline/merge_tests.py',
+                'subversion/tests/cmdline/revert_tests.py',
+                'subversion/tests/cmdline/stat_tests.py',
+                'subversion/tests/cmdline/trans_tests.py',
+                'subversion/tests/cmdline/autoprop_tests.py'
+                'subversion/tests/cmdline/blame_tests.py',
+                'subversion/tests/cmdline/special_tests.py',
+                'subversion/tests/cmdline/svnadmin_tests.py',
+                'subversion/tests/cmdline/svnlook_tests.py',
+                'subversion/tests/cmdline/svnversion_tests.py',
+                'subversion/tests/cmdline/utf8_tests.py'
+                'subversion/tests/cmdline/history_tests.py',
+                'subversion/tests/cmdline/lock_tests.py',
+                'subversion/tests/cmdline/cat_tests.py',
+                'subversion/tests/cmdline/import_tests.py',
+                'subversion/tests/cmdline/svnsync_tests.py'
                ]
 
 import os, sys, re
@@ -70,7 +71,7 @@ except AttributeError:
 
 all_tests = test_scripts
 
-client_tests = filter(lambda x: x.startswith('subversion/tests/svn/'),
+client_tests = filter(lambda x: x.startswith('subversion/tests/cmdline/'),
                       all_tests)
 
 opts, args = my_getopt(sys.argv[1:], 'vcu:l:',
@@ -126,7 +127,7 @@ else:
   create_dirs = 1
 
 sys.path.insert(0, os.path.join(abs_builddir, 'build'))
-sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/svn'))
+sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/cmdline'))
 sys.path.insert(0, os.path.join(abs_builddir, 'subversion/tests/libsvn_subr'))
 import run_tests
 import ebcdic

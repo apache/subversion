@@ -120,7 +120,8 @@ else:
   svn_binary = os.path.join(os.getcwd(), 'svn')
   svnadmin_binary = os.path.join(os.getcwd(), 'svnadmin')
   svnlook_binary = os.path.join(os.getcwd(), 'svnlook')
-  svnsync_binary = os.path.abspath(os.getcwd(), 'svnsync')  
+  # svnsync client not supported in port yet.
+  # svnsync_binary = os.path.abspath(os.getcwd(), 'svnsync')  
   svnversion_binary = os.path.join(os.getcwd(), 'svnversion')
 
 # Username and password used by the working copies
