@@ -85,8 +85,8 @@ def check_keywords(actual_kw, expected_kw, name):
 
   for i in range(0,len(actual_kw)):
     if actual_kw[i] != expected_kw[i]:
-      print '%s, Expected: %s' % (name, expected_kw[i][:-1])
-      print '%s, Got:      %s' % (name, actual_kw[i][:-1])
+      print '%s item %s, Expected: %s' % (name, i, expected_kw[i][:-1])
+      print '%s item %s, Got:      %s' % (name, i, actual_kw[i][:-1])
       raise svntest.Failure
  
 def setup_working_copy(wc_dir, value_len):
