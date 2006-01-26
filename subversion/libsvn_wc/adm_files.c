@@ -6,7 +6,7 @@
  *              information is kept.  
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1034,7 +1034,7 @@ init_adm (const char *path,
   apr_fileperms_t perms = APR_OS_DEFAULT;
 
   /* First, make an empty administrative area. */
-  make_empty_adm (path, pool);
+  SVN_ERR (make_empty_adm (path, pool));
 
   /* Lock it immediately.  Theoretically, no compliant wc library
      would ever consider this an adm area until a README file were
