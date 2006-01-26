@@ -1,7 +1,7 @@
 /* svn_bdb_compat.h --- Compatibility wrapper for different BDB versions.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -62,8 +62,8 @@ extern "C" {
 
 /* Explicit BDB version check. */
 #define SVN_BDB_VERSION_AT_LEAST(major,minor) \
-    (DB_VERSION_MAJOR > (major)) \
-     || (DB_VERSION_MAJOR == (major)) && (DB_VERSION_MINOR >= (minor))
+    (DB_VERSION_MAJOR > (major) \
+     || (DB_VERSION_MAJOR == (major) && DB_VERSION_MINOR >= (minor)))
 
 
 /* Parameter lists */
