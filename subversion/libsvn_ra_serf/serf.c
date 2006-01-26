@@ -24,6 +24,7 @@
 
 #include "svn_pools.h"
 #include "svn_ra.h"
+#include "svn_dav.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
@@ -67,6 +68,11 @@ typedef struct {
   serf_connection_t *conn;
 
   svn_boolean_t using_ssl;
+
+  apr_uri_t root_url;
+
+  apr_hash_t *cached_props;
+
 } serf_session_t;
 
 static serf_bucket_t *
@@ -116,11 +122,14 @@ svn_ra_serf__open (svn_ra_session_t *session,
   /* todo: create a subpool? */
   serf_sess->pool = pool;
   serf_sess->bkt_alloc = serf_bucket_allocator_create(pool, NULL, NULL);
+  serf_sess->cached_props = apr_hash_make(pool);
 
-  /* todo: reuse context across sessions */
+  /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(pool);
 
   apr_uri_parse(serf_sess->pool, repos_URL, &url);
+  serf_sess->root_url = url;
+
   if (!url.port)
     {
         url.port = apr_uri_port_of_scheme(url.scheme);
@@ -139,8 +148,8 @@ svn_ra_serf__open (svn_ra_session_t *session,
 
   /* go ahead and tell serf about the connection. */
   serf_sess->conn = serf_connection_create(serf_sess->context, address,
-                                           conn_setup, &serf_sess,
-                                           conn_closed, &serf_sess, pool);
+                                           conn_setup, serf_sess,
+                                           conn_closed, serf_sess, pool);
 
   session->priv = serf_sess;
   return SVN_NO_ERROR;
@@ -154,12 +163,372 @@ svn_ra_serf__reparent (svn_ra_session_t *session,
   abort();
 }
 
+typedef struct {
+  const char *namespace;
+  const char *name;
+} dav_props_t;
+
+static const char *
+fetch_prop (apr_hash_t *props,
+            const char *path,
+            const char *ns,
+            const char *name)
+{
+  apr_hash_t *path_props, *ns_props;
+  const char *val = NULL;
+
+  path_props = apr_hash_get(props, path, strlen(path));
+
+  if (path_props)
+    {
+      ns_props = apr_hash_get(props, ns, strlen(ns));
+      if (ns_props)
+        {
+          val = apr_hash_get(ns_props, name, strlen(name));
+        }
+    }
+
+  return val;
+}
+
+static void
+set_prop (apr_hash_t *props, const char *path,
+          const char *ns, const char *name,
+          const char *val, apr_pool_t *pool)
+{
+  apr_hash_t *path_props, *ns_props;
+  apr_size_t path_len, ns_len, name_len;
+
+  path_len = strlen(path);
+  ns_len = strlen(ns);
+  name_len = strlen(name);
+
+  path_props = apr_hash_get(props, path, path_len);
+  if (!path_props)
+    {
+      path_props = apr_hash_make(pool);
+      apr_hash_set(props, path, path_len, path_props);
+
+      /* todo: we know that we'll fail the next check, but fall through
+       * for now for simplicity's sake.
+       */
+    }
+
+  ns_props = apr_hash_get(path_props, ns, ns_len);
+  if (!ns_props)
+    {
+      ns_props = apr_hash_make(pool);
+      apr_hash_set(path_props, ns, ns_len, ns_props);
+    }
+
+  apr_hash_set(ns_props, name, name_len, val);
+}
+
+/* propfind bucket:
+ *
+ * <?xml version="1.0" encoding="utf-8"?>
+ * <propfind xmlns="DAV:">
+ *   <prop>
+ *     *prop buckets*
+ *   </prop>
+ * </propfind>
+ */
+
+/* property bucket:
+ *
+ * <*propname* xmlns="*propns*"/>
+ */
+
+#define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\"><prop>"
+#define PROPFIND_TRAILER "</prop></propfind>"
+
+static serf_bucket_t*
+accept_response(serf_request_t *request,
+                serf_bucket_t *stream,
+                void *acceptor_baton,
+                apr_pool_t *pool)
+{
+  serf_bucket_t *c;
+  serf_bucket_alloc_t *bkt_alloc;
+
+  bkt_alloc = serf_request_get_alloc(request);
+  c = serf_bucket_barrier_create(stream, bkt_alloc);
+
+  return serf_bucket_response_create(c, bkt_alloc);
+}
+
+typedef struct {
+  apr_pool_t *pool;
+
+  const char *path;
+
+  const dav_props_t *find_props;
+  apr_hash_t *ret_props;
+
+  svn_boolean_t done;
+} propfind_context_t;
+
+static apr_status_t
+handle_propfind (serf_bucket_t *response,
+                 void *handler_baton,
+                 apr_pool_t *pool)
+{
+  const char *data;
+  apr_size_t len;
+  serf_status_line sl;
+  apr_status_t status;
+  propfind_context_t *ctx = handler_baton;
+
+  status = serf_bucket_response_status(response, &sl);
+  if (status)
+    {
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+      abort();
+    }
+
+  while (1)
+    {
+      status = serf_bucket_read(response, 2048, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return status;
+        }
+
+      /* parse the response
+       *  <?xml version="1.0" encoding="utf-8"?>
+       *  <D:multistatus xmlns:D="DAV:" xmlns:ns1="http://subversion.tigris.org/xmlns/dav/" xmlns:ns0="DAV:">
+       *    <D:response xmlns:lp1="DAV:" xmlns:lp3="http://subversion.tigris.org/xmlns/dav/">
+       *      <D:href>/repos/projects/serf/trunk/</D:href>
+       *      <D:propstat>
+       *        <D:prop>
+       *          <lp1:version-controlled-configuration>
+       *            <D:href>/repos/projects/!svn/vcc/default</D:href>
+       *          </lp1:version-controlled-configuration>
+       *          <lp1:resourcetype>
+       *            <D:collection/>
+       *          </lp1:resourcetype>
+       *          <lp3:baseline-relative-path>
+       *            serf/trunk
+       *          </lp3:baseline-relative-path>
+       *          <lp3:repository-uuid>
+       *            61a7d7f5-40b7-0310-9c16-bb0ea8cb1845
+       *          </lp3:repository-uuid>
+       *        </D:prop>
+       *        <D:status>HTTP/1.1 200 OK</D:status>
+       *      </D:propstat>
+       *    </D:response>
+       *  </D:multistatus>
+       */
+      fwrite(data, 1, len, stdout);
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          ctx->done = 1;
+          return APR_EOF;
+        }
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+
+      /* feed me! */
+    }
+  /* not reached */
+}
+
 static svn_error_t *
-svn_ra_serf__get_latest_revnum (svn_ra_session_t *session,
+fetch_props (apr_hash_t **prop_vals,
+             serf_session_t *sess,
+             const char *url,
+             const char *depth,
+             const dav_props_t *props,
+             apr_pool_t *pool)
+{
+  const dav_props_t *prop;
+  apr_hash_t *ret_props;
+  serf_bucket_t *props_bkt, *tmp, *req_bkt, *hdrs_bkt;
+  serf_request_t *request;
+  propfind_context_t *prop_ctx;
+  apr_status_t status;
+
+  ret_props = apr_hash_make(pool);
+  props_bkt = NULL;
+
+  /* check to see if we have any of this information cached */
+  prop = props;
+  while (prop && prop->namespace)
+    {
+      const char *val;
+
+      val = fetch_prop(sess->cached_props, url, prop->namespace,
+                       prop->name);
+      if (val)
+        {
+          set_prop(ret_props, url, prop->namespace, prop->name, val, pool);
+        }
+      else
+        {
+          if (!props_bkt)
+            {
+              props_bkt = serf_bucket_aggregate_create(sess->bkt_alloc);
+            }
+
+          /* <*propname* xmlns="*propns*" /> */
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<", 1, sess->bkt_alloc);
+          serf_bucket_aggregate_append(props_bkt, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING(prop->name, sess->bkt_alloc);
+          serf_bucket_aggregate_append(props_bkt, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" xmlns=\"",
+                                              sizeof(" xmlns=\"")-1,
+                                              sess->bkt_alloc);
+          serf_bucket_aggregate_append(props_bkt, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING(prop->namespace, sess->bkt_alloc);
+          serf_bucket_aggregate_append(props_bkt, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"/>", sizeof("\"/>")-1,
+                                              sess->bkt_alloc);
+          serf_bucket_aggregate_append(props_bkt, tmp);
+        }
+
+      prop++;
+    }
+
+  /* We satisfied all of the properties with our session cache.  Woo-hoo. */
+  if (!props_bkt)
+    {
+      *prop_vals = ret_props;
+      return SVN_NO_ERROR;
+    }
+
+  /* Cache didn't hit for everything, so generate a request now. */
+
+  /* TODO: programatically add in the namespaces */
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(PROPFIND_HEADER,
+                                      sizeof(PROPFIND_HEADER)-1,
+                                      sess->bkt_alloc);
+  serf_bucket_aggregate_prepend(props_bkt, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(PROPFIND_TRAILER,
+                                      sizeof(PROPFIND_TRAILER)-1,
+                                      sess->bkt_alloc);
+  serf_bucket_aggregate_append(props_bkt, tmp);
+
+  /* create and deliver request */
+  request = serf_connection_request_create(sess->conn);
+
+  req_bkt = serf_bucket_request_create("PROPFIND", url, props_bkt,
+                                       serf_request_get_alloc(request));
+
+  hdrs_bkt = serf_bucket_request_get_headers(req_bkt);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", sess->root_url.hostinfo);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "ra_serf");
+  serf_bucket_headers_setn(hdrs_bkt, "Depth", depth);
+  serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
+  /* serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip"); */
+
+  /* Create the propfind context. */
+  prop_ctx = apr_pcalloc(pool, sizeof(*prop_ctx));
+  prop_ctx->pool = pool;
+  prop_ctx->path = url;
+  prop_ctx->find_props = props;
+  prop_ctx->ret_props = ret_props;
+  prop_ctx->done = 0;
+
+  serf_request_deliver(request, req_bkt,
+                       accept_response, sess,
+                       handle_propfind, prop_ctx);
+
+  while (!prop_ctx->done)
+    {
+      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
+      if (APR_STATUS_IS_TIMEUP(status))
+        {
+          continue;
+        }
+      if (status)
+        {
+          return svn_error_wrap_apr(status, "Error retrieving PROPFIND");
+        }
+      /* Debugging purposes only! */
+      serf_debug__closed_conn(sess->bkt_alloc);
+    }
+
+  *prop_vals = ret_props;
+
+  return SVN_NO_ERROR;
+}
+
+static const dav_props_t base_props[] =
+{
+  { "DAV:", "version-controlled-configuration" },
+  { "DAV:", "resourcetype" },
+  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
+  { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
+  NULL
+};
+
+static const dav_props_t checked_in_props[] =
+{
+  { "DAV:", "checked-in" },
+  NULL
+};
+
+static const dav_props_t baseline_props[] =
+{
+  { "DAV:", "baseline-collection" },
+  { "DAV:", "version-name" },
+  NULL
+};
+
+static svn_error_t *
+svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
                                 svn_revnum_t *latest_revnum,
                                 apr_pool_t *pool)
 {
-  abort();
+  apr_hash_t *props, *ns_props;
+  serf_session_t *session = ra_session->priv;
+  const char *vcc_url, *baseline_url, *version_name;
+
+  SVN_ERR(fetch_props(&props, session, session->root_url.path, "0",
+                      base_props, pool));
+
+  vcc_url = fetch_prop(props, session->root_url.path, SVN_DAV_PROP_NS_SVN,
+                       "version-controlled-configuration");
+
+  if (!vcc_url)
+    {
+      abort();
+    }
+
+  /* Using the version-controlled-configuration, fetch the checked-in prop. */
+  SVN_ERR(fetch_props(&props, session, vcc_url, "0", checked_in_props, pool));
+
+  baseline_url = fetch_prop(props, session->root_url.path,
+                            "DAV:", "checked-in");
+
+  if (!baseline_url)
+    {
+      abort();
+    }
+
+  /* Using the checked-in property, fetch:
+   *    baseline-connection *and* version-name
+   */
+  SVN_ERR(fetch_props(&props, session, baseline_url, "0",
+                      baseline_props, pool));
+
+  version_name = fetch_prop(props, session->root_url.path,
+                            "DAV:", "version-name");
+
+  *latest_revnum = SVN_STR_TO_REV(version_name);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
