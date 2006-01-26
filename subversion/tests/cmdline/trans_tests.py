@@ -185,6 +185,9 @@ def keywords_off(path):
 
 #----------------------------------------------------------------------
 
+### This test is know to fail when Subversion is built in very deep
+### directory structures, caused by SVN_KEYWORD_MAX_LEN being defined
+### as 255.
 def keywords_from_birth(sbox):
   "commit new files with keywords active from birth"
 
