@@ -47,7 +47,7 @@ byte compose an instruction selector, as follows:
 	11	invalid
 
 The remaining six bits of the first byte indicate the length of the
-copy.  If those six bytes are all zero, then the length is encoded as
+copy.  If those six bits are all zero, then the length is encoded as
 an integer immediately following the first byte of the instruction.
 If the instruction selector is 00 or 01, then the instruction encoding
 continues with an offset encoded as an integer.  If the instruction
@@ -55,7 +55,7 @@ selector is 10, then the offset into the new data is implicit; each
 copy from the new data is always for "the next <length> bytes" after
 the last copy.
 
-A copy from the target view must begin at a location before than the
+A copy from the target view must begin at a location before the
 current position in the target view, but its length may extend past
 the current position.  In this case, the target data copied is
 repeated, as happens naturally if the copy is performed byte by byte
@@ -67,7 +67,7 @@ Following are some example instruction encodings.
 	00001011 00000000
 
 	Copy 64 bytes from offset 128 in target view:
-	01000000 00100000 10000001 00000000
+	01000000 01000000 10000001 00000000
 
 	Copy the next 63 bytes of new data:
 	10111111

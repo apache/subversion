@@ -25,8 +25,9 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
    
      * If the target of 'svn log' wanders into unreadable territory,
        then log output will simply stop at the last readable revision.
-       The target will appear to be added (without history) in that
-       revision.
+       If the log is tracing backwards through time, as the plain
+       "svn log" command does, the target will appear to be added
+       (without history) in that revision.
    
      * If a revision returned by 'svn log' contains a mixture of
        readable/unreadable changed-paths, then the log message is
@@ -72,7 +73,7 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
    halts; no further information is retrieved.
    
       Example 1: while 'bar.c' might be perfectly readable in both
-      revisions 5 and 20, the 'svn diff' command (above) will return
+      revisions 10 and 28, the 'svn diff' command (above) will return
       error if the file has an unreadable ancestor somewhere between
       those two revisions.
    
