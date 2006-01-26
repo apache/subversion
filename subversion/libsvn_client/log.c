@@ -58,7 +58,7 @@ svn_client_log3 (const apr_array_header_t *targets,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  const char *path;
+  const char *url_or_path;
   const char *ignored_url;
   const char *base_name = NULL;
   apr_array_header_t *condensed_targets;
@@ -73,10 +73,10 @@ svn_client_log3 (const apr_array_header_t *targets,
          _("Missing required revision specification"));
     }
 
-  path = (APR_ARRAY_IDX(targets, 0, const char *));
+  url_or_path = APR_ARRAY_IDX (targets, 0, const char *);
 
   /* Use the passed URL, if there is one.  */
-  if (svn_path_is_url (path))
+  if (svn_path_is_url (url_or_path))
     {
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
@@ -143,7 +143,7 @@ svn_client_log3 (const apr_array_header_t *targets,
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR (svn_path_condense_targets (&ignored_url, &condensed_targets,
+      SVN_ERR (svn_path_condense_targets (&url_or_path, &condensed_targets,
                                           target_urls, TRUE, pool));
 
       if (condensed_targets->nelts == 0)
@@ -166,8 +166,9 @@ svn_client_log3 (const apr_array_header_t *targets,
     session_opt_rev.kind = svn_opt_revision_unspecified;
 
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &ignored_revnum,
-                                             &ignored_url, path, peg_revision,
-                                             &session_opt_rev, ctx, pool));
+                                             &ignored_url, url_or_path,
+                                             peg_revision, &session_opt_rev,
+                                             ctx, pool));
 
   /* It's a bit complex to correctly handle the special revision words
    * such as "BASE", "COMMITTED", and "PREV".  For example, if the
