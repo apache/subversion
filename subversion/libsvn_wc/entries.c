@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -933,7 +933,7 @@ svn_wc_entries_read (apr_hash_t **entries,
 /* Append a single entry THIS_ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
-static svn_error_t *
+static void
 write_entry (svn_stringbuf_t **output,
              svn_wc_entry_t *entry,
              const char *name,
@@ -1213,7 +1213,6 @@ write_entry (svn_stringbuf_t **output,
                               svn_xml_self_closing,
                               SVN_WC__ENTRIES_ENTRY,
                               atts);
-  return SVN_NO_ERROR;
 }
 
 
@@ -1264,8 +1263,7 @@ svn_wc__entries_write (apr_hash_t *entries,
                          NULL);
 
   /* Write out "this dir" */
-  SVN_ERR (write_entry (&bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, 
-                        this_dir, pool));
+  write_entry (&bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
