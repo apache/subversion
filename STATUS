@@ -73,5 +73,12 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r18247
+    Uncomment section headers in the default repository conffiles.
+    Justification:
+      Avoids confusion.
+    Votes:
+      +1: maxb
+    
 Approved changes:
 
