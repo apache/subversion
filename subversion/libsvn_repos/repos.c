@@ -1506,14 +1506,14 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       "# harry_and_sally = harry,sally"
       APR_EOL_STR
       APR_EOL_STR
-      "[/foo/bar]"
+      "# [/foo/bar]"
       APR_EOL_STR
       "# harry = rw"
       APR_EOL_STR
       "# * ="
       APR_EOL_STR
       APR_EOL_STR
-      "[repository:/baz/fuz]"
+      "# [repository:/baz/fuz]"
       APR_EOL_STR
       "# @harry_and_sally = rw"
       APR_EOL_STR
