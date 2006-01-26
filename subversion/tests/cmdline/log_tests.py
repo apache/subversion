@@ -528,15 +528,25 @@ def dynamic_revision(sbox):
     os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
+def log_wc_with_peg_revision(sbox):
+  "'svn log wc_target@N'"
+  guarantee_repos_and_wc(sbox)
+  my_path = os.path.join(sbox.wc_dir, "A", "B", "E", "beta") + "@8"
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', my_path)
+  check_log_chain(parse_log_output(output), [1])
+
+#----------------------------------------------------------------------
 def url_missing_in_head(sbox):
-  "'svn log -r N URL' when URL is not in HEAD "
+  "'svn log target@N' when target removed from HEAD"
 
   guarantee_repos_and_wc(sbox)
 
   my_url = svntest.main.current_repo_url + "/A/B/E/alpha" + "@8"
   
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'log', '-r', '8', my_url)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', my_url)
+  check_log_chain(parse_log_output(output), [3, 1])
 
 #----------------------------------------------------------------------
 def log_through_copyfrom_history(sbox):
@@ -781,6 +791,7 @@ test_list = [ None,
               log_to_revision_zero,
               dynamic_revision,
               log_with_path_args,
+              log_wc_with_peg_revision,
               url_missing_in_head,
               log_through_copyfrom_history,
               escape_control_chars,

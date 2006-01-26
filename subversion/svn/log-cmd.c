@@ -420,12 +420,18 @@ svn_cl__log (apr_getopt_t *os,
     }
   else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
-      /* If the first target is a URL, then we default to HEAD:0.
-         Otherwise, the default is BASE:0 since WC@HEAD may not exist. */
-      if (svn_path_is_url (target))
-        opt_state->start_revision.kind = svn_opt_revision_head;
+      /* Default to any specified peg revision.  Otherwise, if the
+         first target is an URL, then we default to HEAD:0.  Lastly,
+         the default is BASE:0 since WC@HEAD may not exist. */
+      if (peg_revision.kind == svn_opt_revision_unspecified)
+        {
+          if (svn_path_is_url (target))
+            opt_state->start_revision.kind = svn_opt_revision_head;
+          else
+            opt_state->start_revision.kind = svn_opt_revision_base;
+        }
       else
-        opt_state->start_revision.kind = svn_opt_revision_base;
+        opt_state->start_revision = peg_revision;
 
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         {
