@@ -20,6 +20,8 @@
 
 #include <apr_uri.h>
 
+#include <expat.h>
+
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -168,6 +170,12 @@ typedef struct {
   const char *name;
 } dav_props_t;
 
+typedef struct ns {
+  const char *namespace;
+  const char *val;
+  struct ns *next;
+} ns_t;
+
 static const char *
 fetch_prop (apr_hash_t *props,
             const char *path,
@@ -181,7 +189,7 @@ fetch_prop (apr_hash_t *props,
 
   if (path_props)
     {
-      ns_props = apr_hash_get(props, ns, strlen(ns));
+      ns_props = apr_hash_get(path_props, ns, strlen(ns));
       if (ns_props)
         {
           val = apr_hash_get(ns_props, name, strlen(name));
@@ -265,8 +273,126 @@ typedef struct {
   const dav_props_t *find_props;
   apr_hash_t *ret_props;
 
+  XML_Parser xmlp;
+  ns_t *ns_list;
+
+  svn_boolean_t in_prop;
+  svn_boolean_t collect_cdata;
+  const char *ns;
+  const char *name;
+  const char *val;
+
   svn_boolean_t done;
 } propfind_context_t;
+
+
+static void
+define_ns(propfind_context_t *ctx, const char *ns, const char *val)
+{
+  ns_t *new_ns;
+
+  new_ns = apr_palloc(ctx->pool, sizeof(*new_ns));
+  new_ns->namespace = ns;
+  new_ns->val = apr_pstrdup(ctx->pool, val);
+  new_ns->next = ctx->ns_list;
+  ctx->ns_list = new_ns;
+}
+
+static const char *
+expand_ns(propfind_context_t *ctx, const char *ns_name)
+{
+  ns_t *ns;
+  for (ns = ctx->ns_list; ns; ns = ns->next)
+    {
+      if (strcasecmp(ns->namespace, ns_name) == 0)
+        {
+          return ns->val;
+        }
+    }
+
+  return NULL;
+}
+
+static void XMLCALL
+start_propfind(void *userData, const char *name, const char **attrs)
+{
+  propfind_context_t *ctx = userData;
+  const char *ns;
+  char *colon;
+
+  /* check for new namespaces */
+  while (*attrs)
+    {
+      if (strncmp(*attrs, "xmlns", 5) == 0)
+        {
+          const char *attr, *attr_val;
+          attr = attrs[0] + 6;
+          attr_val = attrs[1];
+          define_ns(ctx, attr, attr_val);
+        }
+      attrs += 2;
+    }
+
+  colon = strchr(name, ':');
+  if (colon)
+    {
+      /* look up name space */
+      *colon = '\0';
+      ns = expand_ns(ctx, name);
+      if (!ns)
+        {
+          abort();
+        }
+      name = colon + 1;
+    }
+  else
+    {
+      /* default namespace */
+      ns = "";
+    }
+
+  if (ctx->in_prop && !ctx->name)
+    {
+      ctx->ns = ns;
+      ctx->name = apr_pstrdup(ctx->pool, name);
+      /* we want to flag the cdata handler to pick up what's next. */
+      ctx->collect_cdata = 1;
+    }
+
+  /* check for 'prop' */
+  if (!ctx->in_prop && strcasecmp(name, "prop") == 0)
+    {
+      ctx->in_prop = 1;
+    }
+}
+
+static void XMLCALL
+end_propfind(void *userData, const char *name)
+{
+  propfind_context_t *ctx = userData;
+  if (ctx->collect_cdata)
+    {
+      if (ctx->val)
+        {
+          set_prop(ctx->ret_props, ctx->path, ctx->ns, ctx->name, ctx->val,
+                   ctx->pool);
+        }
+      ctx->collect_cdata = 0;
+      ctx->name = NULL;
+      ctx->val = NULL;
+    }
+}
+
+static void XMLCALL
+cdata_propfind(void *userData, const char *data, int len)
+{
+  propfind_context_t *ctx = userData;
+  if (ctx->collect_cdata)
+    {
+      ctx->val = apr_pstrndup(ctx->pool, data, len);
+    }
+
+}
 
 static apr_status_t
 handle_propfind (serf_bucket_t *response,
@@ -277,6 +403,7 @@ handle_propfind (serf_bucket_t *response,
   apr_size_t len;
   serf_status_line sl;
   apr_status_t status;
+  enum XML_Status xml_status;
   propfind_context_t *ctx = handler_baton;
 
   status = serf_bucket_response_status(response, &sl);
@@ -322,10 +449,22 @@ handle_propfind (serf_bucket_t *response,
        *    </D:response>
        *  </D:multistatus>
        */
-      fwrite(data, 1, len, stdout);
+      xml_status = XML_Parse(ctx->xmlp, data, len, 0);
+      if (xml_status == XML_STATUS_ERROR)
+        {
+          abort();
+        }
 
       if (APR_STATUS_IS_EOF(status))
         {
+          xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          if (xml_status == XML_STATUS_ERROR)
+            {
+              abort();
+            }
+
+          XML_ParserFree(ctx->xmlp);
+
           ctx->done = 1;
           return APR_EOF;
         }
@@ -440,6 +579,11 @@ fetch_props (apr_hash_t **prop_vals,
   prop_ctx->ret_props = ret_props;
   prop_ctx->done = 0;
 
+  prop_ctx->xmlp = XML_ParserCreate(NULL);
+  XML_SetUserData(prop_ctx->xmlp, prop_ctx);
+  XML_SetElementHandler(prop_ctx->xmlp, start_propfind, end_propfind);
+  XML_SetCharacterDataHandler(prop_ctx->xmlp, cdata_propfind);
+
   serf_request_deliver(request, req_bkt,
                        accept_response, sess,
                        handle_propfind, prop_ctx);
@@ -498,7 +642,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   SVN_ERR(fetch_props(&props, session, session->root_url.path, "0",
                       base_props, pool));
 
-  vcc_url = fetch_prop(props, session->root_url.path, SVN_DAV_PROP_NS_SVN,
+  vcc_url = fetch_prop(props, session->root_url.path, "DAV:",
                        "version-controlled-configuration");
 
   if (!vcc_url)
@@ -509,7 +653,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
   SVN_ERR(fetch_props(&props, session, vcc_url, "0", checked_in_props, pool));
 
-  baseline_url = fetch_prop(props, session->root_url.path,
+  baseline_url = fetch_prop(props, vcc_url,
                             "DAV:", "checked-in");
 
   if (!baseline_url)
@@ -523,8 +667,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   SVN_ERR(fetch_props(&props, session, baseline_url, "0",
                       baseline_props, pool));
 
-  version_name = fetch_prop(props, session->root_url.path,
-                            "DAV:", "version-name");
+  version_name = fetch_prop(props, baseline_url, "DAV:", "version-name");
 
   *latest_revnum = SVN_STR_TO_REV(version_name);
 
