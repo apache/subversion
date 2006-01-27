@@ -301,12 +301,8 @@ main(int argc, const char *argv[])
   rev.kind = svn_opt_revision_unspecified;
   ctx.config = apr_hash_make (pool);
 
-  err = svn_client_status2 (NULL, wc_path, &rev, analyze_status, 
-                            &sb, TRUE, TRUE, FALSE, FALSE, TRUE, &ctx, pool);
-  if (err && (err->apr_err == SVN_ERR_CANCELLED))
-    svn_error_clear (err);
-  else
-    SVN_INT_ERR (err);
+  SVN_INT_ERR (svn_client_status2 (NULL, wc_path, &rev, analyze_status, &sb,
+                                   TRUE, TRUE, FALSE, FALSE, TRUE, &ctx, pool));
 
   if ((! sb.switched ) && (os->ind < argc))
     {
