@@ -150,7 +150,7 @@ svn_ra_serf__open (svn_ra_session_t *session,
 
   if (!url.port)
     {
-        url.port = apr_uri_port_of_scheme(url.scheme);
+      url.port = apr_uri_port_of_scheme(url.scheme);
     }
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
