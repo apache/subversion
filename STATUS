@@ -47,10 +47,13 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r18144, r18164 and r18037, r18127 (only tools/dev/stress.pl)
+  * r18144, r18164, r18170, r18171, r18184
+    and r18037, r18127 (only tools/dev/stress.pl)
     Add support for BDB-4.4 and automatic recovery of wedged databases.
     Justification:
       See above about automatic recovery of wedged databases.
+    Note:
+      Depends on r18254.
     Votes:
       +1 brane
 
@@ -90,6 +93,14 @@ Candidate changes:
     Votes:
       +1: maxb
 
-    
+  * r18254
+    Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
+    Justification:
+      Avoids precedence bugs when used in boolean expressions.
+    Note:
+      r18144 et al. depend on this.
+    Votes:
+      +1: brane
+
 Approved changes:
 
