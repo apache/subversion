@@ -71,7 +71,11 @@ typedef struct {
 
   svn_boolean_t using_ssl;
 
-  apr_uri_t root_url;
+  apr_uri_t repos_url;
+  const char *repos_url_str;
+
+  apr_uri_t repos_root;
+  const char *repos_root_str;
 
   apr_hash_t *cached_props;
 
@@ -107,6 +111,17 @@ conn_closed (serf_connection_t *conn,
     }
 }
 
+static apr_status_t cleanup_serf_session(void *data)
+{
+  serf_session_t *serf_sess = data;
+  if (serf_sess->conn)
+    {
+      serf_connection_close(serf_sess->conn);
+      serf_sess->conn = NULL;
+    }
+  return APR_SUCCESS;
+}
+
 static svn_error_t *
 svn_ra_serf__open (svn_ra_session_t *session,
                    const char *repos_URL,
@@ -130,13 +145,18 @@ svn_ra_serf__open (svn_ra_session_t *session,
   serf_sess->context = serf_context_create(pool);
 
   apr_uri_parse(serf_sess->pool, repos_URL, &url);
-  serf_sess->root_url = url;
+  serf_sess->repos_url = url;
+  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
 
   if (!url.port)
     {
         url.port = apr_uri_port_of_scheme(url.scheme);
     }
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+
+  /* register cleanups */
+  apr_pool_register_cleanup(serf_sess->pool, serf_sess, cleanup_serf_session,
+                            apr_pool_cleanup_null);
 
   /* fetch the DNS record for this host */
   status = apr_sockaddr_info_get(&address, url.hostname, APR_UNSPEC,
@@ -154,15 +174,31 @@ svn_ra_serf__open (svn_ra_session_t *session,
                                            conn_closed, serf_sess, pool);
 
   session->priv = serf_sess;
+
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-svn_ra_serf__reparent (svn_ra_session_t *session,
+svn_ra_serf__reparent (svn_ra_session_t *ra_session,
                        const char *url,
                        apr_pool_t *pool)
 {
-  abort();
+  serf_session_t *session = ra_session->priv;
+  apr_uri_t new_url;
+
+  /* If it's the URL we already have, wave our hands and do nothing. */
+  if (strcmp(session->repos_url_str, url) == 0)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  /* Do we need to check that it's the same host and port? */
+  apr_uri_parse(session->pool, url, &new_url);
+
+  session->repos_url.path = new_url.path;
+  session->repos_url_str = apr_pstrdup(pool, url);
+
+  return SVN_NO_ERROR;
 }
 
 typedef struct {
@@ -384,7 +420,14 @@ end_propfind(void *userData, const char *name)
             {
               name = colon + 1;
             }
-          ctx->attr_val = name;
+
+          /* However, if our element name is the same, we know we're empty. */
+          if (strcasecmp(ctx->attr_name, name) == 0)
+            {
+              name = "";
+            }
+
+          ctx->attr_val = apr_pstrdup(ctx->sess->pool, name);
         }
 
       /* set the return props and update our cache too. */
@@ -585,7 +628,7 @@ fetch_props (apr_hash_t **prop_vals,
                                        serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(req_bkt);
-  serf_bucket_headers_setn(hdrs_bkt, "Host", sess->root_url.hostinfo);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", sess->repos_url.hostinfo);
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "ra_serf");
   serf_bucket_headers_setn(hdrs_bkt, "Depth", depth);
   serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
@@ -660,10 +703,10 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   serf_session_t *session = ra_session->priv;
   const char *vcc_url, *baseline_url, *version_name;
 
-  SVN_ERR(fetch_props(&props, session, session->root_url.path, "0",
+  SVN_ERR(fetch_props(&props, session, session->repos_url.path, "0",
                       base_props, pool));
 
-  vcc_url = fetch_prop(props, session->root_url.path, "DAV:",
+  vcc_url = fetch_prop(props, session->repos_url.path, "DAV:",
                        "version-controlled-configuration");
 
   if (!vcc_url)
@@ -852,14 +895,50 @@ svn_ra_serf__get_log (svn_ra_session_t *session,
   abort();
 }
 
+static const dav_props_t check_path_props[] =
+{
+  { "DAV:", "resourcetype" },
+  NULL
+};
+
 static svn_error_t *
-svn_ra_serf__check_path (svn_ra_session_t *session,
-                         const char *path,
+svn_ra_serf__check_path (svn_ra_session_t *ra_session,
+                         const char *rel_path,
                          svn_revnum_t revision,
                          svn_node_kind_t *kind,
                          apr_pool_t *pool)
 {
-  abort();
+  serf_session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  const char *path, *res_type;
+
+  path = session->repos_url.path;
+
+  /* If we have a relative path, append it. */
+  if (rel_path)
+    {
+      path = svn_path_url_add_component(path, rel_path, pool);
+    }
+
+  SVN_ERR(fetch_props(&props, session, path, "0", check_path_props, pool));
+  res_type = fetch_prop(props, path, "DAV:", "resourcetype");
+
+  if (!res_type)
+    {
+      /* if the file isn't there, return none; but let's abort for now. */
+      abort();
+      *kind = svn_node_none;
+    }
+  else if (strcasecmp(res_type, "collection") == 0)
+    {
+      *kind = svn_node_dir;
+    }
+  else
+    {
+      *kind = svn_node_file;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -872,20 +951,86 @@ svn_ra_serf__stat (svn_ra_session_t *session,
   abort();
 }
 
+static const dav_props_t uuid_props[] =
+{
+  { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
+  NULL
+};
+
 static svn_error_t *
-svn_ra_serf__get_uuid (svn_ra_session_t *session,
+svn_ra_serf__get_uuid (svn_ra_session_t *ra_session,
                        const char **uuid,
                        apr_pool_t *pool)
 {
-  abort();
+  serf_session_t *session = ra_session->priv;
+  apr_hash_t *props;
+
+  SVN_ERR(fetch_props(&props, session, session->repos_url.path, "0",
+                      uuid_props, pool));
+  *uuid = fetch_prop(props, session->repos_url.path,
+                     SVN_DAV_PROP_NS_DAV, "repository-uuid");
+
+  if (!*uuid)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
 }
 
+static const dav_props_t repos_root_props[] =
+{
+  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
+  NULL
+};
+
 static svn_error_t *
-svn_ra_serf__get_repos_root (svn_ra_session_t *session,
+svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
                              const char **url,
                              apr_pool_t *pool)
 {
-  abort();
+  serf_session_t *session = ra_session->priv;
+
+  if (!session->repos_root_str)
+    {
+      const char *baseline_url, *root_path;
+      svn_stringbuf_t *url_buf;
+      apr_hash_t *props;
+
+      SVN_ERR(fetch_props(&props, session, session->repos_url.path, "0",
+                          repos_root_props, pool));
+      baseline_url = fetch_prop(props, session->repos_url.path,
+                                SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
+
+      if (!baseline_url)
+        {
+          abort();
+        }
+
+      /* If we see baseline_url as "", we're the root.  Otherwise... */
+      if (*baseline_url == '\0')
+        {
+          root_path = session->repos_url.path;
+          session->repos_root = session->repos_url;
+          session->repos_root_str = session->repos_url_str;
+        }
+      else
+        {
+          url_buf = svn_stringbuf_create(session->repos_url.path, pool);
+          svn_path_remove_components(url_buf,
+                                     svn_path_component_count(baseline_url));
+          root_path = apr_pstrdup(session->pool, url_buf->data);
+
+          /* Now that we have the root_path, recreate the root_url. */
+          session->repos_root = session->repos_url;
+          session->repos_root.path = (char*)root_path;
+          session->repos_root_str = apr_uri_unparse(session->pool,
+                                                    &session->repos_root, 0);
+        }
+    }
+
+  *url = session->repos_root_str;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
