@@ -170,10 +170,10 @@ typedef struct {
   const char *name;
 } dav_props_t;
 
-typedef struct ns {
+typedef struct ns_t {
   const char *namespace;
-  const char *val;
-  struct ns *next;
+  const char *url;
+  struct ns_t *next;
 } ns_t;
 
 static const char *
@@ -268,6 +268,8 @@ accept_response(serf_request_t *request,
 typedef struct {
   apr_pool_t *pool;
 
+  serf_session_t *sess;
+
   const char *path;
 
   const dav_props_t *find_props;
@@ -279,8 +281,8 @@ typedef struct {
   svn_boolean_t in_prop;
   svn_boolean_t collect_cdata;
   const char *ns;
-  const char *name;
-  const char *val;
+  const char *attr_name;
+  const char *attr_val;
 
   svn_boolean_t done;
 } propfind_context_t;
@@ -293,7 +295,7 @@ define_ns(propfind_context_t *ctx, const char *ns, const char *val)
 
   new_ns = apr_palloc(ctx->pool, sizeof(*new_ns));
   new_ns->namespace = ns;
-  new_ns->val = apr_pstrdup(ctx->pool, val);
+  new_ns->url = apr_pstrdup(ctx->pool, val);
   new_ns->next = ctx->ns_list;
   ctx->ns_list = new_ns;
 }
@@ -306,7 +308,7 @@ expand_ns(propfind_context_t *ctx, const char *ns_name)
     {
       if (strcasecmp(ns->namespace, ns_name) == 0)
         {
-          return ns->val;
+          return ns->url;
         }
     }
 
@@ -333,12 +335,14 @@ start_propfind(void *userData, const char *name, const char **attrs)
       attrs += 2;
     }
 
+  /* look up name space if present */
   colon = strchr(name, ':');
   if (colon)
     {
-      /* look up name space */
-      *colon = '\0';
-      ns = expand_ns(ctx, name);
+      char *stripped_name;
+
+      stripped_name = apr_pstrndup(ctx->pool, name, colon-name);
+      ns = expand_ns(ctx, stripped_name);
       if (!ns)
         {
           abort();
@@ -347,14 +351,14 @@ start_propfind(void *userData, const char *name, const char **attrs)
     }
   else
     {
-      /* default namespace */
+      /* use default namespace for now */
       ns = "";
     }
 
-  if (ctx->in_prop && !ctx->name)
+  if (ctx->in_prop && !ctx->attr_name)
     {
       ctx->ns = ns;
-      ctx->name = apr_pstrdup(ctx->pool, name);
+      ctx->attr_name = apr_pstrdup(ctx->pool, name);
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = 1;
     }
@@ -372,15 +376,31 @@ end_propfind(void *userData, const char *name)
   propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
-      if (ctx->val)
+      /* if we didn't see a CDATA element, we want the tag name. */
+      if (!ctx->attr_val)
         {
-          set_prop(ctx->ret_props, ctx->path, ctx->ns, ctx->name, ctx->val,
-                   ctx->pool);
+          char *colon = strchr(name, ':');
+          if (colon)
+            {
+              name = colon + 1;
+            }
+          ctx->attr_val = name;
         }
+
+      /* set the return props and update our cache too. */
+      set_prop(ctx->ret_props,
+               ctx->path, ctx->ns, ctx->attr_name, ctx->attr_val,
+               ctx->pool);
+      set_prop(ctx->sess->cached_props,
+               ctx->path, ctx->ns, ctx->attr_name, ctx->attr_val,
+               ctx->sess->pool);
+
+      /* we're done with it. */
       ctx->collect_cdata = 0;
-      ctx->name = NULL;
-      ctx->val = NULL;
+      ctx->attr_name = NULL;
+      ctx->attr_val = NULL;
     }
+  /* FIXME: destroy namespaces as we end a handler */
 }
 
 static void XMLCALL
@@ -389,7 +409,7 @@ cdata_propfind(void *userData, const char *data, int len)
   propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
-      ctx->val = apr_pstrndup(ctx->pool, data, len);
+      ctx->attr_val = apr_pstrndup(ctx->pool, data, len);
     }
 
 }
@@ -578,6 +598,7 @@ fetch_props (apr_hash_t **prop_vals,
   prop_ctx->find_props = props;
   prop_ctx->ret_props = ret_props;
   prop_ctx->done = 0;
+  prop_ctx->sess = sess;
 
   prop_ctx->xmlp = XML_ParserCreate(NULL);
   XML_SetUserData(prop_ctx->xmlp, prop_ctx);
@@ -668,6 +689,11 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
                       baseline_props, pool));
 
   version_name = fetch_prop(props, baseline_url, "DAV:", "version-name");
+
+  if (!version_name)
+    {
+      abort();
+    }
 
   *latest_revnum = SVN_STR_TO_REV(version_name);
 
