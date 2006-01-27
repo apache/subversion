@@ -27,6 +27,7 @@
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
+#include "svn_xml.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
@@ -136,8 +137,7 @@ svn_ra_serf__open (svn_ra_session_t *session,
   apr_sockaddr_t *address;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-  /* todo: create a subpool? */
-  serf_sess->pool = pool;
+  apr_pool_create(&serf_sess->pool, pool);
   serf_sess->bkt_alloc = serf_bucket_allocator_create(pool, NULL, NULL);
   serf_sess->cached_props = apr_hash_make(pool);
 
@@ -820,8 +820,312 @@ svn_ra_serf__get_dir (svn_ra_session_t *session,
   abort();
 }
 
+typedef struct {
+  serf_session_t *sess;
+
+  const char *target;
+  svn_revnum_t target_rev;
+
+  svn_boolean_t recurse;
+
+  const svn_delta_editor_t *update_editor;
+  void *update_baton;
+
+  serf_bucket_t *buckets;
+
+  XML_Parser xmlp;
+
+  svn_boolean_t done;
+
+} report_context_t;
+
+static void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
+                            const char *value, serf_bucket_alloc_t *bkt_alloc)
+{
+  serf_bucket_t *tmp;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<", 1, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(tag, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", 1, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(value, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</", 2, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(tag, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", 1, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+}
+
+static void XMLCALL
+start_report(void *userData, const char *name, const char **attrs)
+{
+  report_context_t *ctx = userData;
+
+  abort();
+}
+
+static void XMLCALL
+end_report(void *userData, const char *name)
+{
+  report_context_t *ctx = userData;
+
+  abort();
+}
+
+static void XMLCALL
+cdata_report(void *userData, const char *data, int len)
+{
+  report_context_t *ctx = userData;
+
+  abort();
+}
+
+static apr_status_t
+handle_report (serf_bucket_t *response,
+                 void *handler_baton,
+                 apr_pool_t *pool)
+{
+  const char *data;
+  apr_size_t len;
+  serf_status_line sl;
+  apr_status_t status;
+  enum XML_Status xml_status;
+  report_context_t *ctx = handler_baton;
+
+  status = serf_bucket_response_status(response, &sl);
+  if (status)
+    {
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+      abort();
+    }
+
+  while (1)
+    {
+      status = serf_bucket_read(response, 2048, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return status;
+        }
+
+      /* parse the response */
+      xml_status = XML_Parse(ctx->xmlp, data, len, 0);
+      if (xml_status == XML_STATUS_ERROR)
+        {
+          abort();
+        }
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          if (xml_status == XML_STATUS_ERROR)
+            {
+              abort();
+            }
+
+          XML_ParserFree(ctx->xmlp);
+
+          ctx->done = TRUE;
+          return APR_EOF;
+        }
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+
+      /* feed me! */
+    }
+  /* not reached */
+}
+
 static svn_error_t *
-svn_ra_serf__do_update (svn_ra_session_t *session,
+set_path(void *report_baton,
+         const char *path,
+         svn_revnum_t revision,
+         svn_boolean_t start_empty,
+         const char *lock_token,
+         apr_pool_t *pool)
+{
+  report_context_t *report = report_baton;
+  serf_bucket_t *tmp;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
+                                      sizeof("<S:entry rev=\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(apr_ltoa(pool, revision),
+                                  report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  if (lock_token)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
+                                          sizeof(" lock-token=\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING(lock_token,
+                                      report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  if (start_empty)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" start-empty=\"true\"",
+                                          sizeof(" start-empty=\"true\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", sizeof(">")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(path, report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
+                                      sizeof("</S:entry>")-1,
+                                      report->sess->bkt_alloc);
+
+  serf_bucket_aggregate_append(report->buckets, tmp);
+  return APR_SUCCESS;
+}
+
+static svn_error_t *
+delete_path(void *report_baton,
+            const char *path,
+            apr_pool_t *pool)
+{
+  report_context_t *report = report_baton;
+  abort();
+}
+
+static svn_error_t *
+link_path(void *report_baton,
+          const char *path,
+          const char *url,
+          svn_revnum_t revision,
+          svn_boolean_t start_empty,
+          const char *lock_token,
+          apr_pool_t *pool)
+{
+  report_context_t *report = report_baton;
+  abort();
+}
+
+static const dav_props_t vcc_props[] =
+{
+  { "DAV:", "version-controlled-configuration" },
+  NULL
+};
+
+static svn_error_t *
+finish_report(void *report_baton,
+              apr_pool_t *pool)
+{
+  report_context_t *report = report_baton;
+  serf_session_t *sess = report->sess;
+  serf_request_t *request;
+  serf_bucket_t *req_bkt, *hdrs_bkt, *tmp;
+  const char *vcc_url;
+  apr_hash_t *props;
+  apr_status_t status;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
+                                      sizeof("</S:update-report>")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  SVN_ERR(fetch_props(&props, sess, sess->repos_url.path, "0",
+                      vcc_props, pool));
+
+  vcc_url = fetch_prop(props, sess->repos_url.path, "DAV:",
+                       "version-controlled-configuration");
+
+  if (!vcc_url)
+    {
+      abort();
+    }
+
+  /* create and deliver request */
+  request = serf_connection_request_create(sess->conn);
+
+  req_bkt = serf_bucket_request_create("REPORT", vcc_url, report->buckets,
+                                       serf_request_get_alloc(request));
+
+  hdrs_bkt = serf_bucket_request_get_headers(req_bkt);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", sess->repos_url.hostinfo);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "ra_serf");
+  serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
+  /* serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip"); */
+
+  report->xmlp = XML_ParserCreate(NULL);
+  XML_SetUserData(report->xmlp, report);
+  XML_SetElementHandler(report->xmlp, start_report, end_report);
+  XML_SetCharacterDataHandler(report->xmlp, cdata_report);
+
+  serf_request_deliver(request, req_bkt,
+                       accept_response, sess,
+                       handle_report, report);
+
+  while (!report->done)
+    {
+      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
+      if (APR_STATUS_IS_TIMEUP(status))
+        {
+          continue;
+        }
+      if (status)
+        {
+          return svn_error_wrap_apr(status, _("Error retrieving REPORT"));
+        }
+      /* Debugging purposes only! */
+      serf_debug__closed_conn(sess->bkt_alloc);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+abort_report(void *report_baton,
+             apr_pool_t *pool)
+{
+  report_context_t *report = report_baton;
+  abort();
+}
+
+static const svn_ra_reporter2_t ra_serf_reporter = {
+  set_path,
+  delete_path,
+  link_path,
+  finish_report,
+  abort_report
+};
+
+static svn_error_t *
+svn_ra_serf__do_update (svn_ra_session_t *ra_session,
                         const svn_ra_reporter2_t **reporter,
                         void **report_baton,
                         svn_revnum_t revision_to_update_to,
@@ -831,7 +1135,65 @@ svn_ra_serf__do_update (svn_ra_session_t *session,
                         void *update_baton,
                         apr_pool_t *pool)
 {
-  abort();
+  report_context_t *report;
+  serf_session_t *session = ra_session->priv;
+  serf_bucket_t *tmp;
+
+  report = apr_palloc(pool, sizeof(*report));
+  report->sess = ra_session->priv;
+  report->target = update_target;
+  report->target_rev = revision_to_update_to;
+  report->recurse = recurse;
+  report->update_editor = update_editor;
+  report->update_baton = update_baton;
+
+  *reporter = &ra_serf_reporter;
+  *report_baton = report;
+
+  report->buckets = serf_bucket_aggregate_create(report->sess->bkt_alloc);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:update-report xmlns:S=\"",
+                                      sizeof("<S:update-report xmlns:S=\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
+                                      sizeof(SVN_XML_NAMESPACE)-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
+                                      sizeof("\">")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  add_tag_buckets(report->buckets,
+                  "S:src-path", report->sess->repos_url.path,
+                  report->sess->bkt_alloc);
+
+  if (SVN_IS_VALID_REVNUM(revision_to_update_to))
+    {
+      add_tag_buckets(report->buckets,
+                      "S:target-revision",
+                      apr_ltoa(pool, revision_to_update_to),
+                      report->sess->bkt_alloc);
+    }
+
+  if (*update_target)
+    {
+      add_tag_buckets(report->buckets,
+                      "S:update-target", update_target,
+                      report->sess->bkt_alloc);
+    }
+
+  if (!recurse)
+    {
+      add_tag_buckets(report->buckets,
+                      "S:recursive", "no",
+                      report->sess->bkt_alloc);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
