@@ -155,7 +155,7 @@ svn_ra_serf__open (svn_ra_session_t *session,
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
   /* register cleanups */
-  apr_pool_register_cleanup(serf_sess->pool, serf_sess, cleanup_serf_session,
+  apr_pool_cleanup_register(serf_sess->pool, serf_sess, cleanup_serf_session,
                             apr_pool_cleanup_null);
 
   /* fetch the DNS record for this host */
@@ -342,7 +342,7 @@ expand_ns(propfind_context_t *ctx, const char *ns_name)
   ns_t *ns;
   for (ns = ctx->ns_list; ns; ns = ns->next)
     {
-      if (strcasecmp(ns->namespace, ns_name) == 0)
+      if (strcmp(ns->namespace, ns_name) == 0)
         {
           return ns->url;
         }
@@ -377,7 +377,7 @@ start_propfind(void *userData, const char *name, const char **attrs)
     {
       char *stripped_name;
 
-      stripped_name = apr_pstrndup(ctx->pool, name, colon-name);
+      stripped_name = apr_pstrmemdup(ctx->pool, name, colon-name);
       ns = expand_ns(ctx, stripped_name);
       if (!ns)
         {
@@ -396,13 +396,13 @@ start_propfind(void *userData, const char *name, const char **attrs)
       ctx->ns = ns;
       ctx->attr_name = apr_pstrdup(ctx->pool, name);
       /* we want to flag the cdata handler to pick up what's next. */
-      ctx->collect_cdata = 1;
+      ctx->collect_cdata = TRUE;
     }
 
   /* check for 'prop' */
-  if (!ctx->in_prop && strcasecmp(name, "prop") == 0)
+  if (!ctx->in_prop && strcmp(name, "prop") == 0)
     {
-      ctx->in_prop = 1;
+      ctx->in_prop = TRUE;
     }
 }
 
@@ -422,7 +422,7 @@ end_propfind(void *userData, const char *name)
             }
 
           /* However, if our element name is the same, we know we're empty. */
-          if (strcasecmp(ctx->attr_name, name) == 0)
+          if (strcmp(ctx->attr_name, name) == 0)
             {
               name = "";
             }
@@ -439,7 +439,7 @@ end_propfind(void *userData, const char *name)
                ctx->sess->pool);
 
       /* we're done with it. */
-      ctx->collect_cdata = 0;
+      ctx->collect_cdata = FALSE;
       ctx->attr_name = NULL;
       ctx->attr_val = NULL;
     }
@@ -452,7 +452,7 @@ cdata_propfind(void *userData, const char *data, int len)
   propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
-      ctx->attr_val = apr_pstrndup(ctx->pool, data, len);
+      ctx->attr_val = apr_pstrmemdup(ctx->pool, data, len);
     }
 
 }
@@ -528,7 +528,7 @@ handle_propfind (serf_bucket_t *response,
 
           XML_ParserFree(ctx->xmlp);
 
-          ctx->done = 1;
+          ctx->done = TRUE;
           return APR_EOF;
         }
       if (APR_STATUS_IS_EAGAIN(status))
@@ -640,7 +640,7 @@ fetch_props (apr_hash_t **prop_vals,
   prop_ctx->path = url;
   prop_ctx->find_props = props;
   prop_ctx->ret_props = ret_props;
-  prop_ctx->done = 0;
+  prop_ctx->done = FALSE;
   prop_ctx->sess = sess;
 
   prop_ctx->xmlp = XML_ParserCreate(NULL);
@@ -929,7 +929,7 @@ svn_ra_serf__check_path (svn_ra_session_t *ra_session,
       abort();
       *kind = svn_node_none;
     }
-  else if (strcasecmp(res_type, "collection") == 0)
+  else if (strcmp(res_type, "collection") == 0)
     {
       *kind = svn_node_dir;
     }
