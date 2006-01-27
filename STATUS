@@ -103,5 +103,13 @@ Candidate changes:
     Votes:
       +1: brane
 
+  * r18211
+    Make mod_dav_svn log all the errors in a given chain, rather than
+    just the first one.
+    Justification:
+      Improves debuggability of mod_dav_svn issues dramatically
+    Votes:
+      +1 rooneg
+
 Approved changes:
 
