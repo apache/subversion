@@ -839,6 +839,78 @@ svn_ra_serf__get_dir (svn_ra_session_t *session,
   abort();
 }
 
+typedef enum {
+    OPEN_DIR,
+    ADD_FILE,
+    ADD_DIR,
+    PROP,
+    IGNORE_PROP_NAME,
+    NEED_PROP_NAME,
+} report_state_e;
+
+typedef struct report_info_t
+{
+  /* the name of the file. */
+  const char *file_name;
+
+  /* the containing directory. */
+  const char *file_directory;
+
+  /* the canonical url for this path. */
+  const char *file_url;
+
+  /* hashtable that stores all of the properties for this path. */
+  apr_hash_t *file_props;
+
+  /* pool passed to update->add_file, etc. */
+  apr_pool_t *editor_pool;
+
+  /* file_baton received from add_file, etc. */
+  void *editor_baton;
+
+  /* controlling dir baton */
+  void *dir_baton;
+
+  /* controlling file_baton and textdelta handler */
+  void *file_baton;
+  svn_txdelta_window_handler_t textdelta;
+  void *textdelta_baton;
+
+  /* the in-progress property being parsed */
+  const char *prop_ns;
+  const char *prop_name;
+  const char *prop_val;
+  apr_size_t prop_val_len;
+} report_info_t;
+
+typedef struct report_fetch_t {
+  apr_pool_t *pool;
+
+  serf_session_t *sess;
+
+  const svn_delta_editor_t *update_editor;
+  void *update_baton;
+
+  const svn_txdelta_window_handler_t *handler;
+  void *window_baton;
+
+  void *editor_root_baton;
+
+  report_info_t *info;
+
+  svn_boolean_t done;
+
+  struct report_fetch_t *next;
+} report_fetch_t;
+
+typedef struct report_state_list_t {
+  report_state_e state;
+
+  report_info_t *info;
+
+  struct report_state_list_t *prev;
+} report_state_list_t;
+
 typedef struct {
   serf_session_t *sess;
 
@@ -853,6 +925,17 @@ typedef struct {
   serf_bucket_t *buckets;
 
   XML_Parser xmlp;
+  ns_t *ns_list;
+
+  /* our base rev. */
+  svn_revnum_t base_rev;
+
+  /* could allocate this as an array rather than a linked list. */
+  report_state_list_t *state;
+  report_state_list_t *free_state;
+
+  /* pending fetches */
+  report_fetch_t *active_fetches;
 
   svn_boolean_t done;
 
@@ -885,12 +968,349 @@ static void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
   serf_bucket_aggregate_append(agg_bucket, tmp);
 }
 
+static void push_state(report_context_t *ctx, report_state_e state)
+{
+  report_state_list_t *new_state;
+
+  if (!ctx->free_state)
+    {
+      new_state = apr_palloc(ctx->sess->pool, sizeof(*ctx->state));
+    }
+  else
+    {
+      new_state = ctx->free_state;
+      ctx->free_state = ctx->free_state->prev;
+    }
+  new_state->state = state;
+
+  if (state == ADD_FILE)
+    {
+      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*ctx->state->info));
+      new_state->info->file_props = apr_hash_make(ctx->sess->pool);
+      new_state->info->dir_baton = ctx->state->info->dir_baton;
+    }
+  /* if we have state info from our parent, reuse it. */
+  else if (ctx->state && ctx->state->info)
+    {
+      new_state->info = ctx->state->info;
+    }
+  else
+    {
+      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*ctx->state->info));
+      new_state->info->file_props = apr_hash_make(ctx->sess->pool);
+    }
+
+  /* Add it to the state chain. */
+  new_state->prev = ctx->state;
+  ctx->state = new_state;
+}
+
+static void pop_state(report_context_t *ctx)
+{
+  report_state_list_t *free_state;
+  free_state = ctx->state;
+  /* advance the current state */
+  ctx->state = ctx->state->prev;
+  free_state->prev = ctx->free_state;
+  ctx->free_state = free_state;
+  ctx->free_state->info = NULL;
+}
+
+static apr_status_t
+handle_fetch (serf_bucket_t *response,
+              void *handler_baton,
+              apr_pool_t *pool)
+{
+  const char *data;
+  apr_size_t len;
+  serf_status_line sl;
+  apr_status_t status;
+  report_fetch_t *fetch_ctx = handler_baton;
+
+  status = serf_bucket_response_status(response, &sl);
+  if (status)
+    {
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+      abort();
+    }
+
+  while (1)
+    {
+      svn_txdelta_window_t delta_window = { 0 };
+      svn_txdelta_op_t delta_op;
+      svn_string_t window_data;
+
+      status = serf_bucket_read(response, 2048, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return status;
+        }
+
+      /* construct the text delta window. */
+      window_data.data = data;
+      window_data.len = len;
+
+      delta_op.action_code = svn_txdelta_new;
+      delta_op.offset = 0;
+      delta_op.length = len;
+
+      delta_window.tview_len = len;
+      delta_window.num_ops = 1;
+      delta_window.ops = &delta_op;
+      delta_window.new_data = &window_data;
+
+      /* write to the file located in the info. */
+      fetch_ctx->info->textdelta(&delta_window,
+                                 fetch_ctx->info->textdelta_baton);
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          fetch_ctx->info->textdelta(NULL,
+                                     fetch_ctx->info->textdelta_baton);
+
+          fetch_ctx->update_editor->close_file(fetch_ctx->info->file_baton,
+                                               NULL,
+                                               fetch_ctx->sess->pool);
+
+          fetch_ctx->done = TRUE;
+          return APR_EOF;
+        }
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+    }
+  /* not reached */
+
+  abort();
+}
+
+typedef void (*walker_visitor_t)(void *baton,
+                                 const void *ns, apr_ssize_t ns_len,
+                                 const void *name, apr_ssize_t name_len,
+                                 void *val,
+                                 apr_pool_t *pool);
+
+static void walk_all_props(apr_hash_t *props, const char *name,
+                           walker_visitor_t walker,
+                           void *baton,
+                           apr_pool_t *pool)
+{
+  apr_hash_index_t *ns_hi;
+  apr_hash_t *path_props;
+
+  path_props = apr_hash_get(props, name, strlen(name));
+
+  for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
+       ns_hi = apr_hash_next(ns_hi))
+    {
+      void *ns_val;
+      const void *ns_name;
+      apr_ssize_t ns_len;
+      apr_hash_index_t *name_hi;
+      apr_hash_this(ns_hi, &ns_name, &ns_len, &ns_val);
+      for (name_hi = apr_hash_first(pool, ns_val); name_hi;
+           name_hi = apr_hash_next(name_hi))
+        {
+          void *prop_val;
+          const void *prop_name;
+          apr_ssize_t prop_len;
+          apr_hash_index_t *prop_hi;
+
+          apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
+          /* use a subpool? */
+          walker(baton, ns_name, ns_len, prop_name, prop_len, prop_val, pool);
+        }
+    }
+}
+
+static void
+set_file_props(void *baton,
+               const void *ns, apr_ssize_t ns_len,
+               const void *name, apr_ssize_t name_len,
+               void *val,
+               apr_pool_t *pool)
+{
+  report_context_t *ctx = baton;
+  const char *prop_name;
+  svn_string_t *prop_val;
+
+  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prop_name = name;
+  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+  else if (strcmp(name, "version-name") == 0)
+    prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
+  else if (strcmp(name, "creationdate") == 0)
+    prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
+  else if (strcmp(name, "creator-displayname") == 0)
+    prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
+  else if (strcmp(name, "repository-uuid") == 0)
+    prop_name = SVN_PROP_ENTRY_UUID;
+  else
+    {
+      /* do nothing for now? */
+      return;
+    }
+
+  ctx->update_editor->change_file_prop(ctx->state->info->file_baton,
+                                       prop_name, svn_string_create(val, pool),
+                                       pool);
+}
+
+
+static void fetch_file(report_context_t *ctx, report_info_t *info)
+{
+  const char *checked_in_url, *checksum;
+  serf_request_t *request;
+  serf_bucket_t *req_bkt, *hdrs_bkt;
+  report_fetch_t *fetch_ctx;
+  apr_hash_t *props;
+
+  /* go fetch info->file_name from DAV:checked-in */
+  checked_in_url = fetch_prop(info->file_props, info->file_name,
+                         "DAV:", "checked-in");
+
+  if (!checked_in_url)
+    {
+      abort();
+    }
+
+  /* open the file and  */
+  /* FIXME subpool */
+  ctx->update_editor->add_file(info->file_name, info->dir_baton,
+                               NULL, SVN_INVALID_REVNUM, ctx->sess->pool,
+                               &info->file_baton);
+
+  /* set all of the properties that we know about for this path. */
+  walk_all_props(info->file_props, info->file_name, set_file_props,
+                 ctx, ctx->sess->pool);
+
+  ctx->update_editor->apply_textdelta(ctx->state->info->file_baton,
+                                      NULL, ctx->sess->pool,
+                                      &ctx->state->info->textdelta,
+                                      &ctx->state->info->textdelta_baton);
+
+  /* create and deliver request */
+  request = serf_connection_request_create(ctx->sess->conn);
+
+  req_bkt = serf_bucket_request_create("GET", checked_in_url, NULL,
+                                       serf_request_get_alloc(request));
+
+  hdrs_bkt = serf_bucket_request_get_headers(req_bkt);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", ctx->sess->repos_url.hostinfo);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "ra_serf");
+  /* serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip"); */
+
+  /* Create the fetch context. */
+  fetch_ctx = apr_pcalloc(ctx->sess->pool, sizeof(*fetch_ctx));
+  fetch_ctx->pool = ctx->sess->pool;
+  fetch_ctx->info = info;
+  fetch_ctx->done = FALSE;
+  fetch_ctx->sess = ctx->sess;
+  fetch_ctx->update_editor = ctx->update_editor;
+  fetch_ctx->update_baton = ctx->update_baton;
+
+  serf_request_deliver(request, req_bkt,
+                       accept_response, ctx->sess,
+                       handle_fetch, fetch_ctx);
+
+  fetch_ctx->next = ctx->active_fetches;
+  ctx->active_fetches = fetch_ctx;
+}
+
 static void XMLCALL
 start_report(void *userData, const char *name, const char **attrs)
 {
   report_context_t *ctx = userData;
+  dav_props_t prop_name;
 
-  abort();
+  /* check for new namespaces */
+  define_ns(&ctx->ns_list, attrs, ctx->sess->pool);
+
+  /* look up name space if present */
+  prop_name = expand_ns(ctx->ns_list, name, ctx->sess->pool);
+
+  if (!ctx->state && strcmp(prop_name.name, "open-directory") == 0)
+    {
+      const char *rev = NULL;
+      const char **tmp_attrs = attrs;
+
+      while (*tmp_attrs)
+        {
+          if (strcmp(*tmp_attrs, "rev") == 0)
+            {
+              rev = attrs[1];
+            }
+          tmp_attrs += 2;
+        }
+
+      if (!rev)
+        {
+          abort();
+        }
+
+      push_state(ctx, OPEN_DIR);
+
+      ctx->base_rev = apr_atoi64(rev);
+
+      /* FIXME subpool */
+      ctx->update_editor->open_root(ctx->update_baton, ctx->base_rev,
+                                    ctx->sess->pool,
+                                    &ctx->state->info->dir_baton);
+    }
+  else if (ctx->state && ctx->state->state == OPEN_DIR &&
+           strcmp(prop_name.name, "add-file") == 0)
+    {
+      const char *file_name = NULL;
+      const char **tmp_attrs = attrs;
+
+      while (*tmp_attrs)
+        {
+          if (strcmp(*tmp_attrs, "name") == 0)
+            {
+              file_name = attrs[1];
+            }
+          tmp_attrs += 2;
+        }
+
+      if (!file_name)
+        {
+          abort();
+        }
+
+      push_state(ctx, ADD_FILE);
+      ctx->state->info->file_name = apr_pstrdup(ctx->sess->pool, file_name);
+    }
+  else if (ctx->state && ctx->state->state == ADD_FILE)
+    {
+      if (strcmp(prop_name.name, "checked-in") == 0)
+        {
+          ctx->state->info->prop_ns = prop_name.namespace;
+          ctx->state->info->prop_name = prop_name.name;
+          ctx->state->info->prop_val = NULL;
+          push_state(ctx, IGNORE_PROP_NAME);
+        }
+      else if (strcmp(prop_name.name, "prop") == 0)
+        {
+          /* need to fetch it. */
+          push_state(ctx, NEED_PROP_NAME);
+        }
+    }
+  else if (ctx->state && ctx->state->state == IGNORE_PROP_NAME)
+    {
+      push_state(ctx, PROP);
+    }
+  else if (ctx->state && ctx->state->state == NEED_PROP_NAME)
+    {
+      ctx->state->info->prop_ns = prop_name.namespace;
+      ctx->state->info->prop_name = prop_name.name;
+      ctx->state->info->prop_val = NULL;
+      push_state(ctx, PROP);
+    }
 }
 
 static void XMLCALL
@@ -898,15 +1318,68 @@ end_report(void *userData, const char *name)
 {
   report_context_t *ctx = userData;
 
-  abort();
+  if (ctx->state && ctx->state->state == OPEN_DIR &&
+      (strcmp(name, "open-directory") == 0))
+    {
+      pop_state(ctx);
+    }
+  if (ctx->state && ctx->state->state == ADD_FILE)
+    {
+      /* We should have everything we need to fetch the file. */
+      fetch_file(ctx, ctx->state->info);
+      pop_state(ctx);
+    }
+  else if (ctx->state && ctx->state->state == PROP)
+    {
+      set_prop(ctx->state->info->file_props,
+               ctx->state->info->file_name,
+               ctx->state->info->prop_ns, ctx->state->info->prop_name,
+               ctx->state->info->prop_val,
+               ctx->sess->pool);
+      pop_state(ctx);
+    }
+  else if (ctx->state &&
+           (ctx->state->state == IGNORE_PROP_NAME ||
+            ctx->state->state == NEED_PROP_NAME))
+    {
+      pop_state(ctx);
+    }
 }
 
 static void XMLCALL
 cdata_report(void *userData, const char *data, int len)
 {
   report_context_t *ctx = userData;
+  if (ctx->state && ctx->state->state == PROP)
+    {
+      if (ctx->state->info->prop_val)
+        {
+          char *new_prop_val;
 
-  abort();
+          /* append the data we received before. */
+          new_prop_val = apr_palloc(ctx->sess->pool,
+                                    ctx->state->info->prop_val_len+len+1);
+
+          memcpy(new_prop_val,
+                 ctx->state->info->prop_val,
+                 ctx->state->info->prop_val_len);
+
+          memcpy(new_prop_val+ctx->state->info->prop_val_len,
+                 data, len);
+
+          ctx->state->info->prop_val_len += len;
+
+          new_prop_val[ctx->state->info->prop_val_len] = '\0';
+
+          ctx->state->info->prop_val = new_prop_val;
+        }
+      else
+        {
+          ctx->state->info->prop_val = apr_pstrmemdup(ctx->sess->pool,
+                                                      data, len);
+          ctx->state->info->prop_val_len = len;
+        }
+    }
 }
 
 static apr_status_t
@@ -1068,6 +1541,7 @@ finish_report(void *report_baton,
   serf_session_t *sess = report->sess;
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt, *tmp;
+  report_fetch_t *active_fetch, *prev_fetch;
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
@@ -1109,7 +1583,7 @@ finish_report(void *report_baton,
                        accept_response, sess,
                        handle_report, report);
 
-  while (!report->done)
+  while (!report->done || report->active_fetches)
     {
       status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
@@ -1120,6 +1594,30 @@ finish_report(void *report_baton,
         {
           return svn_error_wrap_apr(status, _("Error retrieving REPORT"));
         }
+
+      /* prune our fetches list if they are done. */
+      active_fetch = report->active_fetches;
+      prev_fetch = NULL;
+      while (active_fetch)
+        {
+          if (active_fetch->done == TRUE)
+            {
+              if (prev_fetch)
+                {
+                  prev_fetch->next = active_fetch->next;
+                }
+              else
+                {
+                  report->active_fetches = active_fetch->next;
+                }
+            }
+          else
+            {
+              prev_fetch = active_fetch;
+            }
+          active_fetch = active_fetch->next;
+        }
+
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
     }
@@ -1165,6 +1663,7 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   report->recurse = recurse;
   report->update_editor = update_editor;
   report->update_baton = update_baton;
+  report->active_fetches = NULL;
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;
