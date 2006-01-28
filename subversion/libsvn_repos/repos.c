@@ -1401,7 +1401,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       "### Visit http://subversion.tigris.org/ for more information."
       APR_EOL_STR
       APR_EOL_STR
-      "# [general]"
+      "[general]"
       APR_EOL_STR
       "### These options control access to the repository for unauthenticated"
       APR_EOL_STR
@@ -1464,7 +1464,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       "### The name and password for each user follow, one account per line."
       APR_EOL_STR
       APR_EOL_STR
-      "# [users]"
+      "[users]"
       APR_EOL_STR
       "# harry = harryssecret"
       APR_EOL_STR
@@ -1501,7 +1501,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       "### ('')."
       APR_EOL_STR
       APR_EOL_STR
-      "# [groups]"
+      "[groups]"
       APR_EOL_STR
       "# harry_and_sally = harry,sally"
       APR_EOL_STR
