@@ -61,14 +61,6 @@ Candidate changes:
     Votes:
       +1: brane
 
-  * r18211
-    Make mod_dav_svn log all the errors in a given chain, rather than
-    just the first one.
-    Justification:
-      Improves debuggability of mod_dav_svn issues dramatically
-    Votes:
-      +1 rooneg, dlr
-
   * r18215
     Enable Subversion's build system to use Neon 0.25.5.
     Branch: 1.3.x-r18215
@@ -98,6 +90,14 @@ Candidate changes:
       +1: brane
 
 Approved changes:
+
+  * r18211
+    Make mod_dav_svn log all the errors in a given chain, rather than
+    just the first one.
+    Justification:
+      Improves debuggability of mod_dav_svn issues dramatically
+    Votes:
+      +1 rooneg, dlr, djames
 
   * r18247, r18250
     Uncomment section headers in the default repository config files.
