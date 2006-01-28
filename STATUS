@@ -32,15 +32,6 @@ Candidate changes:
       +1: dlr
       -0: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
 
-  * r17829, r17831
-    Fix issue # 1456: Subversion RedHat RPMs have bad interaction with NFS
-    server/client.  This was easily accomplished by just making a package
-    change to set the -rpath correctly during package building.
-    Justification:
-      Prevents spurious NFS and AUTOMOUNT messages in log files.
-    Votes:
-      +1: david
-
   * r18114
     In mailer.py:
     Fix bug: named substitutions gathered from defaults.for_repos were being
@@ -61,15 +52,6 @@ Candidate changes:
     Votes:
       +1: brane
 
-  * r18215
-    Enable Subversion's build system to use Neon 0.25.5.
-    Branch: 1.3.x-r18215
-    Justification:
-      Distributions, such as DarwinPorts, have Neon 0.25.5 already and
-      won't enable Subversion's WebDAV support without a patch.
-    Votes:
-      +1: blair, djames
-
   * r18230
     Fix a memory leak in the Python bindings which causes Trac resync to use
     massive amounts of memory for large repositories.
@@ -87,7 +69,26 @@ Candidate changes:
     Note:
       r18144 et al. depend on this.
     Votes:
-      +1: brane
+      +1: brane, lundblad
 
 Approved changes:
+
+  * r18215
+    Enable Subversion's build system to use Neon 0.25.5.
+    Branch: 1.3.x-r18215
+    Justification:
+      Distributions, such as DarwinPorts, have Neon 0.25.5 already and
+      won't enable Subversion's WebDAV support without a patch.
+    Votes:
+      +1: blair, djames, lundblad
+
+  * r17829, r17831
+    Fix issue # 1456: Subversion RedHat RPMs have bad interaction with NFS
+    server/client.  This was easily accomplished by just making a package
+    change to set the -rpath correctly during package building.
+    Justification:
+      Prevents spurious NFS and AUTOMOUNT messages in log files.
+    Votes:
+      +1: david
+      +0: lundblad
 
