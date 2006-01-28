@@ -45,6 +45,9 @@ Candidate changes:
     In mailer.py:
     Fix bug: named substitutions gathered from defaults.for_repos were being
     ignored for sections which contained a specific for_repos option.
+    Justification:
+      This can enable extensive simplification of configurations which want
+      to put the repository name into the *_subject_prefix options.
     Votes:
       +1: maxb
 
@@ -56,7 +59,15 @@ Candidate changes:
     Note:
       Depends on r18254.
     Votes:
-      +1 brane
+      +1: brane
+
+  * r18211
+    Make mod_dav_svn log all the errors in a given chain, rather than
+    just the first one.
+    Justification:
+      Improves debuggability of mod_dav_svn issues dramatically
+    Votes:
+      +1 rooneg, dlr
 
   * r18215
     Enable Subversion's build system to use Neon 0.25.5.
@@ -77,16 +88,6 @@ Candidate changes:
     Votes:
       +1: djames
 
-  * r18114
-    mailer.py: Fix bug: named substitutions gathered from defaults.for_repos
-    were being ignored for sections which contained a specific for_repos
-    option.
-    Justification:
-      This can enable extensive simplification of configurations which want
-      to put the repository name into the *_subject_prefix options.
-    Votes:
-      +1: maxb
-
   * r18254
     Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
     Justification:
@@ -95,14 +96,6 @@ Candidate changes:
       r18144 et al. depend on this.
     Votes:
       +1: brane
-
-  * r18211
-    Make mod_dav_svn log all the errors in a given chain, rather than
-    just the first one.
-    Justification:
-      Improves debuggability of mod_dav_svn issues dramatically
-    Votes:
-      +1 rooneg, dlr
 
 Approved changes:
 
