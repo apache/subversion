@@ -91,9 +91,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r18247, r18250
-    Uncomment section headers in the default repository config files.
-    Justification:
-      Avoids confusion.
-    Votes:
-      +1: maxb, malcolm, dlr
