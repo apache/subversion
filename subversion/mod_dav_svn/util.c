@@ -44,7 +44,7 @@ dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
 }
 
 /* Build up a chain of DAV errors that correspond to the underlying SVN
-   errors that caused tihs problem. */
+   errors that caused this problem. */
 static dav_error *build_error_chain(apr_pool_t *pool, svn_error_t *err,
                                     int status)
 {
