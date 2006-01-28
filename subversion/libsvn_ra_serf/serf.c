@@ -542,12 +542,12 @@ handle_propfind (serf_bucket_t *response,
 }
 
 static svn_error_t *
-fetch_props (apr_hash_t **prop_vals,
-             serf_session_t *sess,
-             const char *url,
-             const char *depth,
-             const dav_props_t *props,
-             apr_pool_t *pool)
+retrieve_props (apr_hash_t **prop_vals,
+                serf_session_t *sess,
+                const char *url,
+                const char *depth,
+                const dav_props_t *props,
+                apr_pool_t *pool)
 {
   const dav_props_t *prop;
   apr_hash_t *ret_props;
@@ -703,8 +703,8 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   serf_session_t *session = ra_session->priv;
   const char *vcc_url, *baseline_url, *version_name;
 
-  SVN_ERR(fetch_props(&props, session, session->repos_url.path, "0",
-                      base_props, pool));
+  SVN_ERR(retrieve_props(&props, session, session->repos_url.path, "0",
+                         base_props, pool));
 
   vcc_url = fetch_prop(props, session->repos_url.path, "DAV:",
                        "version-controlled-configuration");
@@ -715,7 +715,8 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
     }
 
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
-  SVN_ERR(fetch_props(&props, session, vcc_url, "0", checked_in_props, pool));
+  SVN_ERR(retrieve_props(&props, session, vcc_url, "0", checked_in_props,
+                         pool));
 
   baseline_url = fetch_prop(props, vcc_url,
                             "DAV:", "checked-in");
@@ -728,8 +729,8 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   /* Using the checked-in property, fetch:
    *    baseline-connection *and* version-name
    */
-  SVN_ERR(fetch_props(&props, session, baseline_url, "0",
-                      baseline_props, pool));
+  SVN_ERR(retrieve_props(&props, session, baseline_url, "0",
+                         baseline_props, pool));
 
   version_name = fetch_prop(props, baseline_url, "DAV:", "version-name");
 
@@ -1058,8 +1059,8 @@ finish_report(void *report_baton,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  SVN_ERR(fetch_props(&props, sess, sess->repos_url.path, "0",
-                      vcc_props, pool));
+  SVN_ERR(retrieve_props(&props, sess, sess->repos_url.path, "0",
+                         vcc_props, pool));
 
   vcc_url = fetch_prop(props, sess->repos_url.path, "DAV:",
                        "version-controlled-configuration");
@@ -1282,7 +1283,7 @@ svn_ra_serf__check_path (svn_ra_session_t *ra_session,
       path = svn_path_url_add_component(path, rel_path, pool);
     }
 
-  SVN_ERR(fetch_props(&props, session, path, "0", check_path_props, pool));
+  SVN_ERR(retrieve_props(&props, session, path, "0", check_path_props, pool));
   res_type = fetch_prop(props, path, "DAV:", "resourcetype");
 
   if (!res_type)
@@ -1327,8 +1328,8 @@ svn_ra_serf__get_uuid (svn_ra_session_t *ra_session,
   serf_session_t *session = ra_session->priv;
   apr_hash_t *props;
 
-  SVN_ERR(fetch_props(&props, session, session->repos_url.path, "0",
-                      uuid_props, pool));
+  SVN_ERR(retrieve_props(&props, session, session->repos_url.path, "0",
+                         uuid_props, pool));
   *uuid = fetch_prop(props, session->repos_url.path,
                      SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
@@ -1359,8 +1360,8 @@ svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
       svn_stringbuf_t *url_buf;
       apr_hash_t *props;
 
-      SVN_ERR(fetch_props(&props, session, session->repos_url.path, "0",
-                          repos_root_props, pool));
+      SVN_ERR(retrieve_props(&props, session, session->repos_url.path, "0",
+                             repos_root_props, pool));
       baseline_url = fetch_prop(props, session->repos_url.path,
                                 SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
 
