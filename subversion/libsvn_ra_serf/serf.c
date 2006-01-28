@@ -323,84 +323,101 @@ typedef struct {
   svn_boolean_t done;
 } propfind_context_t;
 
-
+/**
+ * Look up the ATTRS array for namespace definitions and add each one
+ * to the NS_LIST of namespaces.
+ *
+ * Temporary allocations are made in POOL.
+ */
 static void
-define_ns(propfind_context_t *ctx, const char *ns, const char *val)
+define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
 {
-  ns_t *new_ns;
+  const char **tmp_attrs = attrs;
 
-  new_ns = apr_palloc(ctx->pool, sizeof(*new_ns));
-  new_ns->namespace = ns;
-  new_ns->url = apr_pstrdup(ctx->pool, val);
-  new_ns->next = ctx->ns_list;
-  ctx->ns_list = new_ns;
+  while (*tmp_attrs)
+    {
+      if (strncmp(*tmp_attrs, "xmlns", 5) == 0)
+        {
+          const char *attr, *attr_val;
+          ns_t *new_ns;
+
+          new_ns = apr_palloc(pool, sizeof(*new_ns));
+
+          new_ns->namespace = apr_pstrdup(pool, tmp_attrs[0]+6);
+          new_ns->url = apr_pstrdup(pool, tmp_attrs[1]);
+
+          new_ns->next = *ns_list;
+
+          *ns_list = new_ns;
+        }
+      tmp_attrs += 2;
+    }
 }
 
-static const char *
-expand_ns(propfind_context_t *ctx, const char *ns_name)
+/**
+ * Look up NAME in the NS_LIST list for previously declared namespace
+ * definitions and return a DAV_PROPS_T-tuple that has values that
+ * has a lifetime tied to POOL.
+ */
+static dav_props_t
+expand_ns(ns_t *ns_list, const char *name, apr_pool_t *pool)
 {
-  ns_t *ns;
-  for (ns = ctx->ns_list; ns; ns = ns->next)
+  char *colon;
+  dav_props_t prop_name;
+
+  colon = strchr(name, ':');
+  if (colon)
     {
-      if (strcmp(ns->namespace, ns_name) == 0)
+      char *stripped_name;
+      ns_t *ns;
+
+      stripped_name = apr_pstrmemdup(pool, name, colon-name);
+      for (ns = ns_list; ns; ns = ns->next)
         {
-          return ns->url;
+          if (strcmp(ns->namespace, stripped_name) == 0)
+            {
+              prop_name.namespace = ns->url;
+            }
         }
+      if (!prop_name.namespace)
+        {
+          abort();
+        }
+
+      prop_name.name = apr_pstrdup(pool, colon + 1);
+    }
+  else
+    {
+      /* use default namespace for now */
+      prop_name.namespace = "";
+      prop_name.name = apr_pstrdup(pool, name);
     }
 
-  return NULL;
+  return prop_name;
 }
 
 static void XMLCALL
 start_propfind(void *userData, const char *name, const char **attrs)
 {
   propfind_context_t *ctx = userData;
-  const char *ns;
-  char *colon;
+  dav_props_t prop_name;
 
   /* check for new namespaces */
-  while (*attrs)
-    {
-      if (strncmp(*attrs, "xmlns", 5) == 0)
-        {
-          const char *attr, *attr_val;
-          attr = attrs[0] + 6;
-          attr_val = attrs[1];
-          define_ns(ctx, attr, attr_val);
-        }
-      attrs += 2;
-    }
+  define_ns(&ctx->ns_list, attrs, ctx->pool);
 
   /* look up name space if present */
-  colon = strchr(name, ':');
-  if (colon)
-    {
-      char *stripped_name;
-
-      stripped_name = apr_pstrmemdup(ctx->pool, name, colon-name);
-      ns = expand_ns(ctx, stripped_name);
-      if (!ns)
-        {
-          abort();
-        }
-      name = colon + 1;
-    }
-  else
-    {
-      /* use default namespace for now */
-      ns = "";
-    }
+  prop_name = expand_ns(ctx->ns_list, name, ctx->pool);
 
   if (ctx->in_prop && !ctx->attr_name)
     {
-      ctx->ns = ns;
-      ctx->attr_name = apr_pstrdup(ctx->pool, name);
+      ctx->ns = prop_name.namespace;
+      ctx->attr_name = prop_name.name;
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = TRUE;
     }
 
   /* check for 'prop' */
-  if (!ctx->in_prop && strcmp(name, "prop") == 0)
+  if (!ctx->in_prop && strcmp(prop_name.name, "prop") == 0)
     {
       ctx->in_prop = TRUE;
     }
@@ -452,6 +469,7 @@ cdata_propfind(void *userData, const char *data, int len)
   propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
+      /* FIXME append instead of setting. */
       ctx->attr_val = apr_pstrmemdup(ctx->pool, data, len);
     }
 
