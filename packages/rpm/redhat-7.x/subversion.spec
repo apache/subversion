@@ -29,6 +29,7 @@ BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: autoconf253 >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -105,6 +106,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
+  NFS server/client.
+
 * Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16236
 - Update do swig-1.3.25.  This makes it so that only the packager/developer
   needs to install the swig package.
@@ -520,6 +525,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
+
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/local/apache2/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/local/apache2/modules/mod_dav_svn.so
 
 %post server
 # Load subversion server into apache configuration.
