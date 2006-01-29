@@ -73,15 +73,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18215
-    Enable Subversion's build system to use Neon 0.25.5.
-    Branch: 1.3.x-r18215
-    Justification:
-      Distributions, such as DarwinPorts, have Neon 0.25.5 already and
-      won't enable Subversion's WebDAV support without a patch.
-    Votes:
-      +1: blair, djames, lundblad
-
   * r17829, r17831
     Fix issue # 1456: Subversion RedHat RPMs have bad interaction with NFS
     server/client.  This was easily accomplished by just making a package
