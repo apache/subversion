@@ -27,6 +27,7 @@ Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.2.52
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel >= 4.2.52
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -103,6 +104,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
+  NFS server/client.
+
 * Wed Aug 31 2005 David Summers <david@summersoft.fay.ar.us> r16011
 - Update to SWIG 1.3.25.  This makes it so that only the developer/packager
   needs the SWIG package installed.
@@ -519,6 +524,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
+
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
 
 %post -n mod_dav_svn
 # Restart apache server if needed.
