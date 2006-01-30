@@ -29,7 +29,7 @@ Candidate changes:
       especially important given the heavy amount of modification
       which was necessary when backporting the change from trunk.
     Votes:
-      +1: dlr
+      +0: dlr
       -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
 
   * r18114
