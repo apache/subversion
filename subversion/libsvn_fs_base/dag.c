@@ -547,7 +547,7 @@ svn_fs_base__dag_set_entry (dag_node_t *node,
   /* Check it's mutable. */
   if (! svn_fs_base__dag_check_mutable (node, txn_id))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        _("Attempted to set entry in immutable node"));
 
   return set_entry (node, entry_name, id, txn_id, trail, pool);
