@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -811,6 +811,29 @@ def status_in_xml(sbox):
 
 #----------------------------------------------------------------------  
 
+def status_ignored_dir(sbox):
+  "status on ignored directory"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  new_dir = os.path.join(wc_dir, "dir.o")
+  new_dir_url = svntest.main.current_repo_url + "/dir.o"
+
+  svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
+                                     'mkdir', new_dir_url, '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd)
+
+  # Make a dir that is ignored by the default ignore patterns.
+  os.mkdir(new_dir)
+
+  # run_and_verify_status doesn't handle this weird kind of entry.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['I      *            ' + new_dir + "\n",
+                                      'Status against revision:      2\n'], [],
+                                     "status", "-u", wc_dir)
+
+#----------------------------------------------------------------------  
+
 
 ########################################################################
 # Run the tests
@@ -835,6 +858,7 @@ test_list = [ None,
               status_on_partially_nonrecursive_wc,
               missing_dir_in_anchor,
               status_in_xml,
+              status_ignored_dir,
              ]
 
 if __name__ == '__main__':
