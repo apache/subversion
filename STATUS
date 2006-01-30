@@ -30,7 +30,7 @@ Candidate changes:
       which was necessary when backporting the change from trunk.
     Votes:
       +1: dlr
-      -0: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
+      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
 
   * r18114
     In mailer.py:
