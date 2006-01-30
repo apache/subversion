@@ -3854,7 +3854,7 @@ examine_copy_inheritance (const char **copy_id,
   if (parent_path->copy_inherit == copy_id_inherit_self)
     {
       /* A copy ID of "0" means we've never been branched.  Therefore,
-         therefore there are no copies relevant to our history. */
+         there are no copies relevant to our history. */
       if (((*copy_id)[0] == '0') && ((*copy_id)[1] == '\0'))
         return SVN_NO_ERROR;
 
