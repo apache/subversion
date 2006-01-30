@@ -62,15 +62,6 @@ Candidate changes:
     Votes:
       +1: djames
 
-  * r18254
-    Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
-    Justification:
-      Avoids precedence bugs when used in boolean expressions.
-    Note:
-      r18144 et al. depend on this.
-    Votes:
-      +1: brane, lundblad
-
   * r18291
     Avoid crash for ignored directory that's in the repo for svn st -u.
     Justification: Crash, bad!  Simple fix.
@@ -80,4 +71,13 @@ Candidate changes:
       +1: lundblad
 
 Approved changes:
+
+  * r18254
+    Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
+    Justification:
+      Avoids precedence bugs when used in boolean expressions.
+    Note:
+      r18144 et al. depend on this.
+    Votes:
+      +1: brane, lundblad, malcolm
 
