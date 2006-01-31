@@ -937,6 +937,11 @@ typedef struct {
   /* pending fetches */
   report_fetch_t *active_fetches;
 
+  /* open directory baton
+   * FIXME make me a linked list
+   */
+  void *dir_baton;
+
   svn_boolean_t done;
 
 } report_context_t;
@@ -1050,21 +1055,24 @@ handle_fetch (serf_bucket_t *response,
         }
 
       /* construct the text delta window. */
-      window_data.data = data;
-      window_data.len = len;
+      if (len)
+        {
+          window_data.data = data;
+          window_data.len = len;
 
-      delta_op.action_code = svn_txdelta_new;
-      delta_op.offset = 0;
-      delta_op.length = len;
+          delta_op.action_code = svn_txdelta_new;
+          delta_op.offset = 0;
+          delta_op.length = len;
 
-      delta_window.tview_len = len;
-      delta_window.num_ops = 1;
-      delta_window.ops = &delta_op;
-      delta_window.new_data = &window_data;
+          delta_window.tview_len = len;
+          delta_window.num_ops = 1;
+          delta_window.ops = &delta_op;
+          delta_window.new_data = &window_data;
 
-      /* write to the file located in the info. */
-      fetch_ctx->info->textdelta(&delta_window,
-                                 fetch_ctx->info->textdelta_baton);
+          /* write to the file located in the info. */
+          fetch_ctx->info->textdelta(&delta_window,
+                                     fetch_ctx->info->textdelta_baton);
+        }
 
       if (APR_STATUS_IS_EOF(status))
         {
@@ -1261,6 +1269,7 @@ start_report(void *userData, const char *name, const char **attrs)
       ctx->update_editor->open_root(ctx->update_baton, ctx->base_rev,
                                     ctx->sess->pool,
                                     &ctx->state->info->dir_baton);
+      ctx->dir_baton = ctx->state->info->dir_baton;
     }
   else if (ctx->state && ctx->state->state == OPEN_DIR &&
            strcmp(prop_name.name, "add-file") == 0)
@@ -1621,6 +1630,15 @@ finish_report(void *report_baton,
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
     }
+
+  /* FIXME subpool */
+  if (report->dir_baton)
+    {
+      SVN_ERR(report->update_editor->close_directory(report->dir_baton,
+                                                     sess->pool));
+    }
+  SVN_ERR(report->update_editor->close_edit(report->update_baton,
+                                            sess->pool));
 
   return SVN_NO_ERROR;
 }
