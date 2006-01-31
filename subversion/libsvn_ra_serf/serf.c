@@ -396,6 +396,24 @@ expand_ns(ns_t *ns_list, const char *name, apr_pool_t *pool)
   return prop_name;
 }
 
+static const char *
+find_attr(const char **attrs, const char *attr_name)
+{
+  const char *attr_val = NULL;
+  const char **tmp_attrs = attrs;
+
+  while (*tmp_attrs)
+    {
+      if (strcmp(*tmp_attrs, attr_name) == 0)
+        {
+          attr_val = attrs[1];
+        }
+      tmp_attrs += 2;
+    }
+
+  return attr_val;
+}
+
 static void XMLCALL
 start_propfind(void *userData, const char *name, const char **attrs)
 {
@@ -839,6 +857,9 @@ svn_ra_serf__get_dir (svn_ra_session_t *session,
   abort();
 }
 
+/**
+ * This enum represents the current state of our XML parsing for a REPORT.
+ */
 typedef enum {
     OPEN_DIR,
     ADD_FILE,
@@ -848,13 +869,50 @@ typedef enum {
     NEED_PROP_NAME,
 } report_state_e;
 
+/**
+ * This structure represents the information for a directory.
+ */
+typedef struct report_dir_t
+{
+  /* The enclosing parent.
+   *
+   * This value is NULL when we are the root.
+   */
+  struct report_dir_t *parent_dir;
+
+  /* the containing directory name */
+  const char *name;
+
+  /* temporary path buffer for this directory. */
+  svn_stringbuf_t *name_buf;
+
+  /* controlling dir baton */
+  void *dir_baton;
+
+  /* How many references to this directory do we still have open? */
+  apr_size_t ref_count;
+
+  /* The next directory we have open. */
+  struct report_dir_t *next;
+} report_dir_t;
+
+/**
+ * This structure represents the information for a file.
+ *
+ * This structure is created as we parse the REPORT response and
+ * once the element is completed, we create a report_fetch_t structure
+ * to give to serf to retrieve this file.
+ */
 typedef struct report_info_t
 {
+  /* The enclosing directory. */
+  report_dir_t *dir;
+
   /* the name of the file. */
   const char *file_name;
 
-  /* the containing directory. */
-  const char *file_directory;
+  /* file name buffer */
+  svn_stringbuf_t *file_name_buf;
 
   /* the canonical url for this path. */
   const char *file_url;
@@ -864,12 +922,6 @@ typedef struct report_info_t
 
   /* pool passed to update->add_file, etc. */
   apr_pool_t *editor_pool;
-
-  /* file_baton received from add_file, etc. */
-  void *editor_baton;
-
-  /* controlling dir baton */
-  void *dir_baton;
 
   /* controlling file_baton and textdelta handler */
   void *file_baton;
@@ -883,31 +935,39 @@ typedef struct report_info_t
   apr_size_t prop_val_len;
 } report_info_t;
 
+/**
+ * This file structure represents a single file to fetch with its
+ * associated Serf session.
+ */
 typedef struct report_fetch_t {
+  /* Our pool. */
   apr_pool_t *pool;
 
+  /* The session we should use to fetch the file. */
   serf_session_t *sess;
 
+  /* Stores the information for the file we want to fetch. */
+  report_info_t *info;
+
+  /* Our update editor and baton. */
   const svn_delta_editor_t *update_editor;
   void *update_baton;
 
-  const svn_txdelta_window_handler_t *handler;
-  void *window_baton;
-
-  void *editor_root_baton;
-
-  report_info_t *info;
-
+  /* Are we done fetching this file? */
   svn_boolean_t done;
 
+  /* The next fetch we have open. */
   struct report_fetch_t *next;
 } report_fetch_t;
 
 typedef struct report_state_list_t {
+   /* The current state that we are in now. */
   report_state_e state;
 
+  /* Information */
   report_info_t *info;
 
+  /* The previous state we were in. */
   struct report_state_list_t *prev;
 } report_state_list_t;
 
@@ -937,10 +997,11 @@ typedef struct {
   /* pending fetches */
   report_fetch_t *active_fetches;
 
-  /* open directory baton
-   * FIXME make me a linked list
-   */
-  void *dir_baton;
+  /* potentially pending dir baton closes */
+  report_dir_t *pending_dir_close;
+
+  /* free list of info structures */
+  report_info_t *free_info;
 
   svn_boolean_t done;
 
@@ -988,11 +1049,33 @@ static void push_state(report_context_t *ctx, report_state_e state)
     }
   new_state->state = state;
 
-  if (state == ADD_FILE)
+  if (state == OPEN_DIR)
     {
-      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*ctx->state->info));
+      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*new_state->info));
       new_state->info->file_props = apr_hash_make(ctx->sess->pool);
-      new_state->info->dir_baton = ctx->state->info->dir_baton;
+      /* Create our root state now. */
+      new_state->info->dir = apr_palloc(ctx->sess->pool,
+                                        sizeof(*new_state->info->dir));
+      new_state->info->dir->parent_dir = NULL;
+      new_state->info->dir->ref_count = 0;
+    }
+  else if (state == ADD_DIR)
+    {
+      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*new_state->info));
+      new_state->info->file_props = ctx->state->info->file_props;
+      new_state->info->dir =
+          apr_palloc(ctx->sess->pool, sizeof(*new_state->info->dir));
+      new_state->info->dir->parent_dir = ctx->state->info->dir;
+      new_state->info->dir->parent_dir->ref_count++;
+      new_state->info->dir->ref_count = 0;
+    }
+  else if (state == ADD_FILE)
+    {
+      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*new_state->info));
+      new_state->info->file_props = ctx->state->info->file_props;
+      /* Point at our parent's directory state. */
+      new_state->info->dir = ctx->state->info->dir;
+      new_state->info->dir->ref_count++;
     }
   /* if we have state info from our parent, reuse it. */
   else if (ctx->state && ctx->state->info)
@@ -1001,8 +1084,7 @@ static void push_state(report_context_t *ctx, report_state_e state)
     }
   else
     {
-      new_state->info = apr_palloc(ctx->sess->pool, sizeof(*ctx->state->info));
-      new_state->info->file_props = apr_hash_make(ctx->sess->pool);
+      abort();
     }
 
   /* Add it to the state chain. */
@@ -1189,7 +1271,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   /* open the file and  */
   /* FIXME subpool */
-  ctx->update_editor->add_file(info->file_name, info->dir_baton,
+  ctx->update_editor->add_file(info->file_name, info->dir->dir_baton,
                                NULL, SVN_INVALID_REVNUM, ctx->sess->pool,
                                &info->file_baton);
 
@@ -1197,10 +1279,10 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   walk_all_props(info->file_props, info->file_name, set_file_props,
                  ctx, ctx->sess->pool);
 
-  ctx->update_editor->apply_textdelta(ctx->state->info->file_baton,
+  ctx->update_editor->apply_textdelta(info->file_baton,
                                       NULL, ctx->sess->pool,
-                                      &ctx->state->info->textdelta,
-                                      &ctx->state->info->textdelta_baton);
+                                      &info->textdelta,
+                                      &info->textdelta_baton);
 
   /* create and deliver request */
   request = serf_connection_request_create(ctx->sess->conn);
@@ -1245,16 +1327,8 @@ start_report(void *userData, const char *name, const char **attrs)
   if (!ctx->state && strcmp(prop_name.name, "open-directory") == 0)
     {
       const char *rev = NULL;
-      const char **tmp_attrs = attrs;
 
-      while (*tmp_attrs)
-        {
-          if (strcmp(*tmp_attrs, "rev") == 0)
-            {
-              rev = attrs[1];
-            }
-          tmp_attrs += 2;
-        }
+      rev = find_attr(attrs, "rev");
 
       if (!rev)
         {
@@ -1268,23 +1342,44 @@ start_report(void *userData, const char *name, const char **attrs)
       /* FIXME subpool */
       ctx->update_editor->open_root(ctx->update_baton, ctx->base_rev,
                                     ctx->sess->pool,
-                                    &ctx->state->info->dir_baton);
-      ctx->dir_baton = ctx->state->info->dir_baton;
+                                    &ctx->state->info->dir->dir_baton);
+      ctx->state->info->dir->name_buf = svn_stringbuf_create("",
+                                                             ctx->sess->pool);
+      ctx->state->info->file_name = "";
     }
-  else if (ctx->state && ctx->state->state == OPEN_DIR &&
+  else if (ctx->state && 
+           (ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
+           strcmp(prop_name.name, "add-directory") == 0)
+    {
+      const char *dir_name = NULL;
+      report_dir_t *dir_info;
+
+      dir_name = find_attr(attrs, "name");
+
+      push_state(ctx, ADD_DIR);
+
+      dir_info = ctx->state->info->dir;
+
+      dir_info->name_buf = svn_stringbuf_dup(dir_info->parent_dir->name_buf,
+                                             ctx->sess->pool);
+      svn_path_add_component(dir_info->name_buf, dir_name);
+      dir_info->name = dir_info->name_buf->data;
+      ctx->state->info->file_name = dir_info->name_buf->data;
+
+      ctx->update_editor->add_directory(dir_info->name_buf->data,
+                                        dir_info->parent_dir->dir_baton,
+                                        NULL, SVN_INVALID_REVNUM,
+                                        ctx->sess->pool,
+                                        &dir_info->dir_baton);
+    }
+  else if (ctx->state &&
+           (ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "add-file") == 0)
     {
       const char *file_name = NULL;
-      const char **tmp_attrs = attrs;
+      report_info_t *info;
 
-      while (*tmp_attrs)
-        {
-          if (strcmp(*tmp_attrs, "name") == 0)
-            {
-              file_name = attrs[1];
-            }
-          tmp_attrs += 2;
-        }
+      file_name = find_attr(attrs, "name");
 
       if (!file_name)
         {
@@ -1292,7 +1387,13 @@ start_report(void *userData, const char *name, const char **attrs)
         }
 
       push_state(ctx, ADD_FILE);
-      ctx->state->info->file_name = apr_pstrdup(ctx->sess->pool, file_name);
+
+      info = ctx->state->info;
+
+      info->file_name_buf = svn_stringbuf_dup(info->dir->name_buf,
+                                              ctx->sess->pool);
+      svn_path_add_component(info->file_name_buf, file_name);
+      info->file_name = info->file_name_buf->data;
     }
   else if (ctx->state && ctx->state->state == ADD_FILE)
     {
@@ -1309,6 +1410,30 @@ start_report(void *userData, const char *name, const char **attrs)
           push_state(ctx, NEED_PROP_NAME);
         }
     }
+  else if (ctx->state && ctx->state->state == ADD_DIR)
+    {
+      if (strcmp(prop_name.name, "checked-in") == 0)
+        {
+          ctx->state->info->prop_ns = prop_name.namespace;
+          ctx->state->info->prop_name = prop_name.name;
+          ctx->state->info->prop_val = NULL;
+          push_state(ctx, IGNORE_PROP_NAME);
+        }
+      else if (strcmp(prop_name.name, "set-prop") == 0)
+        {
+          const char *full_prop_name;
+          dav_props_t new_prop_name;
+
+          full_prop_name = find_attr(attrs, "name");
+          new_prop_name = expand_ns(ctx->ns_list, full_prop_name,
+                                    ctx->sess->pool);
+
+          ctx->state->info->prop_ns = new_prop_name.namespace;
+          ctx->state->info->prop_name = new_prop_name.name;
+          ctx->state->info->prop_val = NULL;
+          push_state(ctx, PROP);
+        }
+    }
   else if (ctx->state && ctx->state->state == IGNORE_PROP_NAME)
     {
       push_state(ctx, PROP);
@@ -1323,16 +1448,24 @@ start_report(void *userData, const char *name, const char **attrs)
 }
 
 static void XMLCALL
-end_report(void *userData, const char *name)
+end_report(void *userData, const char *raw_name)
 {
   report_context_t *ctx = userData;
+  dav_props_t name;
+
+  name = expand_ns(ctx->ns_list, raw_name, ctx->sess->pool);
 
   if (ctx->state && ctx->state->state == OPEN_DIR &&
-      (strcmp(name, "open-directory") == 0))
+      (strcmp(name.name, "open-directory") == 0))
     {
       pop_state(ctx);
     }
-  if (ctx->state && ctx->state->state == ADD_FILE)
+  else if (ctx->state && ctx->state->state == ADD_DIR &&
+           (strcmp(name.name, "add-directory") == 0))
+    {
+      pop_state(ctx);
+    }
+  else if (ctx->state && ctx->state->state == ADD_FILE)
     {
       /* We should have everything we need to fetch the file. */
       fetch_file(ctx, ctx->state->info);
@@ -1611,6 +1744,34 @@ finish_report(void *report_baton,
         {
           if (active_fetch->done == TRUE)
             {
+              report_dir_t *parent_dir = active_fetch->info->dir;
+
+              /* walk up and decrease our directory refcount. */
+              do
+                {
+                  parent_dir->ref_count--;
+
+                  if (parent_dir->ref_count)
+                     break;
+
+                  /* The easy path here is that we've finished the report. */
+                  if (report->done == TRUE)
+                    {
+                      SVN_ERR(report->update_editor->close_directory(
+                                                     parent_dir->dir_baton,
+                                                     sess->pool));
+                    }
+                  else if (!parent_dir->next)
+                    {
+                      parent_dir->next = report->pending_dir_close;
+                      report->pending_dir_close = parent_dir;
+                    }
+
+                  parent_dir = parent_dir->parent_dir;
+                }
+              while (parent_dir);
+
+              /* Remove us from the list. */
               if (prev_fetch)
                 {
                   prev_fetch->next = active_fetch->next;
@@ -1627,18 +1788,27 @@ finish_report(void *report_baton,
           active_fetch = active_fetch->next;
         }
 
+      if (report->done == TRUE)
+        {
+          report_dir_t *dir = report->pending_dir_close;
+
+          while (dir)
+            {
+              if (!dir->ref_count)
+                {
+                  SVN_ERR(report->update_editor->close_directory
+                          (dir->dir_baton, sess->pool));
+                }
+
+              dir = dir->next;
+            }
+        }
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
     }
 
   /* FIXME subpool */
-  if (report->dir_baton)
-    {
-      SVN_ERR(report->update_editor->close_directory(report->dir_baton,
-                                                     sess->pool));
-    }
-  SVN_ERR(report->update_editor->close_edit(report->update_baton,
-                                            sess->pool));
+  SVN_ERR(report->update_editor->close_edit(report->update_baton, sess->pool));
 
   return SVN_NO_ERROR;
 }
