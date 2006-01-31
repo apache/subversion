@@ -517,21 +517,21 @@ typedef struct svn_stream_t svn_stream_t;
 
 
 
-/** Read handler function for a generic stream.  */
+/** Read handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_read_fn_t) (void *baton,
                                        char *buffer,
                                        apr_size_t *len);
 
-/** Write handler function for a generic stream.  */
+/** Write handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_write_fn_t) (void *baton,
                                         const char *data,
                                         apr_size_t *len);
 
-/** Close handler function for a generic stream.  */
+/** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 
 
-/** Creating a generic stream.  */
+/** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
 
 /** Set @a stream's baton to @a baton */
@@ -547,10 +547,10 @@ void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);
 void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 
 
-/** Convenience function to create a generic stream which is empty.  */
+/** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *svn_stream_empty (apr_pool_t *pool);
 
-/** Returns a stream allocated in @a pool which forwards all requests
+/** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
  *
  * @see notes/destruction-of-stacked-resources
@@ -559,14 +559,12 @@ svn_stream_t *svn_stream_empty (apr_pool_t *pool);
  */
 svn_stream_t *svn_stream_disown (svn_stream_t *stream, apr_pool_t *pool);
 
-/** Create a stream which operates on APR * files.
- * For convenience, if @a file is NULL then svn_stream_empty(pool)
- * is returned.
+/** Create a stream that operates on an APR file.
+ * For convenience, if @a file is NULL then return svn_stream_empty(pool).
  *
  * @note The stream returned is not considered to "own" the underlying
  *       file, meaning that svn_stream_close() on the stream will not
  *       close the file.
- *
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
@@ -630,15 +628,15 @@ svn_stream_t * svn_stream_checksummed (svn_stream_t *stream,
                                        unsigned char **write_digest,
                                        apr_pool_t *pool);
 
-/** Read from a generic stream. */
+/** Read from a generic stream. @see svn_stream_t. */
 svn_error_t *svn_stream_read (svn_stream_t *stream, char *buffer,
                               apr_size_t *len);
 
-/** Write to a generic stream. */
+/** Write to a generic stream. @see svn_stream_t. */
 svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
                                apr_size_t *len);
 
-/** Close a generic stream. */
+/** Close a generic stream. @see svn_stream_t. */
 svn_error_t *svn_stream_close (svn_stream_t *stream);
 
 
