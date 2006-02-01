@@ -1100,8 +1100,11 @@ typedef struct {
   report_state_list_t *state;
   report_state_list_t *free_state;
 
-  /* pending fetches */
+  /* pending GET requests */
   report_fetch_t *active_fetches;
+
+  /* pending PROPFIND requests */
+  propfind_context_t *active_propfinds;
 
   /* potentially pending dir baton closes */
   report_dir_t *pending_dir_close;
@@ -1209,6 +1212,80 @@ static void pop_state(report_context_t *ctx)
   ctx->free_state->info = NULL;
 }
 
+typedef void (*walker_visitor_t)(void *baton,
+                                 const void *ns, apr_ssize_t ns_len,
+                                 const void *name, apr_ssize_t name_len,
+                                 void *val,
+                                 apr_pool_t *pool);
+
+static void walk_all_props(apr_hash_t *props, const char *name,
+                           walker_visitor_t walker,
+                           void *baton,
+                           apr_pool_t *pool)
+{
+  apr_hash_index_t *ns_hi;
+  apr_hash_t *path_props;
+
+  path_props = apr_hash_get(props, name, strlen(name));
+
+  for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
+       ns_hi = apr_hash_next(ns_hi))
+    {
+      void *ns_val;
+      const void *ns_name;
+      apr_ssize_t ns_len;
+      apr_hash_index_t *name_hi;
+      apr_hash_this(ns_hi, &ns_name, &ns_len, &ns_val);
+      for (name_hi = apr_hash_first(pool, ns_val); name_hi;
+           name_hi = apr_hash_next(name_hi))
+        {
+          void *prop_val;
+          const void *prop_name;
+          apr_ssize_t prop_len;
+          apr_hash_index_t *prop_hi;
+
+          apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
+          /* use a subpool? */
+          walker(baton, ns_name, ns_len, prop_name, prop_len, prop_val, pool);
+        }
+    }
+}
+
+static void
+set_file_props(void *baton,
+               const void *ns, apr_ssize_t ns_len,
+               const void *name, apr_ssize_t name_len,
+               void *val,
+               apr_pool_t *pool)
+{
+  report_fetch_t *fetch = baton;
+  const char *prop_name;
+  svn_string_t *prop_val;
+
+  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prop_name = name;
+  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+  else if (strcmp(name, "version-name") == 0)
+    prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
+  else if (strcmp(name, "creationdate") == 0)
+    prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
+  else if (strcmp(name, "creator-displayname") == 0)
+    prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
+  else if (strcmp(name, "repository-uuid") == 0)
+    prop_name = SVN_PROP_ENTRY_UUID;
+  else
+    {
+      /* do nothing for now? */
+      return;
+    }
+
+  fetch->update_editor->change_file_prop(fetch->info->file_baton,
+                                         prop_name,
+                                         svn_string_create(val, pool),
+                                         pool);
+}
+
 static apr_status_t
 handle_fetch (serf_bucket_t *response,
               void *handler_baton,
@@ -1267,6 +1344,12 @@ handle_fetch (serf_bucket_t *response,
           fetch_ctx->info->textdelta(NULL,
                                      fetch_ctx->info->textdelta_baton);
 
+          /* set all of the properties we received */
+          walk_all_props(fetch_ctx->info->file_props,
+                         fetch_ctx->info->file_url,
+                         set_file_props,
+                         fetch_ctx, fetch_ctx->sess->pool);
+
           fetch_ctx->update_editor->close_file(fetch_ctx->info->file_baton,
                                                NULL,
                                                fetch_ctx->sess->pool);
@@ -1284,79 +1367,11 @@ handle_fetch (serf_bucket_t *response,
   abort();
 }
 
-typedef void (*walker_visitor_t)(void *baton,
-                                 const void *ns, apr_ssize_t ns_len,
-                                 const void *name, apr_ssize_t name_len,
-                                 void *val,
-                                 apr_pool_t *pool);
-
-static void walk_all_props(apr_hash_t *props, const char *name,
-                           walker_visitor_t walker,
-                           void *baton,
-                           apr_pool_t *pool)
+static const dav_props_t all_props[] =
 {
-  apr_hash_index_t *ns_hi;
-  apr_hash_t *path_props;
-
-  path_props = apr_hash_get(props, name, strlen(name));
-
-  for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
-       ns_hi = apr_hash_next(ns_hi))
-    {
-      void *ns_val;
-      const void *ns_name;
-      apr_ssize_t ns_len;
-      apr_hash_index_t *name_hi;
-      apr_hash_this(ns_hi, &ns_name, &ns_len, &ns_val);
-      for (name_hi = apr_hash_first(pool, ns_val); name_hi;
-           name_hi = apr_hash_next(name_hi))
-        {
-          void *prop_val;
-          const void *prop_name;
-          apr_ssize_t prop_len;
-          apr_hash_index_t *prop_hi;
-
-          apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
-          /* use a subpool? */
-          walker(baton, ns_name, ns_len, prop_name, prop_len, prop_val, pool);
-        }
-    }
-}
-
-static void
-set_file_props(void *baton,
-               const void *ns, apr_ssize_t ns_len,
-               const void *name, apr_ssize_t name_len,
-               void *val,
-               apr_pool_t *pool)
-{
-  report_context_t *ctx = baton;
-  const char *prop_name;
-  svn_string_t *prop_val;
-
-  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = name;
-  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
-  else if (strcmp(name, "version-name") == 0)
-    prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
-  else if (strcmp(name, "creationdate") == 0)
-    prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
-  else if (strcmp(name, "creator-displayname") == 0)
-    prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
-  else if (strcmp(name, "repository-uuid") == 0)
-    prop_name = SVN_PROP_ENTRY_UUID;
-  else
-    {
-      /* do nothing for now? */
-      return;
-    }
-
-  ctx->update_editor->change_file_prop(ctx->state->info->file_baton,
-                                       prop_name, svn_string_create(val, pool),
-                                       pool);
-}
-
+  { "DAV:", "allprop" },
+  NULL
+};
 
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
@@ -1364,6 +1379,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt;
   report_fetch_t *fetch_ctx;
+  propfind_context_t *prop_ctx;
   apr_hash_t *props;
 
   /* go fetch info->file_name from DAV:checked-in */
@@ -1375,22 +1391,32 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
       abort();
     }
 
+  info->file_url = checked_in_url;
+
   /* open the file and  */
   /* FIXME subpool */
   ctx->update_editor->add_file(info->file_name, info->dir->dir_baton,
                                NULL, SVN_INVALID_REVNUM, ctx->sess->pool,
                                &info->file_baton);
 
-  /* set all of the properties that we know about for this path. */
-  walk_all_props(info->file_props, info->file_name, set_file_props,
-                 ctx, ctx->sess->pool);
-
   ctx->update_editor->apply_textdelta(info->file_baton,
                                       NULL, ctx->sess->pool,
                                       &info->textdelta,
                                       &info->textdelta_baton);
 
-  /* create and deliver request */
+  /* First, create the PROPFIND to retrieve the properties. */
+  deliver_props(&prop_ctx, info->file_props, ctx->sess,
+                info->file_url, "0", all_props, ctx->sess->pool);
+
+  if (!prop_ctx)
+    {
+      abort();
+    }
+
+  prop_ctx->next = ctx->active_propfinds;
+  ctx->active_propfinds = prop_ctx;
+
+  /* create and deliver GET request */
   request = serf_connection_request_create(ctx->sess->conn);
 
   req_bkt = serf_bucket_request_create("GET", checked_in_url, NULL,
@@ -1768,6 +1794,7 @@ finish_report(void *report_baton,
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt, *tmp;
   report_fetch_t *active_fetch, *prev_fetch;
+  propfind_context_t *active_propfind, *prev_propfind;
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
@@ -1811,7 +1838,7 @@ finish_report(void *report_baton,
                        accept_response, sess,
                        handle_report, report);
 
-  while (!report->done || report->active_fetches)
+  while (!report->done || report->active_fetches || report->active_propfinds)
     {
       status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
@@ -1821,6 +1848,30 @@ finish_report(void *report_baton,
       if (status)
         {
           return svn_error_wrap_apr(status, _("Error retrieving REPORT"));
+        }
+
+      /* prune our propfind list if they are done. */
+      active_propfind = report->active_propfinds;
+      prev_propfind = NULL;
+      while (active_propfind)
+        {
+          if (active_propfind->done == TRUE)
+            {
+              /* Remove us from the list. */
+              if (prev_propfind)
+                {
+                  prev_propfind->next = active_propfind->next;
+                }
+              else
+                {
+                  report->active_propfinds = active_propfind->next;
+                }
+            }
+          else
+            {
+              prev_propfind = active_propfind;
+            }
+          active_propfind = active_propfind->next;
         }
 
       /* prune our fetches list if they are done. */
@@ -1938,6 +1989,7 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   report->update_editor = update_editor;
   report->update_baton = update_baton;
   report->active_fetches = NULL;
+  report->active_propfinds = NULL;
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;
