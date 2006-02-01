@@ -104,3 +104,62 @@ context_run_wait(svn_boolean_t *done,
 
   return SVN_NO_ERROR;
 }
+
+apr_status_t
+handle_xml_parser (serf_bucket_t *response,
+                   XML_Parser xmlp,
+                   svn_boolean_t *done,
+                   apr_pool_t *pool)
+{
+  const char *data;
+  apr_size_t len;
+  serf_status_line sl;
+  apr_status_t status;
+  enum XML_Status xml_status;
+
+  status = serf_bucket_response_status(response, &sl);
+  if (status)
+    {
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+      abort();
+    }
+
+  while (1)
+    {
+      status = serf_bucket_read(response, 2048, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return status;
+        }
+
+      xml_status = XML_Parse(xmlp, data, len, 0);
+      if (xml_status == XML_STATUS_ERROR)
+        {
+          abort();
+        }
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          xml_status = XML_Parse(xmlp, NULL, 0, 1);
+          if (xml_status == XML_STATUS_ERROR)
+            {
+              abort();
+            }
+
+          XML_ParserFree(xmlp);
+
+          *done = TRUE;
+          return APR_EOF;
+        }
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+
+      /* feed me! */
+    }
+  /* not reached */
+}
