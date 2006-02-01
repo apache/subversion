@@ -2,7 +2,7 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -43,12 +43,7 @@
  *   return ERR_BAD_SRC error
  *
  * if (exist dst_path)
- *   {
- *     if (dst_path is directory)
- *       copy src_path into dst_path as basename (src_path)
- *     else
- *       return ERR_OBSTRUCTION error
- *   }
+ *   return ERR_OBSTRUCTION error
  * else
  *   copy src_path into parent_of_dst_path as basename (dst_path)
  *
@@ -69,7 +64,7 @@ wc_to_wc_copy (const char *src_path,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
-  svn_node_kind_t src_kind, dst_kind;
+  svn_node_kind_t src_kind, dst_kind, dst_parent_kind;
   const char *dst_parent, *base_name;
   svn_wc_adm_access_t *adm_access, *src_access;
   svn_error_t *err;
@@ -82,24 +77,23 @@ wc_to_wc_copy (const char *src_path,
                               svn_path_local_style (src_path, pool));
 
   /* If DST_PATH does not exist, then its basename will become a new
-     file or dir added to its parent (possibly an implicit '.').  If
-     DST_PATH is a dir, then SRC_PATH's basename will become a new
-     file or dir within DST_PATH itself.  Else if it's a file, just
-     error out. */
+     file or dir added to its parent (possibly an implicit '.').
+     Else, just error out. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
-  if (dst_kind == svn_node_none)
-    {
-      svn_path_split (dst_path, &dst_parent, &base_name, pool);
-    }
-  else if (dst_kind == svn_node_dir)
-    {
-      svn_path_split (src_path, NULL, &base_name, pool);
-      dst_parent = dst_path;
-    }
-  else
+  if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              _("File '%s' already exists"),
+                              _("Path '%s' already exists"),
                               svn_path_local_style (dst_path, pool));
+
+  svn_path_split (dst_path, &dst_parent, &base_name, pool);
+
+  /* Make sure the destination parent is a directory and produce a clear
+     error message if it is not. */
+  SVN_ERR (svn_io_check_path (dst_parent, &dst_parent_kind, pool));
+  if (dst_parent_kind != svn_node_dir)
+    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                              _("Path '%s' is not a directory"),
+                              svn_path_local_style (dst_parent, pool));
 
   if (is_move)
     {
@@ -387,36 +381,11 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (svn_ra_check_path (ra_session, dst_rel, youngest, &dst_kind, pool));
-  if (dst_kind == svn_node_none)
+  if (dst_kind != svn_node_none)
     {
-      /* do nothing */
-    }
-  else if (dst_kind == svn_node_file)
-    {
-      /* We disallow the overwriting of files. */
+      /* We disallow the overwriting of existing paths. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                 _("Path '%s' already exists"), dst_rel);
-    }
-  else if (dst_kind == svn_node_dir)
-    {
-      /* As a matter of client-side policy, we prevent overwriting any
-         pre-existing directory.  So we append src_url's basename to
-         dst_rel, and see if that already exists.  */
-      svn_node_kind_t attempt_kind;
-      const char *bname;
-
-      bname = svn_path_uri_decode (svn_path_basename (src_url, pool), pool);
-      dst_rel = svn_path_join (dst_rel, bname, pool);
-      SVN_ERR (svn_ra_check_path (ra_session, dst_rel, youngest,
-                                  &attempt_kind, pool));
-      if (attempt_kind != svn_node_none)
-        return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                  _("Path '%s' already exists"), dst_rel);
-    }
-  else
-    {
-      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                _("Unrecognized node kind of '%s'"), dst_url);
     }
 
   /* Create a new commit item and add it to the array. */
@@ -585,7 +554,7 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  const char *anchor, *target, *base_name, *message;
+  const char *anchor, *target, *message;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -599,7 +568,6 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
   svn_error_t *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
-  const char *base_url;
 
   /* The commit process uses absolute paths, so we need to open the access
      baton using absolute paths, and so we really need to use absolute
@@ -622,28 +590,12 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (svn_ra_check_path (ra_session, svn_path_uri_decode (target, pool),
-                               SVN_INVALID_REVNUM, &dst_kind, pool));
+                              SVN_INVALID_REVNUM, &dst_kind, pool));
   
-  /* BASE_URL defaults to DST_URL. */
-  base_url = apr_pstrdup (pool, dst_url);
-  if (dst_kind == svn_node_none)
+  if (dst_kind != svn_node_none)
     {
-      /* DST_URL doesn't exist under its parent URL, so the URL we
-         will be creating is DST_URL. */
-    }
-  else if (dst_kind == svn_node_dir)
-    {
-      /* DST_URL is an existing directory URL.  The URL we will be
-         creating, then, is DST_URL+BASENAME. */
-      svn_path_split (base_path, NULL, &base_name, pool);
-      base_url = svn_path_url_add_component (base_url, base_name, pool);
-    }
-  else
-    {
-      /* DST_URL is an existing file, which can't be overwritten or
-         used as a container, so error out. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                _("File '%s' already exists"), dst_url);
+                                _("Path '%s' already exists"), dst_url);
     }
 
   /* Create a new commit item and add it to the array. */
@@ -654,7 +606,7 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
 
       commit_items = apr_array_make (pool, 1, sizeof (item));      
       item = apr_pcalloc (pool, sizeof (*item));
-      item->url = base_url;
+      item->url = dst_url;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
 
@@ -673,7 +625,7 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
   else
     dir_access = adm_access;
   if ((cmt_err = svn_client__get_copy_committables (&committables, 
-                                                    base_url,
+                                                    dst_url,
                                                     base_path,
                                                     dir_access,
                                                     ctx,
@@ -691,13 +643,13 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
     goto cleanup;
 
   /* Sort and condense our COMMIT_ITEMS. */
-  if ((cmt_err = svn_client__condense_commit_items (&base_url, 
+  if ((cmt_err = svn_client__condense_commit_items (&dst_url, 
                                                     commit_items, 
                                                     pool)))
     goto cleanup;
 
-  /* Open an RA session to BASE_URL. */
-  if ((cmt_err = svn_client__open_ra_session_internal (&ra_session, base_url,
+  /* Open an RA session to DST_URL. */
+  if ((cmt_err = svn_client__open_ra_session_internal (&ra_session, dst_url,
                                                        NULL, NULL,
                                                        commit_items,
                                                        FALSE, FALSE,
@@ -718,7 +670,7 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
   commit_in_progress = TRUE;
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit (base_url, commit_items, adm_access,
+  cmt_err = svn_client__do_commit (dst_url, commit_items, adm_access,
                                    editor, edit_baton, 
                                    0, /* ### any notify_path_offset needed? */
                                    &tempfiles, ctx, pool);
@@ -754,9 +706,10 @@ repos_to_wc_copy (const char *src_url,
                   apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  svn_node_kind_t src_kind, dst_kind;
+  svn_node_kind_t src_kind, dst_kind, dst_parent_kind;
   svn_revnum_t src_revnum;
   svn_wc_adm_access_t *adm_access;
+  const char *dst_parent;
   const char *src_uuid = NULL, *dst_uuid = NULL;
   svn_boolean_t same_repositories;
   svn_opt_revision_t revision;
@@ -795,51 +748,24 @@ repos_to_wc_copy (const char *src_url,
            _("Path '%s' not found in head revision"), src_url);
     }
 
-  /* There are two interfering sets of cases to watch out for here:
-   *
-   * First set:
-   *
-   *   1) If DST_PATH does not exist, then great.  We're going to
-   *      create a new entry in its parent.
-   *   2) If it does exist, then it must be a directory and we're
-   *      copying to a new entry inside that dir (the entry's name is
-   *      the basename of SRC_URL).
-   *
-   * But while that's all going on, we must also remember:
-   *
-   *   A) If SRC_URL is a directory in the repository, we can check
-   *      it out directly, no problem.
-   *   B) If SRC_URL is a file, we have to manually get the editor
-   *      started, since there won't be a root to open.
-   *
-   * I'm going to ignore B for the moment, and implement cases 1 and
-   * 2 under A.
-   */
-
   /* First, figure out about dst. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
-  if (dst_kind == svn_node_dir)
-    {
-      const char *base_name;
-      svn_path_split (src_url, NULL, &base_name, pool);
-      dst_path = svn_path_join (dst_path, 
-                                svn_path_uri_decode (base_name, pool),
-                                pool);
-    }
-  else if (dst_kind != svn_node_none)  /* must be a file */
+  if (dst_kind != svn_node_none)
     {
       return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                _("File '%s' already exists"),
+                                _("Path '%s' already exists"),
                                 svn_path_local_style (dst_path, pool));
     }
 
-  /* Now that dst_path has possibly been reset, check that there's
-     nothing in the way of the upcoming checkout. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
-  if (dst_kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              _("'%s' is in the way"),
-                              svn_path_local_style (dst_path, pool));
+  /* Make sure the destination parent is a directory and produce a clear
+     error message if it is not. */
+  dst_parent = svn_path_dirname (dst_path, pool);
+  SVN_ERR (svn_io_check_path (svn_path_dirname (dst_path, pool),
+                              &dst_parent_kind, pool));
+  if (dst_parent_kind != svn_node_dir)
+    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                              _("Path '%s' is not a directory"),
+                              svn_path_local_style (dst_parent, pool));
 
   SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, dst_path, TRUE,
                                    0, ctx->cancel_func, ctx->cancel_baton,
@@ -1119,7 +1045,7 @@ setup_copy (svn_commit_info_t **commit_info_p,
 /* Public Interfaces */
 
 svn_error_t *
-svn_client_copy2 (svn_commit_info_t **commit_info_p,
+svn_client_copy3 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path,
@@ -1134,6 +1060,37 @@ svn_client_copy2 (svn_commit_info_t **commit_info_p,
                      pool);
 }
 
+
+svn_error_t *
+svn_client_copy2 (svn_commit_info_t **commit_info_p,
+                  const char *src_path,
+                  const svn_opt_revision_t *src_revision,
+                  const char *dst_path,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_client_copy3 (commit_info_p, src_path, src_revision,
+                          dst_path, ctx, pool);
+
+  /* If the target exists, try to copy the source as a child of the target.
+     This will obviously fail if target is not a directory, but that's exactly
+     what we want. */
+  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+    {
+      const char *src_basename = svn_path_basename (src_path, pool);
+
+      svn_error_clear (err);
+      
+      return svn_client_copy3 (commit_info_p, src_path, src_revision,
+                               svn_path_join (dst_path, src_basename, pool),
+                               ctx, pool);
+    }
+
+  return err;
+}
 
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info_p,
@@ -1154,7 +1111,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
 }
 
 svn_error_t *
-svn_client_move3 (svn_commit_info_t **commit_info_p,
+svn_client_move4 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
@@ -1170,6 +1127,36 @@ svn_client_move3 (svn_commit_info_t **commit_info_p,
                      force,
                      ctx,
                      pool);
+}
+
+svn_error_t *
+svn_client_move3 (svn_commit_info_t **commit_info_p,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_client_move4 (commit_info_p, src_path, dst_path, force, ctx, pool);
+
+  /* If the target exists, try to move the source as a child of the target.
+     This will obviously fail if target is not a directory, but that's exactly
+     what we want. */
+  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+    {
+      const char *src_basename = svn_path_basename (src_path, pool);
+
+      svn_error_clear (err);
+      
+      return svn_client_move4 (commit_info_p, src_path,
+                               svn_path_join (dst_path, src_basename, pool),
+                               force, ctx, pool);
+    }
+
+  return err;
 }
 
 svn_error_t *

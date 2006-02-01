@@ -1694,7 +1694,7 @@ svn_client_resolved (const char *path,
  * URL of a versioned item in the repository.  If @a src_path is a 
  * URL, @a src_revision is used to choose the revision from which to copy 
  * the @a src_path.  @a dst_path must be a file or directory under version
- * control, or a repository URL, existent or not.
+ * control, or a repository URL.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
@@ -1709,10 +1709,7 @@ svn_client_resolved (const char *path,
  *
  * Attempt to create any parent directories for @a dst_path that do not exist.
  *
- * If @a dst_path already exists and is a directory, copy the item into that
- * directory, keeping its name (the last component of @a src_path),
- * otherwise copy the item to the new path and name @a dst_path.
- * If @a dst_path already exists and is not a directory, fail.
+ * If @a dst_path already exists, fail.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is
@@ -1722,7 +1719,24 @@ svn_client_resolved (const char *path,
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_copy3 (svn_commit_info_t **commit_info_p,
+                  const char *src_path,
+                  const svn_opt_revision_t *src_revision,
+                  const char *dst_path,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/** Similar to svn_client_copy3(), with the difference that if @a dst_path
+ * already exists and is a directory, copy the item into that directory,
+ * keeping its name (the last component of @a src_path).
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_client_copy2 (svn_commit_info_t **commit_info_p,
@@ -1755,9 +1769,9 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
  *
  * If @a src_path is a repository URL:
  *
- *   - @a dst_path must also be a repository URL (existent or not).
+ *   - @a dst_path must also be a repository URL.
  *
- *   - the authentication baton in @a ctx and @a ctx->log_msg_func/@a 
+ *   - The authentication baton in @a ctx and @a ctx->log_msg_func/@a 
  *     ctx->log_msg_baton are used to commit the move.
  *
  *   - The move operation will be immediately committed.  If the
@@ -1765,7 +1779,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
  *
  * If @a src_path is a working copy path:
  *
- *   - @a dst_path must also be a working copy path (existent or not).
+ *   - @a dst_path must also be a working copy path.
  *
  *   - @a ctx->log_msg_func and @a ctx->log_msg_baton are ignored.
  *
@@ -1782,11 +1796,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
  *
  * Attempt to create any parent directories for @a dst_path that do not exist.
  *
- * If @a dst_path already exists and is a directory, move the item into that
- * directory, keeping its name (the last component of @a src_path),
- * otherwise move the item to the new path and name @a dst_path.
- * If @a dst_path already exists and is not a directory, fail.
- *
+ * If @a dst_path already exists, fail.
+
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
@@ -1797,8 +1808,24 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
  *
  * ### Is this really true?  What about svn_wc_notify_commit_replaced()? ###
  *
- * @since New in 1.3.
+ * @since New in 1.4.
  */ 
+svn_error_t *
+svn_client_move4 (svn_commit_info_t **commit_info_p,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/** Similar to svn_client_move4(), with the difference that if @a dst_path
+ * already exists and is a directory, move the item into that directory,
+ * keeping its name (the last component of @a src_path).
+ *
+ * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ */
 svn_error_t *
 svn_client_move3 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
