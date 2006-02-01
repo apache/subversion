@@ -2,7 +2,7 @@
  * copy-cmd.c -- Subversion copy command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -112,9 +112,23 @@ svn_cl__copy (apr_getopt_t *os,
     SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton2), opt_state,
                                          NULL, ctx->config, pool));
 
-  err = svn_client_copy2 (&commit_info, src_path,
+  err = svn_client_copy3 (&commit_info, src_path,
                           &(opt_state->start_revision),
                           dst_path, ctx, pool);
+
+  /* If dst_path already exists, try to copy src_path as a child of it. */
+  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+    {
+      const char *src_basename = svn_path_basename (src_path, pool);
+
+      svn_error_clear (err);
+      
+      err = svn_client_copy3 (&commit_info, src_path,
+                              &(opt_state->start_revision),
+                              svn_path_join (dst_path, src_basename, pool),
+                              ctx, pool);
+    }
 
   if (ctx->log_msg_func2)
     SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton2, err));

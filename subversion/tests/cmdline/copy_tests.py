@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1711,7 +1711,8 @@ def wc_copy_dir_to_itself(sbox):
     dir_path = os.path.join(sbox.wc_dir, dirname)
 
     # try to copy dir to itself
-    svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, [],
+    svntest.actions.run_and_verify_svn(None, [],
+                                       '.*Cannot copy .* into its own child.*',
                                        'copy', dir_path, dir_path)
 
 
