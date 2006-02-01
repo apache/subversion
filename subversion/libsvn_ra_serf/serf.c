@@ -269,9 +269,6 @@ set_prop (apr_hash_t *props, const char *path,
 }
 
 
-#define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\"><prop>"
-#define PROPFIND_TRAILER "</prop></propfind>"
-
 static serf_bucket_t*
 accept_response(serf_request_t *request,
                 serf_bucket_t *stream,
@@ -612,26 +609,39 @@ handle_propfind (serf_bucket_t *response,
   /* not reached */
 }
 
+#define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\">"
+#define PROPFIND_TRAILER "</propfind>"
+
+/**
+ * This function will deliver a PROP_CTX PROPFIND request in the SESS
+ * serf context for the properties listed in LOOKUP_PROPS at URL for
+ * DEPTH ("0","1","infinity").
+ *
+ * This function will not block waiting for the response.  Instead, the
+ * caller is expected to call context_run and wait for the PROP_CTX->done
+ * flag to be set.
+ */
 static svn_error_t *
-retrieve_props (apr_hash_t **prop_vals,
-                serf_session_t *sess,
-                const char *url,
-                const char *depth,
-                const dav_props_t *props,
-                apr_pool_t *pool)
+deliver_props (propfind_context_t **prop_ctx,
+               apr_hash_t *prop_vals,
+               serf_session_t *sess,
+               const char *url,
+               const char *depth,
+               const dav_props_t *lookup_props,
+               apr_pool_t *pool)
 {
   const dav_props_t *prop;
-  apr_hash_t *ret_props;
+  apr_hash_t *ret_props = prop_vals;
   serf_bucket_t *props_bkt, *tmp, *req_bkt, *hdrs_bkt;
   serf_request_t *request;
-  propfind_context_t *prop_ctx;
+  propfind_context_t *new_prop_ctx;
   apr_status_t status;
+  svn_boolean_t requested_allprop = FALSE;
 
-  ret_props = apr_hash_make(pool);
   props_bkt = NULL;
 
   /* check to see if we have any of this information cached */
-  prop = props;
+  prop = lookup_props;
   while (prop && prop->namespace)
     {
       const char *val;
@@ -647,6 +657,12 @@ retrieve_props (apr_hash_t **prop_vals,
           if (!props_bkt)
             {
               props_bkt = serf_bucket_aggregate_create(sess->bkt_alloc);
+            }
+
+          /* special case the allprop case. */
+          if (strcmp(prop->name, "allprop") == 0)
+            {
+              requested_allprop = TRUE;
             }
 
           /* <*propname* xmlns="*propns*" /> */
@@ -675,17 +691,36 @@ retrieve_props (apr_hash_t **prop_vals,
   /* We satisfied all of the properties with our session cache.  Woo-hoo. */
   if (!props_bkt)
     {
-      *prop_vals = ret_props;
+      *prop_ctx = NULL;
       return SVN_NO_ERROR;
     }
 
   /* Cache didn't hit for everything, so generate a request now. */
 
   /* TODO: programatically add in the namespaces */
+
+  /* If we're not doing an allprop, add <prop> tags. */
+  if (requested_allprop == FALSE)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<prop>",
+                                          sizeof("<prop>")-1,
+                                          sess->bkt_alloc);
+      serf_bucket_aggregate_prepend(props_bkt, tmp);
+    }
+
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(PROPFIND_HEADER,
                                       sizeof(PROPFIND_HEADER)-1,
                                       sess->bkt_alloc);
+
   serf_bucket_aggregate_prepend(props_bkt, tmp);
+
+  if (requested_allprop == FALSE)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</prop>",
+                                          sizeof("</prop>")-1,
+                                          sess->bkt_alloc);
+      serf_bucket_aggregate_append(props_bkt, tmp);
+    }
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(PROPFIND_TRAILER,
                                       sizeof(PROPFIND_TRAILER)-1,
@@ -706,22 +741,38 @@ retrieve_props (apr_hash_t **prop_vals,
   /* serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip"); */
 
   /* Create the propfind context. */
-  prop_ctx = apr_pcalloc(pool, sizeof(*prop_ctx));
-  prop_ctx->pool = pool;
-  prop_ctx->path = url;
-  prop_ctx->find_props = props;
-  prop_ctx->ret_props = ret_props;
-  prop_ctx->done = FALSE;
-  prop_ctx->sess = sess;
+  new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
+  new_prop_ctx->pool = pool;
+  new_prop_ctx->path = url;
+  new_prop_ctx->find_props = lookup_props;
+  new_prop_ctx->ret_props = ret_props;
+  new_prop_ctx->done = FALSE;
+  new_prop_ctx->sess = sess;
 
-  prop_ctx->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(prop_ctx->xmlp, prop_ctx);
-  XML_SetElementHandler(prop_ctx->xmlp, start_propfind, end_propfind);
-  XML_SetCharacterDataHandler(prop_ctx->xmlp, cdata_propfind);
+  new_prop_ctx->xmlp = XML_ParserCreate(NULL);
+  XML_SetUserData(new_prop_ctx->xmlp, new_prop_ctx);
+  XML_SetElementHandler(new_prop_ctx->xmlp, start_propfind, end_propfind);
+  XML_SetCharacterDataHandler(new_prop_ctx->xmlp, cdata_propfind);
 
   serf_request_deliver(request, req_bkt,
                        accept_response, sess,
-                       handle_propfind, prop_ctx);
+                       handle_propfind, new_prop_ctx);
+
+  *prop_ctx = new_prop_ctx;
+
+  return SVN_NO_ERROR;
+}
+
+/**
+ * This helper function will block until the PROP_CTX indicates that is done
+ * or another error is returned.
+ */
+static svn_error_t *
+wait_for_props(propfind_context_t *prop_ctx,
+               serf_session_t *sess,
+               apr_pool_t *pool)
+{
+  apr_status_t status;
 
   while (!prop_ctx->done)
     {
@@ -738,9 +789,27 @@ retrieve_props (apr_hash_t **prop_vals,
       serf_debug__closed_conn(sess->bkt_alloc);
     }
 
-  *prop_vals = ret_props;
-
   return SVN_NO_ERROR;
+}
+
+/**
+ * This is a blocking version of deliver_props.
+ */
+static svn_error_t *
+retrieve_props (apr_hash_t *prop_vals,
+                serf_session_t *sess,
+                const char *url,
+                const char *depth,
+                const dav_props_t *props,
+                apr_pool_t *pool)
+{
+  propfind_context_t *prop_ctx;
+
+  SVN_ERR(deliver_props(&prop_ctx, prop_vals, sess, url, depth, props, pool));
+  if (prop_ctx)
+    {
+      SVN_ERR(wait_for_props(prop_ctx, sess, pool));
+    }
 }
 
 static const dav_props_t base_props[] =
@@ -774,7 +843,9 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   serf_session_t *session = ra_session->priv;
   const char *vcc_url, *baseline_url, *version_name;
 
-  SVN_ERR(retrieve_props(&props, session, session->repos_url.path, "0",
+  props = apr_hash_make(pool);
+
+  SVN_ERR(retrieve_props(props, session, session->repos_url.path, "0",
                          base_props, pool));
 
   vcc_url = fetch_prop(props, session->repos_url.path, "DAV:",
@@ -786,7 +857,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
     }
 
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
-  SVN_ERR(retrieve_props(&props, session, vcc_url, "0", checked_in_props,
+  SVN_ERR(retrieve_props(props, session, vcc_url, "0", checked_in_props,
                          pool));
 
   baseline_url = fetch_prop(props, vcc_url,
@@ -800,7 +871,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
   /* Using the checked-in property, fetch:
    *    baseline-connection *and* version-name
    */
-  SVN_ERR(retrieve_props(&props, session, baseline_url, "0",
+  SVN_ERR(retrieve_props(props, session, baseline_url, "0",
                          baseline_props, pool));
 
   version_name = fetch_prop(props, baseline_url, "DAV:", "version-name");
@@ -1706,7 +1777,9 @@ finish_report(void *report_baton,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  SVN_ERR(retrieve_props(&props, sess, sess->repos_url.path, "0",
+  props = apr_hash_make(pool);
+
+  SVN_ERR(retrieve_props(props, sess, sess->repos_url.path, "0",
                          vcc_props, pool));
 
   vcc_url = fetch_prop(props, sess->repos_url.path, "DAV:",
@@ -2001,7 +2074,9 @@ svn_ra_serf__check_path (svn_ra_session_t *ra_session,
       path = svn_path_url_add_component(path, rel_path, pool);
     }
 
-  SVN_ERR(retrieve_props(&props, session, path, "0", check_path_props, pool));
+  props = apr_hash_make(pool);
+
+  SVN_ERR(retrieve_props(props, session, path, "0", check_path_props, pool));
   res_type = fetch_prop(props, path, "DAV:", "resourcetype");
 
   if (!res_type)
@@ -2046,7 +2121,9 @@ svn_ra_serf__get_uuid (svn_ra_session_t *ra_session,
   serf_session_t *session = ra_session->priv;
   apr_hash_t *props;
 
-  SVN_ERR(retrieve_props(&props, session, session->repos_url.path, "0",
+  props = apr_hash_make(pool);
+
+  SVN_ERR(retrieve_props(props, session, session->repos_url.path, "0",
                          uuid_props, pool));
   *uuid = fetch_prop(props, session->repos_url.path,
                      SVN_DAV_PROP_NS_DAV, "repository-uuid");
@@ -2078,7 +2155,9 @@ svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
       svn_stringbuf_t *url_buf;
       apr_hash_t *props;
 
-      SVN_ERR(retrieve_props(&props, session, session->repos_url.path, "0",
+      props = apr_hash_make(pool);
+
+      SVN_ERR(retrieve_props(props, session, session->repos_url.path, "0",
                              repos_root_props, pool));
       baseline_url = fetch_prop(props, session->repos_url.path,
                                 SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
