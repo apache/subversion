@@ -268,20 +268,6 @@ set_prop (apr_hash_t *props, const char *path,
   apr_hash_set(ns_props, name, name_len, val);
 }
 
-/* propfind bucket:
- *
- * <?xml version="1.0" encoding="utf-8"?>
- * <propfind xmlns="DAV:">
- *   <prop>
- *     *prop buckets*
- *   </prop>
- * </propfind>
- */
-
-/* property bucket:
- *
- * <*propname* xmlns="*propns*"/>
- */
 
 #define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\"><prop>"
 #define PROPFIND_TRAILER "</prop></propfind>"
@@ -301,26 +287,52 @@ accept_response(serf_request_t *request,
   return serf_bucket_response_create(c, bkt_alloc);
 }
 
-typedef struct {
+/**
+ * This structure represents a pending PROPFIND response.
+ */
+typedef struct propfind_context_t {
+  /* pool to issue allocations from */
   apr_pool_t *pool;
 
+  /* associated serf session */
   serf_session_t *sess;
 
+  /* the requested path */
   const char *path;
 
+  /* the list of requested properties */
   const dav_props_t *find_props;
+
+  /* hash table that will be updated with the properties
+   *
+   * This can be shared between multiple propfind_context_t structures
+   */
   apr_hash_t *ret_props;
 
+  /* the xml parser used */
   XML_Parser xmlp;
+
+  /* Current namespace list */
   ns_t *ns_list;
 
+  /* TODO use the state object as in the report */
+  /* Are we parsing a property right now? */
   svn_boolean_t in_prop;
+
+  /* Should we be harvesting the CDATA elements */
   svn_boolean_t collect_cdata;
+
+  /* Current ns, attribute name, and value of the property we're parsing */
   const char *ns;
   const char *attr_name;
   const char *attr_val;
+  apr_size_t attr_val_len;
 
+  /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
+
+  /* The next PROPFIND we have open. */
+  struct propfind_context_t *next;
 } propfind_context_t;
 
 /**
@@ -328,6 +340,8 @@ typedef struct {
  * to the NS_LIST of namespaces.
  *
  * Temporary allocations are made in POOL.
+ *
+ * TODO: handle scoping of namespaces
  */
 static void
 define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
@@ -396,6 +410,11 @@ expand_ns(ns_t *ns_list, const char *name, apr_pool_t *pool)
   return prop_name;
 }
 
+/**
+ * look for ATTR_NAME in the attrs array and return its value.
+ *
+ * Returns NULL if no matching name is found.
+ */
 static const char *
 find_attr(const char **attrs, const char *attr_name)
 {
@@ -407,6 +426,7 @@ find_attr(const char **attrs, const char *attr_name)
       if (strcmp(*tmp_attrs, attr_name) == 0)
         {
           attr_val = attrs[1];
+          break;
         }
       tmp_attrs += 2;
     }
@@ -414,6 +434,9 @@ find_attr(const char **attrs, const char *attr_name)
   return attr_val;
 }
 
+/**
+ * Expat callback invoked on a start element tag for a PROPFIND response.
+ */
 static void XMLCALL
 start_propfind(void *userData, const char *name, const char **attrs)
 {
@@ -441,6 +464,9 @@ start_propfind(void *userData, const char *name, const char **attrs)
     }
 }
 
+/**
+ * Expat callback invoked on an end element tag for a PROPFIND response.
+ */
 static void XMLCALL
 end_propfind(void *userData, const char *name)
 {
@@ -481,14 +507,48 @@ end_propfind(void *userData, const char *name)
   /* FIXME: destroy namespaces as we end a handler */
 }
 
+static void
+expand_string(const char **cur, apr_size_t *cur_len,
+              const char *new, apr_size_t new_len,
+              apr_pool_t *pool)
+{
+  if (!*cur)
+    {
+      *cur = apr_pstrmemdup(pool, new, new_len);
+      *cur_len = new_len;
+    }
+  else
+    {
+      char *new_cur;
+
+      /* append the data we received before. */
+      new_cur = apr_palloc(pool, *cur_len+new_len+1);
+
+      memcpy(new_cur, *cur, *cur_len);
+      memcpy(new_cur + *cur_len, new, new_len);
+
+      /* NULL-term our new string */
+      new_cur[*cur_len + new_len] = '\0';
+
+      /* update our length */
+      *cur_len += new_len;
+      *cur = new_cur;
+    }
+}
+
+/**
+ * Expat callback invoked on CDATA elements in a PROPFIND response.
+ *
+ * This callback can be called multiple times.
+ */
 static void XMLCALL
 cdata_propfind(void *userData, const char *data, int len)
 {
   propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
-      /* FIXME append instead of setting. */
-      ctx->attr_val = apr_pstrmemdup(ctx->pool, data, len);
+      expand_string(&ctx->attr_val, &ctx->attr_val_len,
+                    data, len, ctx->pool);
     }
 
 }
@@ -523,31 +583,6 @@ handle_propfind (serf_bucket_t *response,
           return status;
         }
 
-      /* parse the response
-       *  <?xml version="1.0" encoding="utf-8"?>
-       *  <D:multistatus xmlns:D="DAV:" xmlns:ns1="http://subversion.tigris.org/xmlns/dav/" xmlns:ns0="DAV:">
-       *    <D:response xmlns:lp1="DAV:" xmlns:lp3="http://subversion.tigris.org/xmlns/dav/">
-       *      <D:href>/repos/projects/serf/trunk/</D:href>
-       *      <D:propstat>
-       *        <D:prop>
-       *          <lp1:version-controlled-configuration>
-       *            <D:href>/repos/projects/!svn/vcc/default</D:href>
-       *          </lp1:version-controlled-configuration>
-       *          <lp1:resourcetype>
-       *            <D:collection/>
-       *          </lp1:resourcetype>
-       *          <lp3:baseline-relative-path>
-       *            serf/trunk
-       *          </lp3:baseline-relative-path>
-       *          <lp3:repository-uuid>
-       *            61a7d7f5-40b7-0310-9c16-bb0ea8cb1845
-       *          </lp3:repository-uuid>
-       *        </D:prop>
-       *        <D:status>HTTP/1.1 200 OK</D:status>
-       *      </D:propstat>
-       *    </D:response>
-       *  </D:multistatus>
-       */
       xml_status = XML_Parse(ctx->xmlp, data, len, 0);
       if (xml_status == XML_STATUS_ERROR)
         {
@@ -1308,6 +1343,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
                        accept_response, ctx->sess,
                        handle_fetch, fetch_ctx);
 
+  /* add the GET to our active list. */
   fetch_ctx->next = ctx->active_fetches;
   ctx->active_fetches = fetch_ctx;
 }
@@ -1494,40 +1530,17 @@ cdata_report(void *userData, const char *data, int len)
   report_context_t *ctx = userData;
   if (ctx->state && ctx->state->state == PROP)
     {
-      if (ctx->state->info->prop_val)
-        {
-          char *new_prop_val;
+      expand_string(&ctx->state->info->prop_val,
+                    &ctx->state->info->prop_val_len,
+                    data, len, ctx->sess->pool);
 
-          /* append the data we received before. */
-          new_prop_val = apr_palloc(ctx->sess->pool,
-                                    ctx->state->info->prop_val_len+len+1);
-
-          memcpy(new_prop_val,
-                 ctx->state->info->prop_val,
-                 ctx->state->info->prop_val_len);
-
-          memcpy(new_prop_val+ctx->state->info->prop_val_len,
-                 data, len);
-
-          ctx->state->info->prop_val_len += len;
-
-          new_prop_val[ctx->state->info->prop_val_len] = '\0';
-
-          ctx->state->info->prop_val = new_prop_val;
-        }
-      else
-        {
-          ctx->state->info->prop_val = apr_pstrmemdup(ctx->sess->pool,
-                                                      data, len);
-          ctx->state->info->prop_val_len = len;
-        }
     }
 }
 
 static apr_status_t
 handle_report (serf_bucket_t *response,
-                 void *handler_baton,
-                 apr_pool_t *pool)
+               void *handler_baton,
+               apr_pool_t *pool)
 {
   const char *data;
   apr_size_t len;
