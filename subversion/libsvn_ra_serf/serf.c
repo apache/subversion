@@ -100,6 +100,21 @@ conn_setup(apr_socket_t *sock,
   return bucket;
 }
 
+static serf_bucket_t*
+accept_response(serf_request_t *request,
+                serf_bucket_t *stream,
+                void *acceptor_baton,
+                apr_pool_t *pool)
+{
+  serf_bucket_t *c;
+  serf_bucket_alloc_t *bkt_alloc;
+
+  bkt_alloc = serf_request_get_alloc(request);
+  c = serf_bucket_barrier_create(stream, bkt_alloc);
+
+  return serf_bucket_response_create(c, bkt_alloc);
+}
+
 static void
 conn_closed (serf_connection_t *conn,
              void *closed_baton,
@@ -266,22 +281,6 @@ set_prop (apr_hash_t *props, const char *path,
     }
 
   apr_hash_set(ns_props, name, name_len, val);
-}
-
-
-static serf_bucket_t*
-accept_response(serf_request_t *request,
-                serf_bucket_t *stream,
-                void *acceptor_baton,
-                apr_pool_t *pool)
-{
-  serf_bucket_t *c;
-  serf_bucket_alloc_t *bkt_alloc;
-
-  bkt_alloc = serf_request_get_alloc(request);
-  c = serf_bucket_barrier_create(stream, bkt_alloc);
-
-  return serf_bucket_response_create(c, bkt_alloc);
 }
 
 /**
