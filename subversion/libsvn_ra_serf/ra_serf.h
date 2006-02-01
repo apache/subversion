@@ -345,6 +345,12 @@ context_run_wait(svn_boolean_t *done,
                  serf_session_t *sess,
                  apr_pool_t *pool);
 
+apr_status_t
+handle_xml_parser(serf_bucket_t *response,
+                  XML_Parser xmlp,
+                  svn_boolean_t *done,
+                  apr_pool_t *pool);
+
 /** XML helper functions. **/
 
 void

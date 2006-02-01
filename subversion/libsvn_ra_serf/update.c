@@ -489,59 +489,11 @@ handle_report (serf_bucket_t *response,
                void *handler_baton,
                apr_pool_t *pool)
 {
-  const char *data;
-  apr_size_t len;
-  serf_status_line sl;
-  apr_status_t status;
-  enum XML_Status xml_status;
   report_context_t *ctx = handler_baton;
 
-  status = serf_bucket_response_status(response, &sl);
-  if (status)
-    {
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return APR_SUCCESS;
-        }
-      abort();
-    }
-
-  while (1)
-    {
-      status = serf_bucket_read(response, 2048, &data, &len);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return status;
-        }
-
-      /* parse the response */
-      xml_status = XML_Parse(ctx->xmlp, data, len, 0);
-      if (xml_status == XML_STATUS_ERROR)
-        {
-          abort();
-        }
-
-      if (APR_STATUS_IS_EOF(status))
-        {
-          xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
-          if (xml_status == XML_STATUS_ERROR)
-            {
-              abort();
-            }
-
-          XML_ParserFree(ctx->xmlp);
-
-          ctx->done = TRUE;
-          return APR_EOF;
-        }
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return APR_SUCCESS;
-        }
-
-      /* feed me! */
-    }
-  /* not reached */
+  return handle_xml_parser(response,
+                           ctx->xmlp, &ctx->done,
+                           pool);
 }
 
 static svn_error_t *
