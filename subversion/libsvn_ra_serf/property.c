@@ -391,24 +391,7 @@ wait_for_props(propfind_context_t *prop_ctx,
                serf_session_t *sess,
                apr_pool_t *pool)
 {
-  apr_status_t status;
-
-  while (!prop_ctx->done)
-    {
-      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
-      if (APR_STATUS_IS_TIMEUP(status))
-        {
-          continue;
-        }
-      if (status)
-        {
-          return svn_error_wrap_apr(status, "Error retrieving PROPFIND");
-        }
-      /* Debugging purposes only! */
-      serf_debug__closed_conn(sess->bkt_alloc);
-    }
-
-  return SVN_NO_ERROR;
+  return context_run_wait(&prop_ctx->done, sess, pool);
 }
 
 /**

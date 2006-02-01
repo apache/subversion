@@ -79,3 +79,28 @@ cleanup_serf_session(void *data)
     }
   return APR_SUCCESS;
 }
+
+svn_error_t *
+context_run_wait(svn_boolean_t *done,
+                 serf_session_t *sess,
+                 apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  while (!*done)
+    {
+      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
+      if (APR_STATUS_IS_TIMEUP(status))
+        {
+          continue;
+        }
+      if (status)
+        {
+          return svn_error_wrap_apr(status, "Error running context");
+        }
+      /* Debugging purposes only! */
+      serf_debug__closed_conn(sess->bkt_alloc);
+    }
+
+  return SVN_NO_ERROR;
+}
