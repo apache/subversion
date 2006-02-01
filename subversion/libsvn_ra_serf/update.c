@@ -834,6 +834,8 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   report->update_baton = update_baton;
   report->active_fetches = NULL;
   report->active_propfinds = NULL;
+  report->done = 0;
+  report->free_info = 0;
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;

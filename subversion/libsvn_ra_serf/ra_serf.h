@@ -339,6 +339,12 @@ conn_closed (serf_connection_t *conn,
 
 apr_status_t
 cleanup_serf_session(void *data);
+
+svn_error_t *
+context_run_wait(svn_boolean_t *done,
+                 serf_session_t *sess,
+                 apr_pool_t *pool);
+
 /** XML helper functions. **/
 
 void
