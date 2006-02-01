@@ -47,8 +47,6 @@ Candidate changes:
     Add support for BDB-4.4 and automatic recovery of wedged databases.
     Justification:
       See above about automatic recovery of wedged databases.
-    Note:
-      Depends on r18254.
     Votes:
       +1: brane
 
@@ -77,7 +75,7 @@ Approved changes:
     Justification:
       Avoids precedence bugs when used in boolean expressions.
     Note:
-      r18144 et al. depend on this.
+      Depends on r18144 et al. - unmergeable until those revs are merged.
     Votes:
       +1: brane, lundblad, malcolm, dlr
 
