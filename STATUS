@@ -47,6 +47,9 @@ Candidate changes:
     Add support for BDB-4.4 and automatic recovery of wedged databases.
     Justification:
       See above about automatic recovery of wedged databases.
+    Notes:
+      We found two bugs after this entry was written. Suggest we suspend
+      voting until brane fixes them on trunk.
     Votes:
       +1: brane
 
