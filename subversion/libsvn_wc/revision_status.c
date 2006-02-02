@@ -72,7 +72,7 @@ analyze_status (void *baton,
 }
 
 svn_error_t *
-svn_wc_revision_status (svn_wc_revision_status_t *result,
+svn_wc_revision_status (svn_wc_revision_status_t **result_p,
                         const char *wc_path,
                         const char *trail_url,
                         svn_boolean_t committed,
@@ -86,6 +86,9 @@ svn_wc_revision_status (svn_wc_revision_status_t *result,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_revnum_t edit_revision;
+
+  svn_wc_revision_status_t *result = apr_palloc (pool, sizeof (**result_p));
+  *result_p = result;
 
   /* set result as nil */
   result->min_rev  = SVN_INVALID_REVNUM;
