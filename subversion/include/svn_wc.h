@@ -3357,6 +3357,10 @@ svn_error_t *svn_wc_remove_lock (const char *path,
 /** A structure to report the mix of revisions found within a working copy,
  * and whether any parts are switched or locally modified.
  *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
  * @since New in 1.4
  */
 typedef struct svn_wc_revision_status_t
@@ -3369,29 +3373,34 @@ typedef struct svn_wc_revision_status_t
 }
 svn_wc_revision_status_t;
 
-/** Fill @a *result with a summary of the revision range and status of the
- * working copy at @a wc_path (not including "externals").
+/** Set @a *result_p to point to a new @c svn_wc_revision_status_t structure
+ * containing a summary of the revision range and status of the working copy
+ * at @a wc_path (not including "externals").
  *
- * Set @a result->min_rev and @a result->max_rev respectively to the lowest and
- * highest revision numbers in the working copy.  If @a committed is true,
- * summarize the last-changed revisions, else the base revisions.
+ * Set @a (*result_p)->min_rev and @a (*result_p)->max_rev respectively to the
+ * lowest and highest revision numbers in the working copy.  If @a committed
+ * is true, summarize the last-changed revisions, else the base revisions.
  *
- * Set @a result->switched to indicate whether any item in the WC is switched
- * relative to its parent.  If @a trail_url is non-null, use it to determine if
- * @a wc_path itself is switched.  It should be any trailing portion of @a
- * wc_path's expected URL, long enough to include any parts that the caller
- * considers might be changed by a switch.  If it does not match the end of @a
- * wc_path's actual URL, then report a "switched" status.
+ * Set @a (*result_p)->switched to indicate whether any item in the WC is
+ * switched relative to its parent.  If @a trail_url is non-null, use it to
+ * determine if @a wc_path itself is switched.  It should be any trailing
+ * portion of @a wc_path's expected URL, long enough to include any parts
+ * that the caller considers might be changed by a switch.  If it does not
+ * match the end of @a wc_path's actual URL, then report a "switched"
+ * status.
  *
- * Set @a result->modified to indicate whether any item is locally modified.
+ * Set @a (*result_p)->modified to indicate whether any item is locally
+ * modified.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
  *
+ * Allocate *result_p in @a pool.
+ *
  * @since New in 1.4
  */
 svn_error_t *
-svn_wc_revision_status (svn_wc_revision_status_t *result,
+svn_wc_revision_status (svn_wc_revision_status_t **result_p,
                         const char *wc_path,
                         const char *trail_url,
                         svn_boolean_t committed,

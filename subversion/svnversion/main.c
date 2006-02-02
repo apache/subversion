@@ -112,7 +112,7 @@ main(int argc, const char *argv[])
   apr_allocator_t *allocator;
   apr_pool_t *pool;
   int wc_format;
-  svn_wc_revision_status_t res;
+  svn_wc_revision_status_t *res;
   svn_boolean_t no_newline = FALSE, committed = FALSE;
   svn_error_t *err;
   apr_getopt_t *os;
@@ -243,12 +243,12 @@ main(int argc, const char *argv[])
                                        NULL, NULL, pool));
 
   /* Build compact '123[:456]M?S?' string. */
-  SVN_INT_ERR (svn_cmdline_printf (pool, "%ld", res.min_rev));
-  if (res.min_rev != res.max_rev)
-    SVN_INT_ERR (svn_cmdline_printf (pool, ":%ld", res.max_rev));
-  if (res.modified)
+  SVN_INT_ERR (svn_cmdline_printf (pool, "%ld", res->min_rev));
+  if (res->min_rev != res->max_rev)
+    SVN_INT_ERR (svn_cmdline_printf (pool, ":%ld", res->max_rev));
+  if (res->modified)
     SVN_INT_ERR (svn_cmdline_fputs ("M", stdout, pool));
-  if (res.switched)
+  if (res->switched)
     SVN_INT_ERR (svn_cmdline_fputs ("S", stdout, pool));
 
   if (! no_newline)
