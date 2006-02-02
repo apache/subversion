@@ -264,7 +264,7 @@ svn_fs_bdb__locks_get (svn_fs_t *fs,
           return err;
         }
 
-      /* Lock is verified, return it in the hash. */
+      /* Lock is verified, hand it off to our callback. */
       if (lock && get_locks_func)
         {
           err = get_locks_func (get_locks_baton, lock, subpool);

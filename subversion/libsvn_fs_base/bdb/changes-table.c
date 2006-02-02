@@ -119,7 +119,7 @@ svn_fs_bdb__changes_delete (svn_fs_t *fs,
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
    svn_fs_path_change_t CHANGES, collapsing multiple changes into a
-   single summarical (is that real word?) change per path. */
+   single succinct change per path. */
 static svn_error_t *
 fold_change (apr_hash_t *changes,
              const change_t *change)

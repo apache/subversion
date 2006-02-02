@@ -77,17 +77,13 @@ svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
                                    apr_pool_t *pool);
 
 
-/* Retrieve a hash of locks in *LOCKS_P, representing all locks
-   that exist at or below PATH in FS.
+/* Retrieve locks representing all locks that exist at or below PATH
+   in FS. Pass each lock to GET_LOCKS_FUNC callback along with
+   GET_LOCKS_BATON.
 
-   The hash maps (const char *)path -> (svn_lock_t *)lock.  All
-   allocations are made in POOL.
-
-   If no locks exist below PATH, return an empty hash.
-
-   This function promises that to auto-expire any locks encountered
-   while building the hash.  That means that the caller can trust that
-   each returned lock hasn't yet expired.
+   This function promises to auto-expire any locks encountered while
+   building the hash.  That means that the caller can trust that each
+   returned lock hasn't yet expired.
 */
 svn_error_t *svn_fs_bdb__locks_get (svn_fs_t *fs,
                                     const char *path,
