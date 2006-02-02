@@ -146,6 +146,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("maximum number of log entries")},
   {"no-unlock",     svn_cl__no_unlock_opt, 0,
                     N_("don't unlock the targets")},
+  {"summarize",     svn_cl__summarize, 0,
+                    N_("show a summary of the results")},
   {0,               0, 0, 0}
 };
 
@@ -297,7 +299,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__summarize} },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -1106,6 +1108,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__no_unlock_opt:
         opt_state.no_unlock = TRUE;
+        break;
+      case svn_cl__summarize:
+        opt_state.summarize = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
