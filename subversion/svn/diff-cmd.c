@@ -36,6 +36,7 @@
 
 /*** Code. ***/
 
+/* Convert KIND into a single character for display to the user. */
 static char
 text_mod_char (svn_client_diff_summarize_kind_t kind)
 {
@@ -55,6 +56,8 @@ text_mod_char (svn_client_diff_summarize_kind_t kind)
     }
 }
 
+/* Print summary information about a given change, implements the
+ * svn_client_diff_summarize_func_t interface. */
 static svn_error_t *
 summarize_func (const svn_client_diff_summarize_t *summary,
                 void *baton,
