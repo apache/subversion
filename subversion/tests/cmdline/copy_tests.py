@@ -1890,7 +1890,27 @@ def force_move(sbox):
   if modified_file_content != expected_file_content:
     raise svntest.Failure("File modifications were lost on 'move --force'")
 
-  
+  # Commit the move and make sure the new content actually reaches
+  # the repository.
+  expected_output = svntest.wc.State(wc_dir, {  
+    'iota': Item(verb='Deleting'),
+    'dest': Item(verb='Adding'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev='2')
+  expected_status.remove("iota")
+  expected_status.add({
+    'dest': Item(status='  ', wc_rev='2'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+  svntest.actions.run_and_verify_svn('Cat file', expected_file_content, [],
+                                     'cat',
+                                     svntest.main.current_repo_url + '/dest')
+
 ########################################################################
 # Run the tests
 
