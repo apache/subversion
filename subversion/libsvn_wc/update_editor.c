@@ -2,7 +2,7 @@
  * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2972,17 +2972,19 @@ svn_wc_add_repos_file2 (const char *dst_path,
                                      FALSE, pool));
       SVN_ERR (svn_wc__loggy_maybe_set_readonly (&log_accum, adm_access,
                                                  base_name, pool));
+    }
+  else
+    {
+      /* No working file provided by the caller, copy and translate the
+         text base. */
+      SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
+                                   svn_wc__copy_translate,
+                                   local_tmp_text_base_path, base_name, FALSE,
+                                   pool));
       SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
                (&log_accum, adm_access,
                 base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
     }
-  else
-    /* No working file provided by the caller, copy and translate the
-       text base. */
-    SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
-                                 svn_wc__copy_translate,
-                                 local_tmp_text_base_path, base_name, FALSE,
-                                 pool));
 
   /* Install new text base. */
   {
