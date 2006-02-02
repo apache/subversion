@@ -36,6 +36,54 @@
 
 /*** Code. ***/
 
+static char
+text_mod_char (svn_client_diff_summarize_kind_t kind)
+{
+  switch (kind)
+    {
+      case svn_client_diff_summarize_kind_modified:
+        return 'M';
+
+      case svn_client_diff_summarize_kind_added:
+        return 'A';
+
+      case svn_client_diff_summarize_kind_deleted:
+        return 'D';
+
+      default:
+        return ' ';
+    }
+}
+
+static svn_error_t *
+summarize_func (const svn_client_diff_summarize_t *summary,
+                void *baton,
+                apr_pool_t *pool)
+{
+  const char *path = baton;
+
+  /* Tack on the target path, so we can differentiate between different parts
+   * of the output when we're given multiple targets. */
+  path = svn_path_join (path, summary->path, pool);
+
+  /* Convert non-urls to local style, so that things like "" show up as "." */
+  if (! svn_path_is_url (path))
+    path = svn_path_local_style (path, pool);
+
+  /* Note: This output format tries to look like the output of 'svn status',
+   *       thus the blank spaces where information that is not relevant to
+   *       a diff summary would go. */
+
+  SVN_ERR (svn_cmdline_printf (pool,
+                               "%c%c %c   %s\n",
+                               text_mod_char (summary->summarize_kind),
+                               summary->prop_changed ? 'M' : ' ',
+                               summary->copyfrom_path ? '+' : ' ',
+                               path));
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_opt_subcommand_t to handle the 'diff' command.
    This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -183,21 +231,35 @@ svn_cl__diff (apr_getopt_t *os,
         {
           target1 = svn_path_join (old_target, path, iterpool);
           target2 = svn_path_join (new_target, path, iterpool);
-          
-          SVN_ERR (svn_client_diff3 (options,
-                                     target1,
-                                     &(opt_state->start_revision),
-                                     target2,
-                                     &(opt_state->end_revision),
-                                     opt_state->nonrecursive ? FALSE : TRUE,
-                                     opt_state->notice_ancestry ? FALSE : TRUE,
-                                     opt_state->no_diff_deleted,
-                                     opt_state->force,
-                                     svn_cmdline_output_encoding (pool),
-                                     outfile,
-                                     errfile,
-                                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                     iterpool));
+
+          if (opt_state->summarize)
+            SVN_ERR (svn_client_diff_summarize
+                       (target1,
+                        &opt_state->start_revision,
+                        target2,
+                        &opt_state->end_revision,
+                        opt_state->nonrecursive ? FALSE : TRUE,
+                        opt_state->notice_ancestry ? FALSE : TRUE,
+                        summarize_func,
+                        (void *) target1,
+                        ((svn_cl__cmd_baton_t *)baton)->ctx,
+                        iterpool));
+          else          
+            SVN_ERR (svn_client_diff3
+                       (options,
+                        target1,
+                        &(opt_state->start_revision),
+                        target2,
+                        &(opt_state->end_revision),
+                        opt_state->nonrecursive ? FALSE : TRUE,
+                        opt_state->notice_ancestry ? FALSE : TRUE,
+                        opt_state->no_diff_deleted,
+                        opt_state->force,
+                        svn_cmdline_output_encoding (pool),
+                        outfile,
+                        errfile,
+                        ((svn_cl__cmd_baton_t *)baton)->ctx,
+                        iterpool));
         }
       else
         {
@@ -213,22 +275,34 @@ svn_cl__diff (apr_getopt_t *os,
             peg_revision.kind = svn_path_is_url (path)
               ? svn_opt_revision_head : svn_opt_revision_working;
 
-          SVN_ERR (svn_client_diff_peg3 (options,
-                                         truepath,
-                                         &peg_revision,
-                                         &opt_state->start_revision,
-                                         &opt_state->end_revision,
-                                         opt_state->nonrecursive
-                                         ? FALSE : TRUE,
-                                         opt_state->notice_ancestry
-                                         ? FALSE : TRUE,
-                                         opt_state->no_diff_deleted,
-                                         opt_state->force,
-                                         svn_cmdline_output_encoding(pool),
-                                         outfile,
-                                         errfile,
-                                         ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                         iterpool));
+          if (opt_state->summarize)
+            SVN_ERR (svn_client_diff_summarize_peg
+                       (truepath,
+                        &peg_revision,
+                        &opt_state->start_revision,
+                        &opt_state->end_revision,
+                        opt_state->nonrecursive ? FALSE : TRUE,
+                        opt_state->notice_ancestry ? FALSE : TRUE,
+                        summarize_func,
+                        (void *) truepath,
+                        ((svn_cl__cmd_baton_t *)baton)->ctx,
+                        iterpool));
+          else
+            SVN_ERR (svn_client_diff_peg3
+                       (options,
+                        truepath,
+                        &peg_revision,
+                        &opt_state->start_revision,
+                        &opt_state->end_revision,
+                        opt_state->nonrecursive ? FALSE : TRUE,
+                        opt_state->notice_ancestry ? FALSE : TRUE,
+                        opt_state->no_diff_deleted,
+                        opt_state->force,
+                        svn_cmdline_output_encoding(pool),
+                        outfile,
+                        errfile,
+                        ((svn_cl__cmd_baton_t *)baton)->ctx,
+                        iterpool));
         }
     }
   svn_pool_destroy (iterpool);

@@ -74,6 +74,7 @@ typedef enum {
   svn_cl__revprop_opt,
   svn_cl__stop_on_copy_opt,
   svn_cl__strict_opt,
+  svn_cl__summarize,
   svn_cl__targets_opt,
   svn_cl__version_opt,
   svn_cl__xml_opt
@@ -141,6 +142,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
+  svn_boolean_t summarize;       /* create a summary of a diff */
 } svn_cl__opt_state_t;
 
 
