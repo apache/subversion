@@ -555,8 +555,8 @@ class WinGeneratorBase(GeneratorBase):
     "Return the list of defines for target"
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
-                   "snprintf=_snprintf", "_CRT_SECURE_NO_DEPRECATE",
-                   "_CRT_NONSTDC_NO_DEPRECATE"]
+                   "snprintf=_snprintf", "_CRT_SECURE_NO_DEPRECATE=",
+                   "_CRT_NONSTDC_NO_DEPRECATE="]
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
