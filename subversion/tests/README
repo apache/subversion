@@ -219,7 +219,7 @@ section.
 Testing Over DAV
 ----------------
 
-Please see subversion/tests/svn/README for how to run the
+Please see subversion/tests/cmdline/README for how to run the
 command-line client test suite against a remote repository.
 
 Conclusion
