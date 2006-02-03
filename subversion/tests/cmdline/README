@@ -21,9 +21,12 @@ These tests require Python 2.0 or later.
 How To Run The Tests
 ====================
 
-To run a test script over ra_local, just invoke it from this
-directory.  Invoke the script with no arguments to run all the tests
-in that script:
+To run a test script over ra_local, invoke it from THIS DIRECTORY.
+
+   $ cd subversion/tests/cmdline/
+
+Invoke the script with no arguments to run all the tests in that
+script:
 
    $ ./basic_tests.py
 
