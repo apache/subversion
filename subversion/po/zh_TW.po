@@ -1,5 +1,5 @@
 # Tranditional Chinese translation for subversion package
-# Copyright (C) 2004 Collab Net.
+# Copyright (C) 2004 CollabNet.
 # This file is distributed under the same license as the subversion package.
 # The original repos for this translation could be found at
 # http://svn.ntcu.net/tmprepo/svn.pot.  There is a glossary.txt.

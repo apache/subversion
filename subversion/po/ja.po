@@ -1,6 +1,6 @@
 # Japanese translations for Subversion
 # Subversion の日本語訳
-# Copyright (C) 2004 Collab Net.
+# Copyright (C) 2004 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 # Note on formating help messages
