@@ -17,9 +17,21 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 import sys, os
+import types
+import re
 import unittest
 from cStringIO import StringIO
+import shutil
 import svnmerge
+import stat
+import atexit
+import getopt
+
+# True/False constants are Python 2.2+
+try:
+    True, False
+except NameError:
+    True, False = 1, 0
 
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
@@ -27,7 +39,7 @@ class TestCase_kwextract(unittest.TestCase):
         self.assertEqual(svnmerge.kwextract("$Date: 2005-09-25 13:45 CET+1$"), "2005-09-25 13:45 CET+1")
     def test_failure(self):
         self.assertEqual(svnmerge.kwextract("$Rev: $"), "<unknown>")
-        self.assertEqual(svnmerge.kwextract("$Date:$"), "<unknown>")
+        self.assertEqual(svnmerge.kwextract("$Date$"), "<unknown>")
 
 class TestCase_launch(unittest.TestCase):
     if os.name == "nt":
@@ -72,8 +84,13 @@ class TestCase_RevisionList(unittest.TestCase):
         self.assertEqual(rl.normalized(), [(1,1), (3,6), (8,18)])
         self.assertEqual(str(rl), "1,3-6,8-18")
     def test_iter(self):
-        rl = svnmerge.RevisionList("4-13,1-5,34,20-22,18-21")
-        self.assertEqual(list(iter(rl)), range(1,14)+range(18,23)+[34])
+        try:
+            iter
+        except NameError:
+            pass
+        else:
+            rl = svnmerge.RevisionList("4-13,1-5,34,20-22,18-21")
+            self.assertEqual(list(iter(rl)), range(1,14)+range(18,23)+[34])
     def test_union(self):
         rl = svnmerge.RevisionList("3-8,4-10") | svnmerge.RevisionList("7-14,1")
         self.assertEqual(str(rl), "1,3-14")
@@ -91,31 +108,45 @@ class TestCase_MinimalMergeIntervals(unittest.TestCase):
         revs = svnmerge.minimal_merge_intervals(rl, phantom)
         self.assertEqual(revs, [(4,12), (18,24)])
 
-class TestCase_HelpScreen(unittest.TestCase):
-    def svnmerge(self, args, error=False):
-        reload(svnmerge)
+class TestCase_SvnMerge(unittest.TestCase):
+    def svnmerge(self, cmds, *args, **kwargs):
+        return self.svnmerge2(cmds.split(), *args, **kwargs)
+
+    def svnmerge2(self, args, error=False, match=None, nonmatch=None):
         out = StringIO()
         sys.stdout = sys.stderr = out
         try:
             try:
-                ret = svnmerge.main(args.split())
+                ret = svnmerge.main(args)
             except SystemExit, e:
                 ret = e.code
         finally:
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
 
+        if ret is None:
+            ret = 0
+
         if error:
             self.assertNotEqual(ret, 0)
         else:
             self.assertEqual(ret, 0)
 
+        if match is not None:
+            self.assert_(re.search(match, out.getvalue()), "pattern %r not found in output: %r" % (match, out.getvalue()))
+        if nonmatch is not None:
+            self.assert_(not re.search(nonmatch, out.getvalue()), "pattern %r found in output: %r" % (nonmatch, out.getvalue()))
+
         return out.getvalue()
 
+
+class TestCase_CommandLineOptions(TestCase_SvnMerge):
     def test_empty(self):
         self.svnmerge("")
     def test_help_commands(self):
-        out = self.svnmerge("help")
+        self.svnmerge("help")
+        self.svnmerge("--help")
+        self.svnmerge("-h")
         for cmd in svnmerge.command_table.keys():
             self.svnmerge("help %s" % cmd)
             self.svnmerge("%s --help" % cmd)
@@ -130,11 +161,194 @@ class TestCase_HelpScreen(unittest.TestCase):
         self.svnmerge("--asdsad init", error=True)
     def test_version(self):
         out = self.svnmerge("--version")
-        self.assert_("Giovanni Bajo" in out)
+        self.assert_(out.find("Giovanni Bajo") >= 0)
         out = self.svnmerge("-V")
-        self.assert_("Giovanni Bajo" in out)
+        self.assert_(out.find("Giovanni Bajo") >= 0)
         out = self.svnmerge("init -V")
-        self.assert_("Giovanni Bajo" in out)
+        self.assert_(out.find("Giovanni Bajo") >= 0)
+    def testOptionOrder(self):
+        """Make sure you can intermix command name, arguments and
+        options in any order."""
+        self.svnmerge("--log avail", error=True,
+                      match="no integration info")  # accepted
+        self.svnmerge("-l avail", error=True,
+                      match="no integration info")  # accepted
+        self.svnmerge("-r123 merge", error=True,
+                      match="no integration info")  # accepted
+        self.svnmerge("-s -v -r92481 merge", error=True,
+                      match="no integration info")  # accepted
+        self.svnmerge("--log merge", error=True,
+                      match="option --log not recognized")
+        self.svnmerge("--diff foobar", error=True, match="foobar")
+
+        # This requires gnu_getopt support to be parsed
+        if hasattr(getopt, "gnu_getopt"):
+            self.svnmerge("-r123 merge . --log", error=True,
+                          match="option --log not recognized")
+
+def temp_path():
+    try:
+        return os.environ["TEMP"]
+    except KeyError:
+        pass
+    if os.name == "posix":
+        return "/tmp"
+    return "."
+
+def rmtree(path):
+    def onerror(func, path, excinfo):
+        if func in [os.remove, os.rmdir]:
+            if os.path.exists(path):
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+
+    if os.path.isdir(path):
+        shutil.rmtree(path, onerror=onerror)
+
+def template_path():
+    basepath = os.path.join(temp_path(), "__svnmerge_test_template")
+    basepath = os.path.abspath(basepath)
+    return basepath
+
+class TestCase_TestRepo(TestCase_SvnMerge):
+    def setUp(self):
+        self.cwd = os.getcwd()
+        basepath = template_path()
+
+        if not os.path.isdir(basepath):
+            rmtree(basepath)
+            os.makedirs(basepath)
+            self.path = os.path.join(basepath, "repo")
+            os.makedirs(self.path)
+
+            self.repo = "file:///" + self.path.replace("\\", "/")
+
+            os.chdir(basepath)
+
+            self.multilaunch("""
+                svnadmin create --fs-type fsfs %(PATH)s
+                svn mkdir -m "create /branches" %(REPO)s/branches
+                svn mkdir -m "create /tags" %(REPO)s/tags
+                svn mkdir -m "create /trunk" %(REPO)s/trunk
+                svn co %(REPO)s/trunk trunk
+            """)
+
+            os.chdir("trunk")
+            open("test1", "w").write("test 1")
+            open("test2", "w").write("test 2")
+            open("test3", "w").write("test 3")
+            open("test4", "w").write("test 4")
+            open("test5", "w").write("test 5")
+
+            self.multilaunch("""
+                svn add test1
+                svn ci -m "add test1"
+                svn add test2
+                svn ci -m "add test2"
+                svn add test3
+                svn ci -m "add test3"
+                svn mkdir -m "create /foobar" %(REPO)s/foobar
+                svn rm -m "remove /foobar" %(REPO)s/foobar
+                svn add test4
+                svn ci -m "add test4"
+                svn add test5
+                svn ci -m "add test5"
+                svn cp -r6 -m "create branch" %(REPO)s/trunk %(REPO)s/branches/test-branch
+            """)
+
+            os.chdir("..")
+
+            self.multilaunch("""
+                svn co %(REPO)s/branches/test-branch
+            """)
+
+            atexit.register(lambda: rmtree(basepath))
+
+        os.chdir(self.cwd)
+
+        self.testpath = os.path.join(temp_path(), "__svnmerge_test")
+        self.testpath = os.path.abspath(self.testpath)
+
+        rmtree(self.testpath)
+        shutil.copytree(basepath, self.testpath)
+        os.chdir(self.testpath)
+        os.chdir("test-branch")
+        self.path = os.path.join(self.testpath, "repo")
+
+        p = self.path.replace("\\", "/")
+        if p[0] != '/':
+            p = '/' + p
+        self.repo = "file://" + p
+
+    def multilaunch(self, cmds):
+        for cmd in cmds.split("\n"):
+            cmd = cmd.strip()
+            svnmerge.launch(cmd % dict(PATH=self.path, REPO=self.repo))
+
+    def revert(self):
+        self.multilaunch("svn revert -R .")
+    def getproperty(self):
+        out = svnmerge.launch("svn pg %s ." % svnmerge.opts["prop"])
+        return out[0].strip()
+
+    def testNoWc(self):
+        os.mkdir("foo")
+        os.chdir("foo")
+        self.svnmerge("init", error=True, match="working dir")
+        self.svnmerge("avail", error=True, match="working dir")
+        self.svnmerge("merge", error=True, match="working dir")
+        self.svnmerge("block", error=True, match="working dir")
+        self.svnmerge("unblock", error=True, match="working dir")
+
+    def testCheckNoIntegrationInfo(self):
+        self.svnmerge("avail", error=True, match="no integration")
+        self.svnmerge("merge", error=True, match="no integration")
+        self.svnmerge("block", error=True, match="no integration")
+        self.svnmerge("unblock", error=True, match="no integration")
+
+    def testBasic(self):
+        self.svnmerge("init")
+        p = self.getproperty()
+        self.assertEqual("/trunk:1-6", p)
+
+        out = self.svnmerge("avail -v", match=r"phantom.*7-8")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "9-10")
+
+        self.svnmerge("avail --log", match=r"| r7.*| r8")
+        self.svnmerge("avail --diff -r9", match="Index: test4")
+
+        out = self.svnmerge("avail --log -r5")
+        self.assertEqual(out.strip(), "")
+        out = self.svnmerge("avail --diff -r5")
+        self.assertEqual(out.strip(), "")
+
+    def testCommitFile(self):
+        self.svnmerge("init -vf commit-log.txt", match="wrote commit message")
+        self.assert_(os.path.exists("commit-log.txt"))
+        os.remove("commit-log.txt")
+
+    def testInitForce(self):
+        open("test1", "a").write("foo")
+        self.svnmerge("init", error=True, match="clean")
+        self.svnmerge("init -F")
+        p = self.getproperty()
+        self.assertEqual("/trunk:1-6", p)
+
+    def testCheckInitializeEverything(self):
+        self.svnmerge2(["init", self.repo + "/trunk"])
+        p = self.getproperty()
+        self.assertEqual("/trunk:1-11", p)
+
+    def testCheckNoCopyfrom(self):
+        os.chdir("..")
+        os.chdir("trunk")
+        self.svnmerge("init", error=True, match="no copyfrom")
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        rmtree(self.testpath)
+
 
 if __name__ == "__main__":
     unittest.main()
