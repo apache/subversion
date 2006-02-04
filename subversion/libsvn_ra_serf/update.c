@@ -688,21 +688,10 @@ finish_report(void *report_baton,
     }
 
   /* create and deliver request */
-  request = serf_connection_request_create(sess->conn);
-
-  req_bkt = serf_bucket_request_create("REPORT", vcc_url, report->buckets,
-                                       serf_request_get_alloc(request));
-
-  hdrs_bkt = serf_bucket_request_get_headers(req_bkt);
-  serf_bucket_headers_setn(hdrs_bkt, "Host", sess->repos_url.hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "ra_serf");
-  serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
-  /* serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip"); */
-
-  report->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(report->xmlp, report);
-  XML_SetElementHandler(report->xmlp, start_report, end_report);
-  XML_SetCharacterDataHandler(report->xmlp, cdata_report);
+  create_serf_req(&request, &req_bkt, NULL,
+                  sess,
+                  "REPORT", vcc_url,
+                  report->buckets, "text/xml");
 
   serf_request_deliver(request, req_bkt,
                        accept_response, sess,
@@ -862,6 +851,12 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   report->active_propfinds = NULL;
   report->done = FALSE;
   report->free_info = 0;
+
+  /* Create our XML parser */
+  report->xmlp = XML_ParserCreate(NULL);
+  XML_SetUserData(report->xmlp, report);
+  XML_SetElementHandler(report->xmlp, start_report, end_report);
+  XML_SetCharacterDataHandler(report->xmlp, cdata_report);
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;

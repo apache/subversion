@@ -346,11 +346,39 @@ conn_closed (serf_connection_t *conn,
 apr_status_t
 cleanup_serf_session(void *data);
 
+/**
+ * Create a REQUEST with an associated REQ_BKT in the SESSION.
+ *
+ * If HDRS_BKT is not-NULL, it will be set to a headers_bucket that
+ * corresponds to the new request.
+ *
+ * The request will be METHOD at URL.
+ *
+ * If BODY_BKT is not-NULL, it will be sent as the request body.
+ *
+ * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
+ */
+void
+create_serf_req(serf_request_t **request,
+                serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
+                serf_session_t *session,
+                const char *method, const char *url,
+                serf_bucket_t *body_bkt, const char *content_type);
+
+/**
+ * This function will run the serf context in SESS until *DONE is TRUE.
+ */
 svn_error_t *
 context_run_wait(svn_boolean_t *done,
                  serf_session_t *sess,
                  apr_pool_t *pool);
 
+/**
+ * This function will feed the RESPONSE body into XMLP.  When parsing is
+ * completed (i.e. an EOF is received), *DONE is set to TRUE.
+ *
+ * Temporary allocations are made in POOL.
+ */
 apr_status_t
 handle_xml_parser(serf_bucket_t *response,
                   XML_Parser xmlp,
