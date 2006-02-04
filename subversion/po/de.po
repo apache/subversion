@@ -2,7 +2,7 @@
 # German translations for Subversion
 # Deutsche Übersetzung für Subversion
 #
-# Copyright (C) 2004 Collab Net.
+# Copyright (C) 2004 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 # Translation dictionary:

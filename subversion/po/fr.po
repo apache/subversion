@@ -1,5 +1,5 @@
 # French translations for subversion package.
-# Copyright (C) 2005 Collab Net.
+# Copyright (C) 2005 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 msgid ""

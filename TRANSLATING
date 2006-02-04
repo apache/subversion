@@ -84,7 +84,7 @@ The header in the newly generated .po file looks like this:
 
 Please replace that block with the following text:
   # <Your language> translation for subversion package
-  # Copyright (C) <YEAR> Collab Net.
+  # Copyright (C) <YEAR> CollabNet.
   # This file is distributed under the same license as the subversion package.
 
 The first translation block in the .po file contains two lines like these:
