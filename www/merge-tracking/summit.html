@@ -18,12 +18,12 @@
 
 <p>On Tuesday, January 17th, 2006, CollabNet held a merge tracking
 summit for some of their Subversion-using customers to solicit use
-cases and requirements for the enterprise.  Enterprise level users
-have branches which last longer than a typical open source project
+cases and requirements for the enterprise.  Enterprise users have
+branches which last longer than a typical open source project
 (e.g. more than a decade). They tend to do merges more often,
 involving more files. They also have a greater need for
-auditability/traceability (e.g. FDA requirements, Sarbanes Oxley
-compliance, etc.).</p>
+auditability/traceability, largely due to compliance requirements
+(e.g. FDA, Sarbanes Oxley, etc.).</p>
 
 <p>The pre-summit <a href="summit-survey.html">survey questionnaire
 and responses</a>, and the <a href="#results">recorded results</a> of
@@ -36,10 +36,18 @@ that summit are available here.</p>
 <p>Partial results below.  Content is not yet in any particular
 order.</p>
 
-<!-- TODO: Incorporate feedback from rooneg, cmpilato, djames, and
-dlr.  Better organize and flesh out content. -->
+<!-- TODO: Incorporate feedback from rooneg, cmpilato, and djames.
+Better organize and flesh out content. -->
 
 <ul>
+  <li>Even basic "merge memory" would be incredible helpful in
+  shops where minimal, inconsistent process prevails.  Users are often
+  very average developers/maintenance programmers.</li>
+
+  <li>Very long-lived branches (e.g. 10+ years) containing very large
+  binaries, tons of merges between them, and subject to duplicate bug
+  reports should be handled.</li>
+
   <li>The ability to manually adjust any merge meta data is crucial.
   For instance, someone may hand-edit one or more resources to achieve
   the same result as a merge, or hand-edit the result of a merge in a
@@ -70,13 +78,21 @@ dlr.  Better organize and flesh out content. -->
   which are marked as merges should be displayed as such, so that the
   user knows to drill down further.</li>
 
+  <li><code>svn log</code> on a merged revision should be able to
+  automatically provide both who made the original change and who
+  performed the merge.</li>
+
   <li>A portable, human-readable change format for review would be
   useful.  Programmatic parsability was not a high priority,
   however.  An extended patch program was not considered crucial.</li>
 
   <li>Visual interfaces to branch/merge management are <em>very</em>
-  useful.  TODO: Follow-up sessions via WebEx will add more detail
-  here.</li>
+  useful.  Such a tool could graphically show which branch/revision
+  have been merged where, and the ancestry of a branch.  <a
+  href="http://www.araxis.com/merge/index.html">Araxis Merge</a> was
+  cited as an excellent example of a tool providing the merge
+  managment portion of this type of UI.  TODO: Follow-up sessions via
+  WebEx will add more detail here.</li>
 
   <li>The ability to do foreign branch is very good (for similar
   reasons to those in the open source world -- many commercial
@@ -97,21 +113,24 @@ dlr.  Better organize and flesh out content. -->
   conflict."</li>
 
   <li>TortoiseSVN merge is apparently good (it has the Araxis
-  Merge-style take my version or their version), but needs a built-in
-  text editor for more involved conflict resolution.</li>
+  Merge-style "take my version or their version"), but needs a
+  built-in text editor for more involved conflict resolution.</li>
 
   <li>Format-specific merge tools is an important need.</li>
 
-  <li>The ability to automate merges, including interfaces for
-  resolving conflicts and handling other errors, is important.
-  Customers who do multi-thousand file merges stress this.</li>
+  <li>The ability to automate merges (e.g. from a stable branch to a
+  development branch), including interfaces for resolving conflicts
+  and handling other errors, is important.  Customers who do
+  multi-thousand file merges stress this.</li>
 
   <li>Questions users want to ask: "Is this version of foo.c the
   'latest' version?  Are there changes out there which are applicable
   to foo.c, that have not been applied?  What are they?"</li>
 
   <li>Any action that can be done to a tag/branch (e.g. merge a
-  change, remove a change, etc.) should be hook-protected.</li>
+  change, remove a change, etc.) should be hook-protected.  Merging
+  itself should be a first-class hook operation (e.g. commit,
+  revprop-change, etc.)</li>
 
   <li>The ability to "shadow" versioned resources: Make a branch, but
   have most of the branch follow the original source, while only a few
@@ -124,7 +143,7 @@ dlr.  Better organize and flesh out content. -->
 
   <li>Roll-back should be convenient, and should be recorded as a
   subtraction event, visible as such in the meta data.  Roll-back was
-  common at Google, and more rare at other shops.</li>
+  common at a few shops, and more rare at others.</li>
 
   <li>Asking change C to where it has been ported was not a strong
   need (e.g. reporting).</li>
