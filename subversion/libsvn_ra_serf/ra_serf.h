@@ -32,35 +32,60 @@
 #include "svn_dav.h"
 
 
+/**
+ * The master serf RA session.
+ *
+ * This is stored in the ra session ->priv field.
+ */
 typedef struct {
+  /* Pool for allocations during this session */
   apr_pool_t *pool;
-  serf_bucket_alloc_t *bkt_alloc;
 
+  /* The current context */
   serf_context_t *context;
   serf_ssl_context_t *ssl_context;
 
-  serf_connection_t *conn;
-
+  /* Are we using ssl */
   svn_boolean_t using_ssl;
 
+  /* Bucket allocator for this context. */
+  serf_bucket_alloc_t *bkt_alloc;
+
+  /* The current connection */
+  serf_connection_t *conn;
+
+  /* The URL that was passed into _open() */
   apr_uri_t repos_url;
   const char *repos_url_str;
 
+  /* The actual discovered root */
   apr_uri_t repos_root;
   const char *repos_root_str;
 
+  /* Cached properties */
   apr_hash_t *cached_props;
 
 } serf_session_t;
 
+/**
+ * Structure which represents a DAV element with a NAMESPACE and NAME.
+ */
 typedef struct {
+  /* Element namespace */
   const char *namespace;
+  /* Element name */
   const char *name;
 } dav_props_t;
 
+/**
+ * Structure which represents an XML namespace.
+ */
 typedef struct ns_t {
+  /* The assigned name. */
   const char *namespace;
+  /* The full URL for this namespace. */
   const char *url;
+  /* The next namespace in our list. */
   struct ns_t *next;
 } ns_t;
 
@@ -111,165 +136,6 @@ typedef struct propfind_context_t {
   /* The next PROPFIND we have open. */
   struct propfind_context_t *next;
 } propfind_context_t;
-
-/**
- * This enum represents the current state of our XML parsing for a REPORT.
- */
-typedef enum {
-    OPEN_DIR,
-    ADD_FILE,
-    ADD_DIR,
-    PROP,
-    IGNORE_PROP_NAME,
-    NEED_PROP_NAME,
-} report_state_e;
-
-/**
- * This structure represents the information for a directory.
- */
-typedef struct report_dir_t
-{
-  /* The enclosing parent.
-   *
-   * This value is NULL when we are the root.
-   */
-  struct report_dir_t *parent_dir;
-
-  /* the containing directory name */
-  const char *name;
-
-  /* temporary path buffer for this directory. */
-  svn_stringbuf_t *name_buf;
-
-  /* the canonical url for this path. */
-  const char *url;
-
-  /* controlling dir baton */
-  void *dir_baton;
-
-  /* Our update editor and baton. */
-  const svn_delta_editor_t *update_editor;
-  void *update_baton;
-
-  /* How many references to this directory do we still have open? */
-  apr_size_t ref_count;
-
-  /* hashtable that stores all of the properties (shared globally) */
-  apr_hash_t *props;
-
-  /* The propfind request for our current directory */
-  propfind_context_t *propfind;
-
-  /* The next directory we have open. */
-  struct report_dir_t *next;
-} report_dir_t;
-
-/**
- * This structure represents the information for a file.
- *
- * This structure is created as we parse the REPORT response and
- * once the element is completed, we create a report_fetch_t structure
- * to give to serf to retrieve this file.
- */
-typedef struct report_info_t
-{
-  /* The enclosing directory. */
-  report_dir_t *dir;
-
-  /* the name of the file. */
-  const char *file_name;
-
-  /* file name buffer */
-  svn_stringbuf_t *file_name_buf;
-
-  /* the canonical url for this path. */
-  const char *file_url;
-
-  /* pool passed to update->add_file, etc. */
-  apr_pool_t *editor_pool;
-
-  /* controlling file_baton and textdelta handler */
-  void *file_baton;
-  svn_txdelta_window_handler_t textdelta;
-  void *textdelta_baton;
-
-  /* the in-progress property being parsed */
-  const char *prop_ns;
-  const char *prop_name;
-  const char *prop_val;
-  apr_size_t prop_val_len;
-} report_info_t;
-
-/**
- * This file structure represents a single file to fetch with its
- * associated Serf session.
- */
-typedef struct report_fetch_t {
-  /* Our pool. */
-  apr_pool_t *pool;
-
-  /* The session we should use to fetch the file. */
-  serf_session_t *sess;
-
-  /* Stores the information for the file we want to fetch. */
-  report_info_t *info;
-
-  /* Are we done fetching this file? */
-  svn_boolean_t done;
-
-  /* The next fetch we have open. */
-  struct report_fetch_t *next;
-} report_fetch_t;
-
-typedef struct report_state_list_t {
-   /* The current state that we are in now. */
-  report_state_e state;
-
-  /* Information */
-  report_info_t *info;
-
-  /* The previous state we were in. */
-  struct report_state_list_t *prev;
-} report_state_list_t;
-
-typedef struct {
-  serf_session_t *sess;
-
-  const char *target;
-  svn_revnum_t target_rev;
-
-  svn_boolean_t recurse;
-
-  const svn_delta_editor_t *update_editor;
-  void *update_baton;
-
-  serf_bucket_t *buckets;
-
-  XML_Parser xmlp;
-  ns_t *ns_list;
-
-  /* our base rev. */
-  svn_revnum_t base_rev;
-
-  /* could allocate this as an array rather than a linked list. */
-  report_state_list_t *state;
-  report_state_list_t *free_state;
-
-  /* pending GET requests */
-  report_fetch_t *active_fetches;
-
-  /* pending PROPFIND requests */
-  propfind_context_t *active_propfinds;
-
-  /* potentially pending dir baton closes */
-  report_dir_t *pending_dir_close;
-
-  /* free list of info structures */
-  report_info_t *free_info;
-
-  svn_boolean_t done;
-
-} report_context_t;
 
 /** DAV property sets */
 static const dav_props_t base_props[] =
