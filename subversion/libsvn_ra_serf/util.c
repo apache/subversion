@@ -80,6 +80,33 @@ cleanup_serf_session(void *data)
   return APR_SUCCESS;
 }
 
+void
+create_serf_req(serf_request_t **request,
+                serf_bucket_t **req_bkt, serf_bucket_t **ret_hdrs_bkt,
+                serf_session_t *session,
+                const char *method, const char *url,
+                serf_bucket_t *body_bkt, const char *content_type)
+{
+  serf_bucket_t *hdrs_bkt;
+
+  *request = serf_connection_request_create(session->conn);
+
+  *req_bkt = serf_bucket_request_create(method, url, body_bkt,
+                                        serf_request_get_alloc(*request));
+
+  hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", session->repos_url.hostinfo);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
+  if (content_type)
+    {
+      serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
+    }
+  if (ret_hdrs_bkt)
+    {
+      *ret_hdrs_bkt = hdrs_bkt;
+    }
+}
+
 svn_error_t *
 context_run_wait(svn_boolean_t *done,
                  serf_session_t *sess,

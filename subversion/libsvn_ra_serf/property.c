@@ -299,19 +299,6 @@ deliver_props (propfind_context_t **prop_ctx,
                                       sess->bkt_alloc);
   serf_bucket_aggregate_append(props_bkt, tmp);
 
-  /* create and deliver request */
-  request = serf_connection_request_create(sess->conn);
-
-  req_bkt = serf_bucket_request_create("PROPFIND", url, props_bkt,
-                                       serf_request_get_alloc(request));
-
-  hdrs_bkt = serf_bucket_request_get_headers(req_bkt);
-  serf_bucket_headers_setn(hdrs_bkt, "Host", sess->repos_url.hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "ra_serf");
-  serf_bucket_headers_setn(hdrs_bkt, "Depth", depth);
-  serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
-  /* serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip"); */
-
   /* Create the propfind context. */
   new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
   new_prop_ctx->pool = pool;
@@ -325,6 +312,13 @@ deliver_props (propfind_context_t **prop_ctx,
   XML_SetUserData(new_prop_ctx->xmlp, new_prop_ctx);
   XML_SetElementHandler(new_prop_ctx->xmlp, start_propfind, end_propfind);
   XML_SetCharacterDataHandler(new_prop_ctx->xmlp, cdata_propfind);
+
+  /* create and deliver request */
+  create_serf_req(&request, &req_bkt, &hdrs_bkt, sess,
+                  "PROPFIND", url,
+                  props_bkt, "text/xml");
+
+  serf_bucket_headers_setn(hdrs_bkt, "Depth", depth);
 
   serf_request_deliver(request, req_bkt,
                        accept_response, sess,
