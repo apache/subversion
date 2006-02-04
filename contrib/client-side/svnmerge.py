@@ -481,7 +481,7 @@ def get_copyfrom(dir):
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir, split_lines=False)
     out = out.replace("\n", " ")
     try:
-        m = re.search(r'(<path .*action="A".*>%s</path>)' % rlpath, out)
+        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)' % rlpath, out)
         head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
         rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
         return head,rev
