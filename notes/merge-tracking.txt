@@ -1,6 +1,9 @@
                        Merge-Tracking in Subversion
                        ============================
 
+NOTE: This content is in the process of being moved to:
+http://subversion.tigris.org/merge-tracking/
+
 These notes try to break apart the various sub-problems of
 "merge-tracking".  People can mean a whole lot of different things
 when they utter that phrase, so this is an attempt to describe various
