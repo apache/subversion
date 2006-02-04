@@ -589,6 +589,8 @@ def analyze_revs(url, begin=1, end=None):
         end = "HEAD"
     else:
         end = str(end)
+        if long(begin) > long(end):
+            return RevisionList(""), RevisionList("")
 
     out = launchsvn('log --quiet -r%s:%s "%s"' % (begin, end, url),
                     split_lines=False)
@@ -609,7 +611,7 @@ def analyze_head_revs(branch_dir, head_url):
     head revisions."""
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    head_rev = get_latestrev(target_to_url(branch_dir))
+    end_rev = get_latestrev(target_to_url(branch_dir))
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
@@ -618,7 +620,16 @@ def analyze_head_revs(branch_dir, head_url):
     if r and r[0][0] == 1:
         base = r[0][1]
 
-    return analyze_revs(head_url, base, head_rev)
+    # See if the user filtered the revision list. If so, we are not interested
+    # in something outside that range.
+    if opts["revision"]:
+        revs = RevisionList(opts["revision"]).sorted()
+        if base < revs[0]:
+            base = revs[0]
+        if end_rev > revs[-1]:
+            end_rev = revs[-1]
+
+    return analyze_revs(head_url, base, end_rev)
 
 def minimal_merge_intervals(revs, phantom_revs):
     """Produce the smallest number of intervals suitable for merging. revs
