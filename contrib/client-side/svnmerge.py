@@ -384,7 +384,7 @@ def _run_propset(dir, prop, value):
         # Fallback for Python <= 2.3 which does not have mkstemp (mktemp
         # suffers from race conditions. Not that we care...)
         fname = tempfile.mktemp()
-        f = file(fname, "wb")
+        f = open(fname, "wb")
 
     try:
         f.write(value)
@@ -1031,7 +1031,13 @@ class CommandOpts:
                 state[o.dest] = o.default
 
         sfl, lfl, back = self._compute_flags(opts)
-        lopts,args = getopt.gnu_getopt(args, sfl, lfl)
+        try:
+            lopts,args = getopt.gnu_getopt(args, sfl, lfl)
+        except AttributeError:
+            # Before Python 2.3, there was not gnu_getopt support. So
+            # we can't parse intermixed positional arguments and options.
+            lopts,args = getopt.getopt(args, sfl, lfl)
+
         for o,v in lopts:
             back[o].apply(state, v)
         return state, args
@@ -1052,6 +1058,7 @@ class CommandOpts:
             opts = self.gopts[:]
             if cmd:
                 opts.extend(cmd.opts)
+                args.remove(cmd.name)
             state, args = self._fancy_getopt(args, opts)
         except getopt.GetoptError, e:
             self.error(e, cmd)
@@ -1068,8 +1075,6 @@ class CommandOpts:
         else:
             if cmd is None:
                 self.error("command argument required")
-            assert cmd.name == args[0]
-        args = args[1:]
         if str(cmd) == "help":
             cmd(*args)
             sys.exit(0)
