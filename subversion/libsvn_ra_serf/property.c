@@ -360,3 +360,39 @@ retrieve_props (apr_hash_t *prop_vals,
       SVN_ERR(wait_for_props(prop_ctx, sess, pool));
     }
 }
+
+void
+walk_all_props(apr_hash_t *props,
+               const char *name,
+               walker_visitor_t walker,
+               void *baton,
+               apr_pool_t *pool)
+{
+  apr_hash_index_t *ns_hi;
+  apr_hash_t *path_props;
+
+  path_props = apr_hash_get(props, name, strlen(name));
+
+  for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
+       ns_hi = apr_hash_next(ns_hi))
+    {
+      void *ns_val;
+      const void *ns_name;
+      apr_ssize_t ns_len;
+      apr_hash_index_t *name_hi;
+      apr_hash_this(ns_hi, &ns_name, &ns_len, &ns_val);
+      for (name_hi = apr_hash_first(pool, ns_val); name_hi;
+           name_hi = apr_hash_next(name_hi))
+        {
+          void *prop_val;
+          const void *prop_name;
+          apr_ssize_t prop_len;
+          apr_hash_index_t *prop_hi;
+
+          apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
+          /* use a subpool? */
+          walker(baton, ns_name, ns_len, prop_name, prop_len, prop_val, pool);
+        }
+    }
+}
+
