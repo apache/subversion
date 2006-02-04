@@ -56,27 +56,36 @@ static void push_state(report_context_t *ctx, report_state_e state)
   if (state == OPEN_DIR)
     {
       new_state->info = apr_palloc(ctx->sess->pool, sizeof(*new_state->info));
-      new_state->info->file_props = apr_hash_make(ctx->sess->pool);
       /* Create our root state now. */
       new_state->info->dir = apr_palloc(ctx->sess->pool,
                                         sizeof(*new_state->info->dir));
+      /* Create the root property tree. */
+      new_state->info->dir->props = apr_hash_make(ctx->sess->pool);
       new_state->info->dir->parent_dir = NULL;
       new_state->info->dir->ref_count = 0;
+      new_state->info->dir->next = NULL;
+      new_state->info->dir->propfind = NULL;
+      /* Point the update_editor */
+      new_state->info->dir->update_editor = ctx->update_editor;
+      new_state->info->dir->update_baton = ctx->update_baton;
     }
   else if (state == ADD_DIR)
     {
       new_state->info = apr_palloc(ctx->sess->pool, sizeof(*new_state->info));
-      new_state->info->file_props = ctx->state->info->file_props;
       new_state->info->dir =
           apr_palloc(ctx->sess->pool, sizeof(*new_state->info->dir));
       new_state->info->dir->parent_dir = ctx->state->info->dir;
       new_state->info->dir->parent_dir->ref_count++;
       new_state->info->dir->ref_count = 0;
+      new_state->info->dir->next = NULL;
+      new_state->info->dir->props = ctx->state->info->dir->props;
+      /* Point the update_editor */
+      new_state->info->dir->update_editor = ctx->update_editor;
+      new_state->info->dir->update_baton = ctx->update_baton;
     }
   else if (state == ADD_FILE)
     {
       new_state->info = apr_palloc(ctx->sess->pool, sizeof(*new_state->info));
-      new_state->info->file_props = ctx->state->info->file_props;
       /* Point at our parent's directory state. */
       new_state->info->dir = ctx->state->info->dir;
       new_state->info->dir->ref_count++;
@@ -107,14 +116,18 @@ static void pop_state(report_context_t *ctx)
   ctx->free_state->info = NULL;
 }
 
+typedef svn_error_t * (*prop_set_t)(void *baton,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool);
+
 static void
-set_file_props(void *baton,
-               const void *ns, apr_ssize_t ns_len,
-               const void *name, apr_ssize_t name_len,
-               void *val,
-               apr_pool_t *pool)
+set_baton_props(prop_set_t setprop, void *baton,
+                const void *ns, apr_ssize_t ns_len,
+                const void *name, apr_ssize_t name_len,
+                void *val,
+                apr_pool_t *pool)
 {
-  report_fetch_t *fetch = baton;
   const char *prop_name;
   svn_string_t *prop_val;
 
@@ -136,10 +149,33 @@ set_file_props(void *baton,
       return;
     }
 
-  fetch->update_editor->change_file_prop(fetch->info->file_baton,
-                                         prop_name,
-                                         svn_string_create(val, pool),
-                                         pool);
+  setprop(baton, prop_name, svn_string_create(val, pool), pool);
+}
+
+static void
+set_file_props(void *baton,
+               const void *ns, apr_ssize_t ns_len,
+               const void *name, apr_ssize_t name_len,
+               void *val,
+               apr_pool_t *pool)
+{
+  report_info_t *info = baton;
+  set_baton_props(info->dir->update_editor->change_file_prop,
+                  info->file_baton,
+                  ns, ns_len, name, name_len, val, pool);
+}
+
+static void
+set_dir_props(void *baton,
+              const void *ns, apr_ssize_t ns_len,
+              const void *name, apr_ssize_t name_len,
+              void *val,
+              apr_pool_t *pool)
+{
+  report_dir_t *dir = baton;
+  set_baton_props(dir->update_editor->change_dir_prop,
+                  dir->dir_baton,
+                  ns, ns_len, name, name_len, val, pool);
 }
 
 static apr_status_t
@@ -197,17 +233,17 @@ handle_fetch (serf_bucket_t *response,
 
       if (APR_STATUS_IS_EOF(status))
         {
-          fetch_ctx->info->textdelta(NULL,
-                                     fetch_ctx->info->textdelta_baton);
+          report_info_t *info = fetch_ctx->info;
+
+          info->textdelta(NULL, info->textdelta_baton);
 
           /* set all of the properties we received */
-          walk_all_props(fetch_ctx->info->file_props,
-                         fetch_ctx->info->file_url,
+          walk_all_props(info->dir->props,
+                         info->file_url,
                          set_file_props,
-                         fetch_ctx, fetch_ctx->sess->pool);
+                         info, fetch_ctx->sess->pool);
 
-          fetch_ctx->update_editor->close_file(fetch_ctx->info->file_baton,
-                                               NULL,
+          info->dir->update_editor->close_file(info->file_baton, NULL,
                                                fetch_ctx->sess->pool);
 
           fetch_ctx->done = TRUE;
@@ -233,7 +269,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   apr_hash_t *props;
 
   /* go fetch info->file_name from DAV:checked-in */
-  checked_in_url = fetch_prop(info->file_props, info->file_name,
+  checked_in_url = fetch_prop(info->dir->props, info->file_name,
                          "DAV:", "checked-in");
 
   if (!checked_in_url)
@@ -245,17 +281,17 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   /* open the file and  */
   /* FIXME subpool */
-  ctx->update_editor->add_file(info->file_name, info->dir->dir_baton,
-                               NULL, SVN_INVALID_REVNUM, ctx->sess->pool,
-                               &info->file_baton);
+  info->dir->update_editor->add_file(info->file_name, info->dir->dir_baton,
+                                     NULL, SVN_INVALID_REVNUM, ctx->sess->pool,
+                                     &info->file_baton);
 
-  ctx->update_editor->apply_textdelta(info->file_baton,
-                                      NULL, ctx->sess->pool,
-                                      &info->textdelta,
-                                      &info->textdelta_baton);
+  info->dir->update_editor->apply_textdelta(info->file_baton,
+                                            NULL, ctx->sess->pool,
+                                            &info->textdelta,
+                                            &info->textdelta_baton);
 
   /* First, create the PROPFIND to retrieve the properties. */
-  deliver_props(&prop_ctx, info->file_props, ctx->sess,
+  deliver_props(&prop_ctx, info->dir->props, ctx->sess,
                 info->file_url, "0", all_props, ctx->sess->pool);
 
   if (!prop_ctx)
@@ -283,8 +319,6 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   fetch_ctx->info = info;
   fetch_ctx->done = FALSE;
   fetch_ctx->sess = ctx->sess;
-  fetch_ctx->update_editor = ctx->update_editor;
-  fetch_ctx->update_baton = ctx->update_baton;
 
   serf_request_deliver(request, req_bkt,
                        accept_response, ctx->sess,
@@ -328,6 +362,7 @@ start_report(void *userData, const char *name, const char **attrs)
                                     &ctx->state->info->dir->dir_baton);
       ctx->state->info->dir->name_buf = svn_stringbuf_create("",
                                                              ctx->sess->pool);
+      ctx->state->info->dir->name = "";
       ctx->state->info->file_name = "";
     }
   else if (ctx->state && 
@@ -393,7 +428,8 @@ start_report(void *userData, const char *name, const char **attrs)
           push_state(ctx, NEED_PROP_NAME);
         }
     }
-  else if (ctx->state && ctx->state->state == ADD_DIR)
+  else if (ctx->state &&
+           (ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR))
     {
       if (strcmp(prop_name.name, "checked-in") == 0)
         {
@@ -438,14 +474,44 @@ end_report(void *userData, const char *raw_name)
 
   name = expand_ns(ctx->ns_list, raw_name, ctx->sess->pool);
 
-  if (ctx->state && ctx->state->state == OPEN_DIR &&
-      (strcmp(name.name, "open-directory") == 0))
+  if (ctx->state &&
+      ((ctx->state->state == OPEN_DIR &&
+        (strcmp(name.name, "open-directory") == 0)) ||
+       (ctx->state->state == ADD_DIR &&
+        (strcmp(name.name, "add-directory") == 0))))
     {
-      pop_state(ctx);
-    }
-  else if (ctx->state && ctx->state->state == ADD_DIR &&
-           (strcmp(name.name, "add-directory") == 0))
-    {
+      /* At this point, we should have the checked-in href.
+       * We need to go do a PROPFIND to get the dir props.
+       */
+      propfind_context_t *prop_ctx;
+      const char *checked_in_url;
+      report_info_t *info = ctx->state->info;
+
+      /* go fetch info->file_name from DAV:checked-in */
+      checked_in_url = fetch_prop(info->dir->props, info->file_name,
+                                  "DAV:", "checked-in");
+
+      if (!checked_in_url)
+        {
+          abort();
+        }
+
+      info->dir->url = checked_in_url;
+
+      /* First, create the PROPFIND to retrieve the properties. */
+      deliver_props(&prop_ctx, info->dir->props, ctx->sess,
+                    info->dir->url, "0", all_props, ctx->sess->pool);
+
+      if (!prop_ctx)
+        {
+          abort();
+        }
+
+      prop_ctx->next = ctx->active_propfinds;
+      ctx->active_propfinds = prop_ctx;
+
+      info->dir->propfind = prop_ctx;
+
       pop_state(ctx);
     }
   else if (ctx->state && ctx->state->state == ADD_FILE)
@@ -456,7 +522,7 @@ end_report(void *userData, const char *raw_name)
     }
   else if (ctx->state && ctx->state->state == PROP)
     {
-      set_prop(ctx->state->info->file_props,
+      set_prop(ctx->state->info->dir->props,
                ctx->state->info->file_name,
                ctx->state->info->prop_ns, ctx->state->info->prop_name,
                ctx->state->info->prop_val,
@@ -494,6 +560,14 @@ handle_report (serf_bucket_t *response,
   return handle_xml_parser(response,
                            ctx->xmlp, &ctx->done,
                            pool);
+}
+
+static svn_error_t *
+close_dir(report_dir_t *dir,
+          apr_pool_t *pool)
+{
+  walk_all_props(dir->props, dir->url, set_dir_props, dir, pool);
+  SVN_ERR(dir->update_editor->close_directory(dir->dir_baton, pool));
 }
 
 static svn_error_t *
@@ -687,12 +761,13 @@ finish_report(void *report_baton,
                   if (parent_dir->ref_count)
                      break;
 
-                  /* The easy path here is that we've finished the report. */
-                  if (report->done == TRUE)
+                  /* The easy path here is that we've finished the report;
+                   * which means that there aren't any new files to add.
+                   */
+                  if (report->done == TRUE &&
+                      parent_dir->propfind->done == TRUE)
                     {
-                      SVN_ERR(report->update_editor->close_directory(
-                                                     parent_dir->dir_baton,
-                                                     sess->pool));
+                      SVN_ERR(close_dir(parent_dir, sess->pool));
                     }
                   else if (!parent_dir->next)
                     {
@@ -727,10 +802,9 @@ finish_report(void *report_baton,
 
           while (dir)
             {
-              if (!dir->ref_count)
+              if (!dir->ref_count && dir->propfind->done == TRUE)
                 {
-                  SVN_ERR(report->update_editor->close_directory
-                          (dir->dir_baton, sess->pool));
+                  SVN_ERR(close_dir(dir, sess->pool));
                 }
 
               dir = dir->next;
@@ -786,7 +860,7 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   report->update_baton = update_baton;
   report->active_fetches = NULL;
   report->active_propfinds = NULL;
-  report->done = 0;
+  report->done = FALSE;
   report->free_info = 0;
 
   *reporter = &ra_serf_reporter;

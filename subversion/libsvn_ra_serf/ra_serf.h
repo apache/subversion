@@ -141,11 +141,24 @@ typedef struct report_dir_t
   /* temporary path buffer for this directory. */
   svn_stringbuf_t *name_buf;
 
+  /* the canonical url for this path. */
+  const char *url;
+
   /* controlling dir baton */
   void *dir_baton;
 
+  /* Our update editor and baton. */
+  const svn_delta_editor_t *update_editor;
+  void *update_baton;
+
   /* How many references to this directory do we still have open? */
   apr_size_t ref_count;
+
+  /* hashtable that stores all of the properties (shared globally) */
+  apr_hash_t *props;
+
+  /* The propfind request for our current directory */
+  propfind_context_t *propfind;
 
   /* The next directory we have open. */
   struct report_dir_t *next;
@@ -171,9 +184,6 @@ typedef struct report_info_t
 
   /* the canonical url for this path. */
   const char *file_url;
-
-  /* hashtable that stores all of the properties for this path. */
-  apr_hash_t *file_props;
 
   /* pool passed to update->add_file, etc. */
   apr_pool_t *editor_pool;
@@ -203,10 +213,6 @@ typedef struct report_fetch_t {
 
   /* Stores the information for the file we want to fetch. */
   report_info_t *info;
-
-  /* Our update editor and baton. */
-  const svn_delta_editor_t *update_editor;
-  void *update_baton;
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
