@@ -349,6 +349,12 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir(self.cwd)
         rmtree(self.testpath)
 
+    def testTrimmedAvailMerge(self):
+        """Check that both avail and merge do not search for phantom revs too hard."""
+        self.svnmerge("init")
+        self.svnmerge("avail -vv -r8-9", match=r"svn log.*-r8:9")
+        self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
+        self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
 
 if __name__ == "__main__":
     unittest.main()
