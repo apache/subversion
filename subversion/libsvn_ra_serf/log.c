@@ -38,43 +38,274 @@
 #include "ra_serf.h"
 
 
+/**
+ * This enum represents the current state of our XML parsing for a REPORT.
+ */
+typedef enum {
+    REPORT,
+    ITEM,
+    VERSION,
+    CREATOR,
+    DATE,
+    COMMENT,
+} log_state_e;
+
+typedef struct {
+  /* The currently collected value as we build it up */
+  const char *tmp;
+  apr_size_t tmp_len;
+
+  /* Hashtable of paths */
+  /* TODO implement changed-paths support */
+  apr_hash_t *paths;
+
+  /* Other log fields */
+  svn_revnum_t version;
+  const char *creator;
+  const char *date;
+  const char *comment;
+} log_info_t;
+
+typedef struct log_state_list_t {
+  /* The current state that we are in now. */
+  log_state_e state;
+
+  /* Information */
+  log_info_t *info;
+
+  /* The previous state we were in. */
+  struct log_state_list_t *prev;
+} log_state_list_t;
+
 typedef struct {
  apr_pool_t *pool;
+
+ /* parameters set by our caller */
+ int limit;
+ int count;
+ svn_boolean_t changed_paths;
 
  /* XML Parser */
  XML_Parser xmlp;
 
- /* Return error code */
+ /* Current namespace list */
+ ns_t *ns_list;
+
+ /* Current state we're in */
+ log_state_list_t *state;
+ log_state_list_t *free_state;
+
+ /* Return error code; if we exceed count, this may be set */
  svn_error_t *error;
 
  /* are we done? */
  svn_boolean_t done;
 
- /* receiver function and baton */
+ /* log receiver function and baton */
  svn_log_message_receiver_t receiver;
  void *receiver_baton;
 } log_context_t;
 
 
+static void
+push_state(log_context_t *log_ctx, log_state_e state)
+{
+  log_state_list_t *new_state;
+
+  if (!log_ctx->free_state)
+    {
+      new_state = apr_palloc(log_ctx->pool, sizeof(*log_ctx->state));
+      new_state->info = NULL;
+    }
+  else
+    {
+      new_state = log_ctx->free_state;
+      log_ctx->free_state = log_ctx->free_state->prev;
+    }
+  new_state->state = state;
+
+  if (state == REPORT)
+    {
+      /* do nothing for now */
+    }
+  else if (state == ITEM)
+    {
+      if (!new_state->info)
+        {
+          new_state->info = apr_palloc(log_ctx->pool, sizeof(*new_state->info));
+        }
+
+      new_state->info->paths = NULL;
+      new_state->info->version = SVN_INVALID_REVNUM;
+      new_state->info->creator = NULL;
+      new_state->info->date = NULL;
+      new_state->info->comment = NULL;
+      new_state->info->tmp = NULL;
+      new_state->info->tmp_len = 0;
+    }
+  /* if we have state info from our parent, reuse it. */
+  else if (log_ctx->state && log_ctx->state->info)
+    {
+      new_state->info = log_ctx->state->info;
+    }
+  else
+    {
+      abort();
+    }
+
+  /* Add it to the state chain. */
+  new_state->prev = log_ctx->state;
+  log_ctx->state = new_state;
+}
+
+static void pop_state(log_context_t *log_ctx)
+{
+  log_state_list_t *free_state;
+  free_state = log_ctx->state;
+  /* advance the current state */
+  log_ctx->state = log_ctx->state->prev;
+  free_state->prev = log_ctx->free_state;
+  log_ctx->free_state = free_state;
+  /* It's okay to reuse our info. */
+  /* ctx->free_state->info = NULL; */
+}
+
 static void XMLCALL
 start_log(void *userData, const char *raw_name, const char **attrs)
 {
   log_context_t *log_ctx = userData;
-  dav_props_t prop_name;
+  dav_props_t name;
 
-  abort();
+  define_ns(&log_ctx->ns_list, attrs, log_ctx->pool);
+
+  name = expand_ns(log_ctx->ns_list, raw_name, log_ctx->pool);
+
+  if (!log_ctx->state && strcmp(name.name, "log-report") == 0)
+    {
+      push_state(log_ctx, REPORT);
+    }
+  else if (log_ctx->state &&
+           log_ctx->state->state == REPORT &&
+           strcmp(name.name, "log-item") == 0)
+    {
+      log_ctx->count++;
+      if (log_ctx->limit && log_ctx->count > log_ctx->limit)
+        {
+          abort();
+        }
+
+      push_state(log_ctx, ITEM);
+    }
+  else if (log_ctx->state &&
+           log_ctx->state->state == ITEM)
+    {
+      if (strcmp(name.name, "version-name") == 0)
+        {
+          push_state(log_ctx, VERSION);
+        }
+      else if (strcmp(name.name, "creator-displayname") == 0)
+        {
+          push_state(log_ctx, CREATOR);
+        }
+      else if (strcmp(name.name, "date") == 0)
+        {
+          push_state(log_ctx, DATE);
+        }
+      else if (strcmp(name.name, "comment") == 0)
+        {
+          push_state(log_ctx, COMMENT);
+        }
+    }
 }
 
 static void XMLCALL
 end_log(void *userData, const char *raw_name)
 {
-  abort();
+  log_context_t *log_ctx = userData;
+  dav_props_t name;
+  log_state_list_t *cur_state;
+
+  if (!log_ctx->state)
+    {
+      return;
+    }
+
+  cur_state = log_ctx->state;
+
+  name = expand_ns(log_ctx->ns_list, raw_name, log_ctx->pool);
+
+  if (cur_state->state == REPORT &&
+      strcmp(name.name, "log-report") == 0)
+    {
+      pop_state(log_ctx);
+    }
+  else if (cur_state->state == ITEM &&
+           strcmp(name.name, "log-item") == 0)
+    {
+      /* Give the info to the reporter */
+      log_ctx->receiver(log_ctx->receiver_baton,
+                        cur_state->info->paths,
+                        cur_state->info->version,
+                        cur_state->info->creator,
+                        cur_state->info->date,
+                        cur_state->info->comment,
+                        log_ctx->pool);
+
+      pop_state(log_ctx);
+    }
+  else if (cur_state->state == VERSION &&
+           strcmp(name.name, "version-name") == 0)
+    {
+      cur_state->info->version = SVN_STR_TO_REV(cur_state->info->tmp);
+      cur_state->info->tmp = NULL;
+      pop_state(log_ctx);
+    }
+  else if (cur_state->state == CREATOR &&
+           strcmp(name.name, "creator-displayname") == 0)
+    {
+      cur_state->info->creator = cur_state->info->tmp;
+      cur_state->info->tmp = NULL;
+      pop_state(log_ctx);
+    }
+  else if (cur_state->state == DATE &&
+           strcmp(name.name, "date") == 0)
+    {
+      cur_state->info->date = cur_state->info->tmp;
+      cur_state->info->tmp = NULL;
+      pop_state(log_ctx);
+    }
+  else if (cur_state->state == COMMENT &&
+           strcmp(name.name, "comment") == 0)
+    {
+      cur_state->info->comment = cur_state->info->tmp;
+      cur_state->info->tmp = NULL;
+      pop_state(log_ctx);
+    }
 }
 
 static void XMLCALL
 cdata_log(void *userData, const char *data, int len)
 {
-  abort();
+  log_context_t *log_ctx = userData;
+
+  if (!log_ctx->state)
+    {
+      return;
+    }
+
+  switch (log_ctx->state->state)
+    {
+      case VERSION:
+      case CREATOR:
+      case DATE:
+      case COMMENT:
+        expand_string(&log_ctx->state->info->tmp,
+                      &log_ctx->state->info->tmp_len,
+                      data, len, log_ctx->pool);
+        break;
+      default:
+        break;
+    }
 }
 
 static apr_status_t
@@ -110,6 +341,8 @@ svn_ra_serf__get_log (svn_ra_session_t *ra_session,
   log_ctx->pool = pool;
   log_ctx->receiver = receiver;
   log_ctx->receiver_baton = receiver_baton;
+  log_ctx->limit = limit;
+  log_ctx->changed_paths = discover_changed_paths;
   log_ctx->error = SVN_NO_ERROR;
   log_ctx->done = FALSE;
 
@@ -233,5 +466,5 @@ svn_ra_serf__get_log (svn_ra_session_t *ra_session,
 
   SVN_ERR(context_run_wait(&log_ctx->done, session, pool));
 
-  return SVN_NO_ERROR;
+  return log_ctx->error;
 }
