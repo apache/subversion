@@ -239,10 +239,10 @@ def check_dir_clean(dir):
     # blank line. So, pratically, the first line matters: if it's non-empty
     # there is a modification.
     out = launchsvn("status -q %s" % dir)
-    if out and out[0]:
+    if out and out[0].strip():
         error('"%s" has local modifications; it must be clean' % dir)
     for L in launchsvn("status -u %s" % dir):
-        if L[7] == '*':
+        if len(L) > 7 and L[7] == '*':
             error('"%s" is not up to date; please "svn update" first' % dir)
 
 class RevisionList:
