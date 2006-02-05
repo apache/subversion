@@ -2703,7 +2703,8 @@ itself) before running mv."
         ;; file into.
         (setq dest (read-file-name (format "Rename %s to: "
                                            (svn-status-line-info->filename (car marked-files)))
-                                   (svn-status-directory-containing-point t)))
+                                   (svn-status-directory-containing-point t)
+                                   (svn-status-line-info->full-path (car marked-files))))
       ;;multiple files selected, so prompt for existing directory to mv them into.
       (setq dest (svn-read-directory-name (format "Move %d files to directory: " num-of-files)
                                           (svn-status-directory-containing-point t) nil t))
