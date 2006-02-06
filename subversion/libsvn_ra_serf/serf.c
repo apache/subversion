@@ -444,17 +444,6 @@ svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_locations (svn_ra_session_t *session,
-                            apr_hash_t **locations,
-                            const char *path,
-                            svn_revnum_t peg_revision,
-                            apr_array_header_t *location_revisions,
-                            apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
 svn_ra_serf__get_file_revs (svn_ra_session_t *session,
                             const char *path,
                             svn_revnum_t start,

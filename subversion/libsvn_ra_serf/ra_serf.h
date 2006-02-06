@@ -402,6 +402,14 @@ svn_ra_serf__get_log (svn_ra_session_t *session,
                       apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__get_locations (svn_ra_session_t *session,
+                            apr_hash_t **locations,
+                            const char *path,
+                            svn_revnum_t peg_revision,
+                            apr_array_header_t *location_revisions,
+                            apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__do_update (svn_ra_session_t *ra_session,
                         const svn_ra_reporter2_t **reporter,
                         void **report_baton,
