@@ -414,11 +414,11 @@ svn_ra_serf__get_log (svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->repos_url.path, "0",
-                         base_props, pool));
+  SVN_ERR(retrieve_props(props, session, session->repos_url.path,
+                         SVN_INVALID_REVNUM, "0", base_props, pool));
 
   /* Send the request to the baseline URL */
-  vcc_url = fetch_prop(props, session->repos_url.path, "DAV:",
+  vcc_url = get_prop(props, session->repos_url.path, "DAV:",
                        "version-controlled-configuration");
 
   if (!vcc_url)
@@ -427,7 +427,7 @@ svn_ra_serf__get_log (svn_ra_session_t *ra_session,
     }
 
   /* Send the request to the baseline URL */
-  relative_url = fetch_prop(props, session->repos_url.path,
+  relative_url = get_prop(props, session->repos_url.path,
                             SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
 
   if (!relative_url)
@@ -435,20 +435,20 @@ svn_ra_serf__get_log (svn_ra_session_t *ra_session,
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, vcc_url, "0", checked_in_props,
-                                                  pool));
+  SVN_ERR(retrieve_props(props, session, vcc_url, SVN_INVALID_REVNUM, "0",
+                         checked_in_props, pool));
 
-  baseline_url = fetch_prop(props, vcc_url, "DAV:", "checked-in");
+  baseline_url = get_prop(props, vcc_url, "DAV:", "checked-in");
 
   if (!baseline_url)
     {
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, baseline_url, "0",
-                         baseline_props, pool));
+  SVN_ERR(retrieve_props(props, session, baseline_url, SVN_INVALID_REVNUM,
+                         "0", baseline_props, pool));
 
-  basecoll_url = fetch_prop(props, baseline_url, "DAV:", "baseline-collection");
+  basecoll_url = get_prop(props, baseline_url, "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {

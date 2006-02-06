@@ -102,6 +102,9 @@ typedef struct propfind_context_t {
   /* the requested path */
   const char *path;
 
+  /* the requested version */
+  svn_revnum_t rev;
+
   /* the list of requested properties */
   const dav_props_t *find_props;
 
@@ -259,18 +262,6 @@ add_tag_buckets(serf_bucket_t *agg_bucket,
                 const char *value,
                 serf_bucket_alloc_t *bkt_alloc);
 
-const char *
-fetch_prop (apr_hash_t *props,
-            const char *path,
-            const char *ns,
-            const char *name);
-
-
-void
-set_prop (apr_hash_t *props, const char *path,
-          const char *ns, const char *name,
-          const char *val, apr_pool_t *pool);
-
 /**
  * Look up the ATTRS array for namespace definitions and add each one
  * to the NS_LIST of namespaces.
@@ -324,6 +315,7 @@ deliver_props (propfind_context_t **prop_ctx,
                apr_hash_t *prop_vals,
                ra_serf_session_t *sess,
                const char *url,
+               svn_revnum_t rev,
                const char *depth,
                const dav_props_t *lookup_props,
                apr_pool_t *pool);
@@ -337,7 +329,6 @@ wait_for_props(propfind_context_t *prop_ctx,
                ra_serf_session_t *sess,
                apr_pool_t *pool);
 
-
 /**
  * This is a blocking version of deliver_props.
  */
@@ -345,6 +336,7 @@ svn_error_t *
 retrieve_props (apr_hash_t *prop_vals,
                 ra_serf_session_t *sess,
                 const char *url,
+                svn_revnum_t rev,
                 const char *depth,
                 const dav_props_t *props,
                 apr_pool_t *pool);
@@ -359,9 +351,41 @@ typedef void (*walker_visitor_t)(void *baton,
 void
 walk_all_props(apr_hash_t *props,
                const char *name,
+               svn_revnum_t rev,
                walker_visitor_t walker,
                void *baton,
                apr_pool_t *pool);
+
+/* Get PROPS for PATH at REV revision with a NS:NAME. */
+const char *
+get_ver_prop (apr_hash_t *props,
+              const char *path,
+              svn_revnum_t rev,
+              const char *ns,
+              const char *name);
+
+/* Same as get_prop, but for the unknown revision */
+const char *
+get_prop (apr_hash_t *props,
+          const char *path,
+          const char *ns,
+          const char *name);
+
+/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
+ *
+ * The POOL governs allocation.
+ */
+void
+set_rev_prop (apr_hash_t *props,
+              const char *path, svn_revnum_t rev,
+              const char *ns, const char *name,
+              const char *val, apr_pool_t *pool);
+
+/* Same as set_rev_prop, but sets it for the unknown revision. */
+void
+set_prop (apr_hash_t *props, const char *path,
+          const char *ns, const char *name,
+          const char *val, apr_pool_t *pool);
 
 /** RA functions */
 
