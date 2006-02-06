@@ -400,6 +400,7 @@ handle_fetch (serf_bucket_t *response,
           /* set all of the properties we received */
           walk_all_props(info->dir->props,
                          info->file_url,
+                         SVN_INVALID_REVNUM,
                          set_file_props,
                          info, fetch_ctx->sess->pool);
 
@@ -429,7 +430,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   apr_hash_t *props;
 
   /* go fetch info->file_name from DAV:checked-in */
-  checked_in_url = fetch_prop(info->dir->props, info->file_name,
+  checked_in_url = get_prop(info->dir->props, info->file_name,
                          "DAV:", "checked-in");
 
   if (!checked_in_url)
@@ -452,7 +453,8 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   /* First, create the PROPFIND to retrieve the properties. */
   deliver_props(&prop_ctx, info->dir->props, ctx->sess,
-                info->file_url, "0", all_props, ctx->sess->pool);
+                info->file_url, SVN_INVALID_REVNUM, "0", all_props,
+                ctx->sess->pool);
 
   if (!prop_ctx)
     {
@@ -648,7 +650,7 @@ end_report(void *userData, const char *raw_name)
       report_info_t *info = ctx->state->info;
 
       /* go fetch info->file_name from DAV:checked-in */
-      checked_in_url = fetch_prop(info->dir->props, info->file_name,
+      checked_in_url = get_prop(info->dir->props, info->file_name,
                                   "DAV:", "checked-in");
 
       if (!checked_in_url)
@@ -660,7 +662,8 @@ end_report(void *userData, const char *raw_name)
 
       /* First, create the PROPFIND to retrieve the properties. */
       deliver_props(&prop_ctx, info->dir->props, ctx->sess,
-                    info->dir->url, "0", all_props, ctx->sess->pool);
+                    info->dir->url, SVN_INVALID_REVNUM,
+                    "0", all_props, ctx->sess->pool);
 
       if (!prop_ctx)
         {
@@ -726,7 +729,8 @@ static svn_error_t *
 close_dir(report_dir_t *dir,
           apr_pool_t *pool)
 {
-  walk_all_props(dir->props, dir->url, set_dir_props, dir, pool);
+  walk_all_props(dir->props, dir->url, SVN_INVALID_REVNUM, set_dir_props, dir,
+                 pool);
   SVN_ERR(dir->update_editor->close_directory(dir->dir_baton, pool));
 }
 
@@ -836,10 +840,11 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, sess, sess->repos_url.path, "0",
+  SVN_ERR(retrieve_props(props, sess, sess->repos_url.path,
+                         SVN_INVALID_REVNUM, "0",
                          vcc_props, pool));
 
-  vcc_url = fetch_prop(props, sess->repos_url.path, "DAV:",
+  vcc_url = get_prop(props, sess->repos_url.path, "DAV:",
                        "version-controlled-configuration");
 
   if (!vcc_url)
