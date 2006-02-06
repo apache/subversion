@@ -234,10 +234,10 @@ struct svn_ra_session_t {
  *
  * ### need to force this to be __cdecl on Windows... how??
  */
-typedef svn_error_t
-*(*svn_ra__init_func_t)(const svn_version_t *loader_version,
-                        const svn_ra__vtable_t **vtable,
-                        apr_pool_t *pool);
+typedef svn_error_t *
+(*svn_ra__init_func_t)(const svn_version_t *loader_version,
+                       const svn_ra__vtable_t **vtable,
+                       apr_pool_t *pool);
 
 /* Declarations of the init functions for the available RA libraries. */
 svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
