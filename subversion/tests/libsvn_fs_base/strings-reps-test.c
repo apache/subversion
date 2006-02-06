@@ -621,7 +621,7 @@ test_strings (const char **msg,
       return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                                "query unexpectedly successful");
     if (err->apr_err != SVN_ERR_FS_NO_SUCH_STRING)
-      return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
+      return svn_error_create (SVN_ERR_FS_GENERAL, err,
                                "query failed with unexpected error");
     svn_error_clear (err);
   }
@@ -715,7 +715,7 @@ abort_string (const char **msg,
     err = svn_fs_base__retry_txn (args.fs, txn_body_string_append_fail, 
                                   &args2, pool);
     if ((! err) || (err->apr_err != SVN_ERR_TEST_FAILED))
-      return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+      return svn_error_create (SVN_ERR_TEST_FAILED, err,
                                "failed to intentionally abort a trail");
     svn_error_clear (err);
   }
