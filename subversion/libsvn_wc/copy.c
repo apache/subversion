@@ -48,7 +48,6 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
   apr_hash_index_t *hi;
   const char *wcprop_path;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_error_t *err;
 
   /* Read PATH's entries. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, subpool));
@@ -57,9 +56,7 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc__wcprop_path (&wcprop_path,
                                 svn_wc_adm_access_path (adm_access),
                                 svn_node_dir, FALSE, subpool));
-  err = svn_io_remove_file (wcprop_path, subpool);
-  if (err)
-    svn_error_clear (err);
+  svn_error_clear (svn_io_remove_file (wcprop_path, subpool));
 
   /* Recursively loop over all children. */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
@@ -86,9 +83,7 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
         {
           SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path,
                                         svn_node_file, FALSE, subpool));
-          err = svn_io_remove_file (wcprop_path, subpool);
-          if (err)
-            svn_error_clear (err);
+          svn_error_clear (svn_io_remove_file (wcprop_path, subpool));
           /* ignoring any error value from the removal; most likely,
              apr_file_remove will complain about trying to a remove a
              file that's not there.  But this more efficient than

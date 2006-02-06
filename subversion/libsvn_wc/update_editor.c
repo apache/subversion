@@ -865,7 +865,7 @@ leftmod_error_chain (svn_error_t *err,
                      const char *path,
                      apr_pool_t *pool)
 {
-  svn_error_t *tmp_err = SVN_NO_ERROR;
+  svn_error_t *tmp_err;
 
   if (! err)
     return SVN_NO_ERROR;
@@ -874,18 +874,14 @@ leftmod_error_chain (svn_error_t *err,
      a local mod was left, or to the NULL end of the chain. */
   for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
     if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-      {
-        break;
-      }
-                   
+      break;
+
   /* If we found a "left a local mod" error, wrap and return it.
      Otherwise, we just return our top-most error. */
   if (tmp_err)
     {
       /* Remove the LOGFILE (and eat up errors from this process). */
-      svn_error_t *err2 = svn_io_remove_file (logfile, pool);
-      if (err2)
-        svn_error_clear (err2);
+      svn_error_clear (svn_io_remove_file (logfile, pool));
 
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, tmp_err,
@@ -1620,13 +1616,8 @@ apply_textdelta (void *file_baton,
   if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
     {
       if (hb->source)
-        {
-          svn_error_t *err2 = svn_wc__close_text_base (hb->source,
-                                                       fb->path,
-                                                       0, handler_pool);
-          if (err2)
-            svn_error_clear (err2);
-        }
+        svn_error_clear (svn_wc__close_text_base (hb->source, fb->path,
+                                                  0, handler_pool));
       svn_pool_destroy (handler_pool);
       return err;
     }

@@ -435,7 +435,7 @@ abort_txn (const char **msg,
     if (err && (err->apr_err != SVN_ERR_FS_NO_SUCH_TRANSACTION))
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
+          (SVN_ERR_FS_GENERAL, err,
            "opening non-existent txn got wrong error");
       }
     else if (! err)
@@ -649,7 +649,7 @@ delete_mutables (const char **msg,
     if (err && (err->apr_err != SVN_ERR_FS_ROOT_DIR))
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
+          (SVN_ERR_FS_GENERAL, err,
            "deleting root directory got wrong error");
       }
     else if (! err)

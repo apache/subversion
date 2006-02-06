@@ -329,14 +329,10 @@ substitute_and_verify (const char *test_name,
         }
       else if (err->apr_err != SVN_ERR_IO_INCONSISTENT_EOL)
         {
-          char buf[1024];
-
-          svn_strerror (err->apr_err, buf, sizeof (buf));
-
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, NULL,
-             "translation of '%s' should fail, but not with error \"%s\"",
-             src_fname, buf);
+            (SVN_ERR_TEST_FAILED, err,
+             "translation of '%s' should fail, but not with this error",
+             src_fname);
         }
       else
         {

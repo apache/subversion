@@ -457,9 +457,7 @@ do_open (svn_wc_adm_access_t **adm_access,
                                       pool);
       if (err)
         {
-          /* Should we attempt to distinguish certain errors? */
-          svn_error_clear (err);
-          return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, err,
                                     _("'%s' is not a working copy"),
                                     svn_path_local_style (path, pool));
         }
@@ -784,8 +782,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
          message.  */
       if (err)
         {
-          svn_error_clear (err);          
-          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, err,
                                     _("Unable to check path existence for '%s'"),
                                     svn_path_local_style (path, pool));
         }
@@ -815,8 +812,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
          message.  */
       if (err)
         {
-          svn_error_clear (err);          
-          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
+          return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, err,
                                     _("Unable to check path existence for '%s'"),
                                     svn_path_local_style (wcpath, pool));
         }
