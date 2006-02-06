@@ -498,6 +498,20 @@ dav_svn__replay_report(const dav_resource *resource,
                                "Problem closing editor drive",
                                resource->pool);
 
+  {
+    const char *action;
+
+    if (base_dir && base_dir[0] != '\0')
+      action = apr_psprintf(resource->info->r->pool,
+                            "replay %ld '%s'", rev,
+                            svn_path_uri_encode(base_dir,
+                                                resource->info->r->pool));
+    else
+      action = apr_psprintf(resource->info->r->pool, "replay %ld", rev);
+
+    apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+  }
+
   ap_fflush(output, bb);
 
   return NULL;
