@@ -65,7 +65,7 @@ typedef struct {
   /* Cached properties */
   apr_hash_t *cached_props;
 
-} serf_session_t;
+} ra_serf_session_t;
 
 /**
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -97,7 +97,7 @@ typedef struct propfind_context_t {
   apr_pool_t *pool;
 
   /* associated serf session */
-  serf_session_t *sess;
+  ra_serf_session_t *sess;
 
   /* the requested path */
   const char *path;
@@ -227,7 +227,7 @@ cleanup_serf_session(void *data);
 void
 create_serf_req(serf_request_t **request,
                 serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
-                serf_session_t *session,
+                ra_serf_session_t *session,
                 const char *method, const char *url,
                 serf_bucket_t *body_bkt, const char *content_type);
 
@@ -236,7 +236,7 @@ create_serf_req(serf_request_t **request,
  */
 svn_error_t *
 context_run_wait(svn_boolean_t *done,
-                 serf_session_t *sess,
+                 ra_serf_session_t *sess,
                  apr_pool_t *pool);
 
 /**
@@ -322,7 +322,7 @@ expand_string(const char **cur, apr_size_t *cur_len,
 svn_error_t *
 deliver_props (propfind_context_t **prop_ctx,
                apr_hash_t *prop_vals,
-               serf_session_t *sess,
+               ra_serf_session_t *sess,
                const char *url,
                const char *depth,
                const dav_props_t *lookup_props,
@@ -334,7 +334,7 @@ deliver_props (propfind_context_t **prop_ctx,
  */
 svn_error_t *
 wait_for_props(propfind_context_t *prop_ctx,
-               serf_session_t *sess,
+               ra_serf_session_t *sess,
                apr_pool_t *pool);
 
 
@@ -343,7 +343,7 @@ wait_for_props(propfind_context_t *prop_ctx,
  */
 svn_error_t *
 retrieve_props (apr_hash_t *prop_vals,
-                serf_session_t *sess,
+                ra_serf_session_t *sess,
                 const char *url,
                 const char *depth,
                 const dav_props_t *props,

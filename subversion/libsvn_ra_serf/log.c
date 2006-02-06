@@ -331,7 +331,7 @@ svn_ra_serf__get_log (svn_ra_session_t *ra_session,
                       apr_pool_t *pool)
 {
   log_context_t *log_ctx;
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
   serf_request_t *request;
   serf_bucket_t *buckets, *req_bkt, *tmp;
   apr_hash_t *props;
