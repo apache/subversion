@@ -42,12 +42,12 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum {
-    REPORT,
-    ITEM,
-    VERSION,
-    CREATOR,
-    DATE,
-    COMMENT,
+  REPORT,
+  ITEM,
+  VERSION,
+  CREATOR,
+  DATE,
+  COMMENT,
 } log_state_e;
 
 typedef struct {
@@ -78,32 +78,32 @@ typedef struct log_state_list_t {
 } log_state_list_t;
 
 typedef struct {
- apr_pool_t *pool;
+  apr_pool_t *pool;
 
- /* parameters set by our caller */
- int limit;
- int count;
- svn_boolean_t changed_paths;
+  /* parameters set by our caller */
+  int limit;
+  int count;
+  svn_boolean_t changed_paths;
 
- /* XML Parser */
- XML_Parser xmlp;
+  /* XML Parser */
+  XML_Parser xmlp;
 
- /* Current namespace list */
- ns_t *ns_list;
+  /* Current namespace list */
+  ns_t *ns_list;
 
- /* Current state we're in */
- log_state_list_t *state;
- log_state_list_t *free_state;
+  /* Current state we're in */
+  log_state_list_t *state;
+  log_state_list_t *free_state;
 
- /* Return error code; if we exceed count, this may be set */
- svn_error_t *error;
+  /* Return error code; if we exceed count, this may be set */
+  svn_error_t *error;
 
- /* are we done? */
- svn_boolean_t done;
+  /* are we done? */
+  svn_boolean_t done;
 
- /* log receiver function and baton */
- svn_log_message_receiver_t receiver;
- void *receiver_baton;
+  /* log receiver function and baton */
+  svn_log_message_receiver_t receiver;
+  void *receiver_baton;
 } log_context_t;
 
 
