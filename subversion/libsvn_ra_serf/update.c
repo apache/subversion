@@ -135,7 +135,7 @@ typedef struct report_fetch_t {
   apr_pool_t *pool;
 
   /* The session we should use to fetch the file. */
-  serf_session_t *sess;
+  ra_serf_session_t *sess;
 
   /* Stores the information for the file we want to fetch. */
   report_info_t *info;
@@ -159,7 +159,7 @@ typedef struct report_state_list_t {
 } report_state_list_t;
 
 typedef struct {
-  serf_session_t *sess;
+  ra_serf_session_t *sess;
 
   const char *target;
   svn_revnum_t target_rev;
@@ -820,7 +820,7 @@ finish_report(void *report_baton,
               apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  serf_session_t *sess = report->sess;
+  ra_serf_session_t *sess = report->sess;
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt, *tmp;
   report_fetch_t *active_fetch, *prev_fetch;
@@ -997,7 +997,7 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
                         apr_pool_t *pool)
 {
   report_context_t *report;
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
   serf_bucket_t *tmp;
 
   report = apr_palloc(pool, sizeof(*report));

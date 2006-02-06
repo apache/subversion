@@ -29,7 +29,7 @@ conn_setup(apr_socket_t *sock,
            apr_pool_t *pool)
 {
   serf_bucket_t *bucket;
-  serf_session_t *sess = baton;
+  ra_serf_session_t *sess = baton;
 
   bucket = serf_bucket_socket_create(sock, sess->bkt_alloc);
   if (sess->using_ssl)
@@ -71,7 +71,7 @@ conn_closed (serf_connection_t *conn,
 apr_status_t
 cleanup_serf_session(void *data)
 {
-  serf_session_t *serf_sess = data;
+  ra_serf_session_t *serf_sess = data;
   if (serf_sess->conn)
     {
       serf_connection_close(serf_sess->conn);
@@ -83,7 +83,7 @@ cleanup_serf_session(void *data)
 void
 create_serf_req(serf_request_t **request,
                 serf_bucket_t **req_bkt, serf_bucket_t **ret_hdrs_bkt,
-                serf_session_t *session,
+                ra_serf_session_t *session,
                 const char *method, const char *url,
                 serf_bucket_t *body_bkt, const char *content_type)
 {
@@ -109,7 +109,7 @@ create_serf_req(serf_request_t **request,
 
 svn_error_t *
 context_run_wait(svn_boolean_t *done,
-                 serf_session_t *sess,
+                 ra_serf_session_t *sess,
                  apr_pool_t *pool)
 {
   apr_status_t status;

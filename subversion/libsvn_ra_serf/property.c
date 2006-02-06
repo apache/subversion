@@ -196,7 +196,7 @@ handle_propfind (serf_bucket_t *response,
 svn_error_t *
 deliver_props (propfind_context_t **prop_ctx,
                apr_hash_t *prop_vals,
-               serf_session_t *sess,
+               ra_serf_session_t *sess,
                const char *url,
                const char *depth,
                const dav_props_t *lookup_props,
@@ -335,7 +335,7 @@ deliver_props (propfind_context_t **prop_ctx,
  */
 svn_error_t *
 wait_for_props(propfind_context_t *prop_ctx,
-               serf_session_t *sess,
+               ra_serf_session_t *sess,
                apr_pool_t *pool)
 {
   return context_run_wait(&prop_ctx->done, sess, pool);
@@ -346,7 +346,7 @@ wait_for_props(propfind_context_t *prop_ctx,
  */
 svn_error_t *
 retrieve_props (apr_hash_t *prop_vals,
-                serf_session_t *sess,
+                ra_serf_session_t *sess,
                 const char *url,
                 const char *depth,
                 const dav_props_t *props,

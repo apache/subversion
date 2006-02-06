@@ -72,7 +72,7 @@ svn_ra_serf__open (svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   apr_status_t status;
-  serf_session_t *serf_sess;
+  ra_serf_session_t *serf_sess;
   apr_uri_t url;
   apr_sockaddr_t *address;
 
@@ -123,7 +123,7 @@ svn_ra_serf__reparent (svn_ra_session_t *ra_session,
                        const char *url,
                        apr_pool_t *pool)
 {
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
   apr_uri_t new_url;
 
   /* If it's the URL we already have, wave our hands and do nothing. */
@@ -147,7 +147,7 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
                                 apr_pool_t *pool)
 {
   apr_hash_t *props, *ns_props;
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
   const char *vcc_url, *baseline_url, *version_name;
 
   props = apr_hash_make(pool);
@@ -323,7 +323,7 @@ svn_ra_serf__check_path (svn_ra_session_t *ra_session,
                          svn_node_kind_t *kind,
                          apr_pool_t *pool)
 {
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
   apr_hash_t *props;
   const char *path, *res_type;
 
@@ -373,7 +373,7 @@ svn_ra_serf__get_uuid (svn_ra_session_t *ra_session,
                        const char **uuid,
                        apr_pool_t *pool)
 {
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
   apr_hash_t *props;
 
   props = apr_hash_make(pool);
@@ -396,7 +396,7 @@ svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
                              const char **url,
                              apr_pool_t *pool)
 {
-  serf_session_t *session = ra_session->priv;
+  ra_serf_session_t *session = ra_session->priv;
 
   if (!session->repos_root_str)
     {
