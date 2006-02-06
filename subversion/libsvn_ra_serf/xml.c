@@ -120,7 +120,7 @@ find_attr(const char **attrs, const char *attr_name)
     {
       if (strcmp(*tmp_attrs, attr_name) == 0)
         {
-          attr_val = attrs[1];
+          attr_val = *(tmp_attrs + 1);
           break;
         }
       tmp_attrs += 2;
