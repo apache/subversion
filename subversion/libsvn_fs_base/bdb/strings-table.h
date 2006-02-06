@@ -30,10 +30,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Special strings-table keys for commonly used strings.  */
-
-
-
 /* This interface provides raw access to the `strings' table.  It does
    not deal with deltification, undeltification, or skels.  It just
    reads and writes strings of bytes. */
