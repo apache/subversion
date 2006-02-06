@@ -1009,8 +1009,9 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   report->update_baton = update_baton;
   report->active_fetches = NULL;
   report->active_propfinds = NULL;
+  report->free_info = NULL;
+  report->free_state = NULL;
   report->done = FALSE;
-  report->free_info = 0;
 
   /* Create our XML parser */
   report->xmlp = XML_ParserCreate(NULL);
