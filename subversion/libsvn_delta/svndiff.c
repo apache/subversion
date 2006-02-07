@@ -108,12 +108,11 @@ append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val)
   svn_stringbuf_appendbytes (header, buf, p - buf);
 }
 
-/* If IN is a string that is > MIN_COMPRESS_SIZE, zlib compress it and
-   place the result in OUT, with an integer preprended specifying the
-   original size.  If IN is not > MIN_COMPRESS_SIZE, or compression
-   caused the string to be larger, OUT will be a copy of IN with the
-   size prepended as an integer. */
-   
+/* If IN is a string that is >= MIN_COMPRESS_SIZE, zlib compress it and
+   place the result in OUT, with an integer prepended specifying the
+   original size.  If IN is < MIN_COMPRESS_SIZE, or if the compressed
+   version of IN was no smaller than the original IN, OUT will be a copy
+   of IN with the size prepended as an integer. */
 static svn_error_t *
 zlib_encode (svn_stringbuf_t *in, svn_stringbuf_t *out)
 {
