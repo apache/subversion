@@ -192,6 +192,7 @@ map_or_read_file(apr_file_t **file,
 }
 
 
+/* Implements svn_diff_fns_t::datasource_open */
 static svn_error_t *
 svn_diff__file_datasource_open(void *baton,
                                svn_diff_datasource_e datasource)
@@ -230,6 +231,7 @@ svn_diff__file_datasource_open(void *baton,
 }
 
 
+/* Implements svn_diff_fns_t::datasource_close */
 static svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
@@ -242,6 +244,7 @@ svn_diff__file_datasource_close(void *baton,
 }
 
 
+/* Implements svn_diff_fns_t::datasource_get_next_token */
 static svn_error_t *
 svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
                                          void *baton,
@@ -350,6 +353,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
 #define COMPARE_CHUNK_SIZE 4096
 
+/* Implements svn_diff_fns_t::token_compare */
 static svn_error_t *
 svn_diff__file_token_compare(void *baton,
                              void *token1,
@@ -443,6 +447,7 @@ svn_diff__file_token_compare(void *baton,
 }
 
 
+/* Implements svn_diff_fns_t::token_discard */
 static void
 svn_diff__file_token_discard(void *baton,
                              void *token)
@@ -455,6 +460,7 @@ svn_diff__file_token_discard(void *baton,
 }
 
 
+/* Implements svn_diff_fns_t::token_discard_all */
 static void
 svn_diff__file_token_discard_all(void *baton)
 {
