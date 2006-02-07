@@ -65,6 +65,9 @@ typedef struct {
   /* Cached properties */
   apr_hash_t *cached_props;
 
+  /* Callback functions to get info from WC */
+  const svn_ra_callbacks2_t *wc_callbacks;
+  void *wc_callback_baton;
 } ra_serf_session_t;
 
 /**
@@ -192,6 +195,11 @@ static const dav_props_t repos_root_props[] =
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
   NULL
 };
+
+/* WC props compatibility with ra_dav. */
+#define RA_SERF_WC_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
+#define RA_SERF_WC_ACTIVITY_URL RA_SERF_WC_NAMESPACE "activity-url"
+#define RA_SERF_WC_CHECKED_IN_URL RA_SERF_WC_NAMESPACE "version-url"
 
 /** Serf utility functions **/
 
