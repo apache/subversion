@@ -3,7 +3,7 @@
 #
 # svnmirror.sh
 #
-VERSION="0.0.6"
+VERSION="0.0.7"
 #
 # This script syncs changes from a developer repository to a
 #             _READONLY_public_repository_
@@ -52,11 +52,16 @@ VERSION="0.0.6"
 #         - for pointing out i forgot to replace one ssh with $LSSH
 #       - John Belmonte <john@neggie.net>
 #         - for pointing out that we use stderr for a non-error message
+#       - Loic Calvez <l.calvez@openchange.org>
+#         - filtering
 #
 # Users:
 #    our biggest users atm are Mono Project and MonoDevelop
 #    Mono Team currently mirrors the repos every 30 minutes!:)
 #    see http://www.mono-project.com/contributing/anonsvn.html
+#
+#    Openchange.org team is using this script with an excluding filter
+#    to synchronise private and public svn server once a day.
 #
 # License:
 #    The same as svn itself. for latest version check:
@@ -75,6 +80,8 @@ VERSION="0.0.6"
 #         + http://svn.elixus.org/svnweb/repos/browse/member/clkao/ 
 #
 # Changes:
+#  0.0.7
+#    + allow optional filtering using svndumpfilter
 #
 #  0.0.6
 #    + print a non-error message to stdout instead of stderr.
@@ -149,6 +156,9 @@ DFLT_LSVNLOOK="/usr/bin/svnlook"
 # Absolute path of svnadmin on the local host.
 DFLT_LSVNADMIN="/usr/bin/svnadmin"
 
+# Absolute path of svndumpfilter on the local machine.
+DFLT_LSVNDUMPFILTER="/usr/bin/svndumpfilter"
+
 # Absolute path to the repository on the local host.
 # REQUIRED
 DFLT_LREPOS="/path/to/repos"
@@ -171,6 +181,9 @@ DFLT_RSVNLOOK="/usr/bin/svnlook"
 # Absolute path of svnadmin on the remote host.
 DFLT_RSVNADMIN="/usr/bin/svnadmin"
 
+# Absolute path of svndumpfilter on the local machine.
+DFLT_RSVNDUMPFILTER="/usr/bin/svndumpfilter"
+
 # Absolute path to the repository on the remote host.
 # REQUIRED
 DFLT_RREPOS="/path/to/repos"
@@ -183,6 +196,22 @@ DFLT_RREPOS="/path/to/repos"
 DFLT_LADDITIONAL=""
 DFLT_RADDITIONAL=""
 
+#
+# with the filter directive you can optionally include a svndumpfilter
+# into the pipe. see svndumpfilter help for more.
+#
+# examples:
+#
+# this will skip trunk/foo.conf from syncing
+# 
+# FILTER="exclude trunk/foo.conf"
+#
+# this filter will only sync trunk
+#
+# FILTER="include trunk/"
+#
+#
+DFLT_FILTER=""
 #_CONFIG_END_MARKER
 #######################################################################
 #
@@ -289,10 +318,12 @@ MODE="${MODE:-$DFLT_MODE}"
 DUMPPARAMS="${DUMPPARAMS:-$DFLT_DUMPPARAMS}"
 LSVNLOOK="${LSVNLOOK:-$DFLT_LSVNLOOK}"
 LSVNADMIN="${LSVNADMIN:-$DFLT_LSVNADMIN}"
+LSVNDUMPFILTER="${LSVNDUMPFILTER:-$DFLT_LSVNDUMPFILTER}"
 LSSH="${LSSH:-$DFLT_LSSH}"
-RUSER="${RUSER:-$USER}"
+RUSER="${RUSER:+$RUSER@}"
 RSVNLOOK="${RSVNLOOK:-$DFLT_RSVNLOOK}"
 RSVNADMIN="${RSVNADMIN:-$DFLT_RSVNADMIN}"
+RSVNDUMPFILTER="${RSVNDUMPFILTER:-$DFLT_RSVNDUMPFILTER}"
 LADDITIONAL="${LADDITIONAL:-$DFLT_LADDITIONAL}"
 RADDITIONAL="${RADDITIONAL:-$DFLT_RADDITIONAL}"
 
@@ -313,7 +344,7 @@ KEYCHAIN="${KEYCHAIN:-$HOME/.keychain/`uname -n`-sh}"
 #
 # getting version of the remote repository
 #
-RVERSION=`${LSSH} ${RUSER}@${RHOST} ${RSVNLOOK} youngest ${RREPOS}`
+RVERSION=`${LSSH} ${RUSER}${RHOST} ${RSVNLOOK} youngest ${RREPOS}`
 if [ -z "${RVERSION}" ] ; then
     echo "getting version of remote repository failed" >&2
     exit 1
@@ -347,22 +378,32 @@ if [ ${MODE} = "push" ] ; then
         echo "revision of remote repos is higher than local one" >&2
         exit 1
     fi
+    DUMPFILTER="cat"
+    if [ -n "$FILTER" ] ; then
+        DUMPFILTER="${LSVNDUMPFILTER} ${FILTER}"
+        [ ${VERBOSE} = true ] && echo "using filter 'svndumpfilter ${FILTER}"
+    fi
     REVRANGE="`expr ${RVERSION} + 1`:${LVERSION}"
     [ ${VERBOSE} = true ] && \
         echo -n "syncing r${REVRANGE} to ${RHOST} ";
-    ${LSVNADMIN} dump ${QUIET} ${DUMPPARAMS} -r${REVRANGE} ${LREPOS} | \
-    ${LSSH} ${RUSER}@${RHOST} "${RADDITIONAL} ${RSVNADMIN} load ${QUIET} ${RREPOS}" || \
+    ${LSVNADMIN} dump ${QUIET} ${DUMPPARAMS} -r${REVRANGE} ${LREPOS} | ${DUMPFILTER} | \
+    ${LSSH} ${RUSER}${RHOST} "${RADDITIONAL} ${RSVNADMIN} load ${QUIET} ${RREPOS}" || \
     RC=1
 elif [ ${MODE} = "pull" ] ; then
     if [ ${LVERSION} -gt ${RVERSION} ] ; then
         echo "revision of local repos is higher than remote one" >&2
         exit 1
     fi
+    DUMPFILTER=""
+    if [ -n "$FILTER" ] ; then
+        DUMPFILTER="| ${LSVNDUMPFILTER} ${FILTER}"
+        [ ${VERBOSE} = true ] && echo "using filter 'svndumpfilter ${FILTER}"
+    fi
     REVRANGE="`expr ${LVERSION} + 1`:${RVERSION}"
     [ ${VERBOSE} = true ] && \
         echo -n "syncing r${REVRANGE} from ${RHOST} ";
-    ${LSSH} ${RUSER}@${RHOST} \
-    "${RADDITIONAL} ${RSVNADMIN} dump ${QUIET} ${DUMPPARAMS} -r${REVRANGE} ${RREPOS}" | \
+    ${LSSH} ${RUSER}${RHOST} \
+    "${RADDITIONAL} ${RSVNADMIN} dump ${QUIET} ${DUMPPARAMS} -r${REVRANGE} ${RREPOS} ${DUMPFILTER}" | \
     ${LSVNADMIN} load ${QUIET} ${LREPOS} || \
     RC=1
 else
@@ -376,6 +417,4 @@ else
         echo "successfull completed."
 fi
 exit ${RC}
-
-
 
