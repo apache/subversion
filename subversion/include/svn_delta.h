@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -357,15 +357,17 @@ void svn_txdelta_apply (svn_stream_t *source,
  * is set to a window handler function and @a *handler_baton is set to
  * the value to pass as the @a baton argument to @a *handler. The svndiff
  * version is @a version.
+ *
+ * @since New in 1.4.
  */
-
 void svn_txdelta_to_svndiff2 (svn_stream_t *output,
                               apr_pool_t *pool,
                               svn_txdelta_window_handler_t *handler,
                               void **handler_baton, int version);
 
 /** Similar to svn_txdelta_to_svndiff2, but always using svndiff
- * version 0.  
+ * version 0.
+ *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_txdelta_to_svndiff (svn_stream_t *output,

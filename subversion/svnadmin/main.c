@@ -2,7 +2,7 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -284,7 +284,7 @@ static const apr_getopt_option_t options_table[] =
 
     {"no-svndiff1",     svnadmin__no_svndiff1, 0,
      N_("disallow use of SVNDIFF1 in on-disk storage,\n"
-        "for backwards compatibility")},
+        "                             for backwards compatibility")},
 
     {NULL}
   };
