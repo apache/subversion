@@ -220,9 +220,11 @@ This can be toggled with \\[svn-status-toggle-hide-unmodified]."
   :type 'boolean
   :group 'psvn)
 (defcustom svn-status-sort-status-buffer t
-  "Sort the `svn-status-buffer-name' buffer.
-Setting this variable to nil speeds up M-x svn-status.
-However, it is possible, that the sorting is wrong in this case.
+  "*Whether to sort the `svn-status-buffer-name' buffer.
+
+Setting this variable to nil speeds up \[M-x svn-status], however the
+listing may then become incorrect.
+
 This can be toggled with \\[svn-status-toggle-sort-status-buffer]."
   :type 'boolean
   :group 'psvn)
@@ -387,10 +389,11 @@ If you'd like to suppress whitespace changes use the following value:
 This can be set with \\[svn-status-set-trac-project-root].")
 
 (defvar svn-status-module-name nil
-  "A nice short name for the actual project.
+  "*A short name for the actual project.
 This can be set with \\[svn-status-set-module-name].")
 
-(defvar svn-status-load-state-before-svn-status t "Load the ++psvn.state file, before running svn-status")
+(defvar svn-status-load-state-before-svn-status t
+  "*Whether to automatically restore state from ++psvn.state file before running svn-status.")
 
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
@@ -579,7 +582,7 @@ See also `svn-status-short-mod-flag-p'."
     (((class color) (background light)) (:foreground "blue4"))
     (((class color) (background dark)) (:foreground "lightskyblue1"))
     (t (:weight bold)))
-  "Face for directories in svn status buffers.
+  "Face for directories in *svn-status* buffers.
 See `svn-status--line-info->directory-p' for what counts as a directory."
   :group 'psvn-faces)
 
@@ -587,7 +590,7 @@ See `svn-status--line-info->directory-p' for what counts as a directory."
 (defface svn-status-filename-face
   '((((class color) (background light)) (:foreground "chocolate"))
     (((class color) (background dark)) (:foreground "beige")))
-  "Face for non-directories in svn status buffers.
+  "Face for non-directories in *svn-status* buffers.
 See `svn-status--line-info->directory-p' for what counts as a directory."
   :group 'psvn-faces)
 
@@ -927,9 +930,10 @@ is prompted for give extra arguments, which are appended to ARGLIST."
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
 
-(defun svn-process-sentinel-fixup-path-seperators()
+(defun svn-process-sentinel-fixup-path-seperators ()
+	"Convert all path separators to UNIX style.
+\(This is a no-op unless `system-type' is windows-nt\)"
   (when (eq system-type 'windows-nt)
-      ;; convert path separator to UNIX style
       (save-excursion
         (goto-char (point-min))
         (while (search-forward "\\" nil t)
@@ -1796,6 +1800,8 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <added>"))
           ((equal action 'deleted)
            (setq tag-string " <deleted>"))
+          ((equal action 'replaced)
+           (setq tag-string " <replaced>"))
           ((equal action 'added-wc)
            (svn-status-line-info->set-filemark line-info ?A)
            (svn-status-line-info->set-localrev line-info 0))
@@ -1840,6 +1846,8 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
                (setq action 'added))
               ((looking-at "Deleting")
                (setq action 'deleted))
+              ((looking-at "Replacing")
+               (setq action 'replaced))
               ((looking-at "Transmitting file data")
                (setq skip t))
               ((looking-at "Committed revision \\([0-9]+\\)")
@@ -1893,6 +1901,16 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
 ;;(svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
 
+(defun svn-status-line-info->symlink-p (line-info)
+  "Return non-nil if LINE-INFO refers to a symlink, nil otherwise.
+The value is the name of the file to which it is linked. \(See
+`file-symlink-p'.\)
+
+On win32 systems this won't work, even though symlinks are supported
+by subversion on such systems."
+  ;; on win32 would need to see how svn does symlinks
+  (file-symlink-p (svn-status-line-info->filename line-info)))
+
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.
 Symbolic links to directories count as directories (see `file-directory-p')."
@@ -1943,7 +1961,24 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                        (svn-status-line-info->directory-p line-info)
                        (svn-status-line-info->filename-nondirectory line-info)
                        'svn-status-directory-face
-                       'svn-status-filename-face)))
+                       'svn-status-filename-face)
+                      ;; if it's a symlkink, add '-> target'
+                      (let ((target (svn-status-line-info->symlink-p line-info)))
+                        (when target
+                          (concat " -> "
+                                  ;; add face to target: could maybe
+                                  ;; use different faces for
+                                  ;; unversioned targets?
+                                  (svn-status-choose-face-to-add
+                                   (file-directory-p target)
+                                   (file-relative-name
+                                    target
+                                    (svn-status-line-info->directory-containing-line-info
+                                     line-info t)); name relative to dir of line-info, not '.'
+                                   'svn-status-directory-face
+                                   'svn-status-filename-face)
+                                  )))
+                      ))
         (elide-hint (if (svn-status-line-info->show-user-elide-continuation line-info) " ..." "")))
     (svn-puthash (svn-status-line-info->filename line-info)
                  (point)
@@ -2169,7 +2204,9 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
 
 
 (defun svn-status-get-file-list (use-marked-files)
-  "Get either the marked files or the files, where the cursor is on."
+  "Get either the selected files or the file under point.
+USE-MARKED-FILES decides which we do.
+See `svn-status-marked-files' for what counts as selected."
   (if use-marked-files
       (svn-status-marked-files)
     (list (svn-status-get-line-information))))
@@ -2178,6 +2215,8 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
   (mapcar 'svn-status-line-info->filename (svn-status-get-file-list use-marked-files)))
 
 (defun svn-status-select-line ()
+	"Return information about the file under point.
+\(Only used for debugging\)"
   (interactive)
   (let ((info (svn-status-get-line-information)))
     (if info
@@ -2186,6 +2225,7 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
       (message "No file on this line"))))
 
 (defun svn-status-ensure-cursor-on-file ()
+	"Raise an error unless point is on a valid file."
   (unless (svn-status-get-line-information)
     (error "No file on the current line")))
 
@@ -3427,7 +3467,6 @@ Commands:
     (define-derived-mode svn-log-edit-mode log-edit-mode "svn-log-edit"
       "Wrapper around `log-edit-mode' for psvn.el"
       (easy-menu-add svn-log-edit-mode-menu)
-      (run-hooks 'svn-log-edit-mode-hook)
       (setq svn-log-edit-update-log-entry nil)
       (set (make-local-variable 'log-edit-callback) 'svn-log-edit-done)
       (set (make-local-variable 'log-edit-listfun) 'svn-log-edit-files-to-commit)
@@ -3713,14 +3752,16 @@ When called with a prefix argument, ask the user for the revision."
       (unless no-error (error "psvn.el: %s is not readable." file)))))
 
 (defun svn-status-toggle-sort-status-buffer ()
-  "If you turn off sorting, you can speed up M-x svn-status.
-However, the buffer is not correct sorted then.
-This function will be removed again, when a faster parsing and
-display routine for svn-status is available."
+  "Toggle sorting of the *svn-status* buffer.
+
+If you turn off sorting, you can speed up \[svn-status].  However,
+the buffer is not correctly sorted then.  This function will be
+removed again, when a faster parsing and display routine for
+`svn-status' is available."
   (interactive)
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
-  (message "The %s buffer will be%s sorted." svn-status-buffer-name
-           (if svn-status-sort-status-buffer "" " not")))
+  (message "The %s buffer will %sbe sorted." svn-status-buffer-name
+           (if svn-status-sort-status-buffer "" "not ")))
 
 (defun svn-status-toggle-display-full-path ()
   "Toggle displaying the full path in the `svn-status-buffer-name' buffer"
