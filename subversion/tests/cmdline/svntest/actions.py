@@ -734,11 +734,10 @@ def match_or_fail(message, label, expected, actual):
   """Make sure that regexp EXPECTED matches at least one line in list ACTUAL.
   If no match, then print MESSAGE (if it's not None), followed by
   EXPECTED and ACTUAL, both labeled with LABEL, and raise SVNLineUnequal."""
-  matched = None
   for line in actual:
     if re.match(expected, line):
-      matched = 1
-  if not matched:
+      break
+  else:
     display_lines(message, label, expected, actual, 1)
     raise main.SVNLineUnequal
 
