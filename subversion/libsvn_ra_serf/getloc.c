@@ -38,12 +38,12 @@
 #include "ra_serf.h"
 
 
-/**
+/*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum {
-    REPORT,
-    LOCATION,
+  REPORT,
+  LOCATION,
 } loc_state_e;
 
 typedef struct loc_state_list_t {
@@ -55,27 +55,27 @@ typedef struct loc_state_list_t {
 } loc_state_list_t;
 
 typedef struct {
- /* pool to allocate memory from */
- apr_pool_t *pool;
+  /* pool to allocate memory from */
+  apr_pool_t *pool;
 
- /* Returned location hash */
- apr_hash_t *paths;
+  /* Returned location hash */
+  apr_hash_t *paths;
 
- /* XML Parser */
- XML_Parser xmlp;
+  /* XML Parser */
+  XML_Parser xmlp;
 
- /* Current namespace list */
- ns_t *ns_list;
+  /* Current namespace list */
+  ns_t *ns_list;
 
- /* Current state we're in */
- loc_state_list_t *state;
- loc_state_list_t *free_state;
+  /* Current state we're in */
+  loc_state_list_t *state;
+  loc_state_list_t *free_state;
 
- /* Return error code; if we exceed count, this may be set */
- svn_error_t *error;
+  /* Return error code */
+  svn_error_t *error;
 
- /* are we done? */
- svn_boolean_t done;
+  /* are we done? */
+  svn_boolean_t done;
 
 } loc_context_t;
 
