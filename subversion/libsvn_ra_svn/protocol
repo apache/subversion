@@ -164,6 +164,9 @@ The following capabilities are currently defined:
   edit-pipeline     If both the client and server present this
                     capability, edit operations will use pipelining.
                     See section 3.1.2.
+  svndiff1          If both the client and server support svndiff version
+                    1, this will be used as the on-the-wire format for svndiff
+                    instead of svndiff version 0.
 
 3. Commands
 -----------

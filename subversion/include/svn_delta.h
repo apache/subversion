@@ -355,7 +355,18 @@ void svn_txdelta_apply (svn_stream_t *source,
  * @a output is a writable generic stream to write the svndiff data to.
  * Allocation takes place in a sub-pool of @a pool.  On return, @a *handler
  * is set to a window handler function and @a *handler_baton is set to
- * the value to pass as the @a baton argument to @a *handler.
+ * the value to pass as the @a baton argument to @a *handler. The svndiff
+ * version is @a version.
+ */
+
+void svn_txdelta_to_svndiff2 (svn_stream_t *output,
+                              apr_pool_t *pool,
+                              svn_txdelta_window_handler_t *handler,
+                              void **handler_baton, int version);
+
+/** Similar to svn_txdelta_to_svndiff2, but always using svndiff
+ * version 0.  
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_txdelta_to_svndiff (svn_stream_t *output,
                              apr_pool_t *pool,

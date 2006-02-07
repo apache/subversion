@@ -33,6 +33,7 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
+#include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
 
@@ -1366,6 +1367,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
                           trail_t *trail,
                           apr_pool_t *pool)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to read the target */
   svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
@@ -1430,8 +1432,15 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
 
   /* Setup a stream to convert the textdelta data into svndiff windows. */
   svn_txdelta (&txdelta_stream, source_stream, target_stream, pool);
-  svn_txdelta_to_svndiff (new_target_stream, pool,
-                          &new_target_handler, &new_target_handler_baton);
+
+  if (bfd->format >= SVN_FS_BASE__MIN_SVNDIFF1_FORMAT)
+    svn_txdelta_to_svndiff2 (new_target_stream, pool,
+                             &new_target_handler, 
+                             &new_target_handler_baton, 1);
+  else
+    svn_txdelta_to_svndiff2 (new_target_stream, pool,
+                             &new_target_handler, 
+                             &new_target_handler_baton, 0);
 
   /* subpool for the windows */
   wpool = svn_pool_create (pool);

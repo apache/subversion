@@ -29,6 +29,7 @@
 #include <apr_want.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include <apr_lib.h>
 
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -1241,6 +1242,183 @@ get_parentpath_resource(request_rec *r,
   return NULL;
 }
 
+/* --------------- Borrowed from httpd's mod_negotiation.c -------------- */
+
+typedef struct accept_rec {
+  char *name;                 /* MUST be lowercase */
+  float quality;
+} accept_rec;
+
+/*
+ * Get a single Accept-encoding line from ACCEPT_LINE, and place the
+ * information we have parsed out of it into RESULT.
+ */
+
+static const char *get_entry(apr_pool_t *p, accept_rec *result,
+                             const char *accept_line)
+{
+    result->quality = 1.0f;
+
+    /*
+     * Note that this handles what I gather is the "old format",
+     *
+     *    Accept: text/html text/plain moo/zot
+     *
+     * without any compatibility kludges --- if the token after the
+     * MIME type begins with a semicolon, we know we're looking at parms,
+     * otherwise, we know we aren't.  (So why all the pissing and moaning
+     * in the CERN server code?  I must be missing something).
+     */
+
+    result->name = ap_get_token(p, &accept_line, 0);
+    ap_str_tolower(result->name);     /* You want case insensitive,
+                                       * you'll *get* case insensitive.
+                                       */
+
+    while (*accept_line == ';')
+      {
+        /* Parameters ... */
+
+        char *parm;
+        char *cp;
+        char *end;
+
+        ++accept_line;
+        parm = ap_get_token(p, &accept_line, 1);
+
+        /* Look for 'var = value' --- and make sure the var is in lcase. */
+
+        for (cp = parm; (*cp && !apr_isspace(*cp) && *cp != '='); ++cp)
+          {
+            *cp = apr_tolower(*cp);
+          }
+
+        if (!*cp)
+          {
+            continue;           /* No '='; just ignore it. */
+          }
+
+        *cp++ = '\0';           /* Delimit var */
+        while (*cp && (apr_isspace(*cp) || *cp == '='))
+          {
+            ++cp;
+          }
+
+        if (*cp == '"')
+          {
+            ++cp;
+            for (end = cp;
+                 (*end && *end != '\n' && *end != '\r' && *end != '\"');
+                 end++);
+          }
+        else
+          {
+            for (end = cp; (*end && !apr_isspace(*end)); end++);
+          }
+        if (*end)
+          {
+            *end = '\0';        /* strip ending quote or return */
+          }
+        ap_str_tolower(cp);
+
+        if (parm[0] == 'q'
+            && (parm[1] == '\0' || (parm[1] == 's' && parm[2] == '\0')))
+          {
+            result->quality = atof(cp);
+          }
+      }
+
+    if (*accept_line == ',')
+      {
+        ++accept_line;
+      }
+
+    return accept_line;
+}
+
+/* @a accept_line is the Accept-Encoding header, which is of the
+   format:
+
+     Accept-Encoding: name; q=N;
+
+   This function will return an array of accept_rec structures that
+   contain the accepted encodings and the quality each one has
+   associated with them.
+*/
+static apr_array_header_t *do_header_line(apr_pool_t *p,
+                                          const char *accept_line)
+{
+    apr_array_header_t *accept_recs;
+
+    if (!accept_line)
+      return NULL;
+
+    accept_recs = apr_array_make(p, 10, sizeof(accept_rec));
+
+    while (*accept_line)
+      {
+        accept_rec *prefs = (accept_rec *) apr_array_push(accept_recs);
+        accept_line = get_entry(p, prefs, accept_line);
+      }
+
+    return accept_recs;
+}
+
+/* ---------------------------------------------------------------------- */
+
+
+/* qsort comparison function for the quality field of the accept_rec
+   structure */
+static int sort_encoding_pref(const void *accept_rec1, const void *accept_rec2)
+{
+  float diff = ((const accept_rec *) accept_rec1)->quality -
+      ((const accept_rec *) accept_rec2)->quality;
+  return (diff == 0 ? 0 : (diff > 0 ? -1 : 1));
+}
+
+/* Parse and handle any possible Accept-Encoding header that has been
+   sent as part of the request.  */
+static void
+svn_dav__negotiate_encoding_prefs(request_rec *r,
+                                  int *svndiff_version)
+{
+  /* It would be nice if mod_negotiation
+     <http://httpd.apache.org/docs-2.1/mod/mod_negotiation.html> could
+     handle the Accept-Encoding header parsing for us.  Sadly, it
+     looks like its data structures and routines are private (see
+     httpd/modules/mappers/mod_negotiation.c).  Thus, we duplicate the
+     necessary ones in this file. */
+  size_t i;
+  const apr_array_header_t *encoding_prefs;
+  encoding_prefs = do_header_line(r->pool, 
+                                  apr_table_get(r->headers_in, 
+                                                "Accept-Encoding"));
+
+  if (!encoding_prefs || apr_is_empty_array(encoding_prefs))
+    {
+      *svndiff_version = 0;
+      return;
+    }
+
+  *svndiff_version = 0;
+  qsort(encoding_prefs->elts, (size_t) encoding_prefs->nelts,
+        sizeof(accept_rec), sort_encoding_pref);
+  for (i = 0; i < encoding_prefs->nelts; i++)
+    {
+      struct accept_rec rec = APR_ARRAY_IDX (encoding_prefs, i,
+                                             struct accept_rec);
+      if (strcmp (rec.name, "svndiff1") == 0)
+        {
+          *svndiff_version = 1;
+          break;
+        }
+      else if (strcmp (rec.name, "svndiff") == 0)
+        {
+          *svndiff_version = 0;
+          break;
+        }
+    } 
+}
 
 
 static dav_error * dav_svn_get_resource(request_rec *r,
@@ -1336,6 +1514,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       ct != NULL
       && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
   }
+
+  svn_dav__negotiate_encoding_prefs (r, &comb->priv.svndiff_version);
 
   /* ### and another hack for computing diffs to send to the client */
   comb->priv.delta_base = apr_table_get(r->headers_in,
@@ -2629,7 +2809,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           svn_stream_set_close(o_stream, dav_svn_close_filter);
 
           /* get a handler/baton for writing into the output stream */
-          svn_txdelta_to_svndiff(o_stream, resource->pool, &handler, &h_baton);
+          svn_txdelta_to_svndiff2(o_stream, resource->pool, &handler, &h_baton,
+                                  resource->info->svndiff_version);
 
           /* got everything set up. read in delta windows and shove them into
              the handler, which pushes data into the output stream, which goes

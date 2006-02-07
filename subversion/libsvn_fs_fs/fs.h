@@ -34,7 +34,10 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   1
+#define SVN_FS_FS__FORMAT_NUMBER   2
+
+/* The minimum format number that supports svndiff version 1.  */
+#define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
 
 /* Maximum number of directories to cache dirents for. 
    This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX

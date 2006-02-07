@@ -66,6 +66,12 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_TYPE_BDB                         "bdb"
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
+
+/** Don't allow svndiff1 to be used in the on-disk storage 
+ * 
+ *  @since New in 1.4. 
+ */
+#define SVN_FS_CONFIG_NO_SVNDIFF1                       "no-svndiff1"
 /** @} */
 
 

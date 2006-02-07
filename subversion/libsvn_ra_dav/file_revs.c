@@ -306,6 +306,9 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
   int http_status = 0;
   struct report_baton rb;
   svn_error_t *err;
+  apr_hash_t *request_headers = apr_hash_make (pool);
+  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING, 
+               "svndiff1;q=0.9,svndiff;q=0.8");
 
   static const char request_head[]
     = "<S:file-revs-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
@@ -350,7 +353,7 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
   err = svn_ra_dav__parsed_request (ras->sess, "REPORT", final_bc_url,
                                     request_body->data, NULL, NULL,
                                     start_element, cdata_handler, end_element,
-                                    &rb, NULL, &http_status, FALSE,
+                                    &rb, request_headers, &http_status, FALSE,
                                     pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.

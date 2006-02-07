@@ -211,6 +211,9 @@ struct dav_resource_private {
   /* ### record the base for computing a delta during a GET */
   const char *delta_base;
 
+  /* SVNDIFF version we can transmit to the client.  */
+  int svndiff_version;
+
   /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
   const char *svn_client_options;
 

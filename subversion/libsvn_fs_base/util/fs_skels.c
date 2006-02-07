@@ -144,7 +144,8 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
   diff = window->children;
   if ((svn_fs_base__list_length (diff) == 3)
       && (svn_fs_base__matches_atom (diff->children, "svndiff"))
-      && (svn_fs_base__matches_atom (diff->children->next, "0"))
+      && ((svn_fs_base__matches_atom (diff->children->next, "0"))
+          || (svn_fs_base__matches_atom (diff->children->next, "1")))
       && (diff->children->next->next->is_atom))
     return TRUE;
 

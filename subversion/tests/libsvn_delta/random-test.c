@@ -337,7 +337,8 @@ random_test (const char **msg,
                                           delta_pool);
 
       /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff (stream, delta_pool, &handler, &handler_baton);
+      svn_txdelta_to_svndiff2 (stream, delta_pool, &handler, &handler_baton,
+                               1);
 
       /* Make stage 1: create the text delta.  */
       svn_txdelta (&txdelta_stream,
@@ -429,7 +430,8 @@ do_random_combine_test (const char **msg,
                                           delta_pool);
 
       /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff (stream, delta_pool, &handler, &handler_baton);
+      svn_txdelta_to_svndiff2 (stream, delta_pool, &handler, &handler_baton,
+                               1);
 
       /* Make stage 1: create the text deltas.  */
 
