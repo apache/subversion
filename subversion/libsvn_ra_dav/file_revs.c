@@ -2,7 +2,7 @@
  * file_revs.c :  routines for requesting and parsing file-revs reports
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -307,13 +307,13 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
   struct report_baton rb;
   svn_error_t *err;
   apr_hash_t *request_headers = apr_hash_make (pool);
-  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING, 
-               "svndiff1;q=0.9,svndiff;q=0.8");
-
   static const char request_head[]
     = "<S:file-revs-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
   static const char request_tail[]
     = "</S:file-revs-report>";
+
+  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING, 
+               "svndiff1;q=0.9,svndiff;q=0.8");
 
   /* Construct request body. */
   svn_stringbuf_appendcstr (request_body, request_head);
