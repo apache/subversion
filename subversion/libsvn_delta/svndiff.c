@@ -139,7 +139,7 @@ zlib_encode (svn_stringbuf_t *in, svn_stringbuf_t *out)
                                  _("compression of svndiff data failed"));
 
       /* Compression didn't help :(, just append the original text */
-      if (endlen > in->len)
+      if (endlen >= in->len)
         {
           svn_stringbuf_appendstr (out, in);
           return SVN_NO_ERROR;
