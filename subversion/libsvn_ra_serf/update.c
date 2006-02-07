@@ -519,6 +519,8 @@ static void delta_file(report_context_t *ctx, report_info_t *info)
   /* note that we have old VC URL */
   serf_bucket_headers_setn(hdrs_bkt, SVN_DAV_DELTA_BASE_HEADER,
                            delta_base->data);
+  serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding",
+                           "svndiff1;q=0.9,svndiff;q=0.8");
 
   /* Create the fetch context. */
   fetch_ctx = apr_pcalloc(ctx->sess->pool, sizeof(*fetch_ctx));
