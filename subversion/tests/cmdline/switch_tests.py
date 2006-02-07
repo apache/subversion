@@ -974,7 +974,9 @@ def relocate_beyond_repos_root(sbox):
 
   # Check that we can contact the repository, meaning that the relocate
   # actually changed the URL.
-  svntest.actions.run_and_verify_svn(None, '^URL: ' + other_A_url + '$', [],
+  #to address svn+ssh urls where '+' seems to be mistaken by the re.match
+  escaped_exp = '^' + re.escape('URL: ' + other_A_url) + '$'
+  svntest.actions.run_and_verify_svn(None, escaped_exp, [],
                                      'info', '-rHEAD', A_wc_dir)
 
 #----------------------------------------------------------------------
