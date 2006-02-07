@@ -615,6 +615,21 @@ start_report(void *userData, const char *name, const char **attrs)
   /* look up name space if present */
   prop_name = expand_ns(ctx->ns_list, name, ctx->sess->pool);
 
+  if (!ctx->state && strcmp(prop_name.name, "target-revision") == 0)
+    {
+      const char *rev = NULL;
+
+      rev = find_attr(attrs, "rev");
+
+      if (!rev)
+        {
+          abort();
+        }
+
+      ctx->update_editor->set_target_revision(ctx->update_baton,
+                                              SVN_STR_TO_REV(rev),
+                                              ctx->sess->pool);
+    }
   if (!ctx->state && strcmp(prop_name.name, "open-directory") == 0)
     {
       const char *rev = NULL;
