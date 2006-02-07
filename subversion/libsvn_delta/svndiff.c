@@ -2,7 +2,7 @@
  * svndiff.c -- Encoding and decoding svndiff-format deltas.
  * 
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -163,8 +163,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   char abuf[128], *ap;
   const svn_txdelta_op_t *op;
   apr_size_t len;
-  apr_size_t lastoffset = 0;
-  apr_size_t bits = 0;  
 
   /* Make sure we write the header.  */
   if (eb->header_done == FALSE)
@@ -390,7 +388,6 @@ zlib_decode (svn_stringbuf_t *in, svn_stringbuf_t *out)
   else
     {
       unsigned long zliblen;
-      unsigned long origlen;
 
       svn_stringbuf_ensure (out, len);
       
@@ -539,23 +536,20 @@ decode_window (svn_txdelta_window_t *window, svn_filesize_t sview_offset,
 {
   const unsigned char *insend;
   int ninst;
-  apr_size_t saved_inslen, saved_newlen;
   apr_size_t npos;
   svn_txdelta_op_t *ops, *op;
-  svn_string_t *new_data;
-  svn_stringbuf_t *instout, *ndout;
+  svn_string_t *new_data = apr_palloc (pool, sizeof (*new_data));
 
   window->sview_offset = sview_offset;
   window->sview_len = sview_len;
   window->tview_len = tview_len;
-  saved_inslen = inslen;
-  saved_newlen = newlen;
 
   insend = data + inslen;
   
   if (version == 1)
     {
       svn_stringbuf_t *instin, *ndin;
+      svn_stringbuf_t *instout, *ndout;
 
       instin = svn_stringbuf_ncreate ((const char *)data, insend - data, pool);
       instout = svn_stringbuf_create ("", pool);
@@ -568,8 +562,16 @@ decode_window (svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       newlen = ndout->len;
       data = (unsigned char *)instout->data;
       insend = (unsigned char *)instout->data + instout->len;
+
+      new_data->data = (const char *) ndout->data;
+      new_data->len = newlen;
     }
-  
+  else
+    {
+      new_data->data = (const char *) insend;
+      new_data->len = newlen;
+    }
+
   /* Count the instructions and make sure they are all valid.  */ 
   SVN_ERR (count_and_verify_instructions (&ninst, data, insend, 
                                           sview_len, tview_len, newlen));
@@ -589,18 +591,10 @@ decode_window (svn_txdelta_window_t *window, svn_filesize_t sview_offset,
           npos += op->length;
         }
     }
+  assert (data == insend);
 
   window->ops = ops;
   window->num_ops = ninst;
-
-  new_data = apr_palloc (pool, sizeof (*new_data));
-
-  if (version == 1)
-    new_data->data = (const char *)ndout->data;
-  else
-    new_data->data = (const char *) data;
-
-  new_data->len = newlen;
   window->new_data = new_data;
 
   return SVN_NO_ERROR;
