@@ -86,6 +86,7 @@ Commit access for specific areas:
       jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
           nori   KOBAYASHI Noritada                          (Ruby tools,
                  <nori1@dolphin.c.u-tokyo.ac.jp>              po: ja)
+            mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh)
 
   Translation:
 
