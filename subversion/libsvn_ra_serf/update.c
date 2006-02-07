@@ -775,6 +775,23 @@ start_report(void *userData, const char *name, const char **attrs)
       svn_path_add_component(info->file_name_buf, file_name);
       info->file_name = info->file_name_buf->data;
     }
+  else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
+           strcmp(prop_name.name, "delete-entry") == 0)
+    {
+      const char *file_name = NULL;
+
+      file_name = find_attr(attrs, "name");
+
+      if (!file_name)
+        {
+          abort();
+        }
+
+      ctx->update_editor->delete_entry(file_name,
+                                       SVN_INVALID_REVNUM,
+                                       ctx->state->info->dir->dir_baton,
+                                       ctx->sess->pool);
+    }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR))
     {
       if (strcmp(prop_name.name, "checked-in") == 0)
