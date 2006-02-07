@@ -160,11 +160,13 @@ LOAD_MOD_MIME=$(get_loadmodule_config mod_mime) \
 # needed for Auth*
 LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
   || {
-say "Auth module not found. Assuming we run against Apache 2.1+"
+say "Monolithic Auth module not found. Assuming we run against Apache 2.1+"
 LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
 LOAD_MOD_AUTHN="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
+LOAD_MOD_AUTHZ="$(get_loadmodule_config mod_authz_user)" \
+    || fail "Authz_User module not found."
 }
 
 HTTPD_PORT=$(($RANDOM+1024))
@@ -194,6 +196,7 @@ $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_AUTH
 $LOAD_MOD_AUTHN
+$LOAD_MOD_AUTHZ
 LockFile            lock
 User                $(whoami)
 Group               $(groups | awk '{print $1}')
