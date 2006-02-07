@@ -624,6 +624,9 @@ open_databases (svn_fs_t *fs, svn_boolean_t create,
 static svn_error_t *
 base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
+  const char * formatval;
+  int format = SVN_FS_BASE__FORMAT_NUMBER;
+  
   /* Create the environment and databases. */
   svn_error_t *svn_err = open_databases (fs, TRUE, path, pool);
   if (svn_err) goto error;
@@ -632,10 +635,15 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   svn_err = svn_fs_base__dag_init_fs (fs);
   if (svn_err) goto error;
 
+  /* See if we had an explicitly specified no svndiff1.  */
+  formatval = apr_hash_get (fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+                            APR_HASH_KEY_STRING);
+  if (formatval)
+    format = 1;
+
   /* This filesystem is ready.  Stamp it with a format number. */
   svn_err = svn_io_write_version_file
-    (svn_path_join (fs->path, FORMAT_FILE, pool),
-     SVN_FS_BASE__FORMAT_NUMBER, pool);
+    (svn_path_join (fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -655,6 +663,10 @@ error:
 static svn_error_t *
 check_format (int format)
 {
+  /* We support format 1 and 2 simultaneously.  */
+  if (format == 1 && SVN_FS_BASE__FORMAT_NUMBER == 2)
+    return SVN_NO_ERROR;
+
   if (format != SVN_FS_BASE__FORMAT_NUMBER)
     {
       return svn_error_createf 

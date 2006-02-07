@@ -39,10 +39,11 @@ main (int argc, char **argv)
   svn_stream_t *encoder;
   void *svndiff_baton;
   apr_pool_t *pool;
+  int version = 0;
 
   if (argc < 3)
     {
-      printf ("usage: %s source target\n", argv[0]);
+      printf ("usage: %s source target [version]\n", argv[0]);
       exit (0);
     }
 
@@ -63,6 +64,8 @@ main (int argc, char **argv)
       fprintf (stderr, "unable to open \"%s\" for reading\n", argv[2]);
       exit (1);
     }
+  if (argc == 4)
+    version = atoi (argv[3]);
 
   svn_txdelta (&txdelta_stream,
                svn_stream_from_aprfile (source_file, pool),
@@ -78,7 +81,8 @@ main (int argc, char **argv)
 #else
   encoder = svn_base64_encode (stdout_stream, pool);
 #endif
-  svn_txdelta_to_svndiff (encoder, pool, &svndiff_handler, &svndiff_baton);
+  svn_txdelta_to_svndiff2 (encoder, pool, &svndiff_handler, &svndiff_baton, 
+                           version);
   err = svn_txdelta_send_txstream (txdelta_stream,
                                    svndiff_handler,
                                    svndiff_baton,

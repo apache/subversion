@@ -41,6 +41,9 @@ struct file_rev_baton {
      writes to support mod_dav-based error handling. */
   svn_boolean_t needs_header;
 
+  /* SVNDIFF version to use when sending to client.  */
+  int svndiff_version;
+
   /* Used by the delta iwndow handler. */
   svn_txdelta_window_handler_t window_handler;
   void *window_baton;
@@ -176,8 +179,8 @@ file_rev_handler(void *baton,
 
       base64_stream = dav_svn_make_base64_output_stream(frb->bb, frb->output,
                                                         pool);
-      svn_txdelta_to_svndiff(base64_stream, pool, &frb->window_handler,
-                             &frb->window_baton);
+      svn_txdelta_to_svndiff2(base64_stream, pool, &frb->window_handler,
+                              &frb->window_baton, frb->svndiff_version);
       *window_handler = delta_window_handler;
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window
@@ -255,6 +258,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
                               output->c->bucket_alloc);
   frb.output = output;
   frb.needs_header = TRUE;
+  frb.svndiff_version = resource->info->svndiff_version;
 
   /* file_rev_handler will send header first time it is called. */
 

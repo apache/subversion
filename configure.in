@@ -451,20 +451,12 @@ AC_HELP_STRING([--with-editor=PATH],
 
 ])
 
-AC_ARG_WITH(zlib,
-AC_HELP_STRING([--with-zlib], [enable zlib support]),
-[
-
-    if test "$withval" = "yes" ; then
-       AC_CHECK_HEADER(zlib.h, [
+AC_CHECK_HEADER(zlib.h, [
            AC_CHECK_LIB(z, inflate, [
                AC_DEFINE([SVN_HAVE_ZLIB], [1], [Is zlib support enabled?])
                LIBS="$LIBS -lz"
-           ])
+           ], [AC_MSG_ERROR([subversion requires zlib])])
        ])
-    fi
-
-])
     
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
