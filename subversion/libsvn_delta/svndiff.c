@@ -159,7 +159,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   svn_stringbuf_t *header = svn_stringbuf_create ("", pool);
   svn_stringbuf_t *newdata = svn_stringbuf_create ("", pool);
   char ibuf[128], *ip;
-  char abuf[128], *ap;
   const svn_txdelta_op_t *op;
   apr_size_t len;
 
@@ -199,7 +198,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       /* Encode the action code and length.  */
       ip = ibuf;
-      ap = abuf;
       switch (op->action_code)
         {
         case svn_txdelta_source: *ip = (char)0; break;
