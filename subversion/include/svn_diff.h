@@ -110,7 +110,10 @@ typedef struct svn_diff_fns_t
   svn_error_t *(*datasource_close)(void *diff_baton,
                                    svn_diff_datasource_e datasource);
 
-  /** Get the next "token" from the datasource of type @a datasource. */
+  /** Get the next "token" from the datasource of type @a datasource.
+   *  Return a "token" in @a *token.   Return a hash of "token" in @a *hash.
+   *  Leave @a token and @a hash untouched when the datasource is exhausted.
+   */
   svn_error_t *(*datasource_get_next_token)(apr_uint32_t *hash, void **token,
                                             void *diff_baton,
                                             svn_diff_datasource_e datasource);
