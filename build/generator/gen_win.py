@@ -44,7 +44,7 @@ class WinGeneratorBase(GeneratorBase):
     self.neon_ver = 24007
     self.httpd_path = None
     self.libintl_path = None
-    self.zlib_path = None
+    self.zlib_path = 'zlib'
     self.openssl_path = None
     self.junit_path = None
     self.swig_path = None
@@ -625,6 +625,8 @@ class WinGeneratorBase(GeneratorBase):
             or isinstance(target, gen_base.TargetSWIGLib)):
       fakeincludes.append(self.swig_libdir)
 
+    fakeincludes.append(self.apath(self.zlib_path))
+    
     return fakeincludes
 
   def get_win_lib_dirs(self, target, cfg):
@@ -634,7 +636,8 @@ class WinGeneratorBase(GeneratorBase):
                             "Release", "LibR")
 
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
-                    self.apath(self.neon_path) ]
+                    self.apath(self.neon_path),
+                    self.apath(self.zlib_path) ]
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -648,6 +651,7 @@ class WinGeneratorBase(GeneratorBase):
 
     dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+    zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -656,6 +660,7 @@ class WinGeneratorBase(GeneratorBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
+    nondeplibs.append(zlib)
     if self.enable_nls:
       if self.libintl_path:
         nondeplibs.append(self.apath(self.libintl_path,
