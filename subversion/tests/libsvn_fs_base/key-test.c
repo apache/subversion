@@ -1,7 +1,7 @@
 /* key-test.c --- tests for the key gen functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -73,7 +73,7 @@ key_test (const char **msg,
              "failed to increment key \"%s\" correctly\n"
              "  expected: %s\n"
              "    actual: %s",
-             orig_key, next_key, gen_key ? gen_key : "(null)");
+             orig_key, next_key, gen_key);
         }
     }
 
