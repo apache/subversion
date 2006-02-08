@@ -343,10 +343,16 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
   length = eol - curp;
   file_token->length += length;
-  *hash = svn_diff__adler32(h, curp, length);
 
   file_baton->curp[idx] = eol;
-  *token = file_token;
+
+  /* If the file length is exactly a multiple of CHUNK_SIZE, we will end up
+   * with a spurious empty token.  Avoid returning it. */
+  if (file_token->length > 0)
+    {
+      *hash = svn_diff__adler32(h, curp, length);
+      *token = file_token;
+    }
 
   return SVN_NO_ERROR;
 }
