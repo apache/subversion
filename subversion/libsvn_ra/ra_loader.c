@@ -282,7 +282,7 @@ svn_error_t *svn_ra_open2 (svn_ra_session_t **session_p,
                                      pool));
           if (! initfunc)
             /* Library not found. */
-            break;
+            continue;
 
           SVN_ERR (initfunc (svn_ra_version (), &vtable, pool));
 
@@ -779,7 +779,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
             }
           if (! compat_initfunc)
             {
-              break;
+              continue;
             }
 
           SVN_ERR (compat_initfunc (SVN_RA_ABI_VERSION, load_pool, ht));
