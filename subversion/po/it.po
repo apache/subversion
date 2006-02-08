@@ -83,8 +83,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-02-07 05:01+0100\n"
-"PO-Revision-Date: 2006-02-07 09:24+0100\n"
+"POT-Creation-Date: 2006-02-08 05:02+0100\n"
+"PO-Revision-Date: 2006-02-08 09:03+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1490,39 +1490,40 @@ msgstr "Il repository in '%s' ha uuid '%s', ma la copia locale ha '%s'"
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "Tipo di revisione non riconosciuto per '%s'"
 
-#: libsvn_delta/svndiff.c:140
+#: libsvn_delta/svndiff.c:139
 msgid "compression of svndiff data failed"
 msgstr "compressione di svndiff fallita"
 
-#: libsvn_delta/svndiff.c:402
+#: libsvn_delta/svndiff.c:396
 msgid "decompression of svndiff data failed"
 msgstr "decompressione dei dati di svndiff fallita"
 
-#: libsvn_delta/svndiff.c:409
+#: libsvn_delta/svndiff.c:403
 msgid "size of uncompressed data does not match stored original length"
-msgstr "la dimensione dei dati non compressi non coincide con quella originaria"
+msgstr ""
+"la dimensione dei dati non compressi non coincide con quella originaria"
 
-#: libsvn_delta/svndiff.c:479
+#: libsvn_delta/svndiff.c:473
 #, c-format
 msgid "Invalid diff stream: insn %d cannot be decoded"
 msgstr "Flusso di diff non valido: insn %d non può essere decodificato"
 
-#: libsvn_delta/svndiff.c:483
+#: libsvn_delta/svndiff.c:477
 #, c-format
 msgid "Invalid diff stream: insn %d has non-positive length"
 msgstr "Flusso di diff non valido: insn %d ha una lunghezza non positiva"
 
-#: libsvn_delta/svndiff.c:487
+#: libsvn_delta/svndiff.c:481
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
 msgstr "Flusso di diff non valido: insn %d supera la vista di destinazione"
 
-#: libsvn_delta/svndiff.c:496
+#: libsvn_delta/svndiff.c:490
 #, c-format
 msgid "Invalid diff stream: [src] insn %d overflows the source view"
 msgstr "Flusso di diff non valido: [orig] insn %d supera la vista di origine"
 
-#: libsvn_delta/svndiff.c:503
+#: libsvn_delta/svndiff.c:497
 #, c-format
 msgid ""
 "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
@@ -1530,42 +1531,42 @@ msgstr ""
 "Flusso di diff non valido: [obi] insn %d inizia oltre la posizione nella "
 "vista di destinazione"
 
-#: libsvn_delta/svndiff.c:510
+#: libsvn_delta/svndiff.c:504
 #, c-format
 msgid "Invalid diff stream: [new] insn %d overflows the new data section"
 msgstr "Flusso di diff non valido: [nuovo] insn %d i dati della nuova sezione"
 
-#: libsvn_delta/svndiff.c:520
+#: libsvn_delta/svndiff.c:514
 msgid "Delta does not fill the target window"
 msgstr "Il delta non riempie la finestra di destinazione"
 
-#: libsvn_delta/svndiff.c:523
+#: libsvn_delta/svndiff.c:517
 msgid "Delta does not contain enough new data"
 msgstr "Il delta non contiene abbastanza nuovi dati"
 
-#: libsvn_delta/svndiff.c:629
+#: libsvn_delta/svndiff.c:620
 msgid "Svndiff has invalid header"
 msgstr "Svndiff ha un header non valido"
 
-#: libsvn_delta/svndiff.c:684 libsvn_delta/svndiff.c:841
+#: libsvn_delta/svndiff.c:675 libsvn_delta/svndiff.c:832
 msgid "Svndiff contains corrupt window header"
 msgstr "Svndiff contiene un header di finestra corrotto"
 
-#: libsvn_delta/svndiff.c:693
+#: libsvn_delta/svndiff.c:684
 msgid "Svndiff has backwards-sliding source views"
 msgstr "retrocedenti"
 
-#: libsvn_delta/svndiff.c:742 libsvn_delta/svndiff.c:789
-#: libsvn_delta/svndiff.c:864
+#: libsvn_delta/svndiff.c:733 libsvn_delta/svndiff.c:780
+#: libsvn_delta/svndiff.c:855
 msgid "Unexpected end of svndiff input"
 msgstr "Fine inaspettata dell'input per svndiff"
 
-#: libsvn_diff/diff_file.c:716
+#: libsvn_diff/diff_file.c:722
 #, c-format
 msgid "%s\\ No newline at end of file%s"
 msgstr "%s\\ Nessun a-capo alla fine del file%s"
 
-#: libsvn_diff/diff_file.c:1301
+#: libsvn_diff/diff_file.c:1307
 #, c-format
 msgid "Failed to delete mmap '%s'"
 msgstr "Cancellazione di mmap '%s' fallita"
@@ -3012,7 +3013,7 @@ msgstr "Non trovo il nome dell'host: %s://%s"
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versione (%d) del lettore per ra_serf non supportata"
 
-#: libsvn_ra_serf/update.c:1081
+#: libsvn_ra_serf/update.c:1115
 msgid "Error retrieving REPORT"
 msgstr "Errore nel recuperare REPORT"
 
@@ -7269,10 +7270,10 @@ msgstr ""
 #: svnadmin/main.c:286
 msgid ""
 "disallow use of SVNDIFF1 in on-disk storage,\n"
-"for backwards compatibility"
+"                             for backwards compatibility"
 msgstr ""
 "disabilita l'uso di SVNDIFF1 nell'archiviazione su disco,\n"
-"per preservare la compatibilità all'indietro"
+"                             per preservare la compatibilità all'indietro"
 
 #: svnadmin/main.c:299
 msgid ""
