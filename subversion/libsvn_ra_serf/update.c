@@ -617,7 +617,7 @@ start_report(void *userData, const char *name, const char **attrs)
 
   if (!ctx->state && strcmp(prop_name.name, "target-revision") == 0)
     {
-      const char *rev = NULL;
+      const char *rev;
 
       rev = find_attr(attrs, "rev");
 
@@ -630,9 +630,9 @@ start_report(void *userData, const char *name, const char **attrs)
                                               SVN_STR_TO_REV(rev),
                                               ctx->sess->pool);
     }
-  if (!ctx->state && strcmp(prop_name.name, "open-directory") == 0)
+  else if (!ctx->state && strcmp(prop_name.name, "open-directory") == 0)
     {
-      const char *rev = NULL;
+      const char *rev;
       report_info_t *info;
 
       rev = find_attr(attrs, "rev");
@@ -663,7 +663,7 @@ start_report(void *userData, const char *name, const char **attrs)
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "open-directory") == 0)
     {
-      const char *rev = NULL, *dirname;
+      const char *rev, *dirname;
       report_dir_t *dir_info;
       report_info_t *info;
 
@@ -701,7 +701,7 @@ start_report(void *userData, const char *name, const char **attrs)
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "add-directory") == 0)
     {
-      const char *dir_name = NULL;
+      const char *dir_name;
       report_dir_t *dir_info;
 
       dir_name = find_attr(attrs, "name");
@@ -725,7 +725,7 @@ start_report(void *userData, const char *name, const char **attrs)
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "open-file") == 0)
     {
-      const char *file_name = NULL, *rev = NULL;
+      const char *file_name, *rev;
       report_info_t *info;
 
       file_name = find_attr(attrs, "name");
@@ -756,7 +756,7 @@ start_report(void *userData, const char *name, const char **attrs)
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "add-file") == 0)
     {
-      const char *file_name = NULL;
+      const char *file_name;
       report_info_t *info;
 
       file_name = find_attr(attrs, "name");
@@ -778,7 +778,7 @@ start_report(void *userData, const char *name, const char **attrs)
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "delete-entry") == 0)
     {
-      const char *file_name = NULL;
+      const char *file_name;
 
       file_name = find_attr(attrs, "name");
 
@@ -1246,18 +1246,13 @@ svn_ra_serf__do_update (svn_ra_session_t *ra_session,
   ra_serf_session_t *session = ra_session->priv;
   serf_bucket_t *tmp;
 
-  report = apr_palloc(pool, sizeof(*report));
+  report = apr_pcalloc(pool, sizeof(*report));
   report->sess = ra_session->priv;
   report->target = update_target;
   report->target_rev = revision_to_update_to;
   report->recurse = recurse;
   report->update_editor = update_editor;
   report->update_baton = update_baton;
-  report->active_fetches = NULL;
-  report->active_propfinds = NULL;
-  report->state = NULL;
-  report->free_info = NULL;
-  report->free_state = NULL;
   report->done = FALSE;
 
   /* Create our XML parser */
