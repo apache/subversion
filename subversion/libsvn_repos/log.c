@@ -187,34 +187,6 @@ detect_changed (apr_hash_t **changed,
   return SVN_NO_ERROR;
 }
 
-/* Save a fs revision root into *ROOT for a given PATH/REV in FS.
- *
- * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
- * AUTHZ_READ_BATON and FS) to check whether the PATH is readable.
- */
-static svn_error_t *
-path_history_root (svn_fs_root_t **root,
-                   svn_fs_t *fs,
-                   const char* path,
-                   svn_revnum_t rev,
-                   svn_repos_authz_func_t authz_read_func,
-                   void* authz_read_baton,
-                   apr_pool_t* pool)
-{
-  /* Get a revision root for REV. */
-  SVN_ERR (svn_fs_revision_root (root, fs, rev, pool));
-
-  if (authz_read_func)
-    {
-      svn_boolean_t readable;
-      SVN_ERR (authz_read_func (&readable, *root, path,
-                                authz_read_baton, pool));
-      if (! readable)
-        return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
-    }
-  return SVN_NO_ERROR;
-}
-
 /* This is used by svn_repos_get_logs3 to keep track of multiple
  * path history information while working through history.
  *
@@ -223,7 +195,6 @@ path_history_root (svn_fs_root_t **root,
  */
 struct path_info
 {
-  svn_fs_root_t *root;
   const char *path;
   svn_fs_history_t *hist;
   apr_pool_t *newpool;
@@ -463,6 +434,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
   apr_array_header_t *histories;
   svn_boolean_t any_histories_left = TRUE;
   int send_count = 0;
+  svn_fs_root_t *root;
   int i;
 
   SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
@@ -536,21 +508,31 @@ svn_repos_get_logs3 (svn_repos_t *repos,
   */
   histories = apr_array_make (pool, paths->nelts,
                               sizeof (struct path_info *));
+
+  SVN_ERR (svn_fs_revision_root (&root, fs, hist_end, pool));
+
   for (i = 0; i < paths->nelts; i++)
     {
       const char *this_path = APR_ARRAY_IDX (paths, i, const char *);
-      svn_fs_root_t *root;
       struct path_info *info = apr_palloc (pool,
                                            sizeof (struct path_info));
 
-      SVN_ERR (path_history_root (&root, fs, this_path, hist_end,
-                                  authz_read_func, authz_read_baton,
-                                  pool));
-      info->root = root;
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+
+          svn_pool_clear (subpool);
+
+          SVN_ERR (authz_read_func (&readable, root, this_path,
+                                    authz_read_baton, subpool));
+          if (! readable)
+            return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
+        }
+
       info->path = this_path;
       info->oldpool = svn_pool_create (pool);
       info->newpool = svn_pool_create (pool);
-      SVN_ERR (svn_fs_node_history (&info->hist, info->root, info->path,
+      SVN_ERR (svn_fs_node_history (&info->hist, root, info->path,
                                     info->oldpool));
       SVN_ERR (get_history (info, fs,
                             strict_node_history,
