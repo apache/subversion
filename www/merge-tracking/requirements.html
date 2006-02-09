@@ -9,55 +9,70 @@
 <link rel="stylesheet" type="text/css" media="print"
   href="tigris-branding/css/print.css"/>
 <script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
-<title>Merge Tracking Use Cases and Requirements</title>
+<title>Merge Tracking Requirements and Use Cases</title>
 </head>
 
 <body>
 <div class="h2">
-<h2>Merge Tracking</h2>
+<h2>Merge Tracking Requirements and Use Cases</h2>
 
-<p>Specification of <a href="index.html">merge tracking</a> use cases
-and requirements.  <span style="font-color: red">This document is
-still UNDER CONSTRUCTION.</span></p>
+<p style="color: red">*** UNDER CONSTRUCTION ***</p>
 
-
-<div class="h3"> <!-- id="use-cases" -->
-<h3>Use Cases and Requirements</h3>
-
-<p>The majority of Subverion's merge tracking use cases and
-requirements are driven by its <a
+<p>This document details Subversion's <a href="index.html">merge
+tracking</a> requirements and their supporting use cases, the majority
+of which are driven by Subversion's <a
 href="../user-classifications.html#developer">Developer</a> and <a
 href="../user-classifications.html#merge-meister">Merge Meister</a>
 users.  A few outliers are driven by <a
 href="../user-classifications.html#program">SCM automation</a>.</p>
 
-<p>TODO: Incorporate <a
-href="http://svn.collab.net/repos/svn/trunk/notes/repeated-merging"
->repeated-merging</a>, and CollabNet Summit findings.</p>
+<div id="requirements">
 
-<div id="misc">
-<h4>Miscellaneous Thoughts</h4>
+<p style="color: red">TODO: Incorporate CollabNet Summit findings.
+Remove redundancies.</p>
+
+
+<div id="cherry-picking">
+<h4>Cherry Picking</h4>
+
+<p>Merge of one or more individual changes from branch A into branch
+B.  This sometimes involves manual application of the changes from rN
+in branch A (e.g. not using <code>svn merge</code>), or manual
+adjustment of a change merged into a WC before it's committed to the
+repository.  Regardless of the merge method used, Subversion must
+provide a way to indicate that the change(s) have been merged into
+branch B.</p>
+
+</div>  <!-- cherry picking -->
+
+
+<div id="auditing">
+<h4>Auditing</h4>
+
+<p>Merge tracking must be audit-friendly, supporing some basic forms
+of reporting which allow for discovery of following types of
+information:</p>
 
 <ul>
-  <li>If you merge rN into some destination (e.g., into branch B), it
-  should be possible to query rN itself to ask what destinations it
-  has been merged to, and the answer set should contain B.</li>
+  <li>If you merge rN into some destination (e.g. branch B), it should
+  be possible to query rN itself to ask what destinations it has been
+  merged to, and the answer set should contain B.</li>
 
   <li>If you merge rN into a branch B, and rN was committed by author A,
-  then 'svn blame' should show the changed lines in B as last touched
-  by A, even if the merge was committed by you and you are not A.
-  (Hmm, this gets tough to implement when one merges a range of
-  revisions simultaneously!)</li>
+  then <code>svn blame</code> should show the changed lines in B as
+  last touched by A, even if the merge was committed by you and you
+  are not A.  This must also work when merging a range of revisions
+  with different authors.</li>
 
-  <li>It should be possible to query any path (file or directory) to
-  find out what changes (revisions) have been merged under it.  For
-  files, "under" just means "into".</li>
+  <li>It should be possible to query any path (file, directory, or
+  symlink) to find out what changes (revisions) have been merged under
+  it.  For files, "under" just means "into".</li>
 
   <li>It should be easy to discover all the paths at which a particular
   node revision (i.e., unique versioned file entity) exists,
-  especially in a given revision.  IOW, this is the "what branches
-  does this exact version of this file exist in" problem, often
-  requested by so-called enterprise-level users.</li>
+  especially in a given revision.  In other words, this is the "what
+  branches does this exact version of this file exist in" problem,
+  often requested by so-called enterprise-level users.</li>
 
   <li>Merge records should be transitive.  Often we merge a bunch of
   changes to a backport branch, tweak them there, then later merge the
@@ -67,38 +82,31 @@ href="http://svn.collab.net/repos/svn/trunk/notes/repeated-merging"
   line as well as the backport branch.</li>
 </ul>
 
-</div>  <!-- misc -->
+</div>  <!-- auditing -->
 
-<div id="cherry-picking">
-<h4>Cherry Picking</h4>
-
-<p>Merge of individual changes from branchA into branchB.
-<!-- TODO: Elaborate. --></p>
-
-</div>  <!-- cherry-picking -->
 
 <div id="repeated-merge">
 <h4>Repeated Merge</h4>
 
-<p>Track which changesets have been applied where, so users can <a
-href="http://svn.collab.net/repos/svn/trunk/notes/repeated-merging"
->repeatedly merge</a> branchA to branchB without having to remember
-the last range of revisions ported.  This would also track changeset
-<a href="#cherry-picking">cherry-picking</a> done by users, so we
-don't accidentally re-merge changesets that are already applied.  This
-is the problem that <a href="http://svk.elixus.org/">svk</a> and <a
+<p>Track which changesets have been applied where, so users can
+repeatedly merge branch A to branch B without having to remember the
+last range of revisions ported.  This would also track changeset <a
+href="#cherry-picking">cherry picking</a> done by users, so we don't
+accidentally re-merge changesets that are already applied.  This is
+the problem that <a href="http://svk.elixus.org/">svk</a> and <a
 href="http://www.gnu.org/software/gnu-arch/">arch</a> claim to have
 already solved, what they're calling <em>star-merge</em>.</p>
 
 </div>  <!-- repeated-merge -->
+
 
 <div id="aslb-merge">
 <h4>Ancestry-Sensitive Line-Based Merge</h4>
 
 <p>Make 'hunks' of contextually-merged text sensitive to ancestry.</p>
 
-<p>A high-resolution version of <a href="#repeated-merge">Repeated
-Merge</a>.  Rather than tracking whole changesets, we track the
+<p>A high-resolution version of <a href="#repeated-merge">repeated
+merge</a>.  Rather than tracking whole changesets, we track the
 lineage of specific lines of code within a file.  The basic idea is
 that when re-merging a particular hunk of code, the contextual-merging
 process is aware that certain lines of code already represent the
@@ -108,9 +116,10 @@ See diagram at the bottom for an explanation.</p>
 
 <p>See the <a href="../variance-adjusted-patching.html">variance
 adjusted patching</a> document for an extended discussion of how to
-implement this by composing diffs; see svn_diff_diff4() for an
-implementation of same.  We may be closer to ancestry-sensitive
-merging than we think.</p>
+implement this by composing diffs; see <a
+href="http://svn.collab.net/svn-doxygen/svn__diff_8h.html#a11"
+><code>svn_diff_diff4()</code></a> for an implementation of same.  We
+may be closer to ancestry-sensitive merging than we think.</p>
 
 <p>Here's an example demonstrating how individual lines of code can be
 tracked.  In this diagram, we're drawing the lineage of a single file,
@@ -182,14 +191,14 @@ requires <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
 rename support</a>.</p>
 
-<p>Edit foo.c on branchA.  Rename foo.c to bar.c on branchB.</p>
+<p>Edit foo.c on branch A.  Rename foo.c to bar.c on branch B.</p>
 
 <ol>
-  <li>Try merging the branchA edit into a working copy of branchB:
+  <li>Try merging the branch A edit into a working copy of branchB:
   <code>svn merge</code> will skip the file, because it can't find
   it.</li>
 
-  <li>Conversely, try merging branchB rename to branchA: <code>svn
+  <li>Conversely, try merging branch B rename to branch A: <code>svn
   merge</code> will delete the 'newer' version of foo.c and add bar.c,
   which has the older text.</li>
 </ol>
@@ -228,23 +237,13 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1525">issue
 
 <p>The ability to automate merges (e.g. from a stable branch to a
 development branch), including interfaces for resolving conflicts and
-handling other errors, is important.  Merge Meister who do
-multi-thousand file merges stress this.</p>
+handling other errors, is important.  <a
+href="../user-classifications.html#merge-meister">Merge Meisters</a>
+who do multi-thousand file merges stress this.</p>
 
 </div>  <!-- automated-merge -->
 
-</div>  <!-- use-cases -->
-
-<!--
-<div class="h3" id="requirements">
-<h3>Requirements</h3>
-
-<p>For now, for the sake of getting everything written down in one
-place, we'll lump requirements and uses cases together in the "Use
-Cases" section.</p>
-
-
-</div>  <! - - requirements -->
+</div>  <!-- requirements -->
 
 
 <div class="h3" id="related-documents">
