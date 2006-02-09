@@ -185,6 +185,12 @@ handle_getloc(serf_bucket_t *response,
 {
   loc_context_t *ctx = handler_baton;
 
+  /* FIXME If we lost our connection, redeliver it. */
+  if (!response)
+    {
+      abort();
+    }
+
   return handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
 }
 
