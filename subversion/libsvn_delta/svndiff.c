@@ -801,8 +801,7 @@ read_one_size (apr_size_t *size, svn_stream_t *stream)
 
 /* Read a window header from STREAM and check it for integer overflow. */
 static svn_error_t *
-read_window_header (svn_stream_t *stream, unsigned int version,
-                    svn_filesize_t *sview_offset,
+read_window_header (svn_stream_t *stream, svn_filesize_t *sview_offset,
                     apr_size_t *sview_len, apr_size_t *tview_len,
                     apr_size_t *inslen, apr_size_t *newlen)
 {
@@ -818,7 +817,7 @@ read_window_header (svn_stream_t *stream, unsigned int version,
         break;
     }
 
-  /* Read the four size fields.  */
+  /* Read the four size fields. */
   SVN_ERR (read_one_size (sview_len, stream));
   SVN_ERR (read_one_size (tview_len, stream));
   SVN_ERR (read_one_size (inslen, stream));
@@ -843,9 +842,8 @@ svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
   svn_filesize_t sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, len;
   unsigned char *buf;
-  
-  SVN_ERR (read_window_header (stream, svndiff_version,
-                               &sview_offset, &sview_len, &tview_len,
+
+  SVN_ERR (read_window_header (stream, &sview_offset, &sview_len, &tview_len,
                                &inslen, &newlen));
   len = inslen + newlen;
   buf = apr_palloc(pool, len);
@@ -870,8 +868,7 @@ svn_txdelta_skip_svndiff_window (apr_file_t *file,
   apr_size_t sview_len, tview_len, inslen, newlen;
   apr_off_t offset;
 
-  SVN_ERR (read_window_header (stream, svndiff_version,
-                               &sview_offset, &sview_len, &tview_len,
+  SVN_ERR (read_window_header (stream, &sview_offset, &sview_len, &tview_len,
                                &inslen, &newlen));
 
   offset = inslen + newlen;
