@@ -210,6 +210,20 @@ handle_propfind (serf_bucket_t *response,
 {
   propfind_context_t *ctx = handler_baton;
 
+  if (!response)
+    {
+      /* uh-oh, we lost our connection! */
+      deliver_props (&ctx,
+                     ctx->ret_props,
+                     ctx->sess,
+                     ctx->path,
+                     ctx->rev,
+                     ctx->depth,
+                     ctx->find_props,
+                     ctx->pool);
+      return APR_SUCCESS;
+    }
+
   return handle_xml_parser(response,
                            ctx->xmlp, &ctx->done,
                            pool);
@@ -229,16 +243,15 @@ handle_propfind (serf_bucket_t *response,
  */
 svn_error_t *
 deliver_props (propfind_context_t **prop_ctx,
-               apr_hash_t *prop_vals,
+               apr_hash_t *ret_props,
                ra_serf_session_t *sess,
-               const char *url,
+               const char *path,
                svn_revnum_t rev,
                const char *depth,
-               const dav_props_t *lookup_props,
+               const dav_props_t *find_props,
                apr_pool_t *pool)
 {
   const dav_props_t *prop;
-  apr_hash_t *ret_props = prop_vals;
   serf_bucket_t *props_bkt, *tmp, *req_bkt, *hdrs_bkt;
   serf_request_t *request;
   propfind_context_t *new_prop_ctx;
@@ -248,16 +261,16 @@ deliver_props (propfind_context_t **prop_ctx,
   props_bkt = NULL;
 
   /* check to see if we have any of this information cached */
-  prop = lookup_props;
+  prop = find_props;
   while (prop && prop->namespace)
     {
       const char *val;
 
-      val = get_ver_prop(sess->cached_props, url, rev, prop->namespace,
+      val = get_ver_prop(sess->cached_props, path, rev, prop->namespace,
                          prop->name);
       if (val)
         {
-          set_ver_prop(ret_props, url, rev, prop->namespace, prop->name, val,
+          set_ver_prop(ret_props, path, rev, prop->namespace, prop->name, val,
                        pool);
         }
       else
@@ -336,12 +349,20 @@ deliver_props (propfind_context_t **prop_ctx,
   serf_bucket_aggregate_append(props_bkt, tmp);
 
   /* Create the propfind context. */
-  new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
+  if (*prop_ctx)
+    {
+      new_prop_ctx = *prop_ctx;
+    }
+  else
+    {
+      new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
+    }
   new_prop_ctx->pool = pool;
-  new_prop_ctx->path = url;
-  new_prop_ctx->find_props = lookup_props;
+  new_prop_ctx->path = path;
+  new_prop_ctx->find_props = find_props;
   new_prop_ctx->ret_props = ret_props;
   new_prop_ctx->rev = rev;
+  new_prop_ctx->depth = depth;
   new_prop_ctx->done = FALSE;
   new_prop_ctx->sess = sess;
 
@@ -352,7 +373,7 @@ deliver_props (propfind_context_t **prop_ctx,
 
   /* create and deliver request */
   create_serf_req(&request, &req_bkt, &hdrs_bkt, sess,
-                  "PROPFIND", url,
+                  "PROPFIND", path,
                   props_bkt, "text/xml");
 
   serf_bucket_headers_setn(hdrs_bkt, "Depth", depth);
@@ -394,7 +415,7 @@ retrieve_props (apr_hash_t *prop_vals,
                 const dav_props_t *props,
                 apr_pool_t *pool)
 {
-  propfind_context_t *prop_ctx;
+  propfind_context_t *prop_ctx = NULL;
 
   SVN_ERR(deliver_props(&prop_ctx, prop_vals, sess, url, rev, depth, props,
                         pool));

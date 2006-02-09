@@ -133,6 +133,22 @@ context_run_wait(svn_boolean_t *done,
 }
 
 apr_status_t
+is_conn_closing(serf_bucket_t *response)
+{
+  serf_bucket_t *hdrs;
+  const char *val;
+
+  hdrs = serf_bucket_response_get_headers(response);
+  val = serf_bucket_headers_get(hdrs, "Connection");
+  if (val && strcasecmp("close", val) == 0)
+    {
+      return SERF_ERROR_CLOSING;
+    }
+
+  return APR_EOF;
+}
+
+apr_status_t
 handle_xml_parser (serf_bucket_t *response,
                    XML_Parser xmlp,
                    svn_boolean_t *done,
@@ -157,6 +173,7 @@ handle_xml_parser (serf_bucket_t *response,
   while (1)
     {
       status = serf_bucket_read(response, 2048, &data, &len);
+
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return status;
@@ -179,7 +196,7 @@ handle_xml_parser (serf_bucket_t *response,
           XML_ParserFree(xmlp);
 
           *done = TRUE;
-          return APR_EOF;
+          return is_conn_closing(response);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {

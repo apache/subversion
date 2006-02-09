@@ -440,6 +440,33 @@ handle_fetch (serf_bucket_t *response,
   apr_status_t status;
   report_fetch_t *fetch_ctx = handler_baton;
 
+  /* uh-oh.  our connection died on us; requeue. */
+  if (!response)
+    {
+      serf_request_t *request;
+      serf_bucket_t *req_bkt, *hdrs_bkt;
+
+      /* create GET request */
+      create_serf_req(&request, &req_bkt, &hdrs_bkt,
+                      fetch_ctx->sess, "GET", fetch_ctx->info->file_url,
+                      NULL, NULL);
+
+      /* note that we have old VC URL */
+      if (SVN_IS_VALID_REVNUM(fetch_ctx->info->base_rev))
+        {
+          serf_bucket_headers_setn(hdrs_bkt, SVN_DAV_DELTA_BASE_HEADER,
+                                   fetch_ctx->info->delta_base->data);
+          serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding",
+                                   "svndiff1;q=0.9,svndiff;q=0.8");
+        }
+
+      serf_request_deliver(request, req_bkt,
+                           accept_response, fetch_ctx->sess,
+                           handle_fetch, fetch_ctx);
+
+      return APR_SUCCESS;
+    }
+
   status = serf_bucket_response_status(response, &sl);
   if (status)
     {
@@ -565,7 +592,7 @@ handle_fetch (serf_bucket_t *response,
           /* We're done with this pool. */
           apr_pool_clear(fetch_ctx->pool);
 
-          return APR_EOF;
+          return is_conn_closing(response);
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
@@ -1050,6 +1077,12 @@ handle_report (serf_bucket_t *response,
                apr_pool_t *pool)
 {
   report_context_t *ctx = handler_baton;
+
+  /* FIXME If we lost our connection, redeliver it. */
+  if (!response)
+    {
+      abort();
+    }
 
   return handle_xml_parser(response,
                            ctx->xmlp, &ctx->done,

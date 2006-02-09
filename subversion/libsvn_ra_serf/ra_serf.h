@@ -108,6 +108,9 @@ typedef struct propfind_context_t {
   /* the requested version */
   svn_revnum_t rev;
 
+  /* the request depth */
+  const char *depth;
+
   /* the list of requested properties */
   const dav_props_t *find_props;
 
@@ -219,6 +222,9 @@ conn_closed (serf_connection_t *conn,
              void *closed_baton,
              apr_status_t why,
              apr_pool_t *pool);
+
+apr_status_t
+is_conn_closing(serf_bucket_t *response);
 
 apr_status_t
 cleanup_serf_session(void *data);
