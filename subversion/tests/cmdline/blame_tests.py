@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -226,6 +226,43 @@ def blame_on_unknown_revision(sbox):
 
 
 
+# The default blame revision range should be 1:N, where N is the
+# peg-revision of the target, or BASE or HEAD if no peg-revision is
+# specified.
+#
+def blame_peg_rev(sbox):
+  "blame targets with peg-revisions"
+
+  sbox.build()
+
+  expected_output_r1 = [
+    "     1    jrandom This is the file 'iota'.\n" ]
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Modify iota and commit it (r2).
+    open('iota', 'w').write("This is no longer the file 'iota'.\n")
+
+    expected_output = svntest.wc.State('.', {
+      'iota' : Item(verb='Sending'),
+      })
+    svntest.actions.run_and_verify_commit('.', expected_output, None)
+
+    # Check that we get a blame of r1 when we specify a peg revision of r1
+    # and no explicit revision.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                       'blame', 'iota@1')
+
+    # Check that an explicit revision overrides the default provided by
+    # the peg revision.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                       'blame', 'iota@2', '-r1')
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -237,6 +274,7 @@ test_list = [ None,
               blame_directory,
               blame_in_xml,
               blame_on_unknown_revision,
+              blame_peg_rev,
              ]
 
 if __name__ == '__main__':

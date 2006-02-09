@@ -2,7 +2,7 @@
  * blame-cmd.c -- Display blame information
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -175,7 +175,7 @@ svn_cl__blame (apr_getopt_t *os,
   apr_array_header_t *targets;
   blame_baton_t bl;
   int i;
-  svn_boolean_t is_head_or_base = FALSE;
+  svn_boolean_t end_revision_unspecified = FALSE;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
                                           opt_state->targets, pool));
@@ -196,7 +196,7 @@ svn_cl__blame (apr_getopt_t *os,
           opt_state->start_revision.value.number = 1;
         }
       else
-        is_head_or_base = TRUE;
+        end_revision_unspecified = TRUE;
     }
 
   if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
@@ -258,17 +258,21 @@ svn_cl__blame (apr_getopt_t *os,
 
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      if (is_head_or_base)
+
+      /* Check for a peg revision. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                   subpool));
+
+      if (end_revision_unspecified)
         {
-          if (svn_path_is_url (target))
+          if (peg_revision.kind != svn_opt_revision_unspecified)
+            opt_state->end_revision = peg_revision;
+          else if (svn_path_is_url (target))
             opt_state->end_revision.kind = svn_opt_revision_head;
           else
             opt_state->end_revision.kind = svn_opt_revision_base;
         }
 
-      /* Check for a peg revision. */
-      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
-                                   subpool));
       if (opt_state->xml)
         {
           /* "<target ...>" */
