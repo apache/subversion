@@ -69,7 +69,7 @@ Candidate changes:
       One of these leaks (in mod_dav_svn/update.c) is the cause for a crash
       seen in the wild on svn.apache.org.  Crash bad!
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
   * r18291
     Avoid crash for ignored directory that's in the repo for svn st -u.
