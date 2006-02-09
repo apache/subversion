@@ -614,8 +614,11 @@ write_handler (void *baton,
       apr_size_t nheader = 4 - db->header_bytes;
       if (nheader > buflen)
         nheader = buflen;
-      db->version = buffer[3];
-      if (memcmp (buffer, "SVN" + db->header_bytes, nheader - 1) != 0)
+      if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) == 0)
+        db->version = 0;
+      else if (memcmp (buffer, "SVN\1" + db->header_bytes, nheader) == 0)
+        db->version = 1;
+      else
         return svn_error_create (SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,
                                  _("Svndiff has invalid header"));
       buflen -= nheader;
