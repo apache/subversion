@@ -64,6 +64,10 @@ information:</p>
   are not A.  This must also work when merging a range of revisions
   with different authors.</li>
 
+  <li>If you merge rN into a branch B, and rN was committed by author
+  A, then <code>svn log -rN</code>should show both the original author
+  A, <em>and</em> the author who merged the change.</li>
+
   <li>It should be possible to query any path (file, directory, or
   symlink) to find out what changes (revisions) have been merged under
   it.  For files, "under" just means "into".</li>
