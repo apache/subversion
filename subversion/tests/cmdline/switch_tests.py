@@ -972,10 +972,11 @@ def relocate_beyond_repos_root(sbox):
                                      'switch', '--relocate',
                                      A_url, other_A_url, A_wc_dir)
 
-  # Check that we can contact the repository, meaning that the relocate
-  # actually changed the URL.
-  #to address svn+ssh urls where '+' seems to be mistaken by the re.match
-  escaped_exp = '^' + re.escape('URL: ' + other_A_url) + '$'
+  # Check that we can contact the repository, meaning that the
+  # relocate actually changed the URI.  Escape the expected URI to
+  # avoid problems from any regex meta-characters it may contain
+  # (e.g. '+').
+  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$'
   svntest.actions.run_and_verify_svn(None, escaped_exp, [],
                                      'info', '-rHEAD', A_wc_dir)
 
