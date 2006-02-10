@@ -114,6 +114,7 @@ svn_cl__checkout (apr_getopt_t *os,
     {
       const char *target_dir;
       const char *true_url;
+      svn_opt_revision_t revision = opt_state->start_revision;
       svn_opt_revision_t peg_revision;
 
       svn_pool_clear (subpool);
@@ -145,14 +146,19 @@ svn_cl__checkout (apr_getopt_t *os,
           target_dir = svn_path_join (local_dir, target_dir, subpool);
         }
 
-      /* svn_client_checkout() doesn't accept an unspecified revision,
-         so default to HEAD. */
-      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        opt_state->start_revision.kind = svn_opt_revision_head;
+      /* Checkout doesn't accept an unspecified revision, so default to
+         the peg revision, or to HEAD if there wasn't a peg. */
+      if (revision.kind == svn_opt_revision_unspecified)
+      {
+        if (peg_revision.kind != svn_opt_revision_unspecified)
+          revision = peg_revision;
+        else
+          revision.kind = svn_opt_revision_head;
+      }
 
       SVN_ERR (svn_client_checkout2 (NULL, true_url, target_dir,
                                      &peg_revision,
-                                     &(opt_state->start_revision),
+                                     &revision,
                                      opt_state->nonrecursive ? FALSE : TRUE,
                                      opt_state->ignore_externals,
                                      ctx, subpool));
