@@ -14,11 +14,7 @@ from svn import fs, core, repos
 CHUNK_SIZE = 16384
 
 def getfile(path, filename, rev=None):
-  #since the backslash on the end of path is not allowed, 
-  #we truncate it
-  if path[-1] == "/":
-     path = path[:-1]
-
+  path = core.svn_path_canonicalize(path)
   repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
 
