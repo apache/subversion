@@ -79,6 +79,7 @@ typedef struct report_dir_t
 
   /* controlling dir baton */
   void *dir_baton;
+  apr_pool_t *dir_baton_pool;
 
   /* Our update editor and baton. */
   const svn_delta_editor_t *update_editor;
@@ -92,6 +93,12 @@ typedef struct report_dir_t
 
   /* The propfind request for our current directory */
   propfind_context_t *propfind;
+
+  /* The children of this directories  */
+  struct report_dir_t *children;
+
+  /* The next sibling of this dir */
+  struct report_dir_t *sibling;
 
   /* The next directory we have open. */
   struct report_dir_t *next;
@@ -200,6 +207,9 @@ typedef struct {
   report_state_list_t *state;
   report_state_list_t *free_state;
 
+  /* root dir */
+  report_dir_t *root_dir;
+
   /* pending GET requests */
   report_fetch_t *active_fetches;
 
@@ -238,22 +248,19 @@ static void push_state(report_context_t *ctx, report_state_e state)
       apr_pool_create(&new_state->info->pool, ctx->sess->pool);
 
       /* Create our root state now. */
-      new_state->info->dir = apr_palloc(ctx->sess->pool,
+      new_state->info->dir = apr_pcalloc(ctx->sess->pool,
                                         sizeof(*new_state->info->dir));
       new_state->info->dir->pool = new_state->info->pool;
 
       /* Create the root property tree. */
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
 
-      new_state->info->dir->parent_dir = NULL;
-      new_state->info->dir->dir_baton = NULL;
-      new_state->info->dir->ref_count = 0;
-      new_state->info->dir->next = NULL;
-      new_state->info->dir->propfind = NULL;
-
-      /* Point the update_editor */
+      /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
       new_state->info->dir->update_baton = ctx->update_baton;
+
+      /* Allow us to be found later. */
+      ctx->root_dir = new_state->info->dir;
     }
   else if (state == ADD_DIR || state == OPEN_DIR)
     {
@@ -262,18 +269,20 @@ static void push_state(report_context_t *ctx, report_state_e state)
       apr_pool_create(&new_state->info->pool, ctx->state->info->pool);
 
       new_state->info->dir =
-          apr_palloc(ctx->state->info->pool, sizeof(*new_state->info->dir));
+          apr_pcalloc(ctx->state->info->pool, sizeof(*new_state->info->dir));
       new_state->info->dir->pool = new_state->info->pool;
       new_state->info->dir->parent_dir = ctx->state->info->dir;
       new_state->info->dir->parent_dir->ref_count++;
-      new_state->info->dir->dir_baton = NULL;
-      new_state->info->dir->ref_count = 0;
-      new_state->info->dir->next = NULL;
+
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
 
-      /* Point the update_editor */
+      /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
       new_state->info->dir->update_baton = ctx->update_baton;
+
+      /* Add ourselves to our parent's list */
+      new_state->info->dir->sibling = ctx->state->info->dir->children;
+      ctx->state->info->dir->children = new_state->info->dir;
     }
   else if (state == OPEN_FILE || state == ADD_FILE)
     {
@@ -281,6 +290,7 @@ static void push_state(report_context_t *ctx, report_state_e state)
                                    sizeof(*new_state->info));
       apr_pool_create(&new_state->info->pool, ctx->state->info->pool);
       new_state->info->file_baton = NULL;
+
       /* Point at our parent's directory state. */
       new_state->info->dir = ctx->state->info->dir;
       new_state->info->dir->ref_count++;
@@ -386,17 +396,22 @@ open_dir(report_dir_t *dir)
 
   if (dir->name[0] == '\0')
     {
+      apr_pool_create(&dir->dir_baton_pool, dir->pool);
+
       SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
                                             dir->pool, &dir->dir_baton));
     }
   else
     {
       SVN_ERR(open_dir(dir->parent_dir));
+
+      apr_pool_create(&dir->dir_baton_pool, dir->parent_dir->dir_baton_pool);
+
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
           SVN_ERR(dir->update_editor->open_directory(dir->name,
                                          dir->parent_dir->dir_baton,
-                                         dir->base_rev, dir->pool,
+                                         dir->base_rev, dir->dir_baton_pool,
                                          &dir->dir_baton));
         }
       else
@@ -404,7 +419,7 @@ open_dir(report_dir_t *dir)
           dir->update_editor->add_directory(dir->name,
                                             dir->parent_dir->dir_baton,
                                             NULL, SVN_INVALID_REVNUM,
-                                            dir->pool,
+                                            dir->dir_baton_pool,
                                             &dir->dir_baton);
         }
     }
@@ -415,18 +430,64 @@ open_dir(report_dir_t *dir)
 static svn_error_t *
 close_dir(report_dir_t *dir)
 {
-  if (!dir->dir_baton)
-    {
-      SVN_ERR(open_dir(dir));
-    }
+  report_dir_t *prev, *sibling;
+
   walk_all_props(dir->props, dir->name, SVN_INVALID_REVNUM, set_dir_props, dir,
                  dir->pool);
   walk_all_props(dir->props, dir->url, SVN_INVALID_REVNUM, set_dir_props, dir,
                  dir->pool);
-  SVN_ERR(dir->update_editor->close_directory(dir->dir_baton, dir->pool));
-  apr_pool_clear(dir->pool);
+  SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
+                                              dir->dir_baton_pool));
+
+  /* remove us from our parent's children list */
+  if (dir->parent_dir)
+    {
+      prev = NULL;
+      sibling = dir->parent_dir->children;
+
+      while (sibling != dir)
+        {
+          prev = sibling;
+          sibling = sibling->sibling;
+          if (!sibling)
+            abort();
+        }
+
+      if (!prev)
+        {
+          dir->parent_dir->children = dir->sibling;
+        }
+      else
+        {
+          prev->sibling = dir->sibling;
+        }
+    }
+
+  apr_pool_destroy(dir->dir_baton_pool);
+  apr_pool_destroy(dir->pool);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *close_all_dirs(report_dir_t *dir)
+{
+  while (dir->children)
+    {
+      SVN_ERR(close_all_dirs(dir->children));
+      dir->ref_count--;
+    }
+
+  if (dir->ref_count)
+    {
+      abort();
+    }
+
+  if (!dir->dir_baton)
+    {
+      SVN_ERR(open_dir(dir));
+    }
+
+  return close_dir(dir);
 }
 
 static apr_status_t
@@ -506,12 +567,14 @@ handle_fetch (serf_bucket_t *response,
               open_dir(info->dir);
             }
 
+          apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+
           if (SVN_IS_VALID_REVNUM(info->base_rev))
             {
               err = info->dir->update_editor->open_file(info->file_name,
                                               info->dir->dir_baton,
                                               info->base_rev,
-                                              fetch_ctx->pool,
+                                              info->editor_pool,
                                               &info->file_baton);
             }
           else
@@ -520,12 +583,13 @@ handle_fetch (serf_bucket_t *response,
                                               info->dir->dir_baton,
                                               NULL,
                                               info->base_rev,
-                                              fetch_ctx->pool,
+                                              info->editor_pool,
                                               &info->file_baton);
             }
 
           info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                    NULL, fetch_ctx->pool,
+                                                    NULL,
+                                                    info->editor_pool,
                                                     &info->textdelta,
                                                     &info->textdelta_baton);
 
@@ -534,7 +598,7 @@ handle_fetch (serf_bucket_t *response,
               fetch_ctx->delta_stream =
                   svn_txdelta_parse_svndiff(fetch_ctx->info->textdelta,
                                             fetch_ctx->info->textdelta_baton,
-                                            TRUE, fetch_ctx->pool);
+                                            TRUE, info->editor_pool);
             }
           else
             {
@@ -577,20 +641,21 @@ handle_fetch (serf_bucket_t *response,
                          info->file_name,
                          SVN_INVALID_REVNUM,
                          set_file_props,
-                         info, fetch_ctx->pool);
+                         info, info->editor_pool);
           walk_all_props(info->dir->props,
                          info->file_url,
                          SVN_INVALID_REVNUM,
                          set_file_props,
-                         info, fetch_ctx->pool);
+                         info, info->editor_pool);
 
           info->dir->update_editor->close_file(info->file_baton, NULL,
-                                               fetch_ctx->pool);
+                                               info->editor_pool);
 
           fetch_ctx->done = TRUE;
 
-          /* We're done with this pool. */
-          apr_pool_clear(fetch_ctx->pool);
+          /* We're done with our pools. */
+          apr_pool_destroy(info->editor_pool);
+          apr_pool_destroy(info->pool);
 
           return is_conn_closing(response);
         }
@@ -634,7 +699,7 @@ static void delta_file(report_context_t *ctx, report_info_t *info)
   /* First, create the PROPFIND to retrieve the properties. */
   deliver_props(&prop_ctx, info->dir->props, ctx->sess,
                 info->file_url, SVN_INVALID_REVNUM, "0", all_props,
-                info->pool);
+                info->dir->pool);
 
   if (!prop_ctx)
     {
@@ -694,7 +759,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   /* First, create the PROPFIND to retrieve the properties. */
   deliver_props(&prop_ctx, info->dir->props, ctx->sess,
                 info->file_url, SVN_INVALID_REVNUM, "0", all_props,
-                info->pool);
+                info->dir->pool);
 
   if (!prop_ctx)
     {
@@ -1017,7 +1082,7 @@ end_report(void *userData, const char *raw_name)
       /* First, create the PROPFIND to retrieve the properties. */
       deliver_props(&prop_ctx, info->dir->props, ctx->sess,
                     info->dir->url, SVN_INVALID_REVNUM,
-                    "0", all_props, info->pool);
+                    "0", all_props, info->dir->pool);
 
       if (!prop_ctx)
         {
@@ -1270,18 +1335,26 @@ finish_report(void *report_baton,
                   if (parent_dir->ref_count)
                      break;
 
-                  /* The easy path here is that we've finished the report;
-                   * which means that there aren't any new files to add.
-                   */
-                  if (report->done == TRUE &&
-                      parent_dir->propfind->done == TRUE)
+                  /* Add the dir to our to be closed list. */
+                  if (!parent_dir->next)
                     {
-                      SVN_ERR(close_dir(parent_dir));
+                      report_dir_t *last = report->pending_dir_close;
+
+                      while (last && last->next)
+                          last = last->next;
+
+                      if (last)
+                        {
+                          last->next = parent_dir;
+                        }
+                      else
+                        {
+                          report->pending_dir_close = parent_dir;
+                        }
                     }
-                  else if (!parent_dir->next)
+                  else
                     {
-                      parent_dir->next = report->pending_dir_close;
-                      report->pending_dir_close = parent_dir;
+                      abort();
                     }
 
                   parent_dir = parent_dir->parent_dir;
@@ -1334,6 +1407,22 @@ finish_report(void *report_baton,
         }
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
+    }
+
+  /* This is a funky edge case, but it makes sense:
+   * We could have empty directories, so we need to close them.
+   */
+  if (report->root_dir->ref_count)
+    {
+      report_dir_t *child;
+
+      /* If we don't have a child dir, something went horribly wrong. */
+      if (!report->root_dir->children)
+        {
+          abort();
+        }
+
+      close_all_dirs(report->root_dir);
     }
 
   /* FIXME subpool */
