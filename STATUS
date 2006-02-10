@@ -69,7 +69,7 @@ Candidate changes:
       Memory usage that scales linearly with the number of targets means
       clients can crash servers via big requests.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
 Approved changes:
 
