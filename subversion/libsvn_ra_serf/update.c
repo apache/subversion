@@ -706,6 +706,8 @@ static void delta_file(report_context_t *ctx, report_info_t *info)
       abort();
     }
 
+  prop_ctx->cache_props = FALSE;
+
   prop_ctx->next = ctx->active_propfinds;
   ctx->active_propfinds = prop_ctx;
 
@@ -765,6 +767,8 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
     {
       abort();
     }
+
+  prop_ctx->cache_props = FALSE;
 
   prop_ctx->next = ctx->active_propfinds;
   ctx->active_propfinds = prop_ctx;
@@ -1088,6 +1092,8 @@ end_report(void *userData, const char *raw_name)
         {
           abort();
         }
+
+      prop_ctx->cache_props = FALSE;
 
       prop_ctx->next = ctx->active_propfinds;
       ctx->active_propfinds = prop_ctx;
