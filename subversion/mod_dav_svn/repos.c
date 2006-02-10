@@ -1324,7 +1324,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
         if (parm[0] == 'q'
             && (parm[1] == '\0' || (parm[1] == 's' && parm[2] == '\0')))
           {
-            result->quality = atof(cp);
+            result->quality = (float) atof(cp);
           }
       }
 
