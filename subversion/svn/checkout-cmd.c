@@ -2,7 +2,7 @@
  * checkout-cmd.c -- Subversion checkout command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -82,8 +82,14 @@ svn_cl__checkout (apr_getopt_t *os,
     {
       if (targets->nelts == 1)
         {
-          local_dir = svn_path_basename (((const char **) (targets->elts))[0],
-                                         pool);
+          svn_opt_revision_t pegrev;
+
+          /* Discard the peg-revision, if one was provided. */
+          SVN_ERR (svn_opt_parse_path (&pegrev, &local_dir, local_dir, pool));
+          if (pegrev.kind != svn_opt_revision_unspecified)
+            local_dir = svn_path_canonicalize (local_dir, pool);
+
+          local_dir = svn_path_basename (local_dir, pool);
           local_dir = svn_path_uri_decode (local_dir, pool);
         }
       else
