@@ -2,7 +2,7 @@
  * blame.c:  return blame messages
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -58,7 +58,12 @@ struct file_rev_baton {
   svn_revnum_t start_rev, end_rev;
   const char *target;
   svn_client_ctx_t *ctx;
+  /* name of file containing the previous revision of the file */
   const char *last_filename;
+  /* name of file containing the previous revision of the file, translated
+     to the appropriate EOL style.  May be identical to the above if no
+     translation was required. */
+  const char *last_filename_translated;
   svn_subst_eol_style_t eol_style;
   const char *eol_str;
   struct rev *rev;     /* the rev for which blame is being assigned
@@ -313,6 +318,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct delta_baton *dbaton = baton;
   struct file_rev_baton *frb = dbaton->file_rev_baton;
+  const char *translation_tgt = dbaton->filename;
 
   /* Call the wrapped handler first. */
   SVN_ERR (dbaton->wrapped_handler (window, dbaton->wrapped_baton));
@@ -332,8 +338,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (svn_subst_translation_required (frb->eol_style, frb->eol_str,
                                       NULL, FALSE, FALSE))
     {
-      const char *translation_tgt;
-
       SVN_ERR (svn_io_open_unique_file2 (NULL,
                                          &translation_tgt,
                                          frb->tmp_path,
@@ -345,17 +349,17 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                                               frb->eol_str, FALSE,
                                               NULL, FALSE, FALSE,
                                               frb->currpool));
-      dbaton->filename = translation_tgt;
     }
 
   /* Process this file. */
-  SVN_ERR (add_file_blame (frb->last_filename,
-                           dbaton->filename, frb));
+  SVN_ERR (add_file_blame (frb->last_filename_translated,
+                           translation_tgt, frb));
 
   /* Prepare for next revision. */
 
   /* Remember the file name so we can diff it with the next revision. */
   frb->last_filename = dbaton->filename;
+  frb->last_filename_translated = translation_tgt;
 
   /* Switch pools. */
   {
@@ -570,6 +574,7 @@ svn_client_blame2 (const char *target,
   frb.target = target;
   frb.ctx = ctx;
   frb.last_filename = NULL;
+  frb.last_filename_translated = NULL;
   frb.eol_style = svn_subst_eol_style_none;
   frb.eol_str = NULL;
   frb.blame = NULL;
