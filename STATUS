@@ -65,14 +65,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18249
-    Fix error leaks from static functions.
-    Justification:
-      One of these leaks (in mod_dav_svn/update.c) is the cause for a crash
-      seen in the wild on svn.apache.org.  Crash bad!
-    Votes:
-      +1: rooneg, dlr, malcolm
-
   * r18291
     Avoid crash for ignored directory that's in the repo for svn st -u.
     Justification: Crash, bad!  Simple fix.
