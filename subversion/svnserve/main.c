@@ -515,6 +515,13 @@ int main(int argc, const char *const *argv)
   apr_signal(SIGPIPE, SIG_IGN);
 #endif
 
+#ifdef SIGXFSZ
+  /* Disable SIGXFSZ generation for the platforms that have it, otherwise
+   * working with large files when compiled against an APR that doesn't have
+   * large file support will crash the program, which is uncool. */
+  apr_signal(SIGXFSZ, SIG_IGN);
+#endif
+
   if (pid_filename)
     SVN_INT_ERR(write_pid_file(pid_filename, pool));
 
