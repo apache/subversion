@@ -276,7 +276,7 @@ svn_txdelta_to_svndiff (svn_stream_t *output,
                         svn_txdelta_window_handler_t *handler,
                         void **handler_baton)
 {
-  return svn_txdelta_to_svndiff2 (output, pool, handler, handler_baton, 0);
+  svn_txdelta_to_svndiff2 (output, pool, handler, handler_baton, 0);
 }
 
 

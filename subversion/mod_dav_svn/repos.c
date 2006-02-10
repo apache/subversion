@@ -1388,7 +1388,7 @@ svn_dav__negotiate_encoding_prefs(request_rec *r,
      looks like its data structures and routines are private (see
      httpd/modules/mappers/mod_negotiation.c).  Thus, we duplicate the
      necessary ones in this file. */
-  size_t i;
+  int i;
   const apr_array_header_t *encoding_prefs;
   encoding_prefs = do_header_line(r->pool, 
                                   apr_table_get(r->headers_in, 
