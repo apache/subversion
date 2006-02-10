@@ -2,7 +2,7 @@
  * main.c: Subversion dump stream filtering tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -526,7 +526,7 @@ new_node_record (void **node_baton,
          skipped, flush the revision if it has not already been done. */
       nb->rb->has_nodes = TRUE;
       if (! nb->rb->writing_begun)
-        output_revision (nb->rb);
+        SVN_ERR (output_revision (nb->rb));
 
       for (hi = apr_hash_first (pool, headers); hi; hi = apr_hash_next (hi))
         {

@@ -2,7 +2,7 @@
  * update.c: handle the update-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -736,9 +736,8 @@ static svn_error_t * upd_open_directory(const char *path,
                                         apr_pool_t *pool,
                                         void **child_baton)
 {
-  open_helper(TRUE /* is_dir */,
-              path, parent_baton, base_revision, pool, child_baton);
-  return SVN_NO_ERROR;
+  return open_helper(TRUE /* is_dir */,
+                     path, parent_baton, base_revision, pool, child_baton);
 }
 
 static svn_error_t * upd_change_xxx_prop(void *baton,
