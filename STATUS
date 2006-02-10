@@ -63,6 +63,14 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r18395 and r18404
+    Fix scalability issues with svn_repos_get_logs3 and lots of targets.
+    Justification:
+      Memory usage that scales linearly with the number of targets means
+      clients can crash servers via big requests.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
   * r18291
