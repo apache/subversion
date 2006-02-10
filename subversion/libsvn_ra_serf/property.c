@@ -371,9 +371,10 @@ deliver_props (propfind_context_t **prop_ctx,
   new_prop_ctx->done = FALSE;
   new_prop_ctx->sess = sess;
 
-  if (new_prop_ctx->xmlp) {
+  if (new_prop_ctx->xmlp)
+    {
       XML_ParserFree(new_prop_ctx->xmlp);
-  }
+    }
   new_prop_ctx->xmlp = XML_ParserCreate(NULL);
 
   XML_SetUserData(new_prop_ctx->xmlp, new_prop_ctx);
