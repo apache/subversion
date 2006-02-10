@@ -196,6 +196,45 @@
 %ignore svn_io_read_version_file;
 %ignore svn_io_write_version_file;
 
+/* svn_path.h: We cherry-pick certain functions from this file. To aid in this,
+ * EVERY function in the file is listed in the order it appears, and is either
+ * %ignore-d, or present as a comment, explicitly documenting that we wrap it.
+ */
+%ignore svn_path_internal_style;
+%ignore svn_path_local_style;
+%ignore svn_path_join;
+%ignore svn_path_join_many;
+%ignore svn_path_basename;
+%ignore svn_path_dirname;
+%ignore svn_path_component_count;
+%ignore svn_path_add_component;
+%ignore svn_path_remove_component;
+%ignore svn_path_remove_components;
+%ignore svn_path_split;
+// svn_path_is_empty;
+// svn_path_canonicalize;
+// svn_path_compare_paths;
+// svn_path_get_longest_ancestor;
+%ignore svn_path_get_absolute;
+%ignore svn_path_split_if_file;
+%ignore svn_path_condense_targets;
+%ignore svn_path_remove_redundancies;
+%ignore svn_path_decompose;
+%ignore svn_path_is_single_path_component;
+%ignore svn_path_is_backpath_present;
+%ignore svn_path_is_child;
+%ignore svn_path_is_ancestor;
+%ignore svn_path_check_valid;
+%ignore svn_path_is_url;
+// svn_path_is_uri_safe;
+%ignore svn_path_uri_encode;
+%ignore svn_path_uri_decode;
+%ignore svn_path_url_add_component;
+%ignore svn_path_uri_from_iri;
+%ignore svn_path_uri_autoescape;
+%ignore svn_path_cstring_from_utf8;
+%ignore svn_path_cstring_to_utf8;
+
 /* Other files */
 %ignore apr_check_dir_empty;
 
@@ -654,7 +693,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_version_h.swg
 %include svn_utf_h.swg
 %include svn_nls_h.swg
-
+%include svn_path_h.swg
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
