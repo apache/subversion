@@ -385,9 +385,11 @@ class Contributor:
 
 class Field:
   """One field in one log message."""
-  def __init__(self, name):
+  def __init__(self, name, alias = None):
     # The name of this field (e.g., "Patch", "Review", etc).
     self.name = name
+    # An alias for the name of this field (e.g., "Reviewed").
+    self.alias = alias
     # A list of contributor objects, in the order in which they were
     # encountered in the field.
     self.contributors = [ ]
@@ -477,7 +479,8 @@ class LogMessage:
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review|Suggested|Found) by:\s+(.*)')
+field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*(.*)')
+field_aliases = { 'Reviewed' : 'Review' }
 parenthetical_aside_re = re.compile('^\(.*\)\s*$')
 
 def graze(input):
@@ -520,10 +523,14 @@ def graze(input):
               # We're on the first line of a field.  Parse the field.
               while m:
                 if not field:
-                  field = Field(m.group(1))
+                  ident = m.group(1)
+                  if field_aliases.has_key(ident):
+                    field = Field(field_aliases[ident], ident)
+                  else:
+                    field = Field(ident)
                 # Each line begins either with "WORD by:", or with whitespace.
                 in_field_re = re.compile('^('
-                                         + field.name
+                                         + (field.alias or field.name)
                                          + ' by:\s+|\s+)(\S.*)+')
                 m = in_field_re.match(line)
                 user, real, email = Contributor.parse(m.group(2))
