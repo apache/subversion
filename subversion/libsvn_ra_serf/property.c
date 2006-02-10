@@ -165,7 +165,7 @@ end_propfind(void *userData, const char *name)
               name = "";
             }
 
-          ctx->attr_val = apr_pstrdup(ctx->sess->pool, name);
+          ctx->attr_val = apr_pstrdup(ctx->pool, name);
         }
 
       /* set the return props and update our cache too. */
@@ -173,10 +173,14 @@ end_propfind(void *userData, const char *name)
                    ctx->path, ctx->rev,
                    ctx->ns, ctx->attr_name, ctx->attr_val,
                    ctx->pool);
-      set_ver_prop(ctx->sess->cached_props,
-                   ctx->path, ctx->rev,
-                   ctx->ns, ctx->attr_name, ctx->attr_val,
-                   ctx->sess->pool);
+      if (ctx->cache_props)
+        {
+          set_ver_prop(ctx->sess->cached_props,
+                       ctx->path, ctx->rev,
+                       ctx->ns, ctx->attr_name,
+                       apr_pstrdup(ctx->sess->pool, ctx->attr_val),
+                       ctx->sess->pool);
+        }
 
       /* we're done with it. */
       ctx->collect_cdata = FALSE;
@@ -356,6 +360,7 @@ deliver_props (propfind_context_t **prop_ctx,
   else
     {
       new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
+      new_prop_ctx->cache_props = TRUE;
     }
   new_prop_ctx->pool = pool;
   new_prop_ctx->path = path;

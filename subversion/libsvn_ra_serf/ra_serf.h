@@ -114,6 +114,9 @@ typedef struct propfind_context_t {
   /* the list of requested properties */
   const dav_props_t *find_props;
 
+  /* should we cache the values of this propfind in our session? */
+  svn_boolean_t cache_props;
+
   /* hash table that will be updated with the properties
    *
    * This can be shared between multiple propfind_context_t structures
