@@ -45,20 +45,19 @@ SUFFIX="\($DECLR *\((.*\|\)\|\)$"
 ATTRIB_RE="__attribute__((warn_unused_result))"  # regex version of it
 ATTRIB_STR="__attribute__((warn_unused_result))"  # plain text version of it
 
+if [ $REMOVE ]; then
+  SUBST="s/$PREFIX$ATTRIB_RE $RET_TYPE$SUFFIX/\1\2\3/"
+else
+  SUBST="s/$PREFIX$RET_TYPE$SUFFIX/\1$ATTRIB_STR \2\3/"
+fi
+
 for F do
-  if [ -f "$F" ]; then
-    # Edit the file, leaving a backup suffixed with a tilde
-    mv -f "$F" "$F~"
-    if [ $REMOVE ]; then
-      sed "s/$PREFIX$ATTRIB_RE $RET_TYPE$SUFFIX/\1\2\3/" < "$F~" > "$F"
-    else
-      sed "s/$PREFIX$RET_TYPE$SUFFIX/\1$ATTRIB_STR \2\3/" < "$F~" > "$F"
-    fi
-    # If not changed, put the untouched file back
-    if cmp -s "$F" "$F~"; then
-      mv -f "$F~" "$F"
-    fi
-  else
-    echo "$0: skipping \"$F\": is not a regular file"
-  fi
+  # Edit the file, leaving a backup suffixed with a tilde
+  { sed -e "$SUBST" "$F" > "$F~1" &&
+    { ! cmp -s "$F" "$F~1"; } &&
+    mv "$F" "$F~" &&  # F is briefly absent now; a copy could avoid this
+    mv "$F~1" "$F"
+  } ||
+  # If anything went wrong or no change was made, remove the temporary file
+  rm "$F~1"
 done
