@@ -137,7 +137,7 @@ add_subdir (svn_fs_root_t *source_root,
             const char *path,
             void *parent_baton,
             const char *source_path,
-            const svn_repos_authz_func_t authz_read_func,
+            svn_repos_authz_func_t authz_read_func,
             void *authz_read_baton,
             apr_pool_t *pool,
             void **dir_baton)
@@ -488,7 +488,7 @@ svn_repos_replay2 (svn_fs_root_t *root,
                    svn_boolean_t send_deltas,
                    const svn_delta_editor_t *editor,
                    void *edit_baton,
-                   const svn_repos_authz_func_t authz_read_func,
+                   svn_repos_authz_func_t authz_read_func,
                    void *authz_read_baton,
                    apr_pool_t *pool)
 {
