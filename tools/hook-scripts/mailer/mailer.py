@@ -1213,14 +1213,6 @@ class UnknownSubcommand(Exception):
   pass
 
 
-def canonicalize_for_svn(path):
-  """Canonicalize a path according to the Subversion style, at least well
-  enough to not risk provoking an assertion from the Subversion code."""
-  normpath = os.path.normpath(path)
-  if path == ".":
-    path = ""
-  return path
-
 # enable True/False in older vsns of Python
 try:
   _unused = True
@@ -1265,7 +1257,7 @@ if the property was added, modified or deleted, respectively.
     usage()
 
   cmd = sys.argv[1]
-  repos_dir = canonicalize_for_svn(sys.argv[2])
+  repos_dir = svn.core.svn_path_canonicalize(sys.argv[2])
   try:
     expected_args = cmd_list[cmd]
   except KeyError:

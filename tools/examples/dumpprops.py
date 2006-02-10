@@ -14,10 +14,7 @@ from svn import fs, core, repos
 
 
 def dumpprops(path, filename='', rev=None):
-
-  if path[-1] == "/":
-     path = path[:-1]
-
+  path = core.svn_path_canonicalize(path)
   repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
 

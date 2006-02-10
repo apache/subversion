@@ -29,8 +29,7 @@ class SVNShell(Cmd):
   def __init__(self, path):
     """initialize an SVNShell object"""
     Cmd.__init__(self)
-    if path[-1] == '/':
-      path = path[:-1]
+    path = core.svn_path_canonicalize(path)
     self.fs_ptr = repos.fs(repos.open(path))
     self.is_rev = 1
     self.rev = fs.youngest_rev(self.fs_ptr)

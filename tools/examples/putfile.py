@@ -12,9 +12,7 @@ import getopt
 from svn import fs, core, repos, delta
 
 def putfile(fname, rpath, uname="", commitmsg=""):
-  if rpath[-1] == "/":
-     rpath = rpath[:-1]
-
+  rpath = core.svn_path_canonicalize(rpath)
   repos_ptr = repos.open(rpath)
   fsob = repos.fs(repos_ptr)
 

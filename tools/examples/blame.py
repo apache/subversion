@@ -14,8 +14,7 @@ CHUNK_SIZE = 100000
 def blame(path, filename, rev=None):
   
   annotresult = {}
-  if path[-1] == "/":
-     path = path[:-1]
+  path = core.svn_path_canonicalize(path)
 
   repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
