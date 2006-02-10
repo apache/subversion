@@ -366,7 +366,11 @@ deliver_props (propfind_context_t **prop_ctx,
   new_prop_ctx->done = FALSE;
   new_prop_ctx->sess = sess;
 
+  if (new_prop_ctx->xmlp) {
+      XML_ParserFree(new_prop_ctx->xmlp);
+  }
   new_prop_ctx->xmlp = XML_ParserCreate(NULL);
+
   XML_SetUserData(new_prop_ctx->xmlp, new_prop_ctx);
   XML_SetElementHandler(new_prop_ctx->xmlp, start_propfind, end_propfind);
   XML_SetCharacterDataHandler(new_prop_ctx->xmlp, cdata_propfind);
