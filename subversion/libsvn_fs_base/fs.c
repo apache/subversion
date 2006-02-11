@@ -1258,6 +1258,7 @@ svn_fs_base__init (const svn_version_t *loader_version,
                               loader_version->major);
   SVN_ERR (svn_ver_check_list (base_version(), checklist));
   SVN_ERR (check_bdb_version());
+  SVN_ERR (svn_fs_bdb__init());
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

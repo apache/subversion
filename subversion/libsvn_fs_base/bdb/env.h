@@ -102,6 +102,10 @@ typedef struct
                                    | DB_PRIVATE)
 
 
+/* Iniitalize the BDB back-end's private stuff. */
+svn_error_t *svn_fs_bdb__init (void);
+
+
 /* Allocate the Berkeley DB descriptor BDB and open the environment.
  *
  * Allocate *BDBP from POOL and open (*BDBP)->env in PATH, using FLAGS
