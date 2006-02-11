@@ -42,7 +42,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r18144, r18164, r18170, r18171, r18184
+  * r18144, r18164, r18170, r18171, r18184, r18434
     and r18037, r18127 (only tools/dev/stress.pl)
     Add support for BDB-4.4 and automatic recovery of wedged databases.
     Justification:
