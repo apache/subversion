@@ -65,6 +65,10 @@
 /* The apr_atomic API changed somewhat between apr-0.x and apr-1.x.
 
    ### Should we move these defines to svn_private_config.h? */
+/* ### Note: svn__atomic_cas should not be combined with the other
+       svn__atomic operations.  A comment in apr_atomic.h explains
+       that on some platforms, the CAS function is implemented in a
+       way that is incompatible with the other atomic operations. */
 #include <apr_version.h>
 #if APR_MAJOR_VERSION > 0
 # define svn__atomic_t apr_uint32_t
@@ -150,7 +154,7 @@ struct bdb_env_t
      Note 2: Unlike other fields in this structure, this field is not
              protected by the cache mutex on threaded platforms, and
              should only be accesses via the svn__atomic functions. */
-  svn__atomic_t panic;
+  volatile svn__atomic_t panic;
 
   /* The key for the environment descriptor cache. */
   bdb_env_key_t key;
@@ -329,22 +333,21 @@ static apr_thread_mutex_t *bdb_cache_lock = NULL;
 #define BDB_CACHE_START_INIT    1
 #define BDB_CACHE_INIT_FAILED   2
 #define BDB_CACHE_INITIALIZED   3
-static volatile apr_uint32_t bdb_cache_state = BDB_CACHE_UNINITIALIZED;
+static volatile svn__atomic_t bdb_cache_state = BDB_CACHE_UNINITIALIZED;
 #endif /* APR_HAS_THREADS */
 
 
-/* Iniitalize the environment descriptor cache. */
-static svn_error_t *
-bdb_cache_init (void)
+svn_error_t *
+svn_fs_bdb__init (void)
 {
   /* We have to initialize the cache exactly once.  Because APR
      doesn't have statically-initialized mutexes, we implement a poor
      man's spinlock using svn__atomic_cas. */
 #if APR_HAS_THREADS
   apr_status_t apr_err;
-  apr_uint32_t cache_state = svn__atomic_cas(&bdb_cache_state,
-                                             BDB_CACHE_START_INIT,
-                                             BDB_CACHE_UNINITIALIZED);
+  svn__atomic_t cache_state = svn__atomic_cas(&bdb_cache_state,
+                                              BDB_CACHE_START_INIT,
+                                              BDB_CACHE_UNINITIALIZED);
 #endif /* APR_HAS_THREADS */
 
 #if APR_HAS_THREADS
@@ -462,17 +465,21 @@ bdb_cache_get (const bdb_env_key_t *keyp, svn_boolean_t *panicp)
   bdb_env_t *bdb = apr_hash_get(bdb_cache, keyp, sizeof *keyp);
   if (bdb && bdb->env)
     {
-      u_int32_t flags;
       *panicp = !!svn__atomic_read(&bdb->panic);
-      if (!*panicp
-          && (bdb->env->get_flags(bdb->env, &flags)
-              || (flags & DB_PANIC_ENVIRONMENT)))
+#if SVN_BDB_VERSION_AT_LEAST(4,2)
+      if (!*panicp)
         {
-          /* Something is wrong with the environment. */
-          svn__atomic_set(&bdb->panic, TRUE);
-          *panicp = TRUE;
-          bdb = NULL;
+          u_int32_t flags;
+          if (bdb->env->get_flags(bdb->env, &flags)
+              || (flags & DB_PANIC_ENVIRONMENT))
+            {
+              /* Something is wrong with the environment. */
+              svn__atomic_set(&bdb->panic, TRUE);
+              *panicp = TRUE;
+              bdb = NULL;
+            }
         }
+#endif /* at least bdb-4.2 */
     }
   else
     {
@@ -510,7 +517,6 @@ svn_fs_bdb__close (bdb_env_baton_t *bdb_baton)
   bdb_env_t *bdb = bdb_baton->bdb;
 
   assert(bdb_baton->env == bdb_baton->bdb->env);
-  SVN_ERR(bdb_cache_init());
 
   /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
      cleanup_env_baton(). */
@@ -597,7 +603,6 @@ svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp, const char *path,
   bdb_env_t *bdb;
   svn_boolean_t panic;
 
-  SVN_ERR(bdb_cache_init());
   acquire_cache_mutex();
 
   /* We can safely discard the open DB_CONFIG file handle.  If the
