@@ -3,7 +3,7 @@
  *           repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1189,13 +1189,13 @@ window_handler (svn_txdelta_window_t *window,
 
   if (!window)
     {
-      SVN_ERR (svn_wc__close_text_base (b->temp_file, b->wc_path, 0, b->pool));
+      SVN_ERR (svn_io_file_close (b->temp_file, b->pool));
 
       if (b->added)
         SVN_ERR (svn_io_file_close (b->original_file, b->pool));
       else
         {
-          SVN_ERR (svn_wc__close_text_base (b->original_file, b->wc_path, 0,
+          SVN_ERR (svn_wc__close_text_base (b->original_file, b->path, 0,
                                             b->pool));
         }
     }
@@ -1238,7 +1238,7 @@ apply_textdelta (void *file_baton,
   else
     {
       /* The current text-base is the starting point if replacing */
-      SVN_ERR (svn_wc__open_text_base (&b->original_file, b->wc_path,
+      SVN_ERR (svn_wc__open_text_base (&b->original_file, b->path,
                                        APR_READ, b->pool));
     }
 
