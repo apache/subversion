@@ -84,14 +84,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18291
-    Avoid crash for ignored directory that's in the repo for svn st -u.
-    Justification: Crash, bad!  Simple fix.
-    Notes:
-      Merge the test separately, due to the move on trunk.
-    Votes:
-      +1: lundblad, dlr, rooneg
-
   * r18254
     Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
     Justification:

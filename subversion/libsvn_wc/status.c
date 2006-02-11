@@ -2,7 +2,7 @@
  * status.c: construct a status structure from an entry structure
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1155,13 +1155,14 @@ make_dir_baton (void **dir_baton,
   /* Order is important here.  We can't depend on parent_status->entry
      being non-NULL until after we've checked all the conditions that
      might indicate that the parent is unversioned ("unversioned" for
-     our purposes includes being an external). */
+     our purposes includes being an external or ignored item). */
   if (parent_status
       && (parent_status->text_status != svn_wc_status_unversioned)
       && (parent_status->text_status != svn_wc_status_deleted)
       && (parent_status->text_status != svn_wc_status_missing)
       && (parent_status->text_status != svn_wc_status_obstructed)
       && (parent_status->text_status != svn_wc_status_external)
+      && (parent_status->text_status != svn_wc_status_ignored)
       && (parent_status->entry->kind == svn_node_dir)
       && (eb->descend || (! pb)))
     {
