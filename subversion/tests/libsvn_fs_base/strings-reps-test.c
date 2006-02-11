@@ -459,7 +459,7 @@ txn_body_string_size (void *baton, trail_t *trail)
   if (string_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "txn_body_string_size: string size is too largs "
+       "txn_body_string_size: string size is too large "
        "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
        string_size, SVN_MAX_OBJECT_SIZE);
   b->len = (apr_size_t) string_size;
