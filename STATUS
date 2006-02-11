@@ -71,17 +71,6 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
-  * r18416
-    Fix checkouts of a single URL-with-peg-revision to check out into
-    a directory based on the basename of the URL without the
-    peg-revision.  (i.e. make 'svn co http://../trunk@1234' create a
-    directory called 'trunk', not 'trunk@1234').
-    Justification:
-      It's nice when software does what you'd expect it to, and does
-      so consistently.
-    Votes:
-      +1: dlr, malcolm
-
 Approved changes:
 
   * r18254
@@ -92,4 +81,15 @@ Approved changes:
       Depends on r18144 et al. - unmergeable until those revs are merged.
     Votes:
       +1: brane, lundblad, malcolm, dlr
+
+  * r18416
+    Fix checkouts of a single URL-with-peg-revision to check out into
+    a directory based on the basename of the URL without the
+    peg-revision.  (i.e. make 'svn co http://../trunk@1234' create a
+    directory called 'trunk', not 'trunk@1234').
+    Justification:
+      It's nice when software does what you'd expect it to, and does
+      so consistently.
+    Votes:
+      +1: dlr, malcolm, lundblad
 
