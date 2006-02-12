@@ -1,7 +1,7 @@
 /* repos-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1560,7 +1560,7 @@ commit_editor_authz  (const char **msg,
                                      subpool));
 
   /* Done. */
-  editor->abort_edit (edit_baton, subpool);
+  SVN_ERR (editor->abort_edit (edit_baton, subpool));
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
