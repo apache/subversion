@@ -433,6 +433,8 @@ retrieve_props (apr_hash_t *prop_vals,
     {
       SVN_ERR(wait_for_props(prop_ctx, sess, pool));
     }
+
+  return SVN_NO_ERROR;
 }
 
 void
