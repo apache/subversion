@@ -110,6 +110,20 @@ fns2_from_fns (const svn_repos_parser_fns_t *fns,
 /** The parser and related helper funcs **/
 
 
+static svn_error_t *
+stream_ran_dry (void)
+{
+  return svn_error_create (SVN_ERR_INCOMPLETE_DATA, NULL,
+                           _("Premature end of content data in dumpstream"));
+}
+
+static svn_error_t *
+stream_malformed (void)
+{
+  return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                           _("Dumpstream data appears to be malformed"));
+}
+
 /* Allocate a new hash *HEADERS in POOL, and read a series of
    RFC822-style headers from STREAM.  Duplicate each header's name and
    value into POOL and store in hash as a const char * ==> const char *.
@@ -145,9 +159,11 @@ read_header_block (svn_stream_t *stream,
       else
         /* Read the next line into a stringbuf. */
         SVN_ERR (svn_stream_readline (stream, &header_str, "\n", &eof, pool));
-      
-      if (eof || svn_stringbuf_isempty(header_str))
+
+      if (svn_stringbuf_isempty(header_str))
         break;    /* end of header block */
+      else if (eof)
+        return stream_ran_dry ();
 
       /* Find the next colon in the stringbuf. */
       while (header_str->data[i] != ':')
@@ -181,20 +197,6 @@ read_header_block (svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-stream_ran_dry (void)
-{
-  return svn_error_create (SVN_ERR_INCOMPLETE_DATA, NULL,
-                           _("Premature end of content data in dumpstream"));
-}
-
-static svn_error_t *
-stream_malformed (void)
-{
-  return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                           _("Dumpstream data appears to be malformed"));
-}
 
 /* Set *PBUF to a string of length LEN, allocated in POOL, read from STREAM.
    Also read a newline from STREAM and increase *ACTUAL_LEN by the total
@@ -283,6 +285,9 @@ parse_property_block (svn_stream_t *stream,
 
           /* Read a val length line */
           SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
+          if (eof)
+            return stream_ran_dry ();
+
           *actual_length += (strbuf->len + 1); /* +1 because we read \n too */
           buf = strbuf->data;
 
@@ -514,9 +519,14 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
       SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
-      
+
       if (eof)
-        break;   /* end of stream, go home. */
+        {
+          if (svn_stringbuf_isempty (linebuf))
+            break;   /* end of stream, go home. */
+          else
+            return stream_ran_dry ();
+        }
 
       if ((linebuf->len == 0) || (apr_isspace (linebuf->data[0])))
         continue; /* empty line ... loop */
@@ -779,6 +789,7 @@ make_node_baton (apr_hash_t *headers,
         nb->kind = svn_node_dir;
     }
 
+  nb->action = (enum svn_node_action)(-1);  /* an invalid action code */
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_ACTION,
                            APR_HASH_KEY_STRING)))
     {
@@ -792,6 +803,7 @@ make_node_baton (apr_hash_t *headers,
         nb->action = svn_node_action_replace;
     }
 
+  nb->copyfrom_rev = SVN_INVALID_REVNUM;
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
                            APR_HASH_KEY_STRING)))
     {
