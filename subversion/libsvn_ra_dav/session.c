@@ -1117,6 +1117,7 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
     }
 }
 
+/* (Note: *LOCK is an output parameter.) */
 /* ### TODO for 1.3: Send all locks to the server at once. */
 static svn_error_t *
 shim_svn_ra_dav__lock(svn_ra_session_t *session,

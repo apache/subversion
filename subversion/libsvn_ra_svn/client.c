@@ -438,6 +438,7 @@ static void ra_svn_get_reporter(ra_svn_session_baton_t *sess_baton,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
+/* (Note: *ARGV is an output parameter.) */
 static svn_error_t *find_tunnel_agent(const char *tunnel, 
                                       const char *hostinfo,
                                       const char ***argv,
@@ -525,6 +526,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
 
+/* (Note: *CONN is an output parameter.) */
 static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
                                 apr_pool_t *pool)
 {

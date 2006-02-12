@@ -279,6 +279,7 @@ copy_tempfile (apr_file_t *fp, apr_pool_t *pool)
 
 
 
+/* Implements svn_test_driver_t. */
 static svn_error_t *
 random_test (const char **msg,
              svn_boolean_t msg_only,
@@ -366,6 +367,7 @@ random_test (const char **msg,
 
 
 
+/* (Note: *LAST_SEED is an output parameter.) */
 static svn_error_t *
 do_random_combine_test (const char **msg,
                         svn_boolean_t msg_only,
@@ -505,6 +507,7 @@ do_random_combine_test (const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_test_driver_t. */
 static svn_error_t *
 random_combine_test (const char **msg,
                      svn_boolean_t msg_only,
