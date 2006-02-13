@@ -300,23 +300,27 @@ COMMENT is an initial description of the file; currently this is ignored."
 
 (defun vc-svn-checkout (file &optional editable rev destfile)
   "Check out revision REV of FILE into the working area.
-The EDITABLE argument must be non-nil, since Subversion doesn't
-support locking.
+
+If EDITABLE is non-nil, do a regular update, otherwise check out the
+requested REV to temp file DESTFILE.  If both EDITABLE and DESTFILE
+are non-nil, raise an error. 
+
 If REV is non-nil, that is the revision to check out (default is
 current workfile version).  If REV is the empty string, that means to
 check out the head of the trunk.  For Subversion, that's equivalent to
-passing nil.
-If optional arg DESTFILE is given, it is an alternate filename to
-write the contents to; we raise an error."
-  (unless editable
-    (error "VC asked Subversion to check out a read-only copy of file"))
-  (when destfile
-    (error "VC asked Subversion to check out a file under another name"))
-  (when (equal rev "")
-    (setq rev nil))
-  (apply 'vc-do-command nil 0 vc-svn-program-name file
-         "update" (if rev (list "-r" rev) '()))
-  (vc-file-setprop file 'vc-workfile-version nil))
+passing nil."
+  (if editable
+      (progn
+       (when destfile
+         (error "VC asked Subversion to check out a file under another name"))
+       (when (equal rev "")
+         (setq rev nil))
+       (apply 'vc-do-command nil 0 vc-svn-program-name file
+              "update" (if rev (list "-r" rev) '()))
+       (vc-file-setprop file 'vc-workfile-version nil))
+      (with-temp-file destfile
+       (apply 'vc-do-command t 0 vc-svn-program-name file
+              "cat" (if (equal rev "") '() (list "-r" rev))))))
 
 
 (defun vc-svn-revert (file &optional contents-done)
@@ -424,5 +428,16 @@ This function returns a status of either 0 (no differences found), or
 (defun vc-svn-find-version (file rev buffer)
   (vc-do-command buffer 0 vc-svn-program-name file 
          "cat" "-r" rev))
+
+(defun vc-svn-annotate-command (file buffer &optional version)
+  "Execute \"svn annotate\" on FILE, inserting the contents in BUFFER.
+Optional arg VERSION is a revision to annotate from."
+  (vc-do-command buffer 0 vc-svn-program-name file "annotate"
+                (if version (concat "-r" version))))
+
+(defun vc-svn-annotate-difference (point)
+  "Difference between the time of the line and the current time.
+Return values are as defined for `current-time'."
+  nil)                                 ; don't bother with differences
 
 (provide 'vc-svn)
