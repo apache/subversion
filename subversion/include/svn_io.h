@@ -51,7 +51,7 @@ typedef enum
   /** Remove when the file is closed */
   svn_io_file_del_on_close,
   /** Remove when the associated pool is cleared */
-  svn_io_file_del_on_pool_cleanup,
+  svn_io_file_del_on_pool_cleanup
 } svn_io_file_del_t;
 
 
