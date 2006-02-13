@@ -274,7 +274,7 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
                      apr_pool_t *pool)
 {
   apr_array_header_t *paths = apr_array_make (pool, 2, sizeof (const char *));
-  const char *top_url, *src_rel, *dst_rel, *message;
+  const char *top_url, *src_rel, *dst_rel, *message, *repos_root;
   svn_revnum_t youngest;
   svn_ra_session_t *ra_session;
   svn_node_kind_t src_kind, dst_kind;
@@ -301,25 +301,6 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
       resurrection = TRUE;
       top_url = svn_path_dirname (top_url, pool);
     }
-
-  /* Get the portions of the SRC and DST URLs that are relative to
-     TOP_URL, and URI-decode those sections. */
-  src_rel = svn_path_is_child (top_url, src_url, pool);
-  if (src_rel)
-    src_rel = svn_path_uri_decode (src_rel, pool);
-  else
-    src_rel = "";
-
-  dst_rel = svn_path_is_child (top_url, dst_url, pool);
-  if (dst_rel)
-    dst_rel = svn_path_uri_decode (dst_rel, pool);
-  else
-    dst_rel = "";
-
-  /* We can't move something into itself, period. */
-  if (svn_path_is_empty (src_rel) && is_move)
-    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              _("Cannot move URL '%s' into itself"), src_url);
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
@@ -357,6 +338,36 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
       else
         return err;
     }
+
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root, pool));
+
+  if (strcmp (dst_url, repos_root) != 0
+      && svn_path_is_child (dst_url, src_url, pool) != NULL)
+    {
+      resurrection = TRUE;
+      top_url = svn_path_dirname (top_url, pool);
+
+      SVN_ERR (svn_ra_reparent (ra_session, top_url, pool));
+    }
+
+  /* Get the portions of the SRC and DST URLs that are relative to
+     TOP_URL, and URI-decode those sections. */
+  src_rel = svn_path_is_child (top_url, src_url, pool);
+  if (src_rel)
+    src_rel = svn_path_uri_decode (src_rel, pool);
+  else
+    src_rel = "";
+
+  dst_rel = svn_path_is_child (top_url, dst_url, pool);
+  if (dst_rel)
+    dst_rel = svn_path_uri_decode (dst_rel, pool);
+  else
+    dst_rel = "";
+
+  /* We can't move something into itself, period. */
+  if (svn_path_is_empty (src_rel) && is_move)
+    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                              _("Cannot move URL '%s' into itself"), src_url);
 
   /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */
