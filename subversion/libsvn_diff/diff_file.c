@@ -885,22 +885,26 @@ svn_diff__file_output_unified_diff_modified(void *baton,
   return SVN_NO_ERROR;
 }
 
-static const char *
-svn_diff__file_output_unified_default_hdr(apr_pool_t *pool,
-                                          const char *path)
+/* Set *HEADER to a new string consisting of PATH, a tab, and PATH's mtime. */
+static svn_error_t *
+svn_diff__file_output_unified_default_hdr(const char **header,
+                                          const char *path,
+                                          apr_pool_t *pool)
 {
   apr_finfo_t file_info;
   apr_time_exp_t exploded_time;
   char time_buffer[64];
   apr_size_t time_len;
 
-  svn_io_stat(&file_info, path, APR_FINFO_MTIME, pool);
+  SVN_ERR(svn_io_stat(&file_info, path, APR_FINFO_MTIME, pool));
   apr_time_exp_lt(&exploded_time, file_info.mtime);
 
   apr_strftime(time_buffer, &time_len, sizeof(time_buffer) - 1,
                "%a %b %e %H:%M:%S %Y", &exploded_time);
 
-  return apr_psprintf(pool, "%s\t%s", path, time_buffer);
+  *header = apr_psprintf(pool, "%s\t%s", path, time_buffer);
+
+  return SVN_NO_ERROR;
 }
 
 static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
@@ -950,14 +954,14 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
 
       if (original_header == NULL)
         {
-          original_header =
-            svn_diff__file_output_unified_default_hdr(pool, original_path);
+          SVN_ERR(svn_diff__file_output_unified_default_hdr
+                  (&original_header, original_path, pool));
         }
 
       if (modified_header == NULL)
         {
-          modified_header =
-            svn_diff__file_output_unified_default_hdr(pool, modified_path);
+          SVN_ERR(svn_diff__file_output_unified_default_hdr
+                  (&modified_header, modified_path, pool));
         }
 
       SVN_ERR(svn_stream_printf_from_utf8(output_stream, header_encoding, pool,
