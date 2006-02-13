@@ -577,6 +577,38 @@ def resurrect_deleted_dir(sbox):
                                         expected_disk,
                                         expected_status)
 
+def copy_deleted_dir_into_prefix(sbox):
+  "copy a deleted dir to a prefix of its old path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete directory A/D, commit that as r2.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
+                                     wc_dir + '/A/D')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D' : Item(verb='Deleting'),
+    })
+
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         None,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+
+  # Ok, copy from a deleted URL into a prefix of that URL, this used to
+  # result in an assert failing.
+  url1 = svntest.main.current_repo_url + '/A/D/G'
+  url2 = svntest.main.current_repo_url + '/A/D'
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-r', '1', url1, url2,
+                                     '-m', 'logmsg')
+
 #----------------------------------------------------------------------
 
 # Test that we're enforcing proper 'svn cp' overwrite behavior.  Note
@@ -1954,6 +1986,7 @@ test_list = [ None,
               delete_replaced_file,
               mv_unversioned_file,
               force_move,
+              copy_deleted_dir_into_prefix,
              ]
 
 if __name__ == '__main__':
