@@ -97,6 +97,7 @@ create_serf_req(serf_request_t **request,
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", session->repos_url.hostinfo);
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
+  serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip");
   if (content_type)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
