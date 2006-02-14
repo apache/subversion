@@ -1928,8 +1928,16 @@ copy_helper (svn_fs_root_t *from_root,
   dag_node_t *from_node;
   parent_path_t *to_parent_path;
   const char *txn_id = to_root->txn;
+  svn_boolean_t same_p;
 
-  assert (from_root->fs == to_root->fs);
+  /* Use an error check, not an assert, because even the caller cannot
+     guarantee that a filesystem's UUID has not changed "on the fly". */
+  SVN_ERR (svn_fs__same_p (&same_p, from_root->fs, to_root->fs, pool));
+  if (! same_p)
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Cannot copy between two different filesystems ('%s' and '%s')."),
+       svn_fs_path (from_root->fs, pool), svn_fs_path (to_root->fs, pool));
 
   if (from_root->is_txn_root)
     return svn_error_create
