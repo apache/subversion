@@ -43,6 +43,12 @@ repository.  Regardless of the merge method used, Subversion must
 provide a way to indicate that the change(s) have been merged into
 branch B.</p>
 
+<p>Additionally, it's important to be able to cherry pick changes in
+multiple different directions.  For example, if you create a release
+branch B by copying the trunk you should be able to both forward port
+changes made on B into trunk and backport changes made on trunk into B
+without confusing the merge tracking algorithm.</p>
+
 </div>  <!-- cherry picking -->
 
 
