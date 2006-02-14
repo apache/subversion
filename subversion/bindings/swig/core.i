@@ -748,6 +748,11 @@ SubversionException = _core.SubversionException
 %}
 
 /* Dummy declaration */
+%header %{
+static void apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self);
+static void apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self);
+%}
+
 struct apr_pool_wrapper_t
 {
 };
