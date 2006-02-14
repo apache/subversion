@@ -94,6 +94,13 @@ Candidate changes:
     Votes:
       +1: rooneg
 
+  * r18456, r18458
+    Fix the Ruby bindings compile error with SWIG 1.3.24.
+    Justification:
+      SWIG bindings must support SWIG 1.3.24.
+    Votes:
+      +1: kou
+
 Approved changes:
 
   * r18254
