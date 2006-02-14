@@ -121,7 +121,12 @@ svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
     }
   pfd.p = pool;
   pfd.reqevents = APR_POLLIN;
+#ifndef AS400
   return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
+#else
+  /* OS400 requires a pool argument for apr_poll(). */
+  return ((apr_poll(&pfd, 1, &n, 0, pool) == APR_SUCCESS) && n);
+#endif
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
