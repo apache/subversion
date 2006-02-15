@@ -126,7 +126,58 @@ const char *lines[] =
     ".$veR$Author$",
     "$",
     "$$",
-    "Line 74: end of subst test data."
+    /* Line 74-75 test for keywords containing '$', issue #1780 */
+    "Line 74: Valid $Author: jran$dom $, started expanded.",
+    "Line 75: Valid $URL: http://tomato/mau$ve $, started expanded.",
+    /* Line 76-78 tests for a string with an unknown keyword of 252-254 bytes 
+       long */
+    "$                                                                       "
+    "                                                                        "
+    "                                                                        "
+    "                                      $$",
+    "$                                                                       "
+    "                                                                        "
+    "                                                                        "
+    "                                       $$",
+    "$                                                                       "
+    "                                                                        "
+    "                                                                        "
+    "                                        $$",
+    /* Testing border cases, line 79-82 test for valid keywords, keywords on
+       line 83-84 are too long */
+    "Line 79: Valid $Author: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa $, started expanded.",
+    "Line 80: Valid $Author: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaa"
+    "aaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaa $, started "
+    "expanded.",
+    /* keyword from first dollar sign to last = 254 chars */
+    "Line 81: Valid $Author: aaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaa$$$ $, started "
+    "expanded.",
+    /* keyword from first dollar sign to last = 255 chars */
+    "Line 82: Valid $Author: aaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaa$$$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$$ $, started "
+    "expanded.",
+    /* keyword from first dollar sign to last = 256 chars */
+    "Line 83: Invalid $Author: aaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaa$$$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$$ $, started "
+    "expanded.",
+    "Line 84: Invalid $Author: aaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaa$$$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$$ $, started "
+    "expanded.",
+    "Line 85: end of subst test data."
   };
 
 
@@ -468,6 +519,27 @@ substitute_and_verify (const char *test_name,
                          NULL);
           expect[71 - 1] =
             apr_pstrcat (pool, ".$veR$Author: ", author, " $", NULL);
+
+          expect[74 - 1] =
+            apr_pstrcat (pool, "Line 74: ",
+                         "Valid $Author: ", author, " $, started expanded.",
+                         NULL);
+          expect[79 - 1] =
+            apr_pstrcat (pool, "Line 79: ",
+                         "Valid $Author: ", author, " $, started expanded.",
+                         NULL);
+          expect[80 - 1] =
+            apr_pstrcat (pool, "Line 80: ",
+                         "Valid $Author: ", author, " $, started expanded.",
+                         NULL);
+          expect[81 - 1] =
+            apr_pstrcat (pool, "Line 81: ",
+                         "Valid $Author: ", author, " $, started expanded.",
+                         NULL);
+          expect[82 - 1] =
+            apr_pstrcat (pool, "Line 82: ",
+                         "Valid $Author: ", author, " $, started expanded.",
+                         NULL);
         }
       else  /* unexpand */
         {
@@ -476,6 +548,16 @@ substitute_and_verify (const char *test_name,
             "Line 37: Valid $LastChangedBy$, started expanded.";
           expect[38 - 1] =
             "Line 38: Valid $Author$, started expanded.";
+          expect[74 - 1] =
+            "Line 74: Valid $Author$, started expanded.";
+          expect[79 - 1] =
+            "Line 79: Valid $Author$, started expanded.";
+          expect[80 - 1] =
+            "Line 80: Valid $Author$, started expanded.";
+          expect[81 - 1] =
+            "Line 81: Valid $Author$, started expanded.";
+          expect[82 - 1] =
+            "Line 82: Valid $Author$, started expanded.";
         }
     }
 
@@ -499,6 +581,10 @@ substitute_and_verify (const char *test_name,
             apr_pstrcat (pool, "Line 42: ",
                          "Valid $URL: ", url, " $, started expanded.",
                          NULL);
+          expect[75 - 1] =
+            apr_pstrcat (pool, "Line 75: ",
+                         "Valid $URL: ", url, " $, started expanded.",
+                         NULL);
         }
       else  /* unexpand */
         {
@@ -507,6 +593,8 @@ substitute_and_verify (const char *test_name,
             "Line 41: Valid $HeadURL$, started expanded.";
           expect[42 - 1] =
             "Line 42: Valid $URL$, started expanded.";
+          expect[75 - 1] =
+            "Line 75: Valid $URL$, started expanded.";
         }
     }
 
