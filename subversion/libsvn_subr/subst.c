@@ -606,11 +606,35 @@ translate_keyword_subst (char *buf,
   return FALSE;
 }                         
 
-/* Parse BUF (whose length is *LEN) for Subversion keywords.  If a
-   keyword is found, optionally perform the substitution on it in
-   place, update *LEN with the new length of the translated keyword
-   string, and return TRUE.  If this buffer doesn't contain a known
-   keyword pattern, leave BUF and *LEN untouched and return FALSE.
+/* Parse BUF (whose length is LEN, and which starts and ends with '$'),
+   trying to match one of the keyword names in KEYWORDS.  If such a
+   keyword is found, update *KEYWORD_NAME with the keyword name and
+   return TRUE. */
+static svn_boolean_t
+match_keyword (char *buf,
+               apr_size_t len,
+               char *keyword_name,
+               apr_hash_t *keywords)
+{
+  apr_size_t i;
+
+  /* Early return for ignored keywords */
+  if (! keywords)
+    return FALSE;
+
+  /* Extract the name of the keyword */
+  for (i = 0; i < len - 2 && buf[i + 1] != ':'; i++)
+    keyword_name[i] = buf[i + 1];
+  keyword_name[i] = '\0';
+
+  return apr_hash_get (keywords, keyword_name, APR_HASH_KEY_STRING) != NULL;
+}
+
+/* Try to translate keyword *KEYWORD_NAME in BUF (whose length is LEN):
+   optionally perform the substitution in place, update *LEN with
+   the new length of the translated keyword string, and return TRUE.
+   If this buffer doesn't contain a known keyword pattern, leave BUF
+   and *LEN untouched and return FALSE.
 
    See the docstring for svn_subst_copy_and_translate for how the
    EXPAND and KEYWORDS parameters work.
@@ -625,12 +649,11 @@ translate_keyword_subst (char *buf,
 static svn_boolean_t
 translate_keyword (char *buf,
                    apr_size_t *len,
+                   const char *keyword_name,
                    svn_boolean_t expand,
                    apr_hash_t *keywords)
 {
   const svn_string_t *value;
-  char keyword_name[SVN_KEYWORD_MAX_LEN + 1];
-  apr_size_t i;
 
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);
@@ -639,11 +662,6 @@ translate_keyword (char *buf,
   /* Early return for ignored keywords */
   if (! keywords)
     return FALSE;
-
-  /* Extract the name of the keyword */
-  for (i = 0; i < *len - 2 && buf[i + 1] != ':'; i++)
-    keyword_name[i] = buf[i + 1];
-  keyword_name[i] = '\0';
 
   value = apr_hash_get (keywords, keyword_name, APR_HASH_KEY_STRING);
 
@@ -919,6 +937,7 @@ translate_chunk (svn_stream_t *dst,
       /* precalculate some oft-used values */
       const char *end = buf + buflen;
       const char *interesting = b->interesting;
+      apr_size_t next_sign_off = 0;
 
       /* At the beginning of this loop, assume that we might be in an
        * interesting state, i.e. with data in the newline or keyword
@@ -943,21 +962,50 @@ translate_chunk (svn_stream_t *dst,
             }
           else if (b->keyword_off && *p == '$')
             {
-              /* If translation fails, treat this '$' as a starting '$'. */
-              b->keyword_buf[b->keyword_off++] = '$';
-              if (translate_keyword (b->keyword_buf, &b->keyword_off,
-                                     b->expand, b->keywords))
-                p++;
+              svn_boolean_t keyword_matches;
+              char keyword_name[SVN_KEYWORD_MAX_LEN + 1];
+
+              /* If keyword is matched, but not correctly translated, try to
+               * look for the next ending '$'. */
+              b->keyword_buf[b->keyword_off++] = *p++;
+              keyword_matches = match_keyword (b->keyword_buf, b->keyword_off,
+                                               keyword_name, b->keywords);
+              if (keyword_matches == FALSE)
+                {
+                  /* reuse the ending '$' */
+                  *p--;
+                  b->keyword_off--;
+                }
+
+              if (keyword_matches == FALSE ||
+                  translate_keyword (b->keyword_buf, &b->keyword_off,
+                                     keyword_name, b->expand, b->keywords) ||
+                  b->keyword_off >= SVN_KEYWORD_MAX_LEN)
+                {
+                  /* write out non-matching text or translated keyword */
+                  SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
+
+                  next_sign_off = 0;
+                  b->keyword_off = 0;
+                }
               else
-                b->keyword_off--;
+                {
+                  if (next_sign_off == 0)
+                    next_sign_off = b->keyword_off - 1;
 
-              SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
-
-              b->keyword_off = 0;
+                  continue;
+                }
             }
           else if (b->keyword_off == SVN_KEYWORD_MAX_LEN - 1
                    || (b->keyword_off && (*p == '\r' || *p == '\n')))
             {
+              if (next_sign_off > 0)
+              {
+                /* rolling back, continue with next '$' in keyword_buf */
+                p -= (b->keyword_off - next_sign_off);
+                b->keyword_off = next_sign_off;
+                next_sign_off = 0;
+              }
               /* No closing '$' found; flush the keyword buffer. */
               SVN_ERR (translate_write (dst, b->keyword_buf, b->keyword_off));
 
