@@ -65,7 +65,7 @@ extern "C" {
  * string "0", then *LEN is set to zero and the effect on NEXT
  * is undefined.
  */
-void svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next);
+void svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next);
 
 
 /* Compare two strings A and B as base-36 alphanumeric keys.
@@ -73,10 +73,10 @@ void svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next);
  * Return -1, 0, or 1 if A is less than, equal to, or greater than B,
  * respectively.
  */
-int svn_fs_fs__key_compare (const char *a, const char *b);
+int svn_fs_fs__key_compare(const char *a, const char *b);
 
 /* Add two base-36 alphanumeric keys to get a third, the result. */
-void svn_fs_fs__add_keys (const char *key1, const char *key2, char *result);
+void svn_fs_fs__add_keys(const char *key1, const char *key2, char *result);
 
 
 #ifdef __cplusplus

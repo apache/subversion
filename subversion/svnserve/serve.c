@@ -221,7 +221,7 @@ static apr_status_t cleanup_fs_access(void *data)
   svn_error_t *serr;
   struct cleanup_fs_access_baton *baton = data;
 
-  serr = svn_fs_set_access (baton->fs, NULL);
+  serr = svn_fs_set_access(baton->fs, NULL);
   if (serr)
     {
       apr_status_t apr_err = serr->apr_err;
@@ -296,7 +296,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       && b->pwdb && strcmp(mech, "CRAM-MD5") == 0)
     {
       SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->pwdb, &user, success));
-      b->user = apr_pstrdup (b->pool, user);
+      b->user = apr_pstrdup(b->pool, user);
       return SVN_NO_ERROR;
     }
 
@@ -699,7 +699,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
-  svn_stringbuf_set (b->fs_path, fs_path);
+  svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -2093,8 +2093,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
   b->fs = svn_repos_fs(b->repos);
-  b->fs_path = svn_stringbuf_create (full_path + strlen(repos_root),
-                                     pool);
+  b->fs_path = svn_stringbuf_create(full_path + strlen(repos_root),
+                                    pool);
   url_buf = svn_stringbuf_create(url, pool);
   svn_path_remove_components(url_buf,
                              svn_path_component_count(b->fs_path->data));

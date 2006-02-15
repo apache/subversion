@@ -48,13 +48,13 @@ extern "C" {
 #include "svn_error_codes.h"
 
 /** Set the error location for debug mode. */
-void svn_error__locate (const char *file, long line);
+void svn_error__locate(const char *file, long line);
 
 
 /** Put an English description of @a statcode into @a buf and return @a buf,
  * null-terminated. @a statcode is either an svn error or apr error.
  */
-char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
+char *svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize);
 
 
 /** If @a err has a custom error message, return that, otherwise
@@ -66,8 +66,8 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
  * @note @a buf and @a bufsize are provided in the interface so that
  * this function is thread-safe and yet does no allocation.
  */
-const char *svn_err_best_message (svn_error_t *err,
-                                  char *buf, apr_size_t bufsize);
+const char *svn_err_best_message(svn_error_t *err,
+                                 char *buf, apr_size_t bufsize);
 
 
 
@@ -95,9 +95,9 @@ const char *svn_err_best_message (svn_error_t *err,
  *        If creating the "bottommost" error in a chain, pass @c NULL for
  *        the child argument.
  */
-svn_error_t *svn_error_create (apr_status_t apr_err,
-                               svn_error_t *child,
-                               const char *message);
+svn_error_t *svn_error_create(apr_status_t apr_err,
+                              svn_error_t *child,
+                              const char *message);
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_create \
@@ -107,11 +107,11 @@ svn_error_t *svn_error_create (apr_status_t apr_err,
  * with a printf-style error message produced by passing @a fmt, using
  * apr_psprintf().
  */
-svn_error_t *svn_error_createf (apr_status_t apr_err,
-                                svn_error_t *child,
-                                const char *fmt, 
-                                ...)
-       __attribute__ ((format (printf, 3, 4)));
+svn_error_t *svn_error_createf(apr_status_t apr_err,
+                               svn_error_t *child,
+                               const char *fmt, 
+                               ...)
+  __attribute__ ((format(printf, 3, 4)));
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_createf \
@@ -125,7 +125,7 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
  * (If UTF-8 translation of the APR error message fails, the ": " and
  * APR error are not appended to the error message.)
  */
-svn_error_t *svn_error_wrap_apr (apr_status_t status, const char *fmt, ...)
+svn_error_t *svn_error_wrap_apr(apr_status_t status, const char *fmt, ...)
        __attribute__((format(printf, 2, 3)));
 
 /** Wrapper macro to collect file and line information */
@@ -136,7 +136,7 @@ svn_error_t *svn_error_wrap_apr (apr_status_t status, const char *fmt, ...)
  * message, before throwing it up the stack.  (It uses all of the
  * child's fields.)
  */
-svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
+svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_quick_wrap \
@@ -146,13 +146,13 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
  * chain will be copied into @a chain's pool and destroyed, so @a new_err 
  * itself becomes invalid after this function.
  */
-void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
+void svn_error_compose(svn_error_t *chain, svn_error_t *new_err);
 
 /** Create a new error that is a deep copy of err and return it.
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_error_dup (svn_error_t *err);
+svn_error_t *svn_error_dup(svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
  * descendants of @a error. 
@@ -163,7 +163,7 @@ svn_error_t *svn_error_dup (svn_error_t *err);
  * nothing; thus, svn_error_clear(svn_foo(...)) works as an idiom to 
  * ignore errors.
  */
-void svn_error_clear (svn_error_t *error);
+void svn_error_clear(svn_error_t *error);
 
 
 /**
@@ -178,18 +178,18 @@ void svn_error_clear (svn_error_t *error);
  *
  * @since New in 1.2.
  */
-void svn_handle_error2 (svn_error_t *error,
-                        FILE *stream,
-                        svn_boolean_t fatal,
-                        const char *prefix);
+void svn_handle_error2(svn_error_t *error,
+                       FILE *stream,
+                       svn_boolean_t fatal,
+                       const char *prefix);
 
 /** Like svn_handle_error2() but with @c prefix set to "svn: "
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-void svn_handle_error (svn_error_t *error,
-                       FILE *stream,
-                       svn_boolean_t fatal);
+void svn_handle_error(svn_error_t *error,
+                      FILE *stream,
+                      svn_boolean_t fatal);
 
 /**
  * Very basic default warning handler: print out the error @a error to the
@@ -198,11 +198,11 @@ void svn_handle_error (svn_error_t *error,
  *
  * @since New in 1.2.
  */
-void svn_handle_warning2 (FILE *stream, svn_error_t *error, const char *prefix);
+void svn_handle_warning2(FILE *stream, svn_error_t *error, const char *prefix);
 
 /** Like svn_handle_warning2() but with @c prefix set to "svn: "
  */
-void svn_handle_warning (FILE *stream, svn_error_t *error);
+void svn_handle_warning(FILE *stream, svn_error_t *error);
 
 
 /** A statement macro for checking error return values.
@@ -253,8 +253,8 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
   do {                                                           \
     svn_error_t *svn_err__temp = (expr);                         \
     if (svn_err__temp) {                                         \
-      svn_handle_error2 (svn_err__temp, stderr, FALSE, "svn: "); \
-      svn_error_clear (svn_err__temp);                           \
+      svn_handle_error2(svn_err__temp, stderr, FALSE, "svn: ");  \
+      svn_error_clear(svn_err__temp);                            \
       return EXIT_FAILURE; }                                     \
   } while (0)
 

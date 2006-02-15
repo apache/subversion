@@ -29,13 +29,13 @@
 #include "../libsvn_fs/fs-loader.h"
 
 svn_error_t *
-svn_fs_fs__check_fs (svn_fs_t *fs)
+svn_fs_fs__check_fs(svn_fs_t *fs)
 {
   if (fs->path)
     return SVN_NO_ERROR;
   else
-    return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,
-                             _("Filesystem object has not been opened yet"));
+    return svn_error_create(SVN_ERR_FS_NOT_OPEN, 0,
+                            _("Filesystem object has not been opened yet"));
 }
 
 
@@ -44,9 +44,9 @@ svn_fs_fs__check_fs (svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
+svn_fs_fs__err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
 {
-  svn_string_t *id_str = svn_fs_fs__id_unparse (id, fs->pool);
+  svn_string_t *id_str = svn_fs_fs__id_unparse(id, fs->pool);
   return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
      _("Reference to non-existent node '%s' in filesystem '%s'"),
@@ -55,7 +55,7 @@ svn_fs_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
+svn_fs_fs__err_not_mutable(svn_fs_t *fs, svn_revnum_t rev, const char *path)
 {
   return
     svn_error_createf
@@ -66,7 +66,7 @@ svn_fs_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
+svn_fs_fs__err_txn_not_mutable(svn_fs_t *fs, const char *txn)
 {
   return
     svn_error_createf
@@ -77,7 +77,7 @@ svn_fs_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
 
 
 svn_error_t *
-svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path)
+svn_fs_fs__err_not_directory(svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
@@ -88,7 +88,7 @@ svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path)
+svn_fs_fs__err_not_file(svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
@@ -99,7 +99,7 @@ svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_corrupt_lockfile (svn_fs_t *fs, const char *path)
+svn_fs_fs__err_corrupt_lockfile(svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
@@ -109,7 +109,7 @@ svn_fs_fs__err_corrupt_lockfile (svn_fs_t *fs, const char *path)
 }
 
 svn_error_t *
-svn_fs_fs__err_no_such_lock (svn_fs_t *fs, const char *path)
+svn_fs_fs__err_no_such_lock(svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
@@ -120,7 +120,7 @@ svn_fs_fs__err_no_such_lock (svn_fs_t *fs, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_lock_expired (svn_fs_t *fs, const char *token)
+svn_fs_fs__err_lock_expired(svn_fs_t *fs, const char *token)
 {
   return
     svn_error_createf
@@ -131,7 +131,7 @@ svn_fs_fs__err_lock_expired (svn_fs_t *fs, const char *token)
 
 
 svn_error_t *
-svn_fs_fs__err_no_user (svn_fs_t *fs)
+svn_fs_fs__err_no_user(svn_fs_t *fs)
 {
   return
     svn_error_createf
@@ -142,9 +142,9 @@ svn_fs_fs__err_no_user (svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs_fs__err_lock_owner_mismatch (svn_fs_t *fs,
-                                    const char *username,
-                                    const char *lock_owner)
+svn_fs_fs__err_lock_owner_mismatch(svn_fs_t *fs,
+                                   const char *username,
+                                   const char *lock_owner)
 {
   return
     svn_error_createf
@@ -155,8 +155,8 @@ svn_fs_fs__err_lock_owner_mismatch (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_fs__err_path_already_locked (svn_fs_t *fs,
-                                    svn_lock_t *lock)
+svn_fs_fs__err_path_already_locked(svn_fs_t *fs,
+                                   svn_lock_t *lock)
 {
   return
     svn_error_createf

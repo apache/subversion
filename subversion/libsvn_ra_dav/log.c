@@ -91,7 +91,7 @@ struct log_baton
  * which they were allocated.  Do not touch any stored error, however.
  */
 static void
-reset_log_item (struct log_baton *lb)
+reset_log_item(struct log_baton *lb)
 {
   lb->revision      = SVN_INVALID_REVNUM;
   lb->author        = NULL;
@@ -99,7 +99,7 @@ reset_log_item (struct log_baton *lb)
   lb->msg           = NULL;
   lb->changed_paths = NULL;
 
-  svn_pool_clear (lb->subpool);
+  svn_pool_clear(lb->subpool);
 }
 
 
@@ -147,7 +147,7 @@ log_start_element(void *userdata,
           copyfrom_revstr = svn_xml_get_attr_value("copyfrom-rev", atts);
           if (copyfrom_path && copyfrom_revstr
               && (SVN_IS_VALID_REVNUM
-                  (copyfrom_rev = SVN_STR_TO_REV (copyfrom_revstr))))
+                  (copyfrom_rev = SVN_STR_TO_REV(copyfrom_revstr))))
             {
               lb->this_path_item->copyfrom_path = apr_pstrdup(lb->subpool,
                                                               copyfrom_path);
@@ -185,20 +185,20 @@ log_end_element(void *userdata,
   switch (elm->id)
     {
     case ELEM_version_name:
-      lb->revision = SVN_STR_TO_REV (cdata);
+      lb->revision = SVN_STR_TO_REV(cdata);
       break;
     case ELEM_creator_displayname:
-      lb->author = apr_pstrdup (lb->subpool, cdata);
+      lb->author = apr_pstrdup(lb->subpool, cdata);
       break;
     case ELEM_log_date:
-      lb->date = apr_pstrdup (lb->subpool, cdata);
+      lb->date = apr_pstrdup(lb->subpool, cdata);
       break;
     case ELEM_added_path:
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
       {
-        char *path = apr_pstrdup (lb->subpool, cdata);
+        char *path = apr_pstrdup(lb->subpool, cdata);
         if (! lb->changed_paths)
           lb->changed_paths = apr_hash_make(lb->subpool);
         apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, 
@@ -206,7 +206,7 @@ log_end_element(void *userdata,
         break;
       }
     case ELEM_comment:
-      lb->msg = apr_pstrdup (lb->subpool, cdata);
+      lb->msg = apr_pstrdup(lb->subpool, cdata);
       break;
     case ELEM_log_item:
       {
@@ -233,7 +233,7 @@ log_end_element(void *userdata,
                                              lb->msg,
                                              lb->subpool);
 
-        reset_log_item (lb);
+        reset_log_item(lb);
         
         if (err)
           {
@@ -414,12 +414,12 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
-  lb.subpool = svn_pool_create (pool);
+  lb.subpool = svn_pool_create(pool);
   lb.err = NULL;
   lb.limit = limit;
   lb.count = 0;
   lb.limit_compat_bailout = FALSE;
-  reset_log_item (&lb);
+  reset_log_item(&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
@@ -427,9 +427,9 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras->sess, ras->url->data, use_rev,
-                                         pool) );
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                        ras->sess, ras->url->data, use_rev,
+                                        pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
@@ -458,7 +458,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
       return lb.err;
     }
 
-  svn_pool_destroy (lb.subpool);
+  svn_pool_destroy(lb.subpool);
 
   if (err && lb.limit_compat_bailout)
     return SVN_NO_ERROR;

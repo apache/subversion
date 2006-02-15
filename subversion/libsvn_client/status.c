@@ -57,9 +57,9 @@ struct status_baton
 
    This implements the 'svn_wc_status_func2_t' function type. */
 static void
-tweak_status (void *baton,
-              const char *path,
-              svn_wc_status2_t *status)
+tweak_status(void *baton,
+             const char *path,
+             svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
 
@@ -70,7 +70,7 @@ tweak_status (void *baton,
     status->repos_text_status = svn_wc_status_deleted;
 
   /* Call the real status function/baton. */
-  sb->real_status_func (sb->real_status_baton, path, status);
+  sb->real_status_func(sb->real_status_baton, path, status);
 }
 
 /* A baton for our reporter that is used to collect locks. */
@@ -87,100 +87,100 @@ typedef struct report_baton_t {
 
 /* Implements svn_ra_reporter2_t->set_path. */
 static svn_error_t *
-reporter_set_path (void *report_baton, const char *path, svn_revnum_t revision,
-                   svn_boolean_t start_empty, const char *lock_token,
-                   apr_pool_t *pool)
+reporter_set_path(void *report_baton, const char *path, svn_revnum_t revision,
+                  svn_boolean_t start_empty, const char *lock_token,
+                  apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
 
-  return rb->wrapped_reporter->set_path (rb->wrapped_report_baton, path,
-                                         revision, start_empty, lock_token,
-                                         pool);
+  return rb->wrapped_reporter->set_path(rb->wrapped_report_baton, path,
+                                        revision, start_empty, lock_token,
+                                        pool);
 }
 
 /* Implements svn_ra_reporter2_t->delete_path. */
 static svn_error_t *
-reporter_delete_path (void *report_baton, const char *path, apr_pool_t *pool)
+reporter_delete_path(void *report_baton, const char *path, apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
 
-  return rb->wrapped_reporter->delete_path (rb->wrapped_report_baton, path,
-                                            pool);
+  return rb->wrapped_reporter->delete_path(rb->wrapped_report_baton, path,
+                                           pool);
 }
 
 /* Implements svn_ra_reporter2_t->link_path. */
 static svn_error_t *
-reporter_link_path (void *report_baton, const char *path, const char *url,
-                    svn_revnum_t revision, svn_boolean_t start_empty,
-                    const char *lock_token, apr_pool_t *pool)
+reporter_link_path(void *report_baton, const char *path, const char *url,
+                   svn_revnum_t revision, svn_boolean_t start_empty,
+                   const char *lock_token, apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   const char *ancestor;
   apr_size_t len;
 
-  ancestor = svn_path_get_longest_ancestor (url, rb->ancestor, pool);
+  ancestor = svn_path_get_longest_ancestor(url, rb->ancestor, pool);
 
   /* If we got a shorter ancestor, truncate our current ancestor.
      Note that svn_path_get_longest_ancestor will allocate its return
      value even if it identical to one of its arguments. */
-  len = strlen (ancestor);
-  if (len < strlen (rb->ancestor))
+  len = strlen(ancestor);
+  if (len < strlen(rb->ancestor))
     rb->ancestor[len] = '\0';
 
-  return rb->wrapped_reporter->link_path (rb->wrapped_report_baton, path, url,
-                                          revision, start_empty, lock_token,
-                                          pool);
+  return rb->wrapped_reporter->link_path(rb->wrapped_report_baton, path, url,
+                                         revision, start_empty, lock_token,
+                                         pool);
 }
 
 /* Implements svn_ra_reporter2_t->finish_report. */
 static svn_error_t *
-reporter_finish_report (void *report_baton, apr_pool_t *pool)
+reporter_finish_report(void *report_baton, apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   svn_ra_session_t *ras;
   apr_hash_t *locks;
   const char *repos_root;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
-  SVN_ERR (svn_client__open_ra_session_internal (&ras, rb->ancestor, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
-                                                 rb->ctx, subpool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ras, rb->ancestor, NULL,
+                                               NULL, NULL, FALSE, TRUE,
+                                               rb->ctx, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
-  err = svn_ra_get_locks (ras, &locks, "", rb->pool);
+  err = svn_ra_get_locks(ras, &locks, "", rb->pool);
   if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
               || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
     {
-      svn_error_clear (err);
+      svn_error_clear(err);
       err = SVN_NO_ERROR;
-      locks = apr_hash_make (rb->pool);
+      locks = apr_hash_make(rb->pool);
     }
-  SVN_ERR (err);
+  SVN_ERR(err);
 
-  SVN_ERR (svn_ra_get_repos_root (ras, &repos_root, subpool));
-  repos_root = apr_pstrdup (rb->pool, repos_root);
+  SVN_ERR(svn_ra_get_repos_root(ras, &repos_root, subpool));
+  repos_root = apr_pstrdup(rb->pool, repos_root);
 
   /* Close the RA session. */
-  svn_pool_destroy (subpool);
+  svn_pool_destroy(subpool);
 
-  SVN_ERR (svn_wc_status_set_repos_locks (rb->set_locks_baton, locks,
-                                          repos_root, rb->pool));
+  SVN_ERR(svn_wc_status_set_repos_locks(rb->set_locks_baton, locks,
+                                        repos_root, rb->pool));
 
-  return rb->wrapped_reporter->finish_report (rb->wrapped_report_baton, pool);
+  return rb->wrapped_reporter->finish_report(rb->wrapped_report_baton, pool);
 }
 
 /* Implements svn_ra_reporter2_t->abort_report. */
 static svn_error_t *
-reporter_abort_report (void *report_baton, apr_pool_t *pool)
+reporter_abort_report(void *report_baton, apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
 
-  return rb->wrapped_reporter->abort_report (rb->wrapped_report_baton, pool);
+  return rb->wrapped_reporter->abort_report(rb->wrapped_report_baton, pool);
 }
 
 /* A reporter that keeps track of the common URL ancestor of all paths in
@@ -198,21 +198,21 @@ static svn_ra_reporter2_t lock_fetch_reporter = {
 
 
 svn_error_t *
-svn_client_status2 (svn_revnum_t *result_rev,
-                    const char *path,
-                    const svn_opt_revision_t *revision,
-                    svn_wc_status_func2_t status_func,
-                    void *status_baton,
-                    svn_boolean_t recurse,
-                    svn_boolean_t get_all,
-                    svn_boolean_t update,
-                    svn_boolean_t no_ignore,
-                    svn_boolean_t ignore_externals,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+svn_client_status2(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func2_t status_func,
+                   void *status_baton,
+                   svn_boolean_t recurse,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *anchor_access, *target_access;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
+  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
   void *edit_baton, *set_locks_baton;
@@ -224,20 +224,20 @@ svn_client_status2 (svn_revnum_t *result_rev,
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
 
-  SVN_ERR (svn_wc_adm_open_anchor (&anchor_access, &target_access, &target,
-                                   path, FALSE, recurse ? -1 : 1,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
-  anchor = svn_wc_adm_access_path (anchor_access);
+  SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
+                                 path, FALSE, recurse ? -1 : 1,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
+  anchor = svn_wc_adm_access_path(anchor_access);
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
-  SVN_ERR (svn_wc_get_status_editor2 (&editor, &edit_baton, &set_locks_baton,
-                                      &edit_revision, anchor_access, target,
-                                      ctx->config, recurse, get_all, no_ignore,
-                                      tweak_status, &sb, ctx->cancel_func,
-                                      ctx->cancel_baton, traversal_info,
-                                      pool));
+  SVN_ERR(svn_wc_get_status_editor2(&editor, &edit_baton, &set_locks_baton,
+                                    &edit_revision, anchor_access, target,
+                                    ctx->config, recurse, get_all, no_ignore,
+                                    tweak_status, &sb, ctx->cancel_func,
+                                    ctx->cancel_baton, traversal_info,
+                                    pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
@@ -249,31 +249,31 @@ svn_client_status2 (svn_revnum_t *result_rev,
       svn_node_kind_t kind;
 
       /* Get full URL from the ANCHOR. */
-      SVN_ERR (svn_wc_entry (&entry, anchor, anchor_access, FALSE, pool));
+      SVN_ERR(svn_wc_entry(&entry, anchor, anchor_access, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
            _("'%s' is not under version control"),
-           svn_path_local_style (anchor, pool));
+           svn_path_local_style(anchor, pool));
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
            _("Entry '%s' has no URL"),
-           svn_path_local_style (anchor, pool));
-      URL = apr_pstrdup (pool, entry->url);
+           svn_path_local_style(anchor, pool));
+      URL = apr_pstrdup(pool, entry->url);
 
       /* Open a repository session to the URL. */
-      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, anchor,
-                                                     anchor_access, NULL,
-                                                     TRUE, TRUE, 
-                                                     ctx, pool));
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
+                                                   anchor_access, NULL,
+                                                   TRUE, TRUE, 
+                                                   ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
          us a whole lot of hassle; if it does, the cost of this
          request should be minimal compared to the size of getting
          back the average amount of "out-of-date" information. */
-      SVN_ERR (svn_ra_check_path (ra_session, "", SVN_INVALID_REVNUM,
-                                  &kind, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM,
+                                &kind, pool));
       if (kind == svn_node_none)
         {
           /* Our status target does not exist in HEAD of the
@@ -284,7 +284,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
             sb.deleted_in_repos = TRUE;
 
           /* And now close the edit. */
-          SVN_ERR (editor->close_edit (edit_baton, pool));
+          SVN_ERR(editor->close_edit(edit_baton, pool));
         }
       else
         {
@@ -300,18 +300,18 @@ svn_client_status2 (svn_revnum_t *result_rev,
           else
             {
               /* Get a revision number for our status operation. */
-              SVN_ERR (svn_client__get_revision_number
-                       (&revnum, ra_session, revision, target, pool));
+              SVN_ERR(svn_client__get_revision_number
+                      (&revnum, ra_session, revision, target, pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */
-          SVN_ERR (svn_ra_do_status (ra_session, &rb.wrapped_reporter,
-                                     &rb.wrapped_report_baton,
-                                     target, revnum, recurse, editor, 
-                                     edit_baton, pool));
+          SVN_ERR(svn_ra_do_status(ra_session, &rb.wrapped_reporter,
+                                   &rb.wrapped_report_baton,
+                                   target, revnum, recurse, editor, 
+                                   edit_baton, pool));
 
           /* Init the report baton. */
-          rb.ancestor = apr_pstrdup (pool, URL);
+          rb.ancestor = apr_pstrdup(pool, URL);
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
@@ -320,23 +320,23 @@ svn_client_status2 (svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR (svn_wc_crawl_revisions2 (path, target_access,
-                                            &lock_fetch_reporter, &rb, FALSE,
-                                            recurse, FALSE, NULL, NULL, NULL,
-                                            pool));
+          SVN_ERR(svn_wc_crawl_revisions2(path, target_access,
+                                          &lock_fetch_reporter, &rb, FALSE,
+                                          recurse, FALSE, NULL, NULL, NULL,
+                                          pool));
         }
     }
   else
     {
-      SVN_ERR (editor->close_edit (edit_baton, pool));
+      SVN_ERR(editor->close_edit(edit_baton, pool));
     }
 
   if (ctx->notify_func2 && update)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify (path, svn_wc_notify_status_completed, pool);
+        = svn_wc_create_notify(path, svn_wc_notify_status_completed, pool);
       notify->revision = edit_revision;
-      (ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+      (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
 
   /* If the caller wants the result revision, give it to them. */
@@ -346,7 +346,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
   /* Close the access baton here, as svn_client__do_external_status()
      calls back into this function and thus will be re-opening the
      working copy. */
-  SVN_ERR (svn_wc_adm_close (anchor_access));
+  SVN_ERR(svn_wc_adm_close(anchor_access));
 
   /* If there are svn:externals set, we don't want those to show up as
      unversioned or unrecognized, so patch up the hash.  If caller wants
@@ -355,9 +355,9 @@ svn_client_status2 (svn_revnum_t *result_rev,
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
   if (recurse && (! ignore_externals))
-    SVN_ERR (svn_client__do_external_status (traversal_info, status_func,
-                                             status_baton, get_all, update,
-                                             no_ignore, ctx, pool));
+    SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
+                                           status_baton, get_all, update,
+                                           no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -374,37 +374,37 @@ struct old_status_func_cb_baton
    by wrapping them before passing along to svn_client_status2().
    
    This implements the 'svn_wc_status_func2_t' function type. */
-static void old_status_func_cb (void *baton,
-                                const char *path,
-                                svn_wc_status2_t *status)
+static void old_status_func_cb(void *baton,
+                               const char *path,
+                               svn_wc_status2_t *status)
 {
   struct old_status_func_cb_baton *b = baton;
   svn_wc_status_t *stat = (svn_wc_status_t *) status;
   
-  b->original_func (b->original_baton, path, stat);
+  b->original_func(b->original_baton, path, stat);
 }
 
 
 svn_error_t *
-svn_client_status (svn_revnum_t *result_rev,
-                   const char *path,
-                   svn_opt_revision_t *revision,
-                   svn_wc_status_func_t status_func,
-                   void *status_baton,
-                   svn_boolean_t recurse,
-                   svn_boolean_t get_all,
-                   svn_boolean_t update,
-                   svn_boolean_t no_ignore,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client_status(svn_revnum_t *result_rev,
+                  const char *path,
+                  svn_opt_revision_t *revision,
+                  svn_wc_status_func_t status_func,
+                  void *status_baton,
+                  svn_boolean_t recurse,
+                  svn_boolean_t get_all,
+                  svn_boolean_t update,
+                  svn_boolean_t no_ignore,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
 {
   struct old_status_func_cb_baton *b = apr_pcalloc(pool, sizeof(*b));
   b->original_func = status_func;
   b->original_baton = status_baton;
 
-  return svn_client_status2 (result_rev, path, revision, 
-                             old_status_func_cb, b,
-                             recurse, get_all, update, no_ignore, FALSE,
-                             ctx, pool);
+  return svn_client_status2(result_rev, path, revision, 
+                            old_status_func_cb, b,
+                            recurse, get_all, update, no_ignore, FALSE,
+                            ctx, pool);
 }
 

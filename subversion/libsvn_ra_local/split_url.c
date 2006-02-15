@@ -24,11 +24,11 @@
 
 
 svn_error_t *
-svn_ra_local__split_URL (svn_repos_t **repos,
-                         const char **repos_url,
-                         const char **fs_path,
-                         const char *URL,
-                         apr_pool_t *pool)
+svn_ra_local__split_URL(svn_repos_t **repos,
+                        const char **repos_url,
+                        const char **fs_path,
+                        const char *URL,
+                        apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   const char *repos_root;
@@ -38,7 +38,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   /* Verify that the URL is well-formed (loosely) */
 
   /* First, check for the "file://" prefix. */
-  if (strncmp (URL, "file://", 7) != 0)
+  if (strncmp(URL, "file://", 7) != 0)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
        _("Local URL '%s' does not contain 'file://' prefix"), URL);
@@ -48,7 +48,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
      everything from that '/' until the end of the URL to be the
      absolute path portion of the URL. */
   hostname = URL + 7;
-  path = strchr (hostname, '/');
+  path = strchr(hostname, '/');
   if (! path)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
@@ -57,9 +57,9 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   /* Treat localhost as an empty hostname. */
   if (hostname != path)
     {
-      hostname = svn_path_uri_decode (apr_pstrmemdup (pool, hostname,
-                                                     path - hostname), pool);
-        if (strncmp (hostname, "localhost", 9) == 0)
+      hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
+                                                    path - hostname), pool);
+      if (strncmp(hostname, "localhost", 9) == 0)
 	  hostname = NULL;
     }
   else
@@ -90,7 +90,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     static const char valid_drive_letters[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     /* Casting away const! */
-    char *dup_path = (char *)svn_path_uri_decode (path, pool);
+    char *dup_path = (char *)svn_path_uri_decode(path, pool);
     if (!hostname && dup_path[1] && strchr(valid_drive_letters, dup_path[1])
         && (dup_path[2] == ':' || dup_path[2] == '|')
         && dup_path[3] == '/')
@@ -104,7 +104,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
       }
     if (hostname)
       /* We still know that the path starts with a slash. */
-      repos_root = apr_pstrcat (pool, "//", hostname, path, NULL);
+      repos_root = apr_pstrcat(pool, "//", hostname, path, NULL);
     else
       repos_root = dup_path;
   }
@@ -116,7 +116,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
        _("Local URL '%s' contains unsupported hostname"), URL);
 
-  repos_root = svn_path_uri_decode (path, pool);
+  repos_root = svn_path_uri_decode(path, pool);
 #endif
 
   /* Search for a repository in the full path. */
@@ -127,7 +127,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
        _("Unable to open repository '%s'"), URL);
 
   /* Attempt to open a repository at URL. */
-  err = svn_repos_open (repos, repos_root, pool);
+  err = svn_repos_open(repos, repos_root, pool);
   if (err)
     return svn_error_createf 
       (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
@@ -140,15 +140,15 @@ svn_ra_local__split_URL (svn_repos_t **repos,
      more.  But then, it is ours...
      We want the suffix of path after the repos root part.  Note that
      repos_root may contain //hostname, but path doesn't.  */
-  *fs_path = svn_path_uri_decode (path, pool)
-    + (strlen (repos_root)
-       - (hostname ? strlen (hostname) + 2 : 0));
+  *fs_path = svn_path_uri_decode(path, pool)
+    + (strlen(repos_root)
+       - (hostname ? strlen(hostname) + 2 : 0));
 
   /* Remove the path components in *fs_path from the original URL, to get
      the URL to the repository root. */
-  urlbuf = svn_stringbuf_create (URL, pool);
-  svn_path_remove_components (urlbuf,
-                              svn_path_component_count (*fs_path));
+  urlbuf = svn_stringbuf_create(URL, pool);
+  svn_path_remove_components(urlbuf,
+                             svn_path_component_count(*fs_path));
   *repos_url = urlbuf->data;
 
   return SVN_NO_ERROR;

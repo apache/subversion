@@ -83,7 +83,7 @@ typedef struct
    filesystem paths should begin with '/', and all redundant and trailing '/'
    characters be removed.  */
 const char *
-svn_fs_base__canonicalize_abspath (const char *path, apr_pool_t *pool);
+svn_fs_base__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
 
 /*** Filesystem Revision ***/

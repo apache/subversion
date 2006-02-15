@@ -47,11 +47,11 @@
 
 
 const char *
-svn_path_internal_style (const char *path, apr_pool_t *pool)
+svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
-      char *p = apr_pstrdup (pool, path);
+      char *p = apr_pstrdup(pool, path);
       path = p;
 
       /* Convert all local-style separators to the canonical ones. */
@@ -60,15 +60,15 @@ svn_path_internal_style (const char *path, apr_pool_t *pool)
           *p = '/';
     }
 
-  return svn_path_canonicalize (path, pool);
+  return svn_path_canonicalize(path, pool);
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 }
 
 
 const char *
-svn_path_local_style (const char *path, apr_pool_t *pool)
+svn_path_local_style(const char *path, apr_pool_t *pool)
 {
-  path = svn_path_canonicalize (path, pool);
+  path = svn_path_canonicalize(path, pool);
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 
   /* Internally, Subversion represents the current directory with the
@@ -78,7 +78,7 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
-      char *p = apr_pstrdup (pool, path);
+      char *p = apr_pstrdup(pool, path);
       path = p;
 
       /* Convert all canonical separators to the local-style ones. */
@@ -94,49 +94,49 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 
 #ifndef NDEBUG
 static svn_boolean_t
-is_canonical (const char *path,
-              apr_size_t len)
+is_canonical(const char *path,
+             apr_size_t len)
 {
-  return (! SVN_PATH_IS_PLATFORM_EMPTY (path, len)
+  return (! SVN_PATH_IS_PLATFORM_EMPTY(path, len)
           && (len <= 1 || path[len-1] != '/'));
 }
 #endif
 
 
-char *svn_path_join (const char *base,
-                     const char *component,
-                     apr_pool_t *pool)
+char *svn_path_join(const char *base,
+                    const char *component,
+                    apr_pool_t *pool)
 {
-  apr_size_t blen = strlen (base);
-  apr_size_t clen = strlen (component);
+  apr_size_t blen = strlen(base);
+  apr_size_t clen = strlen(component);
   char *path;
 
-  assert (is_canonical (base, blen));
-  assert (is_canonical (component, clen));
+  assert(is_canonical(base, blen));
+  assert(is_canonical(component, clen));
 
   /* If the component is absolute, then return it.  */
   if (*component == '/')
-    return apr_pmemdup (pool, component, clen + 1);
+    return apr_pmemdup(pool, component, clen + 1);
 
   /* If either is empty return the other */
-  if (SVN_PATH_IS_EMPTY (base))
-    return apr_pmemdup (pool, component, clen + 1);
-  if (SVN_PATH_IS_EMPTY (component))
-    return apr_pmemdup (pool, base, blen + 1);
+  if (SVN_PATH_IS_EMPTY(base))
+    return apr_pmemdup(pool, component, clen + 1);
+  if (SVN_PATH_IS_EMPTY(component))
+    return apr_pmemdup(pool, base, blen + 1);
 
   if (blen == 1 && base[0] == '/')
     blen = 0; /* Ignore base, just return separator + component */
 
   /* Construct the new, combined path. */
-  path = apr_palloc (pool, blen + 1 + clen + 1);
-  memcpy (path, base, blen);
+  path = apr_palloc(pool, blen + 1 + clen + 1);
+  memcpy(path, base, blen);
   path[blen] = '/';
-  memcpy (path + blen + 1, component, clen + 1);
+  memcpy(path + blen + 1, component, clen + 1);
 
   return path;
 }
 
-char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
+char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
 {
 #define MAX_SAVED_LENGTHS 10
   apr_size_t saved_lengths[MAX_SAVED_LENGTHS];
@@ -150,15 +150,15 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
   svn_boolean_t base_is_empty = FALSE, base_is_root = FALSE;
   int base_arg = 0;
 
-  total_len = strlen (base);
+  total_len = strlen(base);
 
-  assert (is_canonical (base, total_len));
+  assert(is_canonical(base, total_len));
 
   if (total_len == 1 && *base == '/')
     base_is_root = TRUE;
-  else if (SVN_PATH_IS_EMPTY (base))
+  else if (SVN_PATH_IS_EMPTY(base))
     {
-      total_len = sizeof (SVN_EMPTY_PATH) - 1;
+      total_len = sizeof(SVN_EMPTY_PATH) - 1;
       base_is_empty = TRUE;
     }
 
@@ -167,14 +167,14 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
   /* Compute the length of the resulting string. */
 
   nargs = 0;
-  va_start (va, base);
-  while ((s = va_arg (va, const char *)) != NULL)
+  va_start(va, base);
+  while ((s = va_arg(va, const char *)) != NULL)
     {
-      len = strlen (s);
+      len = strlen(s);
 
-      assert (is_canonical (s, len));
+      assert(is_canonical(s, len));
 
-      if (SVN_PATH_IS_EMPTY (s))
+      if (SVN_PATH_IS_EMPTY(s))
         continue;
 
       if (nargs++ < MAX_SAVED_LENGTHS)
@@ -209,21 +209,21 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
           total_len += 1 + len;
         }
     }
-  va_end (va);
+  va_end(va);
 
   /* base == "/" and no further components. just return that. */
   if (base_is_root && total_len == 1)
-    return apr_pmemdup (pool, "/", 2);
+    return apr_pmemdup(pool, "/", 2);
 
   /* we got the total size. allocate it, with room for a NULL character. */
-  path = p = apr_palloc (pool, total_len + 1);
+  path = p = apr_palloc(pool, total_len + 1);
 
   /* if we aren't supposed to skip forward to an absolute component, and if
      this is not an empty base that we are skipping, then copy the base
      into the output. */
-  if (base_arg == 0 && ! (SVN_PATH_IS_EMPTY (base) && ! base_is_empty))
+  if (base_arg == 0 && ! (SVN_PATH_IS_EMPTY(base) && ! base_is_empty))
     {
-      if (SVN_PATH_IS_EMPTY (base))
+      if (SVN_PATH_IS_EMPTY(base))
         memcpy(p, SVN_EMPTY_PATH, len = saved_lengths[0]);
       else
         memcpy(p, base, len = saved_lengths[0]);
@@ -231,10 +231,10 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
     }
 
   nargs = 0;
-  va_start (va, base);
-  while ((s = va_arg (va, const char *)) != NULL)
+  va_start(va, base);
+  while ((s = va_arg(va, const char *)) != NULL)
     {
-      if (SVN_PATH_IS_EMPTY (s))
+      if (SVN_PATH_IS_EMPTY(s))
         continue;
 
       if (++nargs < base_arg)
@@ -243,7 +243,7 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
       if (nargs < MAX_SAVED_LENGTHS)
         len = saved_lengths[nargs];
       else
-        len = strlen (s);
+        len = strlen(s);
 
       /* insert a separator if we aren't copying in the first component
          (which can happen when base_arg is set). also, don't put in a slash
@@ -253,13 +253,13 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
         *p++ = '/';
 
       /* copy the new component and advance the pointer */
-      memcpy (p, s, len);
+      memcpy(p, s, len);
       p += len;
     }
-  va_end (va);
+  va_end(va);
 
   *p = '\0';
-  assert ((apr_size_t)(p - path) == total_len);
+  assert((apr_size_t)(p - path) == total_len);
 
   return path;
 }
@@ -267,11 +267,11 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
 
 
 apr_size_t
-svn_path_component_count (const char *path)
+svn_path_component_count(const char *path)
 {
   apr_size_t count = 0;
 
-  assert (is_canonical (path, strlen (path)));
+  assert(is_canonical(path, strlen(path)));
 
   while (*path)
     {
@@ -300,8 +300,8 @@ svn_path_component_count (const char *path)
  * previous segments.
  */
 static apr_size_t
-previous_segment (const char *path,
-                  apr_size_t len)
+previous_segment(const char *path,
+                 apr_size_t len)
 {
   if (len == 0)
     return 0;
@@ -316,65 +316,65 @@ previous_segment (const char *path,
 }
 
 void
-svn_path_add_component (svn_stringbuf_t *path, 
-                        const char *component)
+svn_path_add_component(svn_stringbuf_t *path, 
+                       const char *component)
 {
-  apr_size_t len = strlen (component);
+  apr_size_t len = strlen(component);
 
-  assert (is_canonical (path->data, path->len));
-  assert (is_canonical (component, len));
+  assert(is_canonical(path->data, path->len));
+  assert(is_canonical(component, len));
 
   /* Append a dir separator, but only if this path is neither empty
      nor consists of a single dir separator already. */
-  if ((! SVN_PATH_IS_EMPTY (path->data))
+  if ((! SVN_PATH_IS_EMPTY(path->data))
       && (! ((path->len == 1) && (*(path->data) == '/'))))
     {
       char dirsep = '/';
-      svn_stringbuf_appendbytes (path, &dirsep, sizeof (dirsep));
+      svn_stringbuf_appendbytes(path, &dirsep, sizeof(dirsep));
     }
 
-  svn_stringbuf_appendbytes (path, component, len);
+  svn_stringbuf_appendbytes(path, component, len);
 }
 
 
 void
-svn_path_remove_component (svn_stringbuf_t *path)
+svn_path_remove_component(svn_stringbuf_t *path)
 {
-  assert (is_canonical (path->data, path->len));
+  assert(is_canonical(path->data, path->len));
 
   path->len = previous_segment(path->data, path->len);
   path->data[path->len] = '\0';
 }
 
 void
-svn_path_remove_components (svn_stringbuf_t *path, apr_size_t n)
+svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n)
 {
   while (n > 0)
     {
-      svn_path_remove_component (path);
+      svn_path_remove_component(path);
       n--;
     }
 }
 
 
 char *
-svn_path_dirname (const char *path, apr_pool_t *pool)
+svn_path_dirname(const char *path, apr_pool_t *pool)
 {
-  apr_size_t len = strlen (path);
+  apr_size_t len = strlen(path);
 
-  assert (is_canonical (path, len));
+  assert(is_canonical(path, len));
 
-  return apr_pstrmemdup (pool, path, previous_segment(path, len));
+  return apr_pstrmemdup(pool, path, previous_segment(path, len));
 }
 
 
 char *
-svn_path_basename (const char *path, apr_pool_t *pool)
+svn_path_basename(const char *path, apr_pool_t *pool)
 {
-  apr_size_t len = strlen (path);
+  apr_size_t len = strlen(path);
   apr_size_t start;
 
-  assert (is_canonical (path, len));
+  assert(is_canonical(path, len));
 
   if (len == 1 && path[0] == '/')
     start = 0;
@@ -385,33 +385,33 @@ svn_path_basename (const char *path, apr_pool_t *pool)
         --start;
     }
 
-  return apr_pstrmemdup (pool, path + start, len - start);
+  return apr_pstrmemdup(pool, path + start, len - start);
 }
 
 
 
 void
-svn_path_split (const char *path,
-                const char **dirpath,
-                const char **base_name,
-                apr_pool_t *pool)
+svn_path_split(const char *path,
+               const char **dirpath,
+               const char **base_name,
+               apr_pool_t *pool)
 {
-  assert (dirpath != base_name);
+  assert(dirpath != base_name);
 
   if (dirpath)
-    *dirpath = svn_path_dirname (path, pool);
+    *dirpath = svn_path_dirname(path, pool);
 
   if (base_name)
-    *base_name = svn_path_basename (path, pool);
+    *base_name = svn_path_basename(path, pool);
 }
 
 
 int
-svn_path_is_empty (const char *path)
+svn_path_is_empty(const char *path)
 {
   /* assert (is_canonical (path, strlen (path))); ### Expensive strlen */
 
-  if (SVN_PATH_IS_EMPTY (path))
+  if (SVN_PATH_IS_EMPTY(path))
     return 1;
 
   return 0;
@@ -419,16 +419,16 @@ svn_path_is_empty (const char *path)
 
 
 int
-svn_path_compare_paths (const char *path1,
-                        const char *path2)
+svn_path_compare_paths(const char *path1,
+                       const char *path2)
 {
-  apr_size_t path1_len = strlen (path1);
-  apr_size_t path2_len = strlen (path2);
+  apr_size_t path1_len = strlen(path1);
+  apr_size_t path2_len = strlen(path2);
   apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
   apr_size_t i = 0;
 
-  assert (is_canonical (path1, path1_len));
-  assert (is_canonical (path2, path2_len));
+  assert(is_canonical(path1, path1_len));
+  assert(is_canonical(path2, path2_len));
 
   /* Skip past common prefix. */
   while (i < min_len && path1[i] == path2[i])
@@ -466,18 +466,18 @@ svn_path_compare_paths (const char *path1,
  * New strings are allocated in POOL.
  */
 static apr_size_t
-get_path_ancestor_length (const char *path1,
-                          const char *path2,
-                          apr_pool_t *pool)
+get_path_ancestor_length(const char *path1,
+                         const char *path2,
+                         apr_pool_t *pool)
 {
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
   
-  path1_len = strlen (path1);
-  path2_len = strlen (path2);
+  path1_len = strlen(path1);
+  path2_len = strlen(path2);
 
-  if (SVN_PATH_IS_EMPTY (path1) || SVN_PATH_IS_EMPTY (path2))
+  if (SVN_PATH_IS_EMPTY(path1) || SVN_PATH_IS_EMPTY(path2))
     return 0;
 
   while (path1[i] == path2[i])
@@ -506,13 +506,13 @@ get_path_ancestor_length (const char *path1,
 
 
 char *
-svn_path_get_longest_ancestor (const char *path1,
-                               const char *path2,
-                               apr_pool_t *pool)
+svn_path_get_longest_ancestor(const char *path1,
+                              const char *path2,
+                              apr_pool_t *pool)
 {
   svn_boolean_t path1_is_url, path2_is_url;
-  path1_is_url = svn_path_is_url (path1);
-  path2_is_url = svn_path_is_url (path2);
+  path1_is_url = svn_path_is_url(path1);
+  path2_is_url = svn_path_is_url(path2);
 
   if (path1_is_url && path2_is_url) 
     {
@@ -524,47 +524,47 @@ svn_path_get_longest_ancestor (const char *path1,
         {
           /* No shared protocol => no common prefix */
           if (path1[i] != path2[i])
-            return apr_pmemdup (pool, SVN_EMPTY_PATH, 
-                                sizeof (SVN_EMPTY_PATH));
+            return apr_pmemdup(pool, SVN_EMPTY_PATH, 
+                               sizeof(SVN_EMPTY_PATH));
 
           if (path1[i] == ':') 
             break;
 
           /* They're both URLs, so EOS can't come before ':' */
-          assert ((path1[i] != '\0') && (path2[i] != '\0'));
+          assert((path1[i] != '\0') && (path2[i] != '\0'));
 
           i++;
         }
 
       i += 3;  /* Advance past '://' */
 
-      path_ancestor_len = get_path_ancestor_length (path1 + i, path2 + i, 
-                                                    pool);
+      path_ancestor_len = get_path_ancestor_length(path1 + i, path2 + i, 
+                                                   pool);
 
       if (path_ancestor_len == 0)
-        return apr_pmemdup (pool, SVN_EMPTY_PATH, sizeof (SVN_EMPTY_PATH));
+        return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
       else
-        return apr_pstrndup (pool, path1, path_ancestor_len + i); 
+        return apr_pstrndup(pool, path1, path_ancestor_len + i); 
     }
 
   else if ((! path1_is_url) && (! path2_is_url))
     { 
-      return apr_pstrndup (pool, path1, 
-                           get_path_ancestor_length (path1, path2, pool));
+      return apr_pstrndup(pool, path1, 
+                          get_path_ancestor_length(path1, path2, pool));
     }
 
   else
     {
       /* A URL and a non-URL => no common prefix */
-      return apr_pmemdup (pool, SVN_EMPTY_PATH, sizeof (SVN_EMPTY_PATH));
+      return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
     }
 }
 
 
 const char *
-svn_path_is_child (const char *path1,
-                   const char *path2,
-                   apr_pool_t *pool)
+svn_path_is_child(const char *path1,
+                  const char *path2,
+                  apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -572,13 +572,13 @@ svn_path_is_child (const char *path1,
   /* assert (is_canonical (path2, strlen (path2)));  ### Expensive strlen */
 
   /* Allow "" and "foo" to be parent/child */
-  if (SVN_PATH_IS_EMPTY (path1))               /* "" is the parent  */
+  if (SVN_PATH_IS_EMPTY(path1))               /* "" is the parent  */
     {
-      if (SVN_PATH_IS_EMPTY (path2)            /* "" not a child    */
+      if (SVN_PATH_IS_EMPTY(path2)            /* "" not a child    */
           || path2[0] == '/')                  /* "/foo" not a child */
         return NULL;
       else
-        return apr_pstrdup (pool, path2);      /* everything else is child */
+        return apr_pstrdup(pool, path2);      /* everything else is child */
     }
 
   /* Reach the end of at least one of the paths.  How should we handle
@@ -599,9 +599,9 @@ svn_path_is_child (const char *path1,
   if (path1[i] == '\0' && path2[i])
     {
       if (path2[i] == '/')
-        return apr_pstrdup (pool, path2 + i + 1);
+        return apr_pstrdup(pool, path2 + i + 1);
       else if (i == 1 && path1[0] == '/')
-        return apr_pstrdup (pool, path2 + 1);
+        return apr_pstrdup(pool, path2 + 1);
     }
 
   /* Otherwise, path2 isn't a child. */
@@ -609,12 +609,12 @@ svn_path_is_child (const char *path1,
 }
 
 svn_boolean_t
-svn_path_is_ancestor (const char *path1, const char *path2)
+svn_path_is_ancestor(const char *path1, const char *path2)
 {
-  apr_size_t path1_len = strlen (path1);
+  apr_size_t path1_len = strlen(path1);
 
   /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
-  if (SVN_PATH_IS_EMPTY (path1))
+  if (SVN_PATH_IS_EMPTY(path1))
     return *path2 != '/';
 
   /* If path1 is a prefix of path2, then:
@@ -623,24 +623,24 @@ svn_path_is_ancestor (const char *path1, const char *path2)
      OR
      - path2 starts a new path component after the common prefix,
      then path1 is an ancestor. */
-  if (strncmp (path1, path2, path1_len) == 0)
+  if (strncmp(path1, path2, path1_len) == 0)
     return path1[path1_len - 1] == '/'
       || (path2[path1_len] == '/' || path2[path1_len] == '\0');
 
   return FALSE;
 }
 apr_array_header_t *
-svn_path_decompose (const char *path,
-                    apr_pool_t *pool)
+svn_path_decompose(const char *path,
+                   apr_pool_t *pool)
 {
   apr_size_t i, oldi;
 
   apr_array_header_t *components = 
-    apr_array_make (pool, 1, sizeof(const char *));
+    apr_array_make(pool, 1, sizeof(const char *));
 
   /* assert (is_canonical (path, strlen (path)));  ### Expensive strlen */
 
-  if (SVN_PATH_IS_EMPTY (path))
+  if (SVN_PATH_IS_EMPTY(path))
     return components;  /* ### Should we return a "" component? */
 
   /* If PATH is absolute, store the '/' as the first component. */
@@ -649,8 +649,8 @@ svn_path_decompose (const char *path,
     {
       char dirsep = '/';
 
-      *((const char **) apr_array_push (components))
-        = apr_pstrmemdup (pool, &dirsep, sizeof (dirsep));
+      *((const char **) apr_array_push(components))
+        = apr_pstrmemdup(pool, &dirsep, sizeof(dirsep));
 
       i++;
       oldi++;
@@ -662,11 +662,11 @@ svn_path_decompose (const char *path,
     {
       if ((path[i] == '/') || (path[i] == '\0'))
         {
-          if (SVN_PATH_IS_PLATFORM_EMPTY (path + oldi, i - oldi))
-            *((const char **) apr_array_push (components)) = SVN_EMPTY_PATH;
+          if (SVN_PATH_IS_PLATFORM_EMPTY(path + oldi, i - oldi))
+            *((const char **) apr_array_push(components)) = SVN_EMPTY_PATH;
           else
-            *((const char **) apr_array_push (components))
-              = apr_pstrmemdup (pool, path + oldi, i - oldi);
+            *((const char **) apr_array_push(components))
+              = apr_pstrmemdup(pool, path + oldi, i - oldi);
 
           i++;
           oldi = i;  /* skipping past the dirsep */
@@ -681,17 +681,17 @@ svn_path_decompose (const char *path,
 
 
 svn_boolean_t
-svn_path_is_single_path_component (const char *name)
+svn_path_is_single_path_component(const char *name)
 {
   /* assert (is_canonical (name, strlen (name)));  ### Expensive strlen */
 
   /* Can't be empty or `..'  */
-  if (SVN_PATH_IS_EMPTY (name)
+  if (SVN_PATH_IS_EMPTY(name)
       || (name[0] == '.' && name[1] == '.' && name[2] == '\0'))
     return FALSE;
 
   /* Slashes are bad, m'kay... */
-  if (strchr (name, '/') != NULL)
+  if (strchr(name, '/') != NULL)
     return FALSE;
 
   /* It is valid.  */
@@ -700,21 +700,21 @@ svn_path_is_single_path_component (const char *name)
 
 
 svn_boolean_t
-svn_path_is_backpath_present (const char *path)
+svn_path_is_backpath_present(const char *path)
 {
-  int len = strlen (path);
+  int len = strlen(path);
   
-  if (! strcmp (path, ".."))
+  if (! strcmp(path, ".."))
     return TRUE;
 
-  if (! strncmp (path, "../", 3))
+  if (! strncmp(path, "../", 3))
     return TRUE;
   
-  if (strstr (path, "/../") != NULL)
+  if (strstr(path, "/../") != NULL)
     return TRUE;
 
   if (len >= 3
-      && (! strncmp (path + len - 3, "/..", 3)))
+      && (! strncmp(path + len - 3, "/..", 3)))
     return TRUE;
 
   return FALSE;
@@ -728,7 +728,7 @@ svn_path_is_backpath_present (const char *path)
    NULL if PATH doesn't appear to be a valid URI.  The returned value
    is not alloced -- it shares memory with PATH. */
 static const char *
-skip_uri_scheme (const char *path)
+skip_uri_scheme(const char *path)
 {
   apr_size_t j;
 
@@ -743,7 +743,7 @@ skip_uri_scheme (const char *path)
 }
 
 svn_boolean_t 
-svn_path_is_url (const char *path)
+svn_path_is_url(const char *path)
 {
   /* ### This function is reaaaaaaaaaaaaaally stupid right now.
      We're just going to look for:
@@ -754,7 +754,7 @@ svn_path_is_url (const char *path)
 
      Someday it might be nice to have an actual URI parser here.
   */
-  return skip_uri_scheme (path) ? TRUE : FALSE;
+  return skip_uri_scheme(path) ? TRUE : FALSE;
 }
 
 
@@ -798,19 +798,19 @@ static const char uri_char_validity[256] = {
 };
 
 svn_boolean_t 
-svn_path_is_uri_safe (const char *path)
+svn_path_is_uri_safe(const char *path)
 {
   apr_size_t i;
 
   /* Skip the URI scheme. */
-  path = skip_uri_scheme (path);
+  path = skip_uri_scheme(path);
 
   /* No scheme?  Get outta here. */
   if (! path)
     return FALSE;
 
   /* Skip to the first slash that's after the URI scheme. */
-  path = strchr (path, '/');
+  path = strchr(path, '/');
 
   /* If there's no first slash, then there's only a host portion;
      therefore there couldn't be any uri-unsafe characters after the
@@ -823,7 +823,7 @@ svn_path_is_uri_safe (const char *path)
       /* Allow '%XX' (where each X is a hex digit) */
       if (path[i] == '%')
         {
-          if (apr_isxdigit (path[i + 1]) && apr_isxdigit (path[i + 2]))
+          if (apr_isxdigit(path[i + 1]) && apr_isxdigit(path[i + 2]))
             {
               i += 2;
               continue;
@@ -843,13 +843,13 @@ svn_path_is_uri_safe (const char *path)
    If no encoding was needed, return PATH, else return a new string allocated
    in POOL. */
 static const char *
-uri_escape (const char *path, const char table[], apr_pool_t *pool)
+uri_escape(const char *path, const char table[], apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
   int c;
 
-  retstr = svn_stringbuf_create ("", pool);
+  retstr = svn_stringbuf_create("", pool);
   for (i = 0; path[i]; i++)
     {
       c = (unsigned char)path[i];
@@ -863,8 +863,8 @@ uri_escape (const char *path, const char table[], apr_pool_t *pool)
       /* First things first, copy all the good stuff that we haven't
          yet copied into our output buffer. */
       if (i - copied)
-        svn_stringbuf_appendbytes (retstr, path + copied, 
-                                   i - copied);
+        svn_stringbuf_appendbytes(retstr, path + copied, 
+                                  i - copied);
       
       /* Now, sprintf() in our escaped character, making sure our
          buffer is big enough to hold the '%' and two digits.  We cast
@@ -872,8 +872,8 @@ uri_escape (const char *path, const char table[], apr_pool_t *pool)
          will be tempted to treat it as an unsigned int...which causes
          problem when messing with 0x80-0xFF chars.  We also need space
          for a null as sprintf will write one. */
-      svn_stringbuf_ensure (retstr, retstr->len + 4);
-      sprintf (retstr->data + retstr->len, "%%%02X", (unsigned char)c);
+      svn_stringbuf_ensure(retstr, retstr->len + 4);
+      sprintf(retstr->data + retstr->len, "%%%02X", (unsigned char)c);
       retstr->len += 3;
 
       /* Finally, update our copy counter. */
@@ -886,7 +886,7 @@ uri_escape (const char *path, const char table[], apr_pool_t *pool)
 
   /* Anything left to copy? */
   if (i - copied)
-    svn_stringbuf_appendbytes (retstr, path + copied, i - copied);
+    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
 
   /* retstr is null-terminated either by sprintf or the svn_stringbuf
      functions. */
@@ -895,15 +895,15 @@ uri_escape (const char *path, const char table[], apr_pool_t *pool)
 }
 
 const char *
-svn_path_uri_encode (const char *path, apr_pool_t *pool)
+svn_path_uri_encode(const char *path, apr_pool_t *pool)
 {
   const char *ret;
 
-  ret = uri_escape (path, uri_char_validity, pool);
+  ret = uri_escape(path, uri_char_validity, pool);
 
   /* Our interface guarantees a copy. */
   if (ret == path)
-    return apr_pstrdup (pool, path);
+    return apr_pstrdup(pool, path);
   else
     return ret;
 }
@@ -930,9 +930,9 @@ static const char iri_escape_chars[256] = {
 };
 
 const char *
-svn_path_uri_from_iri (const char *iri, apr_pool_t *pool)
+svn_path_uri_from_iri(const char *iri, apr_pool_t *pool)
 {
-  return uri_escape (iri, iri_escape_chars, pool);
+  return uri_escape(iri, iri_escape_chars, pool);
 }
 
 const char uri_autoescape_chars[256] = {
@@ -961,22 +961,22 @@ const char uri_autoescape_chars[256] = {
 };
 
 const char *
-svn_path_uri_autoescape (const char *uri, apr_pool_t *pool)
+svn_path_uri_autoescape(const char *uri, apr_pool_t *pool)
 {
-  return uri_escape (uri, uri_autoescape_chars, pool);
+  return uri_escape(uri, uri_autoescape_chars, pool);
 }
 
 const char *
-svn_path_uri_decode (const char *path, apr_pool_t *pool)
+svn_path_uri_decode(const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i;
   svn_boolean_t query_start = FALSE;
 
-  retstr = svn_stringbuf_create ("", pool);
+  retstr = svn_stringbuf_create("", pool);
 
   /* avoid repeated realloc */
-  svn_stringbuf_ensure (retstr, strlen (path) + 1); 
+  svn_stringbuf_ensure(retstr, strlen(path) + 1); 
 
   retstr->len = 0;
   for (i = 0; path[i]; i++)
@@ -994,14 +994,14 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
            * RFC 2396, section 3.3  */
           c = ' ';
         }
-      else if (c == '%' && apr_isxdigit (path[i + 1])
-               && apr_isxdigit (path[i+2]))
+      else if (c == '%' && apr_isxdigit(path[i + 1])
+               && apr_isxdigit(path[i+2]))
         {
           char digitz[3];
           digitz[0] = path[++i];
           digitz[1] = path[++i];
           digitz[2] = '\0';
-          c = (char)(strtol (digitz, NULL, 16));
+          c = (char)(strtol(digitz, NULL, 16));
         }
 
       retstr->data[retstr->len++] = c;
@@ -1015,14 +1015,14 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
 
 
 const char *
-svn_path_url_add_component (const char *url,
-                            const char *component,
-                            apr_pool_t *pool)
+svn_path_url_add_component(const char *url,
+                           const char *component,
+                           apr_pool_t *pool)
 {
   /* URL can have trailing '/' */
-  url = svn_path_canonicalize (url, pool);
+  url = svn_path_canonicalize(url, pool);
 
-  return svn_path_join (url, svn_path_uri_encode (component, pool), pool);
+  return svn_path_join(url, svn_path_uri_encode(component, pool), pool);
 }
 
 svn_error_t *
@@ -1039,12 +1039,12 @@ svn_path_get_absolute(const char **pabsolute,
   apr_status_t apr_err;
   const char *path_apr;
 
-  SVN_ERR (svn_path_cstring_from_utf8
-           (&path_apr, svn_path_canonicalize (relative, pool), pool));
+  SVN_ERR(svn_path_cstring_from_utf8
+          (&path_apr, svn_path_canonicalize(relative, pool), pool));
 
-  if (svn_path_is_url (path_apr))
+  if (svn_path_is_url(path_apr))
     {
-      buffer = apr_pstrdup (pool, path_apr);
+      buffer = apr_pstrdup(pool, path_apr);
     }
   else
     {
@@ -1057,11 +1057,11 @@ svn_path_get_absolute(const char **pabsolute,
       if (apr_err)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  _("Couldn't determine absolute path of '%s'"), 
-                                 svn_path_local_style (relative, pool));
+                                 svn_path_local_style(relative, pool));
     }
 
-  SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
-  *pabsolute = svn_path_canonicalize (*pabsolute, pool);
+  SVN_ERR(svn_path_cstring_to_utf8(pabsolute, buffer, pool));
+  *pabsolute = svn_path_canonicalize(*pabsolute, pool);
   return SVN_NO_ERROR;
 }
 
@@ -1084,7 +1084,7 @@ svn_path_split_if_file(const char *path,
   if (err || finfo.filetype == APR_REG)
     {
       if (err)
-        svn_error_clear (err);
+        svn_error_clear(err);
       svn_path_split(path, pdirectory, pfile, pool);
     }
   else if (finfo.filetype == APR_DIR)
@@ -1104,7 +1104,7 @@ svn_path_split_if_file(const char *path,
 
 
 const char *
-svn_path_canonicalize (const char *path, apr_pool_t *pool)
+svn_path_canonicalize(const char *path, apr_pool_t *pool)
 {
   char *canon, *dst;
   const char *src;
@@ -1112,14 +1112,14 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   apr_size_t canon_segments = 0;
   svn_boolean_t uri;
 
-  dst = canon = apr_pcalloc (pool, strlen (path) + 1);
+  dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
   /* Copy over the URI scheme if present. */
-  src = skip_uri_scheme (path);
+  src = skip_uri_scheme(path);
   if (src)
     {
       uri = TRUE;
-      memcpy (dst, path, src - path);
+      memcpy(dst, path, src - path);
       dst += (src - path);
     }
   else
@@ -1162,7 +1162,7 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
           /* An actual segment, append it to the destination path */
           if (*next)
             seglen++;
-          memcpy (dst, src, seglen);
+          memcpy(dst, src, seglen);
           dst += seglen;
           canon_segments++;
         }
@@ -1193,15 +1193,15 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 
 /** Get APR's internal path encoding. */
 static svn_error_t *
-get_path_encoding (svn_boolean_t *path_is_utf8, apr_pool_t *pool)
+get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   int encoding_style;
 
-  apr_err = apr_filepath_encoding (&encoding_style, pool);
+  apr_err = apr_filepath_encoding(&encoding_style, pool);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err,
-                               _("Can't determine the native path encoding"));
+    return svn_error_wrap_apr(apr_err,
+                              _("Can't determine the native path encoding"));
 
   /* ### What to do about APR_FILEPATH_ENCODING_UNKNOWN?
      Well, for now we'll just punt to the svn_utf_ functions;
@@ -1212,40 +1212,40 @@ get_path_encoding (svn_boolean_t *path_is_utf8, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_path_cstring_from_utf8 (const char **path_apr,
-                            const char *path_utf8,
-                            apr_pool_t *pool)
+svn_path_cstring_from_utf8(const char **path_apr,
+                           const char *path_utf8,
+                           apr_pool_t *pool)
 {
   svn_boolean_t path_is_utf8;
-  SVN_ERR (get_path_encoding (&path_is_utf8, pool));
+  SVN_ERR(get_path_encoding(&path_is_utf8, pool));
   if (path_is_utf8)
     {
-      *path_apr = apr_pstrdup (pool, path_utf8);
+      *path_apr = apr_pstrdup(pool, path_utf8);
       return SVN_NO_ERROR;
     }
   else
-    return svn_utf_cstring_from_utf8 (path_apr, path_utf8, pool);
+    return svn_utf_cstring_from_utf8(path_apr, path_utf8, pool);
 }
 
 
 svn_error_t *
-svn_path_cstring_to_utf8 (const char **path_utf8,
-                          const char *path_apr,
-                          apr_pool_t *pool)
+svn_path_cstring_to_utf8(const char **path_utf8,
+                         const char *path_apr,
+                         apr_pool_t *pool)
 {
   svn_boolean_t path_is_utf8;
-  SVN_ERR (get_path_encoding (&path_is_utf8, pool));
+  SVN_ERR(get_path_encoding(&path_is_utf8, pool));
   if (path_is_utf8)
     {
-      *path_utf8 = apr_pstrdup (pool, path_apr);
+      *path_utf8 = apr_pstrdup(pool, path_apr);
       return SVN_NO_ERROR;
     }
   else
-    return svn_utf_cstring_to_utf8 (path_utf8, path_apr, pool);
+    return svn_utf_cstring_to_utf8(path_utf8, path_apr, pool);
 }
 
 svn_error_t *
-svn_path_check_valid (const char *path, apr_pool_t *pool)
+svn_path_check_valid(const char *path, apr_pool_t *pool)
 {
   const char *c;
 
@@ -1253,11 +1253,11 @@ svn_path_check_valid (const char *path, apr_pool_t *pool)
     {
       if (svn_ctype_iscntrl(*c))
         {
-          return svn_error_createf (
-            SVN_ERR_FS_PATH_SYNTAX, NULL,
-            _("Invalid control character '0x%02x' in path '%s'"),
-            *c,
-            svn_path_local_style (path, pool));
+          return svn_error_createf
+            (SVN_ERR_FS_PATH_SYNTAX, NULL,
+             _("Invalid control character '0x%02x' in path '%s'"),
+             *c,
+             svn_path_local_style(path, pool));
         }
     }
 

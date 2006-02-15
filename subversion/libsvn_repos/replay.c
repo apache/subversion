@@ -130,45 +130,45 @@ struct path_driver_cb_baton
    unavailable because of authz and we need to use it as the source of
    a copy. */
 static svn_error_t *
-add_subdir (svn_fs_root_t *source_root,
-            svn_fs_root_t *target_root,
-            const svn_delta_editor_t *editor,
-            void *edit_baton,
-            const char *path,
-            void *parent_baton,
-            const char *source_path,
-            svn_repos_authz_func_t authz_read_func,
-            void *authz_read_baton,
-            apr_pool_t *pool,
-            void **dir_baton)
+add_subdir(svn_fs_root_t *source_root,
+           svn_fs_root_t *target_root,
+           const svn_delta_editor_t *editor,
+           void *edit_baton,
+           const char *path,
+           void *parent_baton,
+           const char *source_path,
+           svn_repos_authz_func_t authz_read_func,
+           void *authz_read_baton,
+           apr_pool_t *pool,
+           void **dir_baton)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   apr_hash_t *dirents;
 
-  SVN_ERR (editor->add_directory (path, parent_baton, NULL,
-                                  SVN_INVALID_REVNUM, pool, dir_baton));
+  SVN_ERR(editor->add_directory(path, parent_baton, NULL,
+                                SVN_INVALID_REVNUM, pool, dir_baton));
 
-  SVN_ERR (svn_fs_dir_entries (&dirents, source_root, source_path, pool));
+  SVN_ERR(svn_fs_dir_entries(&dirents, source_root, source_path, pool));
 
-  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent;
       const char *new_path;
       void *val;
 
-      svn_pool_clear (subpool);
+      svn_pool_clear(subpool);
 
-      apr_hash_this (hi, NULL, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
 
       dent = val;
 
-      new_path = svn_path_join (path, dent->name, subpool);
+      new_path = svn_path_join(path, dent->name, subpool);
 
       if (authz_read_func)
-        SVN_ERR (authz_read_func (&readable, target_root, new_path,
-                                  authz_read_baton, pool));
+        SVN_ERR(authz_read_func(&readable, target_root, new_path,
+                                authz_read_baton, pool));
 
       if (! readable)
         continue;
@@ -177,14 +177,14 @@ add_subdir (svn_fs_root_t *source_root,
         {
           void *new_dir_baton;
 
-          SVN_ERR (add_subdir (source_root, target_root, editor, edit_baton,
-                               new_path, *dir_baton,
-                               svn_path_join (source_path, dent->name,
-                                              subpool),
-                               authz_read_func, authz_read_baton,
-                               subpool, &new_dir_baton));
+          SVN_ERR(add_subdir(source_root, target_root, editor, edit_baton,
+                             new_path, *dir_baton,
+                             svn_path_join(source_path, dent->name,
+                                           subpool),
+                             authz_read_func, authz_read_baton,
+                             subpool, &new_dir_baton));
 
-          SVN_ERR (editor->close_directory (new_dir_baton, subpool));
+          SVN_ERR(editor->close_directory(new_dir_baton, subpool));
         }
       else if (dent->kind == svn_node_file)
         {
@@ -192,42 +192,42 @@ add_subdir (svn_fs_root_t *source_root,
           void *delta_handler_baton, *file_baton;
           svn_txdelta_stream_t *delta_stream;
 
-          SVN_ERR (editor->add_file (svn_path_join (path, dent->name, subpool),
-                                     *dir_baton, NULL, SVN_INVALID_REVNUM,
-                                     pool, &file_baton));
+          SVN_ERR(editor->add_file(svn_path_join(path, dent->name, subpool),
+                                   *dir_baton, NULL, SVN_INVALID_REVNUM,
+                                   pool, &file_baton));
 
-          SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool, 
-                                            &delta_handler, 
-                                            &delta_handler_baton));
+          SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
+                                          &delta_handler, 
+                                          &delta_handler_baton));
 
-          SVN_ERR (svn_fs_get_file_delta_stream
-                     (&delta_stream, NULL, NULL, source_root,
-                      svn_path_join (source_path, dent->name, subpool),
-                      pool));
+          SVN_ERR(svn_fs_get_file_delta_stream
+                  (&delta_stream, NULL, NULL, source_root,
+                   svn_path_join(source_path, dent->name, subpool),
+                   pool));
 
-          SVN_ERR (svn_txdelta_send_txstream (delta_stream,
-                                              delta_handler,
-                                              delta_handler_baton,
-                                              pool));
+          SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                            delta_handler,
+                                            delta_handler_baton,
+                                            pool));
 
-          SVN_ERR (editor->close_file (file_baton, NULL, pool));
+          SVN_ERR(editor->close_file(file_baton, NULL, pool));
         }
       else
-        abort ();
+        abort();
     }
 
-  svn_pool_destroy (subpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
 
 static svn_boolean_t
-is_within_base_path (const char *path, const char *base_path, int base_len)
+is_within_base_path(const char *path, const char *base_path, int base_len)
 {
   if (base_path[0] == '\0')
     return TRUE;
 
-  if (strncmp (base_path, path, base_len) == 0
+  if (strncmp(base_path, path, base_len) == 0
       && (path[base_len] == '/' || path[base_len] == '\0'))
     return TRUE;
 
@@ -235,11 +235,11 @@ is_within_base_path (const char *path, const char *base_path, int base_len)
 }
 
 static svn_error_t *
-path_driver_cb_func (void **dir_baton,
-                     void *parent_baton,
-                     void *callback_baton,
-                     const char *path,
-                     apr_pool_t *pool)
+path_driver_cb_func(void **dir_baton,
+                    void *parent_baton,
+                    void *callback_baton,
+                    const char *path,
+                    apr_pool_t *pool)
 {
   struct path_driver_cb_baton *cb = callback_baton;
   const svn_delta_editor_t *editor = cb->editor;
@@ -258,7 +258,7 @@ path_driver_cb_func (void **dir_baton,
 
   *dir_baton = NULL;
 
-  change = apr_hash_get (cb->changed_paths, path, APR_HASH_KEY_STRING);
+  change = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
   switch (change->change_kind)
     {
     case svn_fs_path_change_add:
@@ -282,13 +282,13 @@ path_driver_cb_func (void **dir_baton,
 
   /* Handle any deletions. */
   if (do_delete)
-    SVN_ERR (editor->delete_entry (path, SVN_INVALID_REVNUM, 
-                                   parent_baton, pool));
+    SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM, 
+                                 parent_baton, pool));
 
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
     {
-      SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+      SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
       if ((kind != svn_node_dir) && (kind != svn_node_file))
         return svn_error_createf 
           (SVN_ERR_FS_NOT_FOUND, NULL, 
@@ -299,23 +299,23 @@ path_driver_cb_func (void **dir_baton,
   if (do_add)
     {
       /* Was this node copied? */
-      SVN_ERR (svn_fs_copied_from (&copyfrom_rev, &copyfrom_path,
-                                   root, path, pool));
+      SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                 root, path, pool));
 
-      if (copyfrom_path && SVN_IS_VALID_REVNUM (copyfrom_rev))
+      if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
         {
           /* Save the source_root so that we can use it later, when we
              need to generate text deltas. */
 
-          SVN_ERR (svn_fs_revision_root (&source_root,
-                                         svn_fs_root_fs (root),
-                                         copyfrom_rev, pool));
+          SVN_ERR(svn_fs_revision_root(&source_root,
+                                       svn_fs_root_fs(root),
+                                       copyfrom_rev, pool));
 
           if (cb->authz_read_func)
             {
-              SVN_ERR (cb->authz_read_func (&src_readable, source_root,
-                                            copyfrom_path,
-                                            cb->authz_read_baton, pool));
+              SVN_ERR(cb->authz_read_func(&src_readable, source_root,
+                                          copyfrom_path,
+                                          cb->authz_read_baton, pool));
             }
         }
 
@@ -329,20 +329,20 @@ path_driver_cb_func (void **dir_baton,
            */
           if (copyfrom_path
               && (! src_readable 
-                  || ! is_within_base_path (copyfrom_path+1, base_path,
-                                            base_path_len)
+                  || ! is_within_base_path(copyfrom_path+1, base_path,
+                                           base_path_len)
                   || cb->low_water_mark > copyfrom_rev))
             {
-              SVN_ERR (add_subdir (source_root, root, editor, edit_baton,
-                                   path, parent_baton, copyfrom_path,
-                                   cb->authz_read_func, cb->authz_read_baton,
-                                   pool, dir_baton));
+              SVN_ERR(add_subdir(source_root, root, editor, edit_baton,
+                                 path, parent_baton, copyfrom_path,
+                                 cb->authz_read_func, cb->authz_read_baton,
+                                 pool, dir_baton));
             }
           else
             {
-              SVN_ERR (editor->add_directory (path, parent_baton,
-                                              copyfrom_path, copyfrom_rev,
-                                              pool, dir_baton));
+              SVN_ERR(editor->add_directory(path, parent_baton,
+                                            copyfrom_path, copyfrom_rev,
+                                            pool, dir_baton));
             }
         }
       else
@@ -353,16 +353,16 @@ path_driver_cb_func (void **dir_baton,
              all. */
           if (copyfrom_path
               && (! src_readable
-                  || ! is_within_base_path (copyfrom_path+1, base_path,
-                                            base_path_len)
+                  || ! is_within_base_path(copyfrom_path+1, base_path,
+                                           base_path_len)
                   || cb->low_water_mark > copyfrom_rev))
             {
               copyfrom_path = NULL;
               copyfrom_rev = SVN_INVALID_REVNUM;
             }
 
-          SVN_ERR (editor->add_file (path, parent_baton, copyfrom_path,
-                                     copyfrom_rev, pool, &file_baton));
+          SVN_ERR(editor->add_file(path, parent_baton, copyfrom_path,
+                                   copyfrom_rev, pool, &file_baton));
         }
     }
   else if (! do_delete)
@@ -373,20 +373,20 @@ path_driver_cb_func (void **dir_baton,
         {
           if (parent_baton)
             {
-              SVN_ERR (editor->open_directory (path, parent_baton, 
-                                               SVN_INVALID_REVNUM,
-                                               pool, dir_baton));
+              SVN_ERR(editor->open_directory(path, parent_baton, 
+                                             SVN_INVALID_REVNUM,
+                                             pool, dir_baton));
             }
           else
             {
-              SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, 
-                                          pool, dir_baton));
+              SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM, 
+                                        pool, dir_baton));
             }
         }
       else
         {
-          SVN_ERR (editor->open_file (path, parent_baton, SVN_INVALID_REVNUM,
-                                      pool, &file_baton));
+          SVN_ERR(editor->open_file(path, parent_baton, SVN_INVALID_REVNUM,
+                                    pool, &file_baton));
         }
     }
 
@@ -403,36 +403,36 @@ path_driver_cb_func (void **dir_baton,
               int i;
 
               if (change->change_kind != svn_fs_path_change_add)
-                SVN_ERR (svn_fs_node_proplist
-                           (&old_props, cb->compare_root,
-                            copyfrom_path ? copyfrom_path : path, pool));
+                SVN_ERR(svn_fs_node_proplist
+                        (&old_props, cb->compare_root,
+                         copyfrom_path ? copyfrom_path : path, pool));
               else
-                old_props = apr_hash_make (pool);
+                old_props = apr_hash_make(pool);
 
-              SVN_ERR (svn_fs_node_proplist (&new_props, root, path, pool));
+              SVN_ERR(svn_fs_node_proplist(&new_props, root, path, pool));
 
-              SVN_ERR (svn_prop_diffs (&prop_diffs, new_props, old_props,
-                                       pool));
+              SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
+                                     pool));
 
               for (i = 0; i < prop_diffs->nelts; ++i)
                 {
-                   svn_prop_t *pc = &APR_ARRAY_IDX (prop_diffs, i, svn_prop_t);
+                  svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
                    if (kind == svn_node_dir)
-                     SVN_ERR (editor->change_dir_prop (*dir_baton, pc->name,
-                                                       pc->value, pool));
+                     SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
+                                                     pc->value, pool));
                    else if (kind == svn_node_file)
-                     SVN_ERR (editor->change_file_prop (file_baton, pc->name,
-                                                        pc->value, pool));
+                     SVN_ERR(editor->change_file_prop(file_baton, pc->name,
+                                                      pc->value, pool));
                 }
             }
           else
             {
               if (kind == svn_node_dir)
-                SVN_ERR (editor->change_dir_prop (*dir_baton, "", NULL,
-                                                  pool));
+                SVN_ERR(editor->change_dir_prop(*dir_baton, "", NULL,
+                                                pool));
               else if (kind == svn_node_file)
-                SVN_ERR (editor->change_file_prop (file_baton, "", NULL,
-                                                   pool));
+                SVN_ERR(editor->change_file_prop(file_baton, "", NULL,
+                                                 pool));
             }
         }
 
@@ -446,34 +446,34 @@ path_driver_cb_func (void **dir_baton,
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
-          SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool, 
-                                            &delta_handler, 
-                                            &delta_handler_baton));
+          SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
+                                          &delta_handler, 
+                                          &delta_handler_baton));
           if (cb->compare_root)
             {
               svn_txdelta_stream_t *delta_stream;
 
-              SVN_ERR (svn_fs_get_file_delta_stream
-                         (&delta_stream,
-                          (copyfrom_path && src_readable) ? source_root
-                                                          : NULL,
-                          (copyfrom_path && src_readable) ? copyfrom_path
-                                                          : path,
-                          root, path, pool));
+              SVN_ERR(svn_fs_get_file_delta_stream
+                      (&delta_stream,
+                       (copyfrom_path && src_readable) ? source_root
+                       : NULL,
+                       (copyfrom_path && src_readable) ? copyfrom_path
+                       : path,
+                       root, path, pool));
 
-              SVN_ERR (svn_txdelta_send_txstream (delta_stream,
-                                                  delta_handler,
-                                                  delta_handler_baton,
-                                                  pool));
+              SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                                delta_handler,
+                                                delta_handler_baton,
+                                                pool));
             }
           else
-            SVN_ERR (delta_handler (NULL, delta_handler_baton));
+            SVN_ERR(delta_handler(NULL, delta_handler_baton));
         }
     }
 
   /* Close the file baton if we opened it. */
   if (file_baton)
-    SVN_ERR (editor->close_file (file_baton, NULL, pool));
+    SVN_ERR(editor->close_file(file_baton, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -482,15 +482,15 @@ path_driver_cb_func (void **dir_baton,
 
 
 svn_error_t *
-svn_repos_replay2 (svn_fs_root_t *root,
-                   const char *base_path,
-                   svn_revnum_t low_water_mark,
-                   svn_boolean_t send_deltas,
-                   const svn_delta_editor_t *editor,
-                   void *edit_baton,
-                   svn_repos_authz_func_t authz_read_func,
-                   void *authz_read_baton,
-                   apr_pool_t *pool)
+svn_repos_replay2(svn_fs_root_t *root,
+                  const char *base_path,
+                  svn_revnum_t low_water_mark,
+                  svn_boolean_t send_deltas,
+                  const svn_delta_editor_t *editor,
+                  void *edit_baton,
+                  svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,
+                  apr_pool_t *pool)
 {
   apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
@@ -500,21 +500,21 @@ svn_repos_replay2 (svn_fs_root_t *root,
   int base_path_len;
 
   /* Fetch the paths changed under ROOT. */
-  SVN_ERR (svn_fs_paths_changed (&fs_changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed(&fs_changes, root, pool));
 
   if (! base_path)
     base_path = "";
   else if (base_path[0] == '/')
     ++base_path;
 
-  base_path_len = strlen (base_path);
+  base_path_len = strlen(base_path);
 
   /* Make an array from the keys of our CHANGED_PATHS hash, and copy
      the values into a new hash whose keys have no leading slashes. */
-  paths = apr_array_make (pool, apr_hash_count (fs_changes),
-                          sizeof (const char *));
-  changed_paths = apr_hash_make (pool);
-  for (hi = apr_hash_first (pool, fs_changes); hi; hi = apr_hash_next (hi))
+  paths = apr_array_make(pool, apr_hash_count(fs_changes),
+                         sizeof(const char *));
+  changed_paths = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, fs_changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -523,13 +523,13 @@ svn_repos_replay2 (svn_fs_root_t *root,
       svn_fs_path_change_t *change;
       svn_boolean_t allowed = TRUE;
 
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this(hi, &key, &keylen, &val);
       path = key;
       change = val;
 
       if (authz_read_func)
-        SVN_ERR (authz_read_func (&allowed, root, path, authz_read_baton,
-                                  pool));
+        SVN_ERR(authz_read_func(&allowed, root, path, authz_read_baton,
+                                pool));
 
       if (allowed)
         {
@@ -541,17 +541,17 @@ svn_repos_replay2 (svn_fs_root_t *root,
 
           /* If the base_path doesn't match the top directory of this path
              we don't want anything to do with it... */
-          if (is_within_base_path (path, base_path, base_path_len))
+          if (is_within_base_path(path, base_path, base_path_len))
             {
-              APR_ARRAY_PUSH (paths, const char *) = path;
-              apr_hash_set (changed_paths, path, keylen, change);
+              APR_ARRAY_PUSH(paths, const char *) = path;
+              apr_hash_set(changed_paths, path, keylen, change);
             }
         }
     }
 
   /* If we were not give a low water mark, assume that everything is there,
      all the way back to revision 0. */ 
-  if (! SVN_IS_VALID_REVNUM (low_water_mark))
+  if (! SVN_IS_VALID_REVNUM(low_water_mark))
     low_water_mark = 0;
  
   /* Initialize our callback baton. */
@@ -566,41 +566,41 @@ svn_repos_replay2 (svn_fs_root_t *root,
   cb_baton.low_water_mark = low_water_mark;
 
   if (send_deltas)
-    SVN_ERR (svn_fs_revision_root (&cb_baton.compare_root,
-                                   svn_fs_root_fs (root),
-                                   svn_fs_revision_root_revision (root) - 1,
-                                   pool));
+    SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root,
+                                 svn_fs_root_fs(root),
+                                 svn_fs_revision_root_revision(root) - 1,
+                                 pool));
   else
     cb_baton.compare_root = NULL;
 
   /* Determine the revision to use throughout the edit, and call
      EDITOR's set_target_revision() function.  */
-  if (svn_fs_is_revision_root (root))
+  if (svn_fs_is_revision_root(root))
     {
-      svn_revnum_t revision = svn_fs_revision_root_revision (root);
-      SVN_ERR (editor->set_target_revision (edit_baton, revision, pool));
+      svn_revnum_t revision = svn_fs_revision_root_revision(root);
+      SVN_ERR(editor->set_target_revision(edit_baton, revision, pool));
     }
 
   /* Call the path-based editor driver. */
-  SVN_ERR (svn_delta_path_driver (editor, edit_baton, 
-                                  SVN_INVALID_REVNUM, paths, 
-                                  path_driver_cb_func, &cb_baton, pool));
+  SVN_ERR(svn_delta_path_driver(editor, edit_baton, 
+                                SVN_INVALID_REVNUM, paths, 
+                                path_driver_cb_func, &cb_baton, pool));
   
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_repos_replay (svn_fs_root_t *root,
-                  const svn_delta_editor_t *editor,
-                  void *edit_baton,
-                  apr_pool_t *pool)
+svn_repos_replay(svn_fs_root_t *root,
+                 const svn_delta_editor_t *editor,
+                 void *edit_baton,
+                 apr_pool_t *pool)
 {
-  return svn_repos_replay2 (root,
-                            "" /* the whole tree */,
-                            SVN_INVALID_REVNUM, /* no low water mark */
-                            FALSE /* no text deltas */,
-                            editor, edit_baton,
-                            NULL /* no authz func */,
-                            NULL /* no authz baton */,
-                            pool);
+  return svn_repos_replay2(root,
+                           "" /* the whole tree */,
+                           SVN_INVALID_REVNUM, /* no low water mark */
+                           FALSE /* no text deltas */,
+                           editor, edit_baton,
+                           NULL /* no authz func */,
+                           NULL /* no authz baton */,
+                           pool);
 }

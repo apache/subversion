@@ -98,12 +98,12 @@ typedef struct svn_auth_provider_t
    * provider may need, and @a realmstring comes from the
    * svn_auth_first_credentials() call.
    */
-  svn_error_t * (*first_credentials) (void **credentials,
-                                      void **iter_baton,
-                                      void *provider_baton,
-                                      apr_hash_t *parameters,
-                                      const char *realmstring,
-                                      apr_pool_t *pool);
+  svn_error_t * (*first_credentials)(void **credentials,
+                                     void **iter_baton,
+                                     void *provider_baton,
+                                     apr_hash_t *parameters,
+                                     const char *realmstring,
+                                     apr_pool_t *pool);
 
   /** Get a different set of credentials.
    *
@@ -116,12 +116,12 @@ typedef struct svn_auth_provider_t
    * contains any run-time data that the provider may need, and @a
    * realmstring comes from the svn_auth_first_credentials() call.
    */
-  svn_error_t * (*next_credentials) (void **credentials,
-                                     void *iter_baton,
-                                     void *provider_baton,
-                                     apr_hash_t *parameters,
-                                     const char *realmstring,
-                                     apr_pool_t *pool);
+  svn_error_t * (*next_credentials)(void **credentials,
+                                    void *iter_baton,
+                                    void *provider_baton,
+                                    apr_hash_t *parameters,
+                                    const char *realmstring,
+                                    apr_pool_t *pool);
   
   /** Save credentials.
    *
@@ -134,12 +134,12 @@ typedef struct svn_auth_provider_t
    * this function pointer should simply be NULL. @a realmstring comes
    * from the svn_auth_first_credentials() call.
    */
-  svn_error_t * (*save_credentials) (svn_boolean_t *saved,
-                                     void *credentials,
-                                     void *provider_baton,
-                                     apr_hash_t *parameters,
-                                     const char *realmstring,
-                                     apr_pool_t *pool);
+  svn_error_t * (*save_credentials)(svn_boolean_t *saved,
+                                    void *credentials,
+                                    void *provider_baton,
+                                    apr_hash_t *parameters,
+                                    const char *realmstring,
+                                    apr_pool_t *pool);
   
 } svn_auth_provider_t;
 
@@ -299,8 +299,9 @@ typedef struct svn_auth_ssl_server_cert_info_t
  *
  * @since New in 1.3.
  */
-svn_auth_ssl_server_cert_info_t *svn_auth_ssl_server_cert_info_dup (
-  const svn_auth_ssl_server_cert_info_t *info, apr_pool_t *pool);
+svn_auth_ssl_server_cert_info_t *
+svn_auth_ssl_server_cert_info_dup(const svn_auth_ssl_server_cert_info_t *info,
+                                  apr_pool_t *pool);
 
 /** @c SVN_AUTH_CRED_SSL_SERVER_TRUST credentials. */
 typedef struct svn_auth_cred_ssl_server_trust_t
@@ -348,13 +349,13 @@ typedef struct svn_auth_cred_ssl_server_trust_t
  * client with a remember password checkbox would grey out the checkbox if
  * @a may_save is FALSE.
  */
-typedef svn_error_t *
-(*svn_auth_simple_prompt_func_t) (svn_auth_cred_simple_t **cred,
-                                  void *baton,
-                                  const char *realm,
-                                  const char *username,
-                                  svn_boolean_t may_save,
-                                  apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_simple_prompt_func_t)
+  (svn_auth_cred_simple_t **cred,
+   void *baton,
+   const char *realm,
+   const char *username,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
@@ -368,12 +369,12 @@ typedef svn_error_t *
  * client with a remember username checkbox would grey out the checkbox if
  * @a may_save is FALSE.
  */
-typedef svn_error_t *
-(*svn_auth_username_prompt_func_t) (svn_auth_cred_username_t **cred,
-                                    void *baton,
-                                    const char *realm,
-                                    svn_boolean_t may_save,
-                                    apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_username_prompt_func_t)
+  (svn_auth_cred_username_t **cred,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 /** @name SSL server certificate failure bits
@@ -411,14 +412,14 @@ typedef svn_error_t *
  * client with a trust permanently checkbox would grey out the checkbox if
  * @a may_save is FALSE.
  */
-typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
-  svn_auth_cred_ssl_server_trust_t **cred,
-  void *baton,
-  const char *realm,
-  apr_uint32_t failures,
-  const svn_auth_ssl_server_cert_info_t *cert_info,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t)
+  (svn_auth_cred_ssl_server_trust_t **cred,
+   void *baton,
+   const char *realm,
+   apr_uint32_t failures,
+   const svn_auth_ssl_server_cert_info_t *cert_info,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
@@ -431,12 +432,12 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
  * client with a remember certificate checkbox would grey out the checkbox
  * if @a may_save is FALSE.
  */
-typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
-  svn_auth_cred_ssl_client_cert_t **cred,
-  void *baton,
-  const char *realm,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t)
+  (svn_auth_cred_ssl_client_cert_t **cred,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
@@ -449,12 +450,12 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
  * client with a remember password checkbox would grey out the checkbox if
  * @a may_save is FALSE.
  */
-typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t) (
-  svn_auth_cred_ssl_client_cert_pw_t **cred,
-  void *baton,
-  const char *realm,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
+  (svn_auth_cred_ssl_client_cert_pw_t **cred,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 
@@ -609,12 +610,12 @@ svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
  *
  * @since New in 1.4.
  */
-void svn_auth_get_simple_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_simple_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void
+svn_auth_get_simple_prompt_provider(svn_auth_provider_object_t **provider,
+                                    svn_auth_simple_prompt_func_t prompt_func,
+                                    void *prompt_baton,
+                                    int retry_limit,
+                                    apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -630,12 +631,12 @@ void svn_auth_get_simple_prompt_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_username_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_username_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_auth_get_username_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_username_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -651,8 +652,8 @@ void svn_auth_get_username_prompt_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_simple_provider (svn_auth_provider_object_t **provider,
-                                   apr_pool_t *pool);
+void svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
+                                  apr_pool_t *pool);
 
 
 #if defined(WIN32) || defined(DOXYGEN)
@@ -675,9 +676,9 @@ void svn_auth_get_simple_provider (svn_auth_provider_object_t **provider,
  * secret key. This function will detect that situation and behave as
  * if the password were not cached at all.
  */
-void svn_auth_get_windows_simple_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void
+svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
+                                     apr_pool_t *pool);
 #endif /* WIN32 || DOXYGEN */
 
 #if defined(DARWIN) || defined(DOXYGEN)
@@ -694,9 +695,9 @@ void svn_auth_get_windows_simple_provider (
  * @since New in 1.4
  * @note This function is only available on Mac OS 10.2 and higher.
  */
-void svn_auth_get_keychain_simple_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void
+svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
+                                      apr_pool_t *pool);
 
 #endif /* DARWIN || DOXYGEN */
 
@@ -711,8 +712,8 @@ void svn_auth_get_keychain_simple_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_username_provider (svn_auth_provider_object_t **provider,
-                                     apr_pool_t *pool);
+void svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
+                                    apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -724,9 +725,9 @@ void svn_auth_get_username_provider (svn_auth_provider_object_t **provider,
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_server_trust_file_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_auth_get_ssl_server_trust_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -738,9 +739,9 @@ void svn_auth_get_ssl_server_trust_file_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_file_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_auth_get_ssl_client_cert_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -752,9 +753,9 @@ void svn_auth_get_ssl_client_cert_file_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_pw_file_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_auth_get_ssl_client_cert_pw_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -766,11 +767,11 @@ void svn_auth_get_ssl_client_cert_pw_file_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_server_trust_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-  void *prompt_baton,
-  apr_pool_t *pool);
+void svn_auth_get_ssl_server_trust_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+   void *prompt_baton,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -783,12 +784,12 @@ void svn_auth_get_ssl_server_trust_prompt_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_auth_get_ssl_client_cert_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -801,12 +802,12 @@ void svn_auth_get_ssl_client_cert_prompt_provider (
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_pw_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_auth_get_ssl_client_cert_pw_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

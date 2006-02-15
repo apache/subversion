@@ -76,6 +76,7 @@ void svn_ra_svn__get_editorp(const svn_delta_editor_t **editor,
                              apr_pool_t *pool,
                              svn_ra_svn_edit_callback callback,
                              void *callback_baton);
+
 svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const svn_delta_editor_t *editor,

@@ -973,7 +973,7 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
   if ((err = svn_repos_dated_revision(&rev, resource->info->repos->repos, tm,
                                       resource->pool)) != SVN_NO_ERROR)
     {
-      svn_error_clear (err);
+      svn_error_clear(err);
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                            "Could not access revision times.");
     }
@@ -1198,7 +1198,7 @@ static apr_status_t send_get_locations_report(ap_filter_t *output,
   if (apr_err)
     return apr_err;
 
-  for (hi = apr_hash_first(pool, fs_locations); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, fs_locations); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *value;
@@ -1540,7 +1540,7 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
   apr_hash_index_t *hi;
   svn_error_t *serr;
   
-  serr = svn_fs_get_access (&fsaccess, resource->info->repos->fs);
+  serr = svn_fs_get_access(&fsaccess, resource->info->repos->fs);
   if (serr)
     {
       /* If an authenticated user name was attached to the request,
@@ -1558,11 +1558,11 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
       apr_hash_this(hi, NULL, NULL, &val);
       token = val;
       
-      serr = svn_fs_access_add_lock_token (fsaccess, token);
+      serr = svn_fs_access_add_lock_token(fsaccess, token);
       if (serr)
-        return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                    "Error pushing token into filesystem.",
-                                    pool);
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error pushing token into filesystem.",
+                                   pool);
     }
 
   return NULL;
@@ -1700,7 +1700,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   else if (serr)
     {
       if (serr->child && serr->child->message)
-        post_commit_err = apr_pstrdup (pool, serr->child->message);
+        post_commit_err = apr_pstrdup(pool, serr->child->message);
       svn_error_clear(serr);
     }
 

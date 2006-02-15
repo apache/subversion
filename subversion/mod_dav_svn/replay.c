@@ -65,8 +65,8 @@ maybe_close_textdelta(dav_svn_edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
     { 
-      SVN_ERR(dav_svn__send_xml (eb->bb, eb->output,
-                                 "</S:apply-textdelta>" DEBUG_CR));
+      SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                                "</S:apply-textdelta>" DEBUG_CR));
       eb->sending_textdelta = FALSE;
     }
 
@@ -90,10 +90,10 @@ set_target_revision(void *edit_baton,
 }
 
 static svn_error_t *
-open_root (void *edit_baton,
-           svn_revnum_t base_revision,
-           apr_pool_t *pool,
-           void **root_baton)
+open_root(void *edit_baton,
+          svn_revnum_t base_revision,
+          apr_pool_t *pool,
+          void **root_baton)
 {
   dav_svn_edit_baton_t *eb = edit_baton;
 

@@ -213,14 +213,14 @@ extern const apr_getopt_option_t svn_cl__options[];
  * forget to terminate the argument list with SVN_NO_ERROR.
  */
 svn_error_t *
-svn_cl__try (svn_error_t *err,
-             svn_boolean_t *success,
-             svn_boolean_t quiet,
-             ...);
+svn_cl__try(svn_error_t *err,
+            svn_boolean_t *success,
+            svn_boolean_t quiet,
+            ...);
 
 
 /* Our cancellation callback. */
-svn_error_t *svn_cl__check_cancel (void *baton);
+svn_error_t *svn_cl__check_cancel(void *baton);
 
 
 
@@ -228,8 +228,8 @@ svn_error_t *svn_cl__check_cancel (void *baton);
 
 /* Print out commit information found in COMMIT_INFO to the console.
  * POOL is used for temporay allocations. */
-svn_error_t *svn_cl__print_commit_info (svn_commit_info_t *commit_info,
-                                        apr_pool_t *pool);
+svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
+                                       apr_pool_t *pool);
 
 
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
@@ -243,21 +243,21 @@ svn_error_t *svn_cl__print_commit_info (svn_commit_info_t *commit_info,
 
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
    as broken WC locks. */
-svn_error_t *svn_cl__print_status (const char *path,
-                                   svn_wc_status2_t *status,
-                                   svn_boolean_t detailed,
-                                   svn_boolean_t show_last_committed,
-                                   svn_boolean_t skip_unrecognized,
-                                   svn_boolean_t repos_locks,
-                                   apr_pool_t *pool);
+svn_error_t *svn_cl__print_status(const char *path,
+                                  svn_wc_status2_t *status,
+                                  svn_boolean_t detailed,
+                                  svn_boolean_t show_last_committed,
+                                  svn_boolean_t skip_unrecognized,
+                                  svn_boolean_t repos_locks,
+                                  apr_pool_t *pool);
 
 
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
    allocations. */
 svn_error_t *
-svn_cl__print_status_xml (const char *path,
-                          svn_wc_status2_t *status,
-                          apr_pool_t *pool);
+svn_cl__print_status_xml(const char *path,
+                         svn_wc_status2_t *status,
+                         apr_pool_t *pool);
 
 
 /* Print a hash that maps property names (char *) to property values
@@ -268,9 +268,9 @@ svn_cl__print_status_xml (const char *path,
    If NAMES_ONLY is true, print just names, else print names and
    values. */
 svn_error_t *
-svn_cl__print_prop_hash (apr_hash_t *prop_hash,
-                         svn_boolean_t names_only,
-                         apr_pool_t *pool);
+svn_cl__print_prop_hash(apr_hash_t *prop_hash,
+                        svn_boolean_t names_only,
+                        apr_pool_t *pool);
 
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
@@ -279,10 +279,10 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
    appropriate error if any of those checks or operations fail.
  */
 svn_error_t *
-svn_cl__revprop_prepare (const svn_opt_revision_t *revision,
-                         apr_array_header_t *targets,
-                         const char **URL,
-                         apr_pool_t *pool);
+svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
+                        apr_array_header_t *targets,
+                        const char **URL,
+                        apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
@@ -311,16 +311,16 @@ svn_cl__revprop_prepare (const svn_opt_revision_t *revision,
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
-svn_cl__edit_externally (svn_string_t **edited_contents,
-                         const char **tmpfile_left,
-                         const char *editor_cmd,
-                         const char *base_dir,
-                         const svn_string_t *contents,
-                         const char *prefix,
-                         apr_hash_t *config,
-                         svn_boolean_t as_text,
-                         const char *encoding,
-                         apr_pool_t *pool);
+svn_cl__edit_externally(svn_string_t **edited_contents,
+                        const char **tmpfile_left,
+                        const char *editor_cmd,
+                        const char *base_dir,
+                        const svn_string_t *contents,
+                        const char *prefix,
+                        apr_hash_t *config,
+                        svn_boolean_t as_text,
+                        const char *encoding,
+                        apr_pool_t *pool);
 
 
 
@@ -340,12 +340,12 @@ svn_cl__edit_externally (svn_string_t **edited_contents,
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-void svn_cl__get_notifier (svn_wc_notify_func2_t *notify_func_p,
-                           void **notify_baton_p,
-                           svn_boolean_t is_checkout,
-                           svn_boolean_t is_export,
-                           svn_boolean_t suppress_final_line,
-                           apr_pool_t *pool);
+void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
+                          void **notify_baton_p,
+                          svn_boolean_t is_checkout,
+                          svn_boolean_t is_export,
+                          svn_boolean_t suppress_final_line,
+                          apr_pool_t *pool);
 
 
 /*** Log message callback stuffs. ***/
@@ -368,18 +368,18 @@ void svn_cl__get_notifier (svn_wc_notify_func2_t *notify_func_p,
 
    NOTE: While the baton itself will be allocated from POOL, the items
    add to it are added by reference, not duped into POOL!*/
-svn_error_t *svn_cl__make_log_msg_baton (void **baton,
-                                         svn_cl__opt_state_t *opt_state,
-                                         const char *base_dir,
-                                         apr_hash_t *config,
-                                         apr_pool_t *pool);
+svn_error_t *svn_cl__make_log_msg_baton(void **baton,
+                                        svn_cl__opt_state_t *opt_state,
+                                        const char *base_dir,
+                                        apr_hash_t *config,
+                                        apr_pool_t *pool);
 
 /* A function of type svn_client_get_commit_log2_t. */
-svn_error_t *svn_cl__get_log_message (const char **log_msg,
-                                      const char **tmp_file,
-                                      const apr_array_header_t *commit_items,
-                                      void *baton,
-                                      apr_pool_t *pool);
+svn_error_t *svn_cl__get_log_message(const char **log_msg,
+                                     const char **tmp_file,
+                                     const apr_array_header_t *commit_items,
+                                     void *baton,
+                                     apr_pool_t *pool);
 
 /* Handle the cleanup of a log message, using the data in the
    LOG_MSG_BATON, in the face of COMMIT_ERR.  This may mean removing a
@@ -390,26 +390,26 @@ svn_error_t *svn_cl__get_log_message (const char **log_msg,
    All error returns from this function are guaranteed to at least
    include COMMIT_ERR, and perhaps additional errors attached to the
    end of COMMIT_ERR's chain.  */
-svn_error_t *svn_cl__cleanup_log_msg (void *log_msg_baton,
-                                      svn_error_t *commit_err);
+svn_error_t *svn_cl__cleanup_log_msg(void *log_msg_baton,
+                                     svn_error_t *commit_err);
 
 /* Add a message about --force if appropriate */
-svn_error_t *svn_cl__may_need_force (svn_error_t *err);
+svn_error_t *svn_cl__may_need_force(svn_error_t *err);
 
 /* Write the STRING to the stdio STREAM, returning an error if it fails. */
-svn_error_t *svn_cl__error_checked_fputs (const char *string,
-                                          FILE* stream);
+svn_error_t *svn_cl__error_checked_fputs(const char *string,
+                                         FILE* stream);
 
 /* If STRING is non-null, append it, wrapped in a simple XML CDATA element
    named TAGNAME, to the string SB.  Use POOL for temporary allocations. */
-void svn_cl__xml_tagged_cdata (svn_stringbuf_t **sb,
-                               apr_pool_t *pool,
-                               const char *tagname,
-                               const char *string);
+void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
+                              apr_pool_t *pool,
+                              const char *tagname,
+                              const char *string);
 
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */
-const char *svn_cl__node_kind_str (svn_node_kind_t kind);
+const char *svn_cl__node_kind_str(svn_node_kind_t kind);
 
 
 #ifdef __cplusplus

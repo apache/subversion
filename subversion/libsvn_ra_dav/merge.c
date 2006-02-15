@@ -130,32 +130,32 @@ static void add_ignored(merge_ctx_t *mc, const char *cdata)
 }
 
 
-static svn_boolean_t okay_to_bump_path (const char *path,
-                                        apr_hash_t *valid_targets,
-                                        apr_pool_t *pool)
+static svn_boolean_t okay_to_bump_path(const char *path,
+                                       apr_hash_t *valid_targets,
+                                       apr_pool_t *pool)
 {
   svn_stringbuf_t *parent_path;
   enum svn_recurse_kind r;
 
   /* Easy check:  if path itself is in the hash, then it's legit. */
-  if (apr_hash_get (valid_targets, path, APR_HASH_KEY_STRING))
+  if (apr_hash_get(valid_targets, path, APR_HASH_KEY_STRING))
     return TRUE;
   /* Otherwise, this path is bumpable IFF one of its parents is in the
      hash and marked with a 'recursion' flag. */
-  parent_path = svn_stringbuf_create (path, pool);
+  parent_path = svn_stringbuf_create(path, pool);
   
   do {
     apr_size_t len = parent_path->len;
-    svn_path_remove_component (parent_path);
+    svn_path_remove_component(parent_path);
     if (len == parent_path->len)
       break;
-    r = (enum svn_recurse_kind) apr_hash_get (valid_targets,
-                                              parent_path->data,
-                                              APR_HASH_KEY_STRING);
+    r = (enum svn_recurse_kind) apr_hash_get(valid_targets,
+                                             parent_path->data,
+                                             APR_HASH_KEY_STRING);
     if (r == svn_recursive)
       return TRUE;
 
-  } while (! svn_path_is_empty (parent_path->data));
+  } while (! svn_path_is_empty(parent_path->data));
 
   /* Default answer: if we get here, don't allow the bumping. */
   return FALSE;
@@ -182,7 +182,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
      committed target.  The commit-tracking editor built this list for
      us, and took care not to include directories unless they were
      directly committed (i.e., received a property change). */
-  if (! okay_to_bump_path (path, mc->valid_targets, pool))
+  if (! okay_to_bump_path(path, mc->valid_targets, pool))
     return SVN_NO_ERROR;
 
   /* Okay, NOW set the new version url. */
@@ -192,9 +192,9 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
     vsn_url_str.data = vsn_url;
     vsn_url_str.len = strlen(vsn_url);
 
-    SVN_ERR( (*mc->push_prop)(mc->cb_baton, path,
-                              SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
-                              pool) );
+    SVN_ERR((*mc->push_prop)(mc->cb_baton, path,
+                             SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
+                             pool));
   }
 
   return SVN_NO_ERROR;
@@ -272,7 +272,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     relative = mc->href->data + mc->base_len + 1;
 
   /* bump the resource */
-  relative = svn_path_uri_decode (relative, pool);
+  relative = svn_path_uri_decode(relative, pool);
   return bump_resource(mc, relative, mc->vsn_url->data, pool);
 }
 
@@ -513,7 +513,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
             else
               svn_error_clear(err);
           }
-        svn_pool_clear (mc->scratchpool);
+        svn_pool_clear(mc->scratchpool);
       }
       break;
 
@@ -681,7 +681,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   svn_error_t *err;
 
   mc.pool = pool;
-  mc.scratchpool = svn_pool_create (pool);
+  mc.scratchpool = svn_pool_create(pool);
   mc.base_href = repos_url;
   mc.base_len = strlen(repos_url);
   mc.rev = SVN_INVALID_REVNUM;
@@ -711,15 +711,15 @@ svn_error_t * svn_ra_dav__merge_activity(
       
       if (! extra_headers)
         extra_headers = apr_hash_make(pool);
-      apr_hash_set (extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
-                    value);
+      apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
+                   value);
     }
 
   /* Need to marshal the whole [path->token] hash to the server as
      a string within the body of the MERGE request. */
   if ((lock_tokens != NULL)
       && (apr_hash_count(lock_tokens) > 0))
-    SVN_ERR( svn_ra_dav__assemble_locktoken_body(&lockbuf, lock_tokens, pool) );
+    SVN_ERR(svn_ra_dav__assemble_locktoken_body(&lockbuf, lock_tokens, pool));
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"

@@ -60,7 +60,7 @@ typedef struct
   /* We permitted clients of our library to install a Berkeley BDB errcall.
      Since we now use the errcall ourselves, we must store and invoke a user
      errcall, to maintain our API guarantees. */
-  void (*user_callback) (const char *errpfx, char *msg);
+  void (*user_callback)(const char *errpfx, char *msg);
 
   /* The reference count.  It counts the number of bdb_env_baton_t
      instances that refer to this object. */
@@ -103,7 +103,7 @@ typedef struct
 
 
 /* Iniitalize the BDB back-end's private stuff. */
-svn_error_t *svn_fs_bdb__init (void);
+svn_error_t *svn_fs_bdb__init(void);
 
 
 /* Allocate the Berkeley DB descriptor BDB and open the environment.
@@ -122,31 +122,31 @@ svn_error_t *svn_fs_bdb__init (void);
  *       opening the environment).
  */
 
-svn_error_t *svn_fs_bdb__open (bdb_env_baton_t **bdb_batonp,
-                               const char *path,
-                               u_int32_t flags, int mode,
-                               apr_pool_t *pool);
+svn_error_t *svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp,
+                              const char *path,
+                              u_int32_t flags, int mode,
+                              apr_pool_t *pool);
 
 /* Close the Berkeley DB descriptor BDB.
  *
  * Note: This function might not actually close the environment if it
  *       has been opened more than once.
  */
-svn_error_t *svn_fs_bdb__close (bdb_env_baton_t *bdb_baton);
+svn_error_t *svn_fs_bdb__close(bdb_env_baton_t *bdb_baton);
 
 
 /* Get the panic state of the open BDB environment. */
-svn_boolean_t svn_fs_bdb__get_panic (bdb_env_baton_t *bdb_baton);
+svn_boolean_t svn_fs_bdb__get_panic(bdb_env_baton_t *bdb_baton);
 
 /* Set the panic flag on the open BDB environment. */
-void svn_fs_bdb__set_panic (bdb_env_baton_t *bdb_baton);
+void svn_fs_bdb__set_panic(bdb_env_baton_t *bdb_baton);
 
 
 /* Remove the Berkeley DB environment at PATH.
  *
  * Use POOL for temporary allocation.
  */
-svn_error_t *svn_fs_bdb__remove (const char *path, apr_pool_t *pool);
+svn_error_t *svn_fs_bdb__remove(const char *path, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

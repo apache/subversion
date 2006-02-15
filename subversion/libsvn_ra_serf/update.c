@@ -491,9 +491,9 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 }
 
 static apr_status_t
-handle_fetch (serf_bucket_t *response,
-              void *handler_baton,
-              apr_pool_t *pool)
+handle_fetch(serf_bucket_t *response,
+             void *handler_baton,
+             apr_pool_t *pool)
 {
   const char *data;
   apr_size_t len;
@@ -1143,9 +1143,9 @@ cdata_report(void *userData, const char *data, int len)
 }
 
 static apr_status_t
-handle_report (serf_bucket_t *response,
-               void *handler_baton,
-               apr_pool_t *pool)
+handle_report(serf_bucket_t *response,
+              void *handler_baton,
+              apr_pool_t *pool)
 {
   report_context_t *ctx = handler_baton;
 
@@ -1454,15 +1454,15 @@ static const svn_ra_reporter2_t ra_serf_reporter = {
 };
 
 svn_error_t *
-svn_ra_serf__do_update (svn_ra_session_t *ra_session,
-                        const svn_ra_reporter2_t **reporter,
-                        void **report_baton,
-                        svn_revnum_t revision_to_update_to,
-                        const char *update_target,
-                        svn_boolean_t recurse,
-                        const svn_delta_editor_t *update_editor,
-                        void *update_baton,
-                        apr_pool_t *pool)
+svn_ra_serf__do_update(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_update_to,
+                       const char *update_target,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *update_editor,
+                       void *update_baton,
+                       apr_pool_t *pool)
 {
   report_context_t *report;
   ra_serf_session_t *session = ra_session->priv;

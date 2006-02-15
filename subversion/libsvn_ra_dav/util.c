@@ -285,17 +285,17 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
 
     default:
       /* Get the error string from neon and convert to UTF-8. */
-      SVN_ERR (svn_utf_cstring_to_utf8 (&msg, ne_get_error (sess), pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&msg, ne_get_error(sess), pool));
       break;
     }
 
   /* The hostname may contain non-ASCII characters, so convert it to UTF-8. */
-  SVN_ERR (svn_utf_cstring_to_utf8 (&hostport, ne_get_server_hostport(sess),
-                                    pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&hostport, ne_get_server_hostport(sess),
+                                  pool));
 
-  return svn_error_createf (errcode, NULL, "%s: %s (%s://%s)", 
-                            context, msg, ne_get_scheme(sess), 
-                            hostport);
+  return svn_error_createf(errcode, NULL, "%s: %s (%s://%s)", 
+                           context, msg, ne_get_scheme(sess), 
+                           hostport);
 }
 
 
@@ -449,9 +449,9 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
  * from an APR file. See ne_request.h for a description of the
  * interface.
  */
-static ssize_t ra_dav_body_provider (void *userdata,
-                                     char *buffer,
-                                     size_t buflen)
+static ssize_t ra_dav_body_provider(void *userdata,
+                                    char *buffer,
+                                    size_t buflen)
 {
   apr_file_t *body_file = userdata;
   apr_status_t status;
@@ -539,13 +539,13 @@ parse_spool_file(const char *spool_file_name,
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
   
-  SVN_ERR( svn_io_file_open(&spool_file, spool_file_name,
-                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
+                           (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
   spool_stream = svn_stream_from_aprfile(spool_file, pool);
   while (1)
     {
       len = SVN__STREAM_CHUNK_SIZE;
-      SVN_ERR (svn_stream_read (spool_stream, buf, &len));
+      SVN_ERR(svn_stream_read(spool_stream, buf, &len));
       if (len > 0)
         ne_xml_parse(success_parser, buf, len);
       if (len != SVN__STREAM_CHUNK_SIZE)
@@ -566,8 +566,8 @@ parsed_request(ne_session *sess,
                const char *url,
                const char *body,
                apr_file_t *body_file,
-               void set_parser (ne_xml_parser *parser,
-                                void *baton),
+               void set_parser(ne_xml_parser *parser,
+                               void *baton),
                const svn_ra_dav__xml_elm_t *elements,
                svn_boolean_t use_neon_shim,
                /* These three are defined iff use_neon_shim is defined. */
@@ -616,12 +616,12 @@ parsed_request(ne_session *sess,
   if (extra_headers != NULL)
     {
       apr_hash_index_t *hi;
-      for (hi = apr_hash_first (pool, extra_headers);
-           hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first(pool, extra_headers);
+           hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
-          apr_hash_this (hi, &key, NULL, &val);
+          apr_hash_this(hi, &key, NULL, &val);
           ne_add_request_header(req, (const char *) key, (const char *) val); 
         }
     }
@@ -675,10 +675,10 @@ parsed_request(ne_session *sess,
         goto cleanup;
 
       tmpfile_path = svn_path_join(tmpfile_path, "dav-spool", pool);
-      err = svn_io_open_unique_file2 (&spool_reader_baton.spool_file,
-                                      &spool_reader_baton.spool_file_name,
-                                      tmpfile_path, "",
-                                      svn_io_file_del_none, pool);
+      err = svn_io_open_unique_file2(&spool_reader_baton.spool_file,
+                                     &spool_reader_baton.spool_file_name,
+                                     tmpfile_path, "",
+                                     svn_io_file_del_none, pool);
       if (err)
         goto cleanup;
       spool_reader_baton.pool = pool;
@@ -836,8 +836,8 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            const char *url,
                            const char *body,
                            apr_file_t *body_file,
-                           void set_parser (ne_xml_parser *parser,
-                                            void *baton),
+                           void set_parser(ne_xml_parser *parser,
+                                           void *baton),
                            ne_xml_startelm_cb *startelm_cb,
                            ne_xml_cdata_cb *cdata_cb,
                            ne_xml_endelm_cb *endelm_cb,
@@ -861,8 +861,8 @@ svn_ra_dav__parsed_request_compat(ne_session *sess,
                                   const char *url,
                                   const char *body,
                                   apr_file_t *body_file,
-                                  void set_parser (ne_xml_parser *parser,
-                                                   void *baton),
+                                  void set_parser(ne_xml_parser *parser,
+                                                  void *baton),
                                   const svn_ra_dav__xml_elm_t *elements, 
                                   svn_ra_dav__xml_validate_cb validate_cb,
                                   svn_ra_dav__xml_startelm_cb startelm_cb, 
@@ -891,8 +891,8 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras,
     return SVN_NO_ERROR;
 
   /* If we ever got credentials, ask the iter_baton to save them.  */
-  SVN_ERR (svn_auth_save_credentials(ras->auth_iterstate,
-                                     pool));
+  SVN_ERR(svn_auth_save_credentials(ras->auth_iterstate,
+                                    pool));
   
   return SVN_NO_ERROR;
 }

@@ -31,9 +31,9 @@ extern "C" {
 /* Open a `locks' table in ENV.  If CREATE is non-zero, create
    one if it doesn't exist.  Set *LOCKS_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs_bdb__open_locks_table (DB **locks_p,
-                                  DB_ENV *env,
-                                  svn_boolean_t create);
+int svn_fs_bdb__open_locks_table(DB **locks_p,
+                                 DB_ENV *env,
+                                 svn_boolean_t create);
 
 
 /* Add a lock to the `locks' table in FS, as part of TRAIL. 
@@ -43,11 +43,11 @@ int svn_fs_bdb__open_locks_table (DB **locks_p,
 
    Warning:  if LOCK_TOKEN already exists as a key, then its value
    will be overwritten. */
-svn_error_t *svn_fs_bdb__lock_add (svn_fs_t *fs,
-                                   const char *lock_token,
-                                   svn_lock_t *lock,
-                                   trail_t *trail,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_bdb__lock_add(svn_fs_t *fs,
+                                  const char *lock_token,
+                                  svn_lock_t *lock,
+                                  trail_t *trail,
+                                  apr_pool_t *pool);
 
 
 /* Remove the lock whose key is LOCK_TOKEN from the `locks' table of
@@ -55,10 +55,10 @@ svn_error_t *svn_fs_bdb__lock_add (svn_fs_t *fs,
 
    Return SVN_ERR_FS_BAD_LOCK_TOKEN if LOCK_TOKEN does not exist as a
    table key. */
-svn_error_t *svn_fs_bdb__lock_delete (svn_fs_t *fs,
-                                      const char *lock_token,
-                                      trail_t *trail,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_bdb__lock_delete(svn_fs_t *fs,
+                                     const char *lock_token,
+                                     trail_t *trail,
+                                     apr_pool_t *pool);
 
 
 /* Retrieve the lock *LOCK_P pointed to by LOCK_TOKEN from the `locks'
@@ -70,11 +70,11 @@ svn_error_t *svn_fs_bdb__lock_delete (svn_fs_t *fs,
    Before returning LOCK_P, check its expiration date.  If expired,
    remove the row from the `locks' table and return SVN_ERR_FS_LOCK_EXPIRED.
  */
-svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
-                                   svn_fs_t *fs,
-                                   const char *lock_token,
-                                   trail_t *trail,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_bdb__lock_get(svn_lock_t **lock_p,
+                                  svn_fs_t *fs,
+                                  const char *lock_token,
+                                  trail_t *trail,
+                                  apr_pool_t *pool);
 
 
 /* Retrieve locks representing all locks that exist at or below PATH
@@ -85,12 +85,12 @@ svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
    building the hash.  That means that the caller can trust that each
    returned lock hasn't yet expired.
 */
-svn_error_t *svn_fs_bdb__locks_get (svn_fs_t *fs,
-                                    const char *path,
-                                    svn_fs_get_locks_callback_t get_locks_func,
-                                    void *get_locks_baton,
-                                    trail_t *trail,
-                                    apr_pool_t *pool);
+svn_error_t *svn_fs_bdb__locks_get(svn_fs_t *fs,
+                                   const char *path,
+                                   svn_fs_get_locks_callback_t get_locks_func,
+                                   void *get_locks_baton,
+                                   trail_t *trail,
+                                   apr_pool_t *pool);
 
 
 

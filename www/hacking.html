@@ -380,30 +380,33 @@ to ask for review on the developer mailing list.</p>
 <div class="h2" id="coding-style" title="coding-style">
 <h2>Coding style</h2>
 
-<p>We're using ANSI C, and following the GNU coding standards.  Emacs
-users can just load svn-dev.el to get the right indentation behavior
-(most source files here will load it automatically, if
-`enable-local-eval' is set appropriately).</p>
+<p>Subversion uses ANSI C, and follows the GNU coding standards,
+except that we do not put a space between the name of a function and
+the opening parenthesis of its parameter list.  Emacs users can just
+load svn-dev.el to get the right indentation behavior (most source
+files here will load it automatically, if `enable-local-eval' is set
+appropriately).</p>
 
 <p>Read <a href="http://www.gnu.org/prep/standards.html"
 >http://www.gnu.org/prep/standards.html</a> for a full description of
-the GNU coding standards; but here is a short example demonstrating
-the most important formatting guidelines:</p>
+the GNU coding standards.  Below is a short example demonstrating the
+most important formatting guidelines, including our
+no-space-before-param-list-paren exception:</p>
 
 <pre>
    char *                                     /* func type on own line */
-   argblarg (char *arg1, int arg2)            /* func name on own line */
+   argblarg(char *arg1, int arg2)             /* func name on own line */
    {                                          /* first brace on own line */
      if ((some_very_long_condition &amp;&amp; arg2)   /* indent 2 cols */
          || remaining_condition)              /* new line before operator */
        {                                      /* brace on own line, indent 2 */
-         arg1 = some_func (arg1, arg2);       /* space before opening paren */
+         arg1 = some_func(arg1, arg2);        /* NO SPACE BEFORE PAREN */
        }                                      /* close brace on own line */
      else
        {
          do                                   /* format do-while like this */
            {
-             arg1 = another_func (arg1);
+             arg1 = another_func(arg1);
            }
          while (*arg1);
        }
@@ -415,12 +418,6 @@ about the operator precedence, and be willing to add spaces and
 newlines to avoid "code crunch".  Don't worry too much about vertical
 density; it's more important to make code readable than to fit that
 extra line on the screen.</p>
-
-<p>The controversial GNU convention of putting a space between a
-function name and its opening parenthesis is optional in Subversion.
-If you're editing an area of code that already seems to have a
-consistent preference about this, then just stick with that;
-otherwise, pick whichever way you like.</p>
 
 </div>
 

@@ -45,45 +45,45 @@ rewrite_urls(apr_array_header_t *targets,
   int i;
  
   if (targets->nelts < 2)
-    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   from = ((const char **) (targets->elts))[0];
   to = ((const char **) (targets->elts))[1];
 
   /* "--relocate http https" and "--relocate http://foo svn://bar" are OK,
      but things like "--relocate http://foo svn" are not */
-  if (svn_path_is_url (from) != svn_path_is_url (to))
+  if (svn_path_is_url(from) != svn_path_is_url(to))
     return svn_error_createf 
       (SVN_ERR_INCORRECT_PARAMS, NULL, 
        _("'%s' to '%s' is not a valid relocation"), from, to);
  
-  subpool = svn_pool_create (pool);
+  subpool = svn_pool_create(pool);
 
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_client_relocate ("", from, to, recurse, ctx, pool));
+      SVN_ERR(svn_client_relocate("", from, to, recurse, ctx, pool));
     }
   else
     {
       for (i = 2; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
-          svn_pool_clear (subpool);
-          SVN_ERR (svn_client_relocate (target, from, to, recurse, 
-                                        ctx, subpool));
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_client_relocate(target, from, to, recurse, 
+                                      ctx, subpool));
         }
     }
 
-  svn_pool_destroy (subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__switch (apr_getopt_t *os,
-                void *baton,
-                apr_pool_t *pool)
+svn_cl__switch(apr_getopt_t *os,
+               void *baton,
+               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -96,17 +96,17 @@ svn_cl__switch (apr_getopt_t *os,
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
      switch to ("switch_url"). */
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
-    return rewrite_urls (targets, !opt_state->nonrecursive, ctx, pool);
+    return rewrite_urls(targets, !opt_state->nonrecursive, ctx, pool);
 
   if (targets->nelts < 1)
-    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
   if (targets->nelts > 2)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   /* Get the required SWITCH_URL and the optional TARGET arguments. */
   if (targets->nelts == 1)
@@ -121,19 +121,19 @@ svn_cl__switch (apr_getopt_t *os,
     }
 
   /* Validate the switch_url */
-  if (! svn_path_is_url (switch_url))
+  if (! svn_path_is_url(switch_url))
     return svn_error_createf 
       (SVN_ERR_BAD_URL, NULL, 
        _("'%s' does not appear to be a URL"), switch_url);
 
   /* Canonicalize the URL. */
-  switch_url = svn_path_canonicalize (switch_url, pool);
+  switch_url = svn_path_canonicalize(switch_url, pool);
 
   /* Validate the target */
-  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, FALSE, 0,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
-  SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, FALSE, 0,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
+  SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
@@ -141,19 +141,19 @@ svn_cl__switch (apr_getopt_t *os,
   
   /* We want the switch to print the same letters as a regular update. */
   if (entry->kind == svn_node_file)
-    SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
+    SVN_ERR(svn_wc_get_actual_target(target, &parent_dir, &base_tgt, pool));
   else if (entry->kind == svn_node_dir)
     parent_dir = target;
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                          FALSE, FALSE, pool);
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
 
   /* Do the 'switch' update. */
-  SVN_ERR (svn_client_switch (NULL, target, switch_url,
-                              &(opt_state->start_revision),
-                              opt_state->nonrecursive ? FALSE : TRUE,
-                              ctx, pool));
+  SVN_ERR(svn_client_switch(NULL, target, switch_url,
+                            &(opt_state->start_revision),
+                            opt_state->nonrecursive ? FALSE : TRUE,
+                            ctx, pool));
 
   return SVN_NO_ERROR;
 }

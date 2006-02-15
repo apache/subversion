@@ -30,10 +30,10 @@
 
 
 static svn_error_t *
-key_test (const char **msg, 
-          svn_boolean_t msg_only,
-          svn_test_opts_t *opts,
-          apr_pool_t *pool)
+key_test(const char **msg, 
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
+         apr_pool_t *pool)
 {
   int i;
   const char *keys[9][2] = {
@@ -60,13 +60,13 @@ key_test (const char **msg,
       const char *next_key = keys[i][1];
       apr_size_t len, olen;
   
-      len = strlen (orig_key);
+      len = strlen(orig_key);
       olen = len;
 
-      svn_fs_base__next_key (orig_key, &len, gen_key);
+      svn_fs_base__next_key(orig_key, &len, gen_key);
       if (! (((len == olen) || (len == (olen + 1)))
-             && (strlen (next_key) == len)
-             && (strcmp (next_key, gen_key) == 0)))
+             && (strlen(next_key) == len)
+             && (strcmp(next_key, gen_key) == 0)))
         {
           return svn_error_createf 
             (SVN_ERR_FS_GENERAL, NULL,
@@ -86,6 +86,6 @@ key_test (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (key_test),
+    SVN_TEST_PASS(key_test),
     SVN_TEST_NULL
   };

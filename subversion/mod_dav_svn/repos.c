@@ -1174,7 +1174,7 @@ static apr_status_t cleanup_fs_access(void *data)
   svn_error_t *serr;
   struct cleanup_fs_access_baton *baton = data;
   
-  serr = svn_fs_set_access (baton->fs, NULL);
+  serr = svn_fs_set_access(baton->fs, NULL);
   if (serr)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
@@ -1405,14 +1405,14 @@ svn_dav__negotiate_encoding_prefs(request_rec *r,
         sizeof(accept_rec), sort_encoding_pref);
   for (i = 0; i < encoding_prefs->nelts; i++)
     {
-      struct accept_rec rec = APR_ARRAY_IDX (encoding_prefs, i,
-                                             struct accept_rec);
-      if (strcmp (rec.name, "svndiff1") == 0)
+      struct accept_rec rec = APR_ARRAY_IDX(encoding_prefs, i,
+                                            struct accept_rec);
+      if (strcmp(rec.name, "svndiff1") == 0)
         {
           *svndiff_version = 1;
           break;
         }
-      else if (strcmp (rec.name, "svndiff") == 0)
+      else if (strcmp(rec.name, "svndiff") == 0)
         {
           *svndiff_version = 0;
           break;
@@ -1515,7 +1515,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
   }
 
-  svn_dav__negotiate_encoding_prefs (r, &comb->priv.svndiff_version);
+  svn_dav__negotiate_encoding_prefs(r, &comb->priv.svndiff_version);
 
   /* ### and another hack for computing diffs to send to the client */
   comb->priv.delta_base = apr_table_get(r->headers_in,
@@ -1628,7 +1628,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                 apr_pool_cleanup_null);      
       
       /* Create an access context based on the authenticated username. */
-      serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
+      serr = svn_fs_create_access(&access_ctx, r->user, r->pool);
       if (serr)
         {
           return dav_svn__sanitize_error(serr,
@@ -1637,7 +1637,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }
 
       /* Attach the access context to the fs. */
-      serr = svn_fs_set_access (repos->fs, access_ctx);
+      serr = svn_fs_set_access(repos->fs, access_ctx);
       if (serr)
         {
           return dav_svn__sanitize_error(serr, "Could not attach access "
@@ -1665,7 +1665,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       svn_fs_access_t *access_ctx;
       dav_locktoken_list *list = ltl;
 
-      serr = svn_fs_get_access (&access_ctx, repos->fs);
+      serr = svn_fs_get_access(&access_ctx, repos->fs);
       if (serr)
         {
           return dav_svn__sanitize_error(serr, "Lock token is in request, "
@@ -1674,12 +1674,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }
 
       do {
-        serr = svn_fs_access_add_lock_token (access_ctx,
-                                             list->locktoken->uuid_str);
+        serr = svn_fs_access_add_lock_token(access_ctx,
+                                            list->locktoken->uuid_str);
         if (serr)
-          return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error pushing token into filesystem.",
-                                      r->pool);
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Error pushing token into filesystem.",
+                                     r->pool);
         list = list->next;
 
       } while (list);
@@ -2089,11 +2089,11 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
     {
       svn_string_t *mime_type;
 
-      serr = svn_fs_node_prop (&mime_type,
-                               resource->info->root.root,
-                               resource->info->repos_path,
-                               SVN_PROP_MIME_TYPE,
-                               resource->pool);
+      serr = svn_fs_node_prop(&mime_type,
+                              resource->info->root.root,
+                              resource->info->repos_path,
+                              SVN_PROP_MIME_TYPE,
+                              resource->pool);
       
       if (serr != NULL)
         {
@@ -2570,7 +2570,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         /* convert an io dirent hash to an fs dirent hash. */
         entries = apr_hash_make(resource->pool);
         for (hi = apr_hash_first(resource->pool, dirents);
-             hi; hi = apr_hash_next (hi))
+             hi; hi = apr_hash_next(hi))
           {
             const void *key;
             apr_ssize_t klen;

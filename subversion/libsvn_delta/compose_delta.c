@@ -97,7 +97,7 @@ union alloc_block_t
 
 /* Allocate a block. */
 static APR_INLINE void *
-alloc_block (apr_pool_t *pool, alloc_block_t **free_list)
+alloc_block(apr_pool_t *pool, alloc_block_t **free_list)
 {
   alloc_block_t *block;
   if (*free_list == NULL)
@@ -112,7 +112,7 @@ alloc_block (apr_pool_t *pool, alloc_block_t **free_list)
 
 /* Return the block back to the free list. */
 static APR_INLINE void
-free_block (void *ptr, alloc_block_t **free_list)
+free_block(void *ptr, alloc_block_t **free_list)
 {
   /* Wrapper functions take care of type safety. */
   alloc_block_t *const block = ptr;
@@ -135,7 +135,7 @@ typedef struct offset_index_t
    WINDOW. Allocate from POOL. */
 
 static offset_index_t *
-create_offset_index (const svn_txdelta_window_t *window, apr_pool_t *pool)
+create_offset_index(const svn_txdelta_window_t *window, apr_pool_t *pool)
 {
   offset_index_t *ndx = apr_palloc(pool, sizeof(*ndx));
   apr_size_t offset = 0;
@@ -158,7 +158,7 @@ create_offset_index (const svn_txdelta_window_t *window, apr_pool_t *pool)
    NDX. */
 
 static int
-search_offset_index (const offset_index_t *ndx, apr_size_t offset)
+search_offset_index(const offset_index_t *ndx, apr_size_t offset)
 {
   int lo, hi, op;
 
@@ -202,7 +202,7 @@ typedef struct range_index_t
 
 /* Create a range index tree. Allocate from POOL. */
 static range_index_t *
-create_range_index (apr_pool_t *pool)
+create_range_index(apr_pool_t *pool)
 {
   range_index_t *ndx = apr_palloc(pool, sizeof(*ndx));
   ndx->tree = NULL;
@@ -213,10 +213,10 @@ create_range_index (apr_pool_t *pool)
 
 /* Allocate a node for the range index tree. */
 static range_index_node_t *
-alloc_range_index_node (range_index_t *ndx,
-                        apr_size_t offset,
-                        apr_size_t limit,
-                        apr_size_t target_offset)
+alloc_range_index_node(range_index_t *ndx,
+                       apr_size_t offset,
+                       apr_size_t limit,
+                       apr_size_t target_offset)
 {
   range_index_node_t *const node = alloc_block(ndx->pool, &ndx->free_list);
   node->offset = offset;
@@ -229,7 +229,7 @@ alloc_range_index_node (range_index_t *ndx,
 
 /* Free a node from the range index tree. */
 static void
-free_range_index_node (range_index_t *ndx, range_index_node_t *node)
+free_range_index_node(range_index_t *ndx, range_index_node_t *node)
 {
   if (node->next)
     node->next->prev = node->prev;
@@ -242,7 +242,7 @@ free_range_index_node (range_index_t *ndx, range_index_node_t *node)
 /* Splay the index tree, using OFFSET as the key. */
 
 static void
-splay_range_index (apr_size_t offset, range_index_t *ndx)
+splay_range_index(apr_size_t offset, range_index_t *ndx)
 {
   range_index_node_t *tree = ndx->tree;
   range_index_node_t scratch_node;
@@ -340,9 +340,9 @@ splay_range_index (apr_size_t offset, range_index_t *ndx)
     }
 
   /* Sanity check ... */
-  assert ((offset >= tree->offset)
-          || ((tree->left == NULL)
-              && (tree->prev == NULL)));
+  assert((offset >= tree->offset)
+         || ((tree->left == NULL)
+             && (tree->prev == NULL)));
   ndx->tree = tree;
 }
 
@@ -367,7 +367,7 @@ splay_range_index (apr_size_t offset, range_index_t *ndx)
    range-2 and ends after new-range. */
 
 static void
-delete_subtree (range_index_t *ndx, range_index_node_t *node)
+delete_subtree(range_index_t *ndx, range_index_node_t *node)
 {
   if (node != NULL)
     {
@@ -378,7 +378,7 @@ delete_subtree (range_index_t *ndx, range_index_node_t *node)
 }
 
 static void
-clean_tree (range_index_t *ndx, apr_size_t limit)
+clean_tree(range_index_t *ndx, apr_size_t limit)
 {
   apr_size_t top_offset = limit + 1;
   range_index_node_t **nodep = &ndx->tree->right;
@@ -412,8 +412,8 @@ clean_tree (range_index_t *ndx, apr_size_t limit)
    NOTE: The range index must be splayed to OFFSET! */
 
 static void
-insert_range (apr_size_t offset, apr_size_t limit, apr_size_t target_offset,
-              range_index_t *ndx)
+insert_range(apr_size_t offset, apr_size_t limit, apr_size_t target_offset,
+             range_index_t *ndx)
 {
   range_index_node_t *node = NULL;
 
@@ -498,13 +498,13 @@ insert_range (apr_size_t offset, apr_size_t limit, apr_size_t target_offset,
    the range list, TAIL is the last node in the list. NDX holds the
    freelist; OFFSET, LIMIT and KIND are node data. */
 static range_list_node_t *
-alloc_range_list (range_list_node_t **list,
-                  range_list_node_t **tail,
-                  range_index_t *ndx,
-                  enum range_kind kind,
-                  apr_size_t offset,
-                  apr_size_t limit,
-                  apr_size_t target_offset)
+alloc_range_list(range_list_node_t **list,
+                 range_list_node_t **tail,
+                 range_index_t *ndx,
+                 enum range_kind kind,
+                 apr_size_t offset,
+                 apr_size_t limit,
+                 apr_size_t target_offset)
 {
   range_list_node_t *const node = alloc_block(ndx->pool, &ndx->free_list);
   node->kind = kind;
@@ -528,7 +528,7 @@ alloc_range_list (range_list_node_t **list,
 
 /* Free a range list. LIST is the head of the list, NDX holds the freelist. */
 static void
-free_range_list (range_list_node_t *list, range_index_t *ndx)
+free_range_list(range_list_node_t *list, range_index_t *ndx)
 {
   while (list)
     {
@@ -544,7 +544,7 @@ free_range_list (range_list_node_t *list, range_index_t *ndx)
    NOTE: The range index must be splayed to OFFSET! */
 
 static range_list_node_t *
-build_range_list (apr_size_t offset, apr_size_t limit, range_index_t *ndx)
+build_range_list(apr_size_t offset, apr_size_t limit, range_index_t *ndx)
 {
   range_list_node_t *range_list = NULL;
   range_list_node_t *last_range = NULL;
@@ -611,15 +611,15 @@ build_range_list (apr_size_t offset, apr_size_t limit, range_index_t *ndx)
    WINDOW. Allocate space in BUILD_BATON from POOL. */
 
 static void
-copy_source_ops (apr_size_t offset, apr_size_t limit,
-                 apr_size_t target_offset,
-                 svn_txdelta__ops_baton_t *build_baton,
-                 const svn_txdelta_window_t *window,
-                 const offset_index_t *ndx,
-                 apr_pool_t *pool)
+copy_source_ops(apr_size_t offset, apr_size_t limit,
+                apr_size_t target_offset,
+                svn_txdelta__ops_baton_t *build_baton,
+                const svn_txdelta_window_t *window,
+                const offset_index_t *ndx,
+                apr_pool_t *pool)
 {
-  const int first_op = search_offset_index (ndx, offset);
-  const int last_op = search_offset_index (ndx, limit - 1);
+  const int first_op = search_offset_index(ndx, offset);
+  const int last_op = search_offset_index(ndx, limit - 1);
   int op_ndx;
 
   for (op_ndx = first_op; op_ndx <= last_op; ++op_ndx)
@@ -729,9 +729,9 @@ copy_source_ops (apr_size_t offset, apr_size_t limit,
 
 
 svn_txdelta_window_t *
-svn_txdelta_compose_windows (const svn_txdelta_window_t *window_A,
-                             const svn_txdelta_window_t *window_B,
-                             apr_pool_t *pool)
+svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
+                            const svn_txdelta_window_t *window_B,
+                            apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *composite;
@@ -787,7 +787,7 @@ svn_txdelta_compose_windows (const svn_txdelta_window_t *window_A,
 
               tgt_off += range->limit - range->offset;
             }
-          assert (tgt_off == target_offset + op->length);
+          assert(tgt_off == target_offset + op->length);
 
           free_range_list(range_list, range_index);
           insert_range(offset, limit, target_offset, range_index);
@@ -808,13 +808,13 @@ svn_txdelta_compose_windows (const svn_txdelta_window_t *window_A,
 
 /* This is a private interlibrary compatibility wrapper. */
 svn_txdelta_window_t *
-svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
-                              const svn_txdelta_window_t *window_B,
-                              apr_pool_t *pool);
+svn_txdelta__compose_windows(const svn_txdelta_window_t *window_A,
+                             const svn_txdelta_window_t *window_B,
+                             apr_pool_t *pool);
 svn_txdelta_window_t *
-svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
-                              const svn_txdelta_window_t *window_B,
-                              apr_pool_t *pool)
+svn_txdelta__compose_windows(const svn_txdelta_window_t *window_A,
+                             const svn_txdelta_window_t *window_B,
+                             apr_pool_t *pool)
 {
-  return svn_txdelta_compose_windows (window_A, window_B, pool);
+  return svn_txdelta_compose_windows(window_A, window_B, pool);
 }

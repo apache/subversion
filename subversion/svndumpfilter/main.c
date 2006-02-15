@@ -50,68 +50,68 @@
    translation.  Thus dump/load works correctly on Win32.
 */
 static svn_error_t *
-create_stdio_stream (svn_stream_t **stream,
-                     APR_DECLARE(apr_status_t) open_fn (apr_file_t **,
-                                                        apr_pool_t *),
-                     apr_pool_t *pool)
+create_stdio_stream(svn_stream_t **stream,
+                    APR_DECLARE(apr_status_t) open_fn(apr_file_t **,
+                                                      apr_pool_t *),
+                    apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
-  apr_status_t apr_err = open_fn (&stdio_file, pool);
+  apr_status_t apr_err = open_fn(&stdio_file, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, _("Can't open stdio file"));
+    return svn_error_wrap_apr(apr_err, _("Can't open stdio file"));
 
-  *stream = svn_stream_from_aprfile (stdio_file, pool);
+  *stream = svn_stream_from_aprfile(stdio_file, pool);
   return SVN_NO_ERROR;
 }
 
 
 /* Writes a property in dumpfile format to given stringbuf. */
 static void
-write_prop_to_stringbuf (svn_stringbuf_t **strbuf,
-                         const char *name,
-                         const svn_string_t *value)
+write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
+                        const char *name,
+                        const svn_string_t *value)
 {
   int bytes_used, namelen;
   char buf[SVN_KEYLINE_MAXLEN];
 
   /* Output name length, then name. */
-  namelen = strlen (name);
-  svn_stringbuf_appendbytes (*strbuf, "K ", 2);
+  namelen = strlen(name);
+  svn_stringbuf_appendbytes(*strbuf, "K ", 2);
 
-  sprintf (buf, "%d%n", namelen, &bytes_used);
-  svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+  sprintf(buf, "%d%n", namelen, &bytes_used);
+  svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
+  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
 
-  svn_stringbuf_appendbytes (*strbuf, name, namelen);
-  svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+  svn_stringbuf_appendbytes(*strbuf, name, namelen);
+  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
 
   /* Output value length, then value. */
-  svn_stringbuf_appendbytes (*strbuf, "V ", 2);
+  svn_stringbuf_appendbytes(*strbuf, "V ", 2);
 
-  sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
-  svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+  sprintf(buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
+  svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
+  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
 
-  svn_stringbuf_appendbytes (*strbuf, value->data, value->len);
-  svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+  svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
+  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
 }
 
 
 /* Prefix matching function to compare node-path with set of prefixes. */
 static svn_boolean_t
-ary_prefix_match (apr_array_header_t *pfxlist, const char *path)
+ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
 {
-  int i, pfx_len, path_len = strlen (path);
+  int i, pfx_len, path_len = strlen(path);
   const char *pfx;
 
   for (i = 0; i < pfxlist->nelts; i++)
     {
-      pfx = APR_ARRAY_IDX (pfxlist, i, const char *);
-      pfx_len = strlen (pfx);
+      pfx = APR_ARRAY_IDX(pfxlist, i, const char *);
+      pfx_len = strlen(pfx);
       if (path_len < pfx_len)
         continue;
-      if (strncmp (path, pfx, pfx_len) == 0)
+      if (strncmp(path, pfx, pfx_len) == 0)
         return TRUE;
     }
 
@@ -219,10 +219,10 @@ struct node_baton_t
 
 /* New revision: set up revision_baton, decide if we skip it. */
 static svn_error_t *
-new_revision_record (void **revision_baton,
-                     apr_hash_t *headers,
-                     void *parse_baton,
-                     apr_pool_t *pool)
+new_revision_record(void **revision_baton,
+                    apr_hash_t *headers,
+                    void *parse_baton,
+                    apr_pool_t *pool)
 {
   struct revision_baton_t *rb;
   apr_hash_index_t *hi;
@@ -230,20 +230,20 @@ new_revision_record (void **revision_baton,
   void *val;
   svn_stream_t *header_stream;
 
-  *revision_baton = apr_palloc (pool, sizeof (struct revision_baton_t));
+  *revision_baton = apr_palloc(pool, sizeof(struct revision_baton_t));
   rb = *revision_baton;
   rb->pb = parse_baton;
   rb->has_nodes = FALSE;
   rb->has_props = FALSE;
   rb->had_dropped_nodes = FALSE;
   rb->writing_begun = FALSE;
-  rb->header = svn_stringbuf_create ("", pool);
-  rb->props = apr_hash_make (pool);
+  rb->header = svn_stringbuf_create("", pool);
+  rb->props = apr_hash_make(pool);
 
-  header_stream = svn_stream_from_stringbuf (rb->header, pool);
+  header_stream = svn_stream_from_stringbuf(rb->header, pool);
 
-  val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                      APR_HASH_KEY_STRING);
+  val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                     APR_HASH_KEY_STRING);
   rb->rev_orig = SVN_STR_TO_REV(val);
 
   if (rb->pb->do_renumber_revs)
@@ -256,27 +256,27 @@ new_revision_record (void **revision_baton,
     }
 
 
-  SVN_ERR (svn_stream_printf (header_stream, pool,
-                              SVN_REPOS_DUMPFILE_REVISION_NUMBER ": %ld\n",
-                              rb->rev_actual));
+  SVN_ERR(svn_stream_printf(header_stream, pool,
+                            SVN_REPOS_DUMPFILE_REVISION_NUMBER ": %ld\n",
+                            rb->rev_actual));
 
-  for (hi = apr_hash_first (pool, headers); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this (hi, &key, NULL, &val);
-      if ((!strcmp (key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
-          || (!strcmp (key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
-          || (!strcmp (key, SVN_REPOS_DUMPFILE_REVISION_NUMBER)))
+      apr_hash_this(hi, &key, NULL, &val);
+      if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
+          || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
+          || (!strcmp(key, SVN_REPOS_DUMPFILE_REVISION_NUMBER)))
         continue;
 
       /* passthru: put header into header stringbuf. */
 
-      SVN_ERR (svn_stream_printf (header_stream, pool, "%s: %s\n",
-                                  (const char *)key,
-                                  (const char *)val));
+      SVN_ERR(svn_stream_printf(header_stream, pool, "%s: %s\n",
+                                (const char *)key,
+                                (const char *)val));
 
     }
 
-  SVN_ERR (svn_stream_close (header_stream));
+  SVN_ERR(svn_stream_close(header_stream));
 
   return SVN_NO_ERROR;
 }
@@ -287,14 +287,14 @@ new_revision_record (void **revision_baton,
    to TRUE, or by close_revision() otherwise. This must only be called
    if rb->writing_begun is FALSE. */
 static svn_error_t *
-output_revision (struct revision_baton_t *rb)
+output_revision(struct revision_baton_t *rb)
 {
   int bytes_used;
   char buf[SVN_KEYLINE_MAXLEN];
   apr_hash_index_t *hi;
-  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
-  svn_stringbuf_t *props = svn_stringbuf_create ("", hash_pool);
-  apr_pool_t *subpool = svn_pool_create (hash_pool);
+  apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
+  svn_stringbuf_t *props = svn_stringbuf_create("", hash_pool);
+  apr_pool_t *subpool = svn_pool_create(hash_pool);
 
   rb->writing_begun = TRUE;
 
@@ -311,46 +311,46 @@ output_revision (struct revision_baton_t *rb)
     {
       apr_hash_t *old_props = rb->props;
       rb->has_props = TRUE;
-      rb->props = apr_hash_make (hash_pool);
-      apr_hash_set (rb->props, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING,
-                    apr_hash_get (old_props, SVN_PROP_REVISION_DATE, 
-                                  APR_HASH_KEY_STRING));
-      apr_hash_set (rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                    svn_string_create (_("This is an empty revision for "
-                                         "padding."), hash_pool));
+      rb->props = apr_hash_make(hash_pool);
+      apr_hash_set(rb->props, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING,
+                   apr_hash_get(old_props, SVN_PROP_REVISION_DATE, 
+                                APR_HASH_KEY_STRING));
+      apr_hash_set(rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_string_create(_("This is an empty revision for "
+                                       "padding."), hash_pool));
     }
 
   /* Now, "rasterize" the props to a string, and append the property
      information to the header string.  */
   if (rb->has_props)
     {
-      for (hi = apr_hash_first (subpool, rb->props); 
+      for (hi = apr_hash_first(subpool, rb->props); 
            hi; 
-           hi = apr_hash_next (hi))
+           hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
-          apr_hash_this (hi, &key, NULL, &val);
-          write_prop_to_stringbuf (&props, key, val);
+          apr_hash_this(hi, &key, NULL, &val);
+          write_prop_to_stringbuf(&props, key, val);
         }
-      svn_stringbuf_appendcstr (props, "PROPS-END\n");
-      svn_stringbuf_appendcstr (rb->header,
-                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
-      svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes (rb->header, "\n", 1);
+      svn_stringbuf_appendcstr(props, "PROPS-END\n");
+      svn_stringbuf_appendcstr(rb->header,
+                               SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
+      sprintf(buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
+      svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
+      svn_stringbuf_appendbytes(rb->header, "\n", 1);
     }
 
-  svn_stringbuf_appendcstr (rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
-  svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
-  svn_stringbuf_appendbytes (rb->header, "\n", 1);
+  svn_stringbuf_appendcstr(rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
+  sprintf(buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
+  svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
+  svn_stringbuf_appendbytes(rb->header, "\n", 1);
 
   /* put an end to headers */
-  svn_stringbuf_appendbytes (rb->header, "\n", 1);
+  svn_stringbuf_appendbytes(rb->header, "\n", 1);
 
   /* put an end to revision */
-  svn_stringbuf_appendbytes (props,  "\n", 1);
+  svn_stringbuf_appendbytes(props,  "\n", 1);
 
   /* write out the revision */
   /* Revision is written out in the following cases:
@@ -364,30 +364,30 @@ output_revision (struct revision_baton_t *rb)
       || (! rb->had_dropped_nodes))
     {
       /* This revision is a keeper. */
-      SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 rb->header->data, &(rb->header->len)));
-      SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 props->data, &(props->len)));
+      SVN_ERR(svn_stream_write(rb->pb->out_stream,
+                               rb->header->data, &(rb->header->len)));
+      SVN_ERR(svn_stream_write(rb->pb->out_stream,
+                               props->data, &(props->len)));
 
       if (rb->pb->do_renumber_revs)
         {
           svn_revnum_t *rr_key;
           struct revmap_t *rr_val;
-          apr_pool_t *rr_pool = apr_hash_pool_get (rb->pb->renumber_history);
-          rr_key = apr_palloc (rr_pool, sizeof (*rr_key));
-          rr_val = apr_palloc (rr_pool, sizeof (*rr_val));
+          apr_pool_t *rr_pool = apr_hash_pool_get(rb->pb->renumber_history);
+          rr_key = apr_palloc(rr_pool, sizeof(*rr_key));
+          rr_val = apr_palloc(rr_pool, sizeof(*rr_val));
           *rr_key = rb->rev_orig;
           rr_val->rev = rb->rev_actual;
           rr_val->was_dropped = FALSE;
-          apr_hash_set (rb->pb->renumber_history, rr_key, 
-                        sizeof (*rr_key), rr_val);
+          apr_hash_set(rb->pb->renumber_history, rr_key, 
+                       sizeof(*rr_key), rr_val);
           rb->pb->last_live_revision = rb->rev_actual;
         }
 
       if (! rb->pb->quiet)
-        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                      _("Revision %ld committed as %ld.\n"),
-                                      rb->rev_orig, rb->rev_actual));
+        SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                    _("Revision %ld committed as %ld.\n"),
+                                    rb->rev_orig, rb->rev_actual));
     }
   else
     {
@@ -397,43 +397,43 @@ output_revision (struct revision_baton_t *rb)
         {
           svn_revnum_t *rr_key;
           struct revmap_t *rr_val;
-          apr_pool_t *rr_pool = apr_hash_pool_get (rb->pb->renumber_history);
-          rr_key = apr_palloc (rr_pool, sizeof (*rr_key));
-          rr_val = apr_palloc (rr_pool, sizeof (*rr_val));
+          apr_pool_t *rr_pool = apr_hash_pool_get(rb->pb->renumber_history);
+          rr_key = apr_palloc(rr_pool, sizeof(*rr_key));
+          rr_val = apr_palloc(rr_pool, sizeof(*rr_val));
           *rr_key = rb->rev_orig;
           rr_val->rev = rb->pb->last_live_revision;
           rr_val->was_dropped = TRUE;
-          apr_hash_set (rb->pb->renumber_history, rr_key, 
-                        sizeof (*rr_key), rr_val);
+          apr_hash_set(rb->pb->renumber_history, rr_key, 
+                       sizeof(*rr_key), rr_val);
         }
 
       if (! rb->pb->quiet)
-        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                      _("Revision %ld skipped.\n"),
-                                      rb->rev_orig));
+        SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                    _("Revision %ld skipped.\n"),
+                                    rb->rev_orig));
     }
-  svn_pool_destroy (subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
 
 /* UUID record here: dump it, as we do not filter them. */
 static svn_error_t *
-uuid_record (const char *uuid, void *parse_baton, apr_pool_t *pool)
+uuid_record(const char *uuid, void *parse_baton, apr_pool_t *pool)
 {
   struct parse_baton_t *pb = parse_baton;
-  SVN_ERR (svn_stream_printf (pb->out_stream, pool,
-                              SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
+                            SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
   return SVN_NO_ERROR;
 }
 
 
 /* New node here. Set up node_baton by copying headers. */
 static svn_error_t *
-new_node_record (void **node_baton,
-                 apr_hash_t *headers,
-                 void *rev_baton,
-                 apr_pool_t *pool)
+new_node_record(void **node_baton,
+                apr_hash_t *headers,
+                void *rev_baton,
+                apr_pool_t *pool)
 {
   struct parse_baton_t *pb;
   struct node_baton_t *nb;
@@ -443,44 +443,44 @@ new_node_record (void **node_baton,
   void *val;
   const char *tcl;
 
-  *node_baton = apr_palloc (pool, sizeof (struct node_baton_t));
+  *node_baton = apr_palloc(pool, sizeof(struct node_baton_t));
   nb          = *node_baton;
   nb->rb      = rev_baton;
   pb          = nb->rb->pb;
 
-  node_path = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                            APR_HASH_KEY_STRING);
-  copyfrom_path = apr_hash_get (headers,
-                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                                APR_HASH_KEY_STRING);
+  node_path = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                           APR_HASH_KEY_STRING);
+  copyfrom_path = apr_hash_get(headers,
+                               SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                               APR_HASH_KEY_STRING);
 
   /* Ensure that paths start with a leading '/'. */
-  node_path = svn_path_join ("/", node_path, pool);
+  node_path = svn_path_join("/", node_path, pool);
   if (copyfrom_path)
-    copyfrom_path = svn_path_join ("/", copyfrom_path, pool);
+    copyfrom_path = svn_path_join("/", copyfrom_path, pool);
 
   /* Shame, shame, shame ... this is NXOR. */
-  nb->do_skip = (ary_prefix_match (pb->prefixes, node_path)
+  nb->do_skip = (ary_prefix_match(pb->prefixes, node_path)
                  ? pb->do_exclude : (! pb->do_exclude));
 
   /* If we're skipping the node, take note of path, discarding the
      rest.  */
   if (nb->do_skip)
     {
-      apr_hash_set (pb->dropped_nodes, 
-                    apr_pstrdup (apr_hash_pool_get (pb->dropped_nodes), 
-                                 node_path),
-                    APR_HASH_KEY_STRING, (void *)1);
+      apr_hash_set(pb->dropped_nodes, 
+                   apr_pstrdup(apr_hash_pool_get(pb->dropped_nodes), 
+                               node_path),
+                   APR_HASH_KEY_STRING, (void *)1);
       nb->rb->had_dropped_nodes = TRUE;
     }
   else
     {
-      tcl = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                          APR_HASH_KEY_STRING);
+      tcl = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+                         APR_HASH_KEY_STRING);
 
       /* Test if this node was copied from dropped source. */
       if (copyfrom_path &&
-          (ary_prefix_match (pb->prefixes, copyfrom_path) 
+          (ary_prefix_match(pb->prefixes, copyfrom_path) 
            ? pb->do_exclude : (! pb->do_exclude)))
         {
           /* This node was copied from dropped source.
@@ -492,17 +492,17 @@ new_node_record (void **node_baton,
              scenario, we'll just do an add without history using the new
              contents.  */
           const char *kind;
-          kind = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
-                               APR_HASH_KEY_STRING);
+          kind = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_KIND,
+                              APR_HASH_KEY_STRING);
 
           /* If there is a Text-content-length header, and the kind is
              "file", we just fallback to an add without history. */
-          if (tcl && (strcmp (kind, "file") == 0))
+          if (tcl && (strcmp(kind, "file") == 0))
             {
-              apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                            APR_HASH_KEY_STRING, NULL);
-              apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
-                            APR_HASH_KEY_STRING, NULL);
+              apr_hash_set(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                           APR_HASH_KEY_STRING, NULL);
+              apr_hash_set(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                           APR_HASH_KEY_STRING, NULL);
               copyfrom_path = NULL;
             }
           /* Else, this is either a directory or a file whose contents we
@@ -518,22 +518,22 @@ new_node_record (void **node_baton,
       nb->has_props = FALSE;
       nb->has_text = FALSE;
       nb->writing_begun = FALSE;
-      nb->tcl = tcl ? svn__atoui64 (tcl) : 0;
-      nb->header = svn_stringbuf_create ("", pool);
-      nb->props = svn_stringbuf_create ("", pool);
+      nb->tcl = tcl ? svn__atoui64(tcl) : 0;
+      nb->header = svn_stringbuf_create("", pool);
+      nb->props = svn_stringbuf_create("", pool);
 
       /* Now we know for sure that we have a node that will not be
          skipped, flush the revision if it has not already been done. */
       nb->rb->has_nodes = TRUE;
       if (! nb->rb->writing_begun)
-        SVN_ERR (output_revision (nb->rb));
+        SVN_ERR(output_revision(nb->rb));
 
-      for (hi = apr_hash_first (pool, headers); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
         {
-          apr_hash_this (hi, (const void **) &key, NULL, &val);
-          if ((!strcmp (key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
-              || (!strcmp (key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
-              || (!strcmp (key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH)))
+          apr_hash_this(hi, (const void **) &key, NULL, &val);
+          if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
+              || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
+              || (!strcmp(key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH)))
             continue;
 
           /* Rewrite Node-Copyfrom-Rev if we are renumbering revisions.
@@ -543,32 +543,32 @@ new_node_record (void **node_baton,
              This should never happen here.
           */
           if (pb->do_renumber_revs
-              && (!strcmp (key, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV)))
+              && (!strcmp(key, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV)))
             {
               svn_revnum_t cf_orig_rev;
               struct revmap_t *cf_renum_val;
 
               cf_orig_rev = SVN_STR_TO_REV(val);
-              cf_renum_val = apr_hash_get (pb->renumber_history,
-                                           &cf_orig_rev,
-                                           sizeof (svn_revnum_t));
-              if (! (cf_renum_val && SVN_IS_VALID_REVNUM (cf_renum_val->rev)))
+              cf_renum_val = apr_hash_get(pb->renumber_history,
+                                          &cf_orig_rev,
+                                          sizeof(svn_revnum_t));
+              if (! (cf_renum_val && SVN_IS_VALID_REVNUM(cf_renum_val->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                    _("No valid copyfrom revision in filtered stream"));
-              SVN_ERR (svn_stream_printf
-                       (nb->rb->pb->out_stream, pool,
-                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
-                        cf_renum_val->rev));
+              SVN_ERR(svn_stream_printf
+                      (nb->rb->pb->out_stream, pool,
+                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
+                       cf_renum_val->rev));
               continue;
             }
 
           /* passthru: put header straight to output */
 
-          SVN_ERR (svn_stream_printf (nb->rb->pb->out_stream,
-                                      pool, "%s: %s\n",
-                                      (const char *)key,
-                                      (const char *)val));
+          SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
+                                    pool, "%s: %s\n",
+                                    (const char *)key,
+                                    (const char *)val));
         }
     }
 
@@ -581,7 +581,7 @@ new_node_record (void **node_baton,
    if the node has any text, or by close_node() otherwise. This must only
    be called if nb->writing_begun is FALSE. */
 static svn_error_t *
-output_node (struct node_baton_t *nb)
+output_node(struct node_baton_t *nb)
 {
   int bytes_used;
   char buf[SVN_KEYLINE_MAXLEN];
@@ -591,7 +591,7 @@ output_node (struct node_baton_t *nb)
   /* when there are no props nb->props->len would be zero and won't mess up
      Content-Length. */
   if (nb->has_props)
-    svn_stringbuf_appendcstr (nb->props, "PROPS-END\n");
+    svn_stringbuf_appendcstr(nb->props, "PROPS-END\n");
 
   /* 1. recalculate & check text-md5 if present. Passed through right now. */
 
@@ -599,59 +599,59 @@ output_node (struct node_baton_t *nb)
 
   if (nb->has_props)
     {
-      svn_stringbuf_appendcstr (nb->header,
-                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", nb->props->len, &bytes_used);
-      svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes (nb->header, "\n", 1);
+      svn_stringbuf_appendcstr(nb->header,
+                               SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
+      sprintf(buf, ": %" APR_SIZE_T_FMT "%n", nb->props->len, &bytes_used);
+      svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
+      svn_stringbuf_appendbytes(nb->header, "\n", 1);
     }
   if (nb->has_text)
     {
-      svn_stringbuf_appendcstr (nb->header,
-                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
-      sprintf (buf, ": %" SVN_FILESIZE_T_FMT "%n", nb->tcl, &bytes_used);
-      svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes (nb->header, "\n", 1);
+      svn_stringbuf_appendcstr(nb->header,
+                               SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
+      sprintf(buf, ": %" SVN_FILESIZE_T_FMT "%n", nb->tcl, &bytes_used);
+      svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
+      svn_stringbuf_appendbytes(nb->header, "\n", 1);
     }
-  svn_stringbuf_appendcstr (nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  sprintf (buf, ": %" SVN_FILESIZE_T_FMT "%n",
-           (svn_filesize_t) (nb->props->len + nb->tcl), &bytes_used);
-  svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
-  svn_stringbuf_appendbytes (nb->header, "\n", 1);
+  svn_stringbuf_appendcstr(nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
+  sprintf(buf, ": %" SVN_FILESIZE_T_FMT "%n",
+          (svn_filesize_t) (nb->props->len + nb->tcl), &bytes_used);
+  svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
+  svn_stringbuf_appendbytes(nb->header, "\n", 1);
 
   /* put an end to headers */
-  svn_stringbuf_appendbytes (nb->header, "\n", 1);
+  svn_stringbuf_appendbytes(nb->header, "\n", 1);
 
   /* 3. output all the stuff */
 
-  SVN_ERR (svn_stream_write (nb->rb->pb->out_stream,
-                             nb->header->data , &(nb->header->len)));
-  SVN_ERR (svn_stream_write (nb->rb->pb->out_stream,
-                             nb->props->data , &(nb->props->len)));
+  SVN_ERR(svn_stream_write(nb->rb->pb->out_stream,
+                           nb->header->data , &(nb->header->len)));
+  SVN_ERR(svn_stream_write(nb->rb->pb->out_stream,
+                           nb->props->data , &(nb->props->len)));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-set_revision_property (void *revision_baton,
-                       const char *name,
-                       const svn_string_t *value)
+set_revision_property(void *revision_baton,
+                      const char *name,
+                      const svn_string_t *value)
 {
   struct revision_baton_t *rb = revision_baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
+  apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
 
   rb->has_props = TRUE;
-  apr_hash_set (rb->props, apr_pstrdup (hash_pool, name),
-                APR_HASH_KEY_STRING, svn_string_dup (value, hash_pool));
+  apr_hash_set(rb->props, apr_pstrdup(hash_pool, name),
+               APR_HASH_KEY_STRING, svn_string_dup(value, hash_pool));
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-set_node_property (void *node_baton,
-                   const char *name,
-                   const svn_string_t *value)
+set_node_property(void *node_baton,
+                  const char *name,
+                  const svn_string_t *value)
 {
   struct node_baton_t *nb = node_baton;
 
@@ -659,18 +659,18 @@ set_node_property (void *node_baton,
     return SVN_NO_ERROR;
 
   if (!nb->has_props)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             _("Delta property block detected - "
-                               "not supported by svndumpfilter"));
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            _("Delta property block detected - "
+                              "not supported by svndumpfilter"));
 
-  write_prop_to_stringbuf (&(nb->props), name, value);
+  write_prop_to_stringbuf(&(nb->props), name, value);
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-remove_node_props (void *node_baton)
+remove_node_props(void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
 
@@ -684,7 +684,7 @@ remove_node_props (void *node_baton)
 
 
 static svn_error_t *
-set_fulltext (svn_stream_t **stream, void *node_baton)
+set_fulltext(svn_stream_t **stream, void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
 
@@ -692,7 +692,7 @@ set_fulltext (svn_stream_t **stream, void *node_baton)
     {
       nb->has_text = TRUE;
       if (! nb->writing_begun)
-        SVN_ERR(output_node (nb));
+        SVN_ERR(output_node(nb));
       *stream = nb->rb->pb->out_stream;
     }
 
@@ -702,7 +702,7 @@ set_fulltext (svn_stream_t **stream, void *node_baton)
 
 /* Finalize node */
 static svn_error_t *
-close_node (void *node_baton)
+close_node(void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
   apr_size_t len = 2;
@@ -713,10 +713,10 @@ close_node (void *node_baton)
 
   /* If the node was not flushed already to output its text, do it now. */
   if (! nb->writing_begun)
-    SVN_ERR (output_node (nb));
+    SVN_ERR(output_node(nb));
   
   /* put an end to node. */
-  SVN_ERR (svn_stream_write (nb->rb->pb->out_stream, "\n\n", &len));
+  SVN_ERR(svn_stream_write(nb->rb->pb->out_stream, "\n\n", &len));
 
   return SVN_NO_ERROR;
 }
@@ -724,13 +724,13 @@ close_node (void *node_baton)
 
 /* Finalize revision */
 static svn_error_t *
-close_revision (void *revision_baton)
+close_revision(void *revision_baton)
 {
   struct revision_baton_t *rb = revision_baton;
 
   /* If no node has yet flushed the revision, do it now. */
   if (! rb->writing_begun)
-    return output_revision (rb);
+    return output_revision(rb);
   else
     return SVN_NO_ERROR;
 }
@@ -838,20 +838,20 @@ struct svndumpfilter_opt_state
 
 
 static svn_error_t *
-parse_baton_initialize (struct parse_baton_t **pb,
-                        struct svndumpfilter_opt_state *opt_state,
-                        svn_boolean_t do_exclude,
-                        apr_pool_t *pool)
+parse_baton_initialize(struct parse_baton_t **pb,
+                       struct svndumpfilter_opt_state *opt_state,
+                       svn_boolean_t do_exclude,
+                       apr_pool_t *pool)
 {
-  struct parse_baton_t *baton = apr_palloc (pool, sizeof (*baton));
+  struct parse_baton_t *baton = apr_palloc(pool, sizeof(*baton));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR (create_stdio_stream (&(baton->in_stream),
-                                apr_file_open_stdin, pool));
+  SVN_ERR(create_stdio_stream(&(baton->in_stream),
+                              apr_file_open_stdin, pool));
 
   /* Have the parser dump results to STDOUT. Users can redirect a file. */
-  SVN_ERR (create_stdio_stream (&(baton->out_stream),
-                                apr_file_open_stdout, pool));
+  SVN_ERR(create_stdio_stream(&(baton->out_stream),
+                              apr_file_open_stdout, pool));
 
   baton->do_exclude = do_exclude;
   baton->do_renumber_revs = opt_state->renumber_revs;
@@ -860,8 +860,8 @@ parse_baton_initialize (struct parse_baton_t **pb,
   baton->quiet = opt_state->quiet;
   baton->prefixes = opt_state->prefixes;
   baton->rev_drop_count = 0; /* used to shift revnums while filtering */
-  baton->dropped_nodes = apr_hash_make (pool);
-  baton->renumber_history = apr_hash_make (pool);
+  baton->dropped_nodes = apr_hash_make(pool);
+  baton->renumber_history = apr_hash_make(pool);
   baton->last_live_revision = SVN_INVALID_REVNUM;
 
   /* This is non-ideal: We should pass through the version of the
@@ -871,9 +871,9 @@ parse_baton_initialize (struct parse_baton_t **pb,
    *   - Dumpstream version 1 is so ancient as to be ignorable
    *     (0.17.x and earlier)
    */
-  SVN_ERR (svn_stream_printf (baton->out_stream, pool,
-                              SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                              2));
+  SVN_ERR(svn_stream_printf(baton->out_stream, pool,
+                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
+                            2));
 
   *pb = baton;
   return SVN_NO_ERROR;
@@ -881,7 +881,7 @@ parse_baton_initialize (struct parse_baton_t **pb,
 
 /* This implements `help` subcommand. */
 static svn_error_t *
-subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svndumpfilter_opt_state *opt_state = baton;
   const char *header =
@@ -891,11 +891,11 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "\n"
       "Available subcommands:\n");
 
-  SVN_ERR (svn_opt_print_help (os, "svndumpfilter",
-                               opt_state ? opt_state->version : FALSE,
-                               FALSE, NULL,
-                               header, cmd_table, options_table, NULL,
-                               pool));
+  SVN_ERR(svn_opt_print_help(os, "svndumpfilter",
+                             opt_state ? opt_state->version : FALSE,
+                             FALSE, NULL,
+                             header, cmd_table, options_table, NULL,
+                             pool));
 
   return SVN_NO_ERROR;
 }
@@ -903,7 +903,7 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /* Version compatibility check */
 static svn_error_t *
-check_lib_versions (void)
+check_lib_versions(void)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -913,17 +913,17 @@ check_lib_versions (void)
       { NULL, NULL }
     };
 
-  SVN_VERSION_DEFINE (my_version);
-  return svn_ver_check_list (&my_version, checklist);
+  SVN_VERSION_DEFINE(my_version);
+  return svn_ver_check_list(&my_version, checklist);
 }
 
 
 /* Do the real work of filtering. */
 static svn_error_t *
-do_filter (apr_getopt_t *os, 
-           void *baton, 
-           svn_boolean_t do_exclude,
-           apr_pool_t *pool)
+do_filter(apr_getopt_t *os, 
+          void *baton, 
+          svn_boolean_t do_exclude,
+          apr_pool_t *pool)
 {
   struct svndumpfilter_opt_state *opt_state = baton;
   struct parse_baton_t *pb;
@@ -934,116 +934,116 @@ do_filter (apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      apr_pool_t *subpool = svn_pool_create (pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
-      SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                    do_exclude
-                                    ? opt_state->drop_empty_revs
-                                      ? _("Excluding (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Excluding prefixes:\n")
-                                    : opt_state->drop_empty_revs
-                                      ? _("Including (and dropping empty "
-                                          "revisions for) prefixes:\n")
-                                      : _("Including prefixes:\n")));
+      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                  do_exclude
+                                  ? opt_state->drop_empty_revs
+                                  ? _("Excluding (and dropping empty "
+                                      "revisions for) prefixes:\n")
+                                  : _("Excluding prefixes:\n")
+                                  : opt_state->drop_empty_revs
+                                  ? _("Including (and dropping empty "
+                                      "revisions for) prefixes:\n")
+                                  : _("Including prefixes:\n")));
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)
         {
-          svn_pool_clear (subpool);
-          SVN_ERR (svn_cmdline_fprintf
-                   (stderr, subpool, "   '%s'\n",
-                    APR_ARRAY_IDX (opt_state->prefixes, i, const char *)));
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_cmdline_fprintf
+                  (stderr, subpool, "   '%s'\n",
+                   APR_ARRAY_IDX(opt_state->prefixes, i, const char *)));
         }
 
-      SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
-      svn_pool_destroy (subpool);
+      SVN_ERR(svn_cmdline_fputs("\n", stderr, subpool));
+      svn_pool_destroy(subpool);
     }
 
-  SVN_ERR (parse_baton_initialize (&pb, opt_state, do_exclude, pool));
-  SVN_ERR (svn_repos_parse_dumpstream2 (pb->in_stream, &filtering_vtable, pb,
-                                        NULL, NULL, pool));
+  SVN_ERR(parse_baton_initialize(&pb, opt_state, do_exclude, pool));
+  SVN_ERR(svn_repos_parse_dumpstream2(pb->in_stream, &filtering_vtable, pb,
+                                      NULL, NULL, pool));
 
   /* The rest of this is just reporting.  If we aren't reporting, get
      outta here. */
   if (opt_state->quiet)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_cmdline_fputs ("\n", stderr, pool));
+  SVN_ERR(svn_cmdline_fputs("\n", stderr, pool));
 
   if (pb->rev_drop_count)
-    SVN_ERR (svn_cmdline_fprintf (stderr, pool,
-                                  _("Dropped %d revision(s).\n\n"),
-                                  pb->rev_drop_count));
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool,
+                                _("Dropped %d revision(s).\n\n"),
+                                pb->rev_drop_count));
 
   if (pb->do_renumber_revs)
     {
-      apr_pool_t *subpool = svn_pool_create (pool);
-      SVN_ERR (svn_cmdline_fputs (_("Revisions renumbered as follows:\n"),
-                                  stderr, subpool));
+      apr_pool_t *subpool = svn_pool_create(pool);
+      SVN_ERR(svn_cmdline_fputs(_("Revisions renumbered as follows:\n"),
+                                stderr, subpool));
 
       /* Get the keys of the hash, sort them, then print the hash keys
          and values, sorted by keys. */
-      num_keys = apr_hash_count (pb->renumber_history);
-      keys = apr_array_make (pool, num_keys + 1, sizeof (svn_revnum_t));
-      for (hi = apr_hash_first (pool, pb->renumber_history); 
+      num_keys = apr_hash_count(pb->renumber_history);
+      keys = apr_array_make(pool, num_keys + 1, sizeof(svn_revnum_t));
+      for (hi = apr_hash_first(pool, pb->renumber_history); 
            hi; 
-           hi = apr_hash_next (hi))
+           hi = apr_hash_next(hi))
         {
-          apr_hash_this (hi, &key, NULL, NULL);
-          APR_ARRAY_PUSH (keys, svn_revnum_t) = *((const svn_revnum_t *) key);
+          apr_hash_this(hi, &key, NULL, NULL);
+          APR_ARRAY_PUSH(keys, svn_revnum_t) = *((const svn_revnum_t *) key);
         }
-      qsort (keys->elts, keys->nelts, 
-             keys->elt_size, svn_sort_compare_revisions);
+      qsort(keys->elts, keys->nelts, 
+            keys->elt_size, svn_sort_compare_revisions);
       for (i = 0; i < keys->nelts; i++)
         {
           svn_revnum_t this_key;
           struct revmap_t *this_val;
 
-          svn_pool_clear (subpool);
-          this_key = APR_ARRAY_IDX (keys, i, svn_revnum_t);
-          this_val = apr_hash_get (pb->renumber_history, &this_key, 
-                                   sizeof (this_key));
+          svn_pool_clear(subpool);
+          this_key = APR_ARRAY_IDX(keys, i, svn_revnum_t);
+          this_val = apr_hash_get(pb->renumber_history, &this_key, 
+                                  sizeof(this_key));
           if (this_val->was_dropped)
-            SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                          _("   %ld => (dropped)\n"),
-                                          this_key));
+            SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                        _("   %ld => (dropped)\n"),
+                                        this_key));
           else
-            SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                          "   %ld => %ld\n",
-                                          this_key, this_val->rev));
+            SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                        "   %ld => %ld\n",
+                                        this_key, this_val->rev));
         }
-      SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
-      svn_pool_destroy (subpool);
+      SVN_ERR(svn_cmdline_fputs("\n", stderr, subpool));
+      svn_pool_destroy(subpool);
     }
 
-  if (apr_hash_count (pb->dropped_nodes))
+  if (apr_hash_count(pb->dropped_nodes))
     {
-      apr_pool_t *subpool = svn_pool_create (pool);
-      SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                    _("Dropped %d node(s):\n"), 
-                                    apr_hash_count (pb->dropped_nodes)));
+      apr_pool_t *subpool = svn_pool_create(pool);
+      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                  _("Dropped %d node(s):\n"), 
+                                  apr_hash_count(pb->dropped_nodes)));
 
       /* Get the keys of the hash, sort them, then print the hash keys
          and values, sorted by keys. */
-      num_keys = apr_hash_count (pb->dropped_nodes);
-      keys = apr_array_make (pool, num_keys + 1, sizeof (const char *));
-      for (hi = apr_hash_first (pool, pb->dropped_nodes);
+      num_keys = apr_hash_count(pb->dropped_nodes);
+      keys = apr_array_make(pool, num_keys + 1, sizeof(const char *));
+      for (hi = apr_hash_first(pool, pb->dropped_nodes);
            hi; 
-           hi = apr_hash_next (hi))
+           hi = apr_hash_next(hi))
         {
-          apr_hash_this (hi, &key, NULL, NULL);
-          APR_ARRAY_PUSH (keys, const char *) = key;
+          apr_hash_this(hi, &key, NULL, NULL);
+          APR_ARRAY_PUSH(keys, const char *) = key;
         }
-      qsort (keys->elts, keys->nelts, keys->elt_size, svn_sort_compare_paths);
+      qsort(keys->elts, keys->nelts, keys->elt_size, svn_sort_compare_paths);
       for (i = 0; i < keys->nelts; i++)
         {
-          svn_pool_clear (subpool);
-          SVN_ERR (svn_cmdline_fprintf
-                   (stderr, subpool, "   '%s'\n", 
-                    (const char *)APR_ARRAY_IDX (keys, i, const char *)));
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_cmdline_fprintf
+                  (stderr, subpool, "   '%s'\n", 
+                   (const char *)APR_ARRAY_IDX(keys, i, const char *)));
         }
-      SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
-      svn_pool_destroy (subpool);
+      SVN_ERR(svn_cmdline_fputs("\n", stderr, subpool));
+      svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;
@@ -1051,17 +1051,17 @@ do_filter (apr_getopt_t *os,
 
 /* This implements `exclude' subcommand. */
 static svn_error_t *
-subcommand_exclude (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+subcommand_exclude(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  return do_filter (os, baton, TRUE, pool);
+  return do_filter(os, baton, TRUE, pool);
 }
 
 
 /* This implements `include` subcommand. */
 static svn_error_t *
-subcommand_include (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+subcommand_include(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  return do_filter (os, baton, FALSE, pool);
+  return do_filter(os, baton, FALSE, pool);
 }
 
 
@@ -1069,7 +1069,7 @@ subcommand_include (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 /** Main. **/
 
 int
-main (int argc, const char * const *argv)
+main(int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -1085,64 +1085,64 @@ main (int argc, const char * const *argv)
 
 
   /* Initialize the app. */
-  if (svn_cmdline_init ("svndumpfilter", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svndumpfilter", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,
    * given this application is single threaded.
    */
- if (apr_allocator_create (&allocator))
+  if (apr_allocator_create(&allocator))
    return EXIT_FAILURE;
 
-  apr_allocator_max_free_set (allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
 
-  pool = svn_pool_create_ex (NULL, allocator);
-  apr_allocator_owner_set (allocator, pool);
+  pool = svn_pool_create_ex(NULL, allocator);
+  apr_allocator_owner_set(allocator, pool);
 		  
   /* Check library versions */
-  err = check_lib_versions ();
+  err = check_lib_versions();
   if (err)
-    return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
+    return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
 
-  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
+  received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Initialize the FS library. */
-  err = svn_fs_initialize (pool);
+  err = svn_fs_initialize(pool);
   if (err)
-    return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
+    return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
 
   if (argc <= 1)
     {
-      subcommand_help (NULL, NULL, pool);
-      svn_pool_destroy (pool);
+      subcommand_help(NULL, NULL, pool);
+      svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
 
   /* Initialize opt_state. */
-  memset (&opt_state, 0, sizeof (opt_state));
+  memset(&opt_state, 0, sizeof(opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
 
   /* Parse options. */
-  apr_getopt_init (&os, pool, argc, argv);
+  apr_getopt_init(&os, pool, argc, argv);
   os->interleave = 1;
   while (1)
     {
       const char *opt_arg;
 
       /* Parse the next option. */
-      apr_err = apr_getopt_long (os, options_table, &opt_id, &opt_arg);
-      if (APR_STATUS_IS_EOF (apr_err))
+      apr_err = apr_getopt_long(os, options_table, &opt_id, &opt_arg);
+      if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
         {
-          subcommand_help (NULL, NULL, pool);
-          svn_pool_destroy (pool);
+          subcommand_help(NULL, NULL, pool);
+          svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
 
       /* Stash the option code in an array before parsing it. */
-      APR_ARRAY_PUSH (received_opts, int) = opt_id;
+      APR_ARRAY_PUSH(received_opts, int) = opt_id;
 
       switch (opt_id)
         {
@@ -1167,8 +1167,8 @@ main (int argc, const char * const *argv)
           break;
         default:
           {
-            subcommand_help (NULL, NULL, pool);
-            svn_pool_destroy (pool);
+            subcommand_help(NULL, NULL, pool);
+            svn_pool_destroy(pool);
             return EXIT_FAILURE;
           }
         }  /* close `switch' */
@@ -1179,7 +1179,7 @@ main (int argc, const char * const *argv)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is subcommand_help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand (cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand(cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -1187,29 +1187,29 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear (svn_cmdline_fprintf
-                           (stderr, pool, _("Subcommand argument required\n")));
-          subcommand_help (NULL, NULL, pool);
-          svn_pool_destroy (pool);
+          svn_error_clear(svn_cmdline_fprintf
+                          (stderr, pool, _("Subcommand argument required\n")));
+          subcommand_help(NULL, NULL, pool);
+          svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
       else
         {
           const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
+          subcommand = svn_opt_get_canonical_subcommand(cmd_table, first_arg);
           if (subcommand == NULL)
             {
               const char* first_arg_utf8;
-              if ((err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg,
-                                                  pool)))
-                return svn_cmdline_handle_exit_error (err, pool,
-                                                      "svndumpfilter: ");
+              if ((err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
+                                                 pool)))
+                return svn_cmdline_handle_exit_error(err, pool,
+                                                     "svndumpfilter: ");
                 
-              svn_error_clear (svn_cmdline_fprintf (stderr, pool,
-                                                    _("Unknown command: '%s'\n"),
-                                                    first_arg_utf8));
-              subcommand_help (NULL, NULL, pool);
-              svn_pool_destroy (pool);
+              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                                  _("Unknown command: '%s'\n"),
+                                                  first_arg_utf8));
+              subcommand_help(NULL, NULL, pool);
+              svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
         }
@@ -1223,25 +1223,25 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear (svn_cmdline_fprintf
-                           (stderr, pool,
-                            _("\nError: no prefixes supplied.\n")));
-          svn_pool_destroy (pool);
+          svn_error_clear(svn_cmdline_fprintf
+                          (stderr, pool,
+                           _("\nError: no prefixes supplied.\n")));
+          svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
 
-      opt_state.prefixes = apr_array_make (pool, os->argc - os->ind,
-                                           sizeof (const char *));
+      opt_state.prefixes = apr_array_make(pool, os->argc - os->ind,
+                                          sizeof(const char *));
       for (i = os->ind ; i< os->argc; i++)
         {
           const char *prefix;
 
           /* Ensure that each prefix is UTF8-encoded, in internal
              style, and absolute. */
-          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&prefix, os->argv[i], pool));
-          prefix = svn_path_internal_style (prefix, pool);
-          prefix = svn_path_join ("/", prefix, pool);
-          APR_ARRAY_PUSH (opt_state.prefixes, const char *) = prefix;
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
+          prefix = svn_path_internal_style(prefix, pool);
+          prefix = svn_path_join("/", prefix, pool);
+          APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
         }
     }
 
@@ -1249,7 +1249,7 @@ main (int argc, const char * const *argv)
   /* Check that the subcommand wasn't passed any inappropriate options. */
   for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = APR_ARRAY_IDX (received_opts, i, int);
+      opt_id = APR_ARRAY_IDX(received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option
@@ -1258,36 +1258,36 @@ main (int argc, const char * const *argv)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option (subcommand, opt_id))
+      if (! svn_opt_subcommand_takes_option(subcommand, opt_id))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code (opt_id, options_table);
-          svn_opt_format_option (&optstr, badopt, FALSE, pool);
-          svn_error_clear (svn_cmdline_fprintf
-                           (stderr, pool,
-                            _("Subcommand '%s' doesn't accept option '%s'\n"
-                              "Type 'svndumpfilter help %s' for usage.\n"),
-                            subcommand->name, optstr, subcommand->name));
-          svn_pool_destroy (pool);
+            svn_opt_get_option_from_code(opt_id, options_table);
+          svn_opt_format_option(&optstr, badopt, FALSE, pool);
+          svn_error_clear(svn_cmdline_fprintf
+                          (stderr, pool,
+                           _("Subcommand '%s' doesn't accept option '%s'\n"
+                             "Type 'svndumpfilter help %s' for usage.\n"),
+                           subcommand->name, optstr, subcommand->name));
+          svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
     }
 
   /* Run the subcommand. */
-  err = (*subcommand->cmd_func) (os, &opt_state, pool);
+  err = (*subcommand->cmd_func)(os, &opt_state, pool);
   if (err)
     {
-      svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
-      svn_pool_destroy (pool);
+      svn_handle_error2(err, stderr, FALSE, "svndumpfilter: ");
+      svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
   else
     {
-      svn_pool_destroy (pool);
+      svn_pool_destroy(pool);
 
       /* Flush stdout, making sure the user will see any print errors. */
-      SVN_INT_ERR (svn_cmdline_fflush (stdout));
+      SVN_INT_ERR(svn_cmdline_fflush(stdout));
       return EXIT_SUCCESS;
     }
 }

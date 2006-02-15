@@ -52,11 +52,11 @@ struct validator_baton_t
 
 
 static svn_error_t *
-validator_func (void *baton, 
-                const char *uuid, 
-                const char *url,
-                svn_boolean_t root,
-                apr_pool_t *pool)
+validator_func(void *baton, 
+               const char *uuid, 
+               const char *url,
+               svn_boolean_t root,
+               apr_pool_t *pool)
 {
   struct validator_baton_t *b = baton;
   struct url_uuid_t *url_uuid = NULL;
@@ -66,9 +66,9 @@ validator_func (void *baton,
 
   for (i = 0; i < uuids->nelts; ++i)
     {
-      struct url_uuid_t *uu = &APR_ARRAY_IDX (uuids, i,
-                                                   struct url_uuid_t);
-      if (svn_path_is_ancestor (uu->root, url))
+      struct url_uuid_t *uu = &APR_ARRAY_IDX(uuids, i,
+                                             struct url_uuid_t);
+      if (svn_path_is_ancestor(uu->root, url))
         {
           url_uuid = uu;
           break;
@@ -80,29 +80,29 @@ validator_func (void *baton,
      by destroying the subpool. */
   if (! url_uuid)
     {
-      apr_pool_t *subpool = svn_pool_create (pool); 
+      apr_pool_t *subpool = svn_pool_create(pool); 
       svn_ra_session_t *ra_session;
       const char *ra_uuid, *ra_root;
-      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
-                                                     NULL, NULL, FALSE, TRUE,
-                                                     b->ctx, subpool));
-      SVN_ERR (svn_ra_get_uuid (ra_session, &ra_uuid, subpool));
-      SVN_ERR (svn_ra_get_repos_root (ra_session, &ra_root, subpool));
-      url_uuid = &APR_ARRAY_PUSH (uuids, struct url_uuid_t);
-      url_uuid->root = apr_pstrdup (b->pool, ra_root);
-      url_uuid->uuid = apr_pstrdup (b->pool, ra_uuid);
-      svn_pool_destroy (subpool);
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
+                                                   NULL, NULL, FALSE, TRUE,
+                                                   b->ctx, subpool));
+      SVN_ERR(svn_ra_get_uuid(ra_session, &ra_uuid, subpool));
+      SVN_ERR(svn_ra_get_repos_root(ra_session, &ra_root, subpool));
+      url_uuid = &APR_ARRAY_PUSH(uuids, struct url_uuid_t);
+      url_uuid->root = apr_pstrdup(b->pool, ra_root);
+      url_uuid->uuid = apr_pstrdup(b->pool, ra_uuid);
+      svn_pool_destroy(subpool);
     }
 
   /* Make sure the url is a repository root if desired. */
   if (root
-      && strcmp (url, url_uuid->root) != 0)
-    return svn_error_createf (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
-                                  _("'%s' is not the root of the repository"),
-                                  url);
+      && strcmp(url, url_uuid->root) != 0)
+    return svn_error_createf(SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
+                             _("'%s' is not the root of the repository"),
+                             url);
 
   /* Make sure the UUIDs match. */
-  if (uuid && strcmp (uuid, url_uuid->uuid) != 0)
+  if (uuid && strcmp(uuid, url_uuid->uuid) != 0)
     return svn_error_createf
       (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
        _("The repository at '%s' has uuid '%s', but the WC has '%s'"),
@@ -112,31 +112,31 @@ validator_func (void *baton,
 }
               
 svn_error_t *
-svn_client_relocate (const char *path,
-                     const char *from,
-                     const char *to,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_relocate(const char *path,
+                    const char *from,
+                    const char *to,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   struct validator_baton_t vb;
 
   /* Get an access baton for PATH. */
-  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path,
-                                   TRUE, recurse ? -1 : 0,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
+                                 TRUE, recurse ? -1 : 0,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
 
   /* Now, populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
   vb.path = path;
-  vb.url_uuids = apr_array_make (pool, 1, sizeof (struct url_uuid_t));
+  vb.url_uuids = apr_array_make(pool, 1, sizeof(struct url_uuid_t));
   vb.pool = pool;
-  SVN_ERR (svn_wc_relocate2 (path, adm_access, from, to,
-                             recurse, validator_func, &vb, pool));
+  SVN_ERR(svn_wc_relocate2(path, adm_access, from, to,
+                           recurse, validator_func, &vb, pool));
 
   /* All done.  Clean up, and move on out. */
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR(svn_wc_adm_close(adm_access));
   return SVN_NO_ERROR;
 }

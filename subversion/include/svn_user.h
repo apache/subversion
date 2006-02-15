@@ -36,7 +36,7 @@ extern "C" {
  * @since New in 1.4.
  */
 const char *
-svn_user_get_name (apr_pool_t *pool);
+svn_user_get_name(apr_pool_t *pool);
 
 /** Get the path of the current user's home directory, using @a pool for
  * any necessary allocation, returning NULL on error.
@@ -44,7 +44,7 @@ svn_user_get_name (apr_pool_t *pool);
  * @since New in 1.4.
  */
 const char *
-svn_user_get_homedir (apr_pool_t *pool);
+svn_user_get_homedir(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -165,8 +165,8 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 
   svn_stringbuf_t *version_footer;
 
-  version_footer = svn_stringbuf_create (fs_desc_start, pool);
-  SVN_ERR (svn_fs_print_modules (version_footer, pool));
+  version_footer = svn_stringbuf_create(fs_desc_start, pool);
+  SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
   return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);

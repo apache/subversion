@@ -41,7 +41,7 @@ extern "C" {
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_nls_init (void);
+svn_error_t *svn_nls_init(void);
 
 #ifdef __cplusplus
 }

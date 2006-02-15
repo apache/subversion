@@ -57,10 +57,10 @@ accept_response(serf_request_t *request,
 }
 
 void
-conn_closed (serf_connection_t *conn,
-             void *closed_baton,
-             apr_status_t why,
-             apr_pool_t *pool)
+conn_closed(serf_connection_t *conn,
+            void *closed_baton,
+            apr_status_t why,
+            apr_pool_t *pool)
 {
   if (why)
     {
@@ -150,10 +150,10 @@ is_conn_closing(serf_bucket_t *response)
 }
 
 apr_status_t
-handle_xml_parser (serf_bucket_t *response,
-                   XML_Parser xmlp,
-                   svn_boolean_t *done,
-                   apr_pool_t *pool)
+handle_xml_parser(serf_bucket_t *response,
+                  XML_Parser xmlp,
+                  svn_boolean_t *done,
+                  apr_pool_t *pool)
 {
   const char *data;
   apr_size_t len;

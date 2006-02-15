@@ -55,7 +55,7 @@ struct dav_deadprop_rollback {
 
 
 /* retrieve the "right" string to use as a repos path */
-static const char *get_repos_path (struct dav_resource_private *info)
+static const char *get_repos_path(struct dav_resource_private *info)
 {
   return info->repos_path;
 }
@@ -353,16 +353,16 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
   /* Check for special encodings of the property value. */
   while (attr)
     {
-      if (strcmp (attr->name, "encoding") == 0) /* ### namespace check? */
+      if (strcmp(attr->name, "encoding") == 0) /* ### namespace check? */
         {
           const char *enc_type = attr->value;
 
           /* Handle known encodings here. */
-          if (enc_type && (strcmp (enc_type, "base64") == 0))
+          if (enc_type && (strcmp(enc_type, "base64") == 0))
             propval = svn_base64_decode_string(propval, pool);
           else
-            return dav_new_error (pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                                  "Unknown property encoding");
+            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 "Unknown property encoding");
           break;
         }
       /* Next attribute, please. */

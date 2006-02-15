@@ -36,28 +36,28 @@
 
 /* Get a lock comment, allocate it in POOL and store it in *COMMENT. */
 static svn_error_t *
-get_comment (const char **comment, svn_client_ctx_t *ctx,
-             svn_cl__opt_state_t *opt_state, apr_pool_t *pool)
+get_comment(const char **comment, svn_client_ctx_t *ctx,
+            svn_cl__opt_state_t *opt_state, apr_pool_t *pool)
 {
   svn_string_t *comment_string;
 
   if (opt_state->filedata)
     {
       /* Get it from the -F argument. */
-      if (strlen (opt_state->filedata->data) < opt_state->filedata->len)
+      if (strlen(opt_state->filedata->data) < opt_state->filedata->len)
         {
           /* A message containing a zero byte can't be represented as a C
              string. */
-          return svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
-                                   _("Lock comment contains a zero byte"));
+          return svn_error_create(SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
+                                  _("Lock comment contains a zero byte"));
         }
-      comment_string = svn_string_create (opt_state->filedata->data, pool);
+      comment_string = svn_string_create(opt_state->filedata->data, pool);
 
     }
   else if (opt_state->message)
     {
       /* Get if from the -m option. */
-      comment_string = svn_string_create (opt_state->message, pool);
+      comment_string = svn_string_create(opt_state->message, pool);
     }
   else
     {
@@ -66,8 +66,8 @@ get_comment (const char **comment, svn_client_ctx_t *ctx,
     }
 
   /* Translate to UTF8/LF. */
-  SVN_ERR (svn_subst_translate_string (&comment_string, comment_string,
-                                       opt_state->encoding, pool));
+  SVN_ERR(svn_subst_translate_string(&comment_string, comment_string,
+                                     opt_state->encoding, pool));
   *comment = comment_string->data;
 
   return SVN_NO_ERROR;
@@ -75,7 +75,7 @@ get_comment (const char **comment, svn_client_ctx_t *ctx,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__lock (apr_getopt_t *os,
+svn_cl__lock(apr_getopt_t *os,
              void *baton,
              apr_pool_t *pool)
 {
@@ -84,21 +84,21 @@ svn_cl__lock (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *comment;
 
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        opt_state->targets, pool));
 
   /* We only support locking files, so '.' is not valid. */
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   /* Get comment. */
-  SVN_ERR (get_comment (&comment, ctx, opt_state, pool));
+  SVN_ERR(get_comment(&comment, ctx, opt_state, pool));
 
-  svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                        FALSE, FALSE, pool);
+  svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                       FALSE, FALSE, pool);
 
-  SVN_ERR (svn_client_lock (targets, comment, opt_state->force,
-                            ctx, pool));
+  SVN_ERR(svn_client_lock(targets, comment, opt_state->force,
+                          ctx, pool));
 
   return SVN_NO_ERROR;
 }

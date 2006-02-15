@@ -52,27 +52,27 @@ extern "C" {
 
 
 #if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
-typedef apr_pool_t *(*svn_swig_pl_get_current_pool_t) (void);
-typedef void (*svn_swig_pl_set_current_pool_t) (apr_pool_t *pool);
+typedef apr_pool_t *(*svn_swig_pl_get_current_pool_t)(void);
+typedef void (*svn_swig_pl_set_current_pool_t)(apr_pool_t *pool);
 
-void svn_swig_pl_bind_current_pool_fns (svn_swig_pl_get_current_pool_t get,
-                                        svn_swig_pl_set_current_pool_t set);
+void svn_swig_pl_bind_current_pool_fns(svn_swig_pl_get_current_pool_t get,
+                                       svn_swig_pl_set_current_pool_t set);
 #endif
 
-apr_pool_t *svn_swig_pl_make_pool (SV *obj);
+apr_pool_t *svn_swig_pl_make_pool(SV *obj);
 
 typedef enum perl_func_invoker {
     CALL_METHOD,
     CALL_SV
 } perl_func_invoker_t;
 
-svn_error_t *svn_swig_pl_callback_thunk (perl_func_invoker_t caller_func,
-		                         void *func,
-					 SV **result,
-					 const char *fmt, ...);
+svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
+                                        void *func,
+                                        SV **result,
+                                        const char *fmt, ...);
 
-SV *svn_swig_pl_prophash_to_hash (apr_hash_t *hash);
-SV *svn_swig_pl_convert_hash (apr_hash_t *hash, swig_type_info *tinfo);
+SV *svn_swig_pl_prophash_to_hash(apr_hash_t *hash);
+SV *svn_swig_pl_convert_hash(apr_hash_t *hash, swig_type_info *tinfo);
 
 const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool);
@@ -116,11 +116,11 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
                                             apr_pool_t *pool);
 
 /* thunked dir_delta authz read function. */
-svn_error_t *svn_swig_pl_thunk_authz_func (svn_boolean_t *allowed,
-                                           svn_fs_root_t *root,
-                                           const char *path,
-                                           void *baton,
-                                           apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_authz_func(svn_boolean_t *allowed,
+                                          svn_fs_root_t *root,
+                                          const char *path,
+                                          void *baton,
+                                          apr_pool_t *pool);
 
 /* ra callbacks. */
 svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
@@ -129,52 +129,52 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 				   apr_pool_t *pool);
 
 /* thunked simple_prompt callback function */
-svn_error_t *svn_swig_pl_thunk_simple_prompt (svn_auth_cred_simple_t **cred,
-                                              void *baton,
-                                              const char *realm,
-                                              const char *username,
-                                              svn_boolean_t may_save,
-                                              apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_simple_prompt(svn_auth_cred_simple_t **cred,
+                                             void *baton,
+                                             const char *realm,
+                                             const char *username,
+                                             svn_boolean_t may_save,
+                                             apr_pool_t *pool);
 
 /* thunked username_prompt callback function */
-svn_error_t *svn_swig_pl_thunk_username_prompt (svn_auth_cred_username_t **cred,
-                                                void *baton,
-                                                const char *realm,
-                                                svn_boolean_t may_save,
-                                                apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_username_prompt(svn_auth_cred_username_t **cred,
+                                               void *baton,
+                                               const char *realm,
+                                               svn_boolean_t may_save,
+                                               apr_pool_t *pool);
 
 /* thunked ssl_server_trust_prompt callback function */
-svn_error_t *svn_swig_pl_thunk_ssl_server_trust_prompt(
-                              svn_auth_cred_ssl_server_trust_t **cred,
-                              void *baton,
-                              const char *realm,
-                              apr_uint32_t failures,
-                              const svn_auth_ssl_server_cert_info_t *cert_info,
-                              svn_boolean_t may_save,
-                              apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_ssl_server_trust_prompt
+  (svn_auth_cred_ssl_server_trust_t **cred,
+   void *baton,
+   const char *realm,
+   apr_uint32_t failures,
+   const svn_auth_ssl_server_cert_info_t *cert_info,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 /* thunked ssl_client_cert callback function */
-svn_error_t *svn_swig_pl_thunk_ssl_client_cert_prompt (
-                                        svn_auth_cred_ssl_client_cert_t **cred,
-                                        void *baton,
-                                        const char *realm,
-                                        svn_boolean_t may_save,
-                                        apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_prompt
+  (svn_auth_cred_ssl_client_cert_t **cred,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 /* thunked ssl_client_cert_pw callback function */
-svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt (
-                                     svn_auth_cred_ssl_client_cert_pw_t **cred,
-                                     void *baton,
-                                     const char *realm,
-                                     svn_boolean_t may_save,
-                                     apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt
+  (svn_auth_cred_ssl_client_cert_pw_t **cred,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 /* thunked callback for svn_ra_get_wc_prop_func_t */
-svn_error_t *thunk_get_wc_prop (void *baton,
-                                const char *relpath,
-                                const char *name,
-                                const svn_string_t **value,
-                                apr_pool_t *pool);
+svn_error_t *thunk_get_wc_prop(void *baton,
+                               const char *relpath,
+                               const char *name,
+                               const svn_string_t **value,
+                               apr_pool_t *pool);
 
 /* Thunked version of svn_wc_notify_func_t callback type */
 void svn_swig_pl_notify_func(void * baton,
@@ -202,16 +202,16 @@ void svn_swig_pl_status_func(void *baton,
                              const char *path,
                              svn_wc_status_t *status);
 /* Thunked version of svn_client_blame_receiver_t callback type. */
-svn_error_t *svn_swig_pl_blame_func (void *baton,
-                                     apr_int64_t line_no,
-                                     svn_revnum_t revision,
-                                     const char *author,
-                                     const char *date,
-                                     const char *line,
-                                     apr_pool_t *pool);
+svn_error_t *svn_swig_pl_blame_func(void *baton,
+                                    apr_int64_t line_no,
+                                    svn_revnum_t revision,
+                                    const char *author,
+                                    const char *date,
+                                    const char *line,
+                                    apr_pool_t *pool);
 
 /* Thunked config enumerator */
-svn_boolean_t svn_swig_pl_thunk_config_enumerator (const char *name, const char *value, void *baton);
+svn_boolean_t svn_swig_pl_thunk_config_enumerator(const char *name, const char *value, void *baton);
 
 /* helper for making the editor */
 void svn_delta_make_editor(svn_delta_editor_t **editor,
@@ -220,16 +220,16 @@ void svn_delta_make_editor(svn_delta_editor_t **editor,
                            apr_pool_t *pool);
 
 /* svn_stream_t helpers */
-svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj);
-SV *svn_swig_pl_from_stream (svn_stream_t *stream);
+svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj);
+SV *svn_swig_pl_from_stream(svn_stream_t *stream);
 
 /* apr_file_t * */
-apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool);
+apr_file_t *svn_swig_pl_make_file(SV *file, apr_pool_t *pool);
 
-void svn_swig_pl_hold_ref_in_pool (apr_pool_t *pool, SV *sv);
+void svn_swig_pl_hold_ref_in_pool(apr_pool_t *pool, SV *sv);
 
 /* md5 access class */
-SV *svn_swig_pl_from_md5 (unsigned char *digest);
+SV *svn_swig_pl_from_md5(unsigned char *digest);
 
 
 #ifdef __cplusplus

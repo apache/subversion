@@ -1310,7 +1310,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              PyObject *py_editor,
                              apr_pool_t *pool)
 {
-  svn_delta_editor_t *thunk_editor = svn_delta_default_editor (pool);
+  svn_delta_editor_t *thunk_editor = svn_delta_default_editor(pool);
   
   thunk_editor->set_target_revision = set_target_revision;
   thunk_editor->open_root = open_root;
@@ -1336,8 +1336,8 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 /*** Other Wrappers for SVN Functions ***/
 
 
-apr_file_t *svn_swig_py_make_file (PyObject *py_file,
-                                   apr_pool_t *pool)
+apr_file_t *svn_swig_py_make_file(PyObject *py_file,
+                                  apr_pool_t *pool)
 {
   apr_file_t *apr_file = NULL;
   apr_status_t apr_err;
@@ -1345,23 +1345,23 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check (py_file))
+  if (PyString_Check(py_file))
     {
       /* input is a path -- just open an apr_file_t */
-      char* fname = PyString_AS_STRING (py_file);
-      apr_err = apr_file_open (&apr_file, fname,
+      char* fname = PyString_AS_STRING(py_file);
+      apr_err = apr_file_open(&apr_file, fname,
                               APR_CREATE | APR_READ | APR_WRITE,
                               APR_OS_DEFAULT, pool);
       if (apr_err)
         {
           char buf[256];
-          apr_strerror (apr_err, buf, sizeof(buf));
-          PyErr_Format (PyExc_IOError, "apr_file_open failed: %s: '%s'",
-                        buf, fname);
+          apr_strerror(apr_err, buf, sizeof(buf));
+          PyErr_Format(PyExc_IOError, "apr_file_open failed: %s: '%s'",
+                       buf, fname);
           return NULL;
         }
     }
-  else if (PyFile_Check (py_file))
+  else if (PyFile_Check(py_file))
     {
       FILE *file;
       apr_os_file_t osfile;
@@ -1373,12 +1373,12 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 #else
       osfile = (apr_os_file_t)fileno(file);
 #endif
-      apr_err = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+      apr_err = apr_os_file_put(&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
       if (apr_err)
         {
           char buf[256];
-          apr_strerror (apr_err, buf, sizeof(buf));
-          PyErr_Format (PyExc_IOError, "apr_os_file_put failed: %s", buf);
+          apr_strerror(apr_err, buf, sizeof(buf));
+          PyErr_Format(PyExc_IOError, "apr_os_file_put failed: %s", buf);
           return NULL;
         }
     }
@@ -1387,7 +1387,7 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 
 
 static svn_error_t *
-read_handler_pyio (void *baton, char *buffer, apr_size_t *len)
+read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
 {
   PyObject *result;
   PyObject *py_io = baton;
@@ -1425,7 +1425,7 @@ read_handler_pyio (void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-write_handler_pyio (void *baton, const char *data, apr_size_t *len)
+write_handler_pyio(void *baton, const char *data, apr_size_t *len)
 {
   PyObject *result;
   PyObject *py_io = baton;
@@ -1447,7 +1447,7 @@ write_handler_pyio (void *baton, const char *data, apr_size_t *len)
 }
 
 svn_stream_t *
-svn_swig_py_make_stream (PyObject *py_io, apr_pool_t *pool)
+svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
 {
   svn_stream_t *stream;
 
@@ -1456,9 +1456,9 @@ svn_swig_py_make_stream (PyObject *py_io, apr_pool_t *pool)
    * bindings, and we will be finished with the py_io object before we return
    * to python. I.e. DO NOT STORE AWAY THE RESULTING svn_stream_t * for use
    * over multiple calls into the bindings. */
-  stream = svn_stream_create (py_io, pool);
-  svn_stream_set_read (stream, read_handler_pyio);
-  svn_stream_set_write (stream, write_handler_pyio);
+  stream = svn_stream_create(py_io, pool);
+  svn_stream_set_read(stream, read_handler_pyio);
+  svn_stream_set_write(stream, write_handler_pyio);
 
   return stream;
 }
@@ -1575,9 +1575,9 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
   return err;
 }
 
-svn_error_t *svn_swig_py_fs_get_locks_func (void *baton, 
-                                            svn_lock_t *lock,
-                                            apr_pool_t *pool)
+svn_error_t *svn_swig_py_fs_get_locks_func(void *baton, 
+                                           svn_lock_t *lock,
+                                           apr_pool_t *pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -1853,12 +1853,12 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
 
 
 svn_error_t *
-svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
-                                     void *baton,
-                                     const char *realm,
-                                     const char *username,
-                                     svn_boolean_t may_save,
-                                     apr_pool_t *pool)
+svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
+                                    void *baton,
+                                    const char *realm,
+                                    const char *username,
+                                    svn_boolean_t may_save,
+                                    apr_pool_t *pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -1889,7 +1889,7 @@ svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
             }
           else
             {
-              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds = apr_pcalloc(pool, sizeof(*creds));
               creds->username = tmp_creds->username ? \
                 apr_pstrdup(pool, tmp_creds->username) : NULL;
               creds->password = tmp_creds->password ? \
@@ -1905,11 +1905,11 @@ svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
 }
 
 svn_error_t *
-svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
-                                       void *baton,
-                                       const char *realm,
-                                       svn_boolean_t may_save,
-                                       apr_pool_t *pool)
+svn_swig_py_auth_username_prompt_func(svn_auth_cred_username_t **cred,
+                                      void *baton,
+                                      const char *realm,
+                                      svn_boolean_t may_save,
+                                      apr_pool_t *pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -1940,7 +1940,7 @@ svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
             }
           else
             {
-              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds = apr_pcalloc(pool, sizeof(*creds));
               creds->username = tmp_creds->username ? \
                 apr_pstrdup(pool, tmp_creds->username) : NULL;
               creds->may_save = tmp_creds->may_save;
@@ -1994,7 +1994,7 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
             }
           else
             {
-              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds = apr_pcalloc(pool, sizeof(*creds));
               *creds = *tmp_creds;
             }
         }
@@ -2044,7 +2044,7 @@ svn_swig_py_auth_ssl_client_cert_prompt_func(
             }
           else
             {
-              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds = apr_pcalloc(pool, sizeof(*creds));
               creds->cert_file = tmp_creds->cert_file ? \
                 apr_pstrdup(pool, tmp_creds->cert_file) : NULL;
               creds->may_save = tmp_creds->may_save;
@@ -2096,7 +2096,7 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
             }
           else
             {
-              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds = apr_pcalloc(pool, sizeof(*creds));
               creds->password = tmp_creds->password ? \
                 apr_pstrdup(pool, tmp_creds->password) : NULL;
               creds->may_save = tmp_creds->may_save;

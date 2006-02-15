@@ -196,143 +196,132 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
                                            svn_revnum_t *latest_revnum,
                                            apr_pool_t *pool);
 
-svn_error_t *svn_ra_dav__get_dated_revision (svn_ra_session_t *session,
-                                             svn_revnum_t *revision,
-                                             apr_time_t timestamp,
-                                             apr_pool_t *pool);
+svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
+                                            svn_revnum_t *revision,
+                                            apr_time_t timestamp,
+                                            apr_pool_t *pool);
 
-svn_error_t *svn_ra_dav__change_rev_prop (svn_ra_session_t *session,
-                                          svn_revnum_t rev,
-                                          const char *name,
-                                          const svn_string_t *value,
-                                          apr_pool_t *pool);
+svn_error_t *svn_ra_dav__change_rev_prop(svn_ra_session_t *session,
+                                         svn_revnum_t rev,
+                                         const char *name,
+                                         const svn_string_t *value,
+                                         apr_pool_t *pool);
 
-svn_error_t *svn_ra_dav__rev_proplist (svn_ra_session_t *session,
-                                       svn_revnum_t rev,
-                                       apr_hash_t **props,
-                                       apr_pool_t *pool);
+svn_error_t *svn_ra_dav__rev_proplist(svn_ra_session_t *session,
+                                      svn_revnum_t rev,
+                                      apr_hash_t **props,
+                                      apr_pool_t *pool);
 
-svn_error_t *svn_ra_dav__rev_prop (svn_ra_session_t *session,
-                                   svn_revnum_t rev,
-                                   const char *name,
-                                   svn_string_t **value,
+svn_error_t *svn_ra_dav__rev_prop(svn_ra_session_t *session,
+                                  svn_revnum_t rev,
+                                  const char *name,
+                                  svn_string_t **value,
+                                  apr_pool_t *pool);
+
+svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
+                                            const svn_delta_editor_t **editor,
+                                            void **edit_baton,
+                                            const char *log_msg,
+                                            svn_commit_callback2_t callback,
+                                            void *callback_baton,
+                                            apr_hash_t *lock_tokens,
+                                            svn_boolean_t keep_locks,
+                                            apr_pool_t *pool);
+
+svn_error_t * svn_ra_dav__get_file(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t revision,
+                                   svn_stream_t *stream,
+                                   svn_revnum_t *fetched_rev,
+                                   apr_hash_t **props,
                                    apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__get_commit_editor(
-  svn_ra_session_t *session,
-  const svn_delta_editor_t **editor,
-  void **edit_baton,
-  const char *log_msg,
-  svn_commit_callback2_t callback,
-  void *callback_baton,
-  apr_hash_t *lock_tokens,
-  svn_boolean_t keep_locks,
-  apr_pool_t *pool);
+svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_uint32_t dirent_fields,
+                                 apr_hash_t **dirents,
+                                 svn_revnum_t *fetched_rev,
+                                 apr_hash_t **props,
+                                 apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__get_file(
-  svn_ra_session_t *session,
-  const char *path,
-  svn_revnum_t revision,
-  svn_stream_t *stream,
-  svn_revnum_t *fetched_rev,
-  apr_hash_t **props,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_dav__abort_commit(void *session_baton,
+                                       void *edit_baton);
 
-svn_error_t *svn_ra_dav__get_dir(
-  svn_ra_session_t *session,
-  const char *path,
-  svn_revnum_t revision,
-  apr_uint32_t dirent_fields,
-  apr_hash_t **dirents,
-  svn_revnum_t *fetched_rev,
-  apr_hash_t **props,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
+                                    const svn_ra_reporter2_t **reporter,
+                                    void **report_baton,
+                                    svn_revnum_t revision_to_update_to,
+                                    const char *update_target,
+                                    svn_boolean_t recurse,
+                                    const svn_delta_editor_t *wc_update,
+                                    void *wc_update_baton,
+                                    apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__abort_commit(
- void *session_baton,
- void *edit_baton);
+svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
+                                    const svn_ra_reporter2_t **reporter,
+                                    void **report_baton,
+                                    const char *status_target,
+                                    svn_revnum_t revision,
+                                    svn_boolean_t recurse,
+                                    const svn_delta_editor_t *wc_status,
+                                    void *wc_status_baton,
+                                    apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__do_update(
-  svn_ra_session_t *session,
-  const svn_ra_reporter2_t **reporter,
-  void **report_baton,
-  svn_revnum_t revision_to_update_to,
-  const char *update_target,
-  svn_boolean_t recurse,
-  const svn_delta_editor_t *wc_update,
-  void *wc_update_baton,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
+                                    const svn_ra_reporter2_t **reporter,
+                                    void **report_baton,
+                                    svn_revnum_t revision_to_update_to,
+                                    const char *update_target,
+                                    svn_boolean_t recurse,
+                                    const char *switch_url,
+                                    const svn_delta_editor_t *wc_update,
+                                    void *wc_update_baton,
+                                    apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__do_status(
-  svn_ra_session_t *session,
-  const svn_ra_reporter2_t **reporter,
-  void **report_baton,
-  const char *status_target,
-  svn_revnum_t revision,
-  svn_boolean_t recurse,
-  const svn_delta_editor_t *wc_status,
-  void *wc_status_baton,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
+                                  const svn_ra_reporter2_t **reporter,
+                                  void **report_baton,
+                                  svn_revnum_t revision,
+                                  const char *diff_target,
+                                  svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t text_deltas,
+                                  const char *versus_url,
+                                  const svn_delta_editor_t *wc_diff,
+                                  void *wc_diff_baton,
+                                  apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__do_switch(
-  svn_ra_session_t *session,
-  const svn_ra_reporter2_t **reporter,
-  void **report_baton,
-  svn_revnum_t revision_to_update_to,
-  const char *update_target,
-  svn_boolean_t recurse,
-  const char *switch_url,
-  const svn_delta_editor_t *wc_update,
-  void *wc_update_baton,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t start,
+                                  svn_revnum_t end,
+                                  int limit,
+                                  svn_boolean_t discover_changed_paths,
+                                  svn_boolean_t strict_node_history,
+                                  svn_log_message_receiver_t receiver,
+                                  void *receiver_baton,
+                                  apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__do_diff(
-  svn_ra_session_t *session,
-  const svn_ra_reporter2_t **reporter,
-  void **report_baton,
-  svn_revnum_t revision,
-  const char *diff_target,
-  svn_boolean_t recurse,
-  svn_boolean_t ignore_ancestry,
-  svn_boolean_t text_deltas,
-  const char *versus_url,
-  const svn_delta_editor_t *wc_diff,
-  void *wc_diff_baton,
-  apr_pool_t *pool);
+svn_error_t *svn_ra_dav__do_check_path(svn_ra_session_t *session,
+                                       const char *path,
+                                       svn_revnum_t revision,
+                                       svn_node_kind_t *kind,
+                                       apr_pool_t *pool);
 
-svn_error_t * svn_ra_dav__get_log(
-  svn_ra_session_t *session,
-  const apr_array_header_t *paths,
-  svn_revnum_t start,
-  svn_revnum_t end,
-  int limit,
-  svn_boolean_t discover_changed_paths,
-  svn_boolean_t strict_node_history,
-  svn_log_message_receiver_t receiver,
-  void *receiver_baton,
-  apr_pool_t *pool);
+svn_error_t *svn_ra_dav__do_stat(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_dirent_t **dirent,
+                                 apr_pool_t *pool);
 
-svn_error_t *svn_ra_dav__do_check_path(
-  svn_ra_session_t *session,
-  const char *path,
-  svn_revnum_t revision,
-  svn_node_kind_t *kind,
-  apr_pool_t *pool);
-
-svn_error_t *svn_ra_dav__do_stat(
-  svn_ra_session_t *session,
-  const char *path,
-  svn_revnum_t revision,
-  svn_dirent_t **dirent,
-  apr_pool_t *pool);
-
-svn_error_t *svn_ra_dav__get_file_revs (svn_ra_session_t *session,
-                                        const char *path,
-                                        svn_revnum_t start,
-                                        svn_revnum_t end,
-                                        svn_ra_file_rev_handler_t handler,
-                                        void *handler_baton,
-                                        apr_pool_t *pool);
+svn_error_t *svn_ra_dav__get_file_revs(svn_ra_session_t *session,
+                                       const char *path,
+                                       svn_revnum_t start,
+                                       svn_revnum_t end,
+                                       svn_ra_file_rev_handler_t handler,
+                                       void *handler_baton,
+                                       apr_pool_t *pool);
 
 
 /*
@@ -512,12 +501,12 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
    property names) and PROP_DELETES (an array of property names to
    delete).  Send any extra request headers in EXTRA_HEADERS. Use POOL
    for all allocations.  */
-svn_error_t *svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
-                                       const char *url,
-                                       apr_hash_t *prop_changes,
-                                       apr_array_header_t *prop_deletes,
-                                       apr_hash_t *extra_headers,
-                                       apr_pool_t *pool);
+svn_error_t *svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
+                                      const char *url,
+                                      apr_hash_t *prop_changes,
+                                      apr_array_header_t *prop_deletes,
+                                      apr_hash_t *extra_headers,
+                                      apr_pool_t *pool);
 
 extern const ne_propname svn_ra_dav__vcc_prop;
 extern const ne_propname svn_ra_dav__checked_in_prop;
@@ -526,11 +515,11 @@ extern const ne_propname svn_ra_dav__checked_in_prop;
 
 
 /* send an OPTIONS request to fetch the activity-collection-set */
-svn_error_t * svn_ra_dav__get_activity_collection(
-  const svn_string_t **activity_coll,
-  svn_ra_dav__session_t *ras,
-  const char *url,
-  apr_pool_t *pool);
+svn_error_t * svn_ra_dav__get_activity_collection
+  (const svn_string_t **activity_coll,
+   svn_ra_dav__session_t *ras,
+   const char *url,
+   apr_pool_t *pool);
 
 
 /* Call ne_set_request_body_pdovider on REQ with a provider function
@@ -586,8 +575,8 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            const char *url,
                            const char *body,
                            apr_file_t *body_file,
-                           void set_parser (ne_xml_parser *parser,
-                                            void *baton),
+                           void set_parser(ne_xml_parser *parser,
+                                           void *baton),
                            ne_xml_startelm_cb *startelm_cb,
                            ne_xml_cdata_cb *cdata_cb,
                            ne_xml_endelm_cb *endelm_cb,
@@ -611,8 +600,8 @@ svn_ra_dav__parsed_request_compat(ne_session *sess,
                                   const char *url,
                                   const char *body,
                                   apr_file_t *body_file,
-                                  void set_parser (ne_xml_parser *parser,
-                                                   void *baton),
+                                  void set_parser(ne_xml_parser *parser,
+                                                  void *baton),
                                   const svn_ra_dav__xml_elm_t *elements, 
                                   svn_ra_dav__xml_validate_cb validate_cb,
                                   svn_ra_dav__xml_startelm_cb startelm_cb, 
@@ -724,19 +713,18 @@ enum {
 };
 
 /* ### docco */
-svn_error_t * svn_ra_dav__merge_activity(
-    svn_revnum_t *new_rev,
-    const char **committed_date,
-    const char **committed_author,
-    const char **post_commit_err,
-    svn_ra_dav__session_t *ras,
-    const char *repos_url,
-    const char *activity_url,
-    apr_hash_t *valid_targets,
-    apr_hash_t *lock_tokens,
-    svn_boolean_t keep_locks,
-    svn_boolean_t disable_merge_response,
-    apr_pool_t *pool);
+svn_error_t * svn_ra_dav__merge_activity(svn_revnum_t *new_rev,
+                                         const char **committed_date,
+                                         const char **committed_author,
+                                         const char **post_commit_err,
+                                         svn_ra_dav__session_t *ras,
+                                         const char *repos_url,
+                                         const char *activity_url,
+                                         apr_hash_t *valid_targets,
+                                         apr_hash_t *lock_tokens,
+                                         svn_boolean_t keep_locks,
+                                         svn_boolean_t disable_merge_response,
+                                         apr_pool_t *pool);
 
 
 /* Make a buffer for repeated use with svn_stringbuf_set().
@@ -752,8 +740,8 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
 /* If RAS contains authentication info, attempt to store it via client
    callbacks and using POOL for temporary allocations.  */
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras,
-                                   apr_pool_t *pool);
+svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras,
+                                  apr_pool_t *pool);
 
 
 /* Like svn_ra_dav__maybe_store_auth_info(), but conditional on ERR.
@@ -847,12 +835,12 @@ svn_ra_dav__add_error_handler(ne_request *request,
 /*
  * Implements the get_locations RA layer function. */
 svn_error_t *
-svn_ra_dav__get_locations (svn_ra_session_t *session,
-                           apr_hash_t **locations,
-                           const char *path,
-                           svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
-                           apr_pool_t *pool);
+svn_ra_dav__get_locations(svn_ra_session_t *session,
+                          apr_hash_t **locations,
+                          const char *path,
+                          svn_revnum_t peg_revision,
+                          apr_array_header_t *location_revisions,
+                          apr_pool_t *pool);
 
 
 /*

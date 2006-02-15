@@ -34,9 +34,9 @@ struct status_baton
 /* An svn_wc_status_func2_t callback function for analyzing status
    structures. */
 static void
-analyze_status (void *baton,
-                const char *path,
-                svn_wc_status2_t *status)
+analyze_status(void *baton,
+               const char *path,
+               svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
 
@@ -66,19 +66,19 @@ analyze_status (void *baton,
 
   if (sb->wc_path
       && (! sb->wc_url)
-      && (strcmp (path, sb->wc_path) == 0)
+      && (strcmp(path, sb->wc_path) == 0)
       && (status->entry))
-    sb->wc_url = apr_pstrdup (sb->pool, status->entry->url);
+    sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
 }
 
 svn_error_t *
-svn_wc_revision_status (svn_wc_revision_status_t **result_p,
-                        const char *wc_path,
-                        const char *trail_url,
-                        svn_boolean_t committed,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *pool)
+svn_wc_revision_status(svn_wc_revision_status_t **result_p,
+                       const char *wc_path,
+                       const char *trail_url,
+                       svn_boolean_t committed,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *pool)
 {
   struct status_baton sb;
   const char *target;
@@ -87,7 +87,7 @@ svn_wc_revision_status (svn_wc_revision_status_t **result_p,
   void *edit_baton;
   svn_revnum_t edit_revision;
 
-  svn_wc_revision_status_t *result = apr_palloc (pool, sizeof (**result_p));
+  svn_wc_revision_status_t *result = apr_palloc(pool, sizeof(**result_p));
   *result_p = result;
 
   /* set result as nil */
@@ -103,25 +103,25 @@ svn_wc_revision_status (svn_wc_revision_status_t **result_p,
   sb.wc_url = NULL;
   sb.pool = pool;
 
-  SVN_ERR (svn_wc_adm_open_anchor (&anchor_access, &target_access, &target,
-                                   wc_path, FALSE, -1,
-                                   cancel_func, cancel_baton,
-                                   pool));
+  SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
+                                 wc_path, FALSE, -1,
+                                 cancel_func, cancel_baton,
+                                 pool));
 
-  SVN_ERR (svn_wc_get_status_editor2 (&editor, &edit_baton, NULL,
-                                      &edit_revision, anchor_access, target,
-                                      NULL  /* config */,
-                                      TRUE  /* recurse */,
-                                      TRUE  /* get_all */,
-                                      FALSE /* no_ignore */,
-                                      analyze_status, &sb,
-                                      cancel_func, cancel_baton,
-                                      NULL  /* traversal_info */,
-                                      pool));
+  SVN_ERR(svn_wc_get_status_editor2(&editor, &edit_baton, NULL,
+                                    &edit_revision, anchor_access, target,
+                                    NULL  /* config */,
+                                    TRUE  /* recurse */,
+                                    TRUE  /* get_all */,
+                                    FALSE /* no_ignore */,
+                                    analyze_status, &sb,
+                                    cancel_func, cancel_baton,
+                                    NULL  /* traversal_info */,
+                                    pool));
 
-  SVN_ERR (editor->close_edit (edit_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
 
-  SVN_ERR (svn_wc_adm_close (anchor_access));
+  SVN_ERR(svn_wc_adm_close(anchor_access));
 
   if ((! result->switched) && (trail_url != NULL))
     {
@@ -134,9 +134,9 @@ svn_wc_revision_status (svn_wc_revision_status_t **result_p,
         }
       else
         {
-          apr_size_t len1 = strlen (trail_url);
-          apr_size_t len2 = strlen (sb.wc_url);
-          if ((len1 > len2) || strcmp (sb.wc_url + len2 - len1, trail_url))
+          apr_size_t len1 = strlen(trail_url);
+          apr_size_t len2 = strlen(sb.wc_url);
+          if ((len1 > len2) || strcmp(sb.wc_url + len2 - len1, trail_url))
             result->switched = TRUE;
         }
     }

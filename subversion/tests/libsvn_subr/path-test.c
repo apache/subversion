@@ -28,10 +28,10 @@
 #define SVN_EMPTY_PATH ""
 
 static svn_error_t *
-test_path_is_child (const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+test_path_is_child(const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
 {
   int i, j;
 #define NUM_TEST_PATHS 9
@@ -72,11 +72,11 @@ test_path_is_child (const char **msg,
         {
           const char *remainder;
 
-          remainder = svn_path_is_child (paths[i], paths[j], pool);
+          remainder = svn_path_is_child(paths[i], paths[j], pool);
 
           if (((remainder) && (! remainders[i][j]))
               || ((! remainder) && (remainders[i][j]))
-              || (remainder && strcmp (remainder, remainders[i][j])))
+              || (remainder && strcmp(remainder, remainders[i][j])))
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
                "svn_path_is_child (%s, %s) returned '%s' instead of '%s'",
@@ -91,10 +91,10 @@ test_path_is_child (const char **msg,
 
 
 static svn_error_t *
-test_path_split (const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+test_path_split(const char **msg,
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -119,19 +119,19 @@ test_path_split (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof (paths) / sizeof (paths[0]); i++)
+  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
     {
       const char *dir, *base_name;
 
-      svn_path_split (paths[i][0], &dir, &base_name, pool);
-      if (strcmp (dir, paths[i][1]))
+      svn_path_split(paths[i][0], &dir, &base_name, pool);
+      if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_split (%s) returned dirname '%s' instead of '%s'",
              paths[i][0], dir, paths[i][1]);
         }
-      if (strcmp (base_name, paths[i][2]))
+      if (strcmp(base_name, paths[i][2]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
@@ -144,10 +144,10 @@ test_path_split (const char **msg,
 
 
 static svn_error_t *
-test_is_url (const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
+test_is_url(const char **msg,
+            svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
+            apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -178,11 +178,11 @@ test_is_url (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof (paths) / sizeof (paths[0]); i++)
+  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_url (paths[i]);
+      retval = svn_path_is_url(paths[i]);
       if (retvals[i] != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -195,10 +195,10 @@ test_is_url (const char **msg,
 
 
 static svn_error_t *
-test_is_uri_safe (const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
-                  apr_pool_t *pool)
+test_is_uri_safe(const char **msg,
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
+                 apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -232,11 +232,11 @@ test_is_uri_safe (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < (sizeof (paths) / sizeof (const char *)); i++)
+  for (i = 0; i < (sizeof(paths) / sizeof(const char *)); i++)
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_uri_safe (paths[i]);
+      retval = svn_path_is_uri_safe(paths[i]);
       if (retvals[i] != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -249,10 +249,10 @@ test_is_uri_safe (const char **msg,
 
 
 static svn_error_t *
-test_uri_encode (const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+test_uri_encode(const char **msg,
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   int i;
 
@@ -279,8 +279,8 @@ test_uri_encode (const char **msg,
       const char *en_path, *de_path;
 
       /* URI-encode the path, and verify the results. */
-      en_path = svn_path_uri_encode (paths[i][0], pool);
-      if (strcmp (en_path, paths[i][1]))
+      en_path = svn_path_uri_encode(paths[i][0], pool);
+      if (strcmp(en_path, paths[i][1]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
@@ -289,8 +289,8 @@ test_uri_encode (const char **msg,
         }
  
       /* URI-decode the path, and make sure we're back where we started. */
-      de_path = svn_path_uri_decode (en_path, pool);
-      if (strcmp (de_path, paths[i][0]))
+      de_path = svn_path_uri_decode(en_path, pool);
+      if (strcmp(de_path, paths[i][0]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
@@ -303,10 +303,10 @@ test_uri_encode (const char **msg,
 
 
 static svn_error_t *
-test_uri_decode (const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+test_uri_decode(const char **msg,
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   int i;
 
@@ -329,8 +329,8 @@ test_uri_decode (const char **msg,
       const char *de_path;
 
       /* URI-decode the path, and verify the results. */
-      de_path = svn_path_uri_decode (paths[i][0], pool);
-      if (strcmp (de_path, paths[i][1]))
+      de_path = svn_path_uri_decode(paths[i][0], pool);
+      if (strcmp(de_path, paths[i][1]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
@@ -343,10 +343,10 @@ test_uri_decode (const char **msg,
 
 
 static svn_error_t *
-test_uri_autoescape (const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+test_uri_autoescape(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   static const char *paths[3][2] = {
     { "http://svn.collab.net/", "http://svn.collab.net/" },
@@ -362,13 +362,13 @@ test_uri_autoescape (const char **msg,
 
   for (i = 0; i < 3; ++i)
     {
-      const char* uri = svn_path_uri_autoescape (paths[i][0], pool);
-      if (strcmp (uri, paths[i][1]) != 0)
+      const char* uri = svn_path_uri_autoescape(paths[i][0], pool);
+      if (strcmp(uri, paths[i][1]) != 0)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_uri_autoescape on '%s' returned '%s' instead of '%s'",
            paths[i][0], uri, paths[i][1]);
-      if (strcmp (paths[i][0], paths[i][1]) == 0
+      if (strcmp(paths[i][0], paths[i][1]) == 0
           && paths[i][0] != uri)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -380,10 +380,10 @@ test_uri_autoescape (const char **msg,
 }
 
 static svn_error_t *
-test_uri_from_iri (const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_uri_from_iri(const char **msg,
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
+                  apr_pool_t *pool)
 {
   /* We have to code the IRIs like this because the compiler might translate
      character and string literals outside of ASCII to some character set,
@@ -411,13 +411,13 @@ test_uri_from_iri (const char **msg,
 
   for (i = 0; i < 2; ++i)
     {
-      const char *uri = svn_path_uri_from_iri (paths[i][0], pool);
-      if (strcmp (paths[i][1], uri) != 0)
+      const char *uri = svn_path_uri_from_iri(paths[i][0], pool);
+      if (strcmp(paths[i][1], uri) != 0)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_uri_from_iri on '%s' returned '%s' instead of '%s'",
            paths[i][0], uri, paths[i][1]);
-      if (strcmp (paths[i][0], uri) == 0
+      if (strcmp(paths[i][0], uri) == 0
           && paths[i][0] != uri)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -429,10 +429,10 @@ test_uri_from_iri (const char **msg,
 }
 
 static svn_error_t *
-test_join (const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
+test_join(const char **msg,
+          svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
+          apr_pool_t *pool)
 {
   int i;
   char *result;
@@ -528,10 +528,10 @@ test_join (const char **msg,
 
 
 static svn_error_t *
-test_basename (const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
-               apr_pool_t *pool)
+test_basename(const char **msg,
+              svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
+              apr_pool_t *pool)
 {
   int i;
   char *result;
@@ -574,10 +574,10 @@ test_basename (const char **msg,
 
 
 static svn_error_t *
-test_decompose (const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
+test_decompose(const char **msg,
+               svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
+               apr_pool_t *pool)
 {
   static const char * const paths[] = {
     "/", "/", NULL,
@@ -612,7 +612,7 @@ test_decompose (const char **msg,
                                          "svn_path_decompose(\"%s\") returned "
                                          "unexpected component \"%s\"",
                                          paths[i], component);
-              if (strcmp (component, paths[i+j+1])) 
+              if (strcmp(component, paths[i+j+1])) 
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "svn_path_decompose(\"%s\") returned "
                                          "\"%s\" expected \"%s\"",
@@ -631,10 +631,10 @@ test_decompose (const char **msg,
 }
 
 static svn_error_t *
-test_canonicalize (const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
+test_canonicalize(const char **msg,
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
+                  apr_pool_t *pool)
 {
   const char *paths[][2] = {
     { "",                     "" },
@@ -689,13 +689,13 @@ test_canonicalize (const char **msg,
   i = 0;
   while (paths[i][0])
     {
-      const char *canonical = svn_path_canonicalize (paths[i][0], pool);
+      const char *canonical = svn_path_canonicalize(paths[i][0], pool);
 
-      if (strcmp (canonical, paths[i][1]))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "svn_path_canonicalize(\"%s\") returned "
-                                  "\"%s\" expected \"%s\"",
-                                  paths[i][0], canonical, paths[i][1]);
+      if (strcmp(canonical, paths[i][1]))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_canonicalize(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 paths[i][0], canonical, paths[i][1]);
       ++i;
     }
 
@@ -703,10 +703,10 @@ test_canonicalize (const char **msg,
 }
 
 static svn_error_t *
-test_remove_component (const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+test_remove_component(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
 {
   const char *paths[][2] = {
     { "",                     "" },
@@ -724,20 +724,20 @@ test_remove_component (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  buf = svn_stringbuf_create ("", pool);
+  buf = svn_stringbuf_create("", pool);
   
   i = 0;
   while (paths[i][0])
     {
-      svn_stringbuf_set (buf, paths[i][0]);
+      svn_stringbuf_set(buf, paths[i][0]);
 
-      svn_path_remove_component (buf);
+      svn_path_remove_component(buf);
       
-      if (strcmp (buf->data, paths[i][1]))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "svn_path_remove_component(\"%s\") returned "
-                                  "\"%s\" expected \"%s\"",
-                                  paths[i][0], buf->data, paths[i][1]);
+      if (strcmp(buf->data, paths[i][1]))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_remove_component(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 paths[i][0], buf->data, paths[i][1]);
       ++i;
     }
 
@@ -750,18 +750,18 @@ test_remove_component (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test_path_is_child),
-    SVN_TEST_PASS (test_path_split),
-    SVN_TEST_PASS (test_is_url),
-    SVN_TEST_PASS (test_is_uri_safe),
-    SVN_TEST_PASS (test_uri_encode),
-    SVN_TEST_PASS (test_uri_decode),
-    SVN_TEST_PASS (test_uri_autoescape),
-    SVN_TEST_PASS (test_uri_from_iri),
-    SVN_TEST_PASS (test_join),
-    SVN_TEST_PASS (test_basename),
-    SVN_TEST_PASS (test_decompose),
-    SVN_TEST_PASS (test_canonicalize),
-    SVN_TEST_PASS (test_remove_component),
+    SVN_TEST_PASS(test_path_is_child),
+    SVN_TEST_PASS(test_path_split),
+    SVN_TEST_PASS(test_is_url),
+    SVN_TEST_PASS(test_is_uri_safe),
+    SVN_TEST_PASS(test_uri_encode),
+    SVN_TEST_PASS(test_uri_decode),
+    SVN_TEST_PASS(test_uri_autoescape),
+    SVN_TEST_PASS(test_uri_from_iri),
+    SVN_TEST_PASS(test_join),
+    SVN_TEST_PASS(test_basename),
+    SVN_TEST_PASS(test_decompose),
+    SVN_TEST_PASS(test_canonicalize),
+    SVN_TEST_PASS(test_remove_component),
     SVN_TEST_NULL
   };

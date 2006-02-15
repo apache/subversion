@@ -196,12 +196,12 @@ handle_getloc(serf_bucket_t *response,
 
 
 svn_error_t *
-svn_ra_serf__get_locations (svn_ra_session_t *ra_session,
-                            apr_hash_t **locations,
-                            const char *path,
-                            svn_revnum_t peg_revision,
-                            apr_array_header_t *location_revisions,
-                            apr_pool_t *pool)
+svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
+                           apr_hash_t **locations,
+                           const char *path,
+                           svn_revnum_t peg_revision,
+                           apr_array_header_t *location_revisions,
+                           apr_pool_t *pool)
 {
   loc_context_t *loc_ctx;
   ra_serf_session_t *session = ra_session->priv;

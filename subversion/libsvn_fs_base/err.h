@@ -32,7 +32,7 @@ extern "C" {
 
 /* Verify that FS refers to an open database; return an appropriate
    error if this is not the case.  */
-svn_error_t *svn_fs_base__check_fs (svn_fs_t *fs);
+svn_error_t *svn_fs_base__check_fs(svn_fs_t *fs);
 
 
 
@@ -40,76 +40,76 @@ svn_error_t *svn_fs_base__check_fs (svn_fs_t *fs);
 
 
 /* SVN_ERR_FS_CORRUPT: the REVISION skel of revision REV in FS is corrupt.  */
-svn_error_t *svn_fs_base__err_corrupt_fs_revision (svn_fs_t *fs,
-                                                   svn_revnum_t rev);
+svn_error_t *svn_fs_base__err_corrupt_fs_revision(svn_fs_t *fs,
+                                                  svn_revnum_t rev);
 
 /* SVN_ERR_FS_ID_NOT_FOUND: something in FS refers to node revision
    ID, but that node revision doesn't exist.  */
-svn_error_t *svn_fs_base__err_dangling_id (svn_fs_t *fs,
-                                           const svn_fs_id_t *id);
+svn_error_t *svn_fs_base__err_dangling_id(svn_fs_t *fs,
+                                          const svn_fs_id_t *id);
 
 /* SVN_ERR_FS_CORRUPT: something in FS refers to filesystem revision REV,
    but that filesystem revision doesn't exist.  */
-svn_error_t *svn_fs_base__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev);
+svn_error_t *svn_fs_base__err_dangling_rev(svn_fs_t *fs, svn_revnum_t rev);
 
 /* SVN_ERR_FS_CORRUPT: the entry for TXN in the `transactions' table
    is corrupt.  */
-svn_error_t *svn_fs_base__err_corrupt_txn (svn_fs_t *fs, const char *txn);
+svn_error_t *svn_fs_base__err_corrupt_txn(svn_fs_t *fs, const char *txn);
 
 /* SVN_ERR_FS_CORRUPT: the entry for COPY_ID in the `copies' table
    is corrupt.  */
-svn_error_t *svn_fs_base__err_corrupt_copy (svn_fs_t *fs, const char *copy_id);
+svn_error_t *svn_fs_base__err_corrupt_copy(svn_fs_t *fs, const char *copy_id);
 
 /* SVN_ERR_FS_NOT_MUTABLE: the caller attempted to change a node
    outside of a transaction.  */
-svn_error_t *svn_fs_base__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev,
-                                           const char *path);
+svn_error_t *svn_fs_base__err_not_mutable(svn_fs_t *fs, svn_revnum_t rev,
+                                          const char *path);
 
 /* SVN_ERR_FS_NO_SUCH_TRANSACTION: there is no transaction named TXN in FS.  */
-svn_error_t *svn_fs_base__err_no_such_txn (svn_fs_t *fs, const char *txn);
+svn_error_t *svn_fs_base__err_no_such_txn(svn_fs_t *fs, const char *txn);
 
 /* SVN_ERR_FS_TRANSACTION_NOT_MUTABLE: trying to change the
    unchangeable transaction named TXN in FS.  */
-svn_error_t *svn_fs_base__err_txn_not_mutable (svn_fs_t *fs, const char *txn);
+svn_error_t *svn_fs_base__err_txn_not_mutable(svn_fs_t *fs, const char *txn);
 
 /* SVN_ERR_FS_NO_SUCH_COPY: there is no copy with id COPY_ID in FS.  */
-svn_error_t *svn_fs_base__err_no_such_copy (svn_fs_t *fs, const char *copy_id);
+svn_error_t *svn_fs_base__err_no_such_copy(svn_fs_t *fs, const char *copy_id);
 
 /* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
-svn_error_t *svn_fs_base__err_not_directory (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_base__err_not_directory(svn_fs_t *fs, const char *path);
 
 /* SVN_ERR_FS_NOT_FILE: PATH does not refer to a file in FS.  */
-svn_error_t *svn_fs_base__err_not_file (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_base__err_not_file(svn_fs_t *fs, const char *path);
 
 /* SVN_ERR_FS_BAD_LOCK_TOKEN: LOCK_TOKEN does not refer to a lock in FS.  */
-svn_error_t *svn_fs_base__err_bad_lock_token (svn_fs_t *fs,
-                                              const char *lock_token);
+svn_error_t *svn_fs_base__err_bad_lock_token(svn_fs_t *fs,
+                                             const char *lock_token);
 
 /* SVN_ERR_FS_NO_LOCK_TOKEN: no lock token given for PATH in FS.  */
-svn_error_t *svn_fs_base__err_no_lock_token (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_base__err_no_lock_token(svn_fs_t *fs, const char *path);
 
 /* SVN_ERR_FS_CORRUPT: a lock in `locks' table is corrupt.  */
-svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
-                                            const char *lock_token);
+svn_error_t *svn_fs_base__err_corrupt_lock(svn_fs_t *fs,
+                                           const char *lock_token);
 
 /* SVN_ERR_FS_PATH_ALREADY_LOCKED: a path is already locked.  */
-svn_error_t *svn_fs_base__err_path_already_locked (svn_fs_t *fs,
-                                                   svn_lock_t *lock);
+svn_error_t *svn_fs_base__err_path_already_locked(svn_fs_t *fs,
+                                                  svn_lock_t *lock);
 
 /* SVN_ERR_FS_NO_SUCH_LOCK: there is no lock on PATH in FS.  */
-svn_error_t *svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_base__err_no_such_lock(svn_fs_t *fs, const char *path);
 
 /* SVN_ERR_FS_LOCK_EXPIRED: TOKEN's lock in FS has been auto-expired. */
-svn_error_t *svn_fs_base__err_lock_expired (svn_fs_t *fs, const char *token);
+svn_error_t *svn_fs_base__err_lock_expired(svn_fs_t *fs, const char *token);
 
 /* SVN_ERR_FS_NO_USER: FS does not have a user associated with it. */
-svn_error_t *svn_fs_base__err_no_user (svn_fs_t *fs);
+svn_error_t *svn_fs_base__err_no_user(svn_fs_t *fs);
 
 /* SVN_ERR_FS_LOCK_OWNER_MISMATCH: trying to use a lock whose LOCK_OWNER
    doesn't match the USERNAME associated with FS.  */
-svn_error_t *svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
-                                                   const char *username,
-                                                   const char *lock_owner);
+svn_error_t *svn_fs_base__err_lock_owner_mismatch(svn_fs_t *fs,
+                                                  const char *username,
+                                                  const char *lock_owner);
 
 #ifdef __cplusplus
 }

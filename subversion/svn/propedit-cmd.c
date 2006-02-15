@@ -40,9 +40,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__propedit (apr_getopt_t *os,
-                  void *baton,
-                  apr_pool_t *pool)
+svn_cl__propedit(apr_getopt_t *os,
+                 void *baton,
+                 apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -52,13 +52,13 @@ svn_cl__propedit (apr_getopt_t *os,
 
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
-  SVN_ERR (svn_opt_parse_num_args (&args, os, 1, pool));
+  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -69,40 +69,40 @@ svn_cl__propedit (apr_getopt_t *os,
 
       /* Implicit "." is okay for revision properties; it just helps
          us find the right repository. */
-      svn_opt_push_implicit_dot_target (targets, pool);
+      svn_opt_push_implicit_dot_target(targets, pool);
 
-      SVN_ERR (svn_cl__revprop_prepare (&opt_state->start_revision, targets,
-                                        &URL, pool));
+      SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
+                                      &URL, pool));
 
       /* Fetch the current property. */
-      SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,
-                                       URL, &(opt_state->start_revision),
-                                       &rev, ctx, pool));
+      SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
+                                     URL, &(opt_state->start_revision),
+                                     &rev, ctx, pool));
       if (! propval)
-        propval = svn_string_create ("", pool);
+        propval = svn_string_create("", pool);
       
       /* Run the editor on a temporary file which contains the
          original property value... */
-      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_cl__edit_externally (&propval, NULL,
-                                        opt_state->editor_cmd, temp_dir,
-                                        propval, "svn-prop",
-                                        ctx->config,
-                                        svn_prop_needs_translation (pname_utf8),
-                                        opt_state->encoding, pool));
+      SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
+      SVN_ERR(svn_cl__edit_externally(&propval, NULL,
+                                      opt_state->editor_cmd, temp_dir,
+                                      propval, "svn-prop",
+                                      ctx->config,
+                                      svn_prop_needs_translation(pname_utf8),
+                                      opt_state->encoding, pool));
       
       /* ...and re-set the property's value accordingly. */
       if (propval)
         {
-          if (! svn_prop_needs_translation (pname_utf8)
+          if (! svn_prop_needs_translation(pname_utf8)
               && opt_state->encoding)
             return svn_error_create 
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Bad encoding option: prop value not stored as UTF8"));
           
-          SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
-                                           URL, &(opt_state->start_revision),
-                                           &rev, opt_state->force, ctx, pool));
+          SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
+                                         URL, &(opt_state->start_revision),
+                                         &rev, opt_state->force, ctx, pool));
 
           SVN_ERR
             (svn_cmdline_printf
@@ -112,9 +112,9 @@ svn_cl__propedit (apr_getopt_t *os,
         }
       else
         {
-          SVN_ERR (svn_cmdline_printf
-                   (pool, _("No changes to property '%s' on revision %ld\n"),
-                    pname_utf8, rev));
+          SVN_ERR(svn_cmdline_printf
+                  (pool, _("No changes to property '%s' on revision %ld\n"),
+                   pname_utf8, rev));
         }
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
@@ -126,7 +126,7 @@ svn_cl__propedit (apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      apr_pool_t *subpool = svn_pool_create (pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* The customary implicit dot rule has been prone to user error
        * here.  For example, Jon Trowbridge <trow@gnu.og> did
@@ -162,9 +162,9 @@ svn_cl__propedit (apr_getopt_t *os,
           const svn_wc_entry_t *entry;
           svn_opt_revision_t peg_revision;
           
-          svn_pool_clear (subpool);
-          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          if (svn_path_is_url (target))
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
+          if (svn_path_is_url(target))
             {
               /* ### If/when svn_client_propset2() supports setting
                  properties remotely, this guard can go away. */
@@ -179,54 +179,54 @@ svn_cl__propedit (apr_getopt_t *os,
           peg_revision.kind = svn_opt_revision_unspecified;
           
           /* Fetch the current property. */
-          SVN_ERR (svn_client_propget2 (&props, pname_utf8, target,
-                                        &peg_revision,
-                                        &(opt_state->start_revision),
-                                        FALSE, ctx, subpool));
+          SVN_ERR(svn_client_propget2(&props, pname_utf8, target,
+                                      &peg_revision,
+                                      &(opt_state->start_revision),
+                                      FALSE, ctx, subpool));
           
           /* Get the property value. */
-          propval = apr_hash_get (props, target, APR_HASH_KEY_STRING);
+          propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
           if (! propval)
-            propval = svn_string_create ("", subpool);
+            propval = svn_string_create("", subpool);
           
           /* Split the path if it is a file path. */
-          SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
-                                           FALSE, 0, ctx->cancel_func,
-                                           ctx->cancel_baton, subpool));
-          SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
+          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
+                                         FALSE, 0, ctx->cancel_func,
+                                         ctx->cancel_baton, subpool));
+          SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
           if (! entry)
             return svn_error_createf
               (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
                _("'%s' does not appear to be a working copy path"), target);
           if (entry->kind == svn_node_file)
-            svn_path_split (target, &base_dir, NULL, subpool);
+            svn_path_split(target, &base_dir, NULL, subpool);
           
           /* Run the editor on a temporary file which contains the
              original property value... */
-          SVN_ERR (svn_cl__edit_externally (&propval, NULL,
-                                            opt_state->editor_cmd,
-                                            base_dir,
-                                            propval,
-                                            "svn-prop",
-                                            ctx->config,
-                                            svn_prop_needs_translation
-                                            (pname_utf8), opt_state->encoding,
-                                            subpool));
+          SVN_ERR(svn_cl__edit_externally(&propval, NULL,
+                                          opt_state->editor_cmd,
+                                          base_dir,
+                                          propval,
+                                          "svn-prop",
+                                          ctx->config,
+                                          svn_prop_needs_translation
+                                          (pname_utf8), opt_state->encoding,
+                                          subpool));
           
-          target_local = svn_path_local_style (target, subpool);
+          target_local = svn_path_local_style(target, subpool);
 
           /* ...and re-set the property's value accordingly. */
           if (propval)
             {
-              if (! svn_prop_needs_translation (pname_utf8)
+              if (! svn_prop_needs_translation(pname_utf8)
                   && opt_state->encoding)
                 return svn_error_create 
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
               
-              SVN_ERR (svn_client_propset2 (pname_utf8, propval, target, 
-                                            FALSE, opt_state->force,
-                                            ctx, subpool));
+              SVN_ERR(svn_client_propset2(pname_utf8, propval, target, 
+                                          FALSE, opt_state->force,
+                                          ctx, subpool));
               SVN_ERR
                 (svn_cmdline_printf
                  (subpool, _("Set new value for property '%s' on '%s'\n"),
@@ -240,7 +240,7 @@ svn_cl__propedit (apr_getopt_t *os,
                   pname_utf8, target_local));
             }
         }
-      svn_pool_destroy (subpool);
+      svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;

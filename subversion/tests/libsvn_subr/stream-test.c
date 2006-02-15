@@ -25,13 +25,13 @@
 
 
 static svn_error_t *
-test_stream_from_string (const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
-                         apr_pool_t *pool)
+test_stream_from_string(const char **msg,
+                        svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
+                        apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
 
 #define NUM_TEST_STRINGS 4
 #define TEST_BUF_SIZE 10
@@ -65,24 +65,24 @@ test_stream_from_string (const char **msg,
       svn_stringbuf_t *inbuf, *outbuf;
       apr_size_t len;
 
-      inbuf = svn_stringbuf_create (strings[i], subpool);
-      outbuf = svn_stringbuf_create ("", subpool);
-      stream = svn_stream_from_stringbuf (inbuf, subpool);
+      inbuf = svn_stringbuf_create(strings[i], subpool);
+      outbuf = svn_stringbuf_create("", subpool);
+      stream = svn_stream_from_stringbuf(inbuf, subpool);
       len = TEST_BUF_SIZE;
       while (len == TEST_BUF_SIZE)
         {
           /* Read a chunk ... */
-          SVN_ERR (svn_stream_read (stream, buffer, &len));
+          SVN_ERR(svn_stream_read(stream, buffer, &len));
 
           /* ... and append the chunk to the stringbuf. */
-          svn_stringbuf_appendbytes (outbuf, buffer, len);
+          svn_stringbuf_appendbytes(outbuf, buffer, len);
         }
       
-      if (! svn_stringbuf_compare (inbuf, outbuf))
-        return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                                 "Got unexpected result.");
+      if (! svn_stringbuf_compare(inbuf, outbuf))
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Got unexpected result.");
 
-      svn_pool_clear (subpool);
+      svn_pool_clear(subpool);
     }
 
   /* Test svn_stream_from_stringbuf() as a writable stream. */
@@ -92,9 +92,9 @@ test_stream_from_string (const char **msg,
       svn_stringbuf_t *inbuf, *outbuf;
       apr_size_t amt_read, len;
 
-      inbuf = svn_stringbuf_create (strings[i], subpool);
-      outbuf = svn_stringbuf_create ("", subpool);
-      stream = svn_stream_from_stringbuf (outbuf, subpool);
+      inbuf = svn_stringbuf_create(strings[i], subpool);
+      outbuf = svn_stringbuf_create("", subpool);
+      stream = svn_stream_from_stringbuf(outbuf, subpool);
       amt_read = 0;
       while (amt_read < inbuf->len)
         {
@@ -102,21 +102,21 @@ test_stream_from_string (const char **msg,
           len = TEST_BUF_SIZE < (inbuf->len - amt_read) 
                   ? TEST_BUF_SIZE 
                   : inbuf->len - amt_read;
-          SVN_ERR (svn_stream_write (stream, inbuf->data + amt_read, &len));
+          SVN_ERR(svn_stream_write(stream, inbuf->data + amt_read, &len));
           amt_read += len;
         }
       
-      if (! svn_stringbuf_compare (inbuf, outbuf))
-        return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                                 "Got unexpected result.");
+      if (! svn_stringbuf_compare(inbuf, outbuf))
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Got unexpected result.");
 
-      svn_pool_clear (subpool);
+      svn_pool_clear(subpool);
     }
 
 #undef NUM_TEST_STRINGS
 #undef TEST_BUF_SIZE
 
-  svn_pool_destroy (subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -147,10 +147,10 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 
 
 static svn_error_t *
-test_stream_compressed (const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+test_stream_compressed(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
 {
 #define NUM_TEST_STRINGS 5
 #define TEST_BUF_SIZE 10
@@ -158,7 +158,7 @@ test_stream_compressed (const char **msg,
 
   int i;
   svn_stringbuf_t *bufs[NUM_TEST_STRINGS];
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   static const char * const strings[NUM_TEST_STRINGS - 1] = { 
     /* 0 */
@@ -183,7 +183,7 @@ test_stream_compressed (const char **msg,
     return SVN_NO_ERROR;
   
   for (i = 0; i < (NUM_TEST_STRINGS - 1); i++)
-    bufs[i] = svn_stringbuf_create (strings[i], pool);
+    bufs[i] = svn_stringbuf_create(strings[i], pool);
   
   /* the last buffer is for the generated data */
   bufs[NUM_TEST_STRINGS - 1] = generate_test_bytes(GENERATED_SIZE, pool);
@@ -196,42 +196,42 @@ test_stream_compressed (const char **msg,
       apr_size_t len;
       
       origbuf = bufs[i];
-      inbuf = svn_stringbuf_create ("", subpool);
-      outbuf = svn_stringbuf_create ("", subpool);
+      inbuf = svn_stringbuf_create("", subpool);
+      outbuf = svn_stringbuf_create("", subpool);
 
-      stream = svn_stream_compressed (svn_stream_from_stringbuf (outbuf,
-                                                                 subpool),
-                                      subpool);
+      stream = svn_stream_compressed(svn_stream_from_stringbuf(outbuf,
+                                                               subpool),
+                                     subpool);
       len = origbuf->len;
-      SVN_ERR (svn_stream_write (stream, origbuf->data, &len));
-      SVN_ERR (svn_stream_close (stream));
+      SVN_ERR(svn_stream_write(stream, origbuf->data, &len));
+      SVN_ERR(svn_stream_close(stream));
       
-      stream = svn_stream_compressed (svn_stream_from_stringbuf (outbuf, 
-                                                                 subpool),
-                                      subpool);
+      stream = svn_stream_compressed(svn_stream_from_stringbuf(outbuf, 
+                                                               subpool),
+                                     subpool);
       len = TEST_BUF_SIZE;
       while (len >= TEST_BUF_SIZE)
         {
           len = TEST_BUF_SIZE;
-          SVN_ERR (svn_stream_read (stream, buf, &len));
+          SVN_ERR(svn_stream_read(stream, buf, &len));
           if (len > 0)
-            svn_stringbuf_appendbytes (inbuf, buf, len);
+            svn_stringbuf_appendbytes(inbuf, buf, len);
         }
       
-      if (! svn_stringbuf_compare (inbuf, origbuf))
-        return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                                 "Got unexpected result.");
+      if (! svn_stringbuf_compare(inbuf, origbuf))
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Got unexpected result.");
       
-      SVN_ERR (svn_stream_close (stream));
+      SVN_ERR(svn_stream_close(stream));
 
-      svn_pool_clear (subpool);
+      svn_pool_clear(subpool);
     }
   
 #undef NUM_TEST_STRINGS
 #undef TEST_BUF_SIZE
 #undef GENEREATED_SIZE
 
-  svn_pool_destroy (subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -241,7 +241,7 @@ test_stream_compressed (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test_stream_from_string),
-    SVN_TEST_PASS (test_stream_compressed),
+    SVN_TEST_PASS(test_stream_from_string),
+    SVN_TEST_PASS(test_stream_compressed),
     SVN_TEST_NULL
   };

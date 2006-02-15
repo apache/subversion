@@ -90,27 +90,27 @@ static int request_auth(void *userdata, const char *realm, int attempt,
       const char *realmstring;
 
       /* <https://svn.collab.net:80> Subversion repository */
-      realmstring = apr_psprintf (ras->pool, "<%s://%s:%d> %s",
-                                  ras->root.scheme, ras->root.host,
-                                  ras->root.port, realm);
+      realmstring = apr_psprintf(ras->pool, "<%s://%s:%d> %s",
+                                 ras->root.scheme, ras->root.host,
+                                 ras->root.port, realm);
 
-      err = svn_auth_first_credentials (&creds,
-                                        &(ras->auth_iterstate), 
-                                        SVN_AUTH_CRED_SIMPLE,
-                                        realmstring,
-                                        ras->callbacks->auth_baton,
-                                        ras->pool);
+      err = svn_auth_first_credentials(&creds,
+                                       &(ras->auth_iterstate), 
+                                       SVN_AUTH_CRED_SIMPLE,
+                                       realmstring,
+                                       ras->callbacks->auth_baton,
+                                       ras->pool);
     }
 
   else /* attempt > 0 */
     /* ### TODO:  if the http realm changed this time around, we
        should be calling first_creds(), not next_creds(). */
-    err = svn_auth_next_credentials (&creds,
-                                     ras->auth_iterstate,
-                                     ras->pool);
+    err = svn_auth_next_credentials(&creds,
+                                    ras->auth_iterstate,
+                                    ras->pool);
   if (err || ! creds)
     {
-      svn_error_clear (err);
+      svn_error_clear(err);
       return -1;
     }
   simple_creds = creds;
@@ -179,11 +179,11 @@ server_ssl_callback(void *userdata,
   char fingerprint[NE_SSL_DIGESTLEN];
   char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
   const char *realmstring;
-  apr_uint32_t *svn_failures = apr_palloc (ras->pool, sizeof(*svn_failures));
+  apr_uint32_t *svn_failures = apr_palloc(ras->pool, sizeof(*svn_failures));
 
   /* Construct the realmstring, e.g. https://svn.collab.net:80 */
-  realmstring = apr_psprintf (ras->pool, "%s://%s:%d", ras->root.scheme,
-                              ras->root.host, ras->root.port);
+  realmstring = apr_psprintf(ras->pool, "%s://%s:%d", ras->root.scheme,
+                             ras->root.host, ras->root.port);
 
   *svn_failures = convert_neon_failures(failures);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
@@ -305,8 +305,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
 
   apr_pool_create(&pool, ras->pool);
 
-  realmstring = apr_psprintf (pool, "%s://%s:%d", ras->root.scheme,
-                              ras->root.host, ras->root.port);
+  realmstring = apr_psprintf(pool, "%s://%s:%d", ras->root.scheme,
+                             ras->root.host, ras->root.port);
 
   for (try = 0; TRUE; ++try)
     {
@@ -387,8 +387,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
     {
-      apr_array_header_t *l = svn_cstring_split (exceptions, ",", TRUE, pool);
-      is_exception = svn_cstring_match_glob_list (requested_host, l);
+      apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
+      is_exception = svn_cstring_match_glob_list(requested_host, l);
     }
   if (! is_exception)
     {
@@ -551,7 +551,7 @@ ra_dav_get_description(void)
 }
 
 static const char * const *
-ra_dav_get_schemes (apr_pool_t *pool)
+ra_dav_get_schemes(apr_pool_t *pool)
 {
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
@@ -606,12 +606,12 @@ parse_url(ne_uri *uri, const char *url)
 }
 
 static svn_error_t *
-svn_ra_dav__open (svn_ra_session_t *session,
-                  const char *repos_URL,
-                  const svn_ra_callbacks2_t *callbacks,
-                  void *callback_baton,
-                  apr_hash_t *config,
-                  apr_pool_t *pool)
+svn_ra_dav__open(svn_ra_session_t *session,
+                 const char *repos_URL,
+                 const svn_ra_callbacks2_t *callbacks,
+                 void *callback_baton,
+                 apr_hash_t *config,
+                 apr_pool_t *pool)
 {
   apr_size_t len;
   ne_session *sess, *sess2;
@@ -626,7 +626,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
   /* Sanity check the URI */
-  SVN_ERR (parse_url (&uri, repos_URL));
+  SVN_ERR(parse_url(&uri, repos_URL));
 
   /* Can we initialize network? */
   if (ne_sock_init() != 0)
@@ -666,9 +666,9 @@ svn_ra_dav__open (svn_ra_session_t *session,
   sess = ne_session_create(uri.scheme, uri.host, uri.port);
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
 
-  cfg = config ? apr_hash_get (config, 
-                               SVN_CONFIG_CATEGORY_SERVERS,
-                               APR_HASH_KEY_STRING) : NULL;
+  cfg = config ? apr_hash_get(config, 
+                              SVN_CONFIG_CATEGORY_SERVERS,
+                              APR_HASH_KEY_STRING) : NULL;
   if (cfg)
     server_group = svn_config_find_group(cfg, uri.host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
@@ -713,7 +713,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
           {
             /* Allocate the baton in pool, not on stack, so it will
                last till whenever Neon needs it. */
-            struct proxy_auth_baton *pab = apr_palloc(pool, sizeof (*pab));
+            struct proxy_auth_baton *pab = apr_palloc(pool, sizeof(*pab));
 
             pab->username = proxy_username;
             pab->password = proxy_password ? proxy_password : "";
@@ -746,7 +746,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
-  ras->url = svn_stringbuf_create (repos_URL, pool);
+  ras->url = svn_stringbuf_create(repos_URL, pool);
   /* copies uri pointer members, they get free'd in __close. */
   ras->root = uri; 
   ras->sess = sess;
@@ -852,7 +852,7 @@ static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
   SVN_ERR(parse_url(&uri, url));
   ne_uri_free(&ras->root);
   ras->root = uri;
-  svn_stringbuf_set (ras->url, url);
+  svn_stringbuf_set(ras->url, url);
   return SVN_NO_ERROR;
 }
 
@@ -896,9 +896,9 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
       const char *lopped_path;
       const svn_string_t *uuid_propval;
 
-      SVN_ERR (svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                     ras->sess, ras->url->data,
-                                                     pool) );
+      SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                    ras->sess, ras->url->data,
+                                                    pool));
 
       uuid_propval = apr_hash_get(rsrc->propset,
                                   SVN_RA_DAV__PROP_REPOSITORY_UUID,
@@ -935,7 +935,7 @@ handle_creationdate_header(void *userdata,
   if (! value)
     return;
 
-  err = svn_time_from_cstring (&(lrb->creation_date), value, lrb->pool);
+  err = svn_time_from_cstring(&(lrb->creation_date), value, lrb->pool);
   if (err)
     {
       svn_error_clear(err);
@@ -1305,7 +1305,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
     {
       svn_lock_t *lock;
 
-      SVN_ERR( svn_ra_dav__get_lock(session, &lock, path, pool) );
+      SVN_ERR(svn_ra_dav__get_lock(session, &lock, path, pool));
       if (! lock)
         return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
                                  _("'%s' is not locked in the repository"),
@@ -1512,11 +1512,11 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   svn_error_t *err;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component (ras->url->data, path, pool);  
+  url = svn_path_url_add_component(ras->url->data, path, pool);  
 
   err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                       url, SVN_INVALID_REVNUM, pool);
-  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool) );
+  SVN_ERR(svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool));
 
   /* Build context for neon callbacks and then register them. */
   setup_neon_request_hook(ras);
@@ -1572,7 +1572,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
 
 
 static const svn_version_t *
-ra_dav_version (void)
+ra_dav_version(void)
 {
   SVN_VERSION_BODY;
 }
@@ -1610,9 +1610,9 @@ static const svn_ra__vtable_t dav_vtable = {
 };
 
 svn_error_t *
-svn_ra_dav__init (const svn_version_t *loader_version,
-                  const svn_ra__vtable_t **vtable,
-                  apr_pool_t *pool)
+svn_ra_dav__init(const svn_version_t *loader_version,
+                 const svn_ra__vtable_t **vtable,
+                 apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {

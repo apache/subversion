@@ -24,18 +24,18 @@
 #include "svn_private_config.h"
 
 const svn_version_t *
-svn_subr_version (void)
+svn_subr_version(void)
 {
   SVN_VERSION_BODY;
 }
 
 
-svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
-                                  const svn_version_t *lib_version)
+svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
+                                 const svn_version_t *lib_version)
 {
   if (lib_version->tag[0] != '\0')
     /* Development library; require exact match. */
-    return svn_ver_equal (my_version, lib_version);
+    return svn_ver_equal(my_version, lib_version);
   else if (my_version->tag[0] != '\0')
     /* Development client; must be newer than the library
        and have the same major and minor version. */
@@ -49,19 +49,19 @@ svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
 }
 
 
-svn_boolean_t svn_ver_equal (const svn_version_t *my_version,
-                             const svn_version_t *lib_version)
+svn_boolean_t svn_ver_equal(const svn_version_t *my_version,
+                            const svn_version_t *lib_version)
 {
   return (my_version->major == lib_version->major
           && my_version->minor == lib_version->minor
           && my_version->patch == lib_version->patch
-          && 0 == strcmp (my_version->tag, lib_version->tag));
+          && 0 == strcmp(my_version->tag, lib_version->tag));
 }
 
 
 svn_error_t *
-svn_ver_check_list (const svn_version_t *my_version,
-                    const svn_version_checklist_t *checklist)
+svn_ver_check_list(const svn_version_t *my_version,
+                   const svn_version_checklist_t *checklist)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int i;
@@ -69,16 +69,16 @@ svn_ver_check_list (const svn_version_t *my_version,
   for (i = 0; checklist[i].label != NULL; ++i)
     {
       const svn_version_t *lib_version = checklist[i].version_query();
-      if (!svn_ver_compatible (my_version, lib_version))
-        err = svn_error_createf (SVN_ERR_VERSION_MISMATCH, err,
-                                 _("Version mismatch in '%s':"
-                                   " found %d.%d.%d%s,"
-                                   " expected %d.%d.%d%s"),
-                                 checklist[i].label,
-                                 lib_version->major, lib_version->minor,
-                                 lib_version->patch, lib_version->tag,
-                                 my_version->major, my_version->minor,
-                                 my_version->patch, my_version->tag);
+      if (!svn_ver_compatible(my_version, lib_version))
+        err = svn_error_createf(SVN_ERR_VERSION_MISMATCH, err,
+                                _("Version mismatch in '%s':"
+                                  " found %d.%d.%d%s,"
+                                  " expected %d.%d.%d%s"),
+                                checklist[i].label,
+                                lib_version->major, lib_version->minor,
+                                lib_version->patch, lib_version->tag,
+                                my_version->major, my_version->minor,
+                                my_version->patch, my_version->tag);
     }
 
   return err;

@@ -38,7 +38,7 @@ extern "C" {
 /* Set *FS_P to a fresh, unopened FS object, with the right warning
    handling function set.  */
 svn_error_t *
-svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool);
+svn_test__fs_new(svn_fs_t **fs_p, apr_pool_t *pool);
 
 
 /* Create a filesystem of FS_TYPE in a subdir NAME and return a new FS
@@ -46,45 +46,45 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool);
    "fsfs".  Filesystem tests that are backend-specific should use
    svn_test__create_fs instead of this. */
 svn_error_t *
-svn_test__create_fs (svn_fs_t **fs_p,
-                     const char *name, 
-                     const char *fs_type,
-                     apr_pool_t *pool);
+svn_test__create_fs(svn_fs_t **fs_p,
+                    const char *name, 
+                    const char *fs_type,
+                    apr_pool_t *pool);
 
 
 /* Create a repository with a filesystem of FS_TYPE in a subdir NAME
    and return a new REPOS object which points to it.  */
 svn_error_t *
-svn_test__create_repos (svn_repos_t **repos_p,
-                        const char *name,
-                        const char *fs_type,
-                        apr_pool_t *pool);
+svn_test__create_repos(svn_repos_t **repos_p,
+                       const char *name,
+                       const char *fs_type,
+                       apr_pool_t *pool);
 
 
 /* Read all data from a generic read STREAM, and return it in STRING.
    Allocate the svn_stringbuf_t in APRPOOL.  (All data in STRING will be
    dup'ed from STREAM using APRPOOL too.) */
 svn_error_t *
-svn_test__stream_to_string (svn_stringbuf_t **string,
-                            svn_stream_t *stream, 
-                            apr_pool_t *pool);
+svn_test__stream_to_string(svn_stringbuf_t **string,
+                           svn_stream_t *stream, 
+                           apr_pool_t *pool);
 
 
 /* Set the contents of file in PATH under ROOT to CONTENTS.  */
 svn_error_t *
-svn_test__set_file_contents (svn_fs_root_t *root,
-                             const char *path,
-                             const char *contents, 
-                             apr_pool_t *pool);
+svn_test__set_file_contents(svn_fs_root_t *root,
+                            const char *path,
+                            const char *contents, 
+                            apr_pool_t *pool);
 
 
 /* Get the contents of file in PATH under ROOT, and copy them into
    STR.  */
 svn_error_t *
-svn_test__get_file_contents (svn_fs_root_t *root,
-                             const char *path,
-                             svn_stringbuf_t **str, 
-                             apr_pool_t *pool);
+svn_test__get_file_contents(svn_fs_root_t *root,
+                            const char *path,
+                            svn_stringbuf_t **str, 
+                            apr_pool_t *pool);
 
 
 
@@ -114,10 +114,10 @@ svn_test__tree_t;
    those entries, passed in the array ENTRIES (which is an array of
    NUM_ENTRIES tree_test_entry_t's).  */
 svn_error_t *
-svn_test__validate_tree (svn_fs_root_t *root,
-                         svn_test__tree_entry_t *entries,
-                         int num_entries, 
-                         apr_pool_t *pool);
+svn_test__validate_tree(svn_fs_root_t *root,
+                        svn_test__tree_entry_t *entries,
+                        int num_entries, 
+                        apr_pool_t *pool);
 
 /* Structure for describing script-ish commands to perform on a
    transaction using svn_test__txn_script_exec().  */
@@ -139,22 +139,22 @@ svn_test__txn_script_command_t;
 
 /* Execute a "script" SCRIPT on items under TXN_ROOT.  */
 svn_error_t *
-svn_test__txn_script_exec (svn_fs_root_t *txn_root,
-                           svn_test__txn_script_command_t *script,
-                           int num_edits, 
-                           apr_pool_t *pool);
+svn_test__txn_script_exec(svn_fs_root_t *txn_root,
+                          svn_test__txn_script_command_t *script,
+                          int num_edits, 
+                          apr_pool_t *pool);
 
 /* Verify that the tree that exists under ROOT is exactly the Greek
    Tree. */
 svn_error_t *
-svn_test__check_greek_tree (svn_fs_root_t *root,
-                            apr_pool_t *pool);
+svn_test__check_greek_tree(svn_fs_root_t *root,
+                           apr_pool_t *pool);
 
 
 /* Create the Greek Tree under TXN_ROOT.  See ./greek-tree.txt.  */
 svn_error_t *
-svn_test__create_greek_tree (svn_fs_root_t *txn_root,
-                             apr_pool_t *pool);
+svn_test__create_greek_tree(svn_fs_root_t *txn_root,
+                            apr_pool_t *pool);
 
 
 #ifdef __cplusplus

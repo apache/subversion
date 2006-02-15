@@ -325,16 +325,16 @@ handle_log(serf_bucket_t *response,
 }
 
 svn_error_t *
-svn_ra_serf__get_log (svn_ra_session_t *ra_session,
-                      const apr_array_header_t *paths,
-                      svn_revnum_t start,
-                      svn_revnum_t end,
-                      int limit,
-                      svn_boolean_t discover_changed_paths,
-                      svn_boolean_t strict_node_history,
-                      svn_log_message_receiver_t receiver,
-                      void *receiver_baton,
-                      apr_pool_t *pool)
+svn_ra_serf__get_log(svn_ra_session_t *ra_session,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     int limit,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool)
 {
   log_context_t *log_ctx;
   ra_serf_session_t *session = ra_session->priv;

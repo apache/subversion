@@ -34,9 +34,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__help (apr_getopt_t *os,
-              void *baton,
-              apr_pool_t *pool)
+svn_cl__help(apr_getopt_t *os,
+             void *baton,
+             apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state;
 
@@ -57,7 +57,7 @@ svn_cl__help (apr_getopt_t *os,
      "For additional information, see http://subversion.tigris.org/\n");
 
   char *help_header =
-    apr_psprintf (pool, _(help_header_template), SVN_VER_NUMBER);
+    apr_psprintf(pool, _(help_header_template), SVN_VER_NUMBER);
 
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
@@ -69,17 +69,17 @@ svn_cl__help (apr_getopt_t *os,
   else
     opt_state = NULL;
 
-  version_footer = svn_stringbuf_create (ra_desc_start, pool);
-  SVN_ERR (svn_ra_print_modules (version_footer, pool));
+  version_footer = svn_stringbuf_create(ra_desc_start, pool);
+  SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  return svn_opt_print_help (os,
-                             "svn",   /* ### erm, derive somehow? */
-                             opt_state ? opt_state->version : FALSE,
-                             opt_state ? opt_state->quiet : FALSE,
-                             version_footer->data,
-                             help_header,   /* already gettext()'d */
-                             svn_cl__cmd_table,
-                             svn_cl__options,
-                             _(help_footer),
-                             pool);
+  return svn_opt_print_help(os,
+                            "svn",   /* ### erm, derive somehow? */
+                            opt_state ? opt_state->version : FALSE,
+                            opt_state ? opt_state->quiet : FALSE,
+                            version_footer->data,
+                            help_header,   /* already gettext()'d */
+                            svn_cl__cmd_table,
+                            svn_cl__options,
+                            _(help_footer),
+                            pool);
 }

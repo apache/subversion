@@ -32,11 +32,11 @@
 
 
 svn_error_t *
-svn_client__get_revision_number (svn_revnum_t *revnum,
-                                 svn_ra_session_t *ra_session,
-                                 const svn_opt_revision_t *revision,
-                                 const char *path,
-                                 apr_pool_t *pool)
+svn_client__get_revision_number(svn_revnum_t *revnum,
+                                svn_ra_session_t *ra_session,
+                                const svn_opt_revision_t *revision,
+                                const char *path,
+                                apr_pool_t *pool)
 {
   /* ### When revision->kind == svn_opt_revision_date, is there an
      optimization such that we can compare revision->value->date with
@@ -59,10 +59,10 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   if (revision->kind == svn_opt_revision_number)
     *revnum = revision->value.number;
   else if (revision->kind == svn_opt_revision_date)
-    SVN_ERR (svn_ra_get_dated_revision (ra_session, revnum,
-                                        revision->value.date, pool));
+    SVN_ERR(svn_ra_get_dated_revision(ra_session, revnum,
+                                      revision->value.date, pool));
   else if (revision->kind == svn_opt_revision_head)
-    SVN_ERR (svn_ra_get_latest_revnum (ra_session, revnum, pool));
+    SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
   else if (revision->kind == svn_opt_revision_unspecified)
     *revnum = SVN_INVALID_REVNUM;
   else if ((revision->kind == svn_opt_revision_committed)
@@ -78,16 +78,16 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
         return svn_error_create
           (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL, NULL);
 
-      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path, FALSE,
-                                       0, NULL, NULL, pool));
-      SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
-      SVN_ERR (svn_wc_adm_close (adm_access));
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
+                                     0, NULL, NULL, pool));
+      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc_adm_close(adm_access));
 
       if (! ent)
         return svn_error_createf
         (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
 	 _("'%s' is not under version control"),
-         svn_path_local_style (path, pool));
+         svn_path_local_style(path, pool));
       
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
@@ -103,15 +103,15 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
     return svn_error_createf
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
        _("Unrecognized revision type requested for '%s'"),
-       svn_path_local_style (path, pool));
+       svn_path_local_style(path, pool));
   
   return SVN_NO_ERROR;
 }
 
 
 svn_boolean_t
-svn_client__compare_revisions (svn_opt_revision_t *revision1,
-                               svn_opt_revision_t *revision2)
+svn_client__compare_revisions(svn_opt_revision_t *revision1,
+                              svn_opt_revision_t *revision2)
 {
   if ((revision1->kind != revision2->kind)
       || ((revision1->kind == svn_opt_revision_number)
@@ -126,7 +126,7 @@ svn_client__compare_revisions (svn_opt_revision_t *revision1,
 
 
 svn_boolean_t
-svn_client__revision_is_local (const svn_opt_revision_t *revision)
+svn_client__revision_is_local(const svn_opt_revision_t *revision)
 {
   if ((revision->kind == svn_opt_revision_unspecified)
       || (revision->kind == svn_opt_revision_head)

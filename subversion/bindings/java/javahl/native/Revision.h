@@ -40,7 +40,7 @@ public:
              bool oneIfUnspecified = false);
     Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
     ~Revision();
-    const svn_opt_revision_t *revision () const;
+    const svn_opt_revision_t *revision() const;
 
 };
 // !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)

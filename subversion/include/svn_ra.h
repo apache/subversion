@@ -45,7 +45,7 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_ra_version (void);
+const svn_version_t *svn_ra_version(void);
 
 
 /** This is a function type which allows the RA layer to fetch working
@@ -61,11 +61,11 @@ const svn_version_t *svn_ra_version (void);
  * @a name is the name of the property to fetch. If the property is present,
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
  */
-typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
-                                                   const char *relpath,
-                                                   const char *name,
-                                                   const svn_string_t **value,
-                                                   apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
+                                                  const char *relpath,
+                                                  const char *name,
+                                                  const svn_string_t **value,
+                                                  apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to store new
  * working copy properties during update-like operations.  See the
@@ -73,11 +73,11 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
  * @a name. The @a value is the value that will be stored for the property; 
  * a null @a value means the property will be deleted.
  */
-typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
-                                                   const char *path,
-                                                   const char *name,
-                                                   const svn_string_t *value,
-                                                   apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_set_wc_prop_func_t)(void *baton,
+                                                  const char *path,
+                                                  const char *name,
+                                                  const svn_string_t *value,
+                                                  apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to store new
  * working copy properties as part of a commit.  See the comments for
@@ -93,11 +93,11 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
  * the wc prop back from the working copy and get the *old* value.
  * Callers beware.
  */
-typedef svn_error_t *(*svn_ra_push_wc_prop_func_t) (void *baton,
-                                                    const char *path,
-                                                    const char *name,
-                                                    const svn_string_t *value,
-                                                    apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_push_wc_prop_func_t)(void *baton,
+                                                   const char *path,
+                                                   const char *name,
+                                                   const svn_string_t *value,
+                                                   apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to invalidate
  * (i.e., remove) wcprops.  See the documentation for
@@ -106,16 +106,16 @@ typedef svn_error_t *(*svn_ra_push_wc_prop_func_t) (void *baton,
  * Unlike @c svn_ra_push_wc_prop_func_t, this has immediate effect.  If
  * it returns success, the wcprops have been removed.
  */
-typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t) (void *baton,
-                                                           const char *path,
-                                                           const char *name,
-                                                           apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
+                                                          const char *path,
+                                                          const char *name,
+                                                          apr_pool_t *pool);
 
 
 /** A function type for retrieving the youngest revision from a repos. */
-typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
-       (void *session_baton,
-        svn_revnum_t *latest_revnum);
+typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
+  (void *session_baton,
+   svn_revnum_t *latest_revnum);
 
 /**
  * A callback function type for use in @c get_file_revs.
@@ -134,14 +134,14 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
  * @since New in 1.1.
  */
 typedef svn_error_t *(*svn_ra_file_rev_handler_t)
-       (void *baton,
-        const char *path,
-        svn_revnum_t rev,
-        apr_hash_t *rev_props,
-        svn_txdelta_window_handler_t *delta_handler,
-        void **delta_baton,
-        apr_array_header_t *prop_diffs,
-        apr_pool_t *pool);
+  (void *baton,
+   const char *path,
+   svn_revnum_t rev,
+   apr_hash_t *rev_props,
+   svn_txdelta_window_handler_t *delta_handler,
+   void **delta_baton,
+   apr_array_header_t *prop_diffs,
+   apr_pool_t *pool);
 
 /** 
  * Callback function type for locking and unlocking actions.
@@ -162,12 +162,12 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
  * implementation, and passed by the caller.  @a pool may be used for
  * temporary allocation.
  */
-typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
-                                                const char *path,
-                                                svn_boolean_t do_lock,
-                                                const svn_lock_t *lock,
-                                                svn_error_t *ra_err,
-                                                apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_lock_callback_t)(void *baton,
+                                               const char *path,
+                                               svn_boolean_t do_lock,
+                                               const svn_lock_t *lock,
+                                               svn_error_t *ra_err,
+                                               apr_pool_t *pool);
 
 /**
  * Callback function type for progress notification.
@@ -178,10 +178,10 @@ typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
  *
  * @since New in 1.3.
  */
-typedef void (*svn_ra_progress_notify_func_t) (apr_off_t progress,
-                                               apr_off_t total,
-                                               void *baton,
-                                               apr_pool_t *pool);
+typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
+                                              apr_off_t total,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 
 /**
@@ -222,20 +222,20 @@ typedef struct svn_ra_reporter2_t
    * 
    * All temporary allocations are done in @a pool.
    */
-  svn_error_t *(*set_path) (void *report_baton,
-                            const char *path,
-                            svn_revnum_t revision,
-                            svn_boolean_t start_empty,
-                            const char *lock_token,
-                            apr_pool_t *pool);
+  svn_error_t *(*set_path)(void *report_baton,
+                           const char *path,
+                           svn_revnum_t revision,
+                           svn_boolean_t start_empty,
+                           const char *lock_token,
+                           apr_pool_t *pool);
 
   /** Describing a working copy @a path as missing.
    *
    * All temporary allocations are done in @a pool.
    */
-  svn_error_t *(*delete_path) (void *report_baton,
-                               const char *path,
-                               apr_pool_t *pool);
+  svn_error_t *(*delete_path)(void *report_baton,
+                              const char *path,
+                              apr_pool_t *pool);
     
   /** Like set_path(), but differs in that @a path in the working copy
    * (relative to the root of the report driver) isn't a reflection of
@@ -250,13 +250,13 @@ typedef struct svn_ra_reporter2_t
    * 
    * All temporary allocations are done in @a pool.
    */
-  svn_error_t *(*link_path) (void *report_baton,
-                             const char *path,
-                             const char *url,
-                             svn_revnum_t revision,
-                             svn_boolean_t start_empty,
-                             const char *lock_token,
-                             apr_pool_t *pool);
+  svn_error_t *(*link_path)(void *report_baton,
+                            const char *path,
+                            const char *url,
+                            svn_revnum_t revision,
+                            svn_boolean_t start_empty,
+                            const char *lock_token,
+                            apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories
    * or files not explicitly `set' are assumed to be at the
@@ -264,15 +264,15 @@ typedef struct svn_ra_reporter2_t
    * reporting functions, including abort_report, should be called after
    * calling this function.
    */
-  svn_error_t *(*finish_report) (void *report_baton,
-                                 apr_pool_t *pool);
+  svn_error_t *(*finish_report)(void *report_baton,
+                                apr_pool_t *pool);
 
   /** If an error occurs during a report, this routine should cause the
    * filesystem transaction to be aborted & cleaned up.  No other reporting
    * functions should be called after calling this function.
    */
-  svn_error_t *(*abort_report) (void *report_baton,
-                                apr_pool_t *pool);
+  svn_error_t *(*abort_report)(void *report_baton,
+                               apr_pool_t *pool);
 
 } svn_ra_reporter2_t;
 
@@ -285,33 +285,33 @@ typedef struct svn_ra_reporter_t
 {
   /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
    * with @a lock_token always set to NULL. */
-  svn_error_t *(*set_path) (void *report_baton,
+  svn_error_t *(*set_path)(void *report_baton,
+                           const char *path,
+                           svn_revnum_t revision,
+                           svn_boolean_t start_empty,
+                           apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*delete_path)(void *report_baton,
+                              const char *path,
+                              apr_pool_t *pool);
+    
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
+  svn_error_t *(*link_path)(void *report_baton,
                             const char *path,
+                            const char *url,
                             svn_revnum_t revision,
                             svn_boolean_t start_empty,
                             apr_pool_t *pool);
 
   /** Same as the corresponding field in @c svn_ra_reporter2_t. */
-  svn_error_t *(*delete_path) (void *report_baton,
-                               const char *path,
-                               apr_pool_t *pool);
-    
-  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
-   * with @a lock_token always set to NULL. */
-  svn_error_t *(*link_path) (void *report_baton,
-                             const char *path,
-                             const char *url,
-                             svn_revnum_t revision,
-                             svn_boolean_t start_empty,
-                             apr_pool_t *pool);
-
-  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
-  svn_error_t *(*finish_report) (void *report_baton,
-                                 apr_pool_t *pool);
-
-  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
-  svn_error_t *(*abort_report) (void *report_baton,
+  svn_error_t *(*finish_report)(void *report_baton,
                                 apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*abort_report)(void *report_baton,
+                               apr_pool_t *pool);
 } svn_ra_reporter_t;
 
 
@@ -333,9 +333,9 @@ typedef struct svn_ra_callbacks2_t
   /** Open a unique temporary file for writing in the working copy.
    * This file will be automatically deleted when @a fp is closed.
    */
-  svn_error_t *(*open_tmp_file) (apr_file_t **fp,
-                                 void *callback_baton,
-                                 apr_pool_t *pool);
+  svn_error_t *(*open_tmp_file)(apr_file_t **fp,
+                                void *callback_baton,
+                                apr_pool_t *pool);
 
   /** An authentication baton, created by the application, which is
    * capable of retrieving all known types of credentials.
@@ -382,9 +382,9 @@ typedef struct svn_ra_callbacks2_t
  */
 typedef struct svn_ra_callbacks_t
 {
-  svn_error_t *(*open_tmp_file) (apr_file_t **fp,
-                                 void *callback_baton,
-                                 apr_pool_t *pool);
+  svn_error_t *(*open_tmp_file)(apr_file_t **fp,
+                                void *callback_baton,
+                                apr_pool_t *pool);
   
   svn_auth_baton_t *auth_baton;
 
@@ -414,7 +414,7 @@ typedef struct svn_ra_callbacks_t
  * @since New in 1.2.
  */
 svn_error_t *
-svn_ra_initialize (apr_pool_t *pool);
+svn_ra_initialize(apr_pool_t *pool);
 
 /** Initialize a callback structure.
 * Set @a *callbacks to a ra callbacks object, allocated in @a pool.
@@ -425,8 +425,8 @@ svn_ra_initialize (apr_pool_t *pool);
 * @since New in 1.3.
 */
 svn_error_t *
-svn_ra_create_callbacks (svn_ra_callbacks2_t **callbacks,
-                         apr_pool_t *pool);
+svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
+                        apr_pool_t *pool);
 
 /**
  * A repository access session.  This object is used to perform requests
@@ -454,7 +454,7 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_ra_open2 (svn_ra_session_t **session_p,
+svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
                           const char *repos_URL,
                           const svn_ra_callbacks2_t *callbacks,
                           void *callback_baton,
@@ -466,12 +466,12 @@ svn_error_t *svn_ra_open2 (svn_ra_session_t **session_p,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
-                          const char *repos_URL,
-                          const svn_ra_callbacks_t *callbacks,
-                          void *callback_baton,
-                          apr_hash_t *config,
-                          apr_pool_t *pool);
+svn_error_t *svn_ra_open(svn_ra_session_t **session_p,
+                         const char *repos_URL,
+                         const svn_ra_callbacks_t *callbacks,
+                         void *callback_baton,
+                         apr_hash_t *config,
+                         apr_pool_t *pool);
 
 /** Change the root URL of an open @a ra_session to point to a new path in the
  * same repository.  @a url is the new root URL.  Use @a pool for
@@ -482,9 +482,9 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_ra_reparent (svn_ra_session_t *ra_session,
-                              const char *url,
-                              apr_pool_t *pool);
+svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session,
+                             const char *url,
+                             apr_pool_t *pool);
 
 /**
  * Get the latest revision number from the repository of @a session.
@@ -493,9 +493,9 @@ svn_error_t *svn_ra_reparent (svn_ra_session_t *ra_session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_latest_revnum (svn_ra_session_t *session,
-                                       svn_revnum_t *latest_revnum,
-                                       apr_pool_t *pool);
+svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
+                                      svn_revnum_t *latest_revnum,
+                                      apr_pool_t *pool);
 
 /**
  * Get the latest revision number at time @a tm in the repository of
@@ -505,10 +505,10 @@ svn_error_t *svn_ra_get_latest_revnum (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_dated_revision (svn_ra_session_t *session,
-                                        svn_revnum_t *revision,
-                                        apr_time_t tm,
-                                        apr_pool_t *pool);
+svn_error_t *svn_ra_get_dated_revision(svn_ra_session_t *session,
+                                       svn_revnum_t *revision,
+                                       apr_time_t tm,
+                                       apr_pool_t *pool);
 
 /**
  * Set the property @a name to @a value on revision @a rev in the repository
@@ -522,11 +522,11 @@ svn_error_t *svn_ra_get_dated_revision (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_change_rev_prop (svn_ra_session_t *session,
-                                     svn_revnum_t rev,
-                                     const char *name,
-                                     const svn_string_t *value,
-                                     apr_pool_t *pool);
+svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
+                                    svn_revnum_t rev,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool);
 
 /**
  * Set @a *props to the list of unversioned properties attached to revision
@@ -537,10 +537,10 @@ svn_error_t *svn_ra_change_rev_prop (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_rev_proplist (svn_ra_session_t *session,
-                                  svn_revnum_t rev,
-                                  apr_hash_t **props,
-                                  apr_pool_t *pool);
+svn_error_t *svn_ra_rev_proplist(svn_ra_session_t *session,
+                                 svn_revnum_t rev,
+                                 apr_hash_t **props,
+                                 apr_pool_t *pool);
 
 /**
  * Set @a *value to the value of unversioned property @a name attached to
@@ -551,11 +551,11 @@ svn_error_t *svn_ra_rev_proplist (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
-                              svn_revnum_t rev,
-                              const char *name,
-                              svn_string_t **value,
-                              apr_pool_t *pool);
+svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
+                             svn_revnum_t rev,
+                             const char *name,
+                             svn_string_t **value,
+                             apr_pool_t *pool);
 
 /**
  * Set @a *editor and @a *edit_baton to an editor for committing changes
@@ -591,15 +591,15 @@ svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_ra_get_commit_editor2 (svn_ra_session_t *session,
-                                        const svn_delta_editor_t **editor,
-                                        void **edit_baton,
-                                        const char *log_msg,
-                                        svn_commit_callback2_t callback,
-                                        void *callback_baton,
-                                        apr_hash_t *lock_tokens,
-                                        svn_boolean_t keep_locks,
-                                        apr_pool_t *pool);
+svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       const char *log_msg,
+                                       svn_commit_callback2_t callback,
+                                       void *callback_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
+                                       apr_pool_t *pool);
 
 /**
  * Same as svn_ra_get_commit_editor2(), but uses @c svn_commit_callback_t.
@@ -608,15 +608,15 @@ svn_error_t *svn_ra_get_commit_editor2 (svn_ra_session_t *session,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */ 
-svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       const char *log_msg,
-                                       svn_commit_callback_t callback,
-                                       void *callback_baton,
-                                       apr_hash_t *lock_tokens,
-                                       svn_boolean_t keep_locks,
-                                       apr_pool_t *pool);
+svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
+                                      const svn_delta_editor_t **editor,
+                                      void **edit_baton,
+                                      const char *log_msg,
+                                      svn_commit_callback_t callback,
+                                      void *callback_baton,
+                                      apr_hash_t *lock_tokens,
+                                      svn_boolean_t keep_locks,
+                                      apr_pool_t *pool);
 
 /**
  * Fetch the contents and properties of file @a path at @a revision.
@@ -643,13 +643,13 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
-                              const char *path,
-                              svn_revnum_t revision,
-                              svn_stream_t *stream,
-                              svn_revnum_t *fetched_rev,
-                              apr_hash_t **props,
-                              apr_pool_t *pool);
+svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t revision,
+                             svn_stream_t *stream,
+                             svn_revnum_t *fetched_rev,
+                             apr_hash_t **props,
+                             apr_pool_t *pool);
 
 /**
  * If @a dirents is non @c NULL, set @a *dirents to contain all the entries
@@ -678,14 +678,14 @@ svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_ra_get_dir2 (svn_ra_session_t *session,
-                              const char *path,
-                              svn_revnum_t revision,
-                              apr_uint32_t dirent_fields,
-                              apr_hash_t **dirents,
-                              svn_revnum_t *fetched_rev,
-                              apr_hash_t **props,
-                              apr_pool_t *pool);
+svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t revision,
+                             apr_uint32_t dirent_fields,
+                             apr_hash_t **dirents,
+                             svn_revnum_t *fetched_rev,
+                             apr_hash_t **props,
+                             apr_pool_t *pool);
 
 /**
  * Similar to @c svn_ra_get_dir2, but with @c SVN_DIRENT_ALL for the
@@ -695,13 +695,13 @@ svn_error_t *svn_ra_get_dir2 (svn_ra_session_t *session,
  *
  * @deprecated Provided for compatibility with the 1.3 API.
  */
-svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t revision,
-                             apr_hash_t **dirents,
-                             svn_revnum_t *fetched_rev,
-                             apr_hash_t **props,
-                             apr_pool_t *pool);
+svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t revision,
+                            apr_hash_t **dirents,
+                            svn_revnum_t *fetched_rev,
+                            apr_hash_t **props,
+                            apr_pool_t *pool);
 
 /**
  * Ask the RA layer to update a working copy.
@@ -739,15 +739,15 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
-                               const svn_ra_reporter2_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_update_to,
-                               const char *update_target,
-                               svn_boolean_t recurse,
-                               const svn_delta_editor_t *update_editor,
-                               void *update_baton,
-                               apr_pool_t *pool);
+svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
+                              const svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              svn_revnum_t revision_to_update_to,
+                              const char *update_target,
+                              svn_boolean_t recurse,
+                              const svn_delta_editor_t *update_editor,
+                              void *update_baton,
+                              apr_pool_t *pool);
 
 /**
  * Ask the RA layer to 'switch' a working copy to a new
@@ -787,16 +787,16 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
-                               const svn_ra_reporter2_t **reporter,
-                               void **report_baton,
-                               svn_revnum_t revision_to_switch_to,
-                               const char *switch_target,
-                               svn_boolean_t recurse,
-                               const char *switch_url,
-                               const svn_delta_editor_t *switch_editor,
-                               void *switch_baton,
-                               apr_pool_t *pool);
+svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
+                              const svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              svn_revnum_t revision_to_switch_to,
+                              const char *switch_target,
+                              svn_boolean_t recurse,
+                              const char *switch_url,
+                              const svn_delta_editor_t *switch_editor,
+                              void *switch_baton,
+                              apr_pool_t *pool);
 
 /**
  * Ask the RA layer to describe the status of a working copy with respect
@@ -832,15 +832,15 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
-                               const svn_ra_reporter2_t **reporter,
-                               void **report_baton,
-                               const char *status_target,
-                               svn_revnum_t revision,
-                               svn_boolean_t recurse,
-                               const svn_delta_editor_t *status_editor,
-                               void *status_baton,
-                               apr_pool_t *pool);
+svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
+                              const svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              const char *status_target,
+                              svn_revnum_t revision,
+                              svn_boolean_t recurse,
+                              const svn_delta_editor_t *status_editor,
+                              void *status_baton,
+                              apr_pool_t *pool);
 
 /**
  * Ask the RA layer to 'diff' a working copy against @a versus_url;
@@ -895,35 +895,35 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_ra_do_diff2 (svn_ra_session_t *session,
-                              const svn_ra_reporter2_t **reporter,
-                              void **report_baton,
-                              svn_revnum_t revision,
-                              const char *diff_target,
-                              svn_boolean_t recurse,
-                              svn_boolean_t ignore_ancestry,
-                              svn_boolean_t text_deltas,
-                              const char *versus_url,
-                              const svn_delta_editor_t *diff_editor,
-                              void *diff_baton,
-                              apr_pool_t *pool);
-
-/**
- * Similar to svn_ra_do_diff2(), but with @a text_deltas set to @c TRUE.
- *
- * @deprecated Provided for backward compatibility with the 1.3 API.
- */
-svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
+svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
                              const svn_ra_reporter2_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
                              svn_boolean_t recurse,
                              svn_boolean_t ignore_ancestry,
+                             svn_boolean_t text_deltas,
                              const char *versus_url,
                              const svn_delta_editor_t *diff_editor,
                              void *diff_baton,
                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_diff2(), but with @a text_deltas set to @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ */
+svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
+                            const svn_ra_reporter2_t **reporter,
+                            void **report_baton,
+                            svn_revnum_t revision,
+                            const char *diff_target,
+                            svn_boolean_t recurse,
+                            svn_boolean_t ignore_ancestry,
+                            const char *versus_url,
+                            const svn_delta_editor_t *diff_editor,
+                            void *diff_baton,
+                            apr_pool_t *pool);
 
 /**
  * Invoke @a receiver with @a receiver_baton on each log message from
@@ -965,16 +965,16 @@ svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_log (svn_ra_session_t *session,
-                             const apr_array_header_t *paths,
-                             svn_revnum_t start,
-                             svn_revnum_t end,
-                             int limit,
-                             svn_boolean_t discover_changed_paths,
-                             svn_boolean_t strict_node_history,
-                             svn_log_message_receiver_t receiver,
-                             void *receiver_baton,
-                             apr_pool_t *pool);
+svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            int limit,
+                            svn_boolean_t discover_changed_paths,
+                            svn_boolean_t strict_node_history,
+                            svn_log_message_receiver_t receiver,
+                            void *receiver_baton,
+                            apr_pool_t *pool);
 
 /**
  * Set @a *kind to the node kind associated with @a path at @a revision.  
@@ -985,11 +985,11 @@ svn_error_t *svn_ra_get_log (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_check_path (svn_ra_session_t *session,
-                                const char *path,
-                                svn_revnum_t revision,
-                                svn_node_kind_t *kind,
-                                apr_pool_t *pool);
+svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
+                               const char *path,
+                               svn_revnum_t revision,
+                               svn_node_kind_t *kind,
+                               apr_pool_t *pool);
 
 /**
  * Set @a *dirent to an @c svn_dirent_t associated with @a path at @a
@@ -1000,11 +1000,11 @@ svn_error_t *svn_ra_check_path (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_stat (svn_ra_session_t *session,
-                          const char *path,
-                          svn_revnum_t revision,
-                          svn_dirent_t **dirent,
-                          apr_pool_t *pool);
+svn_error_t *svn_ra_stat(svn_ra_session_t *session,
+                         const char *path,
+                         svn_revnum_t revision,
+                         svn_dirent_t **dirent,
+                         apr_pool_t *pool);
 
 
 /**
@@ -1016,9 +1016,9 @@ svn_error_t *svn_ra_stat (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_uuid (svn_ra_session_t *session,
-                              const char **uuid,
-                              apr_pool_t *pool);
+svn_error_t *svn_ra_get_uuid(svn_ra_session_t *session,
+                             const char **uuid,
+                             apr_pool_t *pool);
 
 /**
  * Set @a *url to the repository's root URL.  The value will not include
@@ -1031,9 +1031,9 @@ svn_error_t *svn_ra_get_uuid (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_repos_root (svn_ra_session_t *session,
-                                    const char **url,
-                                    apr_pool_t *pool);
+svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
+                                   const char **url,
+                                   apr_pool_t *pool);
 
 /**
  * Set @a *locations to the locations (at the repository revisions
@@ -1052,12 +1052,12 @@ svn_error_t *svn_ra_get_repos_root (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_locations (svn_ra_session_t *session,
-                                   apr_hash_t **locations,
-                                   const char *path,
-                                   svn_revnum_t peg_revision,
-                                   apr_array_header_t *location_revisions,
-                                   apr_pool_t *pool);
+svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
+                                  apr_hash_t **locations,
+                                  const char *path,
+                                  svn_revnum_t peg_revision,
+                                  apr_array_header_t *location_revisions,
+                                  apr_pool_t *pool);
 
 /**
  * Retrieve a subset of the interesting revisions of a file @a path
@@ -1084,13 +1084,13 @@ svn_error_t *svn_ra_get_locations (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
-                                   const char *path,
-                                   svn_revnum_t start,
-                                   svn_revnum_t end,
-                                   svn_ra_file_rev_handler_t handler,
-                                   void *handler_baton,
-                                   apr_pool_t *pool);
+svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
+                                  const char *path,
+                                  svn_revnum_t start,
+                                  svn_revnum_t end,
+                                  svn_ra_file_rev_handler_t handler,
+                                  void *handler_baton,
+                                  apr_pool_t *pool);
 
 /**
  * Lock each path in @a path_revs, which is a hash whose keys are the
@@ -1123,13 +1123,13 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_lock (svn_ra_session_t *session,
-                          apr_hash_t *path_revs,
-                          const char *comment,
-                          svn_boolean_t steal_lock,
-                          svn_ra_lock_callback_t lock_func, 
-                          void *lock_baton,
-                          apr_pool_t *pool);
+svn_error_t *svn_ra_lock(svn_ra_session_t *session,
+                         apr_hash_t *path_revs,
+                         const char *comment,
+                         svn_boolean_t steal_lock,
+                         svn_ra_lock_callback_t lock_func, 
+                         void *lock_baton,
+                         apr_pool_t *pool);
 
 /**
  * Remove the repository lock for each path in @a path_tokens.
@@ -1154,12 +1154,12 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
-                            apr_hash_t *path_tokens,
-                            svn_boolean_t break_lock,
-                            svn_ra_lock_callback_t lock_func, 
-                            void *lock_baton,
-                            apr_pool_t *pool);
+svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
+                           apr_hash_t *path_tokens,
+                           svn_boolean_t break_lock,
+                           svn_ra_lock_callback_t lock_func, 
+                           void *lock_baton,
+                           apr_pool_t *pool);
 
 /**  
  * If @a path is locked, set @a *lock to an svn_lock_t which
@@ -1168,10 +1168,10 @@ svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
-                              svn_lock_t **lock,
-                              const char *path,
-                              apr_pool_t *pool);
+svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
+                             svn_lock_t **lock,
+                             const char *path,
+                             apr_pool_t *pool);
 
 /**
  * Set @a *locks to a hashtable which represents all locks on or
@@ -1190,10 +1190,10 @@ svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
-                               apr_hash_t **locks,
-                               const char *path,
-                               apr_pool_t *pool);
+svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
+                              apr_hash_t **locks,
+                              const char *path,
+                              apr_pool_t *pool);
 
 
 /**
@@ -1215,13 +1215,13 @@ svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_ra_replay (svn_ra_session_t *session,
-                            svn_revnum_t revision,
-                            svn_revnum_t low_water_mark,
-                            svn_boolean_t send_deltas,
-                            const svn_delta_editor_t *editor,
-                            void *edit_baton,
-                            apr_pool_t *pool);
+svn_error_t *svn_ra_replay(svn_ra_session_t *session,
+                           svn_revnum_t revision,
+                           svn_revnum_t low_water_mark,
+                           svn_boolean_t send_deltas,
+                           const svn_delta_editor_t *editor,
+                           void *edit_baton,
+                           apr_pool_t *pool);
 
 /**
  * Append a textual list of all available RA modules to the stringbuf
@@ -1229,8 +1229,8 @@ svn_error_t *svn_ra_replay (svn_ra_session_t *session,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_print_modules (svn_stringbuf_t *output,
-                                   apr_pool_t *pool);
+svn_error_t *svn_ra_print_modules(svn_stringbuf_t *output,
+                                  apr_pool_t *pool);
 
 
 /**
@@ -1239,9 +1239,9 @@ svn_error_t *svn_ra_print_modules (svn_stringbuf_t *output,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
-                                        void *ra_baton,
-                                        apr_pool_t *pool);
+svn_error_t *svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
+                                       void *ra_baton,
+                                       apr_pool_t *pool);
 
 
 
@@ -1264,178 +1264,178 @@ typedef struct svn_ra_plugin_t
   /** Call svn_ra_open() and set @a session_baton to an object representing
    * the new session.  All other arguments are passed to svn_ra_open().
    */
-  svn_error_t *(*open) (void **session_baton,
-                        const char *repos_URL,
-                        const svn_ra_callbacks_t *callbacks,
-                        void *callback_baton,
-                        apr_hash_t *config,
-                        apr_pool_t *pool);
+  svn_error_t *(*open)(void **session_baton,
+                       const char *repos_URL,
+                       const svn_ra_callbacks_t *callbacks,
+                       void *callback_baton,
+                       apr_hash_t *config,
+                       apr_pool_t *pool);
 
   /** Call svn_ra_get_latest_revnum() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*get_latest_revnum) (void *session_baton,
-                                     svn_revnum_t *latest_revnum,
-                                     apr_pool_t *pool);
+  svn_error_t *(*get_latest_revnum)(void *session_baton,
+                                    svn_revnum_t *latest_revnum,
+                                    apr_pool_t *pool);
 
   /** Call svn_ra_get_dated_revision() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*get_dated_revision) (void *session_baton,
-                                      svn_revnum_t *revision,
-                                      apr_time_t tm,
-                                      apr_pool_t *pool);
+  svn_error_t *(*get_dated_revision)(void *session_baton,
+                                     svn_revnum_t *revision,
+                                     apr_time_t tm,
+                                     apr_pool_t *pool);
 
   /** Call svn_ra_change_rev_prop() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*change_rev_prop) (void *session_baton,
-                                   svn_revnum_t rev,
-                                   const char *name,
-                                   const svn_string_t *value,
-                                   apr_pool_t *pool);
+  svn_error_t *(*change_rev_prop)(void *session_baton,
+                                  svn_revnum_t rev,
+                                  const char *name,
+                                  const svn_string_t *value,
+                                  apr_pool_t *pool);
 
   /** Call svn_ra_rev_proplist() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*rev_proplist) (void *session_baton,
-                                svn_revnum_t rev,
-                                apr_hash_t **props,
-                                apr_pool_t *pool);
+  svn_error_t *(*rev_proplist)(void *session_baton,
+                               svn_revnum_t rev,
+                               apr_hash_t **props,
+                               apr_pool_t *pool);
 
   /** Call svn_ra_rev_prop() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*rev_prop) (void *session_baton,
-                            svn_revnum_t rev,
-                            const char *name,
-                            svn_string_t **value,
-                            apr_pool_t *pool);
-                                   
+  svn_error_t *(*rev_prop)(void *session_baton,
+                           svn_revnum_t rev,
+                           const char *name,
+                           svn_string_t **value,
+                           apr_pool_t *pool);
+  
   /** Call svn_ra_get_commit_editor() with the session associated with
    * @a session_baton and all other arguments plus @a lock_tokens set to
    * @c NULL and @a keep_locks set to @c TRUE.
    */
-  svn_error_t *(*get_commit_editor) (void *session_baton,
-                                     const svn_delta_editor_t **editor,
-                                     void **edit_baton,
-                                     const char *log_msg,
-                                     svn_commit_callback_t callback,
-                                     void *callback_baton,
-                                     apr_pool_t *pool);
+  svn_error_t *(*get_commit_editor)(void *session_baton,
+                                    const svn_delta_editor_t **editor,
+                                    void **edit_baton,
+                                    const char *log_msg,
+                                    svn_commit_callback_t callback,
+                                    void *callback_baton,
+                                    apr_pool_t *pool);
 
   /** Call svn_ra_get_file() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*get_file) (void *session_baton,
-                            const char *path,
-                            svn_revnum_t revision,
-                            svn_stream_t *stream,
-                            svn_revnum_t *fetched_rev,
-                            apr_hash_t **props,
-                            apr_pool_t *pool);
-
-  /** Call svn_ra_get_dir() with the session associated with
-   * @a session_baton and all other arguments.
-   */
-  svn_error_t *(*get_dir) (void *session_baton,
+  svn_error_t *(*get_file)(void *session_baton,
                            const char *path,
                            svn_revnum_t revision,
-                           apr_hash_t **dirents,
+                           svn_stream_t *stream,
                            svn_revnum_t *fetched_rev,
                            apr_hash_t **props,
                            apr_pool_t *pool);
 
+  /** Call svn_ra_get_dir() with the session associated with
+   * @a session_baton and all other arguments.
+   */
+  svn_error_t *(*get_dir)(void *session_baton,
+                          const char *path,
+                          svn_revnum_t revision,
+                          apr_hash_t **dirents,
+                          svn_revnum_t *fetched_rev,
+                          apr_hash_t **props,
+                          apr_pool_t *pool);
+
   /** Call svn_ra_do_update() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*do_update) (void *session_baton,
-                             const svn_ra_reporter_t **reporter,
-                             void **report_baton,
-                             svn_revnum_t revision_to_update_to,
-                             const char *update_target,
-                             svn_boolean_t recurse,
-                             const svn_delta_editor_t *update_editor,
-                             void *update_baton,
-                             apr_pool_t *pool);
+  svn_error_t *(*do_update)(void *session_baton,
+                            const svn_ra_reporter_t **reporter,
+                            void **report_baton,
+                            svn_revnum_t revision_to_update_to,
+                            const char *update_target,
+                            svn_boolean_t recurse,
+                            const svn_delta_editor_t *update_editor,
+                            void *update_baton,
+                            apr_pool_t *pool);
 
   /** Call svn_ra_do_switch() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*do_switch) (void *session_baton,
-                             const svn_ra_reporter_t **reporter,
-                             void **report_baton,
-                             svn_revnum_t revision_to_switch_to,
-                             const char *switch_target,
-                             svn_boolean_t recurse,
-                             const char *switch_url,
-                             const svn_delta_editor_t *switch_editor,
-                             void *switch_baton,
-                             apr_pool_t *pool);
+  svn_error_t *(*do_switch)(void *session_baton,
+                            const svn_ra_reporter_t **reporter,
+                            void **report_baton,
+                            svn_revnum_t revision_to_switch_to,
+                            const char *switch_target,
+                            svn_boolean_t recurse,
+                            const char *switch_url,
+                            const svn_delta_editor_t *switch_editor,
+                            void *switch_baton,
+                            apr_pool_t *pool);
 
   /** Call svn_ra_do_status() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*do_status) (void *session_baton,
-                             const svn_ra_reporter_t **reporter,
-                             void **report_baton,
-                             const char *status_target,
-                             svn_revnum_t revision,
-                             svn_boolean_t recurse,
-                             const svn_delta_editor_t *status_editor,
-                             void *status_baton,
-                             apr_pool_t *pool);
+  svn_error_t *(*do_status)(void *session_baton,
+                            const svn_ra_reporter_t **reporter,
+                            void **report_baton,
+                            const char *status_target,
+                            svn_revnum_t revision,
+                            svn_boolean_t recurse,
+                            const svn_delta_editor_t *status_editor,
+                            void *status_baton,
+                            apr_pool_t *pool);
 
   /** Call svn_ra_do_diff() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*do_diff) (void *session_baton,
-                           const svn_ra_reporter_t **reporter,
-                           void **report_baton,
-                           svn_revnum_t revision,
-                           const char *diff_target,
-                           svn_boolean_t recurse,
-                           svn_boolean_t ignore_ancestry,
-                           const char *versus_url,
-                           const svn_delta_editor_t *diff_editor,
-                           void *diff_baton,
-                           apr_pool_t *pool);
+  svn_error_t *(*do_diff)(void *session_baton,
+                          const svn_ra_reporter_t **reporter,
+                          void **report_baton,
+                          svn_revnum_t revision,
+                          const char *diff_target,
+                          svn_boolean_t recurse,
+                          svn_boolean_t ignore_ancestry,
+                          const char *versus_url,
+                          const svn_delta_editor_t *diff_editor,
+                          void *diff_baton,
+                          apr_pool_t *pool);
 
   /** Call svn_ra_get_log() with the session associated with
    * @a session_baton and all other arguments.  @a limit is set to 0.
    */
-  svn_error_t *(*get_log) (void *session_baton,
-                           const apr_array_header_t *paths,
-                           svn_revnum_t start,
-                           svn_revnum_t end,
-                           svn_boolean_t discover_changed_paths,
-                           svn_boolean_t strict_node_history,
-                           svn_log_message_receiver_t receiver,
-                           void *receiver_baton,
-                           apr_pool_t *pool);
+  svn_error_t *(*get_log)(void *session_baton,
+                          const apr_array_header_t *paths,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          svn_boolean_t discover_changed_paths,
+                          svn_boolean_t strict_node_history,
+                          svn_log_message_receiver_t receiver,
+                          void *receiver_baton,
+                          apr_pool_t *pool);
 
   /** Call svn_ra_check_path() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*check_path) (void *session_baton,
-                              const char *path,
-                              svn_revnum_t revision,
-                              svn_node_kind_t *kind,
-                              apr_pool_t *pool);
+  svn_error_t *(*check_path)(void *session_baton,
+                             const char *path,
+                             svn_revnum_t revision,
+                             svn_node_kind_t *kind,
+                             apr_pool_t *pool);
 
   /** Call svn_ra_get_uuid() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*get_uuid) (void *session_baton,
-                            const char **uuid,
-                            apr_pool_t *pool);
+  svn_error_t *(*get_uuid)(void *session_baton,
+                           const char **uuid,
+                           apr_pool_t *pool);
 
   /** Call svn_ra_get_repos_root() with the session associated with
    * @a session_baton and all other arguments.
    */
-  svn_error_t *(*get_repos_root) (void *session_baton,
-                                  const char **url,
-                                  apr_pool_t *pool);
+  svn_error_t *(*get_repos_root)(void *session_baton,
+                                 const char **url,
+                                 apr_pool_t *pool);
 
   /**
    * Call svn_ra_get_locations() with the session associated with
@@ -1443,12 +1443,12 @@ typedef struct svn_ra_plugin_t
    *
    * @since New in 1.1.
    */
-  svn_error_t *(*get_locations) (void *session_baton,
-                                 apr_hash_t **locations,
-                                 const char *path,
-                                 svn_revnum_t peg_revision,
-                                 apr_array_header_t *location_revisions,
-                                 apr_pool_t *pool);
+  svn_error_t *(*get_locations)(void *session_baton,
+                                apr_hash_t **locations,
+                                const char *path,
+                                svn_revnum_t peg_revision,
+                                apr_array_header_t *location_revisions,
+                                apr_pool_t *pool);
 
   /**
    * Call svn_ra_get_file_revs() with the session associated with
@@ -1456,20 +1456,20 @@ typedef struct svn_ra_plugin_t
    *
    * @since New in 1.1.
    */
-  svn_error_t *(*get_file_revs) (void *session_baton,
-                                 const char *path,
-                                 svn_revnum_t start,
-                                 svn_revnum_t end,
-                                 svn_ra_file_rev_handler_t handler,
-                                 void *handler_baton,
-                                 apr_pool_t *pool);
+  svn_error_t *(*get_file_revs)(void *session_baton,
+                                const char *path,
+                                svn_revnum_t start,
+                                svn_revnum_t end,
+                                svn_ra_file_rev_handler_t handler,
+                                void *handler_baton,
+                                apr_pool_t *pool);
 
   /**
    * Return the plugin's version information.
    *
    * @since New in 1.1.
    */
-  const svn_version_t *(*get_version) (void);
+  const svn_version_t *(*get_version)(void);
 
   
 } svn_ra_plugin_t;
@@ -1491,9 +1491,9 @@ typedef struct svn_ra_plugin_t
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
-                                            apr_pool_t *pool,
-                                            apr_hash_t *hash);
+typedef svn_error_t *(*svn_ra_init_func_t)(int abi_version,
+                                           apr_pool_t *pool,
+                                           apr_hash_t *hash);
 
 /**
  * The current ABI (Application Binary Interface) version for the
@@ -1527,30 +1527,30 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
 /** Initialize libsvn_ra_dav.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
-svn_error_t * svn_ra_dav_init (int abi_version,
-                               apr_pool_t *pool,
-                               apr_hash_t *hash);
+svn_error_t * svn_ra_dav_init(int abi_version,
+                              apr_pool_t *pool,
+                              apr_hash_t *hash);
 
 /** Initialize libsvn_ra_local.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
-svn_error_t * svn_ra_local_init (int abi_version,
-                                 apr_pool_t *pool,
-                                 apr_hash_t *hash);
+svn_error_t * svn_ra_local_init(int abi_version,
+                                apr_pool_t *pool,
+                                apr_hash_t *hash);
 
 /** Initialize libsvn_ra_svn.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
-svn_error_t * svn_ra_svn_init (int abi_version,
-                               apr_pool_t *pool,
-                               apr_hash_t *hash);
+svn_error_t * svn_ra_svn_init(int abi_version,
+                              apr_pool_t *pool,
+                              apr_hash_t *hash);
 
 /** Initialize libsvn_ra_serf.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
-svn_error_t * svn_ra_serf_init (int abi_version,
-                                apr_pool_t *pool,
-                                apr_hash_t *hash);
+svn_error_t * svn_ra_serf_init(int abi_version,
+                               apr_pool_t *pool,
+                               apr_hash_t *hash);
 
 
 /**
@@ -1559,7 +1559,7 @@ svn_error_t * svn_ra_serf_init (int abi_version,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_ra_init_ra_libs (void **ra_baton, apr_pool_t *pool);
+svn_error_t *svn_ra_init_ra_libs(void **ra_baton, apr_pool_t *pool);
 
 /**
  * Return an RA vtable-@a library which can handle URL.  A number of
@@ -1569,10 +1569,10 @@ svn_error_t *svn_ra_init_ra_libs (void **ra_baton, apr_pool_t *pool);
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_ra_get_ra_library (svn_ra_plugin_t **library,
-                                    void *ra_baton,
-                                    const char *url,
-                                    apr_pool_t *pool);
+svn_error_t *svn_ra_get_ra_library(svn_ra_plugin_t **library,
+                                   void *ra_baton,
+                                   const char *url,
+                                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

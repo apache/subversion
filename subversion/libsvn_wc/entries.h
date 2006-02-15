@@ -87,19 +87,19 @@ extern "C" {
    If initial rev is valid and non-zero, then mark the 'this_dir'
    entry as being incomplete.
 */
-svn_error_t *svn_wc__entries_init (const char *path,
-                                   const char *uuid,
-                                   const char *url,
-                                   const char *repos,
-                                   svn_revnum_t initial_rev,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__entries_init(const char *path,
+                                  const char *uuid,
+                                  const char *url,
+                                  const char *repos,
+                                  svn_revnum_t initial_rev,
+                                  apr_pool_t *pool);
 
 
 /* Create or overwrite an `entries' file for ADM_ACCESS using the contents
    of ENTRIES.  See also svn_wc_entries_read() in the public api. */
-svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
-                                    svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool);
+svn_error_t *svn_wc__entries_write(apr_hash_t *entries,
+                                   svn_wc_adm_access_t *adm_access,
+                                   apr_pool_t *pool);
 
 
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
@@ -109,10 +109,10 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
    will refer directly to ATTS and its values.
 
    Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
-svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
-                                    apr_uint32_t *modify_flags,
-                                    apr_hash_t *atts,
-                                    apr_pool_t *pool);
+svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
+                                   apr_uint32_t *modify_flags,
+                                   apr_hash_t *atts,
+                                   apr_pool_t *pool);
 
 
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
@@ -181,15 +181,15 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
    NOTE: when you call this function, the entries file will be read,
    tweaked and finally, if DO_SYNC is TRUE, written back out.  */
-svn_error_t *svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
-                                   const char *name,
-                                   svn_wc_entry_t *entry,
-                                   apr_uint32_t modify_flags,
-                                   svn_boolean_t do_sync,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
+                                  const char *name,
+                                  svn_wc_entry_t *entry,
+                                  apr_uint32_t modify_flags,
+                                  svn_boolean_t do_sync,
+                                  apr_pool_t *pool);
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
-void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
+void svn_wc__entry_remove(apr_hash_t *entries, const char *name);
 
 
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
@@ -209,14 +209,14 @@ void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.) 
  */
 svn_error_t *
-svn_wc__tweak_entry (apr_hash_t *entries,
-                     const char *name,
-                     const char *new_url,
-                     const char *repos,
-                     svn_revnum_t new_rev,
-                     svn_boolean_t allow_removal,
-                     svn_boolean_t *write_required,
-                     apr_pool_t *pool);
+svn_wc__tweak_entry(apr_hash_t *entries,
+                    const char *name,
+                    const char *new_url,
+                    const char *repos,
+                    svn_revnum_t new_rev,
+                    svn_boolean_t allow_removal,
+                    svn_boolean_t *write_required,
+                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -552,8 +552,8 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
   if (len > 1 && url[len - 1] == '/')
       url_path[len - 1] = '\0';
 
-  SVN_ERR( svn_ra_dav__get_props(&props, sess, url_path, NE_DEPTH_ZERO,
-                                 label, which_props, pool) );
+  SVN_ERR(svn_ra_dav__get_props(&props, sess, url_path, NE_DEPTH_ZERO,
+                                label, which_props, pool));
 
   /* ### HACK.  We need to have the client canonicalize paths, get rid
      of double slashes and such.  This check is just a check against
@@ -602,8 +602,8 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   const svn_string_t *value;
 
   props[0] = *propname;
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, url, label, props,
-                                          pool) );
+  SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, sess, url, label, props,
+                                         pool));
 
   name = apr_pstrcat(pool, propname->nspace, propname->name, NULL);
   value = apr_hash_get(rsrc->propset, name, APR_HASH_KEY_STRING);
@@ -646,20 +646,20 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
 
   /* Split the url into its component pieces (scheme, host, path,
      etc).  We want the path part. */
-  ne_uri_parse (url, &parsed_url);
+  ne_uri_parse(url, &parsed_url);
   if (parsed_url.path == NULL)
     {
-      return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                _("Neon was unable to parse URL '%s'"), url);
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("Neon was unable to parse URL '%s'"), url);
     }
 
-  path_s = svn_stringbuf_create (parsed_url.path, pool);
+  path_s = svn_stringbuf_create(parsed_url.path, pool);
 
   /* Try to get the starting_props from the public url.  If the
      resource no longer exists in HEAD, we'll get a failure.  That's
      fine: just keep removing components and trying to get the
      starting_props from parent directories. */
-  while (! svn_path_is_empty (path_s->data))
+  while (! svn_path_is_empty(path_s->data))
     {
       err = svn_ra_dav__get_starting_props(rsrc, sess, path_s->data,
                                            NULL, pool);
@@ -670,7 +670,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
         goto error;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
-      lopped_path = svn_path_join(svn_path_basename (path_s->data, pool),
+      lopped_path = svn_path_join(svn_path_basename(path_s->data, pool),
                                   lopped_path, pool);
       len = path_s->len;
       svn_path_remove_component(path_s);
@@ -682,16 +682,16 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
             (err, _("The path was not part of a repository"));
           goto error;
         }
-      svn_error_clear (err);
+      svn_error_clear(err);
     }
 
   /* error out if entire URL was bogus (not a single part of it exists
      in the repository!)  */
-  if (svn_path_is_empty (path_s->data))
+  if (svn_path_is_empty(path_s->data))
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("No part of path '%s' was found in "
-                                 "repository HEAD"), parsed_url.path);
+      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              _("No part of path '%s' was found in "
+                                "repository HEAD"), parsed_url.path);
       goto error;
     }
 
@@ -717,8 +717,8 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
   /* ### Someday, possibly look for disk-cached VCC via get_wcprop callback. */
 
   /* Finally, resort to a set of PROPFINDs up parent directories. */
-  SVN_ERR( svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                 sess, url, pool) );
+  SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                sess, url, pool));
 
   vcc_s = apr_hash_get(rsrc->propset,
                        SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
@@ -769,8 +769,8 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
         parent directories.
   */
 
-  SVN_ERR( svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                 sess, url, pool) );
+  SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                sess, url, pool));
   
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
   if (vcc == NULL)
@@ -800,7 +800,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
      the VCC...  We are expected to return a URI decoded relative
      path, so decode the lopped path first. */
   my_bc_relative = svn_path_join(relative_path->data,
-                                 svn_path_uri_decode (lopped_path, pool),
+                                 svn_path_uri_decode(lopped_path, pool),
                                  pool);
  
   /* if they want the relative path (could be, they're just trying to find
@@ -844,14 +844,14 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
       /* Get the Baseline from the DAV:checked-in value, then fetch its
          DAV:baseline-collection property. */
       /* ### should wrap this with info about rsrc==VCC */
-      SVN_ERR( svn_ra_dav__get_one_prop(&baseline, sess, vcc->data, NULL,
-                                        &svn_ra_dav__checked_in_prop, pool) );
+      SVN_ERR(svn_ra_dav__get_one_prop(&baseline, sess, vcc->data, NULL,
+                                       &svn_ra_dav__checked_in_prop, pool));
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, 
-                                              baseline->data, NULL,
-                                              which_props, pool) );
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, sess, 
+                                             baseline->data, NULL,
+                                             which_props, pool));
     }
   else
     {
@@ -865,8 +865,8 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, vcc->data, label,
-                                              which_props, pool) );
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, sess, vcc->data, label,
+                                             which_props, pool));
     }
   
   /* Return the baseline rsrc, which now contains whatever set of
@@ -892,13 +892,13 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   /* Go fetch a BASELINE_RSRC that contains specific properties we
      want.  This routine will also fill in BC_RELATIVE as best it
      can. */
-  SVN_ERR (svn_ra_dav__get_baseline_props(&my_bc_rel,
-                                          &baseline_rsrc,
-                                          sess,
-                                          url,
-                                          revision,
-                                          baseline_props, /* specific props */
-                                          pool));
+  SVN_ERR(svn_ra_dav__get_baseline_props(&my_bc_rel,
+                                         &baseline_rsrc,
+                                         sess,
+                                         url,
+                                         revision,
+                                         baseline_props, /* specific props */
+                                         pool));
 
   /* baseline_rsrc now points at the Baseline. We will checkout from
      the DAV:baseline-collection.  The revision we are checking out is
@@ -944,8 +944,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       const char *full_bc_url = svn_path_url_add_component(my_bc_url->data, 
                                                            my_bc_rel.data, 
                                                            pool);
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, full_bc_url,
-                                              NULL, starting_props, pool) );
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, sess, full_bc_url,
+                                             NULL, starting_props, pool));
       *is_dir = rsrc->is_collection;
     }
 
@@ -1009,12 +1009,12 @@ do_setprop(ne_buffer *body,
 
 
 svn_error_t *
-svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
-                          const char *url,
-                          apr_hash_t *prop_changes,
-                          apr_array_header_t *prop_deletes,
-                          apr_hash_t *extra_headers,
-                          apr_pool_t *pool)
+svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
+                         const char *url,
+                         apr_hash_t *prop_changes,
+                         apr_array_header_t *prop_deletes,
+                         apr_hash_t *extra_headers,
+                         apr_pool_t *pool)
 {
   ne_request *req;
   int code;
@@ -1166,7 +1166,7 @@ svn_ra_dav__do_check_path(svn_ra_session_t *session,
   else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
     {
 
-      svn_error_clear (err);
+      svn_error_clear(err);
       *kind = svn_node_none;
       return SVN_NO_ERROR;
     }
@@ -1211,7 +1211,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
           if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
             {
               /* easy out: */
-              svn_error_clear (err);
+              svn_error_clear(err);
               *dirent = NULL;
               return SVN_NO_ERROR;
             }
@@ -1231,7 +1231,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
       if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
         {
           /* easy out: */
-          svn_error_clear (err);
+          svn_error_clear(err);
           *dirent = NULL;
           return SVN_NO_ERROR;
         }
@@ -1242,7 +1242,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
   /* Copying parsing code from svn_ra_dav__get_dir() here.  The hash
      of resources only contains one item, but there's no other way to
      get the item. */
-  for (hi = apr_hash_first (pool, resources); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, resources); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -1252,11 +1252,11 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
       apr_hash_index_t *h;
       svn_dirent_t *entry;
 
-      apr_hash_this (hi, &key, NULL, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       childname =  key;
       resource = val;
           
-      entry = apr_pcalloc (pool, sizeof(*entry));
+      entry = apr_pcalloc(pool, sizeof(*entry));
           
       entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
 
@@ -1271,12 +1271,12 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
         }
           
       /* does this resource contain any 'dead' properties? */
-      for (h = apr_hash_first (pool, resource->propset);
-           h; h = apr_hash_next (h))
+      for (h = apr_hash_first(pool, resource->propset);
+           h; h = apr_hash_next(h))
         {
           const void *kkey;
           void *vval;
-          apr_hash_this (h, &kkey, NULL, &vval);
+          apr_hash_this(h, &kkey, NULL, &vval);
           
           if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
                       sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
@@ -1298,8 +1298,8 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
                              SVN_RA_DAV__PROP_CREATIONDATE,
                              APR_HASH_KEY_STRING);
       if (propval != NULL)
-        SVN_ERR( svn_time_from_cstring(&(entry->time),
-                                       propval->data, pool) );
+        SVN_ERR(svn_time_from_cstring(&(entry->time),
+                                      propval->data, pool));
       
       propval = apr_hash_get(resource->propset,
                              SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,

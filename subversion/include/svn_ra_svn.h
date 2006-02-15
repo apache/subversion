@@ -368,7 +368,7 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * Get libsvn_ra_svn version information.
  * @since New in 1.1.
  */
-const svn_version_t *svn_ra_svn_version (void);
+const svn_version_t *svn_ra_svn_version(void);
 
 #ifdef __cplusplus
 }

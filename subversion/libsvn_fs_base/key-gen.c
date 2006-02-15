@@ -28,8 +28,8 @@
 /* Converting text to numbers.  */
 
 apr_size_t
-svn_fs_base__getsize (const char *data, apr_size_t len,
-                      const char **endptr, apr_size_t max)
+svn_fs_base__getsize(const char *data, apr_size_t len,
+                     const char **endptr, apr_size_t max)
 {
   /* We can't detect overflow by simply comparing value against max,
      since multiplying value by ten can overflow in strange ways if
@@ -84,7 +84,7 @@ svn_fs_base__getsize (const char *data, apr_size_t len,
 /* Converting numbers to text.  */
 
 int
-svn_fs_base__putsize (char *data, apr_size_t len, apr_size_t value)
+svn_fs_base__putsize(char *data, apr_size_t len, apr_size_t value)
 {
   apr_size_t i = 0;
 
@@ -121,7 +121,7 @@ svn_fs_base__putsize (char *data, apr_size_t len, apr_size_t value)
 
 
 void
-svn_fs_base__next_key (const char *this, apr_size_t *len, char *next)
+svn_fs_base__next_key(const char *this, apr_size_t *len, char *next)
 {
   apr_size_t olen = *len;     /* remember the first length */
   int i = olen - 1;           /* initial index; we work backwards */
@@ -173,7 +173,7 @@ svn_fs_base__next_key (const char *this, apr_size_t *len, char *next)
   /* Ensure that we haven't overrun the (ludicrous) bound on key length.
      Note that MAX_KEY_SIZE is a bound on the size *including*
      the trailing null byte. */
-  assert (*len < MAX_KEY_SIZE);
+  assert(*len < MAX_KEY_SIZE);
 
   /* Now we know it's safe to add the null terminator. */
   next[*len] = '\0';
@@ -181,30 +181,30 @@ svn_fs_base__next_key (const char *this, apr_size_t *len, char *next)
   /* Handle any leftover carry. */
   if (carry)
     {
-      memmove (next+1, next, olen);
+      memmove(next+1, next, olen);
       next[0] = '1';
     }
 }
 
 
 int
-svn_fs_base__key_compare (const char *a, const char *b)
+svn_fs_base__key_compare(const char *a, const char *b)
 {
-  int a_len = strlen (a);
-  int b_len = strlen (b);
+  int a_len = strlen(a);
+  int b_len = strlen(b);
   int cmp;
 
   if (a_len > b_len)
     return 1;
   if (b_len > a_len)
     return -1;
-  cmp = strcmp (a, b);
-  return (cmp ? (cmp / abs (cmp)) : 0);
+  cmp = strcmp(a, b);
+  return (cmp ? (cmp / abs(cmp)) : 0);
 }
 
 
 svn_boolean_t
-svn_fs_base__same_keys (const char *a, const char *b)
+svn_fs_base__same_keys(const char *a, const char *b)
 {
   if (! (a || b))
     return TRUE;
@@ -212,5 +212,5 @@ svn_fs_base__same_keys (const char *a, const char *b)
     return FALSE;
   if ((! a) && b)
     return FALSE;
-  return (strcmp (a, b) == 0) ? TRUE : FALSE;
+  return (strcmp(a, b) == 0) ? TRUE : FALSE;
 }

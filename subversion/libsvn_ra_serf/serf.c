@@ -39,7 +39,7 @@
 
 
 static const svn_version_t *
-ra_serf_version (void)
+ra_serf_version(void)
 {
   SVN_VERSION_BODY;
 }
@@ -48,13 +48,13 @@ ra_serf_version (void)
     N_("Access repository via WebDAV protocol through serf.")
 
 static const char *
-ra_serf_get_description (void)
+ra_serf_get_description(void)
 {
   return _(RA_SERF_DESCRIPTION);
 }
 
 static const char * const *
-ra_serf_get_schemes (apr_pool_t *pool)
+ra_serf_get_schemes(apr_pool_t *pool)
 {
   static const char *serf_ssl[] = { "http", "https", NULL };
   static const char *serf_no_ssl[] = { "http", NULL };
@@ -64,12 +64,12 @@ ra_serf_get_schemes (apr_pool_t *pool)
 }
 
 static svn_error_t *
-svn_ra_serf__open (svn_ra_session_t *session,
-                   const char *repos_URL,
-                   const svn_ra_callbacks2_t *callbacks,
-                   void *callback_baton,
-                   apr_hash_t *config,
-                   apr_pool_t *pool)
+svn_ra_serf__open(svn_ra_session_t *session,
+                  const char *repos_URL,
+                  const svn_ra_callbacks2_t *callbacks,
+                  void *callback_baton,
+                  apr_hash_t *config,
+                  apr_pool_t *pool)
 {
   apr_status_t status;
   ra_serf_session_t *serf_sess;
@@ -121,9 +121,9 @@ svn_ra_serf__open (svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__reparent (svn_ra_session_t *ra_session,
-                       const char *url,
-                       apr_pool_t *pool)
+svn_ra_serf__reparent(svn_ra_session_t *ra_session,
+                      const char *url,
+                      apr_pool_t *pool)
 {
   ra_serf_session_t *session = ra_session->priv;
   apr_uri_t new_url;
@@ -144,9 +144,9 @@ svn_ra_serf__reparent (svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
-                                svn_revnum_t *latest_revnum,
-                                apr_pool_t *pool)
+svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
+                               svn_revnum_t *latest_revnum,
+                               apr_pool_t *pool)
 {
   apr_hash_t *props, *ns_props;
   ra_serf_session_t *session = ra_session->priv;
@@ -196,75 +196,62 @@ svn_ra_serf__get_latest_revnum (svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_dated_revision (svn_ra_session_t *session,
-                                 svn_revnum_t *revision,
-                                 apr_time_t tm,
-                                 apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__change_rev_prop (svn_ra_session_t *session,
-                              svn_revnum_t rev,
-                              const char *name,
-                              const svn_string_t *value,
-                              apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__rev_proplist (svn_ra_session_t *session,
-                           svn_revnum_t rev,
-                           apr_hash_t **props,
-                           apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__rev_prop (svn_ra_session_t *session,
-                       svn_revnum_t rev,
-                       const char *name,
-                       svn_string_t **value,
-                       apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__get_commit_editor (svn_ra_session_t *session,
-                                const svn_delta_editor_t **editor,
-                                void **edit_baton,
-                                const char *log_msg,
-                                svn_commit_callback2_t callback,
-                                void *callback_baton,
-                                apr_hash_t *lock_tokens,
-                                svn_boolean_t keep_locks,
+svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
+                                svn_revnum_t *revision,
+                                apr_time_t tm,
                                 apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__get_file (svn_ra_session_t *session,
-                       const char *path,
-                       svn_revnum_t revision,
-                       svn_stream_t *stream,
-                       svn_revnum_t *fetched_rev,
-                       apr_hash_t **props,
-                       apr_pool_t *pool)
+svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
+                             svn_revnum_t rev,
+                             const char *name,
+                             const svn_string_t *value,
+                             apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__get_dir (svn_ra_session_t *session,
+svn_ra_serf__rev_proplist(svn_ra_session_t *session,
+                          svn_revnum_t rev,
+                          apr_hash_t **props,
+                          apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__rev_prop(svn_ra_session_t *session,
+                      svn_revnum_t rev,
+                      const char *name,
+                      svn_string_t **value,
+                      apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
+                               const svn_delta_editor_t **editor,
+                               void **edit_baton,
+                               const char *log_msg,
+                               svn_commit_callback2_t callback,
+                               void *callback_baton,
+                               apr_hash_t *lock_tokens,
+                               svn_boolean_t keep_locks,
+                               apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__get_file(svn_ra_session_t *session,
                       const char *path,
                       svn_revnum_t revision,
-                      apr_uint32_t dirent_fields,
-                      apr_hash_t **dirents,
+                      svn_stream_t *stream,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
                       apr_pool_t *pool)
@@ -273,57 +260,70 @@ svn_ra_serf__get_dir (svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__do_switch (svn_ra_session_t *session,
-                        const svn_ra_reporter2_t **reporter,
-                        void **report_baton,
-                        svn_revnum_t revision_to_switch_to,
-                        const char *switch_target,
-                        svn_boolean_t recurse,
-                        const char *switch_url,
-                        const svn_delta_editor_t *switch_editor,
-                        void *switch_baton,
-                        apr_pool_t *pool)
+svn_ra_serf__get_dir(svn_ra_session_t *session,
+                     const char *path,
+                     svn_revnum_t revision,
+                     apr_uint32_t dirent_fields,
+                     apr_hash_t **dirents,
+                     svn_revnum_t *fetched_rev,
+                     apr_hash_t **props,
+                     apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__do_status (svn_ra_session_t *session,
-                        const svn_ra_reporter2_t **reporter,
-                        void **report_baton,
-                        const char *status_target,
+svn_ra_serf__do_switch(svn_ra_session_t *session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_switch_to,
+                       const char *switch_target,
+                       svn_boolean_t recurse,
+                       const char *switch_url,
+                       const svn_delta_editor_t *switch_editor,
+                       void *switch_baton,
+                       apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__do_status(svn_ra_session_t *session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       const char *status_target,
+                       svn_revnum_t revision,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *status_editor,
+                       void *status_baton,
+                       apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__do_diff(svn_ra_session_t *session,
+                     const svn_ra_reporter2_t **reporter,
+                     void **report_baton,
+                     svn_revnum_t revision,
+                     const char *diff_target,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t text_deltas,
+                     const char *versus_url,
+                     const svn_delta_editor_t *diff_editor,
+                     void *diff_baton,
+                     apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__check_path(svn_ra_session_t *ra_session,
+                        const char *rel_path,
                         svn_revnum_t revision,
-                        svn_boolean_t recurse,
-                        const svn_delta_editor_t *status_editor,
-                        void *status_baton,
+                        svn_node_kind_t *kind,
                         apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__do_diff (svn_ra_session_t *session,
-                      const svn_ra_reporter2_t **reporter,
-                      void **report_baton,
-                      svn_revnum_t revision,
-                      const char *diff_target,
-                      svn_boolean_t recurse,
-                      svn_boolean_t ignore_ancestry,
-                      svn_boolean_t text_deltas,
-                      const char *versus_url,
-                      const svn_delta_editor_t *diff_editor,
-                      void *diff_baton,
-                      apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__check_path (svn_ra_session_t *ra_session,
-                         const char *rel_path,
-                         svn_revnum_t revision,
-                         svn_node_kind_t *kind,
-                         apr_pool_t *pool)
 {
   ra_serf_session_t *session = ra_session->priv;
   apr_hash_t *props;
@@ -362,19 +362,19 @@ svn_ra_serf__check_path (svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__stat (svn_ra_session_t *session,
-                   const char *path,
-                   svn_revnum_t revision,
-                   svn_dirent_t **dirent,
-                   apr_pool_t *pool)
+svn_ra_serf__stat(svn_ra_session_t *session,
+                  const char *path,
+                  svn_revnum_t revision,
+                  svn_dirent_t **dirent,
+                  apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__get_uuid (svn_ra_session_t *ra_session,
-                       const char **uuid,
-                       apr_pool_t *pool)
+svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
+                      const char **uuid,
+                      apr_pool_t *pool)
 {
   ra_serf_session_t *session = ra_session->priv;
   apr_hash_t *props;
@@ -395,9 +395,9 @@ svn_ra_serf__get_uuid (svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
-                             const char **url,
-                             apr_pool_t *pool)
+svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
+                            const char **url,
+                            apr_pool_t *pool)
 {
   ra_serf_session_t *session = ra_session->priv;
 
@@ -446,43 +446,52 @@ svn_ra_serf__get_repos_root (svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_file_revs (svn_ra_session_t *session,
-                            const char *path,
-                            svn_revnum_t start,
-                            svn_revnum_t end,
-                            svn_ra_file_rev_handler_t handler,
-                            void *handler_baton,
-                            apr_pool_t *pool)
+svn_ra_serf__get_file_revs(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_ra_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__lock (svn_ra_session_t *session,
-                   apr_hash_t *path_revs,
-                   const char *comment,
-                   svn_boolean_t force,
-                   svn_ra_lock_callback_t lock_func,
-                   void *lock_baton,
-                   apr_pool_t *pool)
+svn_ra_serf__lock(svn_ra_session_t *session,
+                  apr_hash_t *path_revs,
+                  const char *comment,
+                  svn_boolean_t force,
+                  svn_ra_lock_callback_t lock_func,
+                  void *lock_baton,
+                  apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__unlock (svn_ra_session_t *session,
-                     apr_hash_t *path_tokens,
-                     svn_boolean_t force,
-                     svn_ra_lock_callback_t lock_func,
-                     void *lock_baton,
-                     apr_pool_t *pool)
+svn_ra_serf__unlock(svn_ra_session_t *session,
+                    apr_hash_t *path_tokens,
+                    svn_boolean_t force,
+                    svn_ra_lock_callback_t lock_func,
+                    void *lock_baton,
+                    apr_pool_t *pool)
 {
   abort();
 }
 
 static svn_error_t *
-svn_ra_serf__get_lock (svn_ra_session_t *session,
-                       svn_lock_t **lock,
+svn_ra_serf__get_lock(svn_ra_session_t *session,
+                      svn_lock_t **lock,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  abort();
+}
+
+static svn_error_t *
+svn_ra_serf__get_locks(svn_ra_session_t *session,
+                       apr_hash_t **locks,
                        const char *path,
                        apr_pool_t *pool)
 {
@@ -490,22 +499,13 @@ svn_ra_serf__get_lock (svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_locks (svn_ra_session_t *session,
-                        apr_hash_t **locks,
-                        const char *path,
-                        apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__replay (svn_ra_session_t *session,
-                     svn_revnum_t revision,
-                     svn_revnum_t low_water_mark,
-                     svn_boolean_t text_deltas,
-                     const svn_delta_editor_t *editor,
-                     void *edit_baton,
-                     apr_pool_t *pool)
+svn_ra_serf__replay(svn_ra_session_t *session,
+                    svn_revnum_t revision,
+                    svn_revnum_t low_water_mark,
+                    svn_boolean_t text_deltas,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    apr_pool_t *pool)
 {
   abort();
 }
@@ -543,9 +543,9 @@ static const svn_ra__vtable_t serf_vtable = {
 };
 
 svn_error_t *
-svn_ra_serf__init (const svn_version_t *loader_version,
-                   const svn_ra__vtable_t **vtable,
-                   apr_pool_t *pool)
+svn_ra_serf__init(const svn_version_t *loader_version,
+                  const svn_ra__vtable_t **vtable,
+                  apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
