@@ -28,6 +28,9 @@ AC_PROG_CC
 # Look for a C pre-processor
 AC_PROG_CPP
 
+# Grab target_cpu, so we can use it in the Solaris pkginfo file
+AC_CANONICAL_TARGET
+
 # Look for an extended grep, this macro appeared in autoconf-2.53b,
 # before that, the search for an EGREP was always performed.
 ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
@@ -741,6 +744,7 @@ SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/propchange-email.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
+SVN_CONFIG_SCRIPT(build/pkg/pkginfo)
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 AC_OUTPUT
