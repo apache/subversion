@@ -973,7 +973,7 @@ translate_chunk (svn_stream_t *dst,
               if (keyword_matches == FALSE)
                 {
                   /* reuse the ending '$' */
-                  *p--;
+                  p--;
                   b->keyword_off--;
                 }
 
