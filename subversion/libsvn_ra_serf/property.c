@@ -225,16 +225,65 @@ handle_propfind (serf_bucket_t *response,
                      ctx->depth,
                      ctx->find_props,
                      ctx->pool);
+      if (ctx->xmlp)
+        {
+          XML_ParserFree(ctx->xmlp);
+          ctx->xmlp = NULL;
+        }
       return APR_SUCCESS;
     }
 
-  return handle_xml_parser(response,
-                           ctx->xmlp, &ctx->done,
-                           pool);
+  if (!ctx->xmlp)
+    {
+      ctx->xmlp = XML_ParserCreate(NULL);
+      XML_SetUserData(ctx->xmlp, ctx);
+      XML_SetElementHandler(ctx->xmlp, start_propfind, end_propfind);
+      XML_SetCharacterDataHandler(ctx->xmlp, cdata_propfind);
+    }
+
+  status = handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
+
+  if (ctx->done)
+    {
+      XML_ParserFree(ctx->xmlp);
+    }
+
+  return status;
 }
 
-#define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\">"
-#define PROPFIND_TRAILER "</propfind>"
+static svn_boolean_t
+check_cache(apr_hash_t *ret_props,
+            ra_serf_session_t *sess,
+            const char *path,
+            svn_revnum_t rev,
+            const dav_props_t *find_props,
+            apr_pool_t *pool)
+{
+  svn_boolean_t cache_hit = TRUE;
+  const dav_props_t *prop;
+
+  /* check to see if we have any of this information cached */
+  prop = find_props;
+  while (prop && prop->namespace)
+    {
+      const char *val;
+
+      val = get_ver_prop(sess->cached_props, path, rev, prop->namespace,
+                         prop->name);
+      if (val)
+        {
+          set_ver_prop(ret_props, path, rev, prop->namespace, prop->name, val,
+                       pool);
+        }
+      else
+        {
+          cache_hit = FALSE;
+        }
+      prop++;
+    }
+
+  return cache_hit;
+}
 
 /**
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
@@ -256,147 +305,59 @@ deliver_props (propfind_context_t **prop_ctx,
                apr_pool_t *pool)
 {
   const dav_props_t *prop;
-  serf_bucket_t *props_bkt, *tmp, *req_bkt, *hdrs_bkt;
+  serf_bucket_t *req_bkt;
   serf_request_t *request;
   propfind_context_t *new_prop_ctx;
   apr_status_t status;
-  svn_boolean_t requested_allprop = FALSE;
 
-  props_bkt = NULL;
-
-  /* check to see if we have any of this information cached */
-  prop = find_props;
-  while (prop && prop->namespace)
+  if (!*prop_ctx)
     {
-      const char *val;
+      svn_boolean_t cache_satisfy;
 
-      val = get_ver_prop(sess->cached_props, path, rev, prop->namespace,
-                         prop->name);
-      if (val)
+      cache_satisfy = check_cache(ret_props, sess, path, rev, find_props, pool);
+
+      if (cache_satisfy)
         {
-          set_ver_prop(ret_props, path, rev, prop->namespace, prop->name, val,
-                       pool);
+          *prop_ctx = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
+      new_prop_ctx->cache_props = TRUE;
+
+      new_prop_ctx->pool = pool;
+      new_prop_ctx->path = path;
+      new_prop_ctx->find_props = find_props;
+      new_prop_ctx->ret_props = ret_props;
+      new_prop_ctx->depth = depth;
+      new_prop_ctx->done = FALSE;
+      new_prop_ctx->sess = sess;
+      new_prop_ctx->rev = rev;
+      if (SVN_IS_VALID_REVNUM(rev))
+        {
+          new_prop_ctx->label = apr_ltoa(pool, rev);
         }
       else
         {
-          if (!props_bkt)
-            {
-              props_bkt = serf_bucket_aggregate_create(sess->bkt_alloc);
-            }
-
-          /* special case the allprop case. */
-          if (strcmp(prop->name, "allprop") == 0)
-            {
-              requested_allprop = TRUE;
-            }
-
-          /* <*propname* xmlns="*propns*" /> */
-          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<", 1, sess->bkt_alloc);
-          serf_bucket_aggregate_append(props_bkt, tmp);
-
-          tmp = SERF_BUCKET_SIMPLE_STRING(prop->name, sess->bkt_alloc);
-          serf_bucket_aggregate_append(props_bkt, tmp);
-
-          tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" xmlns=\"",
-                                              sizeof(" xmlns=\"")-1,
-                                              sess->bkt_alloc);
-          serf_bucket_aggregate_append(props_bkt, tmp);
-
-          tmp = SERF_BUCKET_SIMPLE_STRING(prop->namespace, sess->bkt_alloc);
-          serf_bucket_aggregate_append(props_bkt, tmp);
-
-          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"/>", sizeof("\"/>")-1,
-                                              sess->bkt_alloc);
-          serf_bucket_aggregate_append(props_bkt, tmp);
+          new_prop_ctx->label = NULL;
         }
 
-      prop++;
+      *prop_ctx = new_prop_ctx;
     }
-
-  /* We satisfied all of the properties with our session cache.  Woo-hoo. */
-  if (!props_bkt)
-    {
-      *prop_ctx = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  /* Cache didn't hit for everything, so generate a request now. */
-
-  /* TODO: programatically add in the namespaces */
-
-  /* If we're not doing an allprop, add <prop> tags. */
-  if (requested_allprop == FALSE)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<prop>",
-                                          sizeof("<prop>")-1,
-                                          sess->bkt_alloc);
-      serf_bucket_aggregate_prepend(props_bkt, tmp);
-    }
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(PROPFIND_HEADER,
-                                      sizeof(PROPFIND_HEADER)-1,
-                                      sess->bkt_alloc);
-
-  serf_bucket_aggregate_prepend(props_bkt, tmp);
-
-  if (requested_allprop == FALSE)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</prop>",
-                                          sizeof("</prop>")-1,
-                                          sess->bkt_alloc);
-      serf_bucket_aggregate_append(props_bkt, tmp);
-    }
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(PROPFIND_TRAILER,
-                                      sizeof(PROPFIND_TRAILER)-1,
-                                      sess->bkt_alloc);
-  serf_bucket_aggregate_append(props_bkt, tmp);
-
-  /* Create the propfind context. */
-  if (*prop_ctx)
-    {
-      new_prop_ctx = *prop_ctx;
-    }
-  else
-    {
-      new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
-      new_prop_ctx->cache_props = TRUE;
-    }
-  new_prop_ctx->pool = pool;
-  new_prop_ctx->path = path;
-  new_prop_ctx->find_props = find_props;
-  new_prop_ctx->ret_props = ret_props;
-  new_prop_ctx->rev = rev;
-  new_prop_ctx->depth = depth;
-  new_prop_ctx->done = FALSE;
-  new_prop_ctx->sess = sess;
-
-  if (new_prop_ctx->xmlp)
-    {
-      XML_ParserFree(new_prop_ctx->xmlp);
-    }
-  new_prop_ctx->xmlp = XML_ParserCreate(NULL);
-
-  XML_SetUserData(new_prop_ctx->xmlp, new_prop_ctx);
-  XML_SetElementHandler(new_prop_ctx->xmlp, start_propfind, end_propfind);
-  XML_SetCharacterDataHandler(new_prop_ctx->xmlp, cdata_propfind);
 
   /* create and deliver request */
-  create_serf_req(&request, &req_bkt, &hdrs_bkt, sess,
-                  "PROPFIND", path,
-                  props_bkt, "text/xml");
+  request = serf_connection_request_create(sess->conn);
 
-  serf_bucket_headers_setn(hdrs_bkt, "Depth", depth);
-  if (SVN_IS_VALID_REVNUM(rev))
-    {
-      serf_bucket_headers_setn(hdrs_bkt, "Label", apr_ltoa(pool, rev));
-    }
+  req_bkt = serf_bucket_propfind_create(sess->repos_url.hostinfo,
+                                        (*prop_ctx)->path,
+                                        (*prop_ctx)->label,
+                                        (*prop_ctx)->depth,
+                                        (*prop_ctx)->find_props,
+                                        serf_request_get_alloc(request));
 
   serf_request_deliver(request, req_bkt,
                        accept_response, sess,
-                       handle_propfind, new_prop_ctx);
-
-  *prop_ctx = new_prop_ctx;
+                       handle_propfind, *prop_ctx);
 
   return SVN_NO_ERROR;
 }

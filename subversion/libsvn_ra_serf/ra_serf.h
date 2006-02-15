@@ -105,8 +105,9 @@ typedef struct propfind_context_t {
   /* the requested path */
   const char *path;
 
-  /* the requested version */
+  /* the requested version (number and string form) */
   svn_revnum_t rev;
+  const char *label;
 
   /* the request depth */
   const char *depth;
@@ -317,6 +318,14 @@ expand_string(const char **cur, apr_size_t *cur_len,
               apr_pool_t *pool);
 
 /** PROPFIND-related functions **/
+
+/* Our PROPFIND bucket */
+serf_bucket_t * serf_bucket_propfind_create(const char *host,
+                                            const char *path,
+                                            const char *label,
+                                            const char *depth,
+                                            const dav_props_t *find_props,
+                                            serf_bucket_alloc_t *allocator);
 
 /**
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
