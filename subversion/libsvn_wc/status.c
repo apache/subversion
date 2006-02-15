@@ -795,7 +795,7 @@ get_dir_status (struct edit_baton *eb,
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, subpool));
 
   /* Read PATH's dirents. */
-  SVN_ERR (svn_io_get_dirents (&dirents, path, subpool));
+  SVN_ERR (svn_io_get_dirents2 (&dirents, path, subpool));
 
   /* Get this directory's entry. */
   SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, subpool));

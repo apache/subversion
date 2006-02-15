@@ -2561,7 +2561,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         const char *fs_parent_path = 
           dav_svn_get_fs_parent_path(resource->info->r);
 
-        serr = svn_io_get_dirents(&dirents, fs_parent_path, resource->pool);
+        serr = svn_io_get_dirents2(&dirents, fs_parent_path, resource->pool);
         if (serr != NULL)
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "couldn't fetch dirents of SVNParentPath",
@@ -2575,18 +2575,18 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
             const void *key;
             apr_ssize_t klen;
             void *val;
-            svn_node_kind_t *path_kind;
+            svn_io_dirent_t *dirent;
             svn_fs_dirent_t *ent = apr_pcalloc(resource->pool, sizeof(*ent));
 
             apr_hash_this(hi, &key, &klen, &val);
-            path_kind = val;
+            dirent = val;
 
-            if (*path_kind != svn_node_dir)
+            if (dirent->kind != svn_node_dir)
               continue;
 
             ent->name = key;
             ent->id = NULL;     /* ### does it matter? */
-            ent->kind = *path_kind;
+            ent->kind = dirent->kind;
 
             apr_hash_set(entries, key, APR_HASH_KEY_STRING, ent);
           }

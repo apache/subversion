@@ -252,7 +252,8 @@ open_tmp_file (apr_file_t **fp, void *callback_baton, apr_pool_t *pool)
 
   path = svn_path_join (path, "tempfile", pool);
 
-  SVN_ERR (svn_io_open_unique_file (fp, NULL, path, ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (fp, NULL, path, ".tmp",
+                                     svn_io_file_del_on_close, pool));
 
   return SVN_NO_ERROR;
 }

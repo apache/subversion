@@ -1035,8 +1035,9 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
         }
       else
         {
-          SVN_ERR (svn_repos_replay (to_root, dump_editor, 
-                                     dump_edit_baton, subpool));
+          SVN_ERR (svn_repos_replay2 (to_root, "", SVN_INVALID_REVNUM, FALSE,
+                                      dump_editor, dump_edit_baton,
+                                      NULL, NULL, subpool));
         }
 
     loop_end:
