@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2005 by Stefan Reichoer
+;; Copyright (C) 2002-2006 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <stefan@xsteve.at>
 ;; $Id$
@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
-;; freebsd5, red hat el3 with svn 1.1.1
+;; freebsd5, red hat el3 with svn 1.2.3
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -185,7 +185,11 @@
 ;;; Code:
 
 (require 'easymenu)
-(require 'diff-mode nil t)
+
+(condition-case nil
+    (progn
+      (require 'diff-mode))
+  (error nil))
 
 ;;; user setable variables
 (defcustom svn-status-verbose t
