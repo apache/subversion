@@ -213,6 +213,7 @@ handle_propfind(serf_bucket_t *response,
                 apr_pool_t *pool)
 {
   propfind_context_t *ctx = handler_baton;
+  apr_status_t status;
 
   if (!response)
     {
