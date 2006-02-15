@@ -66,7 +66,8 @@ open_tmp_file (apr_file_t **fp,
   truepath = svn_path_join (truepath, "tempfile", pool);
 
   /* Open a unique file;  use APR_DELONCLOSE. */
-  SVN_ERR (svn_io_open_unique_file (fp, NULL, truepath, ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (fp, NULL, truepath, ".tmp",
+                                     svn_io_file_del_on_close, pool));
 
   return SVN_NO_ERROR;
 }

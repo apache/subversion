@@ -601,12 +601,13 @@ harvest_committables (apr_hash_t *committables,
       svn_pool_destroy (loop_pool);
     }
 
-  /* Fetch lock tokens for descendants of deleted directries. */
+  /* Fetch lock tokens for descendants of deleted directories. */
   if (lock_tokens && entry->kind == svn_node_dir
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      SVN_ERR (svn_wc_walk_entries (path, adm_access, &add_tokens_callbacks,
-                                    lock_tokens, FALSE, pool));
+      SVN_ERR (svn_wc_walk_entries2 (path, adm_access, &add_tokens_callbacks,
+                                     lock_tokens, FALSE, ctx->cancel_func,
+                                     ctx->cancel_baton, pool));
     }
 
   return SVN_NO_ERROR;

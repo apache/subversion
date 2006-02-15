@@ -383,7 +383,8 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
 
   /* Drive our editor. */
-  SVN_ERR (svn_repos_replay (root, editor, edit_baton, edit_pool));
+  SVN_ERR (svn_repos_replay2 (root, "", SVN_INVALID_REVNUM, FALSE,
+                              editor, edit_baton, NULL, NULL, edit_pool));
 
   /* Return the tree we just built. */
   *tree = svn_repos_node_from_baton (edit_baton);
@@ -1151,9 +1152,9 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
   /* We immitate what svn_cmdline_printf does here, since we need the byte
      size of what we are going to print. */
 
-  SVN_ERR (svn_subst_translate_cstring (prop_value->data, &prop_value_eol,
-                                        APR_EOL_STR, TRUE,
-                                        NULL, FALSE, pool));
+  SVN_ERR (svn_subst_translate_cstring2 (prop_value->data, &prop_value_eol,
+                                         APR_EOL_STR, TRUE,
+                                         NULL, FALSE, pool));
 
   err = svn_cmdline_cstring_from_utf8 (&prop_value_native, prop_value_eol,
                                        pool);
@@ -1499,8 +1500,8 @@ do_history (svnlook_ctxt_t *c,
      copies. */
   args.fs = c->fs;
   args.show_ids = show_ids;
-  SVN_ERR (svn_repos_history (c->fs, path, print_history, &args,
-                              0, c->rev_id, 1, pool));
+  SVN_ERR (svn_repos_history2 (c->fs, path, print_history, &args,
+                               NULL, NULL, 0, c->rev_id, 1, pool));
   return SVN_NO_ERROR;
 }
 

@@ -508,10 +508,10 @@ svn_wc_process_committed2 (const char *path,
              a directory.  Pass null for wcprop_changes, because the
              ones present in the current call are only applicable to
              this one committed item. */
-          SVN_ERR (svn_wc_process_committed 
+          SVN_ERR (svn_wc_process_committed2
                    (this_path, child_access,
                     (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
-                    new_revnum, rev_date, rev_author, NULL, subpool));
+                    new_revnum, rev_date, rev_author, NULL, FALSE, subpool));
         }
 
       svn_pool_destroy (subpool); 
@@ -774,7 +774,7 @@ erase_from_wc (const char *path,
           }
 
         /* Now handle any remaining unversioned items */
-        SVN_ERR (svn_io_get_dirents (&unver, path, pool));
+        SVN_ERR (svn_io_get_dirents2 (&unver, path, pool));
         for (hi = apr_hash_first (pool, unver); hi; hi = apr_hash_next (hi))
           {
             const void *key;

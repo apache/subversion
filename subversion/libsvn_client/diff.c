@@ -1745,14 +1745,15 @@ do_merge (const char *initial_URL1,
                                         &diff_edit_baton,
                                         pool));
 
-  SVN_ERR (svn_ra_do_diff (ra_session,
-                           &reporter, &report_baton,
-                           end_revnum,
-                           "",
-                           recurse,
-                           ignore_ancestry,
-                           URL2,
-                           diff_editor, diff_edit_baton, pool));
+  SVN_ERR (svn_ra_do_diff2 (ra_session,
+                            &reporter, &report_baton,
+                            end_revnum,
+                            "",
+                            recurse,
+                            ignore_ancestry,
+                            TRUE,  /* text_deltas */
+                            URL2,
+                            diff_editor, diff_edit_baton, pool));
 
   SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, NULL,
                                pool));
@@ -2178,14 +2179,15 @@ diff_repos_wc (const apr_array_header_t *options,
            (&rev, ra_session, revision1, 
             (path1 == url1) ? NULL : path1, pool));
   callback_baton->revnum1 = rev;
-  SVN_ERR (svn_ra_do_diff (ra_session,
-                           &reporter, &report_baton,
-                           rev,
-                           target ? svn_path_uri_decode (target, pool) : NULL,
-                           recurse,
-                           ignore_ancestry,
-                           url1,
-                           diff_editor, diff_edit_baton, pool));
+  SVN_ERR (svn_ra_do_diff2 (ra_session,
+                            &reporter, &report_baton,
+                            rev,
+                            target ? svn_path_uri_decode (target, pool) : NULL,
+                            recurse,
+                            ignore_ancestry,
+                            TRUE,  /* text_deltas */
+                            url1,
+                            diff_editor, diff_edit_baton, pool));
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */

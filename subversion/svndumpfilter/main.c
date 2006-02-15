@@ -737,15 +737,17 @@ close_revision (void *revision_baton)
 
 
 /* Filtering vtable */
-svn_repos_parser_fns_t filtering_vtable =
+svn_repos_parser_fns2_t filtering_vtable =
   {
     new_revision_record,
     uuid_record,
     new_node_record,
     set_revision_property,
     set_node_property,
+    NULL,
     remove_node_props,
     set_fulltext,
+    NULL,
     close_node,
     close_revision
   };
@@ -958,8 +960,8 @@ do_filter (apr_getopt_t *os,
     }
 
   SVN_ERR (parse_baton_initialize (&pb, opt_state, do_exclude, pool));
-  SVN_ERR (svn_repos_parse_dumpstream (pb->in_stream, &filtering_vtable, pb,
-                                       NULL, NULL, pool));
+  SVN_ERR (svn_repos_parse_dumpstream2 (pb->in_stream, &filtering_vtable, pb,
+                                        NULL, NULL, pool));
 
   /* The rest of this is just reporting.  If we aren't reporting, get
      outta here. */
