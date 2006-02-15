@@ -194,8 +194,6 @@ handle_xml_parser (serf_bucket_t *response,
               abort();
             }
 
-          XML_ParserFree(xmlp);
-
           *done = TRUE;
           return is_conn_closing(response);
         }
