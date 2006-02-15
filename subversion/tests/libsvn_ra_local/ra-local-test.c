@@ -48,54 +48,54 @@
    suffixed by the forward-slash-style relative path SUFFIX, performing all
    allocation in POOL. */
 static svn_error_t *
-current_directory_url (const char **url,
-                       const char *suffix,
-                       apr_pool_t *pool)
+current_directory_url(const char **url,
+                      const char *suffix,
+                      apr_pool_t *pool)
 {
   /* 8KB is a lot, but it almost guarantees that any path will fit. */
   char curdir[8192];
   const char *utf8_ls_curdir, *utf8_is_curdir, *unencoded_url;
   
-  if (! getcwd (curdir, sizeof(curdir)))
-    return svn_error_create (SVN_ERR_BASE, NULL, "getcwd() failed");
+  if (! getcwd(curdir, sizeof(curdir)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_ls_curdir, curdir, pool));
-  utf8_is_curdir = svn_path_internal_style (utf8_ls_curdir, pool);
+  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_ls_curdir, curdir, pool));
+  utf8_is_curdir = svn_path_internal_style(utf8_ls_curdir, pool);
 
-  unencoded_url = apr_psprintf (pool, "file://%s%s%s%s",
-                                (utf8_is_curdir[0] != '/') ? "/" : "",
-                                utf8_is_curdir,
-                                (suffix[0] && suffix[0] != '/') ? "/" : "",
-                                suffix);
+  unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",
+                               (utf8_is_curdir[0] != '/') ? "/" : "",
+                               utf8_is_curdir,
+                               (suffix[0] && suffix[0] != '/') ? "/" : "",
+                               suffix);
 
-  *url = svn_path_uri_encode (unencoded_url, pool);
+  *url = svn_path_uri_encode(unencoded_url, pool);
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-make_and_open_local_repos (svn_ra_plugin_t **plugin,
-                           void **session,
-                           const char *repos_name,
-                           const char *fs_type,
-                           apr_pool_t *pool)
+make_and_open_local_repos(svn_ra_plugin_t **plugin,
+                          void **session,
+                          const char *repos_name,
+                          const char *fs_type,
+                          apr_pool_t *pool)
 {
   svn_repos_t *repos;
   void *ra_baton;
   const char *url;
-  svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
+  svn_ra_callbacks_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
 
-  SVN_ERR (svn_test__create_repos (&repos, repos_name, fs_type, pool));
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_name, fs_type, pool));
+  SVN_ERR(svn_ra_init_ra_libs(&ra_baton, pool));
 
   /* Get the plugin which handles "file:" URLs */
-  SVN_ERR (svn_ra_get_ra_library (plugin, ra_baton, "file:", pool));
+  SVN_ERR(svn_ra_get_ra_library(plugin, ra_baton, "file:", pool));
 
-  SVN_ERR (current_directory_url (&url, repos_name, pool));
+  SVN_ERR(current_directory_url(&url, repos_name, pool));
 
   /* Open an RA session into this repository. */
-  SVN_ERR ((*plugin)->open (session, url, cbtable, NULL, NULL, pool));
+  SVN_ERR((*plugin)->open(session, url, cbtable, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -107,10 +107,10 @@ make_and_open_local_repos (svn_ra_plugin_t **plugin,
 
 /* Open an RA session to a local repository. */
 static svn_error_t *
-open_ra_session (const char **msg, 
-                 svn_boolean_t msg_only, 
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+open_ra_session(const char **msg, 
+                svn_boolean_t msg_only, 
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   svn_ra_plugin_t *plugin;
   void *session;
@@ -120,8 +120,8 @@ open_ra_session (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (make_and_open_local_repos (&plugin, &session,
-                                      "test-repo-open", opts->fs_type, pool));
+  SVN_ERR(make_and_open_local_repos(&plugin, &session,
+                                    "test-repo-open", opts->fs_type, pool));
 
   return SVN_NO_ERROR;
 }
@@ -129,10 +129,10 @@ open_ra_session (const char **msg,
 
 /* Discover the youngest revision in a repository.  */
 static svn_error_t *
-get_youngest_rev (const char **msg, 
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts, 
-                  apr_pool_t *pool)
+get_youngest_rev(const char **msg, 
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts, 
+                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *plugin;
   void *session;
@@ -143,16 +143,16 @@ get_youngest_rev (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (make_and_open_local_repos (&plugin, &session,
-                                      "test-repo-getrev", opts->fs_type,
-                                      pool));
+  SVN_ERR(make_and_open_local_repos(&plugin, &session,
+                                    "test-repo-getrev", opts->fs_type,
+                                    pool));
 
   /* Get the youngest revision and make sure it's 0. */
-  SVN_ERR (plugin->get_latest_revnum (session, &latest_rev, pool));
+  SVN_ERR(plugin->get_latest_revnum(session, &latest_rev, pool));
   
   if (latest_rev != 0)
-      return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
-                               "youngest rev isn't 0!");
+    return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
+                            "youngest rev isn't 0!");
 
   return SVN_NO_ERROR;
 }
@@ -161,29 +161,29 @@ get_youngest_rev (const char **msg,
 /* Helper function.  Run svn_ra_local__split_URL with interest only in
    the return error code */
 static apr_status_t
-try_split_url (const char *url, apr_pool_t *pool)
+try_split_url(const char *url, apr_pool_t *pool)
 {
   svn_repos_t *repos;
   const char *repos_path, *fs_path;
   svn_error_t *err;
   apr_status_t apr_err;
 
-  err = svn_ra_local__split_URL (&repos, &repos_path, &fs_path, url, pool);
+  err = svn_ra_local__split_URL(&repos, &repos_path, &fs_path, url, pool);
 
   if (! err)
     return SVN_NO_ERROR;
 
   apr_err = err->apr_err;
-  svn_error_clear (err);
+  svn_error_clear(err);
   return apr_err;
 }
 
 
 static svn_error_t *
-split_url_syntax (const char **msg, 
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts, 
-                  apr_pool_t *pool)
+split_url_syntax(const char **msg, 
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts, 
+                 apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -196,21 +196,21 @@ split_url_syntax (const char **msg,
      require a filesystem) */
 
   /* Use `blah' for scheme instead of `file' */
-  apr_err = try_split_url ("blah:///bin/svn", pool);
+  apr_err = try_split_url("blah:///bin/svn", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (scheme)");
 
   /* Use only single slash after scheme */
-  apr_err = try_split_url ("file:/path/to/repos", pool);
+  apr_err = try_split_url("file:/path/to/repos", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (slashes)");
 
   /* Use only a hostname, with no path */
-  apr_err = try_split_url ("file://hostname", pool);
+  apr_err = try_split_url("file://hostname", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -220,10 +220,10 @@ split_url_syntax (const char **msg,
 }
 
 static svn_error_t *
-split_url_bad_host (const char **msg, 
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts, 
-                    apr_pool_t *pool)
+split_url_bad_host(const char **msg, 
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts, 
+                   apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -233,7 +233,7 @@ split_url_bad_host (const char **msg,
     return SVN_NO_ERROR;
 
   /* Give a hostname other than `' or `localhost' */
-  apr_err = try_split_url ("file://myhost/repos/path", pool);
+  apr_err = try_split_url("file://myhost/repos/path", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
@@ -243,10 +243,10 @@ split_url_bad_host (const char **msg,
 }
 
 static svn_error_t *
-split_url_host (const char **msg, 
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts, 
-                apr_pool_t *pool)
+split_url_host(const char **msg, 
+               svn_boolean_t msg_only,
+               svn_test_opts_t *opts, 
+               apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -257,13 +257,13 @@ split_url_host (const char **msg,
 
   /* Make sure we *don't* fuss about a good URL (note that this URL
      still doesn't point to an existing versioned resource) */
-  apr_err = try_split_url ("file:///repos/path", pool);
+  apr_err = try_split_url("file:///repos/path", pool);
   if (apr_err == SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL cried foul about a good URL (no hostname)");
 
-  apr_err = try_split_url ("file://localhost/repos/path", pool);
+  apr_err = try_split_url("file://localhost/repos/path", pool);
   if (apr_err == SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -280,25 +280,25 @@ split_url_host (const char **msg,
    through svn_ra_local__split_URL to verify that it accurately
    separates the filesystem path and the repository path cruft. */
 static svn_error_t *
-check_split_url (const char *repos_path,
-                 const char *in_repos_path,
-                 const char *fs_type,
-                 apr_pool_t *pool)
+check_split_url(const char *repos_path,
+                const char *in_repos_path,
+                const char *fs_type,
+                apr_pool_t *pool)
 {
   svn_repos_t *repos;
   const char *url, *root_url, *repos_part, *in_repos_part;
 
   /* Create a filesystem and repository */
-  SVN_ERR (svn_test__create_repos (&repos, repos_path, fs_type, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_path, fs_type, pool));
 
-  SVN_ERR (current_directory_url (&root_url, repos_path, pool));
-  url = apr_pstrcat (pool, root_url, in_repos_path, NULL);
+  SVN_ERR(current_directory_url(&root_url, repos_path, pool));
+  url = apr_pstrcat(pool, root_url, in_repos_path, NULL);
 
   /* Run this URL through our splitter... */
-  SVN_ERR (svn_ra_local__split_URL (&repos, &repos_part, &in_repos_part, 
-                                    url, pool));
-  if ((strcmp (repos_part, root_url))
-      || (strcmp (in_repos_part, in_repos_path)))
+  SVN_ERR(svn_ra_local__split_URL(&repos, &repos_part, &in_repos_part, 
+                                  url, pool));
+  if ((strcmp(repos_part, root_url))
+      || (strcmp(in_repos_part, in_repos_path)))
     return svn_error_createf 
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to properly split the URL\n%s\n%s\n%s\n%s",
@@ -309,10 +309,10 @@ check_split_url (const char *repos_path,
 
 
 static svn_error_t *
-split_url_test (const char **msg, 
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts, 
-                apr_pool_t *pool)
+split_url_test(const char **msg, 
+               svn_boolean_t msg_only,
+               svn_test_opts_t *opts, 
+               apr_pool_t *pool)
 {
   *msg = "test svn_ra_local__split_URL correctness";
 
@@ -322,14 +322,14 @@ split_url_test (const char **msg,
   /* TEST 2: Given well-formed URLs, make sure that we can correctly
      find where the filesystem portion of the path ends and the
      in-repository path begins.  */
-  SVN_ERR (check_split_url ("test-repo-split-fs1",
-                            "/trunk/foobar/quux.c",
-                            opts->fs_type,
-                            pool));
-  SVN_ERR (check_split_url ("test-repo-split-fs2",
-                            "/alpha/beta/gamma/delta/epsilon/zeta/eta/theta",
-                            opts->fs_type,
-                            pool));
+  SVN_ERR(check_split_url("test-repo-split-fs1",
+                          "/trunk/foobar/quux.c",
+                          opts->fs_type,
+                          pool));
+  SVN_ERR(check_split_url("test-repo-split-fs2",
+                          "/alpha/beta/gamma/delta/epsilon/zeta/eta/theta",
+                          opts->fs_type,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -347,11 +347,11 @@ split_url_test (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (open_ra_session),
-    SVN_TEST_PASS (get_youngest_rev),
-    SVN_TEST_PASS (split_url_syntax),
-    SVN_TEST_SKIP (split_url_bad_host, HAS_UNC_HOST),
-    SVN_TEST_PASS (split_url_host),
-    SVN_TEST_PASS (split_url_test),
+    SVN_TEST_PASS(open_ra_session),
+    SVN_TEST_PASS(get_youngest_rev),
+    SVN_TEST_PASS(split_url_syntax),
+    SVN_TEST_SKIP(split_url_bad_host, HAS_UNC_HOST),
+    SVN_TEST_PASS(split_url_host),
+    SVN_TEST_PASS(split_url_test),
     SVN_TEST_NULL
   };

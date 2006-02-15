@@ -30,23 +30,23 @@
 /*** Code. ***/
 
 svn_lock_t *
-svn_lock_create (apr_pool_t *pool)
+svn_lock_create(apr_pool_t *pool)
 {
-  return apr_pcalloc (pool, sizeof (svn_lock_t));
+  return apr_pcalloc(pool, sizeof(svn_lock_t));
 }
 
 svn_lock_t *
-svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool)
+svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool)
 {
-  svn_lock_t *new_l = apr_palloc (pool, sizeof (*new_l));
+  svn_lock_t *new_l = apr_palloc(pool, sizeof(*new_l));
 
   *new_l = *lock;
 
-  new_l->path = apr_pstrdup (pool, new_l->path);
-  new_l->token = apr_pstrdup (pool, new_l->token);
-  new_l->owner = apr_pstrdup (pool, new_l->owner);
+  new_l->path = apr_pstrdup(pool, new_l->path);
+  new_l->token = apr_pstrdup(pool, new_l->token);
+  new_l->owner = apr_pstrdup(pool, new_l->owner);
   if (new_l->comment)
-    new_l->comment = apr_pstrdup (pool, new_l->comment);
+    new_l->comment = apr_pstrdup(pool, new_l->comment);
 
   return new_l;
 }

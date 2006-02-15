@@ -62,14 +62,14 @@ SVN_ERROR_START
 
   /* BEGIN Client errors */
 
-  SVN_ERRDEF (SVN_ERR_CMDLINE__TMPFILE_WRITE,
-              "Failed writing to temporary file.")
+SVN_ERRDEF(SVN_ERR_CMDLINE__TMPFILE_WRITE,
+           "Failed writing to temporary file.")
 
-  SVN_ERRDEF (SVN_ERR_CMDLINE__TMPFILE_STAT,
-              "Failed getting info about temporary file.")
+       SVN_ERRDEF(SVN_ERR_CMDLINE__TMPFILE_STAT,
+                  "Failed getting info about temporary file.")
 
-  SVN_ERRDEF (SVN_ERR_CMDLINE__TMPFILE_OPEN,
-              "Failed opening temporary file.")
+       SVN_ERRDEF(SVN_ERR_CMDLINE__TMPFILE_OPEN,
+                  "Failed opening temporary file.")
 
   /* END Client errors */
   

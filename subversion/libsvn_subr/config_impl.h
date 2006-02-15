@@ -62,10 +62,10 @@ struct svn_config_t
 
 
 /* Read sections and options from a file. */
-svn_error_t *svn_config__parse_file (svn_config_t *cfg,
-                                     const char *file,
-                                     svn_boolean_t must_exist,
-                                     apr_pool_t *pool);
+svn_error_t *svn_config__parse_file(svn_config_t *cfg,
+                                    const char *file,
+                                    svn_boolean_t must_exist,
+                                    apr_pool_t *pool);
 
 /* The name of the magic [DEFAULT] section. */
 #define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
@@ -73,27 +73,27 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
 
 #ifdef WIN32
 /* Get the common or user-specific AppData folder */
-svn_error_t *svn_config__win_config_path (const char **folder,
-                                          int system_path,
-                                          apr_pool_t *pool);
+svn_error_t *svn_config__win_config_path(const char **folder,
+                                         int system_path,
+                                         apr_pool_t *pool);
 
 /* Read sections and options from the Windows Registry. */
-svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
-                                         const char *file,
-                                         svn_boolean_t must_exist,
-                                         apr_pool_t *pool);
+svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
+                                        const char *file,
+                                        svn_boolean_t must_exist,
+                                        apr_pool_t *pool);
 
 /* ### It's unclear to me whether this registry stuff should get the
    double underscore or not, and if so, where the extra underscore
    would go.  Thoughts?  -kff */
 #  define SVN_REGISTRY_PREFIX "REGISTRY:"
-#  define SVN_REGISTRY_PREFIX_LEN ((sizeof (SVN_REGISTRY_PREFIX)) - 1)
+#  define SVN_REGISTRY_PREFIX_LEN((sizeof(SVN_REGISTRY_PREFIX)) - 1)
 #  define SVN_REGISTRY_HKLM "HKLM\\"
-#  define SVN_REGISTRY_HKLM_LEN ((sizeof (SVN_REGISTRY_HKLM)) - 1)
+#  define SVN_REGISTRY_HKLM_LEN((sizeof(SVN_REGISTRY_HKLM)) - 1)
 #  define SVN_REGISTRY_HKCU "HKCU\\"
-#  define SVN_REGISTRY_HKCU_LEN ((sizeof (SVN_REGISTRY_HKCU)) - 1)
+#  define SVN_REGISTRY_HKCU_LEN((sizeof(SVN_REGISTRY_HKCU)) - 1)
 #  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
-#  define SVN_REGISTRY_PATH_LEN ((sizeof (SVN_REGISTRY_PATH)) - 1)
+#  define SVN_REGISTRY_PATH_LEN((sizeof(SVN_REGISTRY_PATH)) - 1)
 #  define SVN_REGISTRY_SYS_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
@@ -128,9 +128,9 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
    If the system configuration area cannot be located (possible under
    Win32), set *PATH_P to NULL regardless of FNAME.  */
 svn_error_t *
-svn_config__sys_config_path (const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool);
+svn_config__sys_config_path(const char **path_p,
+                            const char *fname,
+                            apr_pool_t *pool);
 
 
 /* Set *PATH_P to the path to config file FNAME in the user's personal
@@ -143,29 +143,29 @@ svn_config__sys_config_path (const char **path_p,
    CONFIG_DIR overrides this and if set *PATH_P is set to it.
    */
 svn_error_t *
-svn_config__user_config_path (const char *config_dir,
-                              const char **path_p,
-                              const char *fname,
-                              apr_pool_t *pool);
+svn_config__user_config_path(const char *config_dir,
+                             const char **path_p,
+                             const char *fname,
+                             apr_pool_t *pool);
 
 
 /* Open a config file FILENAME with mode MODE. FILENAME is encoded in
    UTF-8, so use POOL for any temporary storage needed for
    conversions. */
 svn_error_t *
-svn_config__open_file (FILE **pfile,
-                       const char *filename,
-                       const char *mode,
-                       apr_pool_t *pool);
+svn_config__open_file(FILE **pfile,
+                      const char *filename,
+                      const char *mode,
+                      apr_pool_t *pool);
 
 
 /* Stubs for allowing 1.0.x Apache modules to be mixed with 1.1.x libraries. */
-typedef svn_boolean_t (*svn_config__section_enumerator_t)
+typedef svn_boolean_t(*svn_config__section_enumerator_t)
         (const char *name, void *baton);
 
-int svn_config__enumerate_sections (svn_config_t *cfg,
-                                    svn_config__section_enumerator_t callback,
-                                    void *baton);
+int svn_config__enumerate_sections(svn_config_t *cfg,
+                                   svn_config__section_enumerator_t callback,
+                                   void *baton);
 
 #ifdef __cplusplus
 }

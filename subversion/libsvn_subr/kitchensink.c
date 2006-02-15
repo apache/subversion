@@ -23,11 +23,11 @@
 
 
 const char *
-svn_uuid_generate (apr_pool_t *pool)
+svn_uuid_generate(apr_pool_t *pool)
 {
   apr_uuid_t uuid;
-  char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
-  apr_uuid_get (&uuid);
-  apr_uuid_format (uuid_str, &uuid);
+  char *uuid_str = apr_pcalloc(pool, APR_UUID_FORMATTED_LENGTH + 1);
+  apr_uuid_get(&uuid);
+  apr_uuid_format(uuid_str, &uuid);
   return uuid_str;
 }

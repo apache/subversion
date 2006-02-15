@@ -83,7 +83,7 @@ extern "C" {
 #define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)(varname))
 #else
 #define bdb_error_gatherer(param1, param2, param3) \
-  bdb_error_gatherer (param2, char *msg)
+  bdb_error_gatherer(param2, char *msg)
 #define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)0)
 #endif
 
@@ -101,7 +101,7 @@ extern "C" {
    against, because the DB->open call is not binary compatible between
    BDB 4.0 and 4.1. This function returns DB_OLD_VERSION if the
    compile-time and run-time versions of BDB don't match. */
-int svn_fs_bdb__check_version (void);
+int svn_fs_bdb__check_version(void);
 
 
 #ifdef __cplusplus

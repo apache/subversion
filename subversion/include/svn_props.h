@@ -68,7 +68,7 @@ svn_prop_t *svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool);
  * @since New in 1.3.
  */
 apr_array_header_t *
-svn_prop_array_dup (const apr_array_header_t *array, apr_pool_t *pool);
+svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool);
 
 
 /**
@@ -95,14 +95,14 @@ typedef enum svn_prop_kind
  * is non-@c NULL) set @a *prefix_len to the length of the prefix of @a name
  * that was sufficient to distinguish its kind.
  */
-svn_prop_kind_t svn_property_kind (int *prefix_len,
-                                   const char *prop_name);
+svn_prop_kind_t svn_property_kind(int *prefix_len,
+                                  const char *prop_name);
 
 
 /** Return @c TRUE iff @a prop_name represents the name of a Subversion
  * property.
  */
-svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
+svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
 
 
 /** If @a propname requires that its value be stored as UTF8/LF in the
@@ -112,7 +112,7 @@ svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
  * svn_subst_translate_string()/svn_subst_detranslate_string() for
  * help with this task.)
  */
-svn_boolean_t svn_prop_needs_translation (const char *propname);
+svn_boolean_t svn_prop_needs_translation(const char *propname);
 
 
 /** Given a @a proplist array of @c svn_prop_t structures, allocate
@@ -131,11 +131,11 @@ svn_boolean_t svn_prop_needs_translation (const char *propname);
  *     into @c svn_prop_kind_t.  That way we can add more prop kinds
  *     in the future without changing this interface... 
  */
-svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
-                                   apr_array_header_t **entry_props,
-                                   apr_array_header_t **wc_props,
-                                   apr_array_header_t **regular_props,
-                                   apr_pool_t *pool);
+svn_error_t *svn_categorize_props(const apr_array_header_t *proplist,
+                                  apr_array_header_t **entry_props,
+                                  apr_array_header_t **wc_props,
+                                  apr_array_header_t **regular_props,
+                                  apr_pool_t *pool);
 
 
 /** Given two property hashes (<tt>const char *name</tt> -> <tt>const 
@@ -152,10 +152,10 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  * value = foo     value = bar       Set occurred (modification)
  * value = NULL    value = baz       Set occurred (creation)</pre>
  */
-svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
-                             apr_hash_t *target_props,
-                             apr_hash_t *source_props,
-                             apr_pool_t *pool);
+svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
+                            apr_hash_t *target_props,
+                            apr_hash_t *source_props,
+                            apr_pool_t *pool);
 
 
 

@@ -47,34 +47,34 @@ extern "C" {
  * @note This function should be called exactly once at program startup,
  *       before calling any other APR or Subversion functions.
  */
-int svn_cmdline_init (const char *progname, FILE *error_stream);
+int svn_cmdline_init(const char *progname, FILE *error_stream);
 
 
 /** Set @a *dest to an output-encoded C string from UTF-8 C string @a
  * src; allocate @a *dest in @a pool.
  */
-svn_error_t *svn_cmdline_cstring_from_utf8 (const char **dest,
-                                            const char *src,
-                                            apr_pool_t *pool);
+svn_error_t *svn_cmdline_cstring_from_utf8(const char **dest,
+                                           const char *src,
+                                           apr_pool_t *pool);
 
 /** Like svn_utf_cstring_from_utf8_fuzzy(), but converts to an
  * output-encoded C string. */
-const char *svn_cmdline_cstring_from_utf8_fuzzy (const char *src,
-                                                 apr_pool_t *pool);
+const char *svn_cmdline_cstring_from_utf8_fuzzy(const char *src,
+                                                apr_pool_t *pool);
 
 /** Set @a *dest to a UTF-8-encoded C string from input-encoded C
  * string @a src; allocate @a *dest in @a pool.
  */
-svn_error_t * svn_cmdline_cstring_to_utf8 (const char **dest,
-                                           const char *src,
-                                           apr_pool_t *pool);
+svn_error_t * svn_cmdline_cstring_to_utf8(const char **dest,
+                                          const char *src,
+                                          apr_pool_t *pool);
 
 /** Set @a *dest to an output-encoded natively-formatted path string
  * from canonical path @a src; allocate @a *dest in @a pool.
  */
-svn_error_t *svn_cmdline_path_local_style_from_utf8 (const char **dest,
-                                                     const char *src,
-                                                     apr_pool_t *pool);
+svn_error_t *svn_cmdline_path_local_style_from_utf8(const char **dest,
+                                                    const char *src,
+                                                    apr_pool_t *pool);
 
 /** Write to stdout, using a printf-like format string @a fmt, passed
  * through apr_pvsprintf().  All string arguments are in UTF-8; the output
@@ -83,9 +83,9 @@ svn_error_t *svn_cmdline_path_local_style_from_utf8 (const char **dest,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_printf (apr_pool_t *pool,
-                                 const char *fmt,
-                                 ...)
+svn_error_t *svn_cmdline_printf(apr_pool_t *pool,
+                                const char *fmt,
+                                ...)
        __attribute__((format(printf, 2, 3)));
 
 /** Write to the stdio @a stream, using a printf-like format string @a fmt,
@@ -95,10 +95,10 @@ svn_error_t *svn_cmdline_printf (apr_pool_t *pool,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_fprintf (FILE *stream,
-                                  apr_pool_t *pool,
-                                  const char *fmt,
-                                  ...)
+svn_error_t *svn_cmdline_fprintf(FILE *stream,
+                                 apr_pool_t *pool,
+                                 const char *fmt,
+                                 ...)
        __attribute__((format(printf, 3, 4)));
 
 /** Output the @a string to the stdio @a stream, converting from UTF-8
@@ -106,9 +106,9 @@ svn_error_t *svn_cmdline_fprintf (FILE *stream,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_fputs (const char *string,
-                                FILE *stream,
-                                apr_pool_t *pool);
+svn_error_t *svn_cmdline_fputs(const char *string,
+                               FILE *stream,
+                               apr_pool_t *pool);
 
 /** Flush output buffers of the stdio @a stream, returning an error if that
  * fails.  This is just a wrapper for the standard fflush() function for
@@ -116,7 +116,7 @@ svn_error_t *svn_cmdline_fputs (const char *string,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_fflush (FILE *stream);
+svn_error_t *svn_cmdline_fflush(FILE *stream);
 
 /** Return the name of the output encoding allocated in @a pool, or @c
  * APR_LOCALE_CHARSET if the output encoding is the same as the locale
@@ -124,7 +124,7 @@ svn_error_t *svn_cmdline_fflush (FILE *stream);
  *
  * @since New in 1.3.
  */
-const char *svn_cmdline_output_encoding (apr_pool_t *pool);
+const char *svn_cmdline_output_encoding(apr_pool_t *pool);
 
 /** Handle @a error in preparation for immediate exit from a
  * command-line client.  Specifically:
@@ -134,17 +134,17 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool);
  *
  * @since New in 1.3.
  */
-int svn_cmdline_handle_exit_error (svn_error_t *error,
-                                   apr_pool_t *pool,
-                                   const char *prefix);
+int svn_cmdline_handle_exit_error(svn_error_t *error,
+                                  apr_pool_t *pool,
+                                  const char *prefix);
 
 /** Prompt the user for input, using @a prompt_str for the prompt and
  * returning the user's response in @a result, allocated in @a pool.
  */
 svn_error_t *
-svn_cmdline_prompt_user (const char **result,
-                         const char *prompt_str,
-                         apr_pool_t *pool);
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool);
 
 /** A cancellation function/baton pair to be passed as the baton argument
  * to the @c svn_cmdline_*_prompt functions.
@@ -160,12 +160,12 @@ typedef struct {
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
-svn_cmdline_auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
-                                void *baton,
-                                const char *realm,
-                                const char *username,
-                                svn_boolean_t may_save,
-                                apr_pool_t *pool);
+svn_cmdline_auth_simple_prompt(svn_auth_cred_simple_t **cred_p,
+                               void *baton,
+                               const char *realm,
+                               const char *username,
+                               svn_boolean_t may_save,
+                               apr_pool_t *pool);
 
 
 /** An implementation of @c svn_auth_username_prompt_func_t that prompts
@@ -174,11 +174,11 @@ svn_cmdline_auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
-svn_cmdline_auth_username_prompt (svn_auth_cred_username_t **cred_p,
-                                  void *baton,
-                                  const char *realm,
-                                  svn_boolean_t may_save,
-                                  apr_pool_t *pool);
+svn_cmdline_auth_username_prompt(svn_auth_cred_username_t **cred_p,
+                                 void *baton,
+                                 const char *realm,
+                                 svn_boolean_t may_save,
+                                 apr_pool_t *pool);
 
 
 /** An implementation of @c svn_auth_ssl_server_trust_prompt_func_t that
@@ -187,14 +187,14 @@ svn_cmdline_auth_username_prompt (svn_auth_cred_username_t **cred_p,
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
-svn_cmdline_auth_ssl_server_trust_prompt (
-  svn_auth_cred_ssl_server_trust_t **cred_p,
-  void *baton,
-  const char *realm,
-  apr_uint32_t failures,
-  const svn_auth_ssl_server_cert_info_t *cert_info,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
+svn_cmdline_auth_ssl_server_trust_prompt
+  (svn_auth_cred_ssl_server_trust_t **cred_p,
+   void *baton,
+   const char *realm,
+   apr_uint32_t failures,
+   const svn_auth_ssl_server_cert_info_t *cert_info,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 /** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
@@ -204,12 +204,12 @@ svn_cmdline_auth_ssl_server_trust_prompt (
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
-svn_cmdline_auth_ssl_client_cert_prompt (
-  svn_auth_cred_ssl_client_cert_t **cred_p,
-  void *baton,
-  const char *realm,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
+svn_cmdline_auth_ssl_client_cert_prompt
+  (svn_auth_cred_ssl_client_cert_t **cred_p,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 
 /** An implementation of @c svn_auth_ssl_client_cert_pw_prompt_func_t that
@@ -218,12 +218,12 @@ svn_cmdline_auth_ssl_client_cert_prompt (
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
-svn_cmdline_auth_ssl_client_cert_pw_prompt (
-  svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-  void *baton,
-  const char *realm,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
+svn_cmdline_auth_ssl_client_cert_pw_prompt
+  (svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
 
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,
@@ -236,16 +236,16 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt (
  * @since New in 1.4.
  */
 svn_error_t *
-svn_cmdline_setup_auth_baton (svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *username,
-                              const char *password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool);
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *username,
+                             const char *password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -66,7 +66,7 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_client_version (void);
+const svn_version_t *svn_client_version(void);
 
 
 
@@ -89,12 +89,12 @@ const svn_version_t *svn_client_version (void);
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_simple_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_simple_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_client_get_simple_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_simple_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -110,12 +110,12 @@ void svn_client_get_simple_prompt_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_username_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_username_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_client_get_username_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_username_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -131,8 +131,8 @@ void svn_client_get_username_prompt_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
-                                     apr_pool_t *pool);
+void svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
+                                    apr_pool_t *pool);
 
 
 #if defined(WIN32) || defined(DOXYGEN)
@@ -157,9 +157,9 @@ void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_windows_simple_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_client_get_windows_simple_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 #endif /* WIN32 || DOXYGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -173,8 +173,8 @@ void svn_client_get_windows_simple_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_username_provider (svn_auth_provider_object_t **provider,
-                                       apr_pool_t *pool);
+void svn_client_get_username_provider(svn_auth_provider_object_t **provider,
+                                      apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -186,9 +186,9 @@ void svn_client_get_username_provider (svn_auth_provider_object_t **provider,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_server_trust_file_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_client_get_ssl_server_trust_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -200,9 +200,9 @@ void svn_client_get_ssl_server_trust_file_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_file_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_client_get_ssl_client_cert_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -214,9 +214,9 @@ void svn_client_get_ssl_client_cert_file_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_pw_file_provider (
-  svn_auth_provider_object_t **provider,
-  apr_pool_t *pool);
+void svn_client_get_ssl_client_cert_pw_file_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -228,11 +228,11 @@ void svn_client_get_ssl_client_cert_pw_file_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_server_trust_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-  void *prompt_baton,
-  apr_pool_t *pool);
+void svn_client_get_ssl_server_trust_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+   void *prompt_baton,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -245,12 +245,12 @@ void svn_client_get_ssl_server_trust_prompt_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_client_get_ssl_client_cert_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -263,12 +263,12 @@ void svn_client_get_ssl_client_cert_prompt_provider (
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_pw_prompt_provider (
-  svn_auth_provider_object_t **provider,
-  svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-  void *prompt_baton,
-  int retry_limit,
-  apr_pool_t *pool);
+void svn_client_get_ssl_client_cert_pw_prompt_provider
+  (svn_auth_provider_object_t **provider,
+   svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+   void *prompt_baton,
+   int retry_limit,
+   apr_pool_t *pool);
 
 
 /** This is a structure which stores a filename and a hash of property
@@ -292,8 +292,8 @@ typedef struct svn_client_proplist_item_t
  * @since New in 1.3.
  */
 svn_client_proplist_item_t *
-svn_client_proplist_item_dup (const svn_client_proplist_item_t *item,
-                              apr_pool_t *pool);
+svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
+                             apr_pool_t *pool);
 
 /** Information about commits passed back to client from this module.
  *
@@ -375,8 +375,8 @@ typedef struct svn_client_commit_item2_t
  * @since New in 1.3.
  */
 svn_client_commit_item2_t *
-svn_client_commit_item2_dup (const svn_client_commit_item2_t *item,
-                             apr_pool_t *pool);
+svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
+                            apr_pool_t *pool);
 
 /** The commit candidate structure.
  *
@@ -436,12 +436,12 @@ typedef struct svn_client_commit_item_t
  *
  * @since New in 1.3.
  */
-typedef svn_error_t *
-(*svn_client_get_commit_log2_t) (const char **log_msg,
-                                 const char **tmp_file,
-                                 const apr_array_header_t *commit_items,
-                                 void *baton,
-                                 apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_get_commit_log2_t)
+  (const char **log_msg,
+   const char **tmp_file,
+   const apr_array_header_t *commit_items,
+   void *baton,
+   apr_pool_t *pool);
 
 /** Callback type used by commit-y operations to get a commit log message
  * from the caller.
@@ -463,12 +463,12 @@ typedef svn_error_t *
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-typedef svn_error_t *
-(*svn_client_get_commit_log_t) (const char **log_msg,
-                                const char **tmp_file,
-                                apr_array_header_t *commit_items,
-                                void *baton,
-                                apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_get_commit_log_t)
+  (const char **log_msg,
+   const char **tmp_file,
+   apr_array_header_t *commit_items,
+   void *baton,
+   apr_pool_t *pool);
 
 /** Callback type used by svn_client_blame() to notify the caller
  * that line @a line_no of the blamed file was last changed in
@@ -480,14 +480,14 @@ typedef svn_error_t *
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
  */
-typedef svn_error_t *
-(*svn_client_blame_receiver_t) (void *baton,
-                                apr_int64_t line_no,
-                                svn_revnum_t revision,
-                                const char *author,
-                                const char *date,
-                                const char *line,
-                                apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_blame_receiver_t)
+  (void *baton,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   const char *author,
+   const char *date,
+   const char *line,
+   apr_pool_t *pool);
 
 
 /** The difference type in an svn_diff_summarize_t structure.
@@ -552,10 +552,10 @@ typedef struct svn_client_diff_summarize_t
  *
  * @since New in 1.4.
  */
-typedef svn_error_t *
-(*svn_client_diff_summarize_func_t) (const svn_client_diff_summarize_t *diff,
-                                     void *baton,
-                                     apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_diff_summarize_func_t)
+  (const svn_client_diff_summarize_t *diff,
+   void *baton,
+   apr_pool_t *pool);
  
 
 /** A client context structure, which holds client specific callbacks, 
@@ -658,8 +658,8 @@ typedef struct svn_client_ctx_t
  * still check for error, for compatibility with future versions.
  */ 
 svn_error_t *
-svn_client_create_context (svn_client_ctx_t **ctx,
-                           apr_pool_t *pool);
+svn_client_create_context(svn_client_ctx_t **ctx,
+                          apr_pool_t *pool);
 
 /**
  * Checkout a working copy of @a URL at @a revision, looked up at @a
@@ -696,15 +696,15 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_checkout2 (svn_revnum_t *result_rev,
-                      const char *URL,
-                      const char *path,
-                      const svn_opt_revision_t *peg_revision,
-                      const svn_opt_revision_t *revision,
-                      svn_boolean_t recurse,
-                      svn_boolean_t ignore_externals,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool);
+svn_client_checkout2(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_externals,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /**
@@ -715,13 +715,13 @@ svn_client_checkout2 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_checkout (svn_revnum_t *result_rev,
-                     const char *URL,
-                     const char *path,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_checkout(svn_revnum_t *result_rev,
+                    const char *URL,
+                    const char *path,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 
 /**
@@ -760,13 +760,13 @@ svn_client_checkout (svn_revnum_t *result_rev,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_update2 (apr_array_header_t **result_revs,
-                    const apr_array_header_t *paths,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t recurse,
-                    svn_boolean_t ignore_externals,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_update2(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /**
  * Similar to svn_client_update2() except that it accepts only a single
@@ -776,12 +776,12 @@ svn_client_update2 (apr_array_header_t **result_revs,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_update (svn_revnum_t *result_rev,
-                   const char *path,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_update(svn_revnum_t *result_rev,
+                  const char *path,
+                  const svn_opt_revision_t *revision,
+                  svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 
 /** Switch working tree @a path to @a url at @a revision,
@@ -809,13 +809,13 @@ svn_client_update (svn_revnum_t *result_rev,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_switch (svn_revnum_t *result_rev,
-                   const char *path,
-                   const char *url,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_switch(svn_revnum_t *result_rev,
+                  const char *path,
+                  const char *url,
+                  const svn_opt_revision_t *revision,
+                  svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 
 /**
@@ -847,12 +847,12 @@ svn_client_switch (svn_revnum_t *result_rev,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_add3 (const char *path,
-                 svn_boolean_t recursive,
-                 svn_boolean_t force,
-                 svn_boolean_t no_ignore,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_add3(const char *path,
+                svn_boolean_t recursive,
+                svn_boolean_t force,
+                svn_boolean_t no_ignore,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 /**
  * Similar to svn_client_add3(), but with the @a no_ignore parameter
@@ -861,11 +861,11 @@ svn_client_add3 (const char *path,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_add2 (const char *path,
-                 svn_boolean_t recursive,
-                 svn_boolean_t force,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_add2(const char *path,
+                svn_boolean_t recursive,
+                svn_boolean_t force,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 /**
  * Similar to svn_client_add2(), but with the @a force parameter
@@ -874,10 +874,10 @@ svn_client_add2 (const char *path,
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
-svn_client_add (const char *path,
-                svn_boolean_t recursive,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+svn_client_add(const char *path,
+               svn_boolean_t recursive,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *pool);
 
 /** Create a directory, either in a repository or a working copy.
  *
@@ -902,10 +902,10 @@ svn_client_add (const char *path,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_mkdir2 (svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *paths,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_mkdir2(svn_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 
 /** Same as svn_client_mkdir2(), but takes the @c svn_client_commit_info_t
@@ -914,10 +914,10 @@ svn_client_mkdir2 (svn_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_mkdir (svn_client_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
+                 const apr_array_header_t *paths,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
                   
 
 /** Delete items from a repository or working copy.
@@ -952,11 +952,11 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info_p,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_delete2 (svn_commit_info_t **commit_info_p,
-                    const apr_array_header_t *paths,
-                    svn_boolean_t force,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_delete2(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /** Similar to svn_client_delete2(), but takes @c svn_client_commit_info_t
@@ -965,11 +965,11 @@ svn_client_delete2 (svn_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_delete (svn_client_commit_info_t **commit_info_p,
-                   const apr_array_header_t *paths,
-                   svn_boolean_t force,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_delete(svn_client_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 
 
@@ -1014,13 +1014,13 @@ svn_client_delete (svn_client_commit_info_t **commit_info_p,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_import2 (svn_commit_info_t **commit_info_p,
-                                 const char *path,
-                                 const char *url,
-                                 svn_boolean_t nonrecursive,
-                                 svn_boolean_t no_ignore,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
+svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
+                                const char *path,
+                                const char *url,
+                                svn_boolean_t nonrecursive,
+                                svn_boolean_t no_ignore,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
 
 /**
  * Similar to svn_client_import2(), but with the @a no_ignore parameter 
@@ -1029,12 +1029,12 @@ svn_error_t *svn_client_import2 (svn_commit_info_t **commit_info_p,
  * 
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info_p,
-                                const char *path,
-                                const char *url,
-                                svn_boolean_t nonrecursive,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
+svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
+                               const char *path,
+                               const char *url,
+                               svn_boolean_t nonrecursive,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
 
 
 /**
@@ -1068,12 +1068,12 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info_p,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_commit3 (svn_commit_info_t **commit_info_p,
-                    const apr_array_header_t *targets,
-                    svn_boolean_t recurse,
-                    svn_boolean_t keep_locks,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_commit3(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t recurse,
+                   svn_boolean_t keep_locks,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /** Similar to svn_client_commit3(), but uses @c svn_client_commit_info_t
  * for @a commit_info_p.
@@ -1083,12 +1083,12 @@ svn_client_commit3 (svn_commit_info_t **commit_info_p,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_commit2 (svn_client_commit_info_t **commit_info_p,
-                    const apr_array_header_t *targets,
-                    svn_boolean_t recurse,
-                    svn_boolean_t keep_locks,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_commit2(svn_client_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t recurse,
+                   svn_boolean_t keep_locks,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /**
  * Similar to svn_client_commit2(), but with @a keep_locks set to
@@ -1097,11 +1097,11 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_commit (svn_client_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t nonrecursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_commit(svn_client_commit_info_t **commit_info_p,
+                  const apr_array_header_t *targets,
+                  svn_boolean_t nonrecursive,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /**
  * Given @a path to a working copy directory (or single file), call
@@ -1132,18 +1132,18 @@ svn_client_commit (svn_client_commit_info_t **commit_info_p,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_status2 (svn_revnum_t *result_rev,
-                    const char *path,
-                    const svn_opt_revision_t *revision,
-                    svn_wc_status_func2_t status_func,
-                    void *status_baton,
-                    svn_boolean_t recurse,
-                    svn_boolean_t get_all,
-                    svn_boolean_t update,
-                    svn_boolean_t no_ignore,
-                    svn_boolean_t ignore_externals,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_status2(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func2_t status_func,
+                   void *status_baton,
+                   svn_boolean_t recurse,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /**
@@ -1155,17 +1155,17 @@ svn_client_status2 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_status (svn_revnum_t *result_rev,
-                   const char *path,
-                   svn_opt_revision_t *revision,
-                   svn_wc_status_func_t status_func,
-                   void *status_baton,
-                   svn_boolean_t recurse,
-                   svn_boolean_t get_all,
-                   svn_boolean_t update,
-                   svn_boolean_t no_ignore,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_status(svn_revnum_t *result_rev,
+                  const char *path,
+                  svn_opt_revision_t *revision,
+                  svn_wc_status_func_t status_func,
+                  void *status_baton,
+                  svn_boolean_t recurse,
+                  svn_boolean_t get_all,
+                  svn_boolean_t update,
+                  svn_boolean_t no_ignore,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /** 
  * Invoke @a receiver with @a receiver_baton on each log message from @a 
@@ -1209,17 +1209,17 @@ svn_client_status (svn_revnum_t *result_rev,
  * @since New in 1.4.
  */
 svn_error_t *
-svn_client_log3 (const apr_array_header_t *targets,
-                 const svn_opt_revision_t *peg_revision,
-                 const svn_opt_revision_t *start,
-                 const svn_opt_revision_t *end,
-                 int limit,
-                 svn_boolean_t discover_changed_paths,
-                 svn_boolean_t strict_node_history,
-                 svn_log_message_receiver_t receiver,
-                 void *receiver_baton,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_log3(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 
 /**
@@ -1230,16 +1230,16 @@ svn_client_log3 (const apr_array_header_t *targets,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_log2 (const apr_array_header_t *targets,
-                 const svn_opt_revision_t *start,
-                 const svn_opt_revision_t *end,
-                 int limit,
-                 svn_boolean_t discover_changed_paths,
-                 svn_boolean_t strict_node_history,
-                 svn_log_message_receiver_t receiver,
-                 void *receiver_baton,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_log2(const apr_array_header_t *targets,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 
 /**
@@ -1263,15 +1263,15 @@ svn_client_log2 (const apr_array_header_t *targets,
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
-svn_client_log (const apr_array_header_t *targets,
-                const svn_opt_revision_t *start,
-                const svn_opt_revision_t *end,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t strict_node_history,
-                svn_log_message_receiver_t receiver,
-                void *receiver_baton,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+svn_client_log(const apr_array_header_t *targets,
+               const svn_opt_revision_t *start,
+               const svn_opt_revision_t *end,
+               svn_boolean_t discover_changed_paths,
+               svn_boolean_t strict_node_history,
+               svn_log_message_receiver_t receiver,
+               void *receiver_baton,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *pool);
 
 /**
  * Invoke @a receiver with @a receiver_baton on each line-blame item
@@ -1292,14 +1292,14 @@ svn_client_log (const apr_array_header_t *targets,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_blame2 (const char *path_or_url,
-                   const svn_opt_revision_t *peg_revision,
-                   const svn_opt_revision_t *start,
-                   const svn_opt_revision_t *end,
-                   svn_client_blame_receiver_t receiver,
-                   void *receiver_baton,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_blame2(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_blame() except that @a peg_revision is always
@@ -1308,13 +1308,13 @@ svn_client_blame2 (const char *path_or_url,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_blame (const char *path_or_url,
-                  const svn_opt_revision_t *start,
-                  const svn_opt_revision_t *end,
-                  svn_client_blame_receiver_t receiver,
-                  void *receiver_baton,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_blame(const char *path_or_url,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 svn_client_blame_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /**
  * Produce diff output which describes the delta between
@@ -1360,20 +1360,20 @@ svn_client_blame (const char *path_or_url,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_diff3 (const apr_array_header_t *diff_options,
-                               const char *path1,
-                               const svn_opt_revision_t *revision1,
-                               const char *path2,
-                               const svn_opt_revision_t *revision2,
-                               svn_boolean_t recurse,
-                               svn_boolean_t ignore_ancestry,
-                               svn_boolean_t no_diff_deleted,
-                               svn_boolean_t ignore_content_type,
-                               const char *header_encoding,
-                               apr_file_t *outfile,
-                               apr_file_t *errfile,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool);
+svn_error_t *svn_client_diff3(const apr_array_header_t *diff_options,
+                              const char *path1,
+                              const svn_opt_revision_t *revision1,
+                              const char *path2,
+                              const svn_opt_revision_t *revision2,
+                              svn_boolean_t recurse,
+                              svn_boolean_t ignore_ancestry,
+                              svn_boolean_t no_diff_deleted,
+                              svn_boolean_t ignore_content_type,
+                              const char *header_encoding,
+                              apr_file_t *outfile,
+                              apr_file_t *errfile,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool);
 
 /**
  * Similar to svn_client_diff3(), but with @a header_encoding set to
@@ -1383,27 +1383,7 @@ svn_error_t *svn_client_diff3 (const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_client_diff2 (const apr_array_header_t *diff_options,
-                               const char *path1,
-                               const svn_opt_revision_t *revision1,
-                               const char *path2,
-                               const svn_opt_revision_t *revision2,
-                               svn_boolean_t recurse,
-                               svn_boolean_t ignore_ancestry,
-                               svn_boolean_t no_diff_deleted,
-                               svn_boolean_t ignore_content_type,
-                               apr_file_t *outfile,
-                               apr_file_t *errfile,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool);
-
-/**
- * Similar to svn_client_diff2(), but with the @a ignore_content_type
- * parameter always set to @c FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.0 API.
- */
-svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
+svn_error_t *svn_client_diff2(const apr_array_header_t *diff_options,
                               const char *path1,
                               const svn_opt_revision_t *revision1,
                               const char *path2,
@@ -1411,10 +1391,30 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_boolean_t recurse,
                               svn_boolean_t ignore_ancestry,
                               svn_boolean_t no_diff_deleted,
+                              svn_boolean_t ignore_content_type,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_diff2(), but with the @a ignore_content_type
+ * parameter always set to @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
+svn_error_t *svn_client_diff(const apr_array_header_t *diff_options,
+                             const char *path1,
+                             const svn_opt_revision_t *revision1,
+                             const char *path2,
+                             const svn_opt_revision_t *revision2,
+                             svn_boolean_t recurse,
+                             svn_boolean_t ignore_ancestry,
+                             svn_boolean_t no_diff_deleted,
+                             apr_file_t *outfile,
+                             apr_file_t *errfile,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
 
 /**
  * Produce diff output which describes the delta between the
@@ -1426,20 +1426,20 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_diff_peg3 (const apr_array_header_t *diff_options,
-                                   const char *path,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const svn_opt_revision_t *start_revision,
-                                   const svn_opt_revision_t *end_revision,
-                                   svn_boolean_t recurse,
-                                   svn_boolean_t ignore_ancestry,
-                                   svn_boolean_t no_diff_deleted,
-                                   svn_boolean_t ignore_content_type,
-                                   const char *header_encoding,
-                                   apr_file_t *outfile,
-                                   apr_file_t *errfile,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
+svn_error_t *svn_client_diff_peg3(const apr_array_header_t *diff_options,
+                                  const char *path,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *start_revision,
+                                  const svn_opt_revision_t *end_revision,
+                                  svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t no_diff_deleted,
+                                  svn_boolean_t ignore_content_type,
+                                  const char *header_encoding,
+                                  apr_file_t *outfile,
+                                  apr_file_t *errfile,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_diff_peg3(), but with @a header_encoding set to
@@ -1449,19 +1449,19 @@ svn_error_t *svn_client_diff_peg3 (const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
-                                   const char *path,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const svn_opt_revision_t *start_revision,
-                                   const svn_opt_revision_t *end_revision,
-                                   svn_boolean_t recurse,
-                                   svn_boolean_t ignore_ancestry,
-                                   svn_boolean_t no_diff_deleted,
-                                   svn_boolean_t ignore_content_type,
-                                   apr_file_t *outfile,
-                                   apr_file_t *errfile,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
+svn_error_t *svn_client_diff_peg2(const apr_array_header_t *diff_options,
+                                  const char *path,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *start_revision,
+                                  const svn_opt_revision_t *end_revision,
+                                  svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t no_diff_deleted,
+                                  svn_boolean_t ignore_content_type,
+                                  apr_file_t *outfile,
+                                  apr_file_t *errfile,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_diff_peg2(), but with the @a ignore_content_type
@@ -1470,18 +1470,18 @@ svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
-                                  const char *path,
-                                  const svn_opt_revision_t *peg_revision,
-                                  const svn_opt_revision_t *start_revision,
-                                  const svn_opt_revision_t *end_revision,
-                                  svn_boolean_t recurse,
-                                  svn_boolean_t ignore_ancestry,
-                                  svn_boolean_t no_diff_deleted,
-                                  apr_file_t *outfile,
-                                  apr_file_t *errfile,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_error_t *svn_client_diff_peg(const apr_array_header_t *diff_options,
+                                 const char *path,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *start_revision,
+                                 const svn_opt_revision_t *end_revision,
+                                 svn_boolean_t recurse,
+                                 svn_boolean_t ignore_ancestry,
+                                 svn_boolean_t no_diff_deleted,
+                                 apr_file_t *outfile,
+                                 apr_file_t *errfile,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 /**
  * Produce a diff summary which lists the changed items between
@@ -1500,16 +1500,16 @@ svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
  * @since New in 1.4.
  */
 svn_error_t *
-svn_client_diff_summarize (const char *path1,
-                           const svn_opt_revision_t *revision1,
-                           const char *path2,
-                           const svn_opt_revision_t *revision2,
-                           svn_boolean_t recurse,
-                           svn_boolean_t ignore_ancestry,
-                           svn_client_diff_summarize_func_t summarize_func,
-                           void *summarize_baton,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool);
+svn_client_diff_summarize(const char *path1,
+                          const svn_opt_revision_t *revision1,
+                          const char *path2,
+                          const svn_opt_revision_t *revision2,
+                          svn_boolean_t recurse,
+                          svn_boolean_t ignore_ancestry,
+                          svn_client_diff_summarize_func_t summarize_func,
+                          void *summarize_baton,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
 
 /**
  * Produce a diff summary which lists the changed items between the
@@ -1528,16 +1528,16 @@ svn_client_diff_summarize (const char *path1,
  * @since New in 1.4.
  */
 svn_error_t *
-svn_client_diff_summarize_peg (const char *path,
-                               const svn_opt_revision_t *peg_revision,
-                               const svn_opt_revision_t *start_revision,
-                               const svn_opt_revision_t *end_revision,
-                               svn_boolean_t recurse,
-                               svn_boolean_t ignore_ancestry,
-                               svn_client_diff_summarize_func_t summarize_func,
-                               void *summarize_baton,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool);
+svn_client_diff_summarize_peg(const char *path,
+                              const svn_opt_revision_t *peg_revision,
+                              const svn_opt_revision_t *start_revision,
+                              const svn_opt_revision_t *end_revision,
+                              svn_boolean_t recurse,
+                              svn_boolean_t ignore_ancestry,
+                              svn_client_diff_summarize_func_t summarize_func,
+                              void *summarize_baton,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool);
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.
@@ -1580,17 +1580,17 @@ svn_client_diff_summarize_peg (const char *path,
  * repository.
  */
 svn_error_t *
-svn_client_merge (const char *source1,
-                  const svn_opt_revision_t *revision1,
-                  const char *source2,
-                  const svn_opt_revision_t *revision2,
-                  const char *target_wcpath,
-                  svn_boolean_t recurse,
-                  svn_boolean_t ignore_ancestry,
-                  svn_boolean_t force,
-                  svn_boolean_t dry_run,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_merge(const char *source1,
+                 const svn_opt_revision_t *revision1,
+                 const char *source2,
+                 const svn_opt_revision_t *revision2,
+                 const char *target_wcpath,
+                 svn_boolean_t recurse,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t force,
+                 svn_boolean_t dry_run,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 
 /**
@@ -1603,17 +1603,17 @@ svn_client_merge (const char *source1,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_client_merge_peg (const char *source,
-                      const svn_opt_revision_t *revision1,
-                      const svn_opt_revision_t *revision2,
-                      const svn_opt_revision_t *peg_revision,
-                      const char *target_wcpath,
-                      svn_boolean_t recurse,
-                      svn_boolean_t ignore_ancestry,
-                      svn_boolean_t force,
-                      svn_boolean_t dry_run,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool);
+svn_client_merge_peg(const char *source,
+                     const svn_opt_revision_t *revision1,
+                     const svn_opt_revision_t *revision2,
+                     const svn_opt_revision_t *peg_revision,
+                     const char *target_wcpath,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t force,
+                     svn_boolean_t dry_run,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /** Recursively cleanup a working copy directory @a dir, finishing any
@@ -1625,9 +1625,9 @@ svn_client_merge_peg (const char *source,
  * immediately.
  */
 svn_error_t *
-svn_client_cleanup (const char *dir,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_cleanup(const char *dir,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /**
@@ -1643,12 +1643,12 @@ svn_client_cleanup (const char *dir,
  * @param pool The pool from which to perform memory allocations
  */
 svn_error_t *
-svn_client_relocate (const char *dir,
-                     const char *from,
-                     const char *to,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_relocate(const char *dir,
+                    const char *from,
+                    const char *to,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 
 /** Restore the pristine version of a working copy @a paths,
@@ -1665,10 +1665,10 @@ svn_client_relocate (const char *dir,
  * ctx->notify_baton2, using notification code @c svn_wc_notify_skip.
  */
 svn_error_t *
-svn_client_revert (const apr_array_header_t *paths,
-                   svn_boolean_t recursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_revert(const apr_array_header_t *paths,
+                  svn_boolean_t recursive,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 
 /** Remove the 'conflicted' state on a working copy @a path.  This will
@@ -1682,10 +1682,10 @@ svn_client_revert (const apr_array_header_t *paths,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
  */
 svn_error_t *
-svn_client_resolved (const char *path,
-                     svn_boolean_t recursive,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 
 /** Copy @a src_path to @a dst_path.
@@ -1722,12 +1722,12 @@ svn_client_resolved (const char *path,
  * @since New in 1.4.
  */
 svn_error_t *
-svn_client_copy3 (svn_commit_info_t **commit_info_p,
-                  const char *src_path,
-                  const svn_opt_revision_t *src_revision,
-                  const char *dst_path,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_copy3(svn_commit_info_t **commit_info_p,
+                 const char *src_path,
+                 const svn_opt_revision_t *src_revision,
+                 const char *dst_path,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 
 /** Similar to svn_client_copy3(), with the difference that if @a dst_path
@@ -1739,12 +1739,12 @@ svn_client_copy3 (svn_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
-svn_client_copy2 (svn_commit_info_t **commit_info_p,
-                  const char *src_path,
-                  const svn_opt_revision_t *src_revision,
-                  const char *dst_path,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_copy2(svn_commit_info_t **commit_info_p,
+                 const char *src_path,
+                 const svn_opt_revision_t *src_revision,
+                 const char *dst_path,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 
 /** Similar to svn_client_copy2(), but uses @c svn_client_commit_info_t
@@ -1753,12 +1753,12 @@ svn_client_copy2 (svn_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_copy (svn_client_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const svn_opt_revision_t *src_revision,
-                 const char *dst_path,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_copy(svn_client_commit_info_t **commit_info_p,
+                const char *src_path,
+                const svn_opt_revision_t *src_revision,
+                const char *dst_path,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 
 /**
@@ -1811,12 +1811,12 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
  * @since New in 1.4.
  */ 
 svn_error_t *
-svn_client_move4 (svn_commit_info_t **commit_info_p,
-                  const char *src_path,
-                  const char *dst_path,
-                  svn_boolean_t force,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_move4(svn_commit_info_t **commit_info_p,
+                 const char *src_path,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /** Similar to svn_client_move4(), with the difference that if @a dst_path
  * already exists and is a directory, move the item into that directory,
@@ -1827,12 +1827,12 @@ svn_client_move4 (svn_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
-svn_client_move3 (svn_commit_info_t **commit_info_p,
-                  const char *src_path,
-                  const char *dst_path,
-                  svn_boolean_t force,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_move3(svn_commit_info_t **commit_info_p,
+                 const char *src_path,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /** Similar to svn_client_move3(), but uses @c svn_client_commit_info_t
  * for @a commit_info_p.
@@ -1842,12 +1842,12 @@ svn_client_move3 (svn_commit_info_t **commit_info_p,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_move2 (svn_client_commit_info_t **commit_info_p,
-                  const char *src_path,
-                  const char *dst_path,
-                  svn_boolean_t force,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
+svn_client_move2(svn_client_commit_info_t **commit_info_p,
+                 const char *src_path,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /**
  * Similar to svn_client_move2(), but an extra argument @a src_revision
@@ -1858,13 +1858,13 @@ svn_client_move2 (svn_client_commit_info_t **commit_info_p,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */ 
 svn_error_t *
-svn_client_move (svn_client_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const svn_opt_revision_t *src_revision,
-                 const char *dst_path,
-                 svn_boolean_t force,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_move(svn_client_commit_info_t **commit_info_p,
+                const char *src_path,
+                const svn_opt_revision_t *src_revision,
+                const char *dst_path,
+                svn_boolean_t force,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 
 /** Properties
@@ -1909,13 +1909,13 @@ svn_client_move (svn_client_commit_info_t **commit_info_p,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_propset2 (const char *propname,
-                     const svn_string_t *propval,
-                     const char *target,
-                     svn_boolean_t recurse,
-                     svn_boolean_t skip_checks,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_propset2(const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
+                    svn_boolean_t recurse,
+                    svn_boolean_t skip_checks,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 /** 
  * Like svn_client_propset2(), but with @a skip_checks always false and a
@@ -1924,11 +1924,11 @@ svn_client_propset2 (const char *propname,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_propset (const char *propname,
-                    const svn_string_t *propval,
-                    const char *target,
-                    svn_boolean_t recurse,
-                    apr_pool_t *pool);
+svn_client_propset(const char *propname,
+                   const svn_string_t *propval,
+                   const char *target,
+                   svn_boolean_t recurse,
+                   apr_pool_t *pool);
 
 /** Set @a propname to @a propval on revision @a revision in the repository
  * represented by @a URL.  Use the authentication baton in @a ctx for 
@@ -1952,14 +1952,14 @@ svn_client_propset (const char *propname,
  * pre-revprop-change hook in the repository, this feature will fail.
  */
 svn_error_t *
-svn_client_revprop_set (const char *propname,
-                        const svn_string_t *propval,
-                        const char *URL,
-                        const svn_opt_revision_t *revision,
-                        svn_revnum_t *set_rev,
-                        svn_boolean_t force,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *pool);
+svn_client_revprop_set(const char *propname,
+                       const svn_string_t *propval,
+                       const char *URL,
+                       const svn_opt_revision_t *revision,
+                       svn_revnum_t *set_rev,
+                       svn_boolean_t force,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool);
                         
 /**
  * Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
@@ -1991,14 +1991,14 @@ svn_client_revprop_set (const char *propname,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_propget2 (apr_hash_t **props,
-                     const char *propname,
-                     const char *target,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_propget2(apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_propget2(), except that the peg revision is
@@ -2007,13 +2007,13 @@ svn_client_propget2 (apr_hash_t **props,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_propget (apr_hash_t **props,
-                    const char *propname,
-                    const char *target,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_propget(apr_hash_t **props,
+                   const char *propname,
+                   const char *target,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /** Set @a *propval to the value of @a propname on revision @a revision 
  * in the repository represented by @a URL.  Use the authentication baton 
@@ -2027,13 +2027,13 @@ svn_client_propget (apr_hash_t **props,
  * like.
  */
 svn_error_t *
-svn_client_revprop_get (const char *propname,
-                        svn_string_t **propval,
-                        const char *URL,
-                        const svn_opt_revision_t *revision,
-                        svn_revnum_t *set_rev,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *pool);
+svn_client_revprop_get(const char *propname,
+                       svn_string_t **propval,
+                       const char *URL,
+                       const svn_opt_revision_t *revision,
+                       svn_revnum_t *set_rev,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool);
 
 /**
  * Set @a *props to the regular properties of @a target, a URL or working
@@ -2066,13 +2066,13 @@ svn_client_revprop_get (const char *propname,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_proplist2 (apr_array_header_t **props,
-                      const char *target,
-                      const svn_opt_revision_t *peg_revision,
-                      const svn_opt_revision_t *revision,
-                      svn_boolean_t recurse,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool);
+svn_client_proplist2(apr_array_header_t **props,
+                     const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 /**
  * Similar to svn_client_proplist2(), except that the peg revision is
@@ -2081,12 +2081,12 @@ svn_client_proplist2 (apr_array_header_t **props,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_proplist (apr_array_header_t **props,
-                     const char *target,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_proplist(apr_array_header_t **props,
+                    const char *target,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 /** Set @a *props to a hash of the revision props attached to @a revision in
  * the repository represented by @a URL.  Use the authentication baton cached 
@@ -2101,12 +2101,12 @@ svn_client_proplist (apr_array_header_t **props,
  * that reads *unversioned* properties attached to a revision.
  */
 svn_error_t *
-svn_client_revprop_list (apr_hash_t **props,
-                         const char *URL,
-                         const svn_opt_revision_t *revision,
-                         svn_revnum_t *set_rev,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *pool);
+svn_client_revprop_list(apr_hash_t **props,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool);
 /** @} */
 
 
@@ -2159,17 +2159,17 @@ svn_client_revprop_list (apr_hash_t **props,
  * @since New in 1.2.
  */ 
 svn_error_t *
-svn_client_export3 (svn_revnum_t *result_rev,
-                    const char *from,
-                    const char *to,
-                    const svn_opt_revision_t *peg_revision,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t overwrite, 
-                    svn_boolean_t ignore_externals,
-                    svn_boolean_t recurse,
-                    const char *native_eol,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_export3(svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t overwrite, 
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t recurse,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /**
@@ -2182,14 +2182,14 @@ svn_client_export3 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_export2 (svn_revnum_t *result_rev,
-                    const char *from,
-                    const char *to,
-                    svn_opt_revision_t *revision,
-                    svn_boolean_t force, 
-                    const char *native_eol,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_export2(svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   svn_opt_revision_t *revision,
+                   svn_boolean_t force, 
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /**
@@ -2199,13 +2199,13 @@ svn_client_export2 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
-svn_client_export (svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
-                   svn_opt_revision_t *revision,
-                   svn_boolean_t force, 
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_export(svn_revnum_t *result_rev,
+                  const char *from,
+                  const char *to,
+                  svn_opt_revision_t *revision,
+                  svn_boolean_t force, 
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /** Invoked by svn_client_list() for each @a path with its @a dirent and,
  * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
@@ -2214,12 +2214,12 @@ svn_client_export (svn_revnum_t *result_rev,
  *
  * @since New in 1.4.
  */
-typedef svn_error_t *(svn_client_list_func_t) (void *baton,
-                                               const char *path,
-                                               const svn_dirent_t *dirent,
-                                               const svn_lock_t *lock,
-                                               const char *abs_path,
-                                               apr_pool_t *pool);
+typedef svn_error_t *(svn_client_list_func_t)(void *baton,
+                                              const char *path,
+                                              const svn_dirent_t *dirent,
+                                              const svn_lock_t *lock,
+                                              const char *abs_path,
+                                              apr_pool_t *pool);
 
 /**
  * Report the directory entry, and possibly children, for @a
@@ -2253,16 +2253,16 @@ typedef svn_error_t *(svn_client_list_func_t) (void *baton,
  * @since New in 1.4.
  */
 svn_error_t *
-svn_client_list (const char *path_or_url,
-                 const svn_opt_revision_t *peg_revision,
-                 const svn_opt_revision_t *revision,
-                 svn_boolean_t recurse,
-                 apr_uint32_t dirent_fields,
-                 svn_boolean_t fetch_locks,
-                 svn_client_ctx_t *ctx,
-                 svn_client_list_func_t list_func,
-                 void *baton,
-                 apr_pool_t *pool);
+svn_client_list(const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                apr_uint32_t dirent_fields,
+                svn_boolean_t fetch_locks,
+                svn_client_ctx_t *ctx,
+                svn_client_list_func_t list_func,
+                void *baton,
+                apr_pool_t *pool);
 
 /**
  * Same as svn_client_list(), but always passes @c SVN_DIRENT_ALL for
@@ -2281,14 +2281,14 @@ svn_client_list (const char *path_or_url,
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
-svn_client_ls3 (apr_hash_t **dirents,
-                apr_hash_t **locks,
-                const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_boolean_t recurse,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+svn_client_ls3(apr_hash_t **dirents,
+               apr_hash_t **locks,
+               const char *path_or_url,
+               const svn_opt_revision_t *peg_revision,
+               const svn_opt_revision_t *revision,
+               svn_boolean_t recurse,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *pool);
 
 /**
  * Same as svn_client_ls3(), but without the ability to get locks.
@@ -2298,13 +2298,13 @@ svn_client_ls3 (apr_hash_t **dirents,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_ls2 (apr_hash_t **dirents,
-                const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_boolean_t recurse,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+svn_client_ls2(apr_hash_t **dirents,
+               const char *path_or_url,
+               const svn_opt_revision_t *peg_revision,
+               const svn_opt_revision_t *revision,
+               svn_boolean_t recurse,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *pool);
 
 /**
  * Similar to svn_client_ls2() except that the peg revision is always
@@ -2313,12 +2313,12 @@ svn_client_ls2 (apr_hash_t **dirents,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_ls (apr_hash_t **dirents,
-               const char *path_or_url,
-               svn_opt_revision_t *revision,
-               svn_boolean_t recurse,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool);
+svn_client_ls(apr_hash_t **dirents,
+              const char *path_or_url,
+              svn_opt_revision_t *revision,
+              svn_boolean_t recurse,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool);
 
 
 /**
@@ -2344,12 +2344,12 @@ svn_client_ls (apr_hash_t **dirents,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_cat2 (svn_stream_t *out,
-                 const char *path_or_url,
-                 const svn_opt_revision_t *peg_revision,
-                 const svn_opt_revision_t *revision,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_cat2(svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 
 /**
@@ -2359,11 +2359,11 @@ svn_client_cat2 (svn_stream_t *out,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_cat (svn_stream_t *out,
-                const char *path_or_url,
-                const svn_opt_revision_t *revision,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool);
+svn_client_cat(svn_stream_t *out,
+               const char *path_or_url,
+               const svn_opt_revision_t *revision,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *pool);
 
 
 /** Locking commands
@@ -2396,11 +2396,11 @@ svn_client_cat (svn_stream_t *out,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_lock (const apr_array_header_t *targets,
-                 const char *comment,
-                 svn_boolean_t steal_lock,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_lock(const apr_array_header_t *targets,
+                const char *comment,
+                svn_boolean_t steal_lock,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 /**
  * Unlock @a targets in the repository.  @a targets is an array of
@@ -2432,10 +2432,10 @@ svn_client_lock (const apr_array_header_t *targets,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_unlock (const apr_array_header_t *targets,
-                   svn_boolean_t break_lock,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_unlock(const apr_array_header_t *targets,
+                  svn_boolean_t break_lock,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /** @} */
 
@@ -2513,10 +2513,10 @@ typedef struct svn_info_t
  * @since New in 1.2.
  */
 typedef svn_error_t *(*svn_info_receiver_t)
-     (void *baton,
-      const char *path,
-      const svn_info_t *info,
-      apr_pool_t *pool);
+  (void *baton,
+   const char *path,
+   const svn_info_t *info,
+   apr_pool_t *pool);
 
 /** 
  * Return a duplicate of @a info, allocated in @a pool. No part of the new
@@ -2560,14 +2560,14 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_info (const char *path_or_url,
-                 const svn_opt_revision_t *peg_revision,
-                 const svn_opt_revision_t *revision,
-                 svn_info_receiver_t receiver,
-                 void *receiver_baton,
-                 svn_boolean_t recurse,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+svn_client_info(const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_info_receiver_t receiver,
+                void *receiver_baton,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 
 
@@ -2583,9 +2583,9 @@ svn_client_info (const char *path_or_url,
  * no entry), set @a *url to null.
  */
 svn_error_t *
-svn_client_url_from_path (const char **url,
-                          const char *path_or_url,
-                          apr_pool_t *pool);
+svn_client_url_from_path(const char **url,
+                         const char *path_or_url,
+                         apr_pool_t *pool);
 
 
 
@@ -2600,10 +2600,10 @@ svn_client_url_from_path (const char **url,
  * authentication.
  */
 svn_error_t *
-svn_client_uuid_from_url (const char **uuid,
-                          const char *url,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
+svn_client_uuid_from_url(const char **uuid,
+                         const char *url,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool);
 
 
 /** Return the repository @a uuid for working-copy @a path, allocated
@@ -2617,11 +2617,11 @@ svn_client_uuid_from_url (const char **uuid,
  * working copies may not have uuids in the entries file.
  */
 svn_error_t *
-svn_client_uuid_from_path (const char **uuid,
-                           const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool);
+svn_client_uuid_from_path(const char **uuid,
+                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
 
 
 /* Opening RA sessions. */
@@ -2637,10 +2637,10 @@ svn_client_uuid_from_path (const char **uuid,
  * having to providing its own callback functions.
  */
 svn_error_t *
-svn_client_open_ra_session (svn_ra_session_t **session,
-                            const char *url,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+svn_client_open_ra_session(svn_ra_session_t **session,
+                           const char *url,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -35,8 +35,8 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 static void
 usage(apr_pool_t *pool)
 {
-  svn_error_clear (svn_cmdline_fprintf
-                    (stderr, pool, _("Type 'svnversion --help' for usage.\n")));
+  svn_error_clear(svn_cmdline_fprintf
+                  (stderr, pool, _("Type 'svnversion --help' for usage.\n")));
   exit(1);
 }
 
@@ -77,17 +77,17 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
     {
       const char *optstr;
       svn_opt_format_option(&optstr, options, TRUE, pool);
-      svn_error_clear (svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
+      svn_error_clear(svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
       ++options;
     }
-  svn_error_clear (svn_cmdline_fprintf(stdout, pool, "\n"));
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
   exit(0);
 }
 
 
 /* Version compatibility check */
 static svn_error_t *
-check_lib_versions (void)
+check_lib_versions(void)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -96,8 +96,8 @@ check_lib_versions (void)
       { NULL, NULL }
     };
 
-   SVN_VERSION_DEFINE (my_version);
-   return svn_ver_check_list (&my_version, checklist);
+  SVN_VERSION_DEFINE(my_version);
+  return svn_ver_check_list(&my_version, checklist);
 }
 
 /*
@@ -126,38 +126,38 @@ main(int argc, const char *argv[])
     };
 
   /* Initialize the app. */
-  if (svn_cmdline_init ("svnversion", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svnversion", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create (&allocator))
+  if (apr_allocator_create(&allocator))
     return EXIT_FAILURE;
 
-  apr_allocator_max_free_set (allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
 
-  pool = svn_pool_create_ex (NULL, allocator);
-  apr_allocator_owner_set (allocator, pool);
+  pool = svn_pool_create_ex(NULL, allocator);
+  apr_allocator_owner_set(allocator, pool);
 
   /* Check library versions */
-  err = check_lib_versions ();
+  err = check_lib_versions();
   if (err)
     {
-      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
+      svn_handle_error2(err, stderr, FALSE, "svnversion: ");
+      svn_error_clear(err);
+      svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
-  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+  if (getenv("SVN_ASP_DOT_NET_HACK"))
     {
-      err = svn_wc_set_adm_dir ("_svn", pool);
+      err = svn_wc_set_adm_dir("_svn", pool);
       if (err)
         {
-          svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
+          svn_handle_error2(err, stderr, FALSE, "svnversion: ");
           return EXIT_FAILURE;
         }
     }
@@ -204,60 +204,60 @@ main(int argc, const char *argv[])
       return EXIT_FAILURE;
     }
 
-  SVN_INT_ERR (svn_utf_cstring_to_utf8
-                 (&wc_path, (os->ind < argc) ? os->argv[os->ind] : ".",
-                  pool));
-  wc_path = svn_path_internal_style (wc_path, pool);
+  SVN_INT_ERR(svn_utf_cstring_to_utf8
+              (&wc_path, (os->ind < argc) ? os->argv[os->ind] : ".",
+               pool));
+  wc_path = svn_path_internal_style(wc_path, pool);
 
   if (os->ind+1 < argc)
-    SVN_INT_ERR (svn_utf_cstring_to_utf8
-                 (&trail_url, os->argv[os->ind+1], pool));
+    SVN_INT_ERR(svn_utf_cstring_to_utf8
+                (&trail_url, os->argv[os->ind+1], pool));
   else
     trail_url = NULL;
 
-  SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
+  SVN_INT_ERR(svn_wc_check_wc(wc_path, &wc_format, pool));
   if (! wc_format)
     {
       svn_node_kind_t kind;
-      SVN_INT_ERR(svn_io_check_path (wc_path, &kind, pool));
+      SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
       if (kind == svn_node_dir)
         {
-          SVN_INT_ERR (svn_cmdline_printf (pool, _("exported%s"), 
-                                           no_newline ? "" : "\n"));
-          svn_pool_destroy (pool);
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("exported%s"), 
+                                         no_newline ? "" : "\n"));
+          svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
       else
         {
           svn_error_clear
-            (svn_cmdline_fprintf (stderr, pool,
-                                  _("'%s' not versioned, and not exported\n"),
-                                  wc_path));
-          svn_pool_destroy (pool);
+            (svn_cmdline_fprintf(stderr, pool,
+                                 _("'%s' not versioned, and not exported\n"),
+                                 wc_path));
+          svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
     }
 
 
-  SVN_INT_ERR (svn_wc_revision_status (&res, wc_path, trail_url, committed,
-                                       NULL, NULL, pool));
+  SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
+                                     NULL, NULL, pool));
 
   /* Build compact '123[:456]M?S?' string. */
-  SVN_INT_ERR (svn_cmdline_printf (pool, "%ld", res->min_rev));
+  SVN_INT_ERR(svn_cmdline_printf(pool, "%ld", res->min_rev));
   if (res->min_rev != res->max_rev)
-    SVN_INT_ERR (svn_cmdline_printf (pool, ":%ld", res->max_rev));
+    SVN_INT_ERR(svn_cmdline_printf(pool, ":%ld", res->max_rev));
   if (res->modified)
-    SVN_INT_ERR (svn_cmdline_fputs ("M", stdout, pool));
+    SVN_INT_ERR(svn_cmdline_fputs("M", stdout, pool));
   if (res->switched)
-    SVN_INT_ERR (svn_cmdline_fputs ("S", stdout, pool));
+    SVN_INT_ERR(svn_cmdline_fputs("S", stdout, pool));
 
   if (! no_newline)
-    SVN_INT_ERR (svn_cmdline_fputs ("\n", stdout, pool));
+    SVN_INT_ERR(svn_cmdline_fputs("\n", stdout, pool));
 
-  svn_pool_destroy (pool);
+  svn_pool_destroy(pool);
 
   /* Flush stdout to make sure that the user will see any printing errors. */
-  SVN_INT_ERR (svn_cmdline_fflush (stdout));
+  SVN_INT_ERR(svn_cmdline_fflush(stdout));
 
   return EXIT_SUCCESS;
 }

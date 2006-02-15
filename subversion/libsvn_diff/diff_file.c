@@ -715,7 +715,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
 
   if (err && APR_STATUS_IS_EOF(err->apr_err))
     {
-      svn_error_clear (err);
+      svn_error_clear(err);
       /* Special case if we reach the end of file AND the last line is in the
          changed range AND the file doesn't end with a newline */
       if (bytes_processed && (type != svn_diff__file_output_unified_skip)
@@ -724,9 +724,9 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
           const char *out_str;
           SVN_ERR(svn_utf_cstring_from_utf8_ex
                   (&out_str,
-                   apr_psprintf (baton->pool,
-                                 _("%s\\ No newline at end of file%s"),
-                                 APR_EOL_STR, APR_EOL_STR),
+                   apr_psprintf(baton->pool,
+                                _("%s\\ No newline at end of file%s"),
+                                APR_EOL_STR, APR_EOL_STR),
                    baton->header_encoding, NULL, baton->pool));
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }

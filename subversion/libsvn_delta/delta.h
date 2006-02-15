@@ -56,33 +56,33 @@ typedef struct svn_txdelta__ops_baton_t {
    OPCODE is svn_delta_new, bytes from NEW_DATA are copied into the window
    data and OFFSET is ignored.  Otherwise NEW_DATA is ignored. All
    allocations are performed in POOL. */
-void svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
-                             enum svn_delta_action opcode,
-                             apr_size_t offset,
-                             apr_size_t length,
-                             const char *new_data,
-                             apr_pool_t *pool);
+void svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
+                            enum svn_delta_action opcode,
+                            apr_size_t offset,
+                            apr_size_t length,
+                            const char *new_data,
+                            apr_pool_t *pool);
 
 
 /* Allocate a delta window from POOL. */
 svn_txdelta_window_t *
-svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
-                          apr_pool_t *pool);
+svn_txdelta__make_window(const svn_txdelta__ops_baton_t *build_baton,
+                         apr_pool_t *pool);
 
 /* Create vdelta window data. Allocate temporary data from POOL. */
-void svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
-                          const char *start,
-                          apr_size_t source_len,
-                          apr_size_t target_len,
-                          apr_pool_t *pool);
+void svn_txdelta__vdelta(svn_txdelta__ops_baton_t *build_baton,
+                         const char *start,
+                         apr_size_t source_len,
+                         apr_size_t target_len,
+                         apr_pool_t *pool);
 
 
 /* Create xdelta window data. Allocate temporary data from POOL. */
-void svn_txdelta__xdelta (svn_txdelta__ops_baton_t *build_baton,
-                          const char *start,
-                          apr_size_t source_len,
-                          apr_size_t target_len,
-                          apr_pool_t *pool);
+void svn_txdelta__xdelta(svn_txdelta__ops_baton_t *build_baton,
+                         const char *start,
+                         apr_size_t source_len,
+                         apr_size_t target_len,
+                         apr_pool_t *pool);
 
 
 #ifdef __cplusplus

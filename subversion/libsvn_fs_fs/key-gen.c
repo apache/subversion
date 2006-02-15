@@ -25,10 +25,10 @@
 /*** Keys for reps and strings. ***/
 
 void
-svn_fs_fs__add_keys (const char *key1, const char *key2, char *result)
+svn_fs_fs__add_keys(const char *key1, const char *key2, char *result)
 {
-  int i1 = strlen (key1) - 1;
-  int i2 = strlen (key2) - 1;
+  int i1 = strlen(key1) - 1;
+  int i2 = strlen(key2) - 1;
   int i3 = 0;
   int val;
   int carry = 0;
@@ -63,7 +63,7 @@ svn_fs_fs__add_keys (const char *key1, const char *key2, char *result)
 
 
 void
-svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
+svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next)
 {
   apr_size_t olen = *len;     /* remember the first length */
   int i = olen - 1;           /* initial index; we work backwards */
@@ -115,7 +115,7 @@ svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
   /* Ensure that we haven't overrun the (ludicrous) bound on key length.
      Note that MAX_KEY_SIZE is a bound on the size *including*
      the trailing null byte. */
-  assert (*len < MAX_KEY_SIZE);
+  assert(*len < MAX_KEY_SIZE);
 
   /* Now we know it's safe to add the null terminator. */
   next[*len] = '\0';
@@ -123,23 +123,23 @@ svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
   /* Handle any leftover carry. */
   if (carry)
     {
-      memmove (next+1, next, olen);
+      memmove(next+1, next, olen);
       next[0] = '1';
     }
 }
 
 
 int
-svn_fs_fs__key_compare (const char *a, const char *b)
+svn_fs_fs__key_compare(const char *a, const char *b)
 {
-  int a_len = strlen (a);
-  int b_len = strlen (b);
+  int a_len = strlen(a);
+  int b_len = strlen(b);
   int cmp;
 
   if (a_len > b_len)
     return 1;
   if (b_len > a_len)
     return -1;
-  cmp = strcmp (a, b);
-  return (cmp ? (cmp / abs (cmp)) : 0);
+  cmp = strcmp(a, b);
+  return (cmp ? (cmp / abs(cmp)) : 0);
 }

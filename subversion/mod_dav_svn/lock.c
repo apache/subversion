@@ -173,7 +173,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Only exclusive locks are supported.");
 
-  lock = svn_lock_create (pool);
+  lock = svn_lock_create(pool);
   lock->path = apr_pstrdup(pool, path);
   lock->token = apr_pstrdup(pool, dlock->locktoken->uuid_str);
 
@@ -537,8 +537,8 @@ dav_svn_get_locks(dav_lockdb *lockdb,
 
       /* Let svn clients know the creationdate of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                     svn_time_to_cstring (slock->creation_date,
-                                          resource->pool));
+                     svn_time_to_cstring(slock->creation_date,
+                                         resource->pool));
       
       /* Let svn clients know who "owns" the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
@@ -611,8 +611,8 @@ dav_svn_find_lock(dav_lockdb *lockdb,
       
       /* Let svn clients know the creationdate of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                     svn_time_to_cstring (slock->creation_date,
-                                          resource->pool));
+                     svn_time_to_cstring(slock->creation_date,
+                                         resource->pool));
 
       /* Let svn clients know the 'owner' of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
@@ -767,7 +767,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                                    "Could not begin a transaction", 
                                    resource->pool);
 
-      if ((serr = svn_fs_txn_root (&txn_root, txn, resource->pool)))
+      if ((serr = svn_fs_txn_root(&txn_root, txn, resource->pool)))
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not begin a transaction", 
                                    resource->pool);
@@ -831,7 +831,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
      svn clients can fill in svn_lock_t->creation_date.  A generic DAV
      client should just ignore the header. */
   apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                 svn_time_to_cstring (slock->creation_date, resource->pool));
+                 svn_time_to_cstring(slock->creation_date, resource->pool));
 
   /* A standard webdav LOCK response doesn't include any information
      about the owner of the lock.  ('DAV:owner' has nothing to do with

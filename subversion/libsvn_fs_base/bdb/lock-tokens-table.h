@@ -31,9 +31,9 @@ extern "C" {
 /* Open a `lock-tokens' table in ENV.  If CREATE is non-zero, create
    one if it doesn't exist.  Set *LOCK_TOKENS_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs_bdb__open_lock_tokens_table (DB **locks_tokens_p,
-                                        DB_ENV *env,
-                                        svn_boolean_t create);
+int svn_fs_bdb__open_lock_tokens_table(DB **locks_tokens_p,
+                                       DB_ENV *env,
+                                       svn_boolean_t create);
 
 
 /* Add a lock-token to the `lock-tokens' table in FS, as part of TRAIL. 
@@ -42,11 +42,11 @@ int svn_fs_bdb__open_lock_tokens_table (DB **locks_tokens_p,
    Warning: if PATH already exists as a key, then its value will be
    overwritten. */
 svn_error_t *
-svn_fs_bdb__lock_token_add (svn_fs_t *fs,
-                            const char *path,
-                            const char *lock_token,
-                            trail_t *trail,
-                            apr_pool_t *pool);
+svn_fs_bdb__lock_token_add(svn_fs_t *fs,
+                           const char *path,
+                           const char *lock_token,
+                           trail_t *trail,
+                           apr_pool_t *pool);
 
 
 /* Remove the lock-token whose key is PATH from the `lock-tokens'
@@ -55,10 +55,10 @@ svn_fs_bdb__lock_token_add (svn_fs_t *fs,
    If PATH doesn't exist as a key, return SVN_ERR_FS_NO_SUCH_LOCK.
 */
 svn_error_t *
-svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
-                               const char *path,
-                               trail_t *trail,
-                               apr_pool_t *pool);
+svn_fs_bdb__lock_token_delete(svn_fs_t *fs,
+                              const char *path,
+                              trail_t *trail,
+                              apr_pool_t *pool);
 
 
 /* Retrieve the lock-token *LOCK_TOKEN_P pointed to by PATH from the
@@ -76,11 +76,11 @@ svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
      removed from the `lock-tokens' table.)
  */
 svn_error_t *
-svn_fs_bdb__lock_token_get (const char **lock_token_p,
-                            svn_fs_t *fs,
-                            const char *path,
-                            trail_t *trail,
-                            apr_pool_t *pool);
+svn_fs_bdb__lock_token_get(const char **lock_token_p,
+                           svn_fs_t *fs,
+                           const char *path,
+                           trail_t *trail,
+                           apr_pool_t *pool);
 
 
 

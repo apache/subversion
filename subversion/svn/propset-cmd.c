@@ -40,9 +40,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__propset (apr_getopt_t *os,
-                 void *baton,
-                 apr_pool_t *pool)
+svn_cl__propset(apr_getopt_t *os,
+                void *baton,
+                apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -55,29 +55,29 @@ svn_cl__propset (apr_getopt_t *os,
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
      NULL, else PNAME alone will precede the targets.  Get a UTF-8
      version of the name, too. */
-  SVN_ERR (svn_opt_parse_num_args (&args, os,
-                                   opt_state->filedata ? 1 : 2, pool));
+  SVN_ERR(svn_opt_parse_num_args(&args, os,
+                                 opt_state->filedata ? 1 : 2, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */
   if (opt_state->filedata)
     {
-      propval = svn_string_create_from_buf (opt_state->filedata, pool);
+      propval = svn_string_create_from_buf(opt_state->filedata, pool);
       propval_came_from_cmdline = FALSE;
     }
   else
     {
-      propval = svn_string_create (((const char **) (args->elts))[1], pool);
+      propval = svn_string_create(((const char **) (args->elts))[1], pool);
       propval_came_from_cmdline = TRUE;
     }
   
   /* We only want special Subversion property values to be in UTF-8
      and LF line endings.  All other propvals are taken literally. */
-  if (svn_prop_needs_translation (pname_utf8))
-    SVN_ERR (svn_subst_translate_string (&propval, propval,
-                                         opt_state->encoding, pool));
+  if (svn_prop_needs_translation(pname_utf8))
+    SVN_ERR(svn_subst_translate_string(&propval, propval,
+                                       opt_state->encoding, pool));
   else 
     if (opt_state->encoding)
       return svn_error_create 
@@ -85,8 +85,8 @@ svn_cl__propset (apr_getopt_t *os,
          _("Bad encoding option: prop value not stored as UTF8"));
   
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -95,15 +95,15 @@ svn_cl__propset (apr_getopt_t *os,
 
       /* Implicit "." is okay for revision properties; it just helps
          us find the right repository. */
-      svn_opt_push_implicit_dot_target (targets, pool);
+      svn_opt_push_implicit_dot_target(targets, pool);
 
-      SVN_ERR (svn_cl__revprop_prepare (&opt_state->start_revision, targets,
-                                        &URL, pool));
+      SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
+                                      &URL, pool));
 
       /* Let libsvn_client do the real work. */
-      SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
-                                       URL, &(opt_state->start_revision),
-                                       &rev, opt_state->force, ctx, pool));
+      SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
+                                     URL, &(opt_state->start_revision),
+                                     &rev, opt_state->force, ctx, pool));
       if (! opt_state->quiet) 
         {
           SVN_ERR
@@ -121,7 +121,7 @@ svn_cl__propset (apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      apr_pool_t *subpool = svn_pool_create (pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* The customary implicit dot rule has been prone to user error
        * here.  People would do intuitive things like
@@ -164,17 +164,17 @@ svn_cl__propset (apr_getopt_t *os,
           const char *target = ((const char **) (targets->elts))[i];
           svn_boolean_t success;
 
-          svn_pool_clear (subpool);
-          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_ERR (svn_cl__try (svn_client_propset2 (pname_utf8,
-                                                     propval, target,
-                                                     opt_state->recursive,
-                                                     opt_state->force,
-                                                     ctx, subpool),
-                                &success, opt_state->quiet,
-                                SVN_ERR_UNVERSIONED_RESOURCE,
-                                SVN_ERR_ENTRY_NOT_FOUND,
-                                SVN_NO_ERROR));
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
+          SVN_ERR(svn_cl__try(svn_client_propset2(pname_utf8,
+                                                  propval, target,
+                                                  opt_state->recursive,
+                                                  opt_state->force,
+                                                  ctx, subpool),
+                              &success, opt_state->quiet,
+                              SVN_ERR_UNVERSIONED_RESOURCE,
+                              SVN_ERR_ENTRY_NOT_FOUND,
+                              SVN_NO_ERROR));
 
           if (success && (! opt_state->quiet))
             {
@@ -183,10 +183,10 @@ svn_cl__propset (apr_getopt_t *os,
                  (pool, opt_state->recursive
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
-                  pname, svn_path_local_style (target, pool)));
+                  pname, svn_path_local_style(target, pool)));
             }
         }
-      svn_pool_destroy (subpool);
+      svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;

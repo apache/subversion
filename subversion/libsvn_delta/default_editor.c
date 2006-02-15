@@ -25,17 +25,65 @@
 
 
 static svn_error_t *
-set_target_revision (void *edit_baton, 
-                     svn_revnum_t target_revision,
-                     apr_pool_t *pool)
+set_target_revision(void *edit_baton, 
+                    svn_revnum_t target_revision,
+                    apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
 }
 static svn_error_t *
-add_item (const char *path,
+add_item(const char *path,
+         void *parent_baton,
+         const char *copyfrom_path,
+         svn_revnum_t copyfrom_revision,
+         apr_pool_t *pool,
+         void **baton)
+{
+  *baton = NULL;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+single_baton_func(void *baton,
+                  apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+absent_xxx_func(const char *path,
+                void *baton,
+                apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+open_root(void *edit_baton,
+          svn_revnum_t base_revision,
+          apr_pool_t *dir_pool,
+          void **root_baton)
+{
+  *root_baton = NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+delete_entry(const char *path,
+             svn_revnum_t revision,
+             void *parent_baton,
+             apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+open_item(const char *path,
           void *parent_baton,
-          const char *copyfrom_path,
-          svn_revnum_t copyfrom_revision,
+          svn_revnum_t base_revision,
           apr_pool_t *pool,
           void **baton)
 {
@@ -43,75 +91,27 @@ add_item (const char *path,
   return SVN_NO_ERROR;
 }
 
-
 static svn_error_t *
-single_baton_func (void *baton,
-                   apr_pool_t *pool)
+change_prop(void *file_baton,
+            const char *name,
+            const svn_string_t *value,
+            apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-absent_xxx_func (const char *path,
-                 void *baton,
-                 apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-open_root (void *edit_baton,
-           svn_revnum_t base_revision,
-           apr_pool_t *dir_pool,
-           void **root_baton)
-{
-  *root_baton = NULL;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-delete_entry (const char *path,
-              svn_revnum_t revision,
-              void *parent_baton,
-              apr_pool_t *pool)
+svn_error_t *svn_delta_noop_window_handler(svn_txdelta_window_t *window,
+                                           void *baton)
 {
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-open_item (const char *path,
-           void *parent_baton,
-           svn_revnum_t base_revision,
-           apr_pool_t *pool,
-           void **baton)
-{
-  *baton = NULL;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-change_prop (void *file_baton,
-             const char *name,
-             const svn_string_t *value,
-             apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
-                                            void *baton)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-apply_textdelta (void *file_baton,
-                 const char *base_checksum,
-                 apr_pool_t *pool,
-                 svn_txdelta_window_handler_t *handler,
-                 void **handler_baton)
+apply_textdelta(void *file_baton,
+                const char *base_checksum,
+                apr_pool_t *pool,
+                svn_txdelta_window_handler_t *handler,
+                void **handler_baton)
 {
   *handler = svn_delta_noop_window_handler;
   *handler_baton = NULL;
@@ -120,9 +120,9 @@ apply_textdelta (void *file_baton,
 
 
 static svn_error_t *
-close_file (void *file_baton,
-            const char *text_checksum,
-            apr_pool_t *pool)
+close_file(void *file_baton,
+           const char *text_checksum,
+           apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
 }
@@ -150,7 +150,7 @@ static const svn_delta_editor_t default_editor =
 };
 
 svn_delta_editor_t *
-svn_delta_default_editor (apr_pool_t *pool)
+svn_delta_default_editor(apr_pool_t *pool)
 {
-  return apr_pmemdup (pool, &default_editor, sizeof (default_editor));
+  return apr_pmemdup(pool, &default_editor, sizeof(default_editor));
 }

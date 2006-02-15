@@ -148,10 +148,10 @@ file_rev_handler(void *baton,
       const svn_string_t *pval;
 
       svn_pool_clear(subpool);
-      apr_hash_this (hi, &key, NULL, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       pname = key;
       pval = val;
-      SVN_ERR(send_prop (frb, "rev-prop", pname, pval, subpool));
+      SVN_ERR(send_prop(frb, "rev-prop", pname, pval, subpool));
     }
 
   /* Send file prop changes. */
@@ -246,7 +246,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
-          if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
+          if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
           path = svn_path_join(resource->info->repos_path, rel_path, 
                                resource->pool);

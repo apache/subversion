@@ -78,13 +78,13 @@ struct report_baton {
 
 /* Prepare RB for a new revision. */
 static void
-reset_file_rev (struct report_baton *rb)
+reset_file_rev(struct report_baton *rb)
 {
-  svn_pool_clear (rb->subpool);
+  svn_pool_clear(rb->subpool);
   rb->path = NULL;
   rb->revnum = SVN_INVALID_REVNUM;
-  rb->rev_props = apr_hash_make (rb->subpool);
-  rb->prop_diffs = apr_array_make (rb->subpool, 0, sizeof (svn_prop_t));
+  rb->rev_props = apr_hash_make(rb->subpool);
+  rb->prop_diffs = apr_array_make(rb->subpool, 0, sizeof(svn_prop_t));
   rb->had_txdelta = FALSE;
   /* Just in case... */
   rb->stream = NULL;
@@ -113,14 +113,14 @@ do {                            \
 
 /* This implements the `ne_xml_startelm_cb' prototype. */
 static int
-start_element (void *userdata, int parent_state, const char *ns,
-               const char *ln, const char **atts)
+start_element(void *userdata, int parent_state, const char *ns,
+              const char *ln, const char **atts)
 {
   struct report_baton *rb = userdata;
   const svn_ra_dav__xml_elm_t *elm;
   const char *att;
 
-  elm = svn_ra_dav__lookup_xml_elem (report_elements, ns, ln);
+  elm = svn_ra_dav__lookup_xml_elem(report_elements, ns, ln);
 
   /* Skip unknown elements. */
   if (!elm)
@@ -136,15 +136,15 @@ start_element (void *userdata, int parent_state, const char *ns,
     case ELEM_file_revs_report:
       if (elm->id == ELEM_file_rev)
         {
-          reset_file_rev (rb);
-          att = svn_xml_get_attr_value ("rev", atts);
+          reset_file_rev(rb);
+          att = svn_xml_get_attr_value("rev", atts);
           if (!att)
             return NE_XML_ABORT;
-          rb->revnum = SVN_STR_TO_REV (att);
-          att = svn_xml_get_attr_value ("path", atts);
+          rb->revnum = SVN_STR_TO_REV(att);
+          att = svn_xml_get_attr_value("path", atts);
           if (!att)
             return NE_XML_ABORT;
-          rb->path = apr_pstrdup (rb->subpool, att);
+          rb->path = apr_pstrdup(rb->subpool, att);
         }
       else
         return NE_XML_ABORT;
@@ -158,23 +158,23 @@ start_element (void *userdata, int parent_state, const char *ns,
         {
         case ELEM_rev_prop:
         case ELEM_set_prop:
-          att = svn_xml_get_attr_value ("name", atts);
+          att = svn_xml_get_attr_value("name", atts);
           if (!att)
             return NE_XML_ABORT;
-          rb->prop_name = apr_pstrdup (rb->subpool, att);
-          att = svn_xml_get_attr_value ("encoding", atts);
-          if (att && strcmp (att, "base64") == 0)
+          rb->prop_name = apr_pstrdup(rb->subpool, att);
+          att = svn_xml_get_attr_value("encoding", atts);
+          if (att && strcmp(att, "base64") == 0)
             rb->base64_prop = TRUE;
           else
             rb->base64_prop = FALSE;
           break;
         case ELEM_remove_prop:
           {
-            svn_prop_t *prop = apr_array_push (rb->prop_diffs);
-            att = svn_xml_get_attr_value ("name", atts);
+            svn_prop_t *prop = apr_array_push(rb->prop_diffs);
+            att = svn_xml_get_attr_value("name", atts);
             if (!att || *att == '\0')
               return NE_XML_ABORT;
-            prop->name = apr_pstrdup (rb->subpool, att);
+            prop->name = apr_pstrdup(rb->subpool, att);
             prop->value = NULL;
           }
           break;
@@ -183,13 +183,13 @@ start_element (void *userdata, int parent_state, const char *ns,
             svn_txdelta_window_handler_t whandler = NULL;
             void *wbaton;
             /* It's time to call our hanlder. */
-            CHKERR (rb->handler (rb->handler_baton, rb->path, rb->revnum,
-                                 rb->rev_props, &whandler, &wbaton,
-                                 rb->prop_diffs, rb->subpool));
+            CHKERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
+                               rb->rev_props, &whandler, &wbaton,
+                               rb->prop_diffs, rb->subpool));
             if (whandler)
               rb->stream = svn_base64_decode
-                (svn_txdelta_parse_svndiff (whandler, wbaton, TRUE,
-                                            rb->subpool), rb->subpool);
+                (svn_txdelta_parse_svndiff(whandler, wbaton, TRUE,
+                                           rb->subpool), rb->subpool);
           }
           break;
         default:
@@ -206,21 +206,21 @@ start_element (void *userdata, int parent_state, const char *ns,
 /* Extract the property value from RB, possibly base64-decoding it.
    Resets RB->cdata_accum. */
 static const svn_string_t *
-extract_propval (struct report_baton *rb)
+extract_propval(struct report_baton *rb)
 {
-  const svn_string_t *v = svn_string_create_from_buf (rb->cdata_accum,
-                                                      rb->subpool);
-  svn_stringbuf_setempty (rb->cdata_accum);
+  const svn_string_t *v = svn_string_create_from_buf(rb->cdata_accum,
+                                                     rb->subpool);
+  svn_stringbuf_setempty(rb->cdata_accum);
   if (rb->base64_prop)
-    return svn_base64_decode_string (v, rb->subpool);
+    return svn_base64_decode_string(v, rb->subpool);
   else
     return v;
 }
 
 /* This implements the `ne_xml_endelm_cb' prototype. */
 static int
-end_element (void *userdata, int state,
-             const char *nspace, const char *elt_name)
+end_element(void *userdata, int state,
+            const char *nspace, const char *elt_name)
 {
   struct report_baton *rb = userdata;
 
@@ -230,28 +230,28 @@ end_element (void *userdata, int state,
       /* If we had no txdelta, we call the handler here, informing it that
          there were no content changes. */
       if (!rb->had_txdelta)
-        CHKERR (rb->handler (rb->handler_baton, rb->path, rb->revnum,
-                             rb->rev_props, NULL, NULL, rb->prop_diffs,
-                             rb->subpool));
+        CHKERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
+                           rb->rev_props, NULL, NULL, rb->prop_diffs,
+                           rb->subpool));
       break;
 
     case ELEM_rev_prop:
-      apr_hash_set (rb->rev_props, rb->prop_name, APR_HASH_KEY_STRING,
-                    extract_propval (rb));
+      apr_hash_set(rb->rev_props, rb->prop_name, APR_HASH_KEY_STRING,
+                   extract_propval(rb));
       break;
 
     case ELEM_set_prop:
       {
-        svn_prop_t *prop = apr_array_push (rb->prop_diffs);
+        svn_prop_t *prop = apr_array_push(rb->prop_diffs);
         prop->name = rb->prop_name;
-        prop->value = extract_propval (rb);
+        prop->value = extract_propval(rb);
         break;
       }
 
     case ELEM_txdelta:
       if (rb->stream)
         {
-          CHKERR (svn_stream_close (rb->stream));
+          CHKERR(svn_stream_close(rb->stream));
           rb->stream = NULL;
         }
       rb->had_txdelta = TRUE;
@@ -262,8 +262,8 @@ end_element (void *userdata, int state,
 
 /* This implements the `ne_xml_cdata_cb' prototype. */
 static int
-cdata_handler (void *userdata, int state,
-               const char *cdata, size_t len)
+cdata_handler(void *userdata, int state,
+              const char *cdata, size_t len)
 {
   struct report_baton *rb = userdata;
 
@@ -271,13 +271,13 @@ cdata_handler (void *userdata, int state,
     {
     case ELEM_rev_prop:
     case ELEM_set_prop:
-      svn_stringbuf_appendbytes (rb->cdata_accum, cdata, len);
+      svn_stringbuf_appendbytes(rb->cdata_accum, cdata, len);
       break;
     case ELEM_txdelta:
       if (rb->stream)
         {
           apr_size_t l = len;
-          CHKERR (svn_stream_write (rb->stream, cdata, &l));
+          CHKERR(svn_stream_write(rb->stream, cdata, &l));
           if (l != len)
             return NE_XML_ABORT;
         }
@@ -291,22 +291,22 @@ cdata_handler (void *userdata, int state,
 #undef CHKERR
 
 svn_error_t *
-svn_ra_dav__get_file_revs (svn_ra_session_t *session,
-                           const char *path,
-                           svn_revnum_t start,
-                           svn_revnum_t end,
-                           svn_ra_file_rev_handler_t handler,
-                           void *handler_baton,
-                           apr_pool_t *pool)
+svn_ra_dav__get_file_revs(svn_ra_session_t *session,
+                          const char *path,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          svn_ra_file_rev_handler_t handler,
+                          void *handler_baton,
+                          apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create ("", pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
   int http_status = 0;
   struct report_baton rb;
   svn_error_t *err;
-  apr_hash_t *request_headers = apr_hash_make (pool);
+  apr_hash_t *request_headers = apr_hash_make(pool);
   static const char request_head[]
     = "<S:file-revs-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
   static const char request_tail[]
@@ -316,51 +316,51 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
                "svndiff1;q=0.9,svndiff;q=0.8");
 
   /* Construct request body. */
-  svn_stringbuf_appendcstr (request_body, request_head);
-  svn_stringbuf_appendcstr (request_body,
-                            apr_psprintf (pool,
-                                          "<S:start-revision>%ld"
-                                          "</S:start-revision>", start));
-  svn_stringbuf_appendcstr (request_body,
-                            apr_psprintf (pool,
-                                          "<S:end-revision>%ld"
-                                          "</S:end-revision>", end));
-  svn_stringbuf_appendcstr (request_body, "<S:path>");
-  svn_stringbuf_appendcstr (request_body,
-                            apr_xml_quote_string (pool, path, 0));
-  svn_stringbuf_appendcstr (request_body, "</S:path>");
-  svn_stringbuf_appendcstr (request_body, request_tail);
+  svn_stringbuf_appendcstr(request_body, request_head);
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:start-revision>%ld"
+                                        "</S:start-revision>", start));
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:end-revision>%ld"
+                                        "</S:end-revision>", end));
+  svn_stringbuf_appendcstr(request_body, "<S:path>");
+  svn_stringbuf_appendcstr(request_body,
+                           apr_xml_quote_string(pool, path, 0));
+  svn_stringbuf_appendcstr(request_body, "</S:path>");
+  svn_stringbuf_appendcstr(request_body, request_tail);
 
   /* Initialize the baton. */
   rb.handler = handler;
   rb.handler_baton = handler_baton;
-  rb.cdata_accum = svn_stringbuf_create ("", pool);
+  rb.cdata_accum = svn_stringbuf_create("", pool);
   rb.err = NULL;
-  rb.subpool = svn_pool_create (pool);
-  reset_file_rev (&rb);
+  rb.subpool = svn_pool_create(pool);
+  reset_file_rev(&rb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from END. */
-  SVN_ERR (svn_ra_dav__get_baseline_info (NULL, &bc_url, &bc_relative, NULL,
-                                          ras->sess, ras->url->data, end,
-                                          pool));
-  final_bc_url = svn_path_url_add_component (bc_url.data, bc_relative.data,
-                                             pool);
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                        ras->sess, ras->url->data, end,
+                                        pool));
+  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                            pool);
 
   /* Dispatch the request. */
-  err = svn_ra_dav__parsed_request (ras->sess, "REPORT", final_bc_url,
-                                    request_body->data, NULL, NULL,
-                                    start_element, cdata_handler, end_element,
-                                    &rb, request_headers, &http_status, FALSE,
-                                    pool);
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
+                                   request_body->data, NULL, NULL,
+                                   start_element, cdata_handler, end_element,
+                                   &rb, request_headers, &http_status, FALSE,
+                                   pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (http_status == 501)
-    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("'get-file-revs' REPORT not implemented"));
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                            _("'get-file-revs' REPORT not implemented"));
 
   /* rb.err contains the relevant error if the response was aborted by
    * a callback returning NE_XML_ABORT; always return that error if
@@ -368,18 +368,18 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
   if (rb.err != NULL)
     {
       if (err)
-        svn_error_clear (err);
+        svn_error_clear(err);
       return rb.err;
     }
-  SVN_ERR (err);
+  SVN_ERR(err);
 
   /* Caller expects at least one revision.  Signal error otherwise. */
   if (!SVN_IS_VALID_REVNUM(rb.revnum))
-    return svn_error_create (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                             _("The file-revs report didn't contain any "
-                               "revisions"));
+    return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                            _("The file-revs report didn't contain any "
+                              "revisions"));
 
-  svn_pool_destroy (rb.subpool);
+  svn_pool_destroy(rb.subpool);
 
   return SVN_NO_ERROR;
 }

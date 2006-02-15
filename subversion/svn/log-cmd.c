@@ -136,13 +136,13 @@ struct log_receiver_baton
  *
  */
 static svn_error_t *
-log_message_receiver (void *baton,
-                      apr_hash_t *changed_paths,
-                      svn_revnum_t rev,
-                      const char *author,
-                      const char *date,
-                      const char *msg,
-                      apr_pool_t *pool)
+log_message_receiver(void *baton,
+                     apr_hash_t *changed_paths,
+                     svn_revnum_t rev,
+                     const char *author,
+                     const char *date,
+                     const char *msg,
+                     apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
 
@@ -150,7 +150,7 @@ log_message_receiver (void *baton,
   int lines;
 
   if (lb->cancel_func)
-    SVN_ERR (lb->cancel_func (lb->cancel_baton));
+    SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
   if (rev == 0 && msg == NULL)
     return SVN_NO_ERROR;
@@ -166,7 +166,7 @@ log_message_receiver (void *baton,
       /* Convert date to a format for humans. */
       apr_time_t time_temp;
       
-      SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
+      SVN_ERR(svn_time_from_cstring(&time_temp, date, pool));
       date = svn_time_to_human_cstring(time_temp, pool);
     }
   else
@@ -175,20 +175,20 @@ log_message_receiver (void *baton,
   if (! lb->omit_log_message && msg == NULL)
     msg = "";
 
-  SVN_ERR (svn_cmdline_printf (pool,
-                               SEP_STRING "r%ld | %s | %s",
-                               rev, author, date));
+  SVN_ERR(svn_cmdline_printf(pool,
+                             SEP_STRING "r%ld | %s | %s",
+                             rev, author, date));
 
   if (! lb->omit_log_message)
     {
-      lines = svn_cstring_count_newlines (msg) + 1;
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   (lines != 1)
-                                   ? " | %d lines"
-                                   : " | %d line", lines));
+      lines = svn_cstring_count_newlines(msg) + 1;
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 (lines != 1)
+                                 ? " | %d lines"
+                                 : " | %d line", lines));
     }
 
-  SVN_ERR (svn_cmdline_printf (pool, "\n"));
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
 
   if (changed_paths)
     {
@@ -196,39 +196,39 @@ log_message_receiver (void *baton,
       int i;
 
       /* Get an array of sorted hash keys. */
-      sorted_paths = svn_sort__hash (changed_paths,
-                                     svn_sort_compare_items_as_paths, pool);
+      sorted_paths = svn_sort__hash(changed_paths,
+                                    svn_sort_compare_items_as_paths, pool);
 
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Changed paths:\n")));
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Changed paths:\n")));
       for (i = 0; i < sorted_paths->nelts; i++)
         {
-          svn_sort__item_t *item = &(APR_ARRAY_IDX (sorted_paths, i,
-                                                    svn_sort__item_t));
+          svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
+                                                   svn_sort__item_t));
           const char *path = item->key;
           svn_log_changed_path_t *log_item 
-            = apr_hash_get (changed_paths, item->key, item->klen);
+            = apr_hash_get(changed_paths, item->key, item->klen);
           const char *copy_data = "";
           
           if (log_item->copyfrom_path 
-              && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
+              && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
               copy_data 
-                = apr_psprintf (pool, 
-                                _(" (from %s:%ld)"),
-                                log_item->copyfrom_path,
-                                log_item->copyfrom_rev);
+                = apr_psprintf(pool, 
+                               _(" (from %s:%ld)"),
+                               log_item->copyfrom_path,
+                               log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_cmdline_printf (pool, "   %c %s%s\n",
-                                       log_item->action, path,
-                                       copy_data));
+          SVN_ERR(svn_cmdline_printf(pool, "   %c %s%s\n",
+                                     log_item->action, path,
+                                     copy_data));
         }
     }
 
   if (! lb->omit_log_message)
     {
       /* A blank line always precedes the log message. */
-      SVN_ERR (svn_cmdline_printf (pool, "\n%s\n", msg));
+      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", msg));
     }
 
   return SVN_NO_ERROR;
@@ -272,32 +272,32 @@ log_message_receiver (void *baton,
  *
  */
 static svn_error_t *
-log_message_receiver_xml (void *baton,
-                          apr_hash_t *changed_paths,
-                          svn_revnum_t rev,
-                          const char *author,
-                          const char *date,
-                          const char *msg,
-                          apr_pool_t *pool)
+log_message_receiver_xml(void *baton,
+                         apr_hash_t *changed_paths,
+                         svn_revnum_t rev,
+                         const char *author,
+                         const char *date,
+                         const char *msg,
+                         apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   char *revstr;
 
   if (lb->cancel_func)
-    SVN_ERR (lb->cancel_func (lb->cancel_baton));
+    SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
   if (rev == 0 && msg == NULL)
     return SVN_NO_ERROR;
 
-  revstr = apr_psprintf (pool, "%ld", rev);
+  revstr = apr_psprintf(pool, "%ld", rev);
   /* <logentry revision="xxx"> */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
-                         "revision", revstr, NULL);
+  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
+                        "revision", revstr, NULL);
 
   /* <author>xxx</author> */
-  svn_cl__xml_tagged_cdata (&sb, pool, "author", author);
+  svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
 
   /* Print the full, uncut, date.  This is machine output. */
   /* According to the docs for svn_log_message_receiver_t, either
@@ -306,7 +306,7 @@ log_message_receiver_xml (void *baton,
   if (date && date[0] == '\0')
     date = NULL;
   /* <date>xxx</date> */
-  svn_cl__xml_tagged_cdata (&sb, pool, "date", date);
+  svn_cl__xml_tagged_cdata(&sb, pool, "date", date);
 
   if (changed_paths)
     {
@@ -314,12 +314,12 @@ log_message_receiver_xml (void *baton,
       char *path;
 
       /* <paths> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "paths",
-                             NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
+                            NULL);
       
-      for (hi = apr_hash_first (pool, changed_paths);
+      for (hi = apr_hash_first(pool, changed_paths);
            hi != NULL;
-           hi = apr_hash_next (hi))
+           hi = apr_hash_next(hi))
         {
           void *val;
           char action[2];
@@ -331,32 +331,32 @@ log_message_receiver_xml (void *baton,
           action[0] = log_item->action;
           action[1] = '\0';
           if (log_item->copyfrom_path
-              && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
+              && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
               /* <path action="X" copyfrom-path="xxx" copyfrom-rev="xxx"> */
-              svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
-              svn_xml_escape_attr_cstring (&escpath,
-                                           log_item->copyfrom_path, pool);
-              revstr = apr_psprintf (pool, "%ld", 
-                                     log_item->copyfrom_rev);
-              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                     "action", action,
-                                     "copyfrom-path", escpath->data,
-                                     "copyfrom-rev", revstr, NULL);
+              svn_stringbuf_t *escpath = svn_stringbuf_create("", pool);
+              svn_xml_escape_attr_cstring(&escpath,
+                                          log_item->copyfrom_path, pool);
+              revstr = apr_psprintf(pool, "%ld", 
+                                    log_item->copyfrom_rev);
+              svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
+                                    "action", action,
+                                    "copyfrom-path", escpath->data,
+                                    "copyfrom-rev", revstr, NULL);
             }
           else
             {
               /* <path action="X"> */
-              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                     "action", action, NULL);
+              svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
+                                    "action", action, NULL);
             }
           /* xxx</path> */
-          svn_xml_escape_cdata_cstring (&sb, path, pool);
-          svn_xml_make_close_tag (&sb, pool, "path");
+          svn_xml_escape_cdata_cstring(&sb, path, pool);
+          svn_xml_make_close_tag(&sb, pool, "path");
         }
 
       /* </paths> */
-      svn_xml_make_close_tag (&sb, pool, "paths");
+      svn_xml_make_close_tag(&sb, pool, "paths");
     }
 
   if (! lb->omit_log_message)
@@ -365,13 +365,13 @@ log_message_receiver_xml (void *baton,
         msg = "";
 
       /* <msg>xxx</msg> */
-      svn_cl__xml_tagged_cdata (&sb, pool, "msg", msg);
+      svn_cl__xml_tagged_cdata(&sb, pool, "msg", msg);
     }
 
   /* </logentry> */
-  svn_xml_make_close_tag (&sb, pool, "logentry");
+  svn_xml_make_close_tag(&sb, pool, "logentry");
 
-  SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
+  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
 
   return SVN_NO_ERROR;
 }
@@ -379,9 +379,9 @@ log_message_receiver_xml (void *baton,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__log (apr_getopt_t *os,
-             void *baton,
-             apr_pool_t *pool)
+svn_cl__log(apr_getopt_t *os,
+            void *baton,
+            apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -392,17 +392,17 @@ svn_cl__log (apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   const char *true_path;
 
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  target = APR_ARRAY_IDX (targets, 0, const char *);
+  target = APR_ARRAY_IDX(targets, 0, const char *);
 
   /* Strip peg revision if targets contains an URI. */
-  SVN_ERR (svn_opt_parse_path (&peg_revision, &true_path, target, pool));
-  APR_ARRAY_IDX (targets, 0, const char *) = true_path;
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
+  APR_ARRAY_IDX(targets, 0, const char *) = true_path;
 
   if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
       && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
@@ -425,7 +425,7 @@ svn_cl__log (apr_getopt_t *os,
          the default is BASE:0 since WC@HEAD may not exist. */
       if (peg_revision.kind == svn_opt_revision_unspecified)
         {
-          if (svn_path_is_url (target))
+          if (svn_path_is_url(target))
             opt_state->start_revision.kind = svn_opt_revision_head;
           else
             opt_state->start_revision.kind = svn_opt_revision_base;
@@ -441,24 +441,24 @@ svn_cl__log (apr_getopt_t *os,
     }
 
   /* Verify that we pass at most one working copy path. */
-  if (! svn_path_is_url (target) )
+  if (! svn_path_is_url(target) )
     {
       if (targets->nelts > 1)
-        return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("When specifying working copy paths, only "
-                                   "one target may be given"));
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("When specifying working copy paths, only "
+                                  "one target may be given"));
     }
   else
     {
       /* Check to make sure there are no other URLs. */
       for (i = 1; i < targets->nelts; i++)
         {
-          target = APR_ARRAY_IDX (targets, i, const char *);
+          target = APR_ARRAY_IDX(targets, i, const char *);
           
-          if (svn_path_is_url (target))
-            return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                     _("Only relative paths can be specified "
-                                       "after a URL"));
+          if (svn_path_is_url(target))
+            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                    _("Only relative paths can be specified "
+                                      "after a URL"));
         }
     }
   
@@ -467,8 +467,8 @@ svn_cl__log (apr_getopt_t *os,
   lb.omit_log_message = opt_state->quiet;
   
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                          FALSE, FALSE, pool);
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
   
   if (opt_state->xml)
     {
@@ -477,37 +477,37 @@ svn_cl__log (apr_getopt_t *os,
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
           /* <?xml version="1.0" encoding="utf-8"?> */
-          svn_xml_make_header (&sb, pool);
+          svn_xml_make_header(&sb, pool);
           
           /* "<log>" */
-          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
+          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "log", NULL);
 
-          SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
+          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
       
-      SVN_ERR (svn_client_log3 (targets,
-                                &peg_revision,
-                                &(opt_state->start_revision),
-                                &(opt_state->end_revision),
-                                opt_state->limit,
-                                opt_state->verbose,
-                                opt_state->stop_on_copy,
-                                log_message_receiver_xml,
-                                &lb,
-                                ctx,
-                                pool));
+      SVN_ERR(svn_client_log3(targets,
+                              &peg_revision,
+                              &(opt_state->start_revision),
+                              &(opt_state->end_revision),
+                              opt_state->limit,
+                              opt_state->verbose,
+                              opt_state->stop_on_copy,
+                              log_message_receiver_xml,
+                              &lb,
+                              ctx,
+                              pool));
       
       if (! opt_state->incremental)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
           /* "</log>" */
-          svn_xml_make_close_tag (&sb, pool, "log");
+          svn_xml_make_close_tag(&sb, pool, "log");
 
-          SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
+          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
     }
   else  /* default output format */
@@ -519,20 +519,20 @@ svn_cl__log (apr_getopt_t *os,
        * is concerned, the result of 'svn log --quiet' is the same
        * either way.
        */
-      SVN_ERR (svn_client_log3 (targets,
-                                &peg_revision,
-                                &(opt_state->start_revision),
-                                &(opt_state->end_revision),
-                                opt_state->limit,
-                                opt_state->verbose,
-                                opt_state->stop_on_copy,
-                                log_message_receiver,
-                                &lb,
-                                ctx,
-                                pool));
+      SVN_ERR(svn_client_log3(targets,
+                              &peg_revision,
+                              &(opt_state->start_revision),
+                              &(opt_state->end_revision),
+                              opt_state->limit,
+                              opt_state->verbose,
+                              opt_state->stop_on_copy,
+                              log_message_receiver,
+                              &lb,
+                              ctx,
+                              pool));
 
       if (! opt_state->incremental)
-        SVN_ERR (svn_cmdline_printf (pool, SEP_STRING));
+        SVN_ERR(svn_cmdline_printf(pool, SEP_STRING));
     }
 
   return SVN_NO_ERROR;

@@ -64,15 +64,15 @@ struct item_baton {
  * NODE_KIND and POOL, respectively.  Allocate the returned structure in POOL.
  */
 static struct item_baton *
-create_item_baton (struct edit_baton *edit_baton,
-                   const char *path,
-                   svn_node_kind_t node_kind,
-                   apr_pool_t *pool)
+create_item_baton(struct edit_baton *edit_baton,
+                  const char *path,
+                  svn_node_kind_t node_kind,
+                  apr_pool_t *pool)
 {
-  struct item_baton *b = apr_pcalloc (pool, sizeof (*b));
+  struct item_baton *b = apr_pcalloc(pool, sizeof(*b));
 
   b->edit_baton = edit_baton;
-  b->path = apr_pstrdup (pool, path);
+  b->path = apr_pstrdup(pool, path);
   b->node_kind = node_kind;
   b->item_pool = pool;
 
@@ -84,14 +84,14 @@ create_item_baton (struct edit_baton *edit_baton,
  * initializing the diff kind to SUM_KIND.
  * All other fields are also initialized from IB to to NULL/invalid values. */
 static void
-ensure_summarize (struct item_baton *ib,
-                  svn_client_diff_summarize_kind_t sum_kind)
+ensure_summarize(struct item_baton *ib,
+                 svn_client_diff_summarize_kind_t sum_kind)
 {
   svn_client_diff_summarize_t *sum;
   if (ib->summarize)
     return;
 
-  sum = apr_pcalloc (ib->item_pool, sizeof (*sum));
+  sum = apr_pcalloc(ib->item_pool, sizeof(*sum));
 
   sum->node_kind = ib->node_kind;
   sum->summarize_kind = sum_kind;
@@ -104,13 +104,13 @@ ensure_summarize (struct item_baton *ib,
 
 /* An editor function. The root of the comparison hierarchy */
 static svn_error_t *
-open_root (void *edit_baton,
-           svn_revnum_t base_revision,
-           apr_pool_t *pool,
-           void **root_baton)
+open_root(void *edit_baton,
+          svn_revnum_t base_revision,
+          apr_pool_t *pool,
+          void **root_baton)
 {
-  struct item_baton *ib = create_item_baton (edit_baton, "",
-                                             svn_node_dir, pool);;
+  struct item_baton *ib = create_item_baton(edit_baton, "",
+                                            svn_node_dir, pool);;
 
   *root_baton = ib;
   return SVN_NO_ERROR;
@@ -118,10 +118,10 @@ open_root (void *edit_baton,
 
 /* An editor function.  */
 static svn_error_t *
-delete_entry (const char *path,
-              svn_revnum_t base_revision,
-              void *parent_baton,
-              apr_pool_t *pool)
+delete_entry(const char *path,
+             svn_revnum_t base_revision,
+             void *parent_baton,
+             apr_pool_t *pool)
 {
   struct item_baton *ib = parent_baton;
   struct edit_baton *eb = ib->edit_baton;
@@ -129,37 +129,37 @@ delete_entry (const char *path,
   svn_node_kind_t kind;
 
   /* We need to know if this is a directory or a file */
-  SVN_ERR (svn_ra_check_path (eb->ra_session,
-                              path,
-                              eb->revision,
-                              &kind,
-                              pool));
+  SVN_ERR(svn_ra_check_path(eb->ra_session,
+                            path,
+                            eb->revision,
+                            &kind,
+                            pool));
 
-  sum = apr_pcalloc (pool, sizeof (*sum));
+  sum = apr_pcalloc(pool, sizeof(*sum));
   sum->summarize_kind = svn_client_diff_summarize_kind_deleted;
   sum->path = path;
   sum->node_kind = kind;
   sum->copyfrom_rev = SVN_INVALID_REVNUM;
 
-  SVN_ERR (eb->summarize_func (sum, eb->summarize_func_baton, pool));
+  SVN_ERR(eb->summarize_func(sum, eb->summarize_func_baton, pool));
 
   return SVN_NO_ERROR;
 }
 
 /* An editor function.  */
 static svn_error_t *
-add_directory (const char *path,
-               void *parent_baton,
-               const char *copyfrom_path,
-               svn_revnum_t copyfrom_rev,
-               apr_pool_t *pool,
-               void **child_baton)
+add_directory(const char *path,
+              void *parent_baton,
+              const char *copyfrom_path,
+              svn_revnum_t copyfrom_rev,
+              apr_pool_t *pool,
+              void **child_baton)
 {
   struct item_baton *pb = parent_baton;
   struct item_baton *cb;
 
-  cb = create_item_baton (pb->edit_baton, path, svn_node_dir, pool);
-  ensure_summarize (cb, svn_client_diff_summarize_kind_added);
+  cb = create_item_baton(pb->edit_baton, path, svn_node_dir, pool);
+  ensure_summarize(cb, svn_client_diff_summarize_kind_added);
   cb->summarize->copyfrom_path = copyfrom_path;
   cb->summarize->copyfrom_rev = copyfrom_rev;
 
@@ -169,16 +169,16 @@ add_directory (const char *path,
 
 /* An editor function.  */
 static svn_error_t *
-open_directory (const char *path,
-                void *parent_baton,
-                svn_revnum_t base_revision,
-                apr_pool_t *pool,
-                void **child_baton)
+open_directory(const char *path,
+               void *parent_baton,
+               svn_revnum_t base_revision,
+               apr_pool_t *pool,
+               void **child_baton)
 {
   struct item_baton *pb = parent_baton;
   struct item_baton *cb;
 
-  cb = create_item_baton (pb->edit_baton, path, svn_node_dir, pool);
+  cb = create_item_baton(pb->edit_baton, path, svn_node_dir, pool);
 
   *child_baton = cb;
   return SVN_NO_ERROR;
@@ -187,15 +187,15 @@ open_directory (const char *path,
 
 /* An editor function.  */
 static svn_error_t *
-close_directory (void *dir_baton,
-                 apr_pool_t *pool)
+close_directory(void *dir_baton,
+                apr_pool_t *pool)
 {
   struct item_baton *ib = dir_baton;
   struct edit_baton *eb = ib->edit_baton;
   
   if (ib->summarize)
-    SVN_ERR (eb->summarize_func (ib->summarize, eb->summarize_func_baton,
-                                 pool));
+    SVN_ERR(eb->summarize_func(ib->summarize, eb->summarize_func_baton,
+                               pool));
 
   return SVN_NO_ERROR;
 }
@@ -203,18 +203,35 @@ close_directory (void *dir_baton,
 
 /* An editor function.  */
 static svn_error_t *
-add_file (const char *path,
+add_file(const char *path,
+         void *parent_baton,
+         const char *copyfrom_path,
+         svn_revnum_t copyfrom_rev,
+         apr_pool_t *pool,
+         void **file_baton)
+{
+  struct item_baton *pb = parent_baton;
+  struct item_baton *cb;
+
+  cb = create_item_baton(pb->edit_baton, path, svn_node_file, pool);
+  ensure_summarize(cb, svn_client_diff_summarize_kind_added);
+
+  *file_baton = cb;
+  return SVN_NO_ERROR;
+}
+
+/* An editor function.  */
+static svn_error_t *
+open_file(const char *path,
           void *parent_baton,
-          const char *copyfrom_path,
-          svn_revnum_t copyfrom_rev,
+          svn_revnum_t base_revision,
           apr_pool_t *pool,
           void **file_baton)
 {
   struct item_baton *pb = parent_baton;
   struct item_baton *cb;
 
-  cb = create_item_baton (pb->edit_baton, path, svn_node_file, pool);
-  ensure_summarize (cb, svn_client_diff_summarize_kind_added);
+  cb = create_item_baton(pb->edit_baton, path, svn_node_file, pool);
 
   *file_baton = cb;
   return SVN_NO_ERROR;
@@ -222,32 +239,15 @@ add_file (const char *path,
 
 /* An editor function.  */
 static svn_error_t *
-open_file (const char *path,
-           void *parent_baton,
-           svn_revnum_t base_revision,
-           apr_pool_t *pool,
-           void **file_baton)
-{
-  struct item_baton *pb = parent_baton;
-  struct item_baton *cb;
-
-  cb = create_item_baton (pb->edit_baton, path, svn_node_file, pool);
-
-  *file_baton = cb;
-  return SVN_NO_ERROR;
-}
-
-/* An editor function.  */
-static svn_error_t *
-apply_textdelta (void *file_baton,
-                 const char *base_checksum,
-                 apr_pool_t *pool,
-                 svn_txdelta_window_handler_t *handler,
-                 void **handler_baton)
+apply_textdelta(void *file_baton,
+                const char *base_checksum,
+                apr_pool_t *pool,
+                svn_txdelta_window_handler_t *handler,
+                void **handler_baton)
 {
   struct item_baton *ib = file_baton;
 
-  ensure_summarize (ib, svn_client_diff_summarize_kind_modified);
+  ensure_summarize(ib, svn_client_diff_summarize_kind_modified);
 
   *handler = svn_delta_noop_window_handler;
   *handler_baton = NULL;
@@ -258,16 +258,16 @@ apply_textdelta (void *file_baton,
 
 /* An editor function.  */
 static svn_error_t *
-close_file (void *file_baton,
-            const char *text_checksum,
-            apr_pool_t *pool)
+close_file(void *file_baton,
+           const char *text_checksum,
+           apr_pool_t *pool)
 {
   struct item_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
 
   if (fb->summarize)
-    SVN_ERR (eb->summarize_func (fb->summarize, eb->summarize_func_baton,
-                                 pool));
+    SVN_ERR(eb->summarize_func(fb->summarize, eb->summarize_func_baton,
+                               pool));
 
   return SVN_NO_ERROR;
 }
@@ -276,16 +276,16 @@ close_file (void *file_baton,
 /* An editor function, implementing both change_file_prop and
  * change_dir_prop.  */
 static svn_error_t *
-change_prop (void *entry_baton,
-             const char *name,
-             const svn_string_t *value,
-             apr_pool_t *pool)
+change_prop(void *entry_baton,
+            const char *name,
+            const svn_string_t *value,
+            apr_pool_t *pool)
 {
   struct item_baton *ib = entry_baton;
 
-  if (svn_property_kind (NULL, name) == svn_prop_regular_kind)
+  if (svn_property_kind(NULL, name) == svn_prop_regular_kind)
     {
-      ensure_summarize (ib, svn_client_diff_summarize_kind_normal);
+      ensure_summarize(ib, svn_client_diff_summarize_kind_normal);
       ib->summarize->prop_changed = TRUE;
     }
 
@@ -294,20 +294,20 @@ change_prop (void *entry_baton,
 
 /* Create a repository diff summarize editor and baton.  */
 svn_error_t *
-svn_client__get_diff_summarize_editor (const char *target,
-                                       svn_client_diff_summarize_func_t
-                                       summarize_func,
-                                       void *item_baton,
-                                       svn_ra_session_t *ra_session,
-                                       svn_revnum_t revision,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       apr_pool_t *pool)
+svn_client__get_diff_summarize_editor(const char *target,
+                                      svn_client_diff_summarize_func_t
+                                      summarize_func,
+                                      void *item_baton,
+                                      svn_ra_session_t *ra_session,
+                                      svn_revnum_t revision,
+                                      svn_cancel_func_t cancel_func,
+                                      void *cancel_baton,
+                                      const svn_delta_editor_t **editor,
+                                      void **edit_baton,
+                                      apr_pool_t *pool)
 {
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
-  struct edit_baton *eb = apr_palloc (pool, sizeof (*eb));
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
+  struct edit_baton *eb = apr_palloc(pool, sizeof(*eb));
 
   eb->summarize_func = summarize_func;
   eb->summarize_func_baton = item_baton;
@@ -327,9 +327,9 @@ svn_client__get_diff_summarize_editor (const char *target,
   tree_editor->change_file_prop = change_prop;
   tree_editor->close_file = close_file;
 
-  SVN_ERR (svn_delta_get_cancellation_editor
-           (cancel_func, cancel_baton, tree_editor, eb, editor, edit_baton,
-            pool));
+  SVN_ERR(svn_delta_get_cancellation_editor
+          (cancel_func, cancel_baton, tree_editor, eb, editor, edit_baton,
+           pool));
 
   return SVN_NO_ERROR;
 }

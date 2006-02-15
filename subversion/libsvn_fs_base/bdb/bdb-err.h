@@ -36,7 +36,7 @@ extern "C" {
 /* Return an svn_error_t object that reports a Berkeley DB error.
    DB_ERR is the error value returned by the Berkeley DB routine.
    Wrap and consume pending errors in BDB.  */
-svn_error_t *svn_fs_bdb__dberr (bdb_env_baton_t *bdb_baton, int db_err);
+svn_error_t *svn_fs_bdb__dberr(bdb_env_baton_t *bdb_baton, int db_err);
 
 
 /* Allocate an error object for a Berkeley DB error, with a formatted message.
@@ -52,13 +52,13 @@ svn_error_t *svn_fs_bdb__dberr (bdb_env_baton_t *bdb_baton, int db_err);
 
    There is no separator between the two messages; if you want one,
    you should include it in FMT.  */
-svn_error_t *svn_fs_bdb__dberrf (bdb_env_baton_t *bdb_baton, int db_err,
-                                 const char *fmt, ...)
+svn_error_t *svn_fs_bdb__dberrf(bdb_env_baton_t *bdb_baton, int db_err,
+                                const char *fmt, ...)
        __attribute__((format(printf, 3, 4)));
 
 
 /* Clear errors associated with BDB. */
-void svn_fs_bdb__clear_err (bdb_env_t *bdb);
+void svn_fs_bdb__clear_err(bdb_env_t *bdb);
 
 
 /* Check the return status from the Berkeley DB operation.  If the
@@ -67,13 +67,13 @@ void svn_fs_bdb__clear_err (bdb_env_t *bdb);
    - FS is the Subversion filesystem we're operating on.
    - OPERATION is a gerund clause describing what we were trying to do.
    - BDB_ERR is the return status from the Berkeley DB function.  */
-svn_error_t *svn_fs_bdb__wrap_db (svn_fs_t *fs,
-                                  const char *operation,
-                                  int db_err);
+svn_error_t *svn_fs_bdb__wrap_db(svn_fs_t *fs,
+                                 const char *operation,
+                                 int db_err);
 
 
 /* A terse wrapper for svn_fs_bdb__wrap_db.  */
-#define BDB_WRAP(fs, op, err) (svn_fs_bdb__wrap_db ((fs), (op), (err)))
+#define BDB_WRAP(fs, op, err) (svn_fs_bdb__wrap_db((fs), (op), (err)))
 
 /* If EXPR returns a non-zero value, pass that value to
    svn_fs_bdb__dberr and return that function's value.  This is like
@@ -83,8 +83,8 @@ svn_error_t *svn_fs_bdb__wrap_db (svn_fs_t *fs,
   do {                                                   \
     int db_err__temp = (expr);                           \
     if (db_err__temp)                                    \
-      return svn_fs_bdb__dberr ((bdb), db_err__temp);    \
-    svn_error_clear ((bdb)->error_info->pending_errors); \
+      return svn_fs_bdb__dberr((bdb), db_err__temp);     \
+    svn_error_clear((bdb)->error_info->pending_errors);  \
     (bdb)->error_info->pending_errors = NULL;            \
   } while (0)
 
@@ -101,7 +101,7 @@ svn_error_t *svn_fs_bdb__wrap_db (svn_fs_t *fs,
 
 /* Verify that FS refers to an open database; return an appropriate
    error if this is not the case.  */
-svn_error_t *svn_fs_bdb__check_fs (svn_fs_t *fs);
+svn_error_t *svn_fs_bdb__check_fs(svn_fs_t *fs);
 
 #ifdef __cplusplus
 }

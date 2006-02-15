@@ -35,28 +35,28 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__mkdir (apr_getopt_t *os,
-               void *baton,
-               apr_pool_t *pool)
+svn_cl__mkdir(apr_getopt_t *os,
+              void *baton,
+              apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                          FALSE, FALSE, pool);
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
 
-  if (! svn_path_is_url (APR_ARRAY_IDX (targets, 0, const char *)))
+  if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {
       ctx->log_msg_func2 = NULL;
       if (opt_state->message || opt_state->filedata)
@@ -68,14 +68,14 @@ svn_cl__mkdir (apr_getopt_t *os,
     }
   else
     {
-      SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton2), opt_state,
-                                           NULL, ctx->config, subpool));
+      SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
+                                         NULL, ctx->config, subpool));
     }
 
-  err = svn_client_mkdir2 (&commit_info, targets, ctx, subpool);
+  err = svn_client_mkdir2(&commit_info, targets, ctx, subpool);
 
   if (ctx->log_msg_func2)
-    err = svn_cl__cleanup_log_msg (ctx->log_msg_baton2, err);
+    err = svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err);
 
   if (err)
     {
@@ -87,7 +87,7 @@ svn_cl__mkdir (apr_getopt_t *os,
     }
 
   if (commit_info && ! opt_state->quiet)
-    SVN_ERR (svn_cl__print_commit_info (commit_info, subpool));
+    SVN_ERR(svn_cl__print_commit_info(commit_info, subpool));
 
   return SVN_NO_ERROR;
 }

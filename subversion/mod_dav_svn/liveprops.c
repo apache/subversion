@@ -233,8 +233,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             format = dav_svn_time_format_rfc1123;
           }
 
-        if (0 != dav_svn_get_last_modified_time (&datestring, &timeval,
-                                                 resource, format, p))
+        if (0 != dav_svn_get_last_modified_time(&datestring, &timeval,
+                                                resource, format, p))
           {
             return DAV_PROP_INSERT_NOTDEF;
           }
@@ -354,9 +354,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           }
         else
           {
-            if ((serr = svn_fs_node_prop (&pval, resource->info->root.root,
-                                          resource->info->repos_path,
-                                          SVN_PROP_MIME_TYPE, p)))
+            if ((serr = svn_fs_node_prop(&pval, resource->info->root.root,
+                                         resource->info->repos_path,
+                                         SVN_PROP_MIME_TYPE, p)))
               {
                 svn_error_clear(serr);
                 pval = NULL;
@@ -370,7 +370,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             else
               mime_type = "text/plain"; /* default for file */
 
-            if ((serr = svn_mime_type_validate (mime_type, p)))
+            if ((serr = svn_mime_type_validate(mime_type, p)))
               {
                 /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
                    there's no point even checking.  No matter what the
@@ -542,7 +542,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               break;
             }
 
-          value = svn_md5_digest_to_cstring (digest, p);
+          value = svn_md5_digest_to_cstring(digest, p);
 
           if (! value)
             return DAV_PROP_INSERT_NOTSUPP;
@@ -717,11 +717,11 @@ void dav_svn_register_uris(apr_pool_t *p)
 }
 
 
-int dav_svn_get_last_modified_time (const char **datestring,
-                                    apr_time_t *timeval,
-                                    const dav_resource *resource,
-                                    enum dav_svn_time_format format,
-                                    apr_pool_t *pool)
+int dav_svn_get_last_modified_time(const char **datestring,
+                                   apr_time_t *timeval,
+                                   const dav_resource *resource,
+                                   enum dav_svn_time_format format,
+                                   apr_pool_t *pool)
 {
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   svn_string_t *committed_date = NULL;

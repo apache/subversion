@@ -141,7 +141,7 @@ SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK
  * If this section gets big, move it all out into a new util.h file. */
 
 /* Ensure that DIR exists. */
-svn_error_t *svn_wc__ensure_directory (const char *path, apr_pool_t *pool);
+svn_error_t *svn_wc__ensure_directory(const char *path, apr_pool_t *pool);
 
 /* Baton for svn_wc__compat_call_notify_func below. */
 typedef struct svn_wc__compat_notify_baton_t {
@@ -153,9 +153,9 @@ typedef struct svn_wc__compat_notify_baton_t {
 /* Implements svn_wc_notify_func2_t.  Call BATON->func (BATON is of type
    svn_wc__compat_notify_baton_t), passing BATON->baton and the appropriate
    arguments from NOTIFY. */
-void svn_wc__compat_call_notify_func (void *baton,
-                                      const svn_wc_notify_t *notify,
-                                      apr_pool_t *pool);
+void svn_wc__compat_call_notify_func(void *baton,
+                                     const svn_wc_notify_t *notify,
+                                     apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

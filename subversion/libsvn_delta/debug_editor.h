@@ -31,11 +31,11 @@ extern "C" {
  * editors.
  */
 svn_error_t *
-svn_delta__get_debug_editor (const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             const svn_delta_editor_t *wrapped_editor,
-                             void *wrapped_baton,
-                             apr_pool_t *pool);
+svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
+                            void **edit_baton,
+                            const svn_delta_editor_t *wrapped_editor,
+                            void *wrapped_baton,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

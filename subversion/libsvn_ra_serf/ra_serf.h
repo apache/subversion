@@ -222,10 +222,10 @@ accept_response(serf_request_t *request,
                 apr_pool_t *pool);
 
 void
-conn_closed (serf_connection_t *conn,
-             void *closed_baton,
-             apr_status_t why,
-             apr_pool_t *pool);
+conn_closed(serf_connection_t *conn,
+            void *closed_baton,
+            apr_status_t why,
+            apr_pool_t *pool);
 
 apr_status_t
 is_conn_closing(serf_bucket_t *response);
@@ -337,14 +337,14 @@ serf_bucket_t * serf_bucket_propfind_create(const char *host,
  * flag to be set.
  */
 svn_error_t *
-deliver_props (propfind_context_t **prop_ctx,
-               apr_hash_t *prop_vals,
-               ra_serf_session_t *sess,
-               const char *url,
-               svn_revnum_t rev,
-               const char *depth,
-               const dav_props_t *lookup_props,
-               apr_pool_t *pool);
+deliver_props(propfind_context_t **prop_ctx,
+              apr_hash_t *prop_vals,
+              ra_serf_session_t *sess,
+              const char *url,
+              svn_revnum_t rev,
+              const char *depth,
+              const dav_props_t *lookup_props,
+              apr_pool_t *pool);
 
 /**
  * This helper function will block until the PROP_CTX indicates that is done
@@ -359,13 +359,13 @@ wait_for_props(propfind_context_t *prop_ctx,
  * This is a blocking version of deliver_props.
  */
 svn_error_t *
-retrieve_props (apr_hash_t *prop_vals,
-                ra_serf_session_t *sess,
-                const char *url,
-                svn_revnum_t rev,
-                const char *depth,
-                const dav_props_t *props,
-                apr_pool_t *pool);
+retrieve_props(apr_hash_t *prop_vals,
+               ra_serf_session_t *sess,
+               const char *url,
+               svn_revnum_t rev,
+               const char *depth,
+               const dav_props_t *props,
+               apr_pool_t *pool);
 
 /** Property walker functions */
 typedef void (*walker_visitor_t)(void *baton,
@@ -384,64 +384,64 @@ walk_all_props(apr_hash_t *props,
 
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
 const char *
-get_ver_prop (apr_hash_t *props,
-              const char *path,
-              svn_revnum_t rev,
-              const char *ns,
-              const char *name);
+get_ver_prop(apr_hash_t *props,
+             const char *path,
+             svn_revnum_t rev,
+             const char *ns,
+             const char *name);
 
 /* Same as get_prop, but for the unknown revision */
 const char *
-get_prop (apr_hash_t *props,
-          const char *path,
-          const char *ns,
-          const char *name);
+get_prop(apr_hash_t *props,
+         const char *path,
+         const char *ns,
+         const char *name);
 
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
  *
  * The POOL governs allocation.
  */
 void
-set_rev_prop (apr_hash_t *props,
-              const char *path, svn_revnum_t rev,
-              const char *ns, const char *name,
-              const char *val, apr_pool_t *pool);
+set_rev_prop(apr_hash_t *props,
+             const char *path, svn_revnum_t rev,
+             const char *ns, const char *name,
+             const char *val, apr_pool_t *pool);
 
 /* Same as set_rev_prop, but sets it for the unknown revision. */
 void
-set_prop (apr_hash_t *props, const char *path,
-          const char *ns, const char *name,
-          const char *val, apr_pool_t *pool);
+set_prop(apr_hash_t *props, const char *path,
+         const char *ns, const char *name,
+         const char *val, apr_pool_t *pool);
 
 /** RA functions */
 
 svn_error_t *
-svn_ra_serf__get_log (svn_ra_session_t *session,
-                      const apr_array_header_t *paths,
-                      svn_revnum_t start,
-                      svn_revnum_t end,
-                      int limit,
-                      svn_boolean_t discover_changed_paths,
-                      svn_boolean_t strict_node_history,
-                      svn_log_message_receiver_t receiver,
-                      void *receiver_baton,
-                      apr_pool_t *pool);
+svn_ra_serf__get_log(svn_ra_session_t *session,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     int limit,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__get_locations (svn_ra_session_t *session,
-                            apr_hash_t **locations,
-                            const char *path,
-                            svn_revnum_t peg_revision,
-                            apr_array_header_t *location_revisions,
-                            apr_pool_t *pool);
+svn_ra_serf__get_locations(svn_ra_session_t *session,
+                           apr_hash_t **locations,
+                           const char *path,
+                           svn_revnum_t peg_revision,
+                           apr_array_header_t *location_revisions,
+                           apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__do_update (svn_ra_session_t *ra_session,
-                        const svn_ra_reporter2_t **reporter,
-                        void **report_baton,
-                        svn_revnum_t revision_to_update_to,
-                        const char *update_target,
-                        svn_boolean_t recurse,
-                        const svn_delta_editor_t *update_editor,
-                        void *update_baton,
-                        apr_pool_t *pool);
+svn_ra_serf__do_update(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_update_to,
+                       const char *update_target,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *update_editor,
+                       void *update_baton,
+                       apr_pool_t *pool);

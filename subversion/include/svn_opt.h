@@ -92,8 +92,8 @@ typedef struct svn_opt_subcommand_desc_t
  * none.  @a cmd_name may be an alias.
  */  
 const svn_opt_subcommand_desc_t *
-svn_opt_get_canonical_subcommand (const svn_opt_subcommand_desc_t *table,
-                                  const char *cmd_name);
+svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
+                                 const char *cmd_name);
 
 
 /**
@@ -102,8 +102,8 @@ svn_opt_get_canonical_subcommand (const svn_opt_subcommand_desc_t *table,
  * every field is zero.
  */
 const apr_getopt_option_t *
-svn_opt_get_option_from_code (int code,
-                              const apr_getopt_option_t *option_table);
+svn_opt_get_option_from_code(int code,
+                             const apr_getopt_option_t *option_table);
 
 
 /**
@@ -111,8 +111,8 @@ svn_opt_get_option_from_code (int code,
  * else return @c FALSE.
  */
 svn_boolean_t
-svn_opt_subcommand_takes_option (const svn_opt_subcommand_desc_t *command,
-                                 int option_code);
+svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
+                                int option_code);
 
 
 /**
@@ -128,12 +128,12 @@ svn_opt_subcommand_takes_option (const svn_opt_subcommand_desc_t *command,
  * Use @a pool for temporary allocation.
  */
 void
-svn_opt_print_generic_help (const char *header,
-                            const svn_opt_subcommand_desc_t *cmd_table,
-                            const apr_getopt_option_t *opt_table,
-                            const char *footer,
-                            apr_pool_t *pool,
-                            FILE *stream);
+svn_opt_print_generic_help(const char *header,
+                           const svn_opt_subcommand_desc_t *cmd_table,
+                           const apr_getopt_option_t *opt_table,
+                           const char *footer,
+                           apr_pool_t *pool,
+                           FILE *stream);
 
 
 /**
@@ -142,10 +142,10 @@ svn_opt_print_generic_help (const char *header,
  * localized to the current locale if a translation is available.
  */
 void
-svn_opt_format_option (const char **string,
-                       const apr_getopt_option_t *opt,
-                       svn_boolean_t doc,
-                       apr_pool_t *pool);
+svn_opt_format_option(const char **string,
+                      const apr_getopt_option_t *opt,
+                      svn_boolean_t doc,
+                      apr_pool_t *pool);
 
 
 
@@ -157,10 +157,10 @@ svn_opt_format_option (const char **string,
  * svn_opt_print_generic_help() gives us a choice?)
  */
 void
-svn_opt_subcommand_help (const char *subcommand, 
-                         const svn_opt_subcommand_desc_t *table,
-                         const apr_getopt_option_t *options_table,
-                         apr_pool_t *pool);
+svn_opt_subcommand_help(const char *subcommand, 
+                        const svn_opt_subcommand_desc_t *table,
+                        const apr_getopt_option_t *options_table,
+                        apr_pool_t *pool);
 
 
 
@@ -245,10 +245,10 @@ typedef struct svn_opt_revision_t
  *
  * Use @a pool for temporary allocations.
  */
-int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
-                            svn_opt_revision_t *end_revision,
-                            const char *arg,
-                            apr_pool_t *pool);
+int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
+                           svn_opt_revision_t *end_revision,
+                           const char *arg,
+                           apr_pool_t *pool);
 
 
 
@@ -270,10 +270,10 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
-                               apr_getopt_t *os,
-                               apr_array_header_t *known_targets,
-                               apr_pool_t *pool);
+svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
 
 
 /**
@@ -291,13 +291,13 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_opt_args_to_target_array (apr_array_header_t **targets_p,
-                              apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
-                              svn_opt_revision_t *start_revision,
-                              svn_opt_revision_t *end_revision,
-                              svn_boolean_t extract_revisions,
-                              apr_pool_t *pool);
+svn_opt_args_to_target_array(apr_array_header_t **targets_p,
+                             apr_getopt_t *os,
+                             apr_array_header_t *known_targets,
+                             svn_opt_revision_t *start_revision,
+                             svn_opt_revision_t *end_revision,
+                             svn_boolean_t extract_revisions,
+                             apr_pool_t *pool);
 
 
 /**
@@ -307,8 +307,8 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
  * with no arguments. Those commands make use of this function to
  * add "." to the target array if the user passes no args.)
  */
-void svn_opt_push_implicit_dot_target (apr_array_header_t *targets,
-                                       apr_pool_t *pool);
+void svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
+                                      apr_pool_t *pool);
 
 
 /**
@@ -317,10 +317,10 @@ void svn_opt_push_implicit_dot_target (apr_array_header_t *targets,
  * doing any UTF-8 conversion.  Allocate @a *args_p and its values in @a pool.
  */
 svn_error_t *
-svn_opt_parse_num_args (apr_array_header_t **args_p,
-                        apr_getopt_t *os,
-                        int num_args,
-                        apr_pool_t *pool);
+svn_opt_parse_num_args(apr_array_header_t **args_p,
+                       apr_getopt_t *os,
+                       int num_args,
+                       apr_pool_t *pool);
 
 
 /**
@@ -329,9 +329,9 @@ svn_opt_parse_num_args (apr_array_header_t **args_p,
  * Allocate @a *args_p and its values in @a pool.
  */
 svn_error_t *
-svn_opt_parse_all_args (apr_array_header_t **args_p,
-                        apr_getopt_t *os,
-                        apr_pool_t *pool);
+svn_opt_parse_all_args(apr_array_header_t **args_p,
+                       apr_getopt_t *os,
+                       apr_pool_t *pool);
 
 /**
  * Parse a working-copy or URL in @a path, extracting any trailing
@@ -367,10 +367,10 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_opt_parse_path (svn_opt_revision_t *rev,
-                    const char **truepath,
-                    const char *path,
-                    apr_pool_t *pool);
+svn_opt_parse_path(svn_opt_revision_t *rev,
+                   const char **truepath,
+                   const char *path,
+                   apr_pool_t *pool);
 
 /**
  * Print either generic help, or command-specific help for @a pgm_name.
@@ -397,16 +397,16 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
  * The logic for handling such a situation should be in one place.
  */
 svn_error_t *
-svn_opt_print_help (apr_getopt_t *os,
-                    const char *pgm_name,
-                    svn_boolean_t print_version,
-                    svn_boolean_t quiet,
-                    const char *version_footer,
-                    const char *header,
-                    const svn_opt_subcommand_desc_t *cmd_table,
-                    const apr_getopt_option_t *option_table,
-                    const char *footer,
-                    apr_pool_t *pool);
+svn_opt_print_help(apr_getopt_t *os,
+                   const char *pgm_name,
+                   svn_boolean_t print_version,
+                   svn_boolean_t quiet,
+                   const char *version_footer,
+                   const char *header,
+                   const svn_opt_subcommand_desc_t *cmd_table,
+                   const apr_getopt_option_t *option_table,
+                   const char *footer,
+                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

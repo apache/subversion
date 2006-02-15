@@ -79,7 +79,7 @@ typedef struct svn_error_t
 
 /** easier array-pushing syntax */
 #ifndef APR_ARRAY_PUSH
-#define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push (ary)))
+#define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push(ary)))
 #endif
 
 /** @} */
@@ -261,8 +261,8 @@ typedef struct svn_dirent_t
  *
  * @since New in 1.4.
  */
-svn_dirent_t *svn_dirent_dup (const svn_dirent_t *dirent,
-                              apr_pool_t *pool);
+svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
+                             apr_pool_t *pool);
 
 
 
@@ -376,7 +376,7 @@ typedef struct svn_commit_info_t
  * @since New in 1.3.
  */
 svn_commit_info_t *
-svn_create_commit_info (apr_pool_t *pool);
+svn_create_commit_info(apr_pool_t *pool);
 
 
 /**
@@ -385,8 +385,8 @@ svn_create_commit_info (apr_pool_t *pool);
  * @since New in 1.4.
  */
 svn_commit_info_t *
-svn_commit_info_dup (const svn_commit_info_t *src_commit_info,
-                     apr_pool_t *pool);
+svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
+                    apr_pool_t *pool);
 
 
 /** A structure to represent a path that changed for a log entry. */
@@ -409,8 +409,9 @@ typedef struct svn_log_changed_path_t
  *
  * @since New in 1.3.
  */
-svn_log_changed_path_t *svn_log_changed_path_dup (
-  const svn_log_changed_path_t *changed_path, apr_pool_t *pool);
+svn_log_changed_path_t *
+svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
+                         apr_pool_t *pool);
 
 
 /** The callback invoked by log message loopers, such as
@@ -443,13 +444,13 @@ svn_log_changed_path_t *svn_log_changed_path_dup (
  * clear it after each iteration, destroy it after the loop is done.)
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
-     (void *baton,
-      apr_hash_t *changed_paths,
-      svn_revnum_t revision,
-      const char *author,
-      const char *date,  /* use svn_time_from_string() if need apr_time_t */
-      const char *message,
-      apr_pool_t *pool);
+  (void *baton,
+   apr_hash_t *changed_paths,
+   svn_revnum_t revision,
+   const char *author,
+   const char *date,  /* use svn_time_from_string() if need apr_time_t */
+   const char *message,
+   apr_pool_t *pool);
 
 
 /** Callback function type for commits.
@@ -460,21 +461,21 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
  *
  * @since New in 1.4.
  */
-typedef svn_error_t * (*svn_commit_callback2_t) (
-    const svn_commit_info_t *commit_info,
-    void *baton,
-    apr_pool_t *pool);
+typedef svn_error_t *(*svn_commit_callback2_t)
+  (const svn_commit_info_t *commit_info,
+   void *baton,
+   apr_pool_t *pool);
 
 /** Same as @c svn_commit_callback2_t, but uses individual
  * data elements instead of the @c svn_commit_info_t structure
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-typedef svn_error_t * (*svn_commit_callback_t) (
-    svn_revnum_t new_revision,
-    const char *date,
-    const char *author,
-    void *baton);
+typedef svn_error_t *(*svn_commit_callback_t)
+  (svn_revnum_t new_revision,
+   const char *date,
+   const char *author,
+   void *baton);
 
 
 /** Return, in @a *callback2 and @a *callback2_baton a function/baton that
@@ -486,11 +487,11 @@ typedef svn_error_t * (*svn_commit_callback_t) (
  *
  * @since New in 1.4.
  */
-void svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
-                                      void *callback_baton,
-                                      svn_commit_callback2_t *callback2,
-                                      void **callback2_baton,
-                                      apr_pool_t *pool);
+void svn_compat_wrap_commit_callback(svn_commit_callback_t callback,
+                                     void *callback_baton,
+                                     svn_commit_callback2_t *callback2,
+                                     void **callback2_baton,
+                                     apr_pool_t *pool);
 
 
 /** A buffer size that may be used when processing a stream of data.
@@ -540,8 +541,8 @@ void svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
  * quotes, newlines, or other garbage on the end, such as might be
  * unsafe in an HTTP header.
  */
-svn_error_t *svn_mime_type_validate (const char *mime_type,
-                                     apr_pool_t *pool);
+svn_error_t *svn_mime_type_validate(const char *mime_type,
+                                    apr_pool_t *pool);
 
 
 /** Return false iff @a mime_type is a textual type.
@@ -549,7 +550,7 @@ svn_error_t *svn_mime_type_validate (const char *mime_type,
  * All mime types that start with "text/" are textual, plus some special 
  * cases (for example, "image/x-xbitmap").
  */
-svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
+svn_boolean_t svn_mime_type_is_binary(const char *mime_type);
 
 
 
@@ -558,7 +559,7 @@ svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
  * should continue, the function should return @c SVN_NO_ERROR, if not, it 
  * should return @c SVN_ERR_CANCELLED.
  */
-typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
+typedef svn_error_t *(*svn_cancel_func_t)(void *cancel_baton);
 
 
 
@@ -603,7 +604,7 @@ typedef struct svn_lock_t
  * @since New in 1.2.
  */
 svn_lock_t *
-svn_lock_create (apr_pool_t *pool);
+svn_lock_create(apr_pool_t *pool);
 
 /**
  * Return a deep copy of @a lock, allocated in @a pool.
@@ -611,7 +612,7 @@ svn_lock_create (apr_pool_t *pool);
  * @since New in 1.2.
  */
 svn_lock_t *
-svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool);
+svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 
 /**
  * Return a formatted universal Universal Unique IDentifier (UUID) string.
@@ -619,7 +620,7 @@ svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool);
  * @since New in 1.4.
  */
 const char *
-svn_uuid_generate (apr_pool_t *pool);
+svn_uuid_generate(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

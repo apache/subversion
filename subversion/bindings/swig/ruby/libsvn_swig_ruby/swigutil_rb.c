@@ -26,7 +26,7 @@ static VALUE cSvnFsFileSystem = Qnil;
 #define DEFINE_ID(key, name)                    \
 static ID id_ ## key = 0;                       \
 static ID                                       \
-rb_id_ ## key (void)                            \
+rb_id_ ## key(void)                             \
 {                                               \
   if (!id_ ## key) {                            \
     id_ ## key = rb_intern(name);               \
@@ -2150,7 +2150,7 @@ svn_swig_rb_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
       SWIG_ConvertPtr(result, &result_cred,
                       SWIG_TypeQuery("svn_auth_cred_simple_t *"), 1);
       tmp_cred = (svn_auth_cred_simple_t *)result_cred;
-      new_cred = apr_pcalloc(pool, sizeof (*new_cred));
+      new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->username = tmp_cred->username ? \
         apr_pstrdup(pool, tmp_cred->username) : NULL;
       new_cred->password = tmp_cred->password ? \
@@ -2194,7 +2194,7 @@ svn_swig_rb_auth_username_prompt_func(svn_auth_cred_username_t **cred,
       SWIG_ConvertPtr(result, &result_cred,
                       SWIG_TypeQuery("svn_auth_cred_username_t *"), 1);
       tmp_cred = (svn_auth_cred_username_t *)result_cred;
-      new_cred = apr_pcalloc(pool, sizeof (*new_cred));
+      new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->username = tmp_cred->username ? \
         apr_pstrdup(pool, tmp_cred->username) : NULL;
       new_cred->may_save = tmp_cred->may_save;
@@ -2241,7 +2241,7 @@ svn_swig_rb_auth_ssl_server_trust_prompt_func(
       SWIG_ConvertPtr(result, &result_cred,
                       SWIG_TypeQuery("svn_auth_cred_ssl_server_trust_t *"), 1);
       tmp_cred = (svn_auth_cred_ssl_server_trust_t *)result_cred;
-      new_cred = apr_pcalloc(pool, sizeof (*new_cred));
+      new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       *new_cred = *tmp_cred;
     }
   }
@@ -2282,7 +2282,7 @@ svn_swig_rb_auth_ssl_client_cert_prompt_func(
       SWIG_ConvertPtr(result, &result_cred,
                       SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_t *"), 1);
       tmp_cred = (svn_auth_cred_ssl_client_cert_t *)result_cred;
-      new_cred = apr_pcalloc(pool, sizeof (*new_cred));
+      new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->cert_file = tmp_cred->cert_file ? \
         apr_pstrdup(pool, tmp_cred->cert_file) : NULL;
       new_cred->may_save = tmp_cred->may_save;
@@ -2325,7 +2325,7 @@ svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
       SWIG_ConvertPtr(result, &result_cred,
                       SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_pw_t *"), 1);
       tmp_cred = (svn_auth_cred_ssl_client_cert_pw_t *)result_cred;
-      new_cred = apr_pcalloc(pool, sizeof (*new_cred));
+      new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->password = tmp_cred->password ? \
         apr_pstrdup(pool, tmp_cred->password) : NULL;
       new_cred->may_save = tmp_cred->may_save;
@@ -2352,7 +2352,7 @@ svn_swig_rb_make_file(VALUE file, apr_pool_t *pool)
 
 
 static svn_error_t *
-read_handler_rbio (void *baton, char *buffer, apr_size_t *len)
+read_handler_rbio(void *baton, char *buffer, apr_size_t *len)
 {
   VALUE result;
   VALUE io = (VALUE)baton;
@@ -2370,7 +2370,7 @@ read_handler_rbio (void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-write_handler_rbio (void *baton, const char *data, apr_size_t *len)
+write_handler_rbio(void *baton, const char *data, apr_size_t *len)
 {
   VALUE io = (VALUE)baton;
   svn_error_t *err = SVN_NO_ERROR;

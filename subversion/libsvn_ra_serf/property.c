@@ -24,11 +24,11 @@
 
 
 const char *
-get_ver_prop (apr_hash_t *props,
-              const char *path,
-              svn_revnum_t rev,
-              const char *ns,
-              const char *name)
+get_ver_prop(apr_hash_t *props,
+             const char *path,
+             svn_revnum_t rev,
+             const char *ns,
+             const char *name)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
   const char *val = NULL;
@@ -52,19 +52,19 @@ get_ver_prop (apr_hash_t *props,
 }
 
 const char *
-get_prop (apr_hash_t *props,
-          const char *path,
-          const char *ns,
-          const char *name)
+get_prop(apr_hash_t *props,
+         const char *path,
+         const char *ns,
+         const char *name)
 {
   return get_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name);
 }
 
 void
-set_ver_prop (apr_hash_t *props,
-              const char *path, svn_revnum_t rev,
-              const char *ns, const char *name,
-              const char *val, apr_pool_t *pool)
+set_ver_prop(apr_hash_t *props,
+             const char *path, svn_revnum_t rev,
+             const char *ns, const char *name,
+             const char *val, apr_pool_t *pool)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
   apr_size_t path_len, ns_len, name_len;
@@ -104,10 +104,10 @@ set_ver_prop (apr_hash_t *props,
 }
 
 void
-set_prop (apr_hash_t *props,
-          const char *path,
-          const char *ns, const char *name,
-          const char *val, apr_pool_t *pool)
+set_prop(apr_hash_t *props,
+         const char *path,
+         const char *ns, const char *name,
+         const char *val, apr_pool_t *pool)
 {
   return set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name, val, pool);
 }
@@ -208,23 +208,23 @@ cdata_propfind(void *userData, const char *data, int len)
 }
 
 static apr_status_t
-handle_propfind (serf_bucket_t *response,
-                 void *handler_baton,
-                 apr_pool_t *pool)
+handle_propfind(serf_bucket_t *response,
+                void *handler_baton,
+                apr_pool_t *pool)
 {
   propfind_context_t *ctx = handler_baton;
 
   if (!response)
     {
       /* uh-oh, we lost our connection! */
-      deliver_props (&ctx,
-                     ctx->ret_props,
-                     ctx->sess,
-                     ctx->path,
-                     ctx->rev,
-                     ctx->depth,
-                     ctx->find_props,
-                     ctx->pool);
+      deliver_props(&ctx,
+                    ctx->ret_props,
+                    ctx->sess,
+                    ctx->path,
+                    ctx->rev,
+                    ctx->depth,
+                    ctx->find_props,
+                    ctx->pool);
       if (ctx->xmlp)
         {
           XML_ParserFree(ctx->xmlp);
@@ -295,14 +295,14 @@ check_cache(apr_hash_t *ret_props,
  * flag to be set.
  */
 svn_error_t *
-deliver_props (propfind_context_t **prop_ctx,
-               apr_hash_t *ret_props,
-               ra_serf_session_t *sess,
-               const char *path,
-               svn_revnum_t rev,
-               const char *depth,
-               const dav_props_t *find_props,
-               apr_pool_t *pool)
+deliver_props(propfind_context_t **prop_ctx,
+              apr_hash_t *ret_props,
+              ra_serf_session_t *sess,
+              const char *path,
+              svn_revnum_t rev,
+              const char *depth,
+              const dav_props_t *find_props,
+              apr_pool_t *pool)
 {
   const dav_props_t *prop;
   serf_bucket_t *req_bkt;
@@ -378,13 +378,13 @@ wait_for_props(propfind_context_t *prop_ctx,
  * This is a blocking version of deliver_props.
  */
 svn_error_t *
-retrieve_props (apr_hash_t *prop_vals,
-                ra_serf_session_t *sess,
-                const char *url,
-                svn_revnum_t rev,
-                const char *depth,
-                const dav_props_t *props,
-                apr_pool_t *pool)
+retrieve_props(apr_hash_t *prop_vals,
+               ra_serf_session_t *sess,
+               const char *url,
+               svn_revnum_t rev,
+               const char *depth,
+               const dav_props_t *props,
+               apr_pool_t *pool)
 {
   propfind_context_t *prop_ctx = NULL;
 

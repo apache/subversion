@@ -62,15 +62,15 @@ typedef struct
 static const rule
 rules[] =
 {
-  { 'Y', DIGITS, ACCUM, APR_OFFSETOF (match_state, base.tm_year) },
-  { 'M', DIGITS, ACCUM, APR_OFFSETOF (match_state, base.tm_mon) },
-  { 'D', DIGITS, ACCUM, APR_OFFSETOF (match_state, base.tm_mday) },
-  { 'h', DIGITS, ACCUM, APR_OFFSETOF (match_state, base.tm_hour) },
-  { 'm', DIGITS, ACCUM, APR_OFFSETOF (match_state, base.tm_min) },
-  { 's', DIGITS, ACCUM, APR_OFFSETOF (match_state, base.tm_sec) },
-  { 'u', DIGITS, MICRO, APR_OFFSETOF (match_state, base.tm_usec) },
-  { 'O', DIGITS, ACCUM, APR_OFFSETOF (match_state, offhours) },
-  { 'o', DIGITS, ACCUM, APR_OFFSETOF (match_state, offminutes) },
+  { 'Y', DIGITS, ACCUM, APR_OFFSETOF(match_state, base.tm_year) },
+  { 'M', DIGITS, ACCUM, APR_OFFSETOF(match_state, base.tm_mon) },
+  { 'D', DIGITS, ACCUM, APR_OFFSETOF(match_state, base.tm_mday) },
+  { 'h', DIGITS, ACCUM, APR_OFFSETOF(match_state, base.tm_hour) },
+  { 'm', DIGITS, ACCUM, APR_OFFSETOF(match_state, base.tm_min) },
+  { 's', DIGITS, ACCUM, APR_OFFSETOF(match_state, base.tm_sec) },
+  { 'u', DIGITS, MICRO, APR_OFFSETOF(match_state, base.tm_usec) },
+  { 'O', DIGITS, ACCUM, APR_OFFSETOF(match_state, offhours) },
+  { 'o', DIGITS, ACCUM, APR_OFFSETOF(match_state, offminutes) },
   { '+', "-+", TZIND, 0 },
   { 'Z', "Z", TZIND, 0 },
   { ':', ":", NOOP, 0 },
@@ -86,9 +86,9 @@ rules[] =
 /* Return the rule associated with TCHAR, or NULL if there
    is no such rule. */
 static const rule *
-find_rule (char tchar)
+find_rule(char tchar)
 {
-  int i = sizeof (rules)/sizeof (rules[0]);
+  int i = sizeof(rules)/sizeof(rules[0]);
   while (i--)
     if (rules[i].key == tchar)
       return &rules[i];
@@ -102,24 +102,24 @@ find_rule (char tchar)
    should be used to interpret the match (i.e. if no time zone
    information was provided), or FALSE if not. */
 static svn_boolean_t
-template_match (apr_time_exp_t *expt, svn_boolean_t *localtz,
-                const char *template, const char *value)
+template_match(apr_time_exp_t *expt, svn_boolean_t *localtz,
+               const char *template, const char *value)
 {
   int multiplier = 100000;
   int tzind = 0;
   match_state ms;
   char *base = (char *)&ms;
 
-  memset (&ms, 0, sizeof (ms));
+  memset(&ms, 0, sizeof(ms));
 
   for (;;)
     {
-      const rule *match = find_rule (*template++);
+      const rule *match = find_rule(*template++);
       char vchar = *value++;
       apr_int32_t *place;
 
       if (!match || (match->valid
-                     && (!vchar || !strchr (match->valid, vchar))))
+                     && (!vchar || !strchr(match->valid, vchar))))
         return FALSE;
 
       /* Compute the address of memory location affected by this
@@ -147,9 +147,9 @@ template_match (apr_time_exp_t *expt, svn_boolean_t *localtz,
         case SKIPFROM:
           if (!vchar)
             break;
-          match = find_rule (*template);
-          if (!strchr (match->valid, vchar))
-            template = strchr (template, ']') + 1;
+          match = find_rule(*template);
+          if (!strchr(match->valid, vchar))
+            template = strchr(template, ']') + 1;
           value--;
           continue;
         case ACCEPT:
@@ -190,8 +190,8 @@ valid_days_by_month[] = {
 };
 
 svn_error_t *
-svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
-                apr_time_t now, apr_pool_t *pool)
+svn_parse_date(svn_boolean_t *matched, apr_time_t *result, const char *text,
+               apr_time_t now, apr_pool_t *pool)
 {
   apr_time_exp_t expt, expnow;
   apr_status_t apr_err;
@@ -199,41 +199,41 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
 
   *matched = FALSE;
 
-  apr_err = apr_time_exp_lt (&expnow, now);
+  apr_err = apr_time_exp_lt(&expnow, now);
   if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, _("Can't manipulate current date"));
+    return svn_error_wrap_apr(apr_err, _("Can't manipulate current date"));
 
-  if (template_match (&expt, &localtz, /* ISO-8601 extended, date only */
-                      "YYYY-M[M]-D[D]",
-                      text)
-      || template_match (&expt, &localtz, /* ISO-8601 extended, UTC */
-                         "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u][Z]",
-                         text)
-      || template_match (&expt, &localtz, /* ISO-8601 extended, with offset */
-                         "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u]+OO[:oo]",
-                         text)
-      || template_match (&expt, &localtz, /* ISO-8601 basic, date only */
-                         "YYYYMMDD",
-                         text)
-      || template_match (&expt, &localtz, /* ISO-8601 basic, UTC */
-                         "YYYYMMDDThhmm[ss[.u[u[u[u[u[u][Z]",
-                         text)
-      || template_match (&expt, &localtz, /* ISO-8601 basic, with offset */
-                         "YYYYMMDDThhmm[ss[.u[u[u[u[u[u]+OO[oo]",
-                         text)
-      || template_match (&expt, &localtz, /* "svn log" format */
-                         "YYYY-M[M]-D[D] h[h]:mm[:ss[.u[u[u[u[u[u][ +OO[oo]",
-                         text)
-      || template_match (&expt, &localtz, /* GNU date's iso-8601 */
-                         "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u]+OO[oo]",
-                         text))
+  if (template_match(&expt, &localtz, /* ISO-8601 extended, date only */
+                     "YYYY-M[M]-D[D]",
+                     text)
+      || template_match(&expt, &localtz, /* ISO-8601 extended, UTC */
+                        "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u][Z]",
+                        text)
+      || template_match(&expt, &localtz, /* ISO-8601 extended, with offset */
+                        "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u]+OO[:oo]",
+                        text)
+      || template_match(&expt, &localtz, /* ISO-8601 basic, date only */
+                        "YYYYMMDD",
+                        text)
+      || template_match(&expt, &localtz, /* ISO-8601 basic, UTC */
+                        "YYYYMMDDThhmm[ss[.u[u[u[u[u[u][Z]",
+                        text)
+      || template_match(&expt, &localtz, /* ISO-8601 basic, with offset */
+                        "YYYYMMDDThhmm[ss[.u[u[u[u[u[u]+OO[oo]",
+                        text)
+      || template_match(&expt, &localtz, /* "svn log" format */
+                        "YYYY-M[M]-D[D] h[h]:mm[:ss[.u[u[u[u[u[u][ +OO[oo]",
+                        text)
+      || template_match(&expt, &localtz, /* GNU date's iso-8601 */
+                        "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u]+OO[oo]",
+                        text))
     {
       expt.tm_year -= 1900;
       expt.tm_mon -= 1;
     }
-  else if (template_match (&expt, &localtz, /* Just a time */
-                           "h[h]:mm[:ss[.u[u[u[u[u[u]",
-                           text))
+  else if (template_match(&expt, &localtz, /* Just a time */
+                          "h[h]:mm[:ss[.u[u[u[u[u[u]",
+                          text))
     {
       expt.tm_year = expnow.tm_year;
       expt.tm_mon = expnow.tm_mon;
@@ -272,18 +272,18 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
          not.  So, calculate the time value using the current time's
          GMT offset and use the GMT offset of the resulting time. */
       expt.tm_gmtoff = expnow.tm_gmtoff;
-      apr_err = apr_time_exp_gmt_get (&candidate, &expt);
+      apr_err = apr_time_exp_gmt_get(&candidate, &expt);
       if (apr_err != APR_SUCCESS)
-        return svn_error_wrap_apr (apr_err,
-                                   _("Can't calculate requested date"));
-      apr_err = apr_time_exp_lt (&expthen, candidate);
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't calculate requested date"));
+      apr_err = apr_time_exp_lt(&expthen, candidate);
       if (apr_err != APR_SUCCESS)
-        return svn_error_wrap_apr (apr_err, _("Can't expand time"));
+        return svn_error_wrap_apr(apr_err, _("Can't expand time"));
       expt.tm_gmtoff = expthen.tm_gmtoff;
     }
-  apr_err = apr_time_exp_gmt_get (result, &expt);
+  apr_err = apr_time_exp_gmt_get(result, &expt);
   if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, _("Can't calculate requested date"));
+    return svn_error_wrap_apr(apr_err, _("Can't calculate requested date"));
 
   *matched = TRUE;
   return SVN_NO_ERROR;

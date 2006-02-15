@@ -120,7 +120,7 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR( svn_fs_paths_changed(&changes, root, pool) );
+  SVN_ERR(svn_fs_paths_changed(&changes, root, pool));
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
@@ -164,10 +164,10 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
           if (! apr_hash_get(sent, path, APR_HASH_KEY_STRING))
             {
               svn_node_kind_t kind;
-              SVN_ERR( svn_fs_check_path(&kind, root, path, subpool) );
-              SVN_ERR( send_response(repos, root, path,
-                                     kind == svn_node_dir ? TRUE : FALSE, 
-                                     output, bb, subpool) );
+              SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
+              SVN_ERR(send_response(repos, root, path,
+                                    kind == svn_node_dir ? TRUE : FALSE, 
+                                    output, bb, subpool));
               apr_hash_set(sent, path, APR_HASH_KEY_STRING, (void *)1);
             }
         }
@@ -180,8 +180,8 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
           const char *parent = svn_path_dirname(path, pool);
           if (! apr_hash_get(sent, parent, APR_HASH_KEY_STRING))
             {
-              SVN_ERR( send_response(repos, root, parent, 
-                                     TRUE, output, bb, subpool) );
+              SVN_ERR(send_response(repos, root, parent, 
+                                    TRUE, output, bb, subpool));
               apr_hash_set(sent, parent, APR_HASH_KEY_STRING, (void *)1);
             }
         }
@@ -238,13 +238,13 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* get the post-commit hook stderr, if any */
   if (post_commit_err)
     {
-      post_commit_header_info = apr_psprintf (pool,
-                                              " xmlns:S=\"%s\"",
-                                              SVN_XML_NAMESPACE);
-      post_commit_err_elem = apr_psprintf (pool,
-                                           "<S:post-commit-err>%s"
-                                           "</S:post-commit-err>",
-                                           post_commit_err);
+      post_commit_header_info = apr_psprintf(pool,
+                                             " xmlns:S=\"%s\"",
+                                             SVN_XML_NAMESPACE);
+      post_commit_err_elem = apr_psprintf(pool,
+                                          "<S:post-commit-err>%s"
+                                          "</S:post-commit-err>",
+                                          post_commit_err);
     }
   else
     {

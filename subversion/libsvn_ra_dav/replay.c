@@ -137,7 +137,7 @@ start_element(void *baton, int parent_state, const char *nspace,
                       _("Missing revision attr in target-revision element"));
         else
           rb->err = rb->editor->set_target_revision(rb->edit_baton,
-                                                    SVN_STR_TO_REV (crev),
+                                                    SVN_STR_TO_REV(crev),
                                                     rb->pool);
       }
       break;
@@ -154,7 +154,7 @@ start_element(void *baton, int parent_state, const char *nspace,
                       _("Missing revision attr in open-root element"));
         else
           rb->err = rb->editor->open_root(rb->edit_baton,
-                                          SVN_STR_TO_REV (crev), subpool,
+                                          SVN_STR_TO_REV(crev), subpool,
                                           &dir_baton);
 
         push_dir(rb, dir_baton, "", subpool);
@@ -330,9 +330,9 @@ start_element(void *baton, int parent_state, const char *nspace,
                        "add-file or open-file"));
       else
         {
-          rb->err = rb->editor->close_file (rb->file_baton,
-                                            NULL, /* XXX text checksum */
-                                            rb->file_pool);
+          rb->err = rb->editor->close_file(rb->file_baton,
+                                           NULL, /* XXX text checksum */
+                                           rb->file_pool);
           rb->file_baton = NULL;
         }
       break;
@@ -347,7 +347,7 @@ start_element(void *baton, int parent_state, const char *nspace,
         {
           dir_item_t *di = &TOP_DIR(rb);
 
-          rb->err = rb->editor->close_directory (di->baton, di->pool);
+          rb->err = rb->editor->close_directory(di->baton, di->pool);
 
           svn_pool_destroy(di->pool);
 
@@ -509,7 +509,7 @@ svn_ra_dav__replay(svn_ra_session_t *session,
                    "</S:replay-report>",
                    revision, low_water_mark, send_deltas);
 
-  SVN_ERR (svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->url->data, pool));
+  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->url->data, pool));
 
   memset(&rb, 0, sizeof(rb));
 
@@ -517,20 +517,20 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.edit_baton = edit_baton;
   rb.err = SVN_NO_ERROR;
   rb.pool = pool;
-  rb.dirs = apr_array_make(pool, 5, sizeof (dir_item_t));
+  rb.dirs = apr_array_make(pool, 5, sizeof(dir_item_t));
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  SVN_ERR (svn_ra_dav__parsed_request(ras->sess, "REPORT", vcc_url, body,
-                                      NULL, NULL,
-                                      start_element,
-                                      cdata_handler,
-                                      end_element,
-                                      &rb,
-                                      NULL, /* extra headers */
-                                      NULL, /* status code */
-                                      FALSE, /* spool response */
-                                      pool));
+  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "REPORT", vcc_url, body,
+                                     NULL, NULL,
+                                     start_element,
+                                     cdata_handler,
+                                     end_element,
+                                     &rb,
+                                     NULL, /* extra headers */
+                                     NULL, /* status code */
+                                     FALSE, /* spool response */
+                                     pool));
 
   return rb.err;
 }

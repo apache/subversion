@@ -35,9 +35,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__commit (apr_getopt_t *os,
-                void *baton,
-                apr_pool_t *pool)
+svn_cl__commit(apr_getopt_t *os,
+               void *baton,
+               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -48,59 +48,59 @@ svn_cl__commit (apr_getopt_t *os,
   svn_boolean_t no_unlock = FALSE;
   svn_commit_info_t *commit_info = NULL;
 
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments. */
-  svn_opt_push_implicit_dot_target (targets, pool);
+  svn_opt_push_implicit_dot_target(targets, pool);
 
   /* Condense the targets (like commit does)... */
-  SVN_ERR (svn_path_condense_targets (&base_dir,
-                                      &condensed_targets,
-                                      targets,
-                                      TRUE,
-                                      pool));
+  SVN_ERR(svn_path_condense_targets(&base_dir,
+                                    &condensed_targets,
+                                    targets,
+                                    TRUE,
+                                    pool));
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
     {
       const char *parent_dir, *base_name;
 
-      SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, 
-                                         &base_name, pool));
+      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, 
+                                       &base_name, pool));
       if (*base_name)
-        base_dir = apr_pstrdup (pool, parent_dir);
+        base_dir = apr_pstrdup(pool, parent_dir);
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                          FALSE, FALSE, pool);
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
 
-  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                      APR_HASH_KEY_STRING);
+  cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                     APR_HASH_KEY_STRING);
   if (cfg)
-    SVN_ERR (svn_config_get_bool (cfg, &no_unlock,
-                                  SVN_CONFIG_SECTION_MISCELLANY,
-                                  SVN_CONFIG_OPTION_NO_UNLOCK, FALSE));
+    SVN_ERR(svn_config_get_bool(cfg, &no_unlock,
+                                SVN_CONFIG_SECTION_MISCELLANY,
+                                SVN_CONFIG_OPTION_NO_UNLOCK, FALSE));
 
   /* We're creating a new log message baton because we can use our base_dir 
      to store the temp file, instead of the current working directory.  The 
      client might not have write access to their working directory, but they 
      better have write access to the directory they're committing.  */
-  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton2),
-                                       opt_state, base_dir, 
-                                       ctx->config, pool));
+  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2),
+                                     opt_state, base_dir, 
+                                     ctx->config, pool));
 
   /* Commit. */
-  SVN_ERR (svn_cl__cleanup_log_msg
-           (ctx->log_msg_baton2, svn_client_commit3 (&commit_info,
-                                                     targets,
-                                                     opt_state->nonrecursive
-                                                     ? FALSE : TRUE,
-                                                     no_unlock,
-                                                     ctx,
-                                                     pool)));
+  SVN_ERR(svn_cl__cleanup_log_msg
+          (ctx->log_msg_baton2, svn_client_commit3(&commit_info,
+                                                   targets,
+                                                   opt_state->nonrecursive
+                                                   ? FALSE : TRUE,
+                                                   no_unlock,
+                                                   ctx,
+                                                   pool)));
   if (commit_info && ! opt_state->quiet)
-    SVN_ERR (svn_cl__print_commit_info (commit_info, pool));
+    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;
 }

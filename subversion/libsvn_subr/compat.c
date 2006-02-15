@@ -31,28 +31,28 @@ struct commit_wrapper_baton {
 
 /* This implements svn_commit_callback2_t. */
 static svn_error_t *
-commit_wrapper_callback (const svn_commit_info_t *commit_info,
-                         void *baton, apr_pool_t *pool)
+commit_wrapper_callback(const svn_commit_info_t *commit_info,
+                        void *baton, apr_pool_t *pool)
 {
   struct commit_wrapper_baton *cwb = baton;
 
   if (cwb->callback)
-    return cwb->callback (commit_info->revision,
-                          commit_info->date,
-                          commit_info->author,
-                          cwb->baton);
+    return cwb->callback(commit_info->revision,
+                         commit_info->date,
+                         commit_info->author,
+                         cwb->baton);
 
   return SVN_NO_ERROR;
 }
 
 void
-svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
-                                 void *callback_baton,
-                                 svn_commit_callback2_t *callback2,
-                                 void **callback2_baton,
-                                 apr_pool_t *pool)
+svn_compat_wrap_commit_callback(svn_commit_callback_t callback,
+                                void *callback_baton,
+                                svn_commit_callback2_t *callback2,
+                                void **callback2_baton,
+                                apr_pool_t *pool)
 {
-  struct commit_wrapper_baton *cwb = apr_palloc (pool, sizeof (*cwb));
+  struct commit_wrapper_baton *cwb = apr_palloc(pool, sizeof(*cwb));
 
   /* Set the user provided old format callback in the baton */
   cwb->baton = callback_baton;

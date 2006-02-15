@@ -34,10 +34,10 @@
 
 
 svn_error_t *
-svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
+svn_wc__ensure_directory(const char *path, apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_error_t *err = svn_io_check_path (path, &kind, pool);
+  svn_error_t *err = svn_io_check_path(path, &kind, pool);
 
   if (err)
     return err;
@@ -47,15 +47,15 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
       /* If got an error other than dir non-existence, then we can't
          ensure this directory's existence, so just return the error.
          Might happen if there's a file in the way, for example. */
-      return svn_error_createf (APR_ENOTDIR, NULL,
-                                _("'%s' is not a directory"),
-                                svn_path_local_style (path, pool));
+      return svn_error_createf(APR_ENOTDIR, NULL,
+                               _("'%s' is not a directory"),
+                               svn_path_local_style(path, pool));
     }
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
 
-      err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
+      err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
 
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -71,25 +71,25 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          const char *shorter = svn_path_dirname (path, pool);
+          const char *shorter = svn_path_dirname(path, pool);
 
           /* Clear the error. */
-          svn_error_clear (err);
+          svn_error_clear(err);
 
           if (shorter[0] == '\0')
             {
               /* A weird and probably rare situation. */
-              return svn_error_create (0, NULL,
-                                       _("Unable to make any directories"));
+              return svn_error_create(0, NULL,
+                                      _("Unable to make any directories"));
             }
           else  /* We have a valid path, so recursively ensure it. */
             {
-              err = svn_wc__ensure_directory (shorter, pool);
+              err = svn_wc__ensure_directory(shorter, pool);
           
               if (err)
                 return (err);
               else
-                return svn_wc__ensure_directory (path, pool);
+                return svn_wc__ensure_directory(path, pool);
             }
         }
 
@@ -97,23 +97,23 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
         return err;
     }
   else  /* No problem, the dir already existed, so just leave. */
-    assert (kind == svn_node_dir);
+    assert(kind == svn_node_dir);
 
   return SVN_NO_ERROR;
 }
 
 /* Return the library version number. */
 const svn_version_t *
-svn_wc_version (void)
+svn_wc_version(void)
 {
   SVN_VERSION_BODY;
 }
 
 svn_wc_notify_t *
-svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
-                      apr_pool_t *pool)
+svn_wc_create_notify(const char *path, svn_wc_notify_action_t action,
+                     apr_pool_t *pool)
 {
-  svn_wc_notify_t *ret = apr_palloc (pool, sizeof (*ret));
+  svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
   ret->path = path;
   ret->action = action;
   ret->kind = svn_node_unknown;
@@ -128,59 +128,59 @@ svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
 }
 
 /* Pool cleanup function to clear an svn_error_t *. */
-static apr_status_t err_cleanup (void *data)
+static apr_status_t err_cleanup(void *data)
 {
-  svn_error_clear (data);
+  svn_error_clear(data);
 
   return APR_SUCCESS;
 }
 
 svn_wc_notify_t *
-svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool)
+svn_wc_dup_notify(const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
-  svn_wc_notify_t *ret = apr_palloc (pool, sizeof (*ret));
+  svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
 
   *ret = *notify;
 
   if (ret->path)
-    ret->path = apr_pstrdup (pool, ret->path);
+    ret->path = apr_pstrdup(pool, ret->path);
   if (ret->mime_type)
-    ret->mime_type = apr_pstrdup (pool, ret->mime_type);
+    ret->mime_type = apr_pstrdup(pool, ret->mime_type);
   if (ret->lock)
-    ret->lock = svn_lock_dup (ret->lock, pool);
+    ret->lock = svn_lock_dup(ret->lock, pool);
   if (ret->err)
     {
-      ret->err = svn_error_dup (ret->err);
-      apr_pool_cleanup_register (pool, ret->err, err_cleanup,
-                                 apr_pool_cleanup_null);
+      ret->err = svn_error_dup(ret->err);
+      apr_pool_cleanup_register(pool, ret->err, err_cleanup,
+                                apr_pool_cleanup_null);
     }
 
   return ret;
 }
  
 svn_wc_external_item_t *
-svn_wc_external_item_dup (const svn_wc_external_item_t *item, apr_pool_t *pool)
+svn_wc_external_item_dup(const svn_wc_external_item_t *item, apr_pool_t *pool)
 {
-  svn_wc_external_item_t *new_item = apr_palloc (pool, sizeof (*new_item));
+  svn_wc_external_item_t *new_item = apr_palloc(pool, sizeof(*new_item));
 
   *new_item = *item;
 
   if (new_item->target_dir)
-    new_item->target_dir = apr_pstrdup (pool, new_item->target_dir);
+    new_item->target_dir = apr_pstrdup(pool, new_item->target_dir);
 
   if (new_item->url)
-    new_item->url = apr_pstrdup (pool, new_item->url);
+    new_item->url = apr_pstrdup(pool, new_item->url);
 
   return new_item;
 }
 
-void svn_wc__compat_call_notify_func (void *baton,
-                                      const svn_wc_notify_t *n,
-                                      apr_pool_t *pool)
+void svn_wc__compat_call_notify_func(void *baton,
+                                     const svn_wc_notify_t *n,
+                                     apr_pool_t *pool)
 {
   svn_wc__compat_notify_baton_t *nb = baton;
 
   if (nb->func)
-    (*nb->func) (nb->baton, n->path, n->action, n->kind, n->mime_type,
-                 n->content_state, n->prop_state, n->revision);
+    (*nb->func)(nb->baton, n->path, n->action, n->kind, n->mime_type,
+                n->content_state, n->prop_state, n->revision);
 }

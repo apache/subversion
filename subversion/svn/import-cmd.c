@@ -34,9 +34,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__import (apr_getopt_t *os,
-                void *baton,
-                apr_pool_t *pool)
+svn_cl__import(apr_getopt_t *os,
+               void *baton,
+               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -73,8 +73,8 @@ svn_cl__import (apr_getopt_t *os,
    * ### kff todo: review above behaviors.
    */
 
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
-                                          opt_state->targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   if (targets->nelts < 1)
     return svn_error_create
@@ -95,28 +95,28 @@ svn_cl__import (apr_getopt_t *os,
       url = ((const char **) (targets->elts))[1];
     }
 
-  if (! svn_path_is_url (url))
+  if (! svn_path_is_url(url))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("Invalid URL '%s'"), url);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2,
-                          FALSE, FALSE, FALSE, pool);
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                         FALSE, FALSE, FALSE, pool);
 
-  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton2), opt_state,
-                                       NULL, ctx->config, pool));
-  SVN_ERR (svn_cl__cleanup_log_msg 
-           (ctx->log_msg_baton2, svn_client_import2 (&commit_info,
-                                                     path,
-                                                     url,
-                                                     opt_state->nonrecursive,
-                                                     opt_state->no_ignore,
-                                                     ctx,
-                                                     pool)));
+  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
+                                     NULL, ctx->config, pool));
+  SVN_ERR(svn_cl__cleanup_log_msg 
+          (ctx->log_msg_baton2, svn_client_import2(&commit_info,
+                                                   path,
+                                                   url,
+                                                   opt_state->nonrecursive,
+                                                   opt_state->no_ignore,
+                                                   ctx,
+                                                   pool)));
 
   if (commit_info && ! opt_state->quiet)
-    SVN_ERR (svn_cl__print_commit_info (commit_info, pool));
+    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;
 }

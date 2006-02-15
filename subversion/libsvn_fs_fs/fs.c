@@ -49,11 +49,11 @@
 /* If filesystem FS is already open, then return an
    SVN_ERR_FS_ALREADY_OPEN error.  Otherwise, return zero.  */
 static svn_error_t *
-check_already_open (svn_fs_t *fs)
+check_already_open(svn_fs_t *fs)
 {
   if (fs->fsap_data)
-    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             _("Filesystem object already open"));
+    return svn_error_create(SVN_ERR_FS_ALREADY_OPEN, 0,
+                            _("Filesystem object already open"));
   else
     return SVN_NO_ERROR;
 }
@@ -61,7 +61,7 @@ check_already_open (svn_fs_t *fs)
 
 
 static svn_error_t *
-fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
+fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -90,22 +90,22 @@ fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      know of a better way of associating a mutex with the
      repository. */
 
-  key = apr_pstrcat (pool, SVN_FSFS_LOCK_USERDATA_PREFIX, ffd->uuid,
-                     (char *) NULL);
-  status = apr_pool_userdata_get (&val, key, common_pool);
+  key = apr_pstrcat(pool, SVN_FSFS_LOCK_USERDATA_PREFIX, ffd->uuid,
+                    (char *) NULL);
+  status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't fetch FSFS mutex"));
+    return svn_error_wrap_apr(status, _("Can't fetch FSFS mutex"));
   lock = val;
   if (!lock)
     {
-      status = apr_thread_mutex_create (&lock, APR_THREAD_MUTEX_DEFAULT,
-                                        common_pool);
+      status = apr_thread_mutex_create(&lock, APR_THREAD_MUTEX_DEFAULT,
+                                       common_pool);
       if (status)
-        return svn_error_wrap_apr (status, _("Can't create FSFS mutex"));
-      key = apr_pstrdup (common_pool, key);
-      status = apr_pool_userdata_set (lock, key, NULL, common_pool);
+        return svn_error_wrap_apr(status, _("Can't create FSFS mutex"));
+      key = apr_pstrdup(common_pool, key);
+      status = apr_pool_userdata_set(lock, key, NULL, common_pool);
       if (status)
-        return svn_error_wrap_apr (status, _("Can't store FSFS mutex"));
+        return svn_error_wrap_apr(status, _("Can't store FSFS mutex"));
     }
   ffd->lock = lock;
 #endif
@@ -119,8 +119,8 @@ fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
    has no effect for fsfs backed Subversion filesystems.  It conforms
    to the fs_library_vtable_t.bdb_set_errcall() API. */
 static svn_error_t *
-fs_set_errcall (svn_fs_t *fs,
-                void (*db_errcall_fcn) (const char *errpfx, char *msg))
+fs_set_errcall(svn_fs_t *fs,
+               void (*db_errcall_fcn)(const char *errpfx, char *msg))
 {
 
   return SVN_NO_ERROR;
@@ -158,17 +158,17 @@ static fs_vtable_t fs_vtable = {
    fsfs-backed Subversion filesystem at path PATH and link it into
    *FS.  Perform temporary allocations in POOL. */
 static svn_error_t *
-fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR (check_already_open (fs));
+  SVN_ERR(check_already_open(fs));
 
-  ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
+  ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
 
-  SVN_ERR (svn_fs_fs__create (fs, path, pool));
+  SVN_ERR(svn_fs_fs__create(fs, path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -182,15 +182,15 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
    correct vtable for the filesystem.  Use POOL for any temporary
    allocations. */
 static svn_error_t *
-fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd;
 
-  ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
+  ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
 
-  SVN_ERR (svn_fs_fs__open (fs, path, pool));
+  SVN_ERR(svn_fs_fs__open(fs, path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -202,12 +202,12 @@ fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
    The CLEAN_LOGS argument is ignored and included for Subversion
    1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
-fs_hotcopy (const char *src_path, 
-            const char *dest_path, 
-            svn_boolean_t clean_logs, 
-            apr_pool_t *pool)
+fs_hotcopy(const char *src_path, 
+           const char *dest_path, 
+           svn_boolean_t clean_logs, 
+           apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs_fs__hotcopy (src_path, dest_path, pool));
+  SVN_ERR(svn_fs_fs__hotcopy(src_path, dest_path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -218,8 +218,8 @@ fs_hotcopy (const char *src_path,
    no effect for fsfs backed Subversion filesystems.  It conforms to
    the fs_library_vtable_t.bdb_recover() API. */
 static svn_error_t *
-fs_recover (const char *path,
-            apr_pool_t *pool)
+fs_recover(const char *path,
+           apr_pool_t *pool)
 {
   /* This is a no-op for FSFS. */
 
@@ -233,13 +233,13 @@ fs_recover (const char *path,
    has no effect for fsfs backed Subversion filesystems.  It conforms
    to the fs_library_vtable_t.bdb_logfiles() API. */
 static svn_error_t *
-fs_logfiles (apr_array_header_t **logfiles,
-             const char *path,
-             svn_boolean_t only_unused,
-             apr_pool_t *pool)
+fs_logfiles(apr_array_header_t **logfiles,
+            const char *path,
+            svn_boolean_t only_unused,
+            apr_pool_t *pool)
 {
   /* A no-op for FSFS. */
-  *logfiles = apr_array_make (pool, 0, sizeof (const char *));
+  *logfiles = apr_array_make(pool, 0, sizeof(const char *));
 
   return SVN_NO_ERROR;
 }
@@ -251,11 +251,11 @@ fs_logfiles (apr_array_header_t **logfiles,
 /* Delete the filesystem located at path PATH.  Perform any temporary
    allocations in POOL. */
 static svn_error_t *
-fs_delete_fs (const char *path,
-              apr_pool_t *pool)
+fs_delete_fs(const char *path,
+             apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR (svn_io_remove_dir (path, pool));
+  SVN_ERR(svn_io_remove_dir(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -265,7 +265,7 @@ fs_delete_fs (const char *path,
 /* Miscellany */
 
 const char *
-svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
+svn_fs_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 {
   char *newpath;
   int path_len;
@@ -278,12 +278,12 @@ svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
   
   /* Empty PATH?  That's just "/". */
   if (! *path)
-    return apr_pstrdup (pool, "/");
+    return apr_pstrdup(pool, "/");
 
   /* Now, the fun begins.  Alloc enough room to hold PATH with an
      added leading '/'. */
-  path_len = strlen (path);
-  newpath = apr_pcalloc (pool, path_len + 2);
+  path_len = strlen(path);
+  newpath = apr_pcalloc(pool, path_len + 2);
 
   /* No leading slash?  Fix that. */
   if (*path != '/')
@@ -323,13 +323,13 @@ svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
 }
 
 static const svn_version_t *
-fs_version (void)
+fs_version(void)
 {
   SVN_VERSION_BODY;
 }
 
 static const char *
-fs_get_description (void)
+fs_get_description(void)
 {
   return _("Module for working with a plain file (FSFS) repository.");
 }
@@ -350,8 +350,8 @@ static fs_library_vtable_t library_vtable = {
 };
 
 svn_error_t *
-svn_fs_fs__init (const svn_version_t *loader_version,
-                 fs_library_vtable_t **vtable)
+svn_fs_fs__init(const svn_version_t *loader_version,
+                fs_library_vtable_t **vtable)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -363,10 +363,10 @@ svn_fs_fs__init (const svn_version_t *loader_version,
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The FS loader does a more exhaustive check. */
   if (loader_version->major != SVN_VER_MAJOR)
-    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
-                              _("Unsupported FS loader version (%d) for fsfs"),
-                              loader_version->major);
-  SVN_ERR (svn_ver_check_list (fs_version(), checklist));
+    return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
+                             _("Unsupported FS loader version (%d) for fsfs"),
+                             loader_version->major);
+  SVN_ERR(svn_ver_check_list(fs_version(), checklist));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

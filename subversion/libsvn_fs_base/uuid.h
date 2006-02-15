@@ -27,11 +27,11 @@ extern "C" {
 /* These functions implement some of the calls in the FS loader
    library's fs vtable. */
 
-svn_error_t *svn_fs_base__get_uuid (svn_fs_t *fs, const char **uuid,
-                                    apr_pool_t *pool);
+svn_error_t *svn_fs_base__get_uuid(svn_fs_t *fs, const char **uuid,
+                                   apr_pool_t *pool);
 
-svn_error_t *svn_fs_base__set_uuid (svn_fs_t *fs, const char *uuid,
-                                    apr_pool_t *pool);
+svn_error_t *svn_fs_base__set_uuid(svn_fs_t *fs, const char *uuid,
+                                   apr_pool_t *pool);
 
 
 #ifdef __cplusplus

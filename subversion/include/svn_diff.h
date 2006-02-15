@@ -63,7 +63,7 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_diff_version (void);
+const svn_version_t *svn_diff_version(void);
 
 
 /* Diffs. */

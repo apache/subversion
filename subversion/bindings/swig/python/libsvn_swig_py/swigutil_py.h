@@ -212,9 +212,9 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
 
 /* thunked fs get_locks function */
 SVN_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_py_fs_get_locks_func (void *baton, 
-                                            svn_lock_t *lock, 
-                                            apr_pool_t *pool);
+svn_error_t *svn_swig_py_fs_get_locks_func(void *baton, 
+                                           svn_lock_t *lock, 
+                                           apr_pool_t *pool);
 
 /* thunked commit log fetcher */
 SVN_SWIG_SWIGUTIL_EXPORT

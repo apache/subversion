@@ -45,7 +45,7 @@ enum svn_wc__timestamp_kind
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
-svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool);
+svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool);
 
 
 /* Set *EQUAL_P to true if PATH's TIMESTAMP_KIND timestamp is the same as
@@ -55,11 +55,11 @@ svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool);
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
-svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            enum svn_wc__timestamp_kind timestamp_kind,
-                            apr_pool_t *pool);
+svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
+                           const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           enum svn_wc__timestamp_kind timestamp_kind,
+                           apr_pool_t *pool);
 
 
 /* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
@@ -75,12 +75,12 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
  *
  * Use POOL for temporary allocation.
  */
-svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
-                                              const char *versioned_file,
-                                              svn_wc_adm_access_t *adm_access,
-                                              const char *base_file,
-                                              svn_boolean_t compare_textbases,
-                                              apr_pool_t *pool);
+svn_error_t *svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
+                                             const char *versioned_file,
+                                             svn_wc_adm_access_t *adm_access,
+                                             const char *base_file,
+                                             svn_boolean_t compare_textbases,
+                                             apr_pool_t *pool);
 
 
 #ifdef __cplusplus

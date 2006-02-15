@@ -39,8 +39,8 @@ extern "C" {
    compatibility with 1.0.x.  Higher numbers have the digits of the
    number appended to SVN_WC__ADM_LOG so that they look like "log.1",
    "log.2", etc. */
-const char *svn_wc__logfile_path (int log_number,
-                                  apr_pool_t *pool);
+const char *svn_wc__logfile_path(int log_number,
+                                 apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to append the contents
@@ -48,10 +48,10 @@ const char *svn_wc__logfile_path (int log_number,
 */
 
 svn_error_t *
-svn_wc__loggy_append (svn_stringbuf_t **log_accum,
-                      svn_wc_adm_access_t *adm_access,
-                      const char *src, const char *dst,
-                      apr_pool_t *pool);
+svn_wc__loggy_append(svn_stringbuf_t **log_accum,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *src, const char *dst,
+                     apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to mark PATH as committed
@@ -59,10 +59,10 @@ svn_wc__loggy_append (svn_stringbuf_t **log_accum,
 */
 
 svn_error_t *
-svn_wc__loggy_committed (svn_stringbuf_t **log_accum,
-                         svn_wc_adm_access_t *adm_access,
-                         const char *path, svn_revnum_t revnum,
-                         apr_pool_t *pool);
+svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
+                        svn_wc_adm_access_t *adm_access,
+                        const char *path, svn_revnum_t revnum,
+                        apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to copy the file SRC_PATH to
@@ -89,23 +89,23 @@ typedef enum svn_wc__copy_t
 
 
 svn_error_t *
-svn_wc__loggy_copy (svn_stringbuf_t **log_accum,
-                    svn_boolean_t *dst_modified,
-                    svn_wc_adm_access_t *adm_access,
-                    svn_wc__copy_t copy_type,
-                    const char *src_path, const char *dst_path,
-                    svn_boolean_t remove_dst_if_no_src,
-                    apr_pool_t *pool);
+svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
+                   svn_boolean_t *dst_modified,
+                   svn_wc_adm_access_t *adm_access,
+                   svn_wc__copy_t copy_type,
+                   const char *src_path, const char *dst_path,
+                   svn_boolean_t remove_dst_if_no_src,
+                   apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
 */
 svn_error_t *
-svn_wc__loggy_delete_entry (svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
-                            const char *path,
-                            apr_pool_t *pool);
+svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *path,
+                           apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to delete lock related
@@ -113,10 +113,10 @@ svn_wc__loggy_delete_entry (svn_stringbuf_t **log_accum,
 */
 
 svn_error_t *
-svn_wc__loggy_delete_lock (svn_stringbuf_t **log_accum,
-                           svn_wc_adm_access_t *adm_access,
-                           const char *path,
-                           apr_pool_t *pool);
+svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
+                          svn_wc_adm_access_t *adm_access,
+                          const char *path,
+                          apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
@@ -127,39 +127,39 @@ svn_wc__loggy_delete_lock (svn_stringbuf_t **log_accum,
    parameter by the same name.
 */
 svn_error_t *
-svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
-                            const char *name,
-                            svn_wc_entry_t *entry,
-                            apr_uint32_t modify_flags,
-                            apr_pool_t *pool);
+svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *name,
+                           svn_wc_entry_t *entry,
+                           apr_uint32_t modify_flags,
+                           apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
 */
 
 svn_error_t *
-svn_wc__loggy_modify_wcprop (svn_stringbuf_t **log_accum,
-                             svn_wc_adm_access_t *adm_access,
-                             const char *path,
-                             const char *propname,
-                             const char *propval,
-                             apr_pool_t *pool);
+svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *propname,
+                            const char *propval,
+                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to merge changes between
    LEFT and RIGHT into TARGET, marking conflicts with the appropriate labels.
 */
 
 svn_error_t *
-svn_wc__loggy_merge (svn_stringbuf_t **log_accum,
-                     svn_wc_adm_access_t *adm_access,
-                     const char *target,
-                     const char *left,
-                     const char *right,
-                     const char *left_label,
-                     const char *right_label,
-                     const char *target_label,
-                     apr_pool_t *pool);
+svn_wc__loggy_merge(svn_stringbuf_t **log_accum,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *target,
+                    const char *left,
+                    const char *right,
+                    const char *left_label,
+                    const char *right_label,
+                    const char *target_label,
+                    apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
@@ -170,12 +170,12 @@ svn_wc__loggy_merge (svn_stringbuf_t **log_accum,
 */
 
 svn_error_t *
-svn_wc__loggy_move (svn_stringbuf_t **log_accum,
-                    svn_boolean_t *dst_modified,
-                    svn_wc_adm_access_t *adm_access,
-                    const char *src_path, const char *dst_path,
-                    svn_boolean_t remove_dst_if_no_src,
-                    apr_pool_t *pool);
+svn_wc__loggy_move(svn_stringbuf_t **log_accum,
+                   svn_boolean_t *dst_modified,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *src_path, const char *dst_path,
+                   svn_boolean_t remove_dst_if_no_src,
+                   apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly' if it has the 'needs-lock' property set and there is
@@ -183,10 +183,10 @@ svn_wc__loggy_move (svn_stringbuf_t **log_accum,
 */
 
 svn_error_t *
-svn_wc__loggy_maybe_set_readonly (svn_stringbuf_t **log_accum,
-                                  svn_wc_adm_access_t *adm_access,
-                                  const char *path,
-                                  apr_pool_t *pool);
+svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
+                                 svn_wc_adm_access_t *adm_access,
+                                 const char *path,
+                                 apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
@@ -196,40 +196,40 @@ svn_wc__loggy_maybe_set_readonly (svn_stringbuf_t **log_accum,
 */
 
 svn_error_t *
-svn_wc__loggy_set_entry_timestamp_from_wc (svn_stringbuf_t **log_accum,
-                                           svn_wc_adm_access_t *adm_access,
-                                           const char *path,
-                                           const char *time_prop,
-                                           apr_pool_t *pool);
+svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
+                                          svn_wc_adm_access_t *adm_access,
+                                          const char *path,
+                                          const char *time_prop,
+                                          apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly'.
 */
 
 svn_error_t *
-svn_wc__loggy_set_readonly (svn_stringbuf_t **log_accum,
-                            svn_wc_adm_access_t *adm_access,
-                            const char *path,
-                            apr_pool_t *pool);
+svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *path,
+                           apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH.
 */
 
 svn_error_t *
-svn_wc__loggy_set_timestamp (svn_stringbuf_t **log_accum,
-                             svn_wc_adm_access_t *adm_access,
-                             const char *path,
-                             const char *timestr,
-                             apr_pool_t *pool);
+svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *timestr,
+                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to remove the file
    BASE_NAME, if it exists.
 */
 svn_error_t *
-svn_wc__loggy_remove (svn_stringbuf_t **log_accum,
-                      svn_wc_adm_access_t *adm_access,
-                      const char *base_name,
-                      apr_pool_t *pool);
+svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *base_name,
+                     apr_pool_t *pool);
 
 
 
@@ -239,9 +239,9 @@ svn_wc__loggy_remove (svn_stringbuf_t **log_accum,
 
    Helper to eliminate code duplication. */
 svn_error_t *
-svn_wc__write_log (svn_wc_adm_access_t *adm_access,
-                   int log_number, svn_stringbuf_t *log_content,
-                   apr_pool_t *pool);
+svn_wc__write_log(svn_wc_adm_access_t *adm_access,
+                  int log_number, svn_stringbuf_t *log_content,
+                  apr_pool_t *pool);
 
 
 /* Process the instructions in the log file for ADM_ACCESS. 
@@ -251,16 +251,16 @@ svn_wc__write_log (svn_wc_adm_access_t *adm_access,
    If the log fails on its first command, return the error
    SVN_ERR_WC_BAD_ADM_LOG_START.  If it fails on some subsequent
    command, return SVN_ERR_WC_BAD_ADM_LOG. */
-svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
-                              const char *diff3_cmd,
-                              apr_pool_t *pool);
+svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
+                             const char *diff3_cmd,
+                             apr_pool_t *pool);
 
 /* Similar to svn_wc__run_log except that it is assumed that the log
    file has been run before and so some of the log commands may
    already have been processed. */
-svn_error_t *svn_wc__rerun_log (svn_wc_adm_access_t *adm_access,
-                                const char *diff3_cmd,
-                                apr_pool_t *pool);
+svn_error_t *svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
+                               const char *diff3_cmd,
+                               apr_pool_t *pool);
 
 
 #ifdef __cplusplus

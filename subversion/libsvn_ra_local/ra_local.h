@@ -74,11 +74,11 @@ typedef struct svn_ra_local__session_baton_t
    Currently, we are not expecting to handle `file://hostname/'-type
    URLs; hostname, in this case, is expected to be the empty string. */
 svn_error_t *
-svn_ra_local__split_URL (svn_repos_t **repos,
-                         const char **repos_url,
-                         const char **fs_path,
-                         const char *URL,
-                         apr_pool_t *pool);
+svn_ra_local__split_URL(svn_repos_t **repos,
+                        const char **repos_url,
+                        const char **fs_path,
+                        const char *URL,
+                        apr_pool_t *pool);
 
 
 

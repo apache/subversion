@@ -70,9 +70,9 @@ typedef enum svn_subst_eol_style
  * If @a *style is NULL, it is ignored.
  */
 void
-svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
-                                const char **eol,
-                                const char *value);
+svn_subst_eol_style_from_value(svn_subst_eol_style_t *style,
+                               const char **eol,
+                               const char *value);
 
 /** Indicates whether the working copy and normalized versions of a file
  * with the given the parameters differ.  If @a force_eol_check is true,
@@ -83,11 +83,11 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
  *
  */
 svn_boolean_t
-svn_subst_translation_required (svn_subst_eol_style_t style,
-                                const char *eol,
-                                apr_hash_t *keywords,
-                                svn_boolean_t special,
-                                svn_boolean_t force_eol_check);
+svn_subst_translation_required(svn_subst_eol_style_t style,
+                               const char *eol,
+                               apr_hash_t *keywords,
+                               svn_boolean_t special,
+                               svn_boolean_t force_eol_check);
 
 
 /** Values used in keyword expansion.
@@ -127,13 +127,13 @@ typedef struct svn_subst_keywords_t
  * @since New in 1.3.
  */
 svn_error_t *
-svn_subst_build_keywords2 (apr_hash_t **kw,
-                           const char *keywords_string,
-                           const char *rev,
-                           const char *url,
-                           apr_time_t date,
-                           const char *author,
-                           apr_pool_t *pool);
+svn_subst_build_keywords2(apr_hash_t **kw,
+                          const char *keywords_string,
+                          const char *rev,
+                          const char *url,
+                          apr_time_t date,
+                          const char *author,
+                          apr_pool_t *pool);
 
 /** Similar to svn_subst_build_keywords2() except that it populates
  * an existing structure @a *kw instead of creating a keywords hash.
@@ -141,13 +141,13 @@ svn_subst_build_keywords2 (apr_hash_t **kw,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_subst_build_keywords (svn_subst_keywords_t *kw,
-                          const char *keywords_string,
-                          const char *rev,
-                          const char *url,
-                          apr_time_t date,
-                          const char *author,
-                          apr_pool_t *pool);
+svn_subst_build_keywords(svn_subst_keywords_t *kw,
+                         const char *keywords_string,
+                         const char *rev,
+                         const char *url,
+                         apr_time_t date,
+                         const char *author,
+                         apr_pool_t *pool);
 
 
 /** Return @c TRUE if @a a and @a b do not hold the same keywords.
@@ -167,10 +167,10 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
  * equivalent to holding no keywords.
  */
 svn_boolean_t 
-svn_subst_keywords_differ2 (apr_hash_t *a,
-                            apr_hash_t *b,
-                            svn_boolean_t compare_values,
-                            apr_pool_t *pool);
+svn_subst_keywords_differ2(apr_hash_t *a,
+                           apr_hash_t *b,
+                           svn_boolean_t compare_values,
+                           apr_pool_t *pool);
 
 /** Similar to svn_subst_keywords_differ2() except that it compares
  * two @c svn_subst_keywords_t structs instead of keyword hashes.
@@ -178,9 +178,9 @@ svn_subst_keywords_differ2 (apr_hash_t *a,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_boolean_t 
-svn_subst_keywords_differ (const svn_subst_keywords_t *a,
-                           const svn_subst_keywords_t *b,
-                           svn_boolean_t compare_values);
+svn_subst_keywords_differ(const svn_subst_keywords_t *a,
+                          const svn_subst_keywords_t *b,
+                          svn_boolean_t compare_values);
 
 
 /** 
@@ -219,13 +219,13 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  * convenient way to get @a eol_str and @a keywords if in libsvn_wc.
  */
 svn_error_t *
-svn_subst_translate_stream3 (svn_stream_t *src,
-                             svn_stream_t *dst,
-                             const char *eol_str,
-                             svn_boolean_t repair,
-                             apr_hash_t *keywords,
-                             svn_boolean_t expand,
-                             apr_pool_t *pool);
+svn_subst_translate_stream3(svn_stream_t *src,
+                            svn_stream_t *dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool);
 
 /** Return a stream which performs eol translation and keyword
  * expansion when read from or written to.  The stream @a stream
@@ -243,12 +243,12 @@ svn_subst_translate_stream3 (svn_stream_t *src,
  * @since New in 1.4.
  */
 svn_stream_t *
-svn_subst_stream_translated (svn_stream_t *stream,
-                             const char *eol_str,
-                             svn_boolean_t repair,
-                             apr_hash_t *keywords,
-                             svn_boolean_t expand,
-                             apr_pool_t *pool);
+svn_subst_stream_translated(svn_stream_t *stream,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool);
 
 /** Similar to svn_subst_translate_stream3() except relies upon a
  * @c svn_subst_keywords_t struct instead of a hash for the keywords.
@@ -256,13 +256,13 @@ svn_subst_stream_translated (svn_stream_t *stream,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_subst_translate_stream2 (svn_stream_t *src,
-                             svn_stream_t *dst,
-                             const char *eol_str,
-                             svn_boolean_t repair,
-                             const svn_subst_keywords_t *keywords,
-                             svn_boolean_t expand,
-                             apr_pool_t *pool);
+svn_subst_translate_stream2(svn_stream_t *src,
+                            svn_stream_t *dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            const svn_subst_keywords_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool);
 
 
 /**
@@ -273,12 +273,12 @@ svn_subst_translate_stream2 (svn_stream_t *src,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_subst_translate_stream (svn_stream_t *src,
-                            svn_stream_t *dst,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            const svn_subst_keywords_t *keywords,
-                            svn_boolean_t expand);
+svn_subst_translate_stream(svn_stream_t *src,
+                           svn_stream_t *dst,
+                           const char *eol_str,
+                           svn_boolean_t repair,
+                           const svn_subst_keywords_t *keywords,
+                           svn_boolean_t expand);
 
 
 /**
@@ -302,14 +302,14 @@ svn_subst_translate_stream (svn_stream_t *src,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_subst_copy_and_translate3 (const char *src,
-                               const char *dst,
-                               const char *eol_str,
-                               svn_boolean_t repair,
-                               apr_hash_t *keywords,
-                               svn_boolean_t expand,
-                               svn_boolean_t special,
-                               apr_pool_t *pool);
+svn_subst_copy_and_translate3(const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              apr_hash_t *keywords,
+                              svn_boolean_t expand,
+                              svn_boolean_t special,
+                              apr_pool_t *pool);
 
 /**
  * Similar to svn_subst_copy_and_translate3() except that @a keywords is a
@@ -319,14 +319,14 @@ svn_subst_copy_and_translate3 (const char *src,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_subst_copy_and_translate2 (const char *src,
-                               const char *dst,
-                               const char *eol_str,
-                               svn_boolean_t repair,
-                               const svn_subst_keywords_t *keywords,
-                               svn_boolean_t expand,
-                               svn_boolean_t special,
-                               apr_pool_t *pool);
+svn_subst_copy_and_translate2(const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              const svn_subst_keywords_t *keywords,
+                              svn_boolean_t expand,
+                              svn_boolean_t special,
+                              apr_pool_t *pool);
 
 /**
  * Similar to svn_subst_copy_and_translate2() except that @a special is
@@ -335,13 +335,13 @@ svn_subst_copy_and_translate2 (const char *src,
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
-svn_subst_copy_and_translate (const char *src,
-                              const char *dst,
-                              const char *eol_str,
-                              svn_boolean_t repair,
-                              const svn_subst_keywords_t *keywords,
-                              svn_boolean_t expand,
-                              apr_pool_t *pool);
+svn_subst_copy_and_translate(const char *src,
+                             const char *dst,
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             const svn_subst_keywords_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool);
 
 
 /**
@@ -358,13 +358,13 @@ svn_subst_copy_and_translate (const char *src,
  * copy.
  */
 svn_error_t *
-svn_subst_translate_cstring2 (const char *src,
-                              const char **dst,
-                              const char *eol_str,
-                              svn_boolean_t repair,
-                              apr_hash_t *keywords,
-                              svn_boolean_t expand,
-                              apr_pool_t *pool);
+svn_subst_translate_cstring2(const char *src,
+                             const char **dst,
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             apr_hash_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool);
 
 /**
  * Similar to svn_subst_translate_cstring2() except that @a keywords is a
@@ -373,13 +373,13 @@ svn_subst_translate_cstring2 (const char *src,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_subst_translate_cstring (const char *src,
-                             const char **dst,
-                             const char *eol_str,
-                             svn_boolean_t repair,
-                             const svn_subst_keywords_t *keywords,
-                             svn_boolean_t expand,
-                             apr_pool_t *pool);
+svn_subst_translate_cstring(const char *src,
+                            const char **dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            const svn_subst_keywords_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *pool);
 
 /**
  * Translates a file @a src in working copy form to a file @a dst in
@@ -402,14 +402,14 @@ svn_subst_translate_cstring (const char *src,
  *
  */
 svn_error_t *
-svn_subst_translate_to_normal_form (const char *src,
-                                    const char *dst,
-                                    svn_subst_eol_style_t eol_style,
-                                    const char *eol_str,
-                                    svn_boolean_t always_repair_eols,
-                                    apr_hash_t *keywords,
-                                    svn_boolean_t special,
-                                    apr_pool_t *pool);
+svn_subst_translate_to_normal_form(const char *src,
+                                   const char *dst,
+                                   svn_subst_eol_style_t eol_style,
+                                   const char *eol_str,
+                                   svn_boolean_t always_repair_eols,
+                                   apr_hash_t *keywords,
+                                   svn_boolean_t special,
+                                   apr_pool_t *pool);
 
 /* EOL conversion and character encodings */
 
@@ -418,20 +418,20 @@ svn_subst_translate_to_normal_form (const char *src,
  * then assume that @a value is in the system-default language encoding.
  * Return the translated data in @a *new_value, allocated in @a pool.  
  */
-svn_error_t *svn_subst_translate_string (svn_string_t **new_value,
-                                         const svn_string_t *value,
-                                         const char *encoding,
-                                         apr_pool_t *pool);
+svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
+                                        const svn_string_t *value,
+                                        const char *encoding,
+                                        apr_pool_t *pool);
 
 /** Translate the data in @a value from UTF8 and LF line-endings into
  * native locale and native line-endings, or to the output locale if
  * @a for_output is TRUE.  Return the translated data in @a
  * *new_value, allocated in @a pool.
  */
-svn_error_t *svn_subst_detranslate_string (svn_string_t **new_value,
-                                           const svn_string_t *value,
-                                           svn_boolean_t for_stdout,
-                                           apr_pool_t *pool);
+svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
+                                          const svn_string_t *value,
+                                          svn_boolean_t for_stdout,
+                                          apr_pool_t *pool);
 
 
 

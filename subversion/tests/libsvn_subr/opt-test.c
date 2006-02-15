@@ -24,10 +24,10 @@
 
 
 static svn_error_t *
-test_parse_peg_rev (const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+test_parse_peg_rev(const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
 {      
   apr_size_t i;
   static struct {
@@ -61,10 +61,10 @@ test_parse_peg_rev (const char **msg,
       svn_opt_revision_t peg;
       svn_error_t *err;
 
-      err = svn_opt_parse_path (&peg, &path, tests[i].input, pool);
+      err = svn_opt_parse_path(&peg, &path, tests[i].input, pool);
       if (err)
         {
-          svn_error_clear (err);
+          svn_error_clear(err);
           if (tests[i].path)
             {
               return svn_error_createf
@@ -77,7 +77,7 @@ test_parse_peg_rev (const char **msg,
         {
           if ((path == NULL)
               || (tests[i].path == NULL)
-              || (strcmp (path, tests[i].path) != 0)
+              || (strcmp(path, tests[i].path) != 0)
               || (peg.kind != tests[i].peg.kind)
               || (peg.kind == svn_opt_revision_number && peg.value.number != tests[i].peg.value.number))
             return svn_error_createf
@@ -96,6 +96,6 @@ test_parse_peg_rev (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test_parse_peg_rev),
+    SVN_TEST_PASS(test_parse_peg_rev),
     SVN_TEST_NULL
   };

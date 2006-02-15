@@ -49,45 +49,45 @@
 
    Set *TM to the apr_time_t datestamp on revision REV in FS. */
 static svn_error_t *
-get_time (apr_time_t *tm,
-          svn_fs_t *fs,
-          svn_revnum_t rev,
-          apr_pool_t *pool)
+get_time(apr_time_t *tm,
+         svn_fs_t *fs,
+         svn_revnum_t rev,
+         apr_pool_t *pool)
 {
   svn_string_t *date_str;
 
-  SVN_ERR (svn_fs_revision_prop (&date_str, fs, rev, SVN_PROP_REVISION_DATE,
-                                 pool));
+  SVN_ERR(svn_fs_revision_prop(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
+                               pool));
   if (! date_str)    
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
        _("Failed to find time on revision %ld"), rev);
 
-  SVN_ERR (svn_time_from_cstring (tm, date_str->data, pool));
+  SVN_ERR(svn_time_from_cstring(tm, date_str->data, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_repos_dated_revision (svn_revnum_t *revision,
-                          svn_repos_t *repos,
-                          apr_time_t tm,
-                          apr_pool_t *pool)
+svn_repos_dated_revision(svn_revnum_t *revision,
+                         svn_repos_t *repos,
+                         apr_time_t tm,
+                         apr_pool_t *pool)
 {
   svn_revnum_t rev_mid, rev_top, rev_bot, rev_latest;
   apr_time_t this_time;
   svn_fs_t *fs = repos->fs;
 
   /* Initialize top and bottom values of binary search. */
-  SVN_ERR (svn_fs_youngest_rev (&rev_latest, fs, pool));
+  SVN_ERR(svn_fs_youngest_rev(&rev_latest, fs, pool));
   rev_bot = 0;
   rev_top = rev_latest;
 
   while (rev_bot <= rev_top)
     {
       rev_mid = (rev_top + rev_bot) / 2;
-      SVN_ERR (get_time (&this_time, fs, rev_mid, pool));
+      SVN_ERR(get_time(&this_time, fs, rev_mid, pool));
       
       if (this_time > tm)/* we've overshot */
         {
@@ -100,7 +100,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
             }
 
           /* see if time falls between rev_mid and rev_mid-1: */
-          SVN_ERR (get_time (&previous_time, fs, rev_mid - 1, pool));
+          SVN_ERR(get_time(&previous_time, fs, rev_mid - 1, pool));
           if (previous_time <= tm)
             {
               *revision = rev_mid - 1;
@@ -121,7 +121,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
             }
           
           /* see if time falls between rev_mid and rev_mid+1: */
-          SVN_ERR (get_time (&next_time, fs, rev_mid + 1, pool));
+          SVN_ERR(get_time(&next_time, fs, rev_mid + 1, pool));
           if (next_time > tm)
             {
               *revision = rev_mid;
@@ -143,14 +143,14 @@ svn_repos_dated_revision (svn_revnum_t *revision,
 
 
 svn_error_t *
-svn_repos_get_committed_info (svn_revnum_t *committed_rev,
-                              const char **committed_date,
-                              const char **last_author,
-                              svn_fs_root_t *root,
-                              const char *path,
-                              apr_pool_t *pool)
+svn_repos_get_committed_info(svn_revnum_t *committed_rev,
+                             const char **committed_date,
+                             const char **last_author,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool)
 {
-  svn_fs_t *fs = svn_fs_root_fs (root);
+  svn_fs_t *fs = svn_fs_root_fs(root);
 
   /* ### It might be simpler just to declare that revision
      properties have char * (i.e., UTF-8) values, not arbitrary
@@ -158,15 +158,15 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
   svn_string_t *committed_date_s, *last_author_s;
   
   /* Get the CR field out of the node's skel. */
-  SVN_ERR (svn_fs_node_created_rev (committed_rev, root, path, pool));
+  SVN_ERR(svn_fs_node_created_rev(committed_rev, root, path, pool));
 
   /* Get the date property of this revision. */
-  SVN_ERR (svn_fs_revision_prop (&committed_date_s, fs, *committed_rev,
-                                 SVN_PROP_REVISION_DATE, pool));
+  SVN_ERR(svn_fs_revision_prop(&committed_date_s, fs, *committed_rev,
+                               SVN_PROP_REVISION_DATE, pool));
 
   /* Get the author property of this revision. */
-  SVN_ERR (svn_fs_revision_prop (&last_author_s, fs, *committed_rev,
-                                 SVN_PROP_REVISION_AUTHOR, pool));
+  SVN_ERR(svn_fs_revision_prop(&last_author_s, fs, *committed_rev,
+                               SVN_PROP_REVISION_AUTHOR, pool));
 
   *committed_date = committed_date_s ? committed_date_s->data : NULL;
   *last_author = last_author_s ? last_author_s->data : NULL;
@@ -177,47 +177,47 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 
 /* Deprecated. */
 svn_error_t *
-svn_repos_history (svn_fs_t *fs,
-                   const char *path,
-                   svn_repos_history_func_t history_func,
-                   void *history_baton,
-                   svn_revnum_t start,
-                   svn_revnum_t end,
-                   svn_boolean_t cross_copies,
-                   apr_pool_t *pool)
+svn_repos_history(svn_fs_t *fs,
+                  const char *path,
+                  svn_repos_history_func_t history_func,
+                  void *history_baton,
+                  svn_revnum_t start,
+                  svn_revnum_t end,
+                  svn_boolean_t cross_copies,
+                  apr_pool_t *pool)
 {
-  return svn_repos_history2 (fs, path, history_func, history_baton,
-                             NULL, NULL,
-                             start, end, cross_copies, pool);
+  return svn_repos_history2(fs, path, history_func, history_baton,
+                            NULL, NULL,
+                            start, end, cross_copies, pool);
 }
 
 
 
 svn_error_t *
-svn_repos_history2 (svn_fs_t *fs,
-                    const char *path,
-                    svn_repos_history_func_t history_func,
-                    void *history_baton,
-                    svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton,
-                    svn_revnum_t start,
-                    svn_revnum_t end,
-                    svn_boolean_t cross_copies,
-                    apr_pool_t *pool)
+svn_repos_history2(svn_fs_t *fs,
+                   const char *path,
+                   svn_repos_history_func_t history_func,
+                   void *history_baton,
+                   svn_repos_authz_func_t authz_read_func,
+                   void *authz_read_baton,
+                   svn_revnum_t start,
+                   svn_revnum_t end,
+                   svn_boolean_t cross_copies,
+                   apr_pool_t *pool)
 {
   svn_fs_history_t *history;
-  apr_pool_t *oldpool = svn_pool_create (pool);
-  apr_pool_t *newpool = svn_pool_create (pool);
+  apr_pool_t *oldpool = svn_pool_create(pool);
+  apr_pool_t *newpool = svn_pool_create(pool);
   const char *history_path;
   svn_revnum_t history_rev;
   svn_fs_root_t *root;
 
   /* Validate the revisions. */
-  if (! SVN_IS_VALID_REVNUM (start))
+  if (! SVN_IS_VALID_REVNUM(start))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
        _("Invalid start revision %ld"), start);
-  if (! SVN_IS_VALID_REVNUM (end))
+  if (! SVN_IS_VALID_REVNUM(end))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
        _("Invalid end revision %ld"), end);
@@ -231,18 +231,18 @@ svn_repos_history2 (svn_fs_t *fs,
     }
 
   /* Get a revision root for END, and an initial HISTORY baton.  */
-  SVN_ERR (svn_fs_revision_root (&root, fs, end, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, end, pool));
 
   if (authz_read_func)
     {
       svn_boolean_t readable;
-      SVN_ERR (authz_read_func (&readable, root, path,
-                                authz_read_baton, pool));
+      SVN_ERR(authz_read_func(&readable, root, path,
+                              authz_read_baton, pool));
       if (! readable)
-        return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
+        return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
     }
 
-  SVN_ERR (svn_fs_node_history (&history, root, path, oldpool));
+  SVN_ERR(svn_fs_node_history(&history, root, path, oldpool));
 
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
@@ -252,15 +252,15 @@ svn_repos_history2 (svn_fs_t *fs,
          we alternate back and forth between our subpools.  */
       apr_pool_t *tmppool;
 
-      SVN_ERR (svn_fs_history_prev (&history, history, cross_copies, newpool));
+      SVN_ERR(svn_fs_history_prev(&history, history, cross_copies, newpool));
 
       /* Only continue if there is further history to deal with. */
       if (! history)
         break;
 
       /* Fetch the location information for this history step. */
-      SVN_ERR (svn_fs_history_location (&history_path, &history_rev,
-                                        history, newpool));
+      SVN_ERR(svn_fs_history_location(&history_path, &history_rev,
+                                      history, newpool));
       
       /* If this history item predates our START revision, quit
          here. */
@@ -272,29 +272,29 @@ svn_repos_history2 (svn_fs_t *fs,
         {
           svn_boolean_t readable;
           svn_fs_root_t *history_root;
-          SVN_ERR (svn_fs_revision_root (&history_root, fs,
-                                         history_rev, newpool));
-          SVN_ERR (authz_read_func (&readable, history_root, history_path,
-                                    authz_read_baton, newpool));
+          SVN_ERR(svn_fs_revision_root(&history_root, fs,
+                                       history_rev, newpool));
+          SVN_ERR(authz_read_func(&readable, history_root, history_path,
+                                  authz_read_baton, newpool));
           if (! readable)
             break;
         }
       
       /* Call the user-provided callback function. */
-      SVN_ERR (history_func (history_baton, history_path, 
-                             history_rev, newpool));
+      SVN_ERR(history_func(history_baton, history_path, 
+                           history_rev, newpool));
 
       /* We're done with the old history item, so we can clear its
          pool, and then toggle our notion of "the old pool". */
-      svn_pool_clear (oldpool);
+      svn_pool_clear(oldpool);
       tmppool = oldpool;
       oldpool = newpool;
       newpool = tmppool;
     }
   while (history); /* shouldn't hit this */
 
-  svn_pool_destroy (oldpool);
-  svn_pool_destroy (newpool);
+  svn_pool_destroy(oldpool);
+  svn_pool_destroy(newpool);
   return SVN_NO_ERROR;
 }
 
@@ -302,17 +302,17 @@ svn_repos_history2 (svn_fs_t *fs,
 /* Helper func:  return SVN_ERR_AUTHZ_UNREADABLE if ROOT/PATH is
    unreadable. */
 static svn_error_t *
-check_readability (svn_fs_root_t *root,
-                   const char *path,
-                   svn_repos_authz_func_t authz_read_func,
-                   void *authz_read_baton,                          
-                   apr_pool_t *pool)
+check_readability(svn_fs_root_t *root,
+                  const char *path,
+                  svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,                          
+                  apr_pool_t *pool)
 {
   svn_boolean_t readable;
-  SVN_ERR (authz_read_func (&readable, root, path, authz_read_baton, pool));
+  SVN_ERR(authz_read_func(&readable, root, path, authz_read_baton, pool));
   if (! readable)
-    return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL,
-                             _("Unreadable path encountered; access denied"));
+    return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL,
+                            _("Unreadable path encountered; access denied"));
   return SVN_NO_ERROR;
 }
 
@@ -321,12 +321,12 @@ check_readability (svn_fs_root_t *root,
  * is derived from fs_path@peg_rev.  The return is placed in *is_ancestor. */
 
 static svn_error_t *
-check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
-                            svn_fs_t *fs,
-                            const char *fs_path,
-                            svn_revnum_t peg_revision,
-                            svn_revnum_t future_revision,
-                            apr_pool_t *pool)
+check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
+                           svn_fs_t *fs,
+                           const char *fs_path,
+                           svn_revnum_t peg_revision,
+                           svn_revnum_t future_revision,
+                           apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   svn_fs_history_t *history;
@@ -334,12 +334,12 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
   svn_revnum_t revision;
   apr_pool_t *lastpool, *currpool;
 
-  lastpool = svn_pool_create (pool);
-  currpool = svn_pool_create (pool);
+  lastpool = svn_pool_create(pool);
+  currpool = svn_pool_create(pool);
 
-  SVN_ERR (svn_fs_revision_root (&root, fs, future_revision, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, future_revision, pool));
 
-  SVN_ERR (svn_fs_node_history (&history, root, fs_path, lastpool));
+  SVN_ERR(svn_fs_node_history(&history, root, fs_path, lastpool));
 
   /* Since paths that are different according to strcmp may still be
      equivalent (due to number of consecutive slashes and the fact that
@@ -352,21 +352,21 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
     {
       apr_pool_t *tmppool;
 
-      SVN_ERR (svn_fs_history_prev (&history, history, TRUE, currpool));
+      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, currpool));
 
       if (!history)
         break;
 
-      SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
+      SVN_ERR(svn_fs_history_location(&path, &revision, history, currpool));
 
       if (!fs_path)
-        fs_path = apr_pstrdup (pool, path);
+        fs_path = apr_pstrdup(pool, path);
 
       if (revision <= peg_revision)
         break;
 
       /* Clear old pool and flip. */
-      svn_pool_clear (lastpool);
+      svn_pool_clear(lastpool);
       tmppool = lastpool;
       lastpool = currpool;
       currpool = tmppool;
@@ -375,23 +375,23 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
   /* We must have had at least one iteration above where we
      reassigned fs_path. Else, the path wouldn't have existed at
      future_revision and svn_fs_history would have thrown. */
-  assert (fs_path != NULL);
+  assert(fs_path != NULL);
      
-  *is_ancestor = (history && strcmp (path, fs_path) == 0);
+  *is_ancestor = (history && strcmp(path, fs_path) == 0);
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_repos_trace_node_locations (svn_fs_t *fs,
-                                apr_hash_t **locations,
-                                const char *fs_path,
-                                svn_revnum_t peg_revision,
-                                apr_array_header_t *location_revisions_orig,
-                                svn_repos_authz_func_t authz_read_func,
-                                void *authz_read_baton,
-                                apr_pool_t *pool)
+svn_repos_trace_node_locations(svn_fs_t *fs,
+                               apr_hash_t **locations,
+                               const char *fs_path,
+                               svn_revnum_t peg_revision,
+                               apr_array_header_t *location_revisions_orig,
+                               svn_repos_authz_func_t authz_read_func,
+                               void *authz_read_baton,
+                               apr_pool_t *pool)
 {
   apr_array_header_t *location_revisions;
   svn_revnum_t *revision_ptr, *revision_ptr_end;
@@ -403,33 +403,33 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   const svn_fs_id_t *id;
 
   /* Sanity check. */
-  assert (location_revisions_orig->elt_size == sizeof(svn_revnum_t));
+  assert(location_revisions_orig->elt_size == sizeof(svn_revnum_t));
 
   /* Ensure that FS_PATH is absolute, because our path-math below will
      depend on that being the case.  */
   if (*fs_path != '/')
-    fs_path = apr_pstrcat (pool, "/", fs_path, NULL);
+    fs_path = apr_pstrcat(pool, "/", fs_path, NULL);
 
   /* Another sanity check. */
   if (authz_read_func)
     {
       svn_fs_root_t *peg_root;
-      SVN_ERR (svn_fs_revision_root (&peg_root, fs, peg_revision, pool));
-      SVN_ERR (check_readability (peg_root, fs_path,
-                                  authz_read_func, authz_read_baton, pool));
+      SVN_ERR(svn_fs_revision_root(&peg_root, fs, peg_revision, pool));
+      SVN_ERR(check_readability(peg_root, fs_path,
+                                authz_read_func, authz_read_baton, pool));
     }
 
-  *locations = apr_hash_make (pool);
+  *locations = apr_hash_make(pool);
 
   /* We flip between two pools in the second loop below. */
-  lastpool = svn_pool_create (pool);
-  currpool = svn_pool_create (pool);
+  lastpool = svn_pool_create(pool);
+  currpool = svn_pool_create(pool);
 
   /* First - let's sort the array of the revisions from the greatest revision
    * downward, so it will be easier to search on. */
-  location_revisions = apr_array_copy (pool, location_revisions_orig);
-  qsort (location_revisions->elts, location_revisions->nelts,
-         sizeof (*revision_ptr), svn_sort_compare_revisions);
+  location_revisions = apr_array_copy(pool, location_revisions_orig);
+  qsort(location_revisions->elts, location_revisions->nelts,
+        sizeof(*revision_ptr), svn_sort_compare_revisions);
 
   revision_ptr = (svn_revnum_t *)location_revisions->elts;
   revision_ptr_end = revision_ptr + location_revisions->nelts;
@@ -439,10 +439,10 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   is_ancestor = FALSE;
   while (revision_ptr < revision_ptr_end && *revision_ptr > peg_revision)
     {
-      svn_pool_clear (currpool);
-      SVN_ERR (check_ancestry_of_peg_path (&is_ancestor, fs, fs_path,
-                                           peg_revision, *revision_ptr,
-                                           currpool));
+      svn_pool_clear(currpool);
+      SVN_ERR(check_ancestry_of_peg_path(&is_ancestor, fs, fs_path,
+                                         peg_revision, *revision_ptr,
+                                         currpool));
       if (is_ancestor)
         break;
       ++revision_ptr;
@@ -452,9 +452,9 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   path = fs_path;
   if (authz_read_func)
     {
-      SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
-      SVN_ERR (check_readability (root, fs_path, authz_read_func,
-                                  authz_read_baton, pool));
+      SVN_ERR(svn_fs_revision_root(&root, fs, revision, pool));
+      SVN_ERR(check_readability(root, fs_path, authz_read_func,
+                                authz_read_baton, pool));
     }
 
   while (revision_ptr < revision_ptr_end)
@@ -466,8 +466,8 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 
       /* Find the target of the innermost copy relevant to path@revision.
          The copy may be of path itself, or of a parent directory. */
-      SVN_ERR (svn_fs_revision_root (&root, fs, revision, currpool));
-      SVN_ERR (svn_fs_closest_copy (&croot, &cpath, root, path, currpool));
+      SVN_ERR(svn_fs_revision_root(&root, fs, revision, currpool));
+      SVN_ERR(svn_fs_closest_copy(&croot, &cpath, root, path, currpool));
       if (! croot)
         break;
 
@@ -476,9 +476,9 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
           svn_boolean_t readable;
           svn_fs_root_t *tmp_root;
 
-          SVN_ERR (svn_fs_revision_root (&tmp_root, fs, revision, currpool));
-          SVN_ERR (authz_read_func (&readable, tmp_root, path,
-                                    authz_read_baton, currpool));
+          SVN_ERR(svn_fs_revision_root(&tmp_root, fs, revision, currpool));
+          SVN_ERR(authz_read_func(&readable, tmp_root, path,
+                                  authz_read_baton, currpool));
           if (! readable)
             {
               return SVN_NO_ERROR;
@@ -487,19 +487,19 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 
       /* Assign the current path to all younger revisions until we reach
          the copy target rev. */
-      crev = svn_fs_revision_root_revision (croot);
+      crev = svn_fs_revision_root_revision(croot);
       while ((revision_ptr < revision_ptr_end) && (*revision_ptr >= crev))
         {
           /* *revision_ptr is allocated out of pool, so we can point
              to in the hash table. */
-          apr_hash_set (*locations, revision_ptr, sizeof (*revision_ptr),
-                        apr_pstrdup (pool, path));
+          apr_hash_set(*locations, revision_ptr, sizeof(*revision_ptr),
+                       apr_pstrdup(pool, path));
           revision_ptr++;
         }
 
       /* Follow the copy to its source.  Ignore all revs between the
          copy target rev and the copy source rev (non-inclusive). */
-      SVN_ERR (svn_fs_copied_from (&srev, &spath, croot, cpath, currpool));
+      SVN_ERR(svn_fs_copied_from(&srev, &spath, croot, cpath, currpool));
       while ((revision_ptr < revision_ptr_end) && (*revision_ptr > srev))
         revision_ptr++;
 
@@ -517,13 +517,13 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
          the copy source path tells us that our path was located at
          "/trunk/foo/bar" before the copy.
       */
-      remainder = (strcmp (cpath, path) == 0) ? "" :
-        svn_path_is_child (cpath, path, currpool);
-      path = svn_path_join (spath, remainder, currpool);
+      remainder = (strcmp(cpath, path) == 0) ? "" :
+        svn_path_is_child(cpath, path, currpool);
+      path = svn_path_join(spath, remainder, currpool);
       revision = srev;
 
       /* Clear last pool and switch. */
-      svn_pool_clear (lastpool);
+      svn_pool_clear(lastpool);
       tmppool = lastpool;
       lastpool = currpool;
       currpool = tmppool;
@@ -534,53 +534,53 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
      the node existing at the same path.  We will look up path@lrev
      for each remaining location-revision and make sure it is related
      to path@revision. */
-  SVN_ERR (svn_fs_revision_root (&root, fs, revision, currpool));
-  SVN_ERR (svn_fs_node_id (&id, root, path, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, revision, currpool));
+  SVN_ERR(svn_fs_node_id(&id, root, path, pool));
   while (revision_ptr < revision_ptr_end)
     {
       svn_node_kind_t kind;
       const svn_fs_id_t *lrev_id;
 
-      svn_pool_clear (currpool);
-      SVN_ERR (svn_fs_revision_root (&root, fs, *revision_ptr, currpool));
-      SVN_ERR (svn_fs_check_path (&kind, root, path, currpool));
+      svn_pool_clear(currpool);
+      SVN_ERR(svn_fs_revision_root(&root, fs, *revision_ptr, currpool));
+      SVN_ERR(svn_fs_check_path(&kind, root, path, currpool));
       if (kind == svn_node_none)
         break;
-      SVN_ERR (svn_fs_node_id (&lrev_id, root, path, currpool));
-      if (! svn_fs_check_related (id, lrev_id))
+      SVN_ERR(svn_fs_node_id(&lrev_id, root, path, currpool));
+      if (! svn_fs_check_related(id, lrev_id))
         break;
 
       /* The node exists at the same path; record that and advance. */
-      apr_hash_set (*locations, revision_ptr, sizeof (*revision_ptr),
-                    apr_pstrdup (pool, path));
+      apr_hash_set(*locations, revision_ptr, sizeof(*revision_ptr),
+                   apr_pstrdup(pool, path));
       revision_ptr++;
     }
 
   /* Ignore any remaining location-revisions; they predate the
      creation of path@revision. */
 
-  svn_pool_destroy (lastpool);
-  svn_pool_destroy (currpool);
+  svn_pool_destroy(lastpool);
+  svn_pool_destroy(currpool);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_repos_get_file_revs (svn_repos_t *repos,
-                         const char *path,
-                         svn_revnum_t start,
-                         svn_revnum_t end,
-                         svn_repos_authz_func_t authz_read_func,
-                         void *authz_read_baton,
-                         svn_repos_file_rev_handler_t handler,
-                         void *handler_baton,
-                         apr_pool_t *pool)
+svn_repos_get_file_revs(svn_repos_t *repos,
+                        const char *path,
+                        svn_revnum_t start,
+                        svn_revnum_t end,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        svn_repos_file_rev_handler_t handler,
+                        void *handler_baton,
+                        apr_pool_t *pool)
 {
   apr_pool_t *iter_pool, *last_pool;
   svn_fs_history_t *history;
-  apr_array_header_t *revnums = apr_array_make (pool, 0,
-                                                sizeof (svn_revnum_t));
-  apr_array_header_t *paths = apr_array_make (pool, 0, sizeof (char *));
+  apr_array_header_t *revnums = apr_array_make(pool, 0,
+                                               sizeof(svn_revnum_t));
+  apr_array_header_t *paths = apr_array_make(pool, 0, sizeof(char *));
   apr_hash_t *last_props;
   svn_fs_root_t *root, *last_root;
   const char *last_path;
@@ -589,23 +589,23 @@ svn_repos_get_file_revs (svn_repos_t *repos,
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
-  iter_pool = svn_pool_create (pool);
-  last_pool = svn_pool_create (pool);
+  iter_pool = svn_pool_create(pool);
+  last_pool = svn_pool_create(pool);
 
   /* Open revision root for path@end. */
   /* ### Can we use last_pool for this? How long does the history
      object need the root? */
-  SVN_ERR (svn_fs_revision_root (&root, repos->fs, end, pool));
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, pool));
 
   /* The path had better be a file in this revision. This avoids calling
      the callback before reporting an uglier error below. */
-  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
   if (kind != svn_node_file)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path);
 
   /* Open a history object. */
-  SVN_ERR (svn_fs_node_history (&history, root, path, last_pool));
+  SVN_ERR(svn_fs_node_history(&history, root, path, last_pool));
   
   /* Get the revisions we are interested in. */
   while (1)
@@ -614,27 +614,27 @@ svn_repos_get_file_revs (svn_repos_t *repos,
       svn_revnum_t rev;
       apr_pool_t *tmp_pool;
 
-      svn_pool_clear (iter_pool);
+      svn_pool_clear(iter_pool);
 
-      SVN_ERR (svn_fs_history_prev (&history, history, TRUE, iter_pool));
+      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iter_pool));
       if (!history)
         break;
-      SVN_ERR (svn_fs_history_location (&rev_path, &rev, history, iter_pool));
+      SVN_ERR(svn_fs_history_location(&rev_path, &rev, history, iter_pool));
       if (authz_read_func)
         {
           svn_boolean_t readable;
           svn_fs_root_t *tmp_root;
 
-          SVN_ERR (svn_fs_revision_root (&tmp_root, repos->fs, rev, iter_pool));
-          SVN_ERR (authz_read_func (&readable, tmp_root, rev_path,
-                                    authz_read_baton, iter_pool));
+          SVN_ERR(svn_fs_revision_root(&tmp_root, repos->fs, rev, iter_pool));
+          SVN_ERR(authz_read_func(&readable, tmp_root, rev_path,
+                                  authz_read_baton, iter_pool));
           if (! readable)
             {
               break;
             }
         }
-      *(svn_revnum_t*) apr_array_push (revnums) = rev;
-      *(char **) apr_array_push (paths) = apr_pstrdup (pool, rev_path);
+      *(svn_revnum_t*) apr_array_push(revnums) = rev;
+      *(char **) apr_array_push(paths) = apr_pstrdup(pool, rev_path);
       if (rev <= start)
         break;
 
@@ -645,20 +645,20 @@ svn_repos_get_file_revs (svn_repos_t *repos,
     }
 
   /* We must have at least one revision to get. */
-  assert (revnums->nelts > 0);
+  assert(revnums->nelts > 0);
 
   /* We want the first txdelta to be against the empty file. */
   last_root = NULL;
   last_path = NULL;
 
   /* Create an empty hash table for the first property diff. */
-  last_props = apr_hash_make (last_pool);
+  last_props = apr_hash_make(last_pool);
 
   /* Walk through the revisions in chronological order. */
   for (i = revnums->nelts; i > 0; --i)
     {
-      svn_revnum_t rev = APR_ARRAY_IDX (revnums, i - 1, svn_revnum_t);
-      const char *rev_path = APR_ARRAY_IDX (paths, i - 1, const char *);
+      svn_revnum_t rev = APR_ARRAY_IDX(revnums, i - 1, svn_revnum_t);
+      const char *rev_path = APR_ARRAY_IDX(paths, i - 1, const char *);
       apr_hash_t *rev_props;
       apr_hash_t *props;
       apr_array_header_t *prop_diffs;
@@ -668,33 +668,33 @@ svn_repos_get_file_revs (svn_repos_t *repos,
       apr_pool_t *tmp_pool;  /* For swapping */
       svn_boolean_t contents_changed;
 
-      svn_pool_clear (iter_pool);
+      svn_pool_clear(iter_pool);
 
       /* Get the revision properties. */
-      SVN_ERR (svn_fs_revision_proplist (&rev_props, repos->fs,
-                                         rev, iter_pool));
+      SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
+                                       rev, iter_pool));
 
       /* Open the revision root. */
-      SVN_ERR (svn_fs_revision_root (&root, repos->fs, rev, iter_pool));
+      SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, iter_pool));
 
       /* Get the file's properties for this revision and compute the diffs. */
-      SVN_ERR (svn_fs_node_proplist (&props, root, rev_path, iter_pool));
-      SVN_ERR (svn_prop_diffs (&prop_diffs, props, last_props, pool));
+      SVN_ERR(svn_fs_node_proplist(&props, root, rev_path, iter_pool));
+      SVN_ERR(svn_prop_diffs(&prop_diffs, props, last_props, pool));
 
       /* Check if the contents changed. */
       /* Special case: In the first revision, we always provide a delta. */
       if (last_root)
-        SVN_ERR (svn_fs_contents_changed (&contents_changed,
-                                          last_root, last_path,
-                                          root, rev_path, iter_pool));
+        SVN_ERR(svn_fs_contents_changed(&contents_changed,
+                                        last_root, last_path,
+                                        root, rev_path, iter_pool));
       else
         contents_changed = TRUE;
 
       /* We have all we need, give to the handler. */
-      SVN_ERR (handler (handler_baton, rev_path, rev, rev_props,
-                        contents_changed ? &delta_handler : NULL,
-                        contents_changed ? &delta_baton : NULL,
-                        prop_diffs, iter_pool));
+      SVN_ERR(handler(handler_baton, rev_path, rev, rev_props,
+                      contents_changed ? &delta_handler : NULL,
+                      contents_changed ? &delta_baton : NULL,
+                      prop_diffs, iter_pool));
 
       /* Compute and send delta if client asked for it.
          Note that this was initialized to NULL, so if !contents_changed,
@@ -702,14 +702,14 @@ svn_repos_get_file_revs (svn_repos_t *repos,
       if (delta_handler)
         {
           /* Get the content delta. */
-          SVN_ERR (svn_fs_get_file_delta_stream (&delta_stream,
-                                                 last_root, last_path,
-                                                 root, rev_path,
-                                                 iter_pool));
+          SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                               last_root, last_path,
+                                               root, rev_path,
+                                               iter_pool));
           /* And send. */
-          SVN_ERR (svn_txdelta_send_txstream (delta_stream,
-                                              delta_handler, delta_baton,
-                                              iter_pool));
+          SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                            delta_handler, delta_baton,
+                                            iter_pool));
         }
 
       /* Remember root, path and props for next iteration. */
@@ -723,8 +723,8 @@ svn_repos_get_file_revs (svn_repos_t *repos,
       last_pool = tmp_pool;
     }
 
-  svn_pool_destroy (last_pool);
-  svn_pool_destroy (iter_pool);
+  svn_pool_destroy(last_pool);
+  svn_pool_destroy(iter_pool);
 
   return SVN_NO_ERROR;
 }

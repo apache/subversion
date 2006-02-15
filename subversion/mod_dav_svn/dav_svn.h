@@ -502,10 +502,10 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
    version controled configurations, activities, histories, and other
    private resources.
 */
-dav_error * dav_svn_resource_kind (request_rec *r,
-                                   const char *uri,
-                                   const char *root_path,
-                                   svn_node_kind_t *kind);
+dav_error * dav_svn_resource_kind(request_rec *r,
+                                  const char *uri,
+                                  const char *root_path,
+                                  svn_node_kind_t *kind);
 
 
 /* Generate the HTTP response body for a successful MERGE. */
@@ -560,11 +560,11 @@ enum dav_svn_time_format {
    If @a timeval or @a datestring is NULL, don't touch it.
 
    Return zero on success, non-zero if an error occurs. */
-int dav_svn_get_last_modified_time (const char **datestring,
-                                    apr_time_t *timeval,
-                                    const dav_resource *resource,
-                                    enum dav_svn_time_format format,
-                                    apr_pool_t *pool);
+int dav_svn_get_last_modified_time(const char **datestring,
+                                   apr_time_t *timeval,
+                                   const dav_resource *resource,
+                                   enum dav_svn_time_format format,
+                                   apr_pool_t *pool);
 
 dav_error * dav_svn__get_locations_report(const dav_resource *resource,
                                           const apr_xml_doc *doc,

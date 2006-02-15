@@ -99,13 +99,13 @@ struct apply_baton {
 
 
 svn_txdelta_window_t *
-svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
-                          apr_pool_t *pool)
+svn_txdelta__make_window(const svn_txdelta__ops_baton_t *build_baton,
+                         apr_pool_t *pool)
 {
   svn_txdelta_window_t *window;
-  svn_string_t *new_data = apr_palloc (pool, sizeof (*new_data));
+  svn_string_t *new_data = apr_palloc(pool, sizeof(*new_data));
 
-  window = apr_palloc (pool, sizeof (*window));
+  window = apr_palloc(pool, sizeof(*window));
   window->sview_offset = 0;
   window->sview_len = 0;
   window->tview_len = 0;
@@ -130,22 +130,22 @@ svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
    bytes of target data.  SOURCE_OFFSET gives the offset of the source
    data, and is simply copied into the window's sview_offset field. */
 static svn_txdelta_window_t *
-compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
-                svn_filesize_t source_offset, apr_pool_t *pool)
+compute_window(const char *data, apr_size_t source_len, apr_size_t target_len,
+               svn_filesize_t source_offset, apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *window;
 
   /* Compute the delta operations. */
-  build_baton.new_data = svn_stringbuf_create ("", pool);
+  build_baton.new_data = svn_stringbuf_create("", pool);
 
   if (source_len == 0)
-    svn_txdelta__vdelta (&build_baton, data, source_len, target_len, pool);
+    svn_txdelta__vdelta(&build_baton, data, source_len, target_len, pool);
   else
-    svn_txdelta__xdelta (&build_baton, data, source_len, target_len, pool);
+    svn_txdelta__xdelta(&build_baton, data, source_len, target_len, pool);
   
   /* Create and return the delta window. */
-  window = svn_txdelta__make_window (&build_baton, pool);
+  window = svn_txdelta__make_window(&build_baton, pool);
   window->sview_offset = source_offset;
   window->sview_len = source_len;
   window->tview_len = target_len;
@@ -155,22 +155,22 @@ compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
 
 
 svn_txdelta_window_t *
-svn_txdelta_window_dup (const svn_txdelta_window_t *window,
-                        apr_pool_t *pool)
+svn_txdelta_window_dup(const svn_txdelta_window_t *window,
+                       apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *new_window;
-  const apr_size_t ops_size = (window->num_ops * sizeof (*build_baton.ops));
+  const apr_size_t ops_size = (window->num_ops * sizeof(*build_baton.ops));
 
   build_baton.num_ops = window->num_ops;
   build_baton.src_ops = window->src_ops;
   build_baton.ops_size = window->num_ops;
-  build_baton.ops = apr_palloc (pool, ops_size);
-  memcpy (build_baton.ops, window->ops, ops_size);
+  build_baton.ops = apr_palloc(pool, ops_size);
+  memcpy(build_baton.ops, window->ops, ops_size);
   build_baton.new_data =
-    svn_stringbuf_create_from_string (window->new_data, pool);
+    svn_stringbuf_create_from_string(window->new_data, pool);
 
-  new_window = svn_txdelta__make_window (&build_baton, pool);
+  new_window = svn_txdelta__make_window(&build_baton, pool);
   new_window->sview_offset = window->sview_offset;
   new_window->sview_len = window->sview_len;
   new_window->tview_len = window->tview_len;
@@ -179,25 +179,25 @@ svn_txdelta_window_dup (const svn_txdelta_window_t *window,
 
 /* This is a private interlibrary compatibility wrapper. */
 svn_txdelta_window_t *
-svn_txdelta__copy_window (const svn_txdelta_window_t *window,
-                          apr_pool_t *pool);
+svn_txdelta__copy_window(const svn_txdelta_window_t *window,
+                         apr_pool_t *pool);
 svn_txdelta_window_t *
-svn_txdelta__copy_window (const svn_txdelta_window_t *window,
-                          apr_pool_t *pool)
+svn_txdelta__copy_window(const svn_txdelta_window_t *window,
+                         apr_pool_t *pool)
 {
-  return svn_txdelta_window_dup (window, pool);
+  return svn_txdelta_window_dup(window, pool);
 }
 
 
 /* Insert a delta op into a delta window. */
 
 void
-svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
-                        enum svn_delta_action opcode,
-                        apr_size_t offset,
-                        apr_size_t length,
-                        const char *new_data,
-                        apr_pool_t *pool)
+svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
+                       enum svn_delta_action opcode,
+                       apr_size_t offset,
+                       apr_size_t length,
+                       const char *new_data,
+                       apr_pool_t *pool)
 {
   svn_txdelta_op_t *op;
 
@@ -213,8 +213,8 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
         {
           op->length += length;
           if (opcode == svn_txdelta_new)
-            svn_stringbuf_appendbytes (build_baton->new_data,
-                                       new_data, length);
+            svn_stringbuf_appendbytes(build_baton->new_data,
+                                      new_data, length);
           return;
         }
     }
@@ -226,12 +226,12 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
       int const new_ops_size = (build_baton->ops_size == 0
                                 ? 16 : 2 * build_baton->ops_size);
       build_baton->ops =
-        apr_palloc (pool, new_ops_size * sizeof (*build_baton->ops));
+        apr_palloc(pool, new_ops_size * sizeof(*build_baton->ops));
 
       /* Copy any existing ops into the new array */
       if (old_ops)
-        memcpy (build_baton->ops, old_ops,
-                build_baton->ops_size * sizeof (*build_baton->ops));
+        memcpy(build_baton->ops, old_ops,
+               build_baton->ops_size * sizeof(*build_baton->ops));
       build_baton->ops_size = new_ops_size;
     }
 
@@ -253,10 +253,10 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
       op->action_code = opcode;
       op->offset = build_baton->new_data->len;
       op->length = length;
-      svn_stringbuf_appendbytes (build_baton->new_data, new_data, length);
+      svn_stringbuf_appendbytes(build_baton->new_data, new_data, length);
       break;
     default:
-      assert (!"unknown delta op.");
+      assert(!"unknown delta op.");
     }
 
   ++build_baton->num_ops;
@@ -267,29 +267,29 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
 /* Allocate a delta stream descriptor. */
 
 void
-svn_txdelta (svn_txdelta_stream_t **stream,
-             svn_stream_t *source,
-             svn_stream_t *target,
-             apr_pool_t *pool)
+svn_txdelta(svn_txdelta_stream_t **stream,
+            svn_stream_t *source,
+            svn_stream_t *target,
+            apr_pool_t *pool)
 {
-  *stream = apr_palloc (pool, sizeof (**stream));
+  *stream = apr_palloc(pool, sizeof(**stream));
   (*stream)->source = source;
   (*stream)->target = target;
   (*stream)->more_source = TRUE;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->buf = apr_palloc (pool, 2 * SVN_DELTA_WINDOW_SIZE);
+  (*stream)->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
 
   /* Initialize MD5 digest calculation. */
-  apr_md5_init (&((*stream)->context));
+  apr_md5_init(&((*stream)->context));
 }
 
 
 
 svn_error_t *
-svn_txdelta_next_window (svn_txdelta_window_t **window,
-                         svn_txdelta_stream_t *stream,
-                         apr_pool_t *pool)
+svn_txdelta_next_window(svn_txdelta_window_t **window,
+                        svn_txdelta_stream_t *stream,
+                        apr_pool_t *pool)
 {
   apr_size_t source_len = SVN_DELTA_WINDOW_SIZE;
   apr_size_t target_len = SVN_DELTA_WINDOW_SIZE;
@@ -297,15 +297,15 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
   /* Read the source stream. */
   if (stream->more_source)
     {
-      SVN_ERR (svn_stream_read (stream->source, stream->buf, &source_len));
+      SVN_ERR(svn_stream_read(stream->source, stream->buf, &source_len));
       stream->more_source = (source_len == SVN_DELTA_WINDOW_SIZE);
     }
   else
     source_len = 0;
 
   /* Read the target stream. */
-  SVN_ERR (svn_stream_read (stream->target, stream->buf + source_len,
-                            &target_len));
+  SVN_ERR(svn_stream_read(stream->target, stream->buf + source_len,
+                          &target_len));
   stream->pos += source_len;
 
   /* ### The apr_md5 functions always return APR_SUCCESS.  At one
@@ -316,15 +316,15 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
   if (target_len == 0)
     {
       /* No target data?  We're done; return the final window. */
-      apr_md5_final (stream->digest, &(stream->context));
+      apr_md5_final(stream->digest, &(stream->context));
       *window = NULL;
       stream->more = FALSE;
       return SVN_NO_ERROR;
     }
   else
     {
-      apr_md5_update (&(stream->context), stream->buf + source_len,
-                      target_len);
+      apr_md5_update(&(stream->context), stream->buf + source_len,
+                     target_len);
     }
 
   *window = compute_window(stream->buf, source_len, target_len,
@@ -336,7 +336,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
 
 
 const unsigned char *
-svn_txdelta_md5_digest (svn_txdelta_stream_t *stream)
+svn_txdelta_md5_digest(svn_txdelta_stream_t *stream)
 {
   /* If there are more windows for this stream, the digest has not yet
      been calculated.  */
@@ -354,22 +354,22 @@ svn_txdelta_md5_digest (svn_txdelta_stream_t *stream)
  * source data, buffers target data, and fires off delta windows when
  * the target data buffer is full. */
 static svn_error_t *
-tpush_write_handler (void *baton, const char *data, apr_size_t *len)
+tpush_write_handler(void *baton, const char *data, apr_size_t *len)
 {
   struct tpush_baton *tb = baton;
   apr_size_t chunk_len, data_len = *len;
-  apr_pool_t *pool = svn_pool_create (tb->pool);
+  apr_pool_t *pool = svn_pool_create(tb->pool);
   svn_txdelta_window_t *window;
 
   while (data_len > 0)
     {
-      svn_pool_clear (pool);
+      svn_pool_clear(pool);
 
       /* Make sure we're all full up on source data, if possible. */
       if (tb->source_len == 0 && !tb->source_done)
         {
           tb->source_len = SVN_DELTA_WINDOW_SIZE;
-          SVN_ERR (svn_stream_read (tb->source, tb->buf, &tb->source_len));
+          SVN_ERR(svn_stream_read(tb->source, tb->buf, &tb->source_len));
           if (tb->source_len < SVN_DELTA_WINDOW_SIZE)
             tb->source_done = TRUE;
         }
@@ -378,7 +378,7 @@ tpush_write_handler (void *baton, const char *data, apr_size_t *len)
       chunk_len = SVN_DELTA_WINDOW_SIZE - tb->target_len;
       if (chunk_len > data_len)
         chunk_len = data_len;
-      memcpy (tb->buf + tb->source_len + tb->target_len, data, chunk_len);
+      memcpy(tb->buf + tb->source_len + tb->target_len, data, chunk_len);
       data += chunk_len;
       data_len -= chunk_len;
       tb->target_len += chunk_len;
@@ -386,9 +386,9 @@ tpush_write_handler (void *baton, const char *data, apr_size_t *len)
       /* If we're full of target data, compute and fire off a window. */
       if (tb->target_len == SVN_DELTA_WINDOW_SIZE)
         {
-          window = compute_window (tb->buf, tb->source_len, tb->target_len,
-                                   tb->source_offset, pool);
-          SVN_ERR (tb->wh (window, tb->whb));
+          window = compute_window(tb->buf, tb->source_len, tb->target_len,
+                                  tb->source_offset, pool);
+          SVN_ERR(tb->wh(window, tb->whb));
           tb->source_offset += tb->source_len;
           tb->source_len = 0;
           tb->target_len = 0;
@@ -404,7 +404,7 @@ tpush_write_handler (void *baton, const char *data, apr_size_t *len)
  * a final window if there is any buffered target data, and then sends
  * a NULL window signifying the end of the window stream. */
 static svn_error_t *
-tpush_close_handler (void *baton)
+tpush_close_handler(void *baton)
 {
   struct tpush_baton *tb = baton;
   svn_txdelta_window_t *window;
@@ -424,29 +424,29 @@ tpush_close_handler (void *baton)
 
 
 svn_stream_t *
-svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
-                         void *handler_baton, svn_stream_t *source,
-                         apr_pool_t *pool)
+svn_txdelta_target_push(svn_txdelta_window_handler_t handler,
+                        void *handler_baton, svn_stream_t *source,
+                        apr_pool_t *pool)
 {
   struct tpush_baton *tb;
   svn_stream_t *stream;
 
   /* Initialize baton. */
-  tb = apr_palloc (pool, sizeof(*tb));
+  tb = apr_palloc(pool, sizeof(*tb));
   tb->source = source;
   tb->wh = handler;
   tb->whb = handler_baton;
   tb->pool = pool;
-  tb->buf = apr_palloc (pool, 2 * SVN_DELTA_WINDOW_SIZE);
+  tb->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
   tb->source_offset = 0;
   tb->source_len = 0;
   tb->source_done = FALSE;
   tb->target_len = 0;
 
   /* Create and return writable stream. */
-  stream = svn_stream_create (tb, pool);
-  svn_stream_set_write (stream, tpush_write_handler);
-  svn_stream_set_close (stream, tpush_close_handler);
+  stream = svn_stream_create(tb, pool);
+  svn_stream_set_write(stream, tpush_write_handler);
+  svn_stream_set_close(stream, tpush_close_handler);
   return stream;
 }
 
@@ -456,23 +456,23 @@ svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
 
 /* Ensure that BUF has enough space for VIEW_LEN bytes.  */
 static APR_INLINE void
-size_buffer (char **buf, apr_size_t *buf_size,
-             apr_size_t view_len, apr_pool_t *pool)
+size_buffer(char **buf, apr_size_t *buf_size,
+            apr_size_t view_len, apr_pool_t *pool)
 {
   if (view_len > *buf_size)
     {
       *buf_size *= 2;
       if (*buf_size < view_len)
         *buf_size = view_len;
-      *buf = apr_palloc (pool, *buf_size);
+      *buf = apr_palloc(pool, *buf_size);
     }
 }
 
 
 void
-svn_txdelta_apply_instructions (svn_txdelta_window_t *window,
-                                const char *sbuf, char *tbuf,
-                                apr_size_t *tlen)
+svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
+                               const char *sbuf, char *tbuf,
+                               apr_size_t *tlen)
 {
   const svn_txdelta_op_t *op;
   apr_size_t i, j, tpos = 0;
@@ -483,14 +483,14 @@ svn_txdelta_apply_instructions (svn_txdelta_window_t *window,
                                   ? op->length : *tlen - tpos);
 
       /* Check some invariants common to all instructions.  */
-      assert (tpos + op->length <= window->tview_len);
+      assert(tpos + op->length <= window->tview_len);
 
       switch (op->action_code)
         {
         case svn_txdelta_source:
           /* Copy from source area.  */
-          assert (op->offset + op->length <= window->sview_len);
-          memcpy (tbuf + tpos, sbuf + op->offset, buf_len);
+          assert(op->offset + op->length <= window->sview_len);
+          memcpy(tbuf + tpos, sbuf + op->offset, buf_len);
           break;
 
         case svn_txdelta_target:
@@ -498,21 +498,21 @@ svn_txdelta_apply_instructions (svn_txdelta_window_t *window,
              semantics aren't guaranteed for overlapping memory areas,
              and target copies are allowed to overlap to generate
              repeated data.  */
-          assert (op->offset < tpos);
+          assert(op->offset < tpos);
           for (i = op->offset, j = tpos; i < op->offset + buf_len; i++)
             tbuf[j++] = tbuf[i];
           break;
 
         case svn_txdelta_new:
           /* Copy from window new area.  */
-          assert (op->offset + op->length <= window->new_data->len);
-          memcpy (tbuf + tpos,
-                  window->new_data->data + op->offset,
-                  buf_len);
+          assert(op->offset + op->length <= window->new_data->len);
+          memcpy(tbuf + tpos,
+                 window->new_data->data + op->offset,
+                 buf_len);
           break;
 
         default:
-          assert (!"Invalid delta instruction code");
+          assert(!"Invalid delta instruction code");
         }
 
       tpos += op->length;
@@ -521,27 +521,27 @@ svn_txdelta_apply_instructions (svn_txdelta_window_t *window,
     }
 
   /* Check that we produced the right amount of data.  */
-  assert (tpos == window->tview_len);
+  assert(tpos == window->tview_len);
   *tlen = tpos;
 }
 
 /* This is a private interlibrary compatibility wrapper. */
 void
-svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
-                                 const char *sbuf, char *tbuf,
-                                 apr_size_t *tlen);
+svn_txdelta__apply_instructions(svn_txdelta_window_t *window,
+                                const char *sbuf, char *tbuf,
+                                apr_size_t *tlen);
 void
-svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
-                                 const char *sbuf, char *tbuf,
-                                 apr_size_t *tlen)
+svn_txdelta__apply_instructions(svn_txdelta_window_t *window,
+                                const char *sbuf, char *tbuf,
+                                apr_size_t *tlen)
 {
-  svn_txdelta_apply_instructions (window, sbuf, tbuf, tlen);
+  svn_txdelta_apply_instructions(window, sbuf, tbuf, tlen);
 }
 
 
 /* Apply WINDOW to the streams given by APPL.  */
 static svn_error_t *
-apply_window (svn_txdelta_window_t *window, void *baton)
+apply_window(svn_txdelta_window_t *window, void *baton)
 {
   struct apply_baton *ab = (struct apply_baton *) baton;
   apr_size_t len;
@@ -551,22 +551,22 @@ apply_window (svn_txdelta_window_t *window, void *baton)
     {
       /* We're done; just clean up.  */
       if (ab->result_digest)
-        apr_md5_final (ab->result_digest, &(ab->md5_context));
+        apr_md5_final(ab->result_digest, &(ab->md5_context));
 
-      err = svn_stream_close (ab->target);
-      svn_pool_destroy (ab->pool);
+      err = svn_stream_close(ab->target);
+      svn_pool_destroy(ab->pool);
 
       return err;
     }
 
   /* Make sure the source view didn't slide backwards.  */
-  assert (window->sview_len == 0
-          || (window->sview_offset >= ab->sbuf_offset
-              && (window->sview_offset + window->sview_len
-                  >= ab->sbuf_offset + ab->sbuf_len)));
+  assert(window->sview_len == 0
+         || (window->sview_offset >= ab->sbuf_offset
+             && (window->sview_offset + window->sview_len
+                 >= ab->sbuf_offset + ab->sbuf_len)));
 
   /* Make sure there's enough room in the target buffer.  */
-  size_buffer (&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);
+  size_buffer(&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);
 
   /* Prepare the source buffer for reading from the input stream.  */
   if (window->sview_offset != ab->sbuf_offset
@@ -575,7 +575,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
       char *old_sbuf = ab->sbuf;
 
       /* Make sure there's enough room.  */
-      size_buffer (&ab->sbuf, &ab->sbuf_size, window->sview_len, ab->pool);
+      size_buffer(&ab->sbuf, &ab->sbuf_size, window->sview_len, ab->pool);
 
       /* If the existing view overlaps with the new view, copy the
        * overlap to the beginning of the new buffer.  */
@@ -583,7 +583,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
         {
           apr_size_t start =
             (apr_size_t)(window->sview_offset - ab->sbuf_offset);
-          memmove (ab->sbuf, old_sbuf + start, ab->sbuf_len - start);
+          memmove(ab->sbuf, old_sbuf + start, ab->sbuf_len - start);
           ab->sbuf_len -= start;
         }
       else
@@ -595,10 +595,10 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   if (ab->sbuf_len < window->sview_len)
     {
       len = window->sview_len - ab->sbuf_len;
-      err = svn_stream_read (ab->source, ab->sbuf + ab->sbuf_len, &len);
+      err = svn_stream_read(ab->source, ab->sbuf + ab->sbuf_len, &len);
       if (err == SVN_NO_ERROR && len != window->sview_len - ab->sbuf_len)
-        err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, NULL,
-                                "Delta source ended unexpectedly");
+        err = svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                               "Delta source ended unexpectedly");
       if (err != SVN_NO_ERROR)
         return err;
       ab->sbuf_len = window->sview_len;
@@ -607,8 +607,8 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   /* Apply the window instructions to the source view to generate
      the target view.  */
   len = window->tview_len;
-  svn_txdelta_apply_instructions (window, ab->sbuf, ab->tbuf, &len);
-  assert (len == window->tview_len);
+  svn_txdelta_apply_instructions(window, ab->sbuf, ab->tbuf, &len);
+  assert(len == window->tview_len);
 
   /* Write out the output. */
 
@@ -622,23 +622,23 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   if (ab->result_digest)
     apr_md5_update(&(ab->md5_context), ab->tbuf, len);
 
-  return svn_stream_write (ab->target, ab->tbuf, &len);
+  return svn_stream_write(ab->target, ab->tbuf, &len);
 }
 
 
 void
-svn_txdelta_apply (svn_stream_t *source,
-                   svn_stream_t *target,
-                   unsigned char *result_digest,
-                   const char *error_info,
-                   apr_pool_t *pool,
-                   svn_txdelta_window_handler_t *handler,
-                   void **handler_baton)
+svn_txdelta_apply(svn_stream_t *source,
+                  svn_stream_t *target,
+                  unsigned char *result_digest,
+                  const char *error_info,
+                  apr_pool_t *pool,
+                  svn_txdelta_window_handler_t *handler,
+                  void **handler_baton)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
   struct apply_baton *ab;
 
-  ab = apr_palloc (subpool, sizeof (*ab));
+  ab = apr_palloc(subpool, sizeof(*ab));
   ab->source = source;
   ab->target = target;
   ab->pool = subpool;
@@ -651,10 +651,10 @@ svn_txdelta_apply (svn_stream_t *source,
   ab->result_digest = result_digest;
 
   if (result_digest)
-    apr_md5_init (&(ab->md5_context));
+    apr_md5_init(&(ab->md5_context));
 
   if (error_info)
-    ab->error_info = apr_pstrdup (subpool, error_info);
+    ab->error_info = apr_pstrdup(subpool, error_info);
   else
     ab->error_info = NULL;
 
@@ -667,10 +667,10 @@ svn_txdelta_apply (svn_stream_t *source,
 /* Convenience routines */
 
 svn_error_t * 
-svn_txdelta_send_string (const svn_string_t *string,
-                         svn_txdelta_window_handler_t handler,
-                         void *handler_baton,
-                         apr_pool_t *pool)
+svn_txdelta_send_string(const svn_string_t *string,
+                        svn_txdelta_window_handler_t handler,
+                        void *handler_baton,
+                        apr_pool_t *pool)
 {
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
@@ -687,19 +687,19 @@ svn_txdelta_send_string (const svn_string_t *string,
   window.new_data = string;
 
   /* Push the one window at the handler. */
-  SVN_ERR ((*handler) (&window, handler_baton));
+  SVN_ERR((*handler)(&window, handler_baton));
   
   /* Push a NULL at the handler, because we're done. */
-  SVN_ERR ((*handler) (NULL, handler_baton));
+  SVN_ERR((*handler)(NULL, handler_baton));
   
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
-                                      svn_txdelta_window_handler_t handler,
-                                      void *handler_baton,
-                                      unsigned char *digest,
-                                      apr_pool_t *pool)
+svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
+                                     svn_txdelta_window_handler_t handler,
+                                     void *handler_baton,
+                                     unsigned char *digest,
+                                     apr_pool_t *pool)
 {
   svn_txdelta_stream_t *txstream;
   svn_error_t *err;
@@ -712,44 +712,44 @@ svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
 
   /* Create a delta stream which converts an *empty* bytestream into the
      target bytestream. */
-  svn_txdelta (&txstream, svn_stream_empty (pool), stream, pool);
-  err = svn_txdelta_send_txstream (txstream, handler, handler_baton, pool);
+  svn_txdelta(&txstream, svn_stream_empty(pool), stream, pool);
+  err = svn_txdelta_send_txstream(txstream, handler, handler_baton, pool);
 
   if (digest && (! err))
     {
       const unsigned char *result_md5;
-      result_md5 = svn_txdelta_md5_digest (txstream);
+      result_md5 = svn_txdelta_md5_digest(txstream);
       /* Since err is null, result_md5 "cannot" be null. */
-      memcpy (digest, result_md5, APR_MD5_DIGESTSIZE);
+      memcpy(digest, result_md5, APR_MD5_DIGESTSIZE);
     }
 
   return err;
 }
 
-svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
-                                        svn_txdelta_window_handler_t handler,
-                                        void *handler_baton,
-                                        apr_pool_t *pool)
+svn_error_t *svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
+                                       svn_txdelta_window_handler_t handler,
+                                       void *handler_baton,
+                                       apr_pool_t *pool)
 {
   svn_txdelta_window_t *window;
 
   /* create a pool just for the windows */
-  apr_pool_t *wpool = svn_pool_create (pool);
+  apr_pool_t *wpool = svn_pool_create(pool);
 
   do
     {
       /* free the window (if any) */
-      svn_pool_clear (wpool);
+      svn_pool_clear(wpool);
 
       /* read in a single delta window */
-      SVN_ERR( svn_txdelta_next_window (&window, txstream, wpool));
+      SVN_ERR(svn_txdelta_next_window(&window, txstream, wpool));
 
       /* shove it at the handler */
-      SVN_ERR( (*handler)(window, handler_baton));
+      SVN_ERR((*handler)(window, handler_baton));
     }
   while (window != NULL);
 
-  svn_pool_destroy (wpool);
+  svn_pool_destroy(wpool);
 
   return SVN_NO_ERROR;
 }
