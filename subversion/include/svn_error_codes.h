@@ -20,7 +20,7 @@
  */
 
 /* What's going on here?
- 
+
    In order to define error codes and their associated description
    strings in the same place, we overload the SVN_ERRDEF() macro with
    two definitions below.  Both take two arguments, an error code name
@@ -31,9 +31,9 @@
    definition creates a static table mapping the enum codes to their
    corresponding strings -- that definition is used by the C file that
    implements svn_strerror().
- 
+
    The header and C files both include this file, using #defines to
-   control which version of the macro they get.  
+   control which version of the macro they get.
 */
 
 
@@ -99,45 +99,45 @@ extern "C" {
 /* Leave one category of room at the beginning, for SVN_WARNING and
    any other such beasts we might create in the future. */
 #define SVN_ERR_BAD_CATEGORY_START      (APR_OS_START_USERERR \
-                                          + ( 1 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 1 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_XML_CATEGORY_START      (APR_OS_START_USERERR \
-                                          + ( 2 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 2 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_IO_CATEGORY_START       (APR_OS_START_USERERR \
-                                          + ( 3 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 3 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_STREAM_CATEGORY_START   (APR_OS_START_USERERR \
-                                          + ( 4 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 4 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_NODE_CATEGORY_START     (APR_OS_START_USERERR \
-                                          + ( 5 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 5 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_ENTRY_CATEGORY_START    (APR_OS_START_USERERR \
-                                          + ( 6 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 6 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_WC_CATEGORY_START       (APR_OS_START_USERERR \
-                                          + ( 7 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 7 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_FS_CATEGORY_START       (APR_OS_START_USERERR \
-                                          + ( 8 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 8 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_REPOS_CATEGORY_START    (APR_OS_START_USERERR \
-                                          + ( 9 * SVN_ERR_CATEGORY_SIZE))
+                                         + ( 9 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_CATEGORY_START       (APR_OS_START_USERERR \
-                                          + (10 * SVN_ERR_CATEGORY_SIZE))
+                                         + (10 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_DAV_CATEGORY_START   (APR_OS_START_USERERR \
-                                          + (11 * SVN_ERR_CATEGORY_SIZE))
+                                         + (11 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_LOCAL_CATEGORY_START (APR_OS_START_USERERR \
                                          + (12 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_SVNDIFF_CATEGORY_START  (APR_OS_START_USERERR \
-                                          + (13 * SVN_ERR_CATEGORY_SIZE))
+                                         + (13 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_APMOD_CATEGORY_START    (APR_OS_START_USERERR \
-                                          + (14 * SVN_ERR_CATEGORY_SIZE))
+                                         + (14 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_CLIENT_CATEGORY_START   (APR_OS_START_USERERR \
-                                          + (15 * SVN_ERR_CATEGORY_SIZE))
+                                         + (15 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_MISC_CATEGORY_START     (APR_OS_START_USERERR \
-                                           + (16 * SVN_ERR_CATEGORY_SIZE))
+                                         + (16 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_CL_CATEGORY_START       (APR_OS_START_USERERR \
-                                           + (17 * SVN_ERR_CATEGORY_SIZE))
+                                         + (17 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_SVN_CATEGORY_START   (APR_OS_START_USERERR \
-                                           + (18 * SVN_ERR_CATEGORY_SIZE))
+                                         + (18 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_AUTHN_CATEGORY_START    (APR_OS_START_USERERR \
-                                           + (19 * SVN_ERR_CATEGORY_SIZE))
+                                         + (19 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_AUTHZ_CATEGORY_START    (APR_OS_START_USERERR \
-                                           + (20 * SVN_ERR_CATEGORY_SIZE))
+                                         + (20 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_DIFF_CATEGORY_START     (APR_OS_START_USERERR \
                                          + (21 * SVN_ERR_CATEGORY_SIZE))
 
@@ -362,7 +362,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_WC_INVALID_OP_ON_CWD,
              SVN_ERR_WC_CATEGORY_START + 19,
-             "Invalid operation on the current working directory")  
+             "Invalid operation on the current working directory")
 
   SVN_ERRDEF(SVN_ERR_WC_BAD_ADM_LOG_START,
              SVN_ERR_WC_CATEGORY_START + 20,
@@ -370,16 +370,16 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_WC_UNSUPPORTED_FORMAT,
              SVN_ERR_WC_CATEGORY_START + 21,
-             "Unsupported working copy format")  
+             "Unsupported working copy format")
 
   SVN_ERRDEF(SVN_ERR_WC_BAD_PATH,
              SVN_ERR_WC_CATEGORY_START + 22,
-             "Path syntax not supported in this context")  
+             "Path syntax not supported in this context")
 
   /** @since New in 1.2. */
   SVN_ERRDEF(SVN_ERR_WC_INVALID_SCHEDULE,
              SVN_ERR_WC_CATEGORY_START + 23,
-             "Invalid schedule")  
+             "Invalid schedule")
 
   /** @since New in 1.3. */
   SVN_ERRDEF(SVN_ERR_WC_INVALID_RELOCATION,
@@ -608,7 +608,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_REPOS_BAD_REVISION_REPORT,
              SVN_ERR_REPOS_CATEGORY_START + 4,
              "Bogus revision report")
- 
+
   /* This is analogous to SVN_ERR_FS_UNSUPPORTED_FORMAT.  To avoid
    * confusion with "versions" (i.e., releases) of Subversion, we
    * started using the word "format" instead of "version".  However,
@@ -690,7 +690,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED,
              SVN_ERR_RA_DAV_CATEGORY_START + 3,
              "RA layer didn't receive requested OPTIONS info")
-    
+
   SVN_ERRDEF(SVN_ERR_RA_DAV_PROPS_NOT_FOUND,
              SVN_ERR_RA_DAV_CATEGORY_START + 4,
              "RA layer failed to fetch properties")
@@ -722,11 +722,11 @@ SVN_ERROR_START
              "Unable to extract data from response header")
 
   /* ra_local errors */
-  
+
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
              SVN_ERR_RA_LOCAL_CATEGORY_START + 0,
              "Couldn't find a repository")
-       
+
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
              SVN_ERR_RA_LOCAL_CATEGORY_START + 1,
              "Couldn't open a repository")
@@ -826,7 +826,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SVNDIFF_UNEXPECTED_END,
              SVN_ERR_SVNDIFF_CATEGORY_START + 4,
              "Svndiff data ends unexpectedly")
-  
+
   SVN_ERRDEF(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
              SVN_ERR_SVNDIFF_CATEGORY_START + 5,
              "Svndiff compressed data is invalid")
@@ -950,7 +950,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_TEST_FAILED,
              SVN_ERR_MISC_CATEGORY_START + 6,
              "Test failed")
-       
+
   SVN_ERRDEF(SVN_ERR_UNSUPPORTED_FEATURE,
              SVN_ERR_MISC_CATEGORY_START + 7,
              "Trying to use an unsupported feature")
