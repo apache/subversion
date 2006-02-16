@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -302,11 +302,89 @@ svn_diff_output(svn_diff_t *diff,
 
 /* Diffs on files */
 
+/** To what extent whitespace should be ignored when comparing lines.
+ *
+ * @since New in 1.4.
+ */
+typedef enum svn_diff_file_ignore_space_t
+{
+  /** Ignore no whitespace. */
+  svn_diff_file_ignore_space_none,
+
+  /** Ignore changes in sequences of whitespace characters, treating each
+   * sequence of whitespace characters as a single space. */
+  svn_diff_file_ignore_space_change,
+
+  /** Ignore all whitespace characters. */
+  svn_diff_file_ignore_space_all
+} svn_diff_file_ignore_space_t;
+
+/** Options to control the behaviour of the file diff routines.
+ *
+ * @since New in 1.4.
+ *
+ * @note This structure may be extended in the future, so to preserve binary
+ * compatibility, users must not allocate structs of this type themselves.
+ * @see svn_diff_file_options_create().
+ */
+typedef struct svn_diff_file_options_t
+{
+  /** To what extent whitespace should be ignored when comparing lines.
+   * The default is @c svn_diff_file_ignore_space_none. */
+  svn_diff_file_ignore_space_t ignore_space;
+  /** Whether to treat all end-of-line markers the same when comparing lines.
+   * The default is @c FALSE. */
+  svn_boolean_t ignore_eol_style;
+} svn_diff_file_options_t;
+
+/** Allocate a @c svn_diff_file_options_t structure in @a pool, initializing
+ * it with default values.
+ *
+ * @since New in 1.4.
+ */
+svn_diff_file_options_t *
+svn_diff_file_options_create(apr_pool_t *pool);
+
+/**
+ * Parse @a args, an array of <ttconst char *</tt> command line switches
+ * and adjust @a options accordingly.  @a options is assumed to be initialized
+ * with default values.  @a pool is used for temporary allocation.
+ *
+ * @since New in 1.4.
+ *
+ * The following options are supported:
+ * - --ignore-space-change, -b
+ * - --ignore-all-space, -w
+ * - --ignore-eol-style
+ * - --unified, -u (for compatibility, does nothing).
+ */
+svn_error_t *
+svn_diff_file_options_parse(svn_diff_file_options_t *options,
+                            const apr_array_header_t *args,
+                            apr_pool_t *pool);
+                            
+
 /** A convenience function to produce a diff between two files.
+ *
+ * @since New in 1.4.
  *
  * Return a diff object in @a *diff (allocated from @a pool) that represents
  * the difference between an @a original file and @a modified file.  
  * (The file arguments must be full paths to the files.)
+ *
+ * Compare lines according to the relevant fields of @a options.
+ */
+svn_error_t *
+svn_diff_file_diff_2(svn_diff_t **diff,
+                     const char *original,
+                     const char *modified,
+                     const svn_diff_file_options_t *options,
+                     apr_pool_t *pool);
+
+/** Similar to svn_file_diff_2(), but with @a options set to a struct with
+ * default options.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_diff_file_diff(svn_diff_t **diff,
@@ -314,12 +392,28 @@ svn_diff_file_diff(svn_diff_t **diff,
                    const char *modified,
                    apr_pool_t *pool);
 
-
 /** A convenience function to produce a diff between three files.
+ *
+ * @since New in 1.4.
  *
  * Return a diff object in @a *diff (allocated from @a pool) that represents
  * the difference between an @a original file, @a modified file, and @a latest 
  * file. (The file arguments must be full paths to the files.)
+ *
+ * Compare lines according to the relevant fields of @a options.
+ */
+svn_error_t *
+svn_diff_file_diff3_2(svn_diff_t **diff,
+                      const char *original,
+                      const char *modified,
+                      const char *latest,
+                      const svn_diff_file_options_t *options,
+                      apr_pool_t *pool);
+
+/** Similar to svn_diff_file_diff3_2(), but with @a options set to a struct
+ * with default options.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_diff_file_diff3(svn_diff_t **diff,
@@ -330,9 +424,27 @@ svn_diff_file_diff3(svn_diff_t **diff,
 
 /** A convenience function to produce a diff between four files.
  *
+ * @since New in 1.4.
+ *
  * Return a diff object in @a *diff (allocated from @a pool) that represents
  * the difference between an @a original file, @a modified file, @a latest
  * and @a ancestor file. (The file arguments must be full paths to the files.)
+ *
+ * Compare lines according to the relevant fields of @a options.
+ */
+svn_error_t *
+svn_diff_file_diff4_2(svn_diff_t **diff,
+                      const char *original,
+                      const char *modified,
+                      const char *latest,
+                      const char *ancestor,
+                      const svn_diff_file_options_t *options,
+                      apr_pool_t *pool);
+
+/** Simliar to svn_file_diff4_2(), but with @a options set to a struct with
+ * default options.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_diff_file_diff4(svn_diff_t **diff,

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -138,6 +138,8 @@ extern "C" {
                                            + (19 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_AUTHZ_CATEGORY_START    (APR_OS_START_USERERR \
                                            + (20 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_DIFF_CATEGORY_START     (APR_OS_START_USERERR \
+                                         + (21 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -828,6 +830,12 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
              SVN_ERR_SVNDIFF_CATEGORY_START + 5,
              "Svndiff compressed data is invalid")
+
+  /* libsvn_diff errors */
+
+  SVN_ERRDEF(SVN_ERR_DIFF_DATASOURCE_MODIFIED,
+             SVN_ERR_DIFF_CATEGORY_START + 0,
+             "Diff data source modified unexpectedly")
 
   /* mod_dav_svn errors */
 
