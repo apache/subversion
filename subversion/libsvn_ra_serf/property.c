@@ -111,6 +111,7 @@ set_prop(apr_hash_t *props,
 {
   return set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name, val, pool);
 }
+
 /**
  * Expat callback invoked on a start element tag for a PROPFIND response.
  */
@@ -205,6 +206,33 @@ cdata_propfind(void *userData, const char *data, int len)
                     data, len, ctx->pool);
     }
 
+}
+
+static apr_status_t
+setup_propfind(serf_request_t *request,
+               void *setup_baton,
+               serf_bucket_t **req_bkt,
+               serf_response_acceptor_t *acceptor,
+               void **acceptor_baton,
+               serf_response_handler_t *handler,
+               void **handler_baton,
+               apr_pool_t *pool)
+{
+  propfind_context_t *ctx = setup_baton;
+
+  *req_bkt = serf_bucket_propfind_create(ctx->sess->repos_url.hostinfo,
+                                         ctx->path,
+                                         ctx->label,
+                                         ctx->depth,
+                                         ctx->find_props,
+                                         serf_request_get_alloc(request));
+
+  *acceptor = ctx->acceptor;
+  *acceptor_baton = ctx->sess;
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
 }
 
 static apr_status_t
@@ -334,6 +362,9 @@ deliver_props(propfind_context_t **prop_ctx,
       new_prop_ctx->done = FALSE;
       new_prop_ctx->sess = sess;
       new_prop_ctx->rev = rev;
+      new_prop_ctx->acceptor = accept_response;
+      new_prop_ctx->handler = handle_propfind;
+
       if (SVN_IS_VALID_REVNUM(rev))
         {
           new_prop_ctx->label = apr_ltoa(pool, rev);
@@ -347,18 +378,7 @@ deliver_props(propfind_context_t **prop_ctx,
     }
 
   /* create and deliver request */
-  request = serf_connection_request_create(sess->conn);
-
-  req_bkt = serf_bucket_propfind_create(sess->repos_url.hostinfo,
-                                        (*prop_ctx)->path,
-                                        (*prop_ctx)->label,
-                                        (*prop_ctx)->depth,
-                                        (*prop_ctx)->find_props,
-                                        serf_request_get_alloc(request));
-
-  serf_request_deliver(request, req_bkt,
-                       accept_response, sess,
-                       handle_propfind, *prop_ctx);
+  serf_connection_request_create(sess->conn, setup_propfind, *prop_ctx);
 
   return SVN_NO_ERROR;
 }

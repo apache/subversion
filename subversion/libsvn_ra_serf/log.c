@@ -104,6 +104,13 @@ typedef struct {
   /* log receiver function and baton */
   svn_log_message_receiver_t receiver;
   void *receiver_baton;
+
+  ra_serf_session_t *session;
+  const char *path;
+  serf_bucket_t *buckets;
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
+
 } log_context_t;
 
 
@@ -308,6 +315,30 @@ cdata_log(void *userData, const char *data, int len)
     }
 }
 
+
+static apr_status_t
+setup_log(serf_request_t *request,
+          void *setup_baton,
+          serf_bucket_t **req_bkt,
+          serf_response_acceptor_t *acceptor,
+          void **acceptor_baton,
+          serf_response_handler_t *handler,
+          void **handler_baton,
+          apr_pool_t *pool)
+{
+  log_context_t *ctx = setup_baton;
+
+  setup_serf_req(request, req_bkt, NULL, ctx->session,
+                 "REPORT", ctx->path, ctx->buckets, "text/xml");
+
+  *acceptor = ctx->acceptor;
+  *acceptor_baton = ctx->session;
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
+}
+
 static apr_status_t
 handle_log(serf_bucket_t *response,
            void *handler_baton,
@@ -463,12 +494,13 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
-  create_serf_req(&request, &req_bkt, NULL, session,
-                  "REPORT", req_url,
-                  buckets, "text/xml");
+  log_ctx->session = session;
+  log_ctx->buckets = buckets;
+  log_ctx->path = req_url;
+  log_ctx->acceptor = accept_response;
+  log_ctx->handler = handle_log;
 
-  serf_request_deliver(request, req_bkt, accept_response, session,
-                       handle_log, log_ctx);
+  serf_connection_request_create(session->conn, setup_log, log_ctx);
 
   SVN_ERR(context_run_wait(&log_ctx->done, session, pool));
 

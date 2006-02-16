@@ -174,6 +174,10 @@ typedef struct report_fetch_t {
 
   /* The next fetch we have open. */
   struct report_fetch_t *next;
+
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
+
 } report_fetch_t;
 
 typedef struct report_state_list_t {
@@ -221,6 +225,10 @@ typedef struct {
 
   /* free list of info structures */
   report_info_t *free_info;
+
+  const char *path;
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
 
   svn_boolean_t done;
 
@@ -491,6 +499,45 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 }
 
 static apr_status_t
+setup_fetch(serf_request_t *request,
+            void *setup_baton,
+            serf_bucket_t **req_bkt,
+            serf_response_acceptor_t *acceptor,
+            void **acceptor_baton,
+            serf_response_handler_t *handler,
+            void **handler_baton,
+            apr_pool_t *pool)
+{
+  report_fetch_t *fetch_ctx = setup_baton;
+  serf_bucket_t *hdrs_bkt;
+
+  /* create GET request */
+  setup_serf_req(request, req_bkt, &hdrs_bkt,
+                 fetch_ctx->sess, "GET", fetch_ctx->info->file_url,
+                 NULL, NULL);
+
+  /* note that we have old VC URL */
+  if (SVN_IS_VALID_REVNUM(fetch_ctx->info->base_rev))
+    {
+      serf_bucket_headers_setn(hdrs_bkt, SVN_DAV_DELTA_BASE_HEADER,
+                               fetch_ctx->info->delta_base->data);
+      serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding",
+                               "svndiff1;q=0.9,svndiff;q=0.8");
+    }
+  else
+    {
+      serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip");
+    }
+
+  *acceptor = fetch_ctx->acceptor;
+  *acceptor_baton = fetch_ctx->sess;
+  *handler = fetch_ctx->handler;
+  *handler_baton = fetch_ctx;
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t
 handle_fetch(serf_bucket_t *response,
              void *handler_baton,
              apr_pool_t *pool)
@@ -504,26 +551,8 @@ handle_fetch(serf_bucket_t *response,
   /* uh-oh.  our connection died on us; requeue. */
   if (!response)
     {
-      serf_request_t *request;
-      serf_bucket_t *req_bkt, *hdrs_bkt;
-
-      /* create GET request */
-      create_serf_req(&request, &req_bkt, &hdrs_bkt,
-                      fetch_ctx->sess, "GET", fetch_ctx->info->file_url,
-                      NULL, NULL);
-
-      /* note that we have old VC URL */
-      if (SVN_IS_VALID_REVNUM(fetch_ctx->info->base_rev))
-        {
-          serf_bucket_headers_setn(hdrs_bkt, SVN_DAV_DELTA_BASE_HEADER,
-                                   fetch_ctx->info->delta_base->data);
-          serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding",
-                                   "svndiff1;q=0.9,svndiff;q=0.8");
-        }
-
-      serf_request_deliver(request, req_bkt,
-                           accept_response, fetch_ctx->sess,
-                           handle_fetch, fetch_ctx);
+      serf_connection_request_create(fetch_ctx->sess->conn, setup_fetch,
+                                     fetch_ctx);
 
       return APR_SUCCESS;
     }
@@ -669,75 +698,6 @@ handle_fetch(serf_bucket_t *response,
   abort();
 }
 
-static void delta_file(report_context_t *ctx, report_info_t *info)
-{
-  const char *checked_in_url, *checksum;
-  const svn_string_t *delta_base;
-  serf_request_t *request;
-  serf_bucket_t *req_bkt, *hdrs_bkt;
-  report_fetch_t *fetch_ctx;
-  propfind_context_t *prop_ctx = NULL;
-  apr_hash_t *props;
-
-  /* go fetch info->file_name from DAV:checked-in */
-  checked_in_url = get_prop(info->dir->props, info->file_name,
-                            "DAV:", "checked-in");
-
-  if (!checked_in_url)
-    {
-      abort();
-    }
-
-  info->file_url = checked_in_url;
-
-  /* We now need to dive all the way into the WC to get the base VCC url. */
-  ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
-                                       info->file_name,
-                                       RA_SERF_WC_CHECKED_IN_URL,
-                                       &info->delta_base, info->pool);
-
-  /* First, create the PROPFIND to retrieve the properties. */
-  deliver_props(&prop_ctx, info->dir->props, ctx->sess,
-                info->file_url, SVN_INVALID_REVNUM, "0", all_props,
-                info->dir->pool);
-
-  if (!prop_ctx)
-    {
-      abort();
-    }
-
-  prop_ctx->cache_props = FALSE;
-
-  prop_ctx->next = ctx->active_propfinds;
-  ctx->active_propfinds = prop_ctx;
-
-  /* create GET request */
-  create_serf_req(&request, &req_bkt, &hdrs_bkt,
-                  ctx->sess,
-                  "GET", checked_in_url,
-                  NULL, NULL);
-
-  /* note that we have old VC URL */
-  serf_bucket_headers_setn(hdrs_bkt, SVN_DAV_DELTA_BASE_HEADER,
-                           delta_base->data);
-  serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding",
-                           "svndiff1;q=0.9,svndiff;q=0.8");
-
-  /* Create the fetch context. */
-  fetch_ctx = apr_pcalloc(ctx->sess->pool, sizeof(*fetch_ctx));
-  fetch_ctx->pool = info->pool;
-  fetch_ctx->info = info;
-  fetch_ctx->sess = ctx->sess;
-
-  serf_request_deliver(request, req_bkt,
-                       accept_response, ctx->sess,
-                       handle_fetch, fetch_ctx);
-
-  /* add the GET to our active list. */
-  fetch_ctx->next = ctx->active_fetches;
-  ctx->active_fetches = fetch_ctx;
-}
-
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
   const char *checked_in_url, *checksum;
@@ -773,22 +733,17 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   prop_ctx->next = ctx->active_propfinds;
   ctx->active_propfinds = prop_ctx;
 
-  /* create GET request */
-  create_serf_req(&request, &req_bkt, &hdrs_bkt,
-                  ctx->sess,
-                  "GET", checked_in_url,
-                  NULL, NULL);
-
   /* Create the fetch context. */
-  fetch_ctx = apr_pcalloc(ctx->sess->pool, sizeof(*fetch_ctx));
+  fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
   fetch_ctx->pool = info->pool;
   fetch_ctx->info = info;
   fetch_ctx->done = FALSE;
   fetch_ctx->sess = ctx->sess;
+  fetch_ctx->acceptor = accept_response;
+  fetch_ctx->handler = handle_fetch;
 
-  serf_request_deliver(request, req_bkt,
-                       accept_response, ctx->sess,
-                       handle_fetch, fetch_ctx);
+  serf_connection_request_create(fetch_ctx->sess->conn, setup_fetch,
+                                 fetch_ctx);
 
   /* add the GET to our active list. */
   fetch_ctx->next = ctx->active_fetches;
@@ -1104,7 +1059,14 @@ end_report(void *userData, const char *raw_name)
     }
   else if (ctx->state->state == OPEN_FILE)
     {
-      delta_file(ctx, ctx->state->info);
+      /* We now need to dive all the way into the WC to get the base VCC url. */
+      ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
+                                           ctx->state->info->file_name,
+                                           RA_SERF_WC_CHECKED_IN_URL,
+                                           &ctx->state->info->delta_base,
+                                           ctx->state->info->pool);
+
+      fetch_file(ctx, ctx->state->info);
       pop_state(ctx);
     }
   else if (ctx->state->state == ADD_FILE)
@@ -1140,6 +1102,31 @@ cdata_report(void *userData, const char *data, int len)
                     data, len, ctx->state->info->dir->pool);
 
     }
+}
+
+static apr_status_t
+setup_report(serf_request_t *request,
+             void *setup_baton,
+             serf_bucket_t **req_bkt,
+             serf_response_acceptor_t *acceptor,
+             void **acceptor_baton,
+             serf_response_handler_t *handler,
+             void **handler_baton,
+             apr_pool_t *pool)
+{
+  report_context_t *ctx = setup_baton;
+
+  /* create REPORT request */
+  setup_serf_req(request, req_bkt, NULL,
+                 ctx->sess, "REPORT", ctx->path,
+                 ctx->buckets, "text/xml");
+
+  *acceptor = ctx->acceptor;
+  *acceptor_baton = ctx->sess;
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
 }
 
 static apr_status_t
@@ -1279,14 +1266,11 @@ finish_report(void *report_baton,
     }
 
   /* create and deliver request */
-  create_serf_req(&request, &req_bkt, NULL,
-                  sess,
-                  "REPORT", vcc_url,
-                  report->buckets, "text/xml");
+  report->path = vcc_url;
+  report->acceptor = accept_response;
+  report->handler = handle_report;
 
-  serf_request_deliver(request, req_bkt,
-                       accept_response, sess,
-                       handle_report, report);
+  serf_connection_request_create(sess->conn, setup_report, report);
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {

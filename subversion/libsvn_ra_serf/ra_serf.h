@@ -146,6 +146,9 @@ typedef struct propfind_context_t {
   /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
 
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
+
   /* The next PROPFIND we have open. */
   struct propfind_context_t *next;
 } propfind_context_t;
@@ -246,11 +249,11 @@ cleanup_serf_session(void *data);
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  */
 void
-create_serf_req(serf_request_t **request,
-                serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
-                ra_serf_session_t *session,
-                const char *method, const char *url,
-                serf_bucket_t *body_bkt, const char *content_type);
+setup_serf_req(serf_request_t *request,
+               serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
+               ra_serf_session_t *session,
+               const char *method, const char *url,
+               serf_bucket_t *body_bkt, const char *content_type);
 
 /**
  * This function will run the serf context in SESS until *DONE is TRUE.

@@ -77,6 +77,14 @@ typedef struct {
   /* are we done? */
   svn_boolean_t done;
 
+  ra_serf_session_t *session;
+
+  const char *path;
+  serf_bucket_t *buckets;
+
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
+
 } loc_context_t;
 
 
@@ -176,6 +184,30 @@ end_getloc(void *userData, const char *raw_name)
     {
       pop_state(loc_ctx);
     }
+}
+
+
+static apr_status_t
+setup_getloc(serf_request_t *request,
+               void *setup_baton,
+               serf_bucket_t **req_bkt,
+               serf_response_acceptor_t *acceptor,
+               void **acceptor_baton,
+               serf_response_handler_t *handler,
+               void **handler_baton,
+               apr_pool_t *pool)
+{
+  loc_context_t *ctx = setup_baton;
+
+  setup_serf_req(request, req_bkt, NULL, ctx->session,
+                 "REPORT", ctx->path, ctx->buckets, "text/xml");
+
+  *acceptor = ctx->acceptor;
+  *acceptor_baton = ctx->session;
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
 }
 
 static apr_status_t
@@ -306,12 +338,12 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
-  create_serf_req(&request, &req_bkt, NULL, session,
-                  "REPORT", req_url,
-                  buckets, "text/xml");
+  loc_ctx->buckets = buckets;
+  loc_ctx->path = req_url;
+  loc_ctx->acceptor = accept_response;
+  loc_ctx->handler = handle_getloc;
 
-  serf_request_deliver(request, req_bkt, accept_response, session,
-                       handle_getloc, loc_ctx);
+  serf_connection_request_create(session->conn, setup_getloc, loc_ctx);
 
   SVN_ERR(context_run_wait(&loc_ctx->done, session, pool));
 
