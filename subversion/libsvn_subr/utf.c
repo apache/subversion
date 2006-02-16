@@ -235,11 +235,11 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
 #ifndef AS400
-      if (frompage == APR_LOCALE_CHARSET)
+      if (frompage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf(pool,
                               _("Can't create a character converter from "
                                 "native encoding to '%s'"), topage);
-      else if (topage == APR_LOCALE_CHARSET)
+      else if (topage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf(pool,
                               _("Can't create a character converter from "
                                 "'%s' to native encoding"), frompage);
@@ -262,9 +262,9 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
   *ret = apr_palloc(pool, sizeof(xlate_handle_node_t));
   (*ret)->handle = handle;
   (*ret)->valid = TRUE;
-  (*ret)->frompage = ((frompage != APR_LOCALE_CHARSET)
+  (*ret)->frompage = ((frompage != SVN_APR_LOCALE_CHARSET)
                       ? apr_pstrdup(pool, frompage) : frompage);
-  (*ret)->topage = ((topage != APR_LOCALE_CHARSET)
+  (*ret)->topage = ((topage != SVN_APR_LOCALE_CHARSET)
                     ? apr_pstrdup(pool, topage) : topage);
   (*ret)->next = NULL;
 
@@ -340,7 +340,8 @@ put_xlate_handle_node(xlate_handle_node_t *node,
 static svn_error_t *
 get_ntou_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 {
-  return get_xlate_handle_node(ret, "UTF-8", APR_LOCALE_CHARSET,
+  return get_xlate_handle_node(ret, SVN_APR_UTF8_CHARSET,
+                               SVN_APR_LOCALE_CHARSET,
                                SVN_UTF_NTOU_XLATE_HANDLE, pool);
 }
 
@@ -353,7 +354,8 @@ get_ntou_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 static svn_error_t *
 get_uton_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 {
-  return get_xlate_handle_node(ret, APR_LOCALE_CHARSET, "UTF-8",
+  return get_xlate_handle_node(ret, SVN_APR_LOCALE_CHARSET,
+                               SVN_APR_UTF8_CHARSET,
                                SVN_UTF_UTON_XLATE_HANDLE, pool);
 }
 
@@ -475,11 +477,11 @@ convert_to_stringbuf(xlate_handle_node_t *node,
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
 #ifndef AS400
-      if (node->frompage == APR_LOCALE_CHARSET)
+      if (node->frompage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf
           (pool, _("Can't convert string from native encoding to '%s':"),
            node->topage);
-      else if (node->topage == APR_LOCALE_CHARSET)
+      else if (node->topage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf
           (pool, _("Can't convert string from '%s' to native encoding:"),
            node->frompage);
@@ -727,7 +729,8 @@ svn_utf_cstring_to_utf8_ex(const char **dest,
   xlate_handle_node_t *node;
   svn_error_t *err;
 
-  SVN_ERR(get_xlate_handle_node(&node, "UTF-8", frompage, convset_key, pool));
+  SVN_ERR(get_xlate_handle_node(&node, SVN_APR_UTF8_CHARSET, frompage,
+                                convset_key, pool));
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, convset_key, pool);
   SVN_ERR(err);
@@ -829,7 +832,8 @@ svn_utf_cstring_from_utf8_ex(const char **dest,
 
   SVN_ERR(check_utf8(src, strlen(src), pool));
 
-  SVN_ERR(get_xlate_handle_node(&node, topage, "UTF-8", convset_key, pool));
+  SVN_ERR(get_xlate_handle_node(&node, topage, SVN_APR_UTF8_CHARSET,
+                                convset_key, pool));
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, convset_key, pool);
 
