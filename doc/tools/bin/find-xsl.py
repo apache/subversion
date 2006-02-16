@@ -2,6 +2,7 @@
 
 import sys
 import os
+import glob
 
 #######################################################
 candidate_xsldirs = (
@@ -15,6 +16,8 @@ candidate_xsldirs = (
     '/usr/share/xml/docbook/stylesheet/nwalsh/current',
     # FreeBSD
     '/usr/local/share/xsl/docbook',
+    # Gentoo
+    '/usr/share/sgml/docbook/xsl-stylesheets-*',
     # Please add your OS's location here if not listed!
     )
 #######################################################
@@ -27,10 +30,15 @@ if os.path.exists(xsl_dir):
   sys.exit(0)
 
 for i in candidate_xsldirs:
-  if os.path.exists(os.path.join(i, 'html', 'docbook.xsl')):
-    os.symlink(i, xsl_dir)
-    print "Found and linked %s" % (i,)
-    break
-else:
-  sys.stderr.write('ERROR: Failed to find a DocBook XSL directory\n')
-  sys.exit(1)
+  globs = glob.glob(i)
+  # Crude method of preferring the highest version, when multiple exist
+  globs.sort() 
+  globs.reverse()
+  for j in globs:
+    if os.path.exists(os.path.join(i, 'html', 'docbook.xsl')):
+      os.symlink(i, xsl_dir)
+      print "Found and linked %s" % (i,)
+      sys.exit(0)
+
+sys.stderr.write('ERROR: Failed to find a DocBook XSL directory\n')
+sys.exit(1)
