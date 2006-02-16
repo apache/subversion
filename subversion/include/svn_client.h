@@ -524,13 +524,6 @@ typedef struct svn_client_diff_summarize_t
   /** Path relative to the target. */
   const char *path;
 
-  /** The path from which this item was copied, else NULL. */
-  const char *copyfrom_path;
-  
-  /** The revision from which this item was copied, else
-   * @c SVN_INVALID_REVNUM. */
-  svn_revnum_t copyfrom_rev;
-
   /** Change kind */
   svn_client_diff_summarize_kind_t summarize_kind;
 

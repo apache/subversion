@@ -96,7 +96,6 @@ ensure_summarize(struct item_baton *ib,
   sum->node_kind = ib->node_kind;
   sum->summarize_kind = sum_kind;
   sum->path = ib->path;
-  sum->copyfrom_rev = SVN_INVALID_REVNUM;
 
   ib->summarize = sum;
 }
@@ -139,7 +138,6 @@ delete_entry(const char *path,
   sum->summarize_kind = svn_client_diff_summarize_kind_deleted;
   sum->path = path;
   sum->node_kind = kind;
-  sum->copyfrom_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR(eb->summarize_func(sum, eb->summarize_func_baton, pool));
 
@@ -160,8 +158,6 @@ add_directory(const char *path,
 
   cb = create_item_baton(pb->edit_baton, path, svn_node_dir, pool);
   ensure_summarize(cb, svn_client_diff_summarize_kind_added);
-  cb->summarize->copyfrom_path = copyfrom_path;
-  cb->summarize->copyfrom_rev = copyfrom_rev;
 
   *child_baton = cb;
   return SVN_NO_ERROR;

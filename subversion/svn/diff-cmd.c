@@ -78,10 +78,9 @@ summarize_func(const svn_client_diff_summarize_t *summary,
    *       a diff summary would go. */
 
   SVN_ERR(svn_cmdline_printf(pool,
-                             "%c%c %c   %s\n",
+                             "%c%c     %s\n",
                              text_mod_char(summary->summarize_kind),
                              summary->prop_changed ? 'M' : ' ',
-                             summary->copyfrom_path ? '+' : ' ',
                              path));
 
   return SVN_NO_ERROR;

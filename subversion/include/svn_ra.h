@@ -893,6 +893,9 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note The reporter provided by this function does NOT supply copy-
+ * from information to the diff editor callbacks.
+ *
  * @since New in 1.4.
  */
 svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
