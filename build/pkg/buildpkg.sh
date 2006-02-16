@@ -62,7 +62,7 @@ do
   esac
 
   case "$1" in
-  --with-prefix=*)
+  --prefix=*)
   PREFIX=$optarg
   esac
 
