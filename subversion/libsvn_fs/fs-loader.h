@@ -107,17 +107,6 @@ svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
 svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
                              fs_library_vtable_t **vtable);
 
-/* Set *SAME_P to TRUE iff FS1 and FS2 have the same UUID.
- * Use POOL for temporary allocation only.
- *
- * Note: this is shared between all fs backends because its
- * implementation uses only public svn_fs APIs.  However, it is not
- * public itself because its only callers are within the fs layer.
- */
-svn_error_t *svn_fs__same_p(svn_boolean_t *same_p,
-                            svn_fs_t *fs1, svn_fs_t *fs2,
-                            apr_pool_t *pool);
-
 
 
 /*** vtable types for the abstract FS objects ***/

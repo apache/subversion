@@ -879,25 +879,6 @@ svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
   return fs->vtable->set_uuid(fs, uuid, pool);
 }
 
-svn_error_t *svn_fs__same_p(svn_boolean_t *same_p,
-                            svn_fs_t *fs1,
-                            svn_fs_t *fs2,
-                            apr_pool_t *pool)
-{
-  const char *uuid1;
-  const char *uuid2;
-
-  /* Random thought: if fetching UUIDs to compare filesystems is too
-     expensive, one solution would be to cache the UUID in each fs
-     object (copying the UUID into fs->pool, of course). */
-
-  SVN_ERR(svn_fs_get_uuid(fs1, &uuid1, pool));
-  SVN_ERR(svn_fs_get_uuid(fs2, &uuid2, pool));
-
-  *same_p = ! strcmp(uuid1, uuid2);
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path, 
             const char *token, const char *comment,
