@@ -2892,7 +2892,7 @@ txn_body_copy(void *baton,
 }
 
 
-/* Set *SAME_P to TRUE iff FS1 and FS2 have the same UUID.
+/* Set *SAME_P to TRUE if FS1 and FS2 have the same UUID, else set to FALSE.
    Use POOL for temporary allocation only.
    Note: this code is duplicated between libsvn_fs_fs and libsvn_fs_base. */
 static svn_error_t *
