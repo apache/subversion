@@ -127,7 +127,7 @@ start_getloc(void *userData, const char *raw_name, const char **attrs)
 
   define_ns(&loc_ctx->ns_list, attrs, loc_ctx->pool);
 
-  name = expand_ns(loc_ctx->ns_list, raw_name, loc_ctx->pool);
+  name = expand_ns(loc_ctx->ns_list, raw_name);
 
   if (!loc_ctx->state && strcmp(name.name, "get-locations-report") == 0)
     {
@@ -172,7 +172,7 @@ end_getloc(void *userData, const char *raw_name)
 
   cur_state = loc_ctx->state;
 
-  name = expand_ns(loc_ctx->ns_list, raw_name, loc_ctx->pool);
+  name = expand_ns(loc_ctx->ns_list, raw_name);
 
   if (cur_state->state == REPORT &&
       strcmp(name.name, "get-locations-report") == 0)

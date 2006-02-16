@@ -65,7 +65,10 @@ typedef struct report_dir_t
   /* our pool */
   apr_pool_t *pool;
 
-  /* the containing directory name */
+  /* the base name. */
+  const char *base_name;
+
+  /* the containing directory name (including parents) */
   const char *name;
 
   /* temporary path buffer for this directory. */
@@ -87,6 +90,9 @@ typedef struct report_dir_t
 
   /* How many references to this directory do we still have open? */
   apr_size_t ref_count;
+
+  /* Namespace list allocated out of this ->pool. */
+  ns_t *ns_list;
 
   /* hashtable that stores all of the properties (shared globally) */
   apr_hash_t *props;
@@ -119,11 +125,14 @@ typedef struct report_info_t
   /* The enclosing directory. */
   report_dir_t *dir;
 
-  /* the name of the file. */
-  const char *file_name;
+  /* the base name of the file. */
+  const char *base_name;
+
+  /* the name of the file (fully-expanded including the parent). */
+  const char *name;
 
   /* file name buffer */
-  svn_stringbuf_t *file_name_buf;
+  svn_stringbuf_t *name_buf;
 
   /* the canonical url for this path. */
   const char *file_url;
@@ -187,6 +196,12 @@ typedef struct report_state_list_t {
   /* Information */
   report_info_t *info;
 
+  /* Temporary pool */
+  apr_pool_t *pool;
+
+  /* Temporary namespace list */
+  ns_t *ns_list;
+
   /* The previous state we were in. */
   struct report_state_list_t *prev;
 } report_state_list_t;
@@ -242,11 +257,15 @@ static void push_state(report_context_t *ctx, report_state_e state)
   if (!ctx->free_state)
     {
       new_state = apr_palloc(ctx->sess->pool, sizeof(*ctx->state));
+
+      apr_pool_create(&new_state->pool, ctx->sess->pool);
     }
   else
     {
       new_state = ctx->free_state;
       ctx->free_state = ctx->free_state->prev;
+
+      apr_pool_clear(new_state->pool);
     }
   new_state->state = state;
 
@@ -262,6 +281,7 @@ static void push_state(report_context_t *ctx, report_state_e state)
 
       /* Create the root property tree. */
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
+      new_state->info->dir->ns_list = NULL;
 
       /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
@@ -283,6 +303,7 @@ static void push_state(report_context_t *ctx, report_state_e state)
       new_state->info->dir->parent_dir->ref_count++;
 
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
+      new_state->info->dir->ns_list = new_state->info->dir->ns_list;
 
       /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
@@ -311,6 +332,16 @@ static void push_state(report_context_t *ctx, report_state_e state)
   else
     {
       abort();
+    }
+
+  if (!ctx->state)
+    {
+      /* Attach to the root state. */
+      new_state->ns_list = ctx->ns_list;
+    }
+  else
+    {
+      new_state->ns_list = ctx->state->ns_list;
     }
 
   /* Add it to the state chain. */
@@ -402,9 +433,12 @@ open_dir(report_dir_t *dir)
       return SVN_NO_ERROR;
     }
 
-  if (dir->name[0] == '\0')
+  if (dir->base_name[0] == '\0')
     {
       apr_pool_create(&dir->dir_baton_pool, dir->pool);
+
+      dir->name_buf = svn_stringbuf_create("", dir->dir_baton_pool);
+      dir->name = dir->name_buf->data;
 
       SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
                                             dir->pool, &dir->dir_baton));
@@ -414,6 +448,12 @@ open_dir(report_dir_t *dir)
       SVN_ERR(open_dir(dir->parent_dir));
 
       apr_pool_create(&dir->dir_baton_pool, dir->parent_dir->dir_baton_pool);
+
+      /* Expand our name. */
+      dir->name_buf = svn_stringbuf_dup(dir->parent_dir->name_buf,
+                                        dir->dir_baton_pool);
+      svn_path_add_component(dir->name_buf, dir->base_name);
+      dir->name = dir->name_buf->data;
 
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
@@ -440,10 +480,10 @@ close_dir(report_dir_t *dir)
 {
   report_dir_t *prev, *sibling;
 
-  walk_all_props(dir->props, dir->name, SVN_INVALID_REVNUM, set_dir_props, dir,
-                 dir->pool);
+  walk_all_props(dir->props, dir->base_name, SVN_INVALID_REVNUM,
+                 set_dir_props, dir, dir->dir_baton_pool);
   walk_all_props(dir->props, dir->url, SVN_INVALID_REVNUM, set_dir_props, dir,
-                 dir->pool);
+                 dir->dir_baton_pool);
   SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
                                               dir->dir_baton_pool));
 
@@ -573,7 +613,7 @@ handle_fetch(serf_bucket_t *response,
       svn_txdelta_op_t delta_op;
       svn_string_t window_data;
 
-      status = serf_bucket_read(response, 2048, &data, &len);
+      status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return status;
@@ -598,9 +638,18 @@ handle_fetch(serf_bucket_t *response,
 
           apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
 
+          /* Expand our full name now if we haven't done so yet. */
+          if (!info->name)
+            {
+              info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
+                                                 info->dir->dir_baton_pool);
+              svn_path_add_component(info->name_buf, info->base_name);
+              info->name = info->name_buf->data;
+            }
+
           if (SVN_IS_VALID_REVNUM(info->base_rev))
             {
-              err = info->dir->update_editor->open_file(info->file_name,
+              err = info->dir->update_editor->open_file(info->name,
                                               info->dir->dir_baton,
                                               info->base_rev,
                                               info->editor_pool,
@@ -608,7 +657,7 @@ handle_fetch(serf_bucket_t *response,
             }
           else
             {
-              err = info->dir->update_editor->add_file(info->file_name,
+              err = info->dir->update_editor->add_file(info->name,
                                               info->dir->dir_baton,
                                               NULL,
                                               info->base_rev,
@@ -667,7 +716,7 @@ handle_fetch(serf_bucket_t *response,
 
           /* set all of the properties we received */
           walk_all_props(info->dir->props,
-                         info->file_name,
+                         info->base_name,
                          SVN_INVALID_REVNUM,
                          set_file_props,
                          info, info->editor_pool);
@@ -707,8 +756,8 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   propfind_context_t *prop_ctx = NULL;
   apr_hash_t *props;
 
-  /* go fetch info->file_name from DAV:checked-in */
-  checked_in_url = get_prop(info->dir->props, info->file_name,
+  /* go fetch info->name from DAV:checked-in */
+  checked_in_url = get_prop(info->dir->props, info->base_name,
                          "DAV:", "checked-in");
 
   if (!checked_in_url)
@@ -755,12 +804,25 @@ start_report(void *userData, const char *name, const char **attrs)
 {
   report_context_t *ctx = userData;
   dav_props_t prop_name;
+  apr_pool_t *pool;
+  ns_t **ns_list;
+
+  if (!ctx->state)
+    {
+      pool = ctx->sess->pool;
+      ns_list = &ctx->ns_list;
+    }
+  else
+    {
+      pool = ctx->state->pool;
+      ns_list = &ctx->state->ns_list;
+    }
 
   /* check for new namespaces */
-  define_ns(&ctx->ns_list, attrs, ctx->sess->pool);
+  define_ns(ns_list, attrs, pool);
 
   /* look up name space if present */
-  prop_name = expand_ns(ctx->ns_list, name, ctx->sess->pool);
+  prop_name = expand_ns(*ns_list, name);
 
   if (!ctx->state && strcmp(prop_name.name, "target-revision") == 0)
     {
@@ -796,9 +858,11 @@ start_report(void *userData, const char *name, const char **attrs)
       info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
 
-      info->dir->name_buf = svn_stringbuf_create("", info->pool);
-      info->dir->name = "";
-      info->file_name = "";
+      info->dir->base_name = "";
+      info->dir->name = NULL;
+
+      info->base_name = info->dir->base_name;
+      info->name = info->dir->name;
     }
   else if (!ctx->state)
     {
@@ -833,9 +897,11 @@ start_report(void *userData, const char *name, const char **attrs)
       info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
 
-      dir_info->name_buf = svn_stringbuf_create(dirname, info->pool);
-      dir_info->name = dir_info->name_buf->data;
-      info->file_name = dir_info->name_buf->data;
+      info->dir->base_name = apr_pstrdup(info->dir->pool, dirname);
+      info->dir->name = NULL;
+
+      ctx->state->info->base_name = dir_info->base_name;
+      ctx->state->info->name = dir_info->name;
     }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "add-directory") == 0)
@@ -849,11 +915,11 @@ start_report(void *userData, const char *name, const char **attrs)
 
       dir_info = ctx->state->info->dir;
 
-      dir_info->name_buf = svn_stringbuf_dup(dir_info->parent_dir->name_buf,
-                                             dir_info->pool);
-      svn_path_add_component(dir_info->name_buf, dir_name);
-      dir_info->name = dir_info->name_buf->data;
-      ctx->state->info->file_name = dir_info->name_buf->data;
+      dir_info->base_name = apr_pstrdup(dir_info->pool, dir_name);
+      dir_info->name = NULL;
+
+      ctx->state->info->base_name = dir_info->base_name;
+      ctx->state->info->name = dir_info->name;
 
       /* Mark that we don't have a base. */
       ctx->state->info->base_rev = SVN_INVALID_REVNUM;
@@ -885,10 +951,8 @@ start_report(void *userData, const char *name, const char **attrs)
 
       info->base_rev = apr_atoi64(rev);
 
-      info->file_name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                              info->pool);
-      svn_path_add_component(info->file_name_buf, file_name);
-      info->file_name = info->file_name_buf->data;
+      info->base_name = apr_pstrdup(info->pool, file_name);
+      info->name = NULL;
     }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "add-file") == 0)
@@ -909,10 +973,8 @@ start_report(void *userData, const char *name, const char **attrs)
 
       info->base_rev = SVN_INVALID_REVNUM;
 
-      info->file_name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                              info->pool);
-      svn_path_add_component(info->file_name_buf, file_name);
-      info->file_name = info->file_name_buf->data;
+      info->base_name = apr_pstrdup(info->pool, file_name);
+      info->name = NULL;
     }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "delete-entry") == 0)
@@ -940,7 +1002,8 @@ start_report(void *userData, const char *name, const char **attrs)
       if (strcmp(prop_name.name, "checked-in") == 0)
         {
           ctx->state->info->prop_ns = prop_name.namespace;
-          ctx->state->info->prop_name = prop_name.name;
+          ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
+                                                    prop_name.name);
           ctx->state->info->prop_val = NULL;
           push_state(ctx, IGNORE_PROP_NAME);
         }
@@ -950,11 +1013,11 @@ start_report(void *userData, const char *name, const char **attrs)
           dav_props_t new_prop_name;
 
           full_prop_name = find_attr(attrs, "name");
-          new_prop_name = expand_ns(ctx->ns_list, full_prop_name,
-                                    ctx->state->info->dir->pool);
+          new_prop_name = expand_ns(ctx->state->ns_list, full_prop_name);
 
           ctx->state->info->prop_ns = new_prop_name.namespace;
-          ctx->state->info->prop_name = new_prop_name.name;
+          ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
+                                                    new_prop_name.name);
           ctx->state->info->prop_val = NULL;
           push_state(ctx, PROP);
         }
@@ -978,7 +1041,8 @@ start_report(void *userData, const char *name, const char **attrs)
       if (strcmp(prop_name.name, "checked-in") == 0)
         {
           ctx->state->info->prop_ns = prop_name.namespace;
-          ctx->state->info->prop_name = prop_name.name;
+          ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
+                                                    prop_name.name);
           ctx->state->info->prop_val = NULL;
           push_state(ctx, IGNORE_PROP_NAME);
         }
@@ -995,7 +1059,8 @@ start_report(void *userData, const char *name, const char **attrs)
   else if (ctx->state->state == NEED_PROP_NAME)
     {
       ctx->state->info->prop_ns = prop_name.namespace;
-      ctx->state->info->prop_name = prop_name.name;
+      ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
+                                                prop_name.name);
       ctx->state->info->prop_val = NULL;
       push_state(ctx, PROP);
     }
@@ -1007,13 +1072,13 @@ end_report(void *userData, const char *raw_name)
   report_context_t *ctx = userData;
   dav_props_t name;
 
-  name = expand_ns(ctx->ns_list, raw_name, ctx->sess->pool);
-
   if (!ctx->state)
     {
       /* nothing to close yet. */
       return;
     }
+
+  name = expand_ns(ctx->state->ns_list, raw_name);
 
   if (((ctx->state->state == OPEN_DIR &&
         (strcmp(name.name, "open-directory") == 0)) ||
@@ -1028,8 +1093,8 @@ end_report(void *userData, const char *raw_name)
       report_info_t *info = ctx->state->info;
 
       /* go fetch info->file_name from DAV:checked-in */
-      checked_in_url = get_prop(info->dir->props, info->file_name,
-                                  "DAV:", "checked-in");
+      checked_in_url = get_prop(info->dir->props, info->base_name,
+                                "DAV:", "checked-in");
 
       if (!checked_in_url)
         {
@@ -1059,14 +1124,31 @@ end_report(void *userData, const char *raw_name)
     }
   else if (ctx->state->state == OPEN_FILE)
     {
+      report_info_t *info = ctx->state->info;
+
+      /* At this point, we *must* create our parent's names. */
+      if (!info->dir->dir_baton)
+        {
+          open_dir(info->dir);
+        }
+
+      /* Expand our full name now if we haven't done so yet. */
+      if (!info->name)
+        {
+          info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
+                                             info->dir->dir_baton_pool);
+          svn_path_add_component(info->name_buf, info->base_name);
+          info->name = info->name_buf->data;
+        }
+
       /* We now need to dive all the way into the WC to get the base VCC url. */
       ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
-                                           ctx->state->info->file_name,
+                                           info->name,
                                            RA_SERF_WC_CHECKED_IN_URL,
-                                           &ctx->state->info->delta_base,
-                                           ctx->state->info->pool);
+                                           &info->delta_base,
+                                           info->pool);
 
-      fetch_file(ctx, ctx->state->info);
+      fetch_file(ctx, info);
       pop_state(ctx);
     }
   else if (ctx->state->state == ADD_FILE)
@@ -1077,11 +1159,55 @@ end_report(void *userData, const char *raw_name)
     }
   else if (ctx->state->state == PROP)
     {
-      set_prop(ctx->state->info->dir->props,
-               ctx->state->info->file_name,
-               ctx->state->info->prop_ns, ctx->state->info->prop_name,
-               ctx->state->info->prop_val,
-               ctx->state->info->dir->pool);
+      /* We need to move the prop_ns, prop_name, and prop_val into the
+       * same lifetime as the dir->pool.
+       */
+      ns_t *ns, *ns_name_match;
+      int found = 0;
+      report_dir_t *dir;
+
+      dir = ctx->state->info->dir;
+
+      /* We're going to be slightly tricky.  We don't care what the ->url
+       * field is here at this point.  So, we're going to stick a single
+       * copy of the property name inside of the ->url field.
+       */
+      ns_name_match = NULL;
+      for (ns = dir->ns_list; ns; ns = ns->next)
+        {
+          if (strcmp(ns->namespace, ctx->state->info->prop_ns) == 0)
+            {
+              ns_name_match = ns;
+              if (strcmp(ns->url, ctx->state->info->prop_name) == 0)
+                {
+                  found = 1;
+                  break;
+                }
+            }
+        }
+
+      if (!found)
+        {
+          ns = apr_palloc(dir->pool, sizeof(*ns));
+          if (!ns_name_match)
+            {
+              ns->namespace = apr_pstrdup(dir->pool, ctx->state->info->prop_ns);
+            }
+          else
+            {
+              ns->namespace = ns_name_match->namespace;
+            }
+          ns->url = apr_pstrdup(dir->pool, ctx->state->info->prop_name);
+
+          ns->next = dir->ns_list;
+          dir->ns_list = ns;
+        }
+
+      set_prop(dir->props, ctx->state->info->base_name,
+               ns->namespace, ns->url,
+               apr_pstrmemdup(dir->pool, ctx->state->info->prop_val,
+                              ctx->state->info->prop_val_len),
+               dir->pool);
       pop_state(ctx);
     }
   else if ((ctx->state->state == IGNORE_PROP_NAME ||
@@ -1099,7 +1225,7 @@ cdata_report(void *userData, const char *data, int len)
     {
       expand_string(&ctx->state->info->prop_val,
                     &ctx->state->info->prop_val_len,
-                    data, len, ctx->state->info->dir->pool);
+                    data, len, ctx->state->pool);
 
     }
 }

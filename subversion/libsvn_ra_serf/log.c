@@ -185,7 +185,7 @@ start_log(void *userData, const char *raw_name, const char **attrs)
 
   define_ns(&log_ctx->ns_list, attrs, log_ctx->pool);
 
-  name = expand_ns(log_ctx->ns_list, raw_name, log_ctx->pool);
+  name = expand_ns(log_ctx->ns_list, raw_name);
 
   if (!log_ctx->state && strcmp(name.name, "log-report") == 0)
     {
@@ -239,7 +239,7 @@ end_log(void *userData, const char *raw_name)
 
   cur_state = log_ctx->state;
 
-  name = expand_ns(log_ctx->ns_list, raw_name, log_ctx->pool);
+  name = expand_ns(log_ctx->ns_list, raw_name);
 
   if (cur_state->state == REPORT &&
       strcmp(name.name, "log-report") == 0)

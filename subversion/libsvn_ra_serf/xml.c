@@ -48,16 +48,29 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
       if (strncmp(*tmp_attrs, "xmlns", 5) == 0)
         {
           const char *attr, *attr_val;
-          ns_t *new_ns;
+          ns_t *new_ns, *cur_ns;
+          int found = 0;
 
-          new_ns = apr_palloc(pool, sizeof(*new_ns));
+          /* Have we already defined this ns previously? */
+          for (cur_ns = *ns_list; cur_ns; cur_ns = cur_ns->next)
+            {
+              if (strcmp(cur_ns->namespace, tmp_attrs[0]+6) == 0)
+                {
+                  found = 1;
+                  break;
+                }
+            }
 
-          new_ns->namespace = apr_pstrdup(pool, tmp_attrs[0]+6);
-          new_ns->url = apr_pstrdup(pool, tmp_attrs[1]);
+          if (!found)
+            {
+              new_ns = apr_palloc(pool, sizeof(*new_ns));
+              new_ns->namespace = apr_pstrdup(pool, tmp_attrs[0]+6);
+              new_ns->url = apr_pstrdup(pool, tmp_attrs[1]);
 
-          new_ns->next = *ns_list;
+              new_ns->next = *ns_list;
 
-          *ns_list = new_ns;
+              *ns_list = new_ns;
+            }
         }
       tmp_attrs += 2;
     }
@@ -69,7 +82,7 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
  * has a lifetime tied to POOL.
  */
 dav_props_t
-expand_ns(ns_t *ns_list, const char *name, apr_pool_t *pool)
+expand_ns(ns_t *ns_list, const char *name)
 {
   char *colon;
   dav_props_t prop_name;
@@ -77,29 +90,30 @@ expand_ns(ns_t *ns_list, const char *name, apr_pool_t *pool)
   colon = strchr(name, ':');
   if (colon)
     {
-      char *stripped_name;
       ns_t *ns;
 
-      stripped_name = apr_pstrmemdup(pool, name, colon-name);
+      *colon = '\0';
       for (ns = ns_list; ns; ns = ns->next)
         {
-          if (strcmp(ns->namespace, stripped_name) == 0)
+          if (strcmp(ns->namespace, name) == 0)
             {
               prop_name.namespace = ns->url;
+              break;
             }
         }
       if (!prop_name.namespace)
         {
           abort();
         }
+      *colon = ':';
 
-      prop_name.name = apr_pstrdup(pool, colon + 1);
+      prop_name.name = colon + 1;
     }
   else
     {
       /* use default namespace for now */
       prop_name.namespace = "";
-      prop_name.name = apr_pstrdup(pool, name);
+      prop_name.name = name;
     }
 
   return prop_name;

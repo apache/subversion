@@ -170,7 +170,7 @@ handle_xml_parser(serf_bucket_t *response,
 
   while (1)
     {
-      status = serf_bucket_read(response, 2048, &data, &len);
+      status = serf_bucket_read(response, 8000, &data, &len);
 
       if (SERF_BUCKET_READ_ERROR(status))
         {
