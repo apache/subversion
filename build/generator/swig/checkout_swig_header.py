@@ -3,7 +3,7 @@
 # Checkout files from the SWIG library into Subversion's proxy directory
 #
 
-import sys, os, re, fileinput
+import sys, os, re, fileinput, shutil
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
