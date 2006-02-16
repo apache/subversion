@@ -125,12 +125,12 @@ start_propfind(void *userData, const char *name, const char **attrs)
   define_ns(&ctx->ns_list, attrs, ctx->pool);
 
   /* look up name space if present */
-  prop_name = expand_ns(ctx->ns_list, name, ctx->pool);
+  prop_name = expand_ns(ctx->ns_list, name);
 
   if (ctx->in_prop && !ctx->attr_name)
     {
       ctx->ns = prop_name.namespace;
-      ctx->attr_name = prop_name.name;
+      ctx->attr_name = apr_pstrdup(ctx->pool, prop_name.name);
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = TRUE;
     }
