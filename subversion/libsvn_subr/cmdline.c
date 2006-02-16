@@ -308,7 +308,7 @@ const char *svn_cmdline_output_encoding(apr_pool_t *pool)
   if (output_encoding)
     return apr_pstrdup(pool, output_encoding);
   else
-    return APR_LOCALE_CHARSET;
+    return SVN_APR_LOCALE_CHARSET;
 }
 
 int

@@ -994,7 +994,7 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
   return svn_diff_file_output_unified2(output_stream, diff,
                                        original_path, modified_path,
                                        original_header, modified_header,
-                                       APR_LOCALE_CHARSET, pool);
+                                       SVN_APR_LOCALE_CHARSET, pool);
 }
 
 
