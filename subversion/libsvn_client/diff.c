@@ -487,26 +487,14 @@ diff_content_changed(const char *path,
   else   /* use libsvn_diff to generate the diff  */
     {
       svn_diff_t *diff;
+      svn_diff_file_options_t *opts = svn_diff_file_options_create(subpool);
 
-      /* We don't currently support any options (well, other than -u, since we 
-         default to unified diff output anyway), so if we received anything 
-         other than that it's an error. */
       if (diff_cmd_baton->options)
-        {
-          for (i = 0; i < diff_cmd_baton->options->nelts; ++i)
-            {
-              const char *arg
-                = ((const char **)(diff_cmd_baton->options->elts))[i];
+        SVN_ERR(svn_diff_file_options_parse(opts, diff_cmd_baton->options,
+                                            subpool));
 
-              if (strcmp(arg, "-u") == 0)
-                continue;
-              else
-                return svn_error_createf(SVN_ERR_INVALID_DIFF_OPTION, NULL,
-                                         _("'%s' is not supported"), arg);
-            }
-        }
-
-      SVN_ERR(svn_diff_file_diff(&diff, tmpfile1, tmpfile2, subpool));
+      SVN_ERR(svn_diff_file_diff_2(&diff, tmpfile1, tmpfile2, opts,
+                                   subpool));
 
       if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty)
         {
