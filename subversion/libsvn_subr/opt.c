@@ -24,11 +24,11 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <apr_file_info.h>
 
 #include "svn_cmdline.h"
 #include "svn_version.h"
 #include "svn_types.h"
-#include "svn_wc.h"
 #include "svn_opt.h"
 #include "svn_error.h"
 #include "svn_path.h"
