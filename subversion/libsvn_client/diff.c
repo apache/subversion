@@ -2,7 +2,7 @@
  * diff.c: comparing and merging
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2178,7 +2178,12 @@ diff_repos_wc(const apr_array_header_t *options,
   SVN_ERR(svn_client__get_revision_number
           (&rev, ra_session, revision1, 
            (path1 == url1) ? NULL : path1, pool));
-  callback_baton->revnum1 = rev;
+
+  if (!reverse)
+    callback_baton->revnum1 = rev;
+  else
+    callback_baton->revnum2 = rev;
+
   SVN_ERR(svn_ra_do_diff2(ra_session,
                           &reporter, &report_baton,
                           rev,
