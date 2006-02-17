@@ -21,13 +21,6 @@
  *       value == 1 if syntax of authz file is invalid or file not found
  *       value == 2 in case of general error
  *
- *  To compile on unix against Subversion and APR libraries, try
- *  something like:
- *
- *  cc svnauthz-validate.c -o svnauthz-validate \
- *  -I../subversion/include -I../apr/include/ -I../apr-util/include \
- *  -L/usr/local/lib -lsvn_repos-1
- *
  */
 
 #include "svn_pools.h"
