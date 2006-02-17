@@ -72,10 +72,15 @@ apr_status_t
 cleanup_serf_session(void *data)
 {
   ra_serf_session_t *serf_sess = data;
-  if (serf_sess->conn)
+  int i;
+
+  for (i = 0; i < serf_sess->num_conns; i++)
     {
-      serf_connection_close(serf_sess->conn);
-      serf_sess->conn = NULL;
+      if (serf_sess->conns[i])
+        {
+          serf_connection_close(serf_sess->conns[i]);
+          serf_sess->conns[i] = NULL;
+        }
     }
   return APR_SUCCESS;
 }

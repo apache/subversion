@@ -451,7 +451,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->repos_url.path,
+  SVN_ERR(retrieve_props(props, session, session->conns[0],
+                         session->repos_url.path,
                          SVN_INVALID_REVNUM, "0", base_props, pool));
 
   /* Send the request to the baseline URL */
@@ -472,7 +473,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, vcc_url, SVN_INVALID_REVNUM, "0",
+  SVN_ERR(retrieve_props(props, session, session->conns[0], vcc_url,
+                         SVN_INVALID_REVNUM, "0",
                          checked_in_props, pool));
 
   baseline_url = get_prop(props, vcc_url, "DAV:", "checked-in");
@@ -482,8 +484,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, baseline_url, SVN_INVALID_REVNUM,
-                         "0", baseline_props, pool));
+  SVN_ERR(retrieve_props(props, session, session->conns[0], baseline_url,
+                         SVN_INVALID_REVNUM, "0", baseline_props, pool));
 
   basecoll_url = get_prop(props, baseline_url, "DAV:", "baseline-collection");
 
@@ -500,7 +502,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->acceptor = accept_response;
   log_ctx->handler = handle_log;
 
-  serf_connection_request_create(session->conn, setup_log, log_ctx);
+  serf_connection_request_create(session->conns[0], setup_log, log_ctx);
 
   SVN_ERR(context_run_wait(&log_ctx->done, session, pool));
 
