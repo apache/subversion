@@ -1031,7 +1031,7 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
   if ((err = svn_repos_fs_get_locks(&locks,
                                     resource->info->repos->repos,
                                     resource->info->repos_path,
-                                    dav_svn_authz_read, &arb,
+                                    dav_svn_authz_read_func(&arb), &arb,
                                     resource->pool)) != SVN_NO_ERROR)
     return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                err->message, resource->pool);      
@@ -1298,7 +1298,7 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   serr = svn_repos_trace_node_locations(resource->info->repos->fs,
                                         &fs_locations, abs_path, peg_revision,
                                         location_revisions,
-                                        dav_svn_authz_read, &arb,
+                                        dav_svn_authz_read_func(&arb), &arb,
                                         resource->pool);
 
   if (serr)

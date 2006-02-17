@@ -264,7 +264,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* Get the revisions and send them. */
   serr = svn_repos_get_file_revs(resource->info->repos->repos,
-                                 path, start, end, dav_svn_authz_read, &arb,
+                                 path, start, end,
+                                 dav_svn_authz_read_func(&arb), &arb,
                                  file_rev_handler, &frb, resource->pool);
 
   if (serr)
