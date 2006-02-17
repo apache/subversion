@@ -178,6 +178,15 @@ typedef struct report_fetch_t {
   /* Have we read our response headers yet? */
   svn_boolean_t read_headers;
 
+  /* This flag is set when our response is aborted before we reach the
+   * end and we decide to requeue this request.
+   */
+  svn_boolean_t aborted_read;
+  apr_off_t aborted_read_size;
+
+  /* This is the amount of data that we have read so far. */
+  apr_off_t read_size;
+
   /* If we're receiving an svndiff, this will be non-NULL. */
   svn_stream_t *delta_stream;
 
@@ -609,6 +618,20 @@ handle_fetch(serf_bucket_t *response,
   /* uh-oh.  our connection died on us; requeue. */
   if (!response)
     {
+      /* If we already started the fetch and opened the file handle, we need
+       * to hold subsequent read() ops until we get back to where we were
+       * before the close and we can then resume the textdelta() calls.
+       */
+      if (fetch_ctx->read_headers == TRUE)
+        {
+          if (fetch_ctx->aborted_read == FALSE && fetch_ctx->read_size)
+            {
+              fetch_ctx->aborted_read = TRUE;
+              fetch_ctx->aborted_read_size = fetch_ctx->read_size;
+            }
+          fetch_ctx->read_size = 0;
+        }
+
       serf_connection_request_create(fetch_ctx->conn, setup_fetch,
                                      fetch_ctx);
 
@@ -702,6 +725,35 @@ handle_fetch(serf_bucket_t *response,
             }
         }
 
+      fetch_ctx->read_size += len;
+
+      if (fetch_ctx->aborted_read == TRUE)
+        {
+          /* We haven't caught up to where we were before. */
+          if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
+            {
+              /* Eek.  What did the file shrink or something? */
+              if (APR_STATUS_IS_EOF(status))
+                {
+                  abort();
+                }
+
+              /* Skip on to the next iteration of this loop. */
+              if (APR_STATUS_IS_EAGAIN(status))
+                {
+                  return APR_SUCCESS;
+                }
+              continue;
+            }
+
+          /* Woo-hoo.  We're back. */ 
+          fetch_ctx->aborted_read = FALSE;
+
+          /* Increment data and len by the difference. */
+          data += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+          len += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+        }
+      
       if (fetch_ctx->delta_stream)
         {
           svn_stream_write(fetch_ctx->delta_stream, data, &len);
