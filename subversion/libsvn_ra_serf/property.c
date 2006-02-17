@@ -249,6 +249,7 @@ handle_propfind(serf_bucket_t *response,
       deliver_props(&ctx,
                     ctx->ret_props,
                     ctx->sess,
+                    ctx->conn,
                     ctx->path,
                     ctx->rev,
                     ctx->depth,
@@ -327,6 +328,7 @@ svn_error_t *
 deliver_props(propfind_context_t **prop_ctx,
               apr_hash_t *ret_props,
               ra_serf_session_t *sess,
+              serf_connection_t *conn,
               const char *path,
               svn_revnum_t rev,
               const char *depth,
@@ -361,6 +363,7 @@ deliver_props(propfind_context_t **prop_ctx,
       new_prop_ctx->depth = depth;
       new_prop_ctx->done = FALSE;
       new_prop_ctx->sess = sess;
+      new_prop_ctx->conn = conn;
       new_prop_ctx->rev = rev;
       new_prop_ctx->acceptor = accept_response;
       new_prop_ctx->handler = handle_propfind;
@@ -378,7 +381,7 @@ deliver_props(propfind_context_t **prop_ctx,
     }
 
   /* create and deliver request */
-  serf_connection_request_create(sess->conn, setup_propfind, *prop_ctx);
+  serf_connection_request_create(conn, setup_propfind, *prop_ctx);
 
   return SVN_NO_ERROR;
 }
@@ -401,6 +404,7 @@ wait_for_props(propfind_context_t *prop_ctx,
 svn_error_t *
 retrieve_props(apr_hash_t *prop_vals,
                ra_serf_session_t *sess,
+               serf_connection_t *conn,
                const char *url,
                svn_revnum_t rev,
                const char *depth,
@@ -409,8 +413,8 @@ retrieve_props(apr_hash_t *prop_vals,
 {
   propfind_context_t *prop_ctx = NULL;
 
-  SVN_ERR(deliver_props(&prop_ctx, prop_vals, sess, url, rev, depth, props,
-                        pool));
+  SVN_ERR(deliver_props(&prop_ctx, prop_vals, sess, conn, url, rev, depth,
+                        props, pool));
   if (prop_ctx)
     {
       SVN_ERR(wait_for_props(prop_ctx, sess, pool));

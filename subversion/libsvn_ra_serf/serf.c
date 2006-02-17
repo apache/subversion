@@ -74,7 +74,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_status_t status;
   ra_serf_session_t *serf_sess;
   apr_uri_t url;
-  apr_sockaddr_t *address;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   apr_pool_create(&serf_sess->pool, pool);
@@ -101,8 +100,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                             apr_pool_cleanup_null);
 
   /* fetch the DNS record for this host */
-  status = apr_sockaddr_info_get(&address, url.hostname, APR_UNSPEC,
-                                 url.port, 0, pool);
+  status = apr_sockaddr_info_get(&serf_sess->address, url.hostname,
+                                 APR_UNSPEC, url.port, 0, pool);
   if (status)
     {
       return svn_error_createf(status, NULL,
@@ -110,10 +109,13 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                url.scheme, url.hostname);
     }
 
+  serf_sess->conns = apr_palloc(pool, sizeof(*serf_sess->conns) * 4);
   /* go ahead and tell serf about the connection. */
-  serf_sess->conn = serf_connection_create(serf_sess->context, address,
-                                           conn_setup, serf_sess,
-                                           conn_closed, serf_sess, pool);
+  serf_sess->conns[0] = serf_connection_create(serf_sess->context,
+                                               serf_sess->address,
+                                               conn_setup, serf_sess,
+                                               conn_closed, serf_sess, pool);
+  serf_sess->num_conns = 1;
 
   session->priv = serf_sess;
 
@@ -154,7 +156,8 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->repos_url.path,
+  SVN_ERR(retrieve_props(props, session, session->conns[0],
+                         session->repos_url.path,
                          SVN_INVALID_REVNUM, "0", base_props, pool));
 
   vcc_url = get_prop(props, session->repos_url.path, "DAV:",
@@ -166,7 +169,8 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
     }
 
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
-  SVN_ERR(retrieve_props(props, session, vcc_url, SVN_INVALID_REVNUM, "0",
+  SVN_ERR(retrieve_props(props, session, session->conns[0],
+                         vcc_url, SVN_INVALID_REVNUM, "0",
                          checked_in_props, pool));
 
   baseline_url = get_prop(props, vcc_url,
@@ -180,7 +184,8 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   /* Using the checked-in property, fetch:
    *    baseline-connection *and* version-name
    */
-  SVN_ERR(retrieve_props(props, session, baseline_url, SVN_INVALID_REVNUM,
+  SVN_ERR(retrieve_props(props, session, session->conns[0],
+                         baseline_url, SVN_INVALID_REVNUM,
                          "0", baseline_props, pool));
 
   version_name = get_prop(props, baseline_url, "DAV:", "version-name");
@@ -339,7 +344,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, path, revision, "0",
+  SVN_ERR(retrieve_props(props, session, session->conns[0], path, revision, "0",
                          check_path_props, pool));
   res_type = get_ver_prop(props, path, revision, "DAV:", "resourcetype");
 
@@ -381,7 +386,8 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->repos_url.path, 
+  SVN_ERR(retrieve_props(props, session, session->conns[0],
+                         session->repos_url.path, 
                          SVN_INVALID_REVNUM, "0", uuid_props, pool));
   *uuid = get_prop(props, session->repos_url.path,
                      SVN_DAV_PROP_NS_DAV, "repository-uuid");
@@ -409,7 +415,8 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 
       props = apr_hash_make(pool);
 
-      SVN_ERR(retrieve_props(props, session, session->repos_url.path, 
+      SVN_ERR(retrieve_props(props, session, session->conns[0],
+                             session->repos_url.path, 
                              SVN_INVALID_REVNUM, "0", repos_root_props, pool));
       baseline_url = get_prop(props, session->repos_url.path,
                                 SVN_DAV_PROP_NS_DAV, "baseline-relative-path");

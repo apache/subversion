@@ -51,8 +51,13 @@ typedef struct {
   /* Bucket allocator for this context. */
   serf_bucket_alloc_t *bkt_alloc;
 
+  /* The address where the connections are made to */
+  apr_sockaddr_t *address;
+
   /* The current connection */
-  serf_connection_t *conn;
+  serf_connection_t **conns;
+  int num_conns;
+  int cur_conn;
 
   /* The URL that was passed into _open() */
   apr_uri_t repos_url;
@@ -101,6 +106,11 @@ typedef struct propfind_context_t {
 
   /* associated serf session */
   ra_serf_session_t *sess;
+  serf_connection_t *conn;
+
+  /* The acceptor and handler for this response. */
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
 
   /* the requested path */
   const char *path;
@@ -145,9 +155,6 @@ typedef struct propfind_context_t {
 
   /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
-
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
 
   /* The next PROPFIND we have open. */
   struct propfind_context_t *next;
@@ -341,6 +348,7 @@ svn_error_t *
 deliver_props(propfind_context_t **prop_ctx,
               apr_hash_t *prop_vals,
               ra_serf_session_t *sess,
+              serf_connection_t *conn,
               const char *url,
               svn_revnum_t rev,
               const char *depth,
@@ -362,6 +370,7 @@ wait_for_props(propfind_context_t *prop_ctx,
 svn_error_t *
 retrieve_props(apr_hash_t *prop_vals,
                ra_serf_session_t *sess,
+               serf_connection_t *conn,
                const char *url,
                svn_revnum_t rev,
                const char *depth,

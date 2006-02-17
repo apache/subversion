@@ -169,6 +169,9 @@ typedef struct report_fetch_t {
   /* The session we should use to fetch the file. */
   ra_serf_session_t *sess;
 
+  /* The connection we should use to fetch file. */
+  serf_connection_t *conn;
+
   /* Stores the information for the file we want to fetch. */
   report_info_t *info;
 
@@ -591,7 +594,7 @@ handle_fetch(serf_bucket_t *response,
   /* uh-oh.  our connection died on us; requeue. */
   if (!response)
     {
-      serf_connection_request_create(fetch_ctx->sess->conn, setup_fetch,
+      serf_connection_request_create(fetch_ctx->conn, setup_fetch,
                                      fetch_ctx);
 
       return APR_SUCCESS;
@@ -750,11 +753,18 @@ handle_fetch(serf_bucket_t *response,
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
   const char *checked_in_url, *checksum;
+  serf_connection_t *conn;
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt;
   report_fetch_t *fetch_ctx;
   propfind_context_t *prop_ctx = NULL;
   apr_hash_t *props;
+
+  /* What connection should we go on? */
+  conn = ctx->sess->conns[ctx->sess->cur_conn++];
+
+  if (ctx->sess->cur_conn == ctx->sess->num_conns)
+     ctx->sess->cur_conn = 1;
 
   /* go fetch info->name from DAV:checked-in */
   checked_in_url = get_prop(info->dir->props, info->base_name,
@@ -768,7 +778,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   info->file_url = checked_in_url;
 
   /* First, create the PROPFIND to retrieve the properties. */
-  deliver_props(&prop_ctx, info->dir->props, ctx->sess,
+  deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
                 info->file_url, SVN_INVALID_REVNUM, "0", all_props,
                 info->dir->pool);
 
@@ -788,10 +798,11 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   fetch_ctx->info = info;
   fetch_ctx->done = FALSE;
   fetch_ctx->sess = ctx->sess;
+  fetch_ctx->conn = conn;
   fetch_ctx->acceptor = accept_response;
   fetch_ctx->handler = handle_fetch;
 
-  serf_connection_request_create(fetch_ctx->sess->conn, setup_fetch,
+  serf_connection_request_create(conn, setup_fetch,
                                  fetch_ctx);
 
   /* add the GET to our active list. */
@@ -1105,6 +1116,7 @@ end_report(void *userData, const char *raw_name)
 
       /* First, create the PROPFIND to retrieve the properties. */
       deliver_props(&prop_ctx, info->dir->props, ctx->sess,
+                    ctx->sess->conns[ctx->sess->cur_conn],
                     info->dir->url, SVN_INVALID_REVNUM,
                     "0", all_props, info->dir->pool);
 
@@ -1379,7 +1391,7 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, sess, sess->repos_url.path,
+  SVN_ERR(retrieve_props(props, sess, sess->conns[0], sess->repos_url.path,
                          SVN_INVALID_REVNUM, "0",
                          vcc_props, pool));
 
@@ -1396,7 +1408,28 @@ finish_report(void *report_baton,
   report->acceptor = accept_response;
   report->handler = handle_report;
 
-  serf_connection_request_create(sess->conn, setup_report, report);
+  serf_connection_request_create(sess->conns[0], setup_report, report);
+
+  sess->conns[1] = serf_connection_create(sess->context,
+                                         sess->address,
+                                         conn_setup, sess,
+                                         conn_closed, sess,
+                                         sess->pool);
+  sess->num_conns++;
+  sess->conns[2] = serf_connection_create(sess->context,
+                                         sess->address,
+                                         conn_setup, sess,
+                                         conn_closed, sess,
+                                         sess->pool);
+  sess->num_conns++;
+  sess->conns[3] = serf_connection_create(sess->context,
+                                         sess->address,
+                                         conn_setup, sess,
+                                         conn_closed, sess,
+                                         sess->pool);
+  sess->num_conns++;
+
+  sess->cur_conn = 1;
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
