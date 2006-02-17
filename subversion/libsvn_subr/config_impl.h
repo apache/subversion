@@ -87,13 +87,13 @@ svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
    double underscore or not, and if so, where the extra underscore
    would go.  Thoughts?  -kff */
 #  define SVN_REGISTRY_PREFIX "REGISTRY:"
-#  define SVN_REGISTRY_PREFIX_LEN((sizeof(SVN_REGISTRY_PREFIX)) - 1)
+#  define SVN_REGISTRY_PREFIX_LEN ((sizeof(SVN_REGISTRY_PREFIX)) - 1)
 #  define SVN_REGISTRY_HKLM "HKLM\\"
-#  define SVN_REGISTRY_HKLM_LEN((sizeof(SVN_REGISTRY_HKLM)) - 1)
+#  define SVN_REGISTRY_HKLM_LEN ((sizeof(SVN_REGISTRY_HKLM)) - 1)
 #  define SVN_REGISTRY_HKCU "HKCU\\"
-#  define SVN_REGISTRY_HKCU_LEN((sizeof(SVN_REGISTRY_HKCU)) - 1)
+#  define SVN_REGISTRY_HKCU_LEN ((sizeof(SVN_REGISTRY_HKCU)) - 1)
 #  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
-#  define SVN_REGISTRY_PATH_LEN((sizeof(SVN_REGISTRY_PATH)) - 1)
+#  define SVN_REGISTRY_PATH_LEN ((sizeof(SVN_REGISTRY_PATH)) - 1)
 #  define SVN_REGISTRY_SYS_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
