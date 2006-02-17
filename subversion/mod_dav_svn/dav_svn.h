@@ -609,6 +609,10 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
                                 void *baton,
                                 apr_pool_t *pool);
 
+/* If authz is enabled in the specified BATON, return a read authorization
+   function. Otherwise, return NULL. */
+svn_repos_authz_func_t
+dav_svn_authz_read_func(dav_svn_authz_read_baton *baton);
 
 /* Every provider needs to define an opaque locktoken type. */
 struct dav_locktoken

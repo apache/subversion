@@ -212,6 +212,16 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
 }
 
 
+svn_repos_authz_func_t dav_svn_authz_read_func(dav_svn_authz_read_baton *baton)
+{
+  /* Easy out: If the admin has explicitly set 'SVNPathAuthz Off',
+     then we don't need to do any authorization checks. */
+  if (! dav_svn_get_pathauthz_flag(baton->r))
+    return NULL;
+
+  return dav_svn_authz_read; 
+}
+
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
    if LINKPATH is NULL, PATH will map to itself. */
 static void add_to_path_map(apr_hash_t *hash,
@@ -1267,7 +1277,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
-                                     dav_svn_authz_read,
+                                     dav_svn_authz_read_func(&arb),
                                      &arb,
                                      resource->pool)))
     {
@@ -1493,7 +1503,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       serr = svn_repos_dir_delta(zero_root, "", target,
                                  uc.rev_root, dst_path,
                                  /* re-use the editor */
-                                 editor, &uc, dav_svn_authz_read,
+                                 editor, &uc, dav_svn_authz_read_func(&arb),
                                  &arb, FALSE /* text-deltas */, recurse, 
                                  TRUE /* entryprops */, 
                                  FALSE /* ignore-ancestry */, resource->pool);

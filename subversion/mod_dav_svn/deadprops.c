@@ -232,7 +232,7 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
   arb->r = resource->info->r;
   arb->repos = resource->info->repos;
   db->authz_read_baton = arb;
-  db->authz_read_func = dav_svn_authz_read;
+  db->authz_read_func = dav_svn_authz_read_func(arb);
 
   /* ### use RO and node's mutable status to look for an error? */
 
