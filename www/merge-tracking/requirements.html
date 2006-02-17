@@ -187,6 +187,35 @@ push or pull interface.  (It was pointed out that SVK does remember
 these things; if someone familiar with the SVK interface wants to put
 an example transcript here, that would be great.)</p>
 
+<p>Here is the svk command transcript:
+</p>
+<blockquote>
+A branch creation by:
+<code>svk copy //project/trunk //project/branch-B</code>
+(or mirroring an existing subversion repository containing such branch)
+</p>
+
+<p>
+To merge from trunk to branch-B:
+<code>svk smerge //project/trunk //project/branch-B</code>, or
+<code>svk smerge --to //project/branch-B</code>, or
+<code>svk pull //project/branch-B</code>
+</p>
+<p>
+To merge from branch-B back to trunk:
+<code>svk smerge //project/trunk //project/branch-B</code>, or
+<code>svk smerge --from //project/branch-B</code>, or
+<code>svk push //project/branch-B</code>
+</p>
+
+<p>
+There is also a <code>-I</code> flag in smerge to merge changes
+revision-by-revision.  Push is by default with the option, and
+pull is not.
+</p>
+
+</blockquote>
+
 <p>Another common case is porting a single change from one line to
 another.  This currently requires <code>-r&lt;X-1&gt;:X</code> syntax,
 but Subversion 1.4 will include the <code>-c</code> option (introduced
@@ -195,6 +224,9 @@ arithmetic.  However, Subversion 1.4 will still require the URL of the
 merge source to be specified; a merge tracking solution that eases
 common cases would obviate the need for the user to supply the URL
 when a single change is ported from a branch's ancestor line.</p>
+
+<p>svk merge also supports <code>-c N</code> flag which is
+<code>-rN-1:N</code>.</p>
 
 </div>  <!-- common-case-ease -->
 
