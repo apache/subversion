@@ -320,7 +320,7 @@ typedef struct id_vtable_t
 
 struct svn_fs_t
 {
-  /* A pool managing this filesystem */
+  /* The pool in which this fs object is allocated */
   apr_pool_t *pool;
 
   /* The path to the repository's top-level directory */
