@@ -781,7 +781,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   conn = ctx->sess->conns[ctx->sess->cur_conn++];
 
   if (ctx->sess->cur_conn == ctx->sess->num_conns)
-     ctx->sess->cur_conn = 1;
+    ctx->sess->cur_conn = 1;
 
   /* go fetch info->name from DAV:checked-in */
   checked_in_url = get_prop(info->dir->props, info->base_name,
@@ -808,7 +808,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   prop_ctx->done_list = &ctx->done_propfinds;
 
   if (ctx->active_propfinds)
-      ctx->active_propfinds->prev = prop_ctx;
+    ctx->active_propfinds->prev = prop_ctx;
 
   prop_ctx->next = ctx->active_propfinds;
   ctx->active_propfinds = prop_ctx;
@@ -828,7 +828,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   /* add the GET to our active list. */
   if (ctx->active_fetches)
-      ctx->active_fetches->prev = fetch_ctx;
+    ctx->active_fetches->prev = fetch_ctx;
   fetch_ctx->next = ctx->active_fetches;
   ctx->active_fetches = fetch_ctx;
 }
@@ -1500,12 +1500,12 @@ finish_report(void *report_baton,
 
           /* Remove us from the active list. */
           if (done_fetch->prev)
-              done_fetch->prev->next = done_fetch->next;
+            done_fetch->prev->next = done_fetch->next;
           else
-              report->active_fetches = done_fetch->next;
+            report->active_fetches = done_fetch->next;
 
           if (done_fetch->next)
-              done_fetch->next->prev = done_fetch->prev;
+            done_fetch->next->prev = done_fetch->prev;
 
           done_list = done_list->next;
 
