@@ -276,6 +276,12 @@ handle_propfind(serf_bucket_t *response,
   if (ctx->done)
     {
       XML_ParserFree(ctx->xmlp);
+      if (ctx->done_list)
+        {
+          ctx->done_item.data = ctx;
+          ctx->done_item.next = *ctx->done_list;
+          *ctx->done_list = &ctx->done_item;
+        }
     }
 
   return status;
