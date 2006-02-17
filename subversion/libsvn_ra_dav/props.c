@@ -111,6 +111,7 @@ static const elem_defn elem_definitions[] =
   { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
   { ELEM_md5_checksum, SVN_RA_DAV__PROP_MD5_CHECKSUM, 1 },
   { ELEM_repository_uuid, SVN_RA_DAV__PROP_REPOSITORY_UUID, 1 },
+  { ELEM_deadprop_count, SVN_RA_DAV__PROP_DEADPROP_COUNT, 1 },
   { 0 }
 };
 
@@ -146,6 +147,8 @@ static const svn_ra_dav__xml_elm_t propfind_elements[] =
   { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum,
     SVN_RA_DAV__XML_CDATA },
   { SVN_DAV_PROP_NS_DAV, "repository-uuid", ELEM_repository_uuid,
+    SVN_RA_DAV__XML_CDATA },
+  { SVN_DAV_PROP_NS_DAV, "deadprop-count", ELEM_deadprop_count,
     SVN_RA_DAV__XML_CDATA },
 
   /* Unknowns */

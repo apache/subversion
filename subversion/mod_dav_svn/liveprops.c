@@ -67,7 +67,8 @@ enum {
 enum {
   SVN_PROPID_baseline_relative_path = 1,
   SVN_PROPID_md5_checksum,
-  SVN_PROPID_repository_uuid
+  SVN_PROPID_repository_uuid,
+  SVN_PROPID_deadprop_count
 };
 
 static const dav_liveprop_spec dav_svn_props[] =
@@ -96,6 +97,7 @@ static const dav_liveprop_spec dav_svn_props[] =
   SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
   SVN_RO_SVN_PROP(md5_checksum, md5-checksum),
   SVN_RO_SVN_PROP(repository_uuid, repository-uuid),
+  SVN_RO_SVN_PROP(deadprop_count, deadprop-count),
 
   { 0 } /* sentinel */
 };
@@ -563,6 +565,30 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       break;
 
+    case SVN_PROPID_deadprop_count:
+      {
+        unsigned int propcount;
+        apr_hash_t *proplist;  
+      
+        if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+            return DAV_PROP_INSERT_NOTSUPP;
+
+        serr = svn_fs_node_proplist(&proplist,
+                                    resource->info->root.root,
+                                    resource->info->repos_path, p);
+        if (serr != NULL)
+          {
+            /* ### what to do? */
+            svn_error_clear(serr);
+            value = "###error###";
+            break;  
+          }
+         
+        propcount = apr_hash_count(proplist);
+        value = apr_psprintf(p, "%u", propcount);
+        break;
+      }
+      
     default:
       /* ### what the heck was this property? */
       return DAV_PROP_INSERT_NOTDEF;

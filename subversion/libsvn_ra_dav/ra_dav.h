@@ -362,6 +362,7 @@ svn_error_t *svn_ra_dav__get_file_revs(svn_ra_session_t *session,
 
 #define SVN_RA_DAV__PROP_REPOSITORY_UUID SVN_DAV_PROP_NS_DAV "repository-uuid"
 
+#define SVN_RA_DAV__PROP_DEADPROP_COUNT SVN_DAV_PROP_NS_DAV "deadprop-count"
 
 typedef struct {
   /* what is the URL for this resource */
@@ -709,7 +710,8 @@ enum {
   ELEM_change_file_prop,
   ELEM_change_dir_prop,
   ELEM_close_file,
-  ELEM_close_directory
+  ELEM_close_directory,
+  ELEM_deadprop_count
 };
 
 /* ### docco */
