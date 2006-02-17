@@ -98,6 +98,14 @@ typedef struct ns_t {
 } ns_t;
 
 /**
+ * An incredibly simple list.
+ */
+typedef struct ra_serf_list_t {
+  void *data;
+  struct ra_serf_list_t *next;
+} ra_serf_list_t;
+
+/**
  * This structure represents a pending PROPFIND response.
  */
 typedef struct propfind_context_t {
@@ -156,8 +164,17 @@ typedef struct propfind_context_t {
   /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
 
+  /* If not-NULL, add us to this list when we're done. */
+  ra_serf_list_t **done_list;
+
+  ra_serf_list_t done_item;
+
+  /* The prev PROPFIND we have open. */
+  struct propfind_context_t *prev;
+
   /* The next PROPFIND we have open. */
   struct propfind_context_t *next;
+
 } propfind_context_t;
 
 /** DAV property sets */

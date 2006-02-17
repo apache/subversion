@@ -182,7 +182,11 @@ typedef struct report_fetch_t {
   svn_stream_t *delta_stream;
 
   /* Are we done fetching this file? */
-  svn_boolean_t done;
+  ra_serf_list_t **done_list;
+  ra_serf_list_t done_item;
+
+  /* The previous fetch we have open. */
+  struct report_fetch_t *prev;
 
   /* The next fetch we have open. */
   struct report_fetch_t *next;
@@ -235,11 +239,14 @@ typedef struct {
   /* pending GET requests */
   report_fetch_t *active_fetches;
 
+  /* completed fetches (contains report_fetch_t) */
+  ra_serf_list_t *done_fetches;
+
   /* pending PROPFIND requests */
   propfind_context_t *active_propfinds;
 
-  /* potentially pending dir baton closes */
-  report_dir_t *pending_dir_close;
+  /* completed PROPFIND requests (contains propfind_context_t) */
+  ra_serf_list_t *done_propfinds;
 
   /* free list of info structures */
   report_info_t *free_info;
@@ -282,6 +289,8 @@ static void push_state(report_context_t *ctx, report_state_e state)
                                         sizeof(*new_state->info->dir));
       new_state->info->dir->pool = new_state->info->pool;
 
+      new_state->info->dir->propfind = NULL;
+
       /* Create the root property tree. */
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
       new_state->info->dir->ns_list = NULL;
@@ -304,6 +313,8 @@ static void push_state(report_context_t *ctx, report_state_e state)
       new_state->info->dir->pool = new_state->info->pool;
       new_state->info->dir->parent_dir = ctx->state->info->dir;
       new_state->info->dir->parent_dir->ref_count++;
+
+      new_state->info->dir->propfind = NULL;
 
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
       new_state->info->dir->ns_list = new_state->info->dir->ns_list;
@@ -482,6 +493,10 @@ static svn_error_t *
 close_dir(report_dir_t *dir)
 {
   report_dir_t *prev, *sibling;
+
+  if (dir->ref_count) {
+      abort();
+  }
 
   walk_all_props(dir->props, dir->base_name, SVN_INVALID_REVNUM,
                  set_dir_props, dir, dir->dir_baton_pool);
@@ -732,7 +747,9 @@ handle_fetch(serf_bucket_t *response,
           info->dir->update_editor->close_file(info->file_baton, NULL,
                                                info->editor_pool);
 
-          fetch_ctx->done = TRUE;
+          fetch_ctx->done_item.data = fetch_ctx;
+          fetch_ctx->done_item.next = *fetch_ctx->done_list;
+          *fetch_ctx->done_list = &fetch_ctx->done_item;
 
           /* We're done with our pools. */
           apr_pool_destroy(info->editor_pool);
@@ -788,6 +805,10 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
     }
 
   prop_ctx->cache_props = FALSE;
+  prop_ctx->done_list = &ctx->done_propfinds;
+
+  if (ctx->active_propfinds)
+      ctx->active_propfinds->prev = prop_ctx;
 
   prop_ctx->next = ctx->active_propfinds;
   ctx->active_propfinds = prop_ctx;
@@ -796,7 +817,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
   fetch_ctx->pool = info->pool;
   fetch_ctx->info = info;
-  fetch_ctx->done = FALSE;
+  fetch_ctx->done_list = &ctx->done_fetches;
   fetch_ctx->sess = ctx->sess;
   fetch_ctx->conn = conn;
   fetch_ctx->acceptor = accept_response;
@@ -806,6 +827,8 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
                                  fetch_ctx);
 
   /* add the GET to our active list. */
+  if (ctx->active_fetches)
+      ctx->active_fetches->prev = fetch_ctx;
   fetch_ctx->next = ctx->active_fetches;
   ctx->active_fetches = fetch_ctx;
 }
@@ -1126,6 +1149,10 @@ end_report(void *userData, const char *raw_name)
         }
 
       prop_ctx->cache_props = FALSE;
+      prop_ctx->done_list = &ctx->done_propfinds;
+
+      if (ctx->active_propfinds)
+          ctx->active_propfinds->prev = prop_ctx;
 
       prop_ctx->next = ctx->active_propfinds;
       ctx->active_propfinds = prop_ctx;
@@ -1378,8 +1405,7 @@ finish_report(void *report_baton,
   ra_serf_session_t *sess = report->sess;
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt, *tmp;
-  report_fetch_t *active_fetch, *prev_fetch;
-  propfind_context_t *active_propfind, *prev_propfind;
+  ra_serf_list_t *done_list;
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
@@ -1444,116 +1470,66 @@ finish_report(void *report_baton,
         }
 
       /* prune our propfind list if they are done. */
-      active_propfind = report->active_propfinds;
-      prev_propfind = NULL;
-      while (active_propfind)
+      done_list = report->done_propfinds;
+      while (done_list)
         {
-          if (active_propfind->done == TRUE)
-            {
-              /* Remove us from the list. */
-              if (prev_propfind)
-                {
-                  prev_propfind->next = active_propfind->next;
-                }
-              else
-                {
-                  report->active_propfinds = active_propfind->next;
-                }
-            }
+          /* Remove us from the active list. */
+          propfind_context_t *done_propfind = done_list->data;
+          if (done_propfind->prev)
+              done_propfind->prev->next = done_propfind->next;
           else
-            {
-              prev_propfind = active_propfind;
-            }
-          active_propfind = active_propfind->next;
+              report->active_propfinds = done_propfind->next;
+
+          if (done_propfind->next)
+              done_propfind->next->prev = done_propfind->prev;
+
+          done_list = done_list->next;
         }
+      report->done_propfinds = NULL;
 
       /* prune our fetches list if they are done. */
-      active_fetch = report->active_fetches;
-      prev_fetch = NULL;
-      while (active_fetch)
+      done_list = report->done_fetches;
+      while (done_list)
         {
-          if (active_fetch->done == TRUE)
-            {
-              report_dir_t *parent_dir = active_fetch->info->dir;
+          report_fetch_t *done_fetch = done_list->data;
+          report_dir_t *cur_dir;
 
-              /* walk up and decrease our directory refcount. */
+          /* decrease our parent's directory refcount. */
+          cur_dir = done_fetch->info->dir;
+          cur_dir->ref_count--;
+
+          /* Remove us from the active list. */
+          if (done_fetch->prev)
+              done_fetch->prev->next = done_fetch->next;
+          else
+              report->active_fetches = done_fetch->next;
+
+          if (done_fetch->next)
+              done_fetch->next->prev = done_fetch->prev;
+
+          done_list = done_list->next;
+
+          /* If our parent has no remaining children and it is not possible
+           * for us to add more, it's time for us to close this dir.
+           */
+          if (!cur_dir->ref_count &&
+              cur_dir->propfind && cur_dir->propfind->done)
+            {
               do
                 {
-                  parent_dir->ref_count--;
-
-                  if (parent_dir->ref_count)
-                     break;
-
-                  /* Add the dir to our to be closed list. */
-                  if (!parent_dir->next)
+                  if (cur_dir->parent_dir)
                     {
-                      report_dir_t *last = report->pending_dir_close;
-
-                      while (last && last->next)
-                          last = last->next;
-
-                      if (last)
-                        {
-                          last->next = parent_dir;
-                        }
-                      else
-                        {
-                          report->pending_dir_close = parent_dir;
-                        }
+                      cur_dir->parent_dir->ref_count--;
                     }
-                  else
-                    {
-                      abort();
-                    }
-
-                  parent_dir = parent_dir->parent_dir;
+                  SVN_ERR(close_dir(cur_dir));
+                  cur_dir = cur_dir->parent_dir;
                 }
-              while (parent_dir);
-
-              /* Remove us from the list. */
-              if (prev_fetch)
-                {
-                  prev_fetch->next = active_fetch->next;
-                }
-              else
-                {
-                  report->active_fetches = active_fetch->next;
-                }
-            }
-          else
-            {
-              prev_fetch = active_fetch;
-            }
-          active_fetch = active_fetch->next;
-        }
-
-      if (report->done == TRUE)
-        {
-          report_dir_t *prev, *dir = report->pending_dir_close;
-
-          prev = NULL;
-          while (dir)
-            {
-              if (!dir->ref_count && dir->propfind->done == TRUE)
-                {
-                  SVN_ERR(close_dir(dir));
-                  if (prev)
-                    {
-                      prev->next = dir->next;
-                    }
-                  else
-                    {
-                      report->pending_dir_close = dir->next;
-                    }
-                }
-              else
-                {
-                  prev = dir;
-                }
-
-              dir = dir->next;
+              while (cur_dir && !cur_dir->ref_count && cur_dir->propfind &&
+                     cur_dir->propfind->done);
             }
         }
+      report->done_fetches = NULL;
+
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
     }
