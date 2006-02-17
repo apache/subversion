@@ -38,7 +38,7 @@
 #include "ra_serf.h"
 
 
-/**
+/*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum {
@@ -51,40 +51,39 @@ typedef enum {
     NEED_PROP_NAME,
 } report_state_e;
 
-/**
+/*
  * This structure represents the information for a directory.
  */
 typedef struct report_dir_t
 {
-  /* The enclosing parent.
+  /* Our parent directory.
    *
    * This value is NULL when we are the root.
    */
   struct report_dir_t *parent_dir;
 
-  /* our pool */
   apr_pool_t *pool;
 
-  /* the base name. */
+  /* Our name sans any parents. */
   const char *base_name;
 
-  /* the containing directory name (including parents) */
+  /* the expanded directory name (including all parent names) */
   const char *name;
 
   /* temporary path buffer for this directory. */
   svn_stringbuf_t *name_buf;
 
-  /* the canonical url for this path. */
+  /* the canonical url for this directory. */
   const char *url;
 
-  /* our base rev. */
+  /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
 
-  /* controlling dir baton */
+  /* controlling dir baton - this is only created in open_dir() */
   void *dir_baton;
   apr_pool_t *dir_baton_pool;
 
-  /* Our update editor and baton. */
+  /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
   void *update_baton;
 
@@ -94,24 +93,23 @@ typedef struct report_dir_t
   /* Namespace list allocated out of this ->pool. */
   ns_t *ns_list;
 
-  /* hashtable that stores all of the properties (shared globally) */
+  /* hashtable that stores all of the properties (shared with a dir) */
   apr_hash_t *props;
 
   /* The propfind request for our current directory */
   propfind_context_t *propfind;
 
-  /* The children of this directories  */
+  /* The children of this directory  */
   struct report_dir_t *children;
 
-  /* The next sibling of this dir */
+  /* The next sibling of this directory */
   struct report_dir_t *sibling;
-
-  /* The next directory we have open. */
-  struct report_dir_t *next;
 } report_dir_t;
 
 /*
  * This structure represents the information for a file.
+ *
+ * A directory may have a report_info_t associated with it as well.
  *
  * This structure is created as we parse the REPORT response and
  * once the element is completed, we create a report_fetch_t structure
@@ -119,28 +117,31 @@ typedef struct report_dir_t
  */
 typedef struct report_info_t
 {
-  /* our pool */
   apr_pool_t *pool;
 
-  /* The enclosing directory. */
+  /* The enclosing directory.
+   *
+   * If this structure refers to a directory, the dir it points to will be
+   * itself.
+   */
   report_dir_t *dir;
 
-  /* the base name of the file. */
+  /* Our name sans any directory info. */
   const char *base_name;
 
-  /* the name of the file (fully-expanded including the parent). */
+  /* the expanded file name (including all parent directory names) */
   const char *name;
 
   /* file name buffer */
   svn_stringbuf_t *name_buf;
 
-  /* the canonical url for this path. */
-  const char *file_url;
+  /* the canonical url for this file. */
+  const char *url;
 
-  /* our base rev. */
+  /* Our base revision - SVN_INVALID_REVNUM if we're adding this file. */
   svn_revnum_t base_rev;
 
-  /* our delta base, if present */
+  /* our delta base, if present (NULL if we're adding the file) */
   const svn_string_t *delta_base;
 
   /* pool passed to update->add_file, etc. */
@@ -151,16 +152,18 @@ typedef struct report_info_t
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
-  /* the in-progress property being parsed */
+  /* temporary property for this file which is currently being parsed
+   * It will eventually be stored in our parent directory's property hash.
+   */
   const char *prop_ns;
   const char *prop_name;
   const char *prop_val;
   apr_size_t prop_val_len;
 } report_info_t;
 
-/**
- * This file structure represents a single file to fetch with its
- * associated Serf session.
+/*
+ * This structure represents a single request to GET (fetch) a file with
+ * its associated Serf session/connection.
  */
 typedef struct report_fetch_t {
   /* Our pool. */
@@ -200,11 +203,18 @@ typedef struct report_fetch_t {
   /* The next fetch we have open. */
   struct report_fetch_t *next;
 
+  /* The acceptor and handler for this GET request. */
   serf_response_acceptor_t acceptor;
   serf_response_handler_t handler;
 
 } report_fetch_t;
 
+/*
+ * Encapsulates all of the REPORT parsing state that we need to know at
+ * any given time.
+ *
+ * Previous states are stored in ->prev field.
+ */
 typedef struct report_state_list_t {
    /* The current state that we are in now. */
   report_state_e state;
@@ -215,34 +225,49 @@ typedef struct report_state_list_t {
   /* Temporary pool */
   apr_pool_t *pool;
 
-  /* Temporary namespace list */
+  /* Temporary namespace list allocated from ->pool */
   ns_t *ns_list;
 
   /* The previous state we were in. */
   struct report_state_list_t *prev;
 } report_state_list_t;
 
+/*
+ * The master structure for a REPORT request and response.
+ */
 typedef struct {
   ra_serf_session_t *sess;
 
+  /* What is the target revision that we want for this REPORT? */
   const char *target;
   svn_revnum_t target_rev;
 
   svn_boolean_t recurse;
 
+  /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
   void *update_baton;
 
+  /* The request body for the REPORT. */
   serf_bucket_t *buckets;
 
+  /* Our XML parser and root namespace for parsing the response. */
   XML_Parser xmlp;
   ns_t *ns_list;
 
-  /* could allocate this as an array rather than a linked list. */
+  /* the current state we are in for parsing the REPORT response.
+   *
+   * could allocate this as an array rather than a linked list.
+   *
+   * (We tend to use only about 8 or 9 states in a given update-report,
+   * but in theory it could be much larger based on the number of directories
+   * we are adding.)
+   */
   report_state_list_t *state;
+  /* A list of previous states that we have created but aren't using now. */
   report_state_list_t *free_state;
 
-  /* root dir */
+  /* root directory object */
   report_dir_t *root_dir;
 
   /* pending GET requests */
@@ -260,10 +285,14 @@ typedef struct {
   /* free list of info structures */
   report_info_t *free_info;
 
+  /* The path to the REPORT request */
   const char *path;
+
+  /* The acceptor and handler for the REPORT request/response. */
   serf_response_acceptor_t acceptor;
   serf_response_handler_t handler;
 
+  /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
 } report_context_t;
@@ -326,7 +355,10 @@ static void push_state(report_context_t *ctx, report_state_e state)
       new_state->info->dir->propfind = NULL;
 
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
-      new_state->info->dir->ns_list = new_state->info->dir->ns_list;
+
+      /* Point our ns_list at our parents to try to reuse it. */
+      new_state->info->dir->ns_list =
+          new_state->info->dir->parent_dir->ns_list;
 
       /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
@@ -580,7 +612,7 @@ setup_fetch(serf_request_t *request,
 
   /* create GET request */
   setup_serf_req(request, req_bkt, &hdrs_bkt,
-                 fetch_ctx->sess, "GET", fetch_ctx->info->file_url,
+                 fetch_ctx->sess, "GET", fetch_ctx->info->url,
                  NULL, NULL);
 
   /* note that we have old VC URL */
@@ -791,7 +823,7 @@ handle_fetch(serf_bucket_t *response,
                          set_file_props,
                          info, info->editor_pool);
           walk_all_props(info->dir->props,
-                         info->file_url,
+                         info->url,
                          SVN_INVALID_REVNUM,
                          set_file_props,
                          info, info->editor_pool);
@@ -844,11 +876,11 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
       abort();
     }
 
-  info->file_url = checked_in_url;
+  info->url = checked_in_url;
 
   /* First, create the PROPFIND to retrieve the properties. */
   deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
-                info->file_url, SVN_INVALID_REVNUM, "0", all_props,
+                info->url, SVN_INVALID_REVNUM, "0", all_props,
                 info->dir->pool);
 
   if (!prop_ctx)

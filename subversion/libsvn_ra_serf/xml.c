@@ -54,7 +54,7 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
           /* Have we already defined this ns previously? */
           for (cur_ns = *ns_list; cur_ns; cur_ns = cur_ns->next)
             {
-              if (strcmp(cur_ns->namespace, tmp_attrs[0]+6) == 0)
+              if (strcmp(cur_ns->namespace, tmp_attrs[0] + 6) == 0)
                 {
                   found = 1;
                   break;
@@ -64,7 +64,7 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
           if (!found)
             {
               new_ns = apr_palloc(pool, sizeof(*new_ns));
-              new_ns->namespace = apr_pstrdup(pool, tmp_attrs[0]+6);
+              new_ns->namespace = apr_pstrdup(pool, tmp_attrs[0] + 6);
               new_ns->url = apr_pstrdup(pool, tmp_attrs[1]);
 
               new_ns->next = *ns_list;
@@ -84,7 +84,7 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
 dav_props_t
 expand_ns(ns_t *ns_list, const char *name)
 {
-  char *colon;
+  const char *colon;
   dav_props_t prop_name;
 
   colon = strchr(name, ':');
@@ -92,10 +92,9 @@ expand_ns(ns_t *ns_list, const char *name)
     {
       ns_t *ns;
 
-      *colon = '\0';
       for (ns = ns_list; ns; ns = ns->next)
         {
-          if (strcmp(ns->namespace, name) == 0)
+          if (strncmp(ns->namespace, name, colon-name) == 0)
             {
               prop_name.namespace = ns->url;
               break;
@@ -105,7 +104,6 @@ expand_ns(ns_t *ns_list, const char *name)
         {
           abort();
         }
-      *colon = ':';
 
       prop_name.name = colon + 1;
     }
