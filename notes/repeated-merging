@@ -23,7 +23,7 @@ The Ancestry Set approach (AS)
 ------------------------------
 
 (For a longer description of this approach, see
-http://svn.collab.net/repos/svn/trunk/doc/programmer/design/model.texi
+http://svn.collab.net/repos/svn/trunk/doc/design/model.xml
 under "Merging and Ancestry".)
 
 In this scheme, you record the full ancestry set for each
