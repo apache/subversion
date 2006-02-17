@@ -922,6 +922,13 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* the property we need to fetch to see if the server we are
+   connected to supports the deadprop-count property. */
+static const ne_propname deadprop_count_support_props[] =
+{
+  { SVN_DAV_PROP_NS_DAV, "deadprop-count" },
+  { NULL }
+};
 
 svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                  const char *path,
@@ -937,6 +944,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
   apr_hash_t *resources;
   const char *final_url;
   apr_size_t final_url_n_components;
+  svn_boolean_t supports_deadprop_count;
   svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component(ras->url->data, path, pool);
 
@@ -964,13 +972,39 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
         *fetched_rev = got_rev;
     }
 
+  /* For issue 2151:
+     See if we are dealing with a server that understand the 
+     deadprop-count prop.  If it doesn't we'll need to do an
+     allprop PROPFIND - If it does, we'll execute a more
+     targetted PROPFIND.
+  */
+  
+  {
+    const svn_string_t *deadprop_count;
+  
+    SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess,
+                                           final_url, NULL,
+                                           deadprop_count_support_props,
+                                           pool));
+
+    deadprop_count = apr_hash_get(rsrc->propset,
+                                  SVN_RA_DAV__PROP_DEADPROP_COUNT,
+                                  APR_HASH_KEY_STRING);
+ 
+    if (deadprop_count == NULL)
+      supports_deadprop_count = FALSE;
+    else
+      supports_deadprop_count = TRUE;
+  }
+    
   if (dirents)
     {
       ne_propname *which_props;
 
       /* if we didn't ask for the has_props field, we can get individual
          properties. */
-      if ((SVN_DIRENT_HAS_PROPS & dirent_fields) == 0)
+      if ((SVN_DIRENT_HAS_PROPS & dirent_fields) == 0
+          || supports_deadprop_count)
         {
           int num_props = 1; /* start with one for the final NULL */
 
@@ -978,6 +1012,9 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
             ++num_props;
 
           if (dirent_fields & SVN_DIRENT_SIZE)
+            ++num_props;
+
+          if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             ++num_props;
 
           if (dirent_fields & SVN_DIRENT_CREATED_REV)
@@ -1010,6 +1047,12 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
             {
               which_props[num_props].nspace = "DAV:";
               which_props[num_props--].name = "getcontentlength";
+            }
+
+          if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+            {
+              which_props[num_props].nspace = SVN_DAV_PROP_NS_DAV;
+              which_props[num_props--].name = "deadprop-count";
             }
 
           if (dirent_fields & SVN_DIRENT_CREATED_REV)
@@ -1062,6 +1105,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
           const svn_string_t *propval;
           apr_hash_index_t *h;
           svn_dirent_t *entry;
+          apr_int64_t prop_count;
           
           apr_hash_this(hi, &key, NULL, &val);
           childname =  key;
@@ -1099,22 +1143,51 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
             { 
               /* does this resource contain any 'svn' or 'custom' properties,
                  i.e.  ones actually created and set by the user? */
-              for (h = apr_hash_first(pool, resource->propset);
-                   h; h = apr_hash_next(h))
+              if (supports_deadprop_count == TRUE) 
                 {
-                  const void *kkey;
-                  void *vval;
-                  apr_hash_this(h, &kkey, NULL, &vval);
-              
-                  if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
-                              sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
-                    entry->has_props = TRUE;
-              
-                  else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
-                                   sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
-                    entry->has_props = TRUE;
+                  propval = apr_hash_get(resource->propset,
+                                         SVN_RA_DAV__PROP_DEADPROP_COUNT,
+                                         APR_HASH_KEY_STRING);
+                                     
+                  if (propval == NULL)
+                    {
+                      /* we thought that the server supported the
+                         deadprop-count property.  apparently not. */
+                      return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                                              _("Server response missing the "
+                                                "expected deadprop-count "
+                                                "property"));
+                    }
+                  else
+                    {
+                      prop_count = svn__atoui64(propval->data);
+                      if (prop_count == 0)
+                        entry->has_props = FALSE;
+                      else
+                        entry->has_props = TRUE;
+                    }
                 }
-             }
+              else
+                {
+                   /* The server doesn't support the deadprop_count prop,
+                      fallback */
+                  for (h = apr_hash_first(pool, resource->propset);
+                       h; h = apr_hash_next(h))
+                    {
+                      const void *kkey;
+                      void *vval;
+                      apr_hash_this(h, &kkey, NULL, &vval);
+                  
+                      if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
+                                  sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
+                        entry->has_props = TRUE;
+                  
+                      else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
+                                       sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
+                        entry->has_props = TRUE;
+                    }
+                }
+            }
 
           if (dirent_fields & SVN_DIRENT_CREATED_REV)
             { 
