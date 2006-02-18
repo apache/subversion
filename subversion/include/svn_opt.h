@@ -64,7 +64,44 @@ typedef svn_error_t *(svn_opt_subcommand_t)
 #define SVN_OPT_FIRST_LONGOPT_ID 256
 
 
-/** One element of a subcommand dispatch table. */
+/** One element of a subcommand dispatch table.
+ *
+ * @since New in 1.4.
+ */
+typedef struct svn_opt_subcommand_desc2_t
+{
+  /** The full name of this command. */
+  const char *name;
+
+  /** The function this command invokes. */
+  svn_opt_subcommand_t *cmd_func;
+
+  /** A list of alias names for this command (e.g., 'up' for 'update'). */
+  const char *aliases[SVN_OPT_MAX_ALIASES];
+
+  /** A brief string describing this command, for usage messages. */
+  const char *help;
+
+  /** A list of options accepted by this command.  Each value in the
+   * array is a unique enum (the 2nd field in apr_getopt_option_t)
+   */
+  int valid_options[SVN_OPT_MAX_OPTIONS];
+
+  /** A list of option help descriptions, keyed by the option unique enum
+   * (the 2nd field in apr_getopt_option_t), which override the generic
+   * descriptions given in an apr_getopt_option_t on a per-subcommand basis.
+   */
+  struct { int optch; const char *desc; } desc_overrides[SVN_OPT_MAX_OPTIONS];
+} svn_opt_subcommand_desc2_t;
+
+
+/** One element of a subcommand dispatch table.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ *
+ * Like #svn_opt_subcommand_desc2_t but lacking the @c desc_overrides
+ * member.
+ */
 typedef struct svn_opt_subcommand_desc_t
 {
   /** The full name of this command. */
@@ -90,6 +127,22 @@ typedef struct svn_opt_subcommand_desc_t
 /**
  * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if 
  * none.  @a cmd_name may be an alias.
+ *
+ * @since New in 1.4.
+ */  
+const svn_opt_subcommand_desc2_t *
+svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
+                                  const char *cmd_name);
+
+
+/**
+ * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if 
+ * none.  @a cmd_name may be an alias.
+ *
+ * Same as svn_opt_get_canonical_subcommand2(), but acts on
+ * #svn_opt_subcommand_desc_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */  
 const svn_opt_subcommand_desc_t *
 svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
@@ -97,9 +150,29 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
 
 
 /**
+ * Return pointer to an @c apr_getopt_option_t for the option whose 
+ * option code is @a code, or @c NULL if no match.  @a option_table must end
+ * with an element whose every field is zero.  If @c command is non-NULL,
+ * then the subcommand-specific option description instead of the generic one,
+ * if a specific description is defined.
+ *
+ * The returned value may be statically allocated, or allocated in @a pool.
+ *
+ * @since New in 1.4.
+ */
+const apr_getopt_option_t *
+svn_opt_get_option_from_code2(int code,
+                              const apr_getopt_option_t *option_table,
+                              const svn_opt_subcommand_desc2_t *command,
+                              apr_pool_t *pool);
+
+
+/**
  * Return the first entry from @a option_table whose option code is @a code,
  * or @c NULL if no match.  @a option_table must end with an element whose
  * every field is zero.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 const apr_getopt_option_t *
 svn_opt_get_option_from_code(int code,
@@ -109,6 +182,22 @@ svn_opt_get_option_from_code(int code,
 /**
  * Return @c TRUE iff subcommand @a command supports option @a option_code,
  * else return @c FALSE.
+ *
+ * @since New in 1.4.
+ */
+svn_boolean_t
+svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code);
+
+
+/**
+ * Return @c TRUE iff subcommand @a command supports option @a option_code,
+ * else return @c FALSE.
+ *
+ * Same as svn_opt_subcommand_takes_option2(), but acts on
+ * #svn_opt_subcommand_desc_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_boolean_t
 svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
@@ -126,6 +215,22 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
  * @a footer followed by a newline.
  *
  * Use @a pool for temporary allocation.
+ *
+ * @since New in 1.4.
+ */
+void
+svn_opt_print_generic_help2(const char *header,
+                            const svn_opt_subcommand_desc2_t *cmd_table,
+                            const apr_getopt_option_t *opt_table,
+                            const char *footer,
+                            apr_pool_t *pool,
+                            FILE *stream);
+
+
+/* Same as svn_opt_print_generic_help2(), but acts on
+ * #svn_opt_subcommand_desc_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void
 svn_opt_print_generic_help(const char *header,
@@ -155,6 +260,21 @@ svn_opt_format_option(const char **string,
  * allocation.  @a subcommand may be a canonical command name or an
  * alias.  (### todo: why does this only print to @c stdout, whereas
  * svn_opt_print_generic_help() gives us a choice?)
+ *
+ * @since New in 1.4.
+ */
+void
+svn_opt_subcommand_help2(const char *subcommand, 
+                         const svn_opt_subcommand_desc2_t *table,
+                         const apr_getopt_option_t *options_table,
+                         apr_pool_t *pool);
+
+
+/**
+ * Same as svn_opt_subcommand_help2(), but acts on
+ * #svn_opt_subcommand_desc_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void
 svn_opt_subcommand_help(const char *subcommand, 
@@ -386,7 +506,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  *      information.
  *
  *    - Else if @a print_version is not true, then print generic help,
- *      via svn_opt_print_generic_help() with the @a header, @a cmd_table,
+ *      via svn_opt_print_generic_help2() with the @a header, @a cmd_table,
  *      @a option_table, and @a footer arguments.
  *
  * Use @a pool for temporary allocations.
@@ -395,6 +515,25 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * general usage help is that a confused user might put both the
  * --version flag *and* subcommand arguments on a help command line.
  * The logic for handling such a situation should be in one place.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_opt_print_help2(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const char *footer,
+                    apr_pool_t *pool);
+
+
+/* Same as vn_opt_print_help2), but acts on #svn_opt_subcommand_desc_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_opt_print_help(apr_getopt_t *os,
