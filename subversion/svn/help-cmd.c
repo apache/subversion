@@ -72,14 +72,14 @@ svn_cl__help(apr_getopt_t *os,
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  return svn_opt_print_help(os,
-                            "svn",   /* ### erm, derive somehow? */
-                            opt_state ? opt_state->version : FALSE,
-                            opt_state ? opt_state->quiet : FALSE,
-                            version_footer->data,
-                            help_header,   /* already gettext()'d */
-                            svn_cl__cmd_table,
-                            svn_cl__options,
-                            _(help_footer),
-                            pool);
+  return svn_opt_print_help2(os,
+                             "svn",   /* ### erm, derive somehow? */
+                             opt_state ? opt_state->version : FALSE,
+                             opt_state ? opt_state->quiet : FALSE,
+                             version_footer->data,
+                             help_header,   /* already gettext()'d */
+                             svn_cl__cmd_table,
+                             svn_cl__options,
+                             _(help_footer),
+                             pool);
 }

@@ -62,7 +62,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("force validity of log message source")},
   {"help",          'h', 0, N_("show help on a subcommand")},
   {NULL,            '?', 0, N_("show help on a subcommand")},
-  {"message",       'm', 1, N_("specify commit message ARG")},
+  {"message",       'm', 1, N_("specify log message ARG")},
   {"quiet",         'q', 0, N_("print as little as possible")},
   {"recursive",     'R', 0, N_("descend recursively")},
   {"non-recursive", 'N', 0, N_("operate on single directory only")},
@@ -78,7 +78,7 @@ const apr_getopt_option_t svn_cl__options[] =
     "                                'PREV'       revision just before COMMITTED")
    /* spacing corresponds to svn_opt_format_option */
   },
-  {"file",          'F', 1, N_("read data from file ARG")},
+  {"file",          'F', 1, N_("read log message from file ARG")},
   {"incremental",   svn_cl__incremental_opt, 0,
                     N_("give output suitable for concatenation")},
   {"encoding",      svn_cl__encoding_opt, 1,
@@ -183,7 +183,7 @@ const apr_getopt_option_t svn_cl__options[] =
                                 svn_cl__editor_cmd_opt, \
                                 svn_cl__encoding_opt
 
-const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
+const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 {
   { "add", svn_cl__add, {0}, N_
     ("Put files and directories under version control, scheduling\n"
@@ -386,7 +386,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  Use --force to steal the lock from another user or working copy.\n"),
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
       svn_cl__encoding_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-      svn_cl__force_opt } },
+      svn_cl__force_opt },
+    {{'F', N_("read lock comment from file ARG")},
+     {'m', N_("specify lock comment ARG")}} },
+
   { "log", svn_cl__log, {0}, N_
     ("Show the log messages for a set of revision(s) and/or file(s).\n"
      "usage: 1. log [PATH]\n"
@@ -570,7 +573,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  only on the file children of the directory.\n"),
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt},
+    {{'F', N_("read propery value from file ARG")}} },
 
   { "resolved", svn_cl__resolved, {0}, N_
     ("Remove 'conflicted' state on working copy files or directories.\n"
@@ -773,7 +777,7 @@ main(int argc, const char * const *argv)
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
   int i;
-  const svn_opt_subcommand_desc_t *subcommand = NULL;
+  const svn_opt_subcommand_desc2_t *subcommand = NULL;
   const char *dash_m_arg = NULL, *dash_F_arg = NULL;
   const char *path_utf8;
   apr_status_t apr_err;
@@ -1139,7 +1143,7 @@ main(int argc, const char * const *argv)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is svn_cl__help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand(svn_cl__cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand2(svn_cl__cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -1157,8 +1161,8 @@ main(int argc, const char * const *argv)
       else
         {
           const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_opt_get_canonical_subcommand(svn_cl__cmd_table,
-                                                        first_arg);
+          subcommand = svn_opt_get_canonical_subcommand2(svn_cl__cmd_table,
+                                                         first_arg);
           if (subcommand == NULL)
             {
               const char *first_arg_utf8;
@@ -1188,11 +1192,12 @@ main(int argc, const char * const *argv)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option(subcommand, opt_id))
+      if (! svn_opt_subcommand_takes_option2(subcommand, opt_id))
         {
           const char *optstr, *optstr_utf8, *cmdname_utf8;
           const apr_getopt_option_t *badopt = 
-            svn_opt_get_option_from_code(opt_id, svn_cl__options);
+            svn_opt_get_option_from_code2(opt_id, svn_cl__options,
+                                          subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if ((err = svn_utf_cstring_to_utf8(&optstr_utf8, optstr, pool))
               || (err = svn_utf_cstring_to_utf8(&cmdname_utf8,
