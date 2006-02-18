@@ -3995,7 +3995,6 @@ svn_fs_fs__create(svn_fs_t *fs,
                   const char *path,
                   apr_pool_t *pool)
 {
-  const char *formatval;
   int format = SVN_FS_FS__FORMAT_NUMBER;
   
   fs->path = apr_pstrdup(pool, path);
@@ -4015,9 +4014,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
   /* See if we had an explicitly requested no svndiff1.  */
-  formatval = apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
-                           APR_HASH_KEY_STRING);
-  if (formatval)
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+                                 APR_HASH_KEY_STRING))
     format = 1;
   
   SVN_ERR(write_revision_zero(fs));
