@@ -624,7 +624,6 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
 static svn_error_t *
 base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  const char * formatval;
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   
   /* Create the environment and databases. */
@@ -636,9 +635,8 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* See if we had an explicitly specified no svndiff1.  */
-  formatval = apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
-                           APR_HASH_KEY_STRING);
-  if (formatval)
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+                                 APR_HASH_KEY_STRING))
     format = 1;
 
   /* This filesystem is ready.  Stamp it with a format number. */
