@@ -158,8 +158,6 @@ to FSFS or from FSFS to BDB?</a></li>
     but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
-<li><a href="#linux-bdb42-build">I'm having trouble building
-    Subversion under *NIX with BerkeleyDB 4.2 What should I do?</a></li>
 <li><a href="#windows-mod_dav_svn-build">I'm getting errors trying to build
     Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
@@ -182,7 +180,7 @@ a <tt>file:</tt> URL?</a></li>
     a "bad database version", that it found db-3.X, rather than
     db-4.X.</a></li>
 <li><a href="#redhat-db">I'm getting "Function not implemented" errors on
-    RedHat 9, and nothing works.  How do I fix this?</a></li>
+    Red Hat 9, and nothing works.  How do I fix this?</a></li>
 <li><a href="#no-author">Why does SVN log say "(no author)" for files
     committed or imported via Apache (ra_dav)?</a></li>
 <li><a href="#windows-access-denied">I'm getting occasional "Access Denied"
@@ -336,7 +334,7 @@ to Subversion</a>.</p>
 href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
 portability layer.  The Subversion client will run anywhere APR runs,
 which is most places.  The Subversion server (i.e., the repository
-side) is the same, except that it will not host a BDB repository
+side) is the same, except that it will not host a Berkeley DB repository
 on Win9x platforms (Win95/Win98/WinME), because <a
 href="http://www.sleepycat.com">Berkeley DB</a> has
 shared-memory segment problems on Win9x.  FSFS repositories
@@ -954,12 +952,14 @@ equivalent to CVS modules:</p>
 server?</h3>
 
 <p>If you are using a repository with the Berkeley DB back end
-(currently the default), do <i>not</i> access the repository via NFS.
-BDB <a href="http://www.sleepycat.com/docs/ref/env/remote.html">does
-not support storage of databases on remote file systems</a>.  Some NFS
-servers claim that they explicitly support use of BDB on NFS-mounted
-partitions, but we've only ever seen BDB databases get corrupted when
-living on an NFS or SMB network drive.</p>
+(default for repositories created with Subversion 1.0 and 1.1, not the
+default thereafter), do <i>not</i> access the repository via NFS.
+Berkeley DB <a
+href="http://www.sleepycat.com/docs/ref/env/remote.html">does not
+support storage of databases on remote file systems</a>.  Some NFS
+servers claim that they explicitly support use of Berkeley DB on
+NFS-mounted partitions, but we've only ever seen Berkeley DB databases
+get corrupted when living on an NFS or SMB network drive.</p>
 
 <p>If you are using the <a
 href="http://svn.collab.net/repos/svn/trunk/notes/fsfs">FSFS</a>
@@ -1026,10 +1026,10 @@ $ db_archive -a -h /repos/db | xargs rm
 
 <p>See also <code>svnadmin hotcopy</code> or <code>hotbackup.py</code>.</p>
 
-<p><strong>Note:</strong> If you use Berkeley DB 4.2, Subversion 0.35
-or later will create new repositories with automatic log file removal
-enabled. You can change this by passing the <code>--bdb-log-keep</code>
-option to <code>svnadmin create</code>. Refer to the section about the <a
+<p><strong>Note:</strong> If you use Berkeley DB 4.2, Subversion will
+create new repositories with automatic log file removal enabled. You
+can change this by passing the <code>--bdb-log-keep</code> option to
+<code>svnadmin create</code>. Refer to the section about the <a
 href="http://www.sleepycat.com/docs/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
 <code>DB_LOG_AUTOREMOVE</code></a> flag in the Berkeley DB manual.</p>
 
@@ -1056,7 +1056,7 @@ section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
-<b>Note for SELinux / Fedora Core 3+ / RedHat Enterprise users:</b>
+<b>Note for SELinux / Fedora Core 3+ / Red Hat Enterprise users:</b>
 
 <p>In addition to regular Unix permissions, under SELinux every file,
 directory, process, etc. has a 'security context'.  When a process
@@ -1088,7 +1088,7 @@ access the repository.</p>
 write access?</h3>
 
 <p>Certain client operations are "read-only", like checkouts and
-updates.  From an access-control standpoint, apache treats them as
+updates.  From an access-control standpoint, Apache treats them as
 such.  But libsvn_fs (the repository filesystem API) still has to
 write temporary data in order to produce tree-deltas.  So the process
 accessing the repository always requires both read <em>and</em> write
@@ -1099,7 +1099,7 @@ operations by comparing two trees.  One tree is the usually the HEAD
 revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
-<p>This limitation only applies to the bdb backend; the <a
+<p>This limitation only applies to the Berkeley DB backend; the <a
 href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
 backend</a> does not exhibit this behaviour.</p>
 
@@ -1841,23 +1841,24 @@ with Subversion it is best to use the SVN_EDITOR variable.
 <h3>How do I determine which version of
 Berkeley DB a repository is using?</h3>
 
-<p>If it's a live repository, then the easy answer is "Whatever version
-of BDB you have installed".  If, however, it is a repository from a
-backup, or some unknown source, and you have no idea which version of
-BDB it was made with, here's how you find out:</p>
+<p>If it's a live repository, then the easy answer is "Whatever
+version of Berkeley DB you have installed".  If, however, it is a
+repository from a backup, or some unknown source, and you have no idea
+which version of Berkeley DB it was made with, here's how you find
+out:</p>
 
-<p>Run some command to view the two 4-byte integers at offsets 12 and 16
-(decimal) in the highest-numbered db/log.* file in the repository.  Here
-is an example using GNU od: "<tt>od -j12 -N8 -tx4
-  log.<i>&lt;number&gt;</i></tt>".  Here is an example using Mac OS X
-hexdump: "<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>".  The
-first integer should be the magic number 0x00040988, which identifies
-the file as a BDB logfile.  The second number is the log format version
-- match it to a BDB program version
-using the table below:</p>
+<p>Run some command to view the two 4-byte integers at offsets 12 and
+16 (decimal) in the highest-numbered db/log.* file in the repository.
+Here is an example using GNU od: "<tt>od -j12 -N8 -tx4
+log.<i>&lt;number&gt;</i></tt>".  Here is an example using Mac OS X
+hexdump: "<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>".
+The first integer should be the magic number 0x00040988, which
+identifies the file as a Berkeley DB logfile.  The second number is
+the log format version
+- match it to a Berkeley DB version using the table below:</p>
 
 <table border="1" cellspacing="2" cellpadding="2">
-  <tr><th>Log format version</th><th>BDB program version</th></tr>
+  <tr><th>Log format version</th><th>Berkeley DB version</th></tr>
   <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
   <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
   <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
@@ -2114,7 +2115,7 @@ command.</p>
 time, giving me errors about needing recovery (DB_RUNRECOVERY). What
 could be the cause?</h3>
 
-<p>The BerkeleyDB database in your repository is sensitive to
+<p>The Berkeley DB database in your repository is sensitive to
 interruptions.  If a process accessing the database exits without
 "cleanly" closing the environment, then the database is left in an
 inconsistent state.  Common causes of this include:</p>
@@ -2224,10 +2225,10 @@ give errors like this:</p>
 <p>In that case, try Berkeley DB's native <b>db_recover</b> utility
 (see <a href="http://www.sleepycat.com/docs/utility/db_recover.html"
 >http://www.sleepycat.com/docs/utility/db_recover.html</a>).  It
-usually lives in a "bin/" subdirectory of the Berkeley installation,
+usually lives in a "bin/" subdirectory of the Berkeley DB installation,
 for example if you installed Berkeley DB from source, it might be
 <tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>; or on systems where
-Berkeley comes prepackaged it might just be
+Berkeley DB comes prepackaged it might just be
 <tt>/usr/bin/db_recover</tt>.  If you have multiple versions of
 Berkeley DB installed, make sure that the version of db_recover you
 use matches the version of Berkeley DB with which your repository was
@@ -2418,85 +2419,6 @@ You probably have old copies of
 sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
 building with are completely up-to-date, and try again.
 </p>
-
-</div>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<div class="h3" id="linux-bdb42-build" title="linux-bdb42-build">
-<h3>I'm having trouble building
-    Subversion under *NIX with BerkeleyDB 4.2.x What should I do?</h3>
-
-<p>Subversion compiles against BerkeleyDB by asking apr-util for the
-appropriate BDB build options.  This means that either the apr-util in
-your Subversion tarball or the one in your Apache tree must
-successfully detect BDB.  Normally one does this by passing
-"--with-berkeley-db" to apr-util's ./configure.  (When you pass this
-argument to either Apache or Subversion's ./configure, it's really
-just getting passed down to apr-util's ./configure.)</p>
-
-<p>The problem is that BerkeleyDB 4.2 is newer than the latest
-released version of apr-util, so apr-util doesn't know how to detect
-it.</p>
-
-<p>The long-term solution is already in place: the latest apr-util in
-CVS has code to explicitly detect BDB 4.2.  When either apr-util or
-Apache httpd does another release, this ability will widely
-available.</p>
-
-<p>In the short term, the best thing to do is apply <a
-href="db42-support-patch.txt">this patch</a> to your apr-util's
-./configure script -- either to the apr-util in your apache tree (if
-you're building Apache before Subversion), or to the apr-util in your
-Subversion tarball (if you're not building Apache at all.)  This patch
-is the new DB 4.2 detection code already in the latest apr-util
-CVS.</p>
-
-<p>If you've building Apache first, apply the patch to httpd-2.0.48's
-apr-util's configure script, and then build with these options:</p>
-
-<pre>
-  $ configure \
-  --enable-dav \
-  --enable-so \
-  --with-berkeley-db=/usr/local/BerkeleyDB.4.2 \
-  --with-dbm=db42
-</pre>
-<p>
-You can confirm that Apache is built with the proper BDB libraries with the
-following command:
-</p>
-<pre>
-  $ ldd /usr/local/apache2/bin/httpd | fgrep libdb
-      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
-</pre>
-
-<p>And then you can simply build Subversion with no mention of BDB.
-(...although Subversion <i>might</i> need to be told where to find
-your Apache installation, if it's in a non-standard place.)</p>
-
-<p>If you're not building Apache, apply the patch to the apr-util
- ./configure script in your Subversion tree, and use similar build
- options:</p>
-
-<pre>
-  $ configure \
-  --with-berkeley-db=/usr/local/BerkeleyDB.4.2 \
-  --with-dbm=db42
-</pre>
-
-<p>
-Again, you can confirm that Subversion was built against the proper BDB
-library with the following:
-</p>
-<pre>
-  $ ldd /usr/local/bin/svn | fgrep libdb
-      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
-</pre>
-
-<p>
-If you install your libraries in locations other than the defaults, you would
-need to adjust the paths at each step accordingly.</p>
 
 </div>
 
@@ -2742,16 +2664,16 @@ apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
 <![CDATA[=========================================================]]>
 
 <div class="h3" id="redhat-db" title="redhat-db">
-<h3>I'm getting "Function not implemented" errors on RedHat
+<h3>I'm getting "Function not implemented" errors on Red Hat
 9, and nothing works.  How do I fix this?</h3>
 
 <p>This is not really a problem with Subversion, but it often affects
 Subversion users.</p>
 
-<p>RedHat 9 and Fedora ship with a Berkeley DB library that relies on the kernel
-support for NPTL (the Native Posix Threads Library).</p>
+<p>Red Hat 9 and Fedora ship with a Berkeley DB library that relies on
+the kernel support for NPTL (the Native Posix Threads Library).</p>
 
-<p>The kernels that RedHat provides have this support built in, but if you
+<p>The kernels that Red Hat provides have this support built in, but if you
 compile your own kernel, then you may well not have the NPTL support.  If that
 is the case, then you will see errors like this:</p>
 <blockquote><pre>
@@ -2761,14 +2683,14 @@ Function not implemented
 </pre></blockquote>
 <p>This can be fixed in one of several ways:</p>
 <ul>
-<li>Rebuild db4 for the kernel you're using.</li>
-<li>Use a RedHat 9 kernel.</li>
+<li>Rebuild Berkeley DB for the kernel you're using.</li>
+<li>Use a Red Hat 9 kernel.</li>
 <li>Apply the NPTL patches to the kernel you're using.</li>
 <li>Use a recent (2.5.x) kernel with the NPTL support included.</li>
 <li>Check if environment variable <code>LD_ASSUME_KERNEL</code> is set
     to <code>2.2.5</code>, and if so, unset it before starting
     Subversion (Apache). (You usually would set this variable to run
-    Wine or Winex on RedHat 9)</li>
+    Wine or Winex on Red Hat 9)</li>
 </ul>
 <p>To use the NPTL version of Berkeley DB you also need to use a glibc
 library with NPTL support, which probably means the i686 version. See
@@ -3128,11 +3050,11 @@ and 4.2 are better.  This error message is a symptom of one unique way
 in which 4.1 will sometimes break.</p>
 
 <p>The problem is that the database format field for one of the tables
-that make up a Subversion BDB-type repository has become corrupted.
-For unknown reasons, this is almost always the 'copies' table, which
-switches from the 'btree' type to the 'recno' type.  Simple recovery
-procedures are outlined below - if they do not succeed, you should
-contact the Subversion Users <a
+that make up a Subversion repository using the Berkeley DB backend has
+become corrupted.  For unknown reasons, this is almost always the
+'copies' table, which switches from the 'btree' type to the 'recno'
+type.  Simple recovery procedures are outlined below - if they do not
+succeed, you should contact the Subversion Users <a
   href="mailto:users@subversion.tigris.org">mailing list</a>.</p>
 
 <ul>
@@ -3225,9 +3147,11 @@ is still at r7, you do not see the log information for r8.</p>
 <p>Normally one can simply run <tt>svnadmin recover</tt> to upgrade a
   Berkeley DB repository in-place.  However, due to a bug in the way
   this command invokes the <tt>db_recover()</tt> API, this won't work
-  correctly when upgrading from BDB 4.0/4.1/4.2 to BDB 4.3.</p>
+  correctly when upgrading from Berkeley DB 4.0/4.1/4.2 to Berkeley DB
+  4.3.</p>
 
-<p>Use this procedure to upgrade your repository in-place to BDB 4.3:</p>
+<p>Use this procedure to upgrade your repository in-place to Berkeley
+DB 4.3:</p>
 
 <ul>
 
@@ -3236,7 +3160,7 @@ Apache, svnserve, restrict access via file://, svnlook, svnadmin,
 etc.)</li>
 
 <li>Using an <i>older</i> <tt>svnadmin</tt> binary (that is, linked to
-  an older BerkeleyDB):
+  an older Berkeley DB):
 
   <ol>
 
