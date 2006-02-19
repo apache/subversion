@@ -68,15 +68,18 @@ needed.
 Alter the definition of INCLUDES, adding *at the beginning*, the appropriate
 -I/usr/include/db-4.X option.
 
-Now make.  If all goes well, your newly built Subversion should be using your
-alternate Berkeley DB version.
-
-
-OUTSTANDING PROBLEM:  Despite this meddling, libtool still fetches a -ldb
-option for the version of Berkeley DB linked to APR-util from the APR-util .la
-file, and uses it when linking the command line programs.  Because of the use
-of --with-uniquename above, this is not a problem per se, but it does result,
-on Linux, in the addition of spurious DT_NEEDED dependency records to the
+Last issue: Despite this meddling, libtool still fetches a -ldb option for the
+version of Berkeley DB linked to APR-util from the APR-util .la file, and uses
+it when linking the command line programs.  Because of the use of
+--with-uniquename above, this is not a problem per se, but it does result, on
+Linux, in the addition of spurious DT_NEEDED dependency records to the
 binaries, such that they claim to be dependent on BOTH the alternate AND
 APR-util versions of Berkeley DB, despite the fact they never invoke code in
-the linked-to-APR-util version.
+the linked-to-APR-util version.  This can be avoided by setting
+EXTRA_LDFLAGS="-Wl,--as-needed", though you should be aware that this will
+likely strip off several other DT_NEEDED records too, none of which should be
+necessary, but with the complexities of shared library linking, you should
+probably test that this hasn't had any unforeseen side-effects.
+
+Now make.  If all goes well, your newly built Subversion should be using your
+alternate Berkeley DB version.
