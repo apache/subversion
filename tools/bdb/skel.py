@@ -167,11 +167,15 @@ class Txn:
 class SvnDiffWindow:
   def __init__(self, skelstructure):
     self.offset = skelstructure[0]
+    self.svndiffver = skelstructure[1][0][1]
     self.str = skelstructure[1][0][2]
     self.size = skelstructure[1][1]
     self.vs_rep = skelstructure[1][2]
-    #self.rep_offset = skelstructure[1][3]
-    
+
+  def _unparse_structure(self):
+    return ([ self.offset, [ [ 'svndiff', self.svndiffver, self.str ],
+        self.size, self.vs_rep ] ])
+
 
 class Rep:
   def __init__(self, skelstring="((fulltext 0  (md5 16 \0\0\0\0\0\0\0\0" \
@@ -197,6 +201,7 @@ class Rep:
     if self.kind == "fulltext":
       structure.append(self.str)
     elif self.kind == "delta":
-      structure.extend(self.windows)
+      for w in self.windows:
+        structure.append(w._unparse_structure())
     return unparse( structure )
 
