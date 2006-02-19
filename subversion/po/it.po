@@ -84,8 +84,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-02-17 05:02+0100\n"
-"PO-Revision-Date: 2006-02-17 10:30+0100\n"
+"POT-Creation-Date: 2006-02-19 05:02+0100\n"
+"PO-Revision-Date: 2006-02-19 09:28+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2037,13 +2037,13 @@ msgstr ""
 "Errore del DB Berkeley per il filesystem '%s' durante l'apertura "
 "dell'ambiente:\n"
 
-#: libsvn_fs_base/fs.c:674 libsvn_fs_fs/fs_fs.c:277
+#: libsvn_fs_base/fs.c:672 libsvn_fs_fs/fs_fs.c:277
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr ""
 "Il formato atteso per il filesystem era '%d'; il formato trovato è '%d'"
 
-#: libsvn_fs_base/fs.c:1096
+#: libsvn_fs_base/fs.c:1094
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -2054,7 +2054,7 @@ msgstr ""
 "potrebbe interferire con l'algoritmo di copia a caldo. Se il\n"
 "problema persiste, prova a disattivare tale opzione in DB_CONFIG."
 
-#: libsvn_fs_base/fs.c:1115
+#: libsvn_fs_base/fs.c:1113
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -2066,12 +2066,12 @@ msgstr ""
 "a caldo. Se il problema persiste, prova a disattivare tale \n"
 "opzione in DB_CONFIG."
 
-#: libsvn_fs_base/fs.c:1224
+#: libsvn_fs_base/fs.c:1222
 msgid "Module for working with a Berkeley DB repository."
 msgstr ""
 "Modulo da usare con un repository che si appoggia ad un database Berkeley"
 
-#: libsvn_fs_base/fs.c:1257
+#: libsvn_fs_base/fs.c:1255
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Versione del lettore di filesystem (%d) per bdb non supportata"
@@ -2505,7 +2505,7 @@ msgstr "Non posso abbandonare il mutex per il filesystem"
 msgid "Transaction out of date"
 msgstr "Transazione scaduta"
 
-#: libsvn_fs_fs/fs_fs.c:4127
+#: libsvn_fs_fs/fs_fs.c:4125
 msgid "No such transaction"
 msgstr "Transazione inesistente"
 
@@ -2642,29 +2642,33 @@ msgstr ""
 "   checksum atteso:   %s\n"
 "   checksum effettivo:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1262
+#: libsvn_ra_dav/fetch.c:1157
+msgid "Server response missing the expected deadprop-count property"
+msgstr "L'attesa proprietà deadprop-count non è presente nella risposta del server"
+
+#: libsvn_ra_dav/fetch.c:1335
 msgid "Server does not support date-based operations"
 msgstr "Il server non supporta operazioni basate sulla data"
 
-#: libsvn_ra_dav/fetch.c:1269
+#: libsvn_ra_dav/fetch.c:1342
 msgid "Invalid server response to dated-rev request"
 msgstr "Risposta del server non valida ad una richiesta di revisione con data"
 
-#: libsvn_ra_dav/fetch.c:1408
+#: libsvn_ra_dav/fetch.c:1481
 msgid "'get-locations' REPORT not implemented"
 msgstr "REPORT di 'get-locations' non implementato"
 
-#: libsvn_ra_dav/fetch.c:1581 libsvn_ra_dav/session.c:1187
+#: libsvn_ra_dav/fetch.c:1654 libsvn_ra_dav/session.c:1187
 #: libsvn_ra_dav/session.c:1473
 msgid "Incomplete lock data returned"
 msgstr "Restituiti dati di blocco incompleti"
 
-#: libsvn_ra_dav/fetch.c:1757 libsvn_ra_dav/fetch.c:1765
-#: libsvn_ra_dav/fetch.c:1769
+#: libsvn_ra_dav/fetch.c:1830 libsvn_ra_dav/fetch.c:1838
+#: libsvn_ra_dav/fetch.c:1842
 msgid "Server does not support locking features"
 msgstr "Il server non supporta le funazionalità di blocco"
 
-#: libsvn_ra_dav/fetch.c:1846
+#: libsvn_ra_dav/fetch.c:1919
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -2672,17 +2676,17 @@ msgstr ""
 "Richiesta DAV fallita; è possibile che l'hook pre-revprop-change del "
 "repository abbia fallito o non esista"
 
-#: libsvn_ra_dav/fetch.c:2581
+#: libsvn_ra_dav/fetch.c:2654
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Errore nella scrittura di '%s': EOF inatteso"
 
-#: libsvn_ra_dav/fetch.c:2726
+#: libsvn_ra_dav/fetch.c:2799
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Codifica XML sconosciuta: '%s'"
 
-#: libsvn_ra_dav/fetch.c:3013
+#: libsvn_ra_dav/fetch.c:3086
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "Il gestore delle risposte di REPORT non è riuscito a completare la guida "
@@ -2742,48 +2746,48 @@ msgstr ""
 "La risposta di OPTIONS non include l'activity-collection-set richiesto; "
 "questo spesso significa che l'URL non è WebDAV"
 
-#: libsvn_ra_dav/props.c:585
+#: libsvn_ra_dav/props.c:588
 #, c-format
 msgid "Failed to find label '%s' for URL '%s'"
 msgstr "Non ho trovato l'etichetta '%s' per l'URL '%s'"
 
-#: libsvn_ra_dav/props.c:614
+#: libsvn_ra_dav/props.c:617
 #, c-format
 msgid "'%s' was not present on the resource"
 msgstr "'%s' non era presente nella risorsa"
 
-#: libsvn_ra_dav/props.c:653
+#: libsvn_ra_dav/props.c:656
 #, c-format
 msgid "Neon was unable to parse URL '%s'"
 msgstr "Neon non è stato in grado di interpretare l'URL '%s'"
 
-#: libsvn_ra_dav/props.c:682
+#: libsvn_ra_dav/props.c:685
 msgid "The path was not part of a repository"
 msgstr "Il percorso non fa parte del repository"
 
-#: libsvn_ra_dav/props.c:693
+#: libsvn_ra_dav/props.c:696
 #, c-format
 msgid "No part of path '%s' was found in repository HEAD"
 msgstr ""
 "Nessuna parte del percorso '%s' è stata trovata nella HEAD del repository"
 
-#: libsvn_ra_dav/props.c:727 libsvn_ra_dav/props.c:782
+#: libsvn_ra_dav/props.c:730 libsvn_ra_dav/props.c:785
 msgid "The VCC property was not found on the resource"
 msgstr "La proprietà VCC non è stata trovata sulla risorsa"
 
-#: libsvn_ra_dav/props.c:795
+#: libsvn_ra_dav/props.c:798
 msgid "The relative-path property was not found on the resource"
 msgstr "La proprietà di percorso relativo non è stata trovata sulla risorsa"
 
-#: libsvn_ra_dav/props.c:916
+#: libsvn_ra_dav/props.c:919
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr "'DAV:baseline-collection' non era presente sulla risorsa di baseline"
 
-#: libsvn_ra_dav/props.c:935
+#: libsvn_ra_dav/props.c:938
 msgid "'DAV:version-name' was not present on the baseline resource"
 msgstr "'DAV:version-name' non era presente sulla risorsa di baseline"
 
-#: libsvn_ra_dav/props.c:1103
+#: libsvn_ra_dav/props.c:1106
 msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "Almeno una modifica di proprietà è fallita; il repository è rimaso immutato"
@@ -3022,17 +3026,17 @@ msgstr "Non riesco ad aprire il repository '%s'"
 msgid "Access repository via WebDAV protocol through serf."
 msgstr "Modulo per accedere ad un repository tramite protocollo WebDAV."
 
-#: libsvn_ra_serf/serf.c:109
+#: libsvn_ra_serf/serf.c:108
 #, c-format
 msgid "Could not lookup hostname: %s://%s"
 msgstr "Non trovo il nome dell'host: %s://%s"
 
-#: libsvn_ra_serf/serf.c:565
+#: libsvn_ra_serf/serf.c:572
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versione (%d) del lettore per ra_serf non supportata"
 
-#: libsvn_ra_serf/update.c:1410
+#: libsvn_ra_serf/update.c:1553
 msgid "Error retrieving REPORT"
 msgstr "Errore nel recuperare REPORT"
 
@@ -4159,7 +4163,7 @@ msgstr "Non riesco ad ottenere il nome del file del modulo"
 msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
 msgstr "Non riesco a convertire il percorso del modulo a UTF-8 da UCS-2: '%s'"
 
-#: libsvn_subr/opt.c:146
+#: libsvn_subr/opt.c:215 libsvn_subr/opt.c:293
 msgid ""
 "\n"
 "Valid options:\n"
@@ -4167,11 +4171,11 @@ msgstr ""
 "\n"
 "Opzioni valide:\n"
 
-#: libsvn_subr/opt.c:236
+#: libsvn_subr/opt.c:422
 msgid " arg"
 msgstr " argomento"
 
-#: libsvn_subr/opt.c:259
+#: libsvn_subr/opt.c:445 libsvn_subr/opt.c:468
 #, c-format
 msgid ""
 "\"%s\": unknown command.\n"
@@ -4180,27 +4184,27 @@ msgstr ""
 "\"%s\": comando sconosciuto.\n"
 "\n"
 
-#: libsvn_subr/opt.c:529
+#: libsvn_subr/opt.c:738
 #, c-format
 msgid "Syntax error parsing revision '%s'"
 msgstr "Errore di sintassi nella lettura della revisione '%s'"
 
-#: libsvn_subr/opt.c:606
+#: libsvn_subr/opt.c:815
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
 msgstr "L'URL '%s' non è propriamente codificata come URI"
 
-#: libsvn_subr/opt.c:612
+#: libsvn_subr/opt.c:821
 #, c-format
 msgid "URL '%s' contains a '..' element"
 msgstr "L'URL '%s' contiene un elemento '..'"
 
-#: libsvn_subr/opt.c:641
+#: libsvn_subr/opt.c:850
 #, c-format
 msgid "Error resolving case of '%s'"
 msgstr "Errore nella risoluzione del caso '%s'"
 
-#: libsvn_subr/opt.c:743
+#: libsvn_subr/opt.c:952
 #, c-format
 msgid ""
 "%s, version %s\n"
@@ -4211,7 +4215,7 @@ msgstr ""
 "   compilato %s, %s\n"
 "\n"
 
-#: libsvn_subr/opt.c:746
+#: libsvn_subr/opt.c:955
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -4225,7 +4229,7 @@ msgstr ""
 "Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:799
+#: libsvn_subr/opt.c:1008 libsvn_subr/opt.c:1051
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "Digita '%s help' per informazioni.\n"
@@ -5533,8 +5537,8 @@ msgid "show help on a subcommand"
 msgstr "mostra le informazioni su un comando"
 
 #: svn/main.c:65
-msgid "specify commit message ARG"
-msgstr "specifica il messaggio di commit ARG"
+msgid "specify log message ARG"
+msgstr "specifica il messaggio di log ARG"
 
 #: svn/main.c:66
 msgid "print as little as possible"
@@ -5579,8 +5583,8 @@ msgstr ""
 "COMMITTED"
 
 #: svn/main.c:81
-msgid "read data from file ARG"
-msgstr "legge i dati dal file ARG"
+msgid "read log message from file ARG"
+msgstr "legge il messagio di log dal file ARG"
 
 #: svn/main.c:83
 msgid "give output suitable for concatenation"
@@ -6075,7 +6079,15 @@ msgstr ""
 "\n"
 "Usa --force per rubare il blocco da un altro utente o copia di lavoro.\n"
 
+#: svn/main.c:390
+msgid "read lock comment from file ARG"
+msgstr "legge il commento al blocco dal file ARG"
+
 #: svn/main.c:391
+msgid "specify lock comment ARG"
+msgstr "specifica il commento al blocco ARG"
+
+#: svn/main.c:394
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6130,7 +6142,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: svn/main.c:420
+#: svn/main.c:423
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6181,7 +6193,7 @@ msgstr ""
 "  sorgenti abbiano nomi identici che corrispondano ad un file in '.':\n"
 "  in quel caso le differenze vengono applicate a quel file.\n"
 
-#: svn/main.c:448
+#: svn/main.c:451
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -6211,7 +6223,7 @@ msgstr ""
 "\n"
 "  In entrambi i casi tutte le directory intermedie devono già esistere.\n"
 
-#: svn/main.c:465
+#: svn/main.c:468
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -6234,7 +6246,7 @@ msgstr ""
 "    CL  -> CL:   muove e prepara all'inserimento (con storico)\n"
 "    URL -> URL:  spostamento completamente lato server.\n"
 
-#: svn/main.c:478
+#: svn/main.c:481
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6254,7 +6266,7 @@ msgstr ""
 "del repository.\n"
 "     OBBIETTIVO determina semplicemente a quale repository accedere.\n"
 
-#: svn/main.c:489
+#: svn/main.c:492
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6274,7 +6286,7 @@ msgstr ""
 "del repository.\n"
 "     OBBIETTIVO determina semplicemente a quale repository accedere.\n"
 
-#: svn/main.c:501
+#: svn/main.c:504
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6311,7 +6323,7 @@ msgstr ""
 "  questi abbellimenti (utile, per esempio, per redirigere i valori\n"
 "  di proprietà binarie in un file).\n"
 
-#: svn/main.c:520
+#: svn/main.c:523
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6333,7 +6345,7 @@ msgstr ""
 "repository.\n"
 "     OBBIETTIVO determina semplicemente a quale repository accedere.\n"
 
-#: svn/main.c:532
+#: svn/main.c:535
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6426,7 +6438,11 @@ msgstr ""
 "ricorsivamente\n"
 "  sui figli della directory.\n"
 
-#: svn/main.c:576
+#: svn/main.c:577
+msgid "read propery value from file ARG"
+msgstr "legge il valore della proprietà dal file ARG"
+
+#: svn/main.c:580
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -6442,7 +6458,7 @@ msgstr ""
 "  e non rimuove i segnali di conflitto; rimuove semplicemente lo\n"
 "  stato di conflitto e permette a seguire il commit di PERCORSO.\n"
 
-#: svn/main.c:585
+#: svn/main.c:589
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -6456,7 +6472,7 @@ msgstr ""
 "  Nota: questo comando non richiede accesso al repository e risolve\n"
 "  ogni stato di conflito. Tuttavia non ripristina le directory rimosse.\n"
 
-#: svn/main.c:593
+#: svn/main.c:597
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -6611,7 +6627,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Revisione head:   981\n"
 
-#: svn/main.c:669
+#: svn/main.c:673
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -6643,7 +6659,7 @@ msgstr ""
 "riflette\n"
 "     la stessa directory nello stesso repository.\n"
 
-#: svn/main.c:685
+#: svn/main.c:689
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -6655,7 +6671,7 @@ msgstr ""
 "\n"
 "Usa --force per forzare il blocco.\n"
 
-#: svn/main.c:693
+#: svn/main.c:697
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -6698,15 +6714,15 @@ msgstr ""
 "  colonna. Una 'B' nella terza colonna significa che il blocco del file è\n"
 "  stato rotto o rubato.\n"
 
-#: svn/main.c:755 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:137
+#: svn/main.c:759 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:137
 msgid "Caught signal"
 msgstr "Catturato il segnale"
 
-#: svn/main.c:863
+#: svn/main.c:867
 msgid "Non-numeric limit argument given"
 msgstr "Fornito un argumento di limite non numerico"
 
-#: svn/main.c:882
+#: svn/main.c:886
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
@@ -6715,19 +6731,19 @@ msgstr ""
 "volte,\n"
 "o sia -c che -r"
 
-#: svn/main.c:891
+#: svn/main.c:895
 msgid "Non-numeric change argument given to -c"
 msgstr "Assegnato a -c un argumento non numerico"
 
-#: svn/main.c:897
+#: svn/main.c:901
 msgid "There is no change 0"
 msgstr "Non esiste una modifica 0"
 
-#: svn/main.c:903
+#: svn/main.c:907
 msgid "Argument to -c must be positive"
 msgstr "L'argumento per -c dev'essere positivo"
 
-#: svn/main.c:915
+#: svn/main.c:919
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -6736,31 +6752,31 @@ msgstr ""
 "c,\n"
 "prova '-r N:M' invece di '-r N -r M'"
 
-#: svn/main.c:928 svnadmin/main.c:1236
+#: svn/main.c:932 svnadmin/main.c:1236
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Errore di sintassi nell'argomento di revisione '%s'"
 
-#: svn/main.c:1076 svn/main.c:1086
+#: svn/main.c:1080 svn/main.c:1090
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props e --no-auto-props sono mutualmente esclusivi"
 
-#: svn/main.c:1102
+#: svn/main.c:1106
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Errore di sintassi nell'argomento native-eol '%s'"
 
-#: svn/main.c:1152 svndumpfilter/main.c:1191 svnlook/main.c:2142
+#: svn/main.c:1156 svndumpfilter/main.c:1191 svnlook/main.c:2142
 msgid "Subcommand argument required\n"
 msgstr "È necessario specificare un argomento per il comando\n"
 
-#: svn/main.c:1170 svnadmin/main.c:1347 svndumpfilter/main.c:1209
+#: svn/main.c:1174 svnadmin/main.c:1347 svndumpfilter/main.c:1209
 #: svnlook/main.c:2160
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Comando sconosciuto: '%s'\n"
 
-#: svn/main.c:1203
+#: svn/main.c:1208
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -6769,19 +6785,19 @@ msgstr ""
 "Il comando '%s' non accetta l'opzione '%s'\n"
 "Digita 'svn help %s' per le istruzioni.\n"
 
-#: svn/main.c:1240
+#: svn/main.c:1245
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Il file contenente il messaggio di log è sotto controllo di versione;\n"
 "usa --force-log per proseguire comunque"
 
-#: svn/main.c:1247
+#: svn/main.c:1252
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Il file contenente il commento di blocco è sotto controllo di versione;\n"
 "usa --force-log per proseguire comunque"
 
-#: svn/main.c:1268
+#: svn/main.c:1273
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -6789,7 +6805,7 @@ msgstr ""
 "Il messaggio di log è il nome di un percorso (volevi usare -F?);\n"
 "usa '--force-log' per proseguire comunque"
 
-#: svn/main.c:1275
+#: svn/main.c:1280
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -6797,7 +6813,7 @@ msgstr ""
 "Il commento di blocco è il nome di un percorso (volevi usare -F?);\n"
 "usa '--force-log' per proseguire comunque"
 
-#: svn/main.c:1400
+#: svn/main.c:1405
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
