@@ -766,7 +766,7 @@ svn_cl__check_cancel(void *baton)
 /*** Main. ***/
 
 int
-main(int argc, const char * const *argv)
+main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_allocator_t *allocator;
@@ -835,7 +835,10 @@ main(int argc, const char * const *argv)
     }
 
   /* Else, parse options. */
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+
   os->interleave = 1;
   while (1)
     {
