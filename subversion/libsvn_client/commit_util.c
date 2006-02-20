@@ -2,7 +2,7 @@
  * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1289,10 +1289,22 @@ svn_client__do_commit(const char *base_url,
 
       if (ctx->notify_func2)
         {
-          svn_wc_notify_t *notify
-            = svn_wc_create_notify(item->path,
-                                   svn_wc_notify_commit_postfix_txdelta,
-                                   subpool);
+          svn_wc_notify_t *notify;
+          const char *npath = NULL;
+
+          if (notify_path_prefix)
+            {
+              if (strcmp(notify_path_prefix, item->path) != 0)
+                npath = svn_path_is_child(notify_path_prefix, item->path,
+                                          subpool);
+              else
+                npath = ".";
+            }
+          if (! npath)
+            npath = item->path;
+          notify = svn_wc_create_notify(npath,
+                                        svn_wc_notify_commit_postfix_txdelta,
+                                        subpool);
           notify->kind = svn_node_file;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
         }
