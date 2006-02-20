@@ -1683,11 +1683,10 @@ svn_client_resolved(const char *path,
 
 /** Copy @a src_path to @a dst_path.
  *
- * @a src_path must be a file or directory under version control, or the
- * URL of a versioned item in the repository.  If @a src_path is a 
- * URL, @a src_revision is used to choose the revision from which to copy 
- * the @a src_path.  @a dst_path must be a file or directory under version
- * control, or a repository URL.
+ * @a src_path must be a file or directory under version control, or
+ * the URL of a versioned item in the repository.  @a src_revision is
+ * used to choose the revision from which to copy the @a src_path.  @a
+ * dst_path must be a non-existent WC path or URL.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
@@ -1700,9 +1699,10 @@ svn_client_resolved(const char *path,
  * until a commit occurs.  This scheduling can be removed with
  * svn_client_revert().
  *
- * Attempt to create any parent directories for @a dst_path that do not exist.
- *
- * If @a dst_path already exists, fail.
+ * The parent of @a dst_path must already exist, but if @a dst_path
+ * already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is
+ * a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path
+ * is an URL.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is
@@ -1787,10 +1787,11 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *     and @a force is not set, the move will fail. If @a force is set such
  *     items will be removed.
  *
- * Attempt to create any parent directories for @a dst_path that do not exist.
+ * The parent of @a dst_path must already exist, but if @a dst_path
+ * already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is
+ * a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path
+ * is an URL.
  *
- * If @a dst_path already exists, fail.
-
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
