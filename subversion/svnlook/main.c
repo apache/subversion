@@ -1975,7 +1975,7 @@ subcommand_uuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 /*** Main. ***/
 
 int
-main(int argc, const char * const *argv)
+main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -2028,7 +2028,10 @@ main(int argc, const char * const *argv)
   opt_state.rev = SVN_INVALID_REVNUM;
 
   /* Parse options. */
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+
   os->interleave = 1;
   while (1)
     {

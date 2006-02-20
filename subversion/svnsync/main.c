@@ -1155,7 +1155,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 int
-main(int argc, const char * const argv[])
+main(int argc, const char *argv[])
 {
   const svn_opt_subcommand_desc_t *subcommand = NULL;
   apr_array_header_t *received_opts;
@@ -1201,7 +1201,9 @@ main(int argc, const char * const argv[])
       return EXIT_FAILURE;
     }
 
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
 
   os->interleave = 1;
 
