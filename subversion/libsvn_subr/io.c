@@ -52,6 +52,9 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 
+#ifdef AS400
+#define SVN_UTF_UTOE_XLATE_HANDLE "svn-utf-utoe-xlate-handle"
+#endif
 
 /*
   Windows is 'aided' by a number of types of applications that
@@ -369,8 +372,17 @@ svn_io_create_unique_link(const char **unique_name_p,
          before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
+#ifndef AS400_UTF8 
       SVN_ERR(svn_path_cstring_from_utf8(&unique_name_apr, unique_name,
                                          pool));
+#else
+      /* On OS400 with UTF support a native cstring is UTF-8,
+       * but symlink() *really* needs an EBCDIC path. */
+      SVN_ERR(svn_utf_cstring_from_utf8_ex(&unique_name_apr, unique_name,
+                                           (const char*)0,
+                                           SVN_UTF_UTOE_XLATE_HANDLE,
+                                           pool));
+#endif
 
       do {
         rv = symlink(dest_apr, unique_name_apr);
@@ -433,7 +445,15 @@ svn_io_read_link(svn_string_t **dest,
   char buf[1025];
   int rv;
   
+#ifndef AS400_UTF8  
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
+#else
+  /* On OS400 with UTF support a native cstring is UTF-8, but
+   * readlink() *really* needs an EBCDIC path. */
+  SVN_ERR(svn_utf_cstring_from_utf8_ex(&path_apr, path, (const char*)0,
+                                       SVN_UTF_UTOE_XLATE_HANDLE,
+                                       pool));
+#endif
   do {
     rv = readlink(path_apr, buf, sizeof(buf) - 1);
   } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));

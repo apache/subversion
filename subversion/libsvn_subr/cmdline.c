@@ -72,9 +72,18 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
        e.g. file descriptor 2 would be reused when opening a file, a
        write to stderr would write to that file and most likely
        corrupt it. */
+#ifdef AS400_UTF8
+    /* Even with the UTF support in V5R4 a few functions on OS400 don't
+     * support UTF-8 string arguments and require EBCDIC paths, including
+     * open(). */
+#pragma convert(0)
+#endif
     if ((fstat(0, &st) == -1 && open("/dev/null", O_RDONLY) == -1) ||
         (fstat(1, &st) == -1 && open("/dev/null", O_WRONLY) == -1) ||
         (fstat(2, &st) == -1 && open("/dev/null", O_WRONLY) == -1))
+#ifdef AS400_UTF8
+#pragma convert(1208)
+#endif
       {
         fprintf(error_stream, "%s: error: cannot open '/dev/null'\n",
                 progname);
