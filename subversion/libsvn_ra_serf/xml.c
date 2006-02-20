@@ -94,7 +94,7 @@ expand_ns(ns_t *ns_list, const char *name)
 
       for (ns = ns_list; ns; ns = ns->next)
         {
-          if (strncmp(ns->namespace, name, colon-name) == 0)
+          if (strncmp(ns->namespace, name, colon - name) == 0)
             {
               prop_name.namespace = ns->url;
               break;
