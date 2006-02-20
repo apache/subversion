@@ -22,14 +22,14 @@ current access baton and entries caching system was gradually hacked
 in, and libsvn_wc is now faster and scales a bit better, but problems
 still remain.
 
-My favourite example of the problems caused by the "path as parameter"
-API is svn_wc_props_modified_p.  It's basic function is to determine
-if the base props file and the working props file are the same or
-different, but physical IO operations have to be repeated because they
-are buried behind several layers of API.  It's difficult to fix
-without rewriting, or duplicating, a number of svn_io_xxx and
-svn_wc_xxx functions.  Aside from the repeated IO itself, each IO
-operation also has to repeat the UTF-8 to native path conversion.
+A good example of the problems caused by the "path as parameter" API
+is svn_wc_text_modified_p.  It's basic function is to determine if the
+base text file and the working file are the same or different, but
+physical IO operations have to be repeated because they are buried
+behind several layers of API.  It's difficult to fix without
+rewriting, or duplicating, a number of svn_io_xxx and svn_wc_xxx
+functions.  Aside from the repeated IO itself, each IO operation also
+has to repeat the UTF-8 to native path conversion.
 
 The current entries caching makes things faster than in the past, but
 has it's own problems.  Most operations now cache the entire entries
@@ -103,15 +103,21 @@ implement, some of them may not work at all.
   spare.  Perhaps compressed text-bases would make things faster
   rather than slower, by trading spare CPU for reduced IO?
 
-- Keep track of the last text/prop time written into an entries file
-  and store it in svn_wc_t.  Then when we come to do a timestamp sleep
-  we can do it from the that time rather than the current time.
+- Keep track of the last text time written into an entries file and
+  store it in svn_wc_t.  Then when we come to do a timestamp sleep
+  we can do it from that time rather than the current time.
 
 - Store working file size in the entries file and use it as another
   shortcut to detect modifications.  This should not need any extra
   system calls, the stat() for timestamp can also return the size.
   When it triggers it will be much faster than possibly detranslating
   and then doing a byte-by-byte comparison.
+  ### Problem: This doesn't work when the file needs translation, because the
+  ### file might be modified in such a way that these modifications disappear
+  ### when the file is detranslated.
+
+- Consider using the translated stream API to get a (de)translated
+  version of a file, when the temp file is not needed.
 
 - Make the entries file smaller.  The properties committed-date 
   committed-rev and last-author are really only needed for keyword
@@ -127,11 +133,13 @@ implement, some of them may not work at all.
 - Optimise property handling
   http://svn.haxx.se/dev/archive-2004-11/0318.shtml
 
-  * Look at calls to svn_wc__get_keywords, svn_wc__get_eol_style and
-    svn_wc__get_special, each of those reads the properties file.  If
-    they occur together then consider replacing them with a single call
-    to svn_wc_prop_list, and perhaps write some functions that accept
-    the properties hash as an argument.
+  * Look at calls to svn_wc__get_keywords and svn_wc__get_eol_style
+    Each of those reads the properties file.  If they occur together
+    then consider replacing them with a single call to svn_wc_prop_list,
+    and perhaps write some functions that accept the properties hash
+    as an argument.  Alternatively, consider caching the existence of
+    these two properties in the entries file to avoid reading the props
+    file at all in some cases.
 
 - Optimise update/incomplete handling to reduce the number of times
   the entry file gets written.
