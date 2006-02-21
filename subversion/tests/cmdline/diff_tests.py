@@ -2196,7 +2196,7 @@ def diff_repos_wc_add_with_props(sbox):
     os.chdir(current_dir)
 
 def diff_nonrecursive_checkout_deleted_dir(sbox):
-  '''check out a dir -N and run di to a rev before its child dir existed'''
+  "nonrecursive diff + deleted directories"
   sbox.build()
 
   url = svntest.main.current_repo_url
