@@ -1883,6 +1883,31 @@ def diff_schedule_delete(sbox):
   finally:
     os.chdir(current_dir)
 
+def diff_nonrecursive_checkout_deleted_dir(sbox):
+  "nonrecursive diff + deleted directories"
+  sbox.build()
+
+  url = svntest.main.current_repo_url
+  A_url = url + '/A'
+  A_prime_url = url + '/A_prime'
+
+  svntest.main.run_svn(None, 'cp', '-m', 'log msg', A_url, A_prime_url)
+
+  svntest.main.run_svn(None, 'mkdir', '-m', 'log msg', A_prime_url + '/Q')
+
+  wc = sbox.add_wc_path('wc')
+
+  svntest.main.run_svn(None, 'co', '-N', A_prime_url, wc)
+
+  saved_cwd = os.getcwd()
+
+  try:
+    os.chdir(wc)
+
+    svntest.main.run_svn(None, 'di', '-r1')
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 #Run the tests
 
@@ -1917,6 +1942,7 @@ test_list = [ None,
               diff_force,
               diff_schedule_delete,
               XFail(diff_renamed_dir),
+              diff_nonrecursive_checkout_deleted_dir,
               ]
 
 if __name__ == '__main__':
