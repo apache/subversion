@@ -2195,6 +2195,30 @@ def diff_repos_wc_add_with_props(sbox):
   finally:
     os.chdir(current_dir)
 
+def diff_nonrecursive_checkout_deleted_dir(sbox):
+  '''check out a dir -N and run di to a rev before its child dir existed'''
+  sbox.build()
+
+  url = svntest.main.current_repo_url
+  A_url = url + '/A'
+  A_prime_url = url + '/A_prime'
+
+  svntest.main.run_svn(None, 'cp', '-m', 'log msg', A_url, A_prime_url)
+
+  svntest.main.run_svn(None, 'mkdir', '-m', 'log msg', A_prime_url + '/Q')
+
+  wc = sbox.add_wc_path('wc')
+
+  svntest.main.run_svn(None, 'co', '-N', A_prime_url, wc)
+
+  saved_cwd = os.getcwd()
+
+  try:
+    os.chdir(wc)
+
+    svntest.main.run_svn(None, 'di', '-r1')
+  finally:
+    os.chdir(saved_cwd)
 
 ########################################################################
 #Run the tests
@@ -2234,6 +2258,7 @@ test_list = [ None,
               diff_mime_type_changes,
               XFail(diff_prop_change_local_propmod),
               diff_repos_wc_add_with_props,
+              diff_nonrecursive_checkout_deleted_dir,
               ]
 
 if __name__ == '__main__':
