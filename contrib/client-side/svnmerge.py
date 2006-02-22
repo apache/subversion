@@ -535,8 +535,7 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    dir = target_to_url(branch_dir)
-    dir = url_to_rlpath(dir)
+    dir = url_to_rlpath(target_to_url(branch_dir))
 
     # To make bi-directional merges easier, find the target's
     # repository local path so it can be removed from the list of
