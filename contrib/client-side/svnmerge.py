@@ -41,7 +41,7 @@
 #   the complementary "svnmerge unblock".
 # - "svnmerge avail" has grown two new options:
 #   -B to display a list of the blocked revisions
-#   -A to display both the the blocked and the available revisions.
+#   -A to display both the blocked and the available revisions.
 # - Improved generated commit message to make it machine parsable even when
 #   merging commits which are themselves merges.
 # - Add --force option to skip working copy check
@@ -236,7 +236,7 @@ def check_dir_clean(dir):
     report('checking status of "%s"' % dir)
     # Checking with -q does not show unversioned files, or external directories.
     # Though it displays a debug message for external directories, after a
-    # blank line. So, pratically, the first line matters: if it's non-empty
+    # blank line. So, practically, the first line matters: if it's non-empty
     # there is a modification.
     out = launchsvn("status -q %s" % dir)
     if out and out[0].strip():
