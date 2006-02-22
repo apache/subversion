@@ -856,10 +856,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   apr_hash_t *props;
 
   /* What connection should we go on? */
-  conn = ctx->sess->conns[ctx->sess->cur_conn++];
-
-  if (ctx->sess->cur_conn == ctx->sess->num_conns)
-    ctx->sess->cur_conn = 1;
+  conn = ctx->sess->conns[ctx->sess->cur_conn];
 
   /* go fetch info->name from DAV:checked-in */
   checked_in_url = get_prop(info->dir->props, info->base_name,
@@ -1529,6 +1526,11 @@ finish_report(void *report_baton,
         {
           return svn_error_wrap_apr(status, _("Error retrieving REPORT"));
         }
+
+      /* Switch our connection. */
+      if (!report->done)
+         if (++sess->cur_conn == sess->num_conns)
+             sess->cur_conn = 1;
 
       /* prune our propfind list if they are done. */
       done_list = report->done_propfinds;
