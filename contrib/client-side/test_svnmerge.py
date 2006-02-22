@@ -35,10 +35,10 @@ except NameError:
 
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
-        self.assertEqual(svnmerge.kwextract("$Rev$"), "134 rasky")
+        self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")
         self.assertEqual(svnmerge.kwextract("$Date: 2005-09-25 13:45 CET+1$"), "2005-09-25 13:45 CET+1")
     def test_failure(self):
-        self.assertEqual(svnmerge.kwextract("$Rev$"), "<unknown>")
+        self.assertEqual(svnmerge.kwextract("$Rev: $"), "<unknown>")
         self.assertEqual(svnmerge.kwextract("$Date$"), "<unknown>")
 
 class TestCase_launch(unittest.TestCase):
@@ -331,10 +331,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("init -vf commit-log.txt", match="wrote commit message")
         self.assert_(os.path.exists("commit-log.txt"))
         os.remove("commit-log.txt")
-
-    def testCommitFileDisabled(self):
-        self.svnmerge("init -v -f-", nonmatch="wrote commit message")
-        self.assert_(not os.path.exists(svnmerge.opts["commit_file"]))
 
     def testInitForce(self):
         open("test1", "a").write("foo")
