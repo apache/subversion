@@ -466,12 +466,12 @@ def get_repo_root(dir):
             url = temp
         assert 0, "svn repos root not found"
 
-def url_to_rlpath(dir):
+def url_to_rlpath(url):
     """Convert a repos URL into a repo-local path."""
-    root = get_repo_root(dir)
+    root = get_repo_root(url)
     assert root[-1] != "/"
-    assert dir[:len(root)] == root, "dir=%r, root=%r" % (dir, root)
-    return dir[len(root):]
+    assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
+    return url[len(root):]
 
 def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
