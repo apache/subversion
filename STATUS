@@ -115,12 +115,12 @@ Candidate changes:
       +1: rooneg, lundblad
 
   * r18539, r18541
-    Fix crash with diff and nonrecursive checkout.
+    Fix crash with diff and non-recursive checkout.
     Justification:
       Crash bad.
     Branch: 1.3.x-r18539
     Votes:
-      +1: rooneg, lundblad
+      +1: rooneg, lundblad, dlr
 
 Approved changes:
 
