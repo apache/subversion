@@ -197,12 +197,6 @@ typedef struct report_fetch_t {
   ra_serf_list_t **done_list;
   ra_serf_list_t done_item;
 
-  /* The previous fetch we have open. */
-  struct report_fetch_t *prev;
-
-  /* The next fetch we have open. */
-  struct report_fetch_t *next;
-
   /* The acceptor and handler for this GET request. */
   serf_response_acceptor_t acceptor;
   serf_response_handler_t handler;
@@ -270,14 +264,14 @@ typedef struct {
   /* root directory object */
   report_dir_t *root_dir;
 
-  /* pending GET requests */
-  report_fetch_t *active_fetches;
+  /* number of pending GET requests */
+  unsigned int active_fetches;
 
   /* completed fetches (contains report_fetch_t) */
   ra_serf_list_t *done_fetches;
 
-  /* pending PROPFIND requests */
-  propfind_context_t *active_propfinds;
+  /* number of pending PROPFIND requests */
+  unsigned int active_propfinds;
 
   /* completed PROPFIND requests (contains propfind_context_t) */
   ra_serf_list_t *done_propfinds;
@@ -881,21 +875,14 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   /* First, create the PROPFIND to retrieve the properties. */
   deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
                 info->url, SVN_INVALID_REVNUM, "0", all_props,
-                info->dir->pool);
+                FALSE, &ctx->done_propfinds, info->dir->pool);
 
   if (!prop_ctx)
     {
       abort();
     }
 
-  prop_ctx->cache_props = FALSE;
-  prop_ctx->done_list = &ctx->done_propfinds;
-
-  if (ctx->active_propfinds)
-    ctx->active_propfinds->prev = prop_ctx;
-
-  prop_ctx->next = ctx->active_propfinds;
-  ctx->active_propfinds = prop_ctx;
+  ctx->active_propfinds++;
 
   /* Create the fetch context. */
   fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
@@ -910,11 +897,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   serf_connection_request_create(conn, setup_fetch,
                                  fetch_ctx);
 
-  /* add the GET to our active list. */
-  if (ctx->active_fetches)
-    ctx->active_fetches->prev = fetch_ctx;
-  fetch_ctx->next = ctx->active_fetches;
-  ctx->active_fetches = fetch_ctx;
+  ctx->active_fetches++;
 }
 
 static void XMLCALL
@@ -1225,21 +1208,15 @@ end_report(void *userData, const char *raw_name)
       deliver_props(&prop_ctx, info->dir->props, ctx->sess,
                     ctx->sess->conns[ctx->sess->cur_conn],
                     info->dir->url, SVN_INVALID_REVNUM,
-                    "0", all_props, info->dir->pool);
+                    "0", all_props, FALSE, &ctx->done_propfinds,
+                    info->dir->pool);
 
       if (!prop_ctx)
         {
           abort();
         }
 
-      prop_ctx->cache_props = FALSE;
-      prop_ctx->done_list = &ctx->done_propfinds;
-
-      if (ctx->active_propfinds)
-          ctx->active_propfinds->prev = prop_ctx;
-
-      prop_ctx->next = ctx->active_propfinds;
-      ctx->active_propfinds = prop_ctx;
+      ctx->active_propfinds++;
 
       info->dir->propfind = prop_ctx;
 
@@ -1557,15 +1534,7 @@ finish_report(void *report_baton,
       done_list = report->done_propfinds;
       while (done_list)
         {
-          /* Remove us from the active list. */
-          propfind_context_t *done_propfind = done_list->data;
-          if (done_propfind->prev)
-              done_propfind->prev->next = done_propfind->next;
-          else
-              report->active_propfinds = done_propfind->next;
-
-          if (done_propfind->next)
-              done_propfind->next->prev = done_propfind->prev;
+          report->active_propfinds--;
 
           done_list = done_list->next;
         }
@@ -1582,14 +1551,8 @@ finish_report(void *report_baton,
           cur_dir = done_fetch->info->dir;
           cur_dir->ref_count--;
 
-          /* Remove us from the active list. */
-          if (done_fetch->prev)
-            done_fetch->prev->next = done_fetch->next;
-          else
-            report->active_fetches = done_fetch->next;
-
-          if (done_fetch->next)
-            done_fetch->next->prev = done_fetch->prev;
+          /* Decrement our active fetch count. */
+          report->active_fetches--;
 
           done_list = done_list->next;
 
@@ -1597,7 +1560,7 @@ finish_report(void *report_baton,
            * for us to add more, it's time for us to close this dir.
            */
           if (!cur_dir->ref_count &&
-              cur_dir->propfind && cur_dir->propfind->done)
+              cur_dir->propfind && is_propfind_done(cur_dir->propfind))
             {
               do
                 {
@@ -1609,7 +1572,7 @@ finish_report(void *report_baton,
                   cur_dir = cur_dir->parent_dir;
                 }
               while (cur_dir && !cur_dir->ref_count && cur_dir->propfind &&
-                     cur_dir->propfind->done);
+                     is_propfind_done(cur_dir->propfind));
             }
         }
       report->done_fetches = NULL;
