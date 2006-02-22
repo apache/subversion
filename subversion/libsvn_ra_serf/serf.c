@@ -239,20 +239,6 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
-                               const svn_delta_editor_t **editor,
-                               void **edit_baton,
-                               const char *log_msg,
-                               svn_commit_callback2_t callback,
-                               void *callback_baton,
-                               apr_hash_t *lock_tokens,
-                               svn_boolean_t keep_locks,
-                               apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *session,
                       const char *path,
                       svn_revnum_t revision,

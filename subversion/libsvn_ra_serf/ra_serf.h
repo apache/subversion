@@ -375,6 +375,24 @@ set_prop(apr_hash_t *props, const char *path,
          const char *ns, const char *name,
          const char *val, apr_pool_t *pool);
 
+/** OPTIONS-related functions */
+
+typedef struct options_context_t options_context_t;
+
+/* Is this OPTIONS-request done yet? */
+svn_boolean_t* get_options_done_ptr(options_context_t *ctx);
+
+const char *
+options_get_activity_collection(options_context_t *ctx);
+
+/* Create an OPTIONS request */
+svn_error_t *
+create_options_req(options_context_t **opt_ctx,
+                   ra_serf_session_t *session,
+                   serf_connection_t *conn,
+                   const char *path,
+                   apr_pool_t *pool);
+
 /** RA functions */
 
 svn_error_t *
@@ -407,3 +425,14 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
                        apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
+                               const svn_delta_editor_t **editor,
+                               void **edit_baton,
+                               const char *log_msg,
+                               svn_commit_callback2_t callback,
+                               void *callback_baton,
+                               apr_hash_t *lock_tokens,
+                               svn_boolean_t keep_locks,
+                               apr_pool_t *pool);
