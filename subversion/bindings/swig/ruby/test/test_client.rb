@@ -960,18 +960,38 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.mv_f(path1, path2)
     end
 
-    infos = []
+    notifies = []
     ctx.set_notify_func do |notify|
-      infos << [notify.path, notify]
+      notifies << notify
     end
     ctx.ci(@wc_path)
 
-    assert_equal([path1, path2].sort,
-                 infos.collect{|path, notify| path}.sort)
-    path1_notify = infos.assoc(path1)[1]
-    assert(path1_notify.commit_deleted?)
-    path2_notify = infos.assoc(path2)[1]
-    assert(path2_notify.commit_added?)
+    paths = notifies.collect do |notify|
+      notify.path
+    end
+    assert_equal([path1, path2, path2].sort, paths.sort)
+
+    deleted_paths = notifies.find_all do |notify|
+      notify.commit_deleted?
+    end.collect do |notify|
+      notify.path
+    end
+    assert_equal([path1].sort, deleted_paths.sort)
+
+    added_paths = notifies.find_all do |notify|
+      notify.commit_added?
+    end.collect do |notify|
+      notify.path
+    end
+    assert_equal([path2].sort, added_paths.sort)
+
+    postfix_txdelta_paths = notifies.find_all do |notify|
+      notify.commit_postfix_txdelta?
+    end.collect do |notify|
+      notify.path
+    end
+    assert_equal([path2].sort, postfix_txdelta_paths.sort)
+
     assert_equal(src2, File.open(path2) {|f| f.read})
   end
 
