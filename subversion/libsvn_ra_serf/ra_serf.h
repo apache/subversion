@@ -227,6 +227,12 @@ handle_xml_parser(serf_bucket_t *response,
                   svn_boolean_t *done,
                   apr_pool_t *pool);
 
+apr_status_t
+handle_status_only(serf_bucket_t *response,
+                   int *status_code,
+                   svn_boolean_t *done,
+                   apr_pool_t *pool);
+
 /** XML helper functions. **/
 
 void

@@ -208,3 +208,52 @@ handle_xml_parser(serf_bucket_t *response,
     }
   /* not reached */
 }
+
+apr_status_t
+handle_status_only(serf_bucket_t *response,
+                   int *status_code,
+                   svn_boolean_t *done,
+                   apr_pool_t *pool)
+{
+  apr_status_t status;
+  serf_status_line sl;
+
+  status = serf_bucket_response_status(response, &sl);
+  if (status)
+    {
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+      abort();
+    }
+
+  *status_code = sl.code;
+
+  /* We don't care what the body is. */
+  while (1)
+    {
+      const char *data;
+      apr_size_t len;
+
+      status = serf_bucket_read(response, 8000, &data, &len);
+
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return status;
+        }
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          *done = TRUE;
+          return is_conn_closing(response);
+        }
+
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return APR_SUCCESS;
+        }
+      /* feed me! */
+    }
+  /* not reached */
+}
