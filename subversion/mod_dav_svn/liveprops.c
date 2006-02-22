@@ -571,7 +571,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         apr_hash_t *proplist;  
       
         if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
-            return DAV_PROP_INSERT_NOTSUPP;
+          return DAV_PROP_INSERT_NOTSUPP;
 
         serr = svn_fs_node_proplist(&proplist,
                                     resource->info->root.root,
