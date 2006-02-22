@@ -23,6 +23,71 @@
 #include "ra_serf.h"
 
 
+/**
+ * This structure represents a pending PROPFIND response.
+ */
+struct propfind_context_t {
+  /* pool to issue allocations from */
+  apr_pool_t *pool;
+
+  /* associated serf session */
+  ra_serf_session_t *sess;
+  serf_connection_t *conn;
+
+  /* The acceptor and handler for this response. */
+  serf_response_acceptor_t acceptor;
+  serf_response_handler_t handler;
+
+  /* the requested path */
+  const char *path;
+
+  /* the requested version (number and string form) */
+  svn_revnum_t rev;
+  const char *label;
+
+  /* the request depth */
+  const char *depth;
+
+  /* the list of requested properties */
+  const dav_props_t *find_props;
+
+  /* should we cache the values of this propfind in our session? */
+  svn_boolean_t cache_props;
+
+  /* hash table that will be updated with the properties
+   *
+   * This can be shared between multiple propfind_context_t structures
+   */
+  apr_hash_t *ret_props;
+
+  /* the xml parser used */
+  XML_Parser xmlp;
+
+  /* Current namespace list */
+  ns_t *ns_list;
+
+  /* TODO use the state object as in the report */
+  /* Are we parsing a property right now? */
+  svn_boolean_t in_prop;
+
+  /* Should we be harvesting the CDATA elements */
+  svn_boolean_t collect_cdata;
+
+  /* Current ns, attribute name, and value of the property we're parsing */
+  const char *ns;
+  const char *attr_name;
+  const char *attr_val;
+  apr_size_t attr_val_len;
+
+  /* Are we done issuing the PROPFIND? */
+  svn_boolean_t done;
+
+  /* If not-NULL, add us to this list when we're done. */
+  ra_serf_list_t **done_list;
+
+  ra_serf_list_t done_item;
+};
+
 const char *
 get_ver_prop(apr_hash_t *props,
              const char *path,
@@ -254,6 +319,8 @@ handle_propfind(serf_bucket_t *response,
                     ctx->rev,
                     ctx->depth,
                     ctx->find_props,
+                    ctx->cache_props,
+                    ctx->done_list,
                     ctx->pool);
       if (ctx->xmlp)
         {
@@ -339,6 +406,8 @@ deliver_props(propfind_context_t **prop_ctx,
               svn_revnum_t rev,
               const char *depth,
               const dav_props_t *find_props,
+              svn_boolean_t cache_props,
+              ra_serf_list_t **done_list,
               apr_pool_t *pool)
 {
   const dav_props_t *prop;
@@ -360,10 +429,10 @@ deliver_props(propfind_context_t **prop_ctx,
         }
 
       new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
-      new_prop_ctx->cache_props = TRUE;
 
       new_prop_ctx->pool = pool;
       new_prop_ctx->path = path;
+      new_prop_ctx->cache_props = cache_props;
       new_prop_ctx->find_props = find_props;
       new_prop_ctx->ret_props = ret_props;
       new_prop_ctx->depth = depth;
@@ -373,6 +442,7 @@ deliver_props(propfind_context_t **prop_ctx,
       new_prop_ctx->rev = rev;
       new_prop_ctx->acceptor = accept_response;
       new_prop_ctx->handler = handle_propfind;
+      new_prop_ctx->done_list = done_list;
 
       if (SVN_IS_VALID_REVNUM(rev))
         {
@@ -390,6 +460,12 @@ deliver_props(propfind_context_t **prop_ctx,
   serf_connection_request_create(conn, setup_propfind, *prop_ctx);
 
   return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+is_propfind_done(propfind_context_t *ctx)
+{
+  return ctx->done;
 }
 
 /**
@@ -420,7 +496,7 @@ retrieve_props(apr_hash_t *prop_vals,
   propfind_context_t *prop_ctx = NULL;
 
   SVN_ERR(deliver_props(&prop_ctx, prop_vals, sess, conn, url, rev, depth,
-                        props, pool));
+                        props, TRUE, NULL, pool));
   if (prop_ctx)
     {
       SVN_ERR(wait_for_props(prop_ctx, sess, pool));

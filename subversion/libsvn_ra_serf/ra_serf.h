@@ -105,78 +105,6 @@ typedef struct ra_serf_list_t {
   struct ra_serf_list_t *next;
 } ra_serf_list_t;
 
-/**
- * This structure represents a pending PROPFIND response.
- */
-typedef struct propfind_context_t {
-  /* pool to issue allocations from */
-  apr_pool_t *pool;
-
-  /* associated serf session */
-  ra_serf_session_t *sess;
-  serf_connection_t *conn;
-
-  /* The acceptor and handler for this response. */
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-
-  /* the requested path */
-  const char *path;
-
-  /* the requested version (number and string form) */
-  svn_revnum_t rev;
-  const char *label;
-
-  /* the request depth */
-  const char *depth;
-
-  /* the list of requested properties */
-  const dav_props_t *find_props;
-
-  /* should we cache the values of this propfind in our session? */
-  svn_boolean_t cache_props;
-
-  /* hash table that will be updated with the properties
-   *
-   * This can be shared between multiple propfind_context_t structures
-   */
-  apr_hash_t *ret_props;
-
-  /* the xml parser used */
-  XML_Parser xmlp;
-
-  /* Current namespace list */
-  ns_t *ns_list;
-
-  /* TODO use the state object as in the report */
-  /* Are we parsing a property right now? */
-  svn_boolean_t in_prop;
-
-  /* Should we be harvesting the CDATA elements */
-  svn_boolean_t collect_cdata;
-
-  /* Current ns, attribute name, and value of the property we're parsing */
-  const char *ns;
-  const char *attr_name;
-  const char *attr_val;
-  apr_size_t attr_val_len;
-
-  /* Are we done issuing the PROPFIND? */
-  svn_boolean_t done;
-
-  /* If not-NULL, add us to this list when we're done. */
-  ra_serf_list_t **done_list;
-
-  ra_serf_list_t done_item;
-
-  /* The prev PROPFIND we have open. */
-  struct propfind_context_t *prev;
-
-  /* The next PROPFIND we have open. */
-  struct propfind_context_t *next;
-
-} propfind_context_t;
-
 /** DAV property sets */
 static const dav_props_t base_props[] =
 {
@@ -344,6 +272,11 @@ expand_string(const char **cur, apr_size_t *cur_len,
 
 /** PROPFIND-related functions **/
 
+typedef struct propfind_context_t propfind_context_t;
+
+svn_boolean_t
+is_propfind_done(propfind_context_t *ctx);
+
 /* Our PROPFIND bucket */
 serf_bucket_t * serf_bucket_propfind_create(const char *host,
                                             const char *path,
@@ -370,6 +303,8 @@ deliver_props(propfind_context_t **prop_ctx,
               svn_revnum_t rev,
               const char *depth,
               const dav_props_t *lookup_props,
+              svn_boolean_t cache_props,
+              ra_serf_list_t **done_list,
               apr_pool_t *pool);
 
 /**
