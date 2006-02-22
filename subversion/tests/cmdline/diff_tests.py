@@ -2195,6 +2195,11 @@ def diff_repos_wc_add_with_props(sbox):
   finally:
     os.chdir(current_dir)
 
+
+#----------------------------------------------------------------------
+# repos-wc diffs on a non-recursively checked out wc that would normally
+# (if recursively checked out) include a directory that is not present in
+# the repos version should not segfault.
 def diff_nonrecursive_checkout_deleted_dir(sbox):
   "nonrecursive diff + deleted directories"
   sbox.build()
@@ -2216,9 +2221,13 @@ def diff_nonrecursive_checkout_deleted_dir(sbox):
   try:
     os.chdir(wc)
 
-    svntest.main.run_svn(None, 'di', '-r1')
+    # We don't particular care about the output here, just that it doesn't
+    # segfault.
+    svntest.main.run_svn(None, 'diff', '-r1')
+
   finally:
     os.chdir(saved_cwd)
+
 
 ########################################################################
 #Run the tests
