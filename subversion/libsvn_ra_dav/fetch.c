@@ -922,7 +922,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* the property we need to fetch to see if the server we are
+/* The property we need to fetch to see whether the server we are
    connected to supports the deadprop-count property. */
 static const ne_propname deadprop_count_support_props[] =
 {
@@ -972,13 +972,10 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
         *fetched_rev = got_rev;
     }
 
-  /* For issue 2151:
-     See if we are dealing with a server that understand the 
-     deadprop-count prop.  If it doesn't we'll need to do an
-     allprop PROPFIND - If it does, we'll execute a more
-     targetted PROPFIND.
-  */
-  
+  /* For issue 2151: See if we are dealing with a server that
+     understands the deadprop-count property.  If it doesn't, we'll
+     need to do an allprop PROPFIND.  If it does, we'll execute a more
+     targeted PROPFIND. */
   {
     const svn_string_t *deadprop_count;
   
@@ -991,10 +988,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                   SVN_RA_DAV__PROP_DEADPROP_COUNT,
                                   APR_HASH_KEY_STRING);
  
-    if (deadprop_count == NULL)
-      supports_deadprop_count = FALSE;
-    else
-      supports_deadprop_count = TRUE;
+    supports_deadprop_count = (deadprop_count != NULL);
   }
     
   if (dirents)
@@ -1105,7 +1099,6 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
           const svn_string_t *propval;
           apr_hash_index_t *h;
           svn_dirent_t *entry;
-          apr_int64_t prop_count;
           
           apr_hash_this(hi, &key, NULL, &val);
           childname =  key;
@@ -1141,9 +1134,10 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
          
           if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             { 
-              /* does this resource contain any 'svn' or 'custom' properties,
-                 i.e.  ones actually created and set by the user? */
-              if (supports_deadprop_count == TRUE) 
+              /* Does this resource contain any 'svn' or 'custom'
+                 properties (e.g. ones actually created and set by the
+                 user)? */
+              if (supports_deadprop_count) 
                 {
                   propval = apr_hash_get(resource->propset,
                                          SVN_RA_DAV__PROP_DEADPROP_COUNT,
@@ -1160,11 +1154,8 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                     }
                   else
                     {
-                      prop_count = svn__atoui64(propval->data);
-                      if (prop_count == 0)
-                        entry->has_props = FALSE;
-                      else
-                        entry->has_props = TRUE;
+                      apr_int64_t prop_count = svn__atoui64(propval->data);
+                      entry->has_props = (prop_count > 0);
                     }
                 }
               else
@@ -1178,12 +1169,10 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                       void *vval;
                       apr_hash_this(h, &kkey, NULL, &vval);
                   
-                      if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
-                                  sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
-                        entry->has_props = TRUE;
-                  
-                      else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
-                                       sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
+                      if (strncmp((const char *) kkey, SVN_DAV_PROP_NS_CUSTOM,
+                                  sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0
+                          || strncmp((const char *) kkey, SVN_DAV_PROP_NS_SVN,
+                                     sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
                         entry->has_props = TRUE;
                     }
                 }
