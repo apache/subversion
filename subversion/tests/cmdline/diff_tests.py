@@ -2319,7 +2319,7 @@ test_list = [ None,
               XFail(diff_prop_change_local_propmod),
               diff_repos_wc_add_with_props,
               diff_nonrecursive_checkout_deleted_dir,
-              XFail(diff_repos_working_added_dir),
+              diff_repos_working_added_dir,
               ]
 
 if __name__ == '__main__':
