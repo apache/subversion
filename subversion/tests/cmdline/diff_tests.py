@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -2229,6 +2229,57 @@ def diff_nonrecursive_checkout_deleted_dir(sbox):
     os.chdir(saved_cwd)
 
 
+#----------------------------------------------------------------------
+# repos->WORKING diffs that include directories with local mods that are
+# not present in the repos version should work as expected (and not, for
+# example, show an extraneous BASE->WORKING diff for the added directory
+# after the repos->WORKING output).
+def diff_repos_working_added_dir(sbox):
+  "repos->WORKING diff showing added modifed dir"
+
+  sbox.build()
+
+  expected_output_r1_BASE = [
+    "Index: X/bar\n",
+    "===================================================================\n",
+    "--- X/bar\t(revision 0)\n",
+    "+++ X/bar\t(revision 2)\n",
+    "@@ -0,0 +1 @@\n",
+    "+content\n" ]
+  expected_output_r1_WORKING = [
+    "Index: X/bar\n",
+    "===================================================================\n",
+    "--- X/bar\t(revision 0)\n",
+    "+++ X/bar\t(revision 2)\n",
+    "@@ -0,0 +1,2 @@\n",
+    "+content\n",
+    "+more content\n" ]
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Create directory X and file X/bar, and commit them (r2).
+    os.makedirs('X')
+    svntest.main.file_append(os.path.join('X', 'bar'), "content\n")
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'add', 'X')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Make a local modification to X/bar.
+    svntest.main.file_append(os.path.join('X', 'bar'), "more content\n")
+
+    # Now, if we diff r1 to WORKING or BASE, we should see the content
+    # addition for X/bar, and (for WORKING) the local modification.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_BASE, [],
+                                       'diff', '-r', '1:BASE')
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_WORKING, [],
+                                       'diff', '-r', '1')
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -2268,6 +2319,7 @@ test_list = [ None,
               XFail(diff_prop_change_local_propmod),
               diff_repos_wc_add_with_props,
               diff_nonrecursive_checkout_deleted_dir,
+              XFail(diff_repos_working_added_dir),
               ]
 
 if __name__ == '__main__':
