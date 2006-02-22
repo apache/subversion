@@ -974,6 +974,9 @@ delete_entry(const char *path,
   if (! entry)
     return SVN_NO_ERROR;
 
+  /* Mark this entry as compared in the parent directory's baton. */
+  apr_hash_set(pb->compared, full_path, APR_HASH_KEY_STRING, "");
+
   SVN_ERR(get_empty_file(pb->edit_baton, &empty_file));
   switch (entry->kind)
     {
@@ -1013,8 +1016,6 @@ delete_entry(const char *path,
           SVN_ERR(report_wc_file_as_added(pb, adm_access, full_path, entry,
                                           pool));
         }
-
-      apr_hash_set(pb->compared, full_path, APR_HASH_KEY_STRING, "");
       break;
 
     case svn_node_dir:
