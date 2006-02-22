@@ -9,6 +9,24 @@ Status of 1.3.1:
 
 Candidate changes:
 
+  * r18549:
+    Prevent svn_load_dirs.pl from trying to import .svn or _svn
+      directories, which can cause svn core dumps since it treads over
+      the working copies' .svn files.  Ouch!
+    Justification:
+      Causing core dumps bad.  Importing files from .svn into
+      Subversion also bad.
+    Votes:
+      +1: blair
+
+  * r18550:
+    Educate svn_load_dirs.pl to support symlinks.
+    Justification:
+      Nice for people using svn_load_dirs.pl to automatically update
+      checked in symlinks from vendor drops.
+    Votes:
+      +1: blair
+
   * r17280, r18172, r18205, r18491
     Upgrade SWIG bindings to be compatible with SWIG 1.3.26-1.3.28
     Branch: 1.3.x-r17280
