@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-02-23 23:24+0100\n"
-"PO-Revision-Date: 2006-01-17 18:11+0000\n"
+"PO-Revision-Date: 2006-02-23 23:34+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1432,19 +1432,16 @@ msgid "Unrecognized revision type requested for '%s'"
 msgstr "Det ble bedt om en ukjent revisjonstype for «%s»"
 
 #: libsvn_delta/svndiff.c:139
-#, fuzzy
 msgid "Compression of svndiff data failed"
-msgstr "komprimering av svndiff-data feilet"
+msgstr "Komprimering av svndiff-data feilet"
 
 #: libsvn_delta/svndiff.c:396
-#, fuzzy
 msgid "Decompression of svndiff data failed"
-msgstr "dekomprimering av svndiff-data feilet"
+msgstr "Dekomprimering av svndiff-data feilet"
 
 #: libsvn_delta/svndiff.c:403
-#, fuzzy
 msgid "Size of uncompressed data does not match stored original length"
-msgstr "størrelsen på ukomprimerte data stemmer ikke med original lengde"
+msgstr "Størrelsen på ukomprimerte data stemmer ikke med original lengde"
 
 #: libsvn_delta/svndiff.c:473
 #, c-format
@@ -1574,9 +1571,9 @@ msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "Negativ utgått-dato gitt til svn_fs_lock"
 
 #: libsvn_fs_base/bdb/bdb-err.c:101
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while %s:\n"
-msgstr "Berkeley DB-feil for filsystem %s mens %s:\n"
+msgstr "Berkeley DB-feil for filsystem «%s» mens %s:\n"
 
 #: libsvn_fs_base/bdb/changes-table.c:87
 msgid "creating change"
@@ -1953,19 +1950,19 @@ msgid "Filesystem object already open"
 msgstr "Filsystemobjekt er allerede åpent"
 
 #: libsvn_fs_base/fs.c:189
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while closing environment:\n"
-msgstr "Berkeley DB-feil for filsystem %s under lukking av miljø:\n"
+msgstr "Berkeley DB-feil for filsystem «%s» under lukking av miljø:\n"
 
 #: libsvn_fs_base/fs.c:539
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while creating environment:\n"
-msgstr "Berkeley DB-feil for filsystem %s under opprettelse av miljø:\n"
+msgstr "Berkeley DB-feil for filsystem «%s» under opprettelse av miljø:\n"
 
 #: libsvn_fs_base/fs.c:545
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
-msgstr "Berkeley DB-feil for filsystem %s under åpning av miljø:\n"
+msgstr "Berkeley DB-feil for filsystem «%s» under åpning av miljø:\n"
 
 #: libsvn_fs_base/fs.c:672 libsvn_fs_fs/fs_fs.c:277
 #, c-format
@@ -2181,9 +2178,9 @@ msgid "The root directory cannot be deleted"
 msgstr "Rotkatalogen kan ikke slettes"
 
 #: libsvn_fs_base/tree.c:2935 libsvn_fs_fs/tree.c:1962
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')"
-msgstr "Kan ikke kopiere mellom to forskjellige filsystemer («%s» og «%s»)."
+msgstr "Kan ikke kopiere mellom to forskjellige filsystemer («%s» og «%s»)"
 
 #: libsvn_fs_base/tree.c:2944 libsvn_fs_fs/tree.c:1968
 msgid "Copy from mutable tree not currently supported"
@@ -6350,7 +6347,6 @@ msgstr ""
 "  som ligger under katalogen.\n"
 
 #: svn/main.c:583
-#, fuzzy
 msgid "read property value from file ARG"
 msgstr "les egenskapsverdi fra filen ARG"
 
