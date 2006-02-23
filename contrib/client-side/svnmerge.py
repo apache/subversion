@@ -18,8 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #
-# Author: Archie Cobbs   archie at awarix dot com
-# Rewritten in Python by: Giovanni Bajo  rasky at develer dot com
+# Author: Archie Cobbs <archie at awarix dot com>
+# Rewritten in Python by: Giovanni Bajo <rasky at develer dot com>
 #
 # Acknowledgments:
 #   John Belmonte <john at neggie dot net> - metadata and usability
@@ -537,7 +537,7 @@ def get_default_head(branch_dir, branch_props):
     props = branch_props.copy()
     dir = url_to_rlpath(target_to_url(branch_dir))
 
-    # To make bi-directional merges easier, find the target's
+    # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
     # possible integration sources.
     if props.has_key(dir):
