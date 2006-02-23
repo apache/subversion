@@ -230,6 +230,8 @@ typedef struct report_state_list_t {
  * The master structure for a REPORT request and response.
  */
 typedef struct {
+  apr_pool_t *pool;
+
   ra_serf_session_t *sess;
 
   /* What is the target revision that we want for this REPORT? */
@@ -1380,13 +1382,14 @@ set_path(void *report_baton,
 {
   report_context_t *report = report_baton;
   serf_bucket_t *tmp;
+  const char *path_copy;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(apr_ltoa(pool, revision),
+  tmp = SERF_BUCKET_SIMPLE_STRING(apr_ltoa(report->pool, revision),
                                   report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
@@ -1422,7 +1425,9 @@ set_path(void *report_baton,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(path, report->sess->bkt_alloc);
+  path_copy = apr_pstrdup(report->pool, path);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(path_copy, report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
@@ -1637,6 +1642,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   serf_bucket_t *tmp;
 
   report = apr_pcalloc(pool, sizeof(*report));
+  report->pool = pool;
   report->sess = ra_session->priv;
   report->target = update_target;
   report->target_rev = revision_to_update_to;
