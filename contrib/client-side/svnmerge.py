@@ -344,7 +344,7 @@ def dict_from_revlist_prop(propvalue):
         prop[head] = revs
     return prop
 
-def get_revlist_prop(url_or_dir, propname):
+def get_revlist_prop(url_or_dir, propname, rev=None):
     """Given a repository URL or working copy path and a property
     name, extract the values of the property which store per-head
     revision lists and return a dictionary whose key is a relative
@@ -354,8 +354,10 @@ def get_revlist_prop(url_or_dir, propname):
     # Note that propget does not return an error if the property does
     # not exist, it simply does not output anything. So we do not need
     # to check for LaunchError here.
-    out = launchsvn('propget "%s" "%s"' % (propname, url_or_dir),
-                    split_lines=False)
+    args = '--strict "%s" "%s"' % (propname, url_or_dir)
+    if rev:
+        args = '-r %s %s' % (rev, args)
+    out = launchsvn('propget %s' % args, split_lines=False)
 
     return dict_from_revlist_prop(out)
 
