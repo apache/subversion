@@ -668,8 +668,14 @@ def diff_only_property_change(sbox):
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1:2')
 
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'diff', '-c', '2')
+
     svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
                                        'diff', '-r', '2:1')
+
+    svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
+                                       'diff', '-c', '-2')
 
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1')
