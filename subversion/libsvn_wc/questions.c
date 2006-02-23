@@ -269,7 +269,10 @@ compare_and_verify(svn_boolean_t *modified_p,
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc_entry(&entry, versioned_file, adm_access, TRUE, pool));
-
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(versioned_file, pool));
 
   if (compare_textbases)
     SVN_ERR(svn_wc_translated_file2

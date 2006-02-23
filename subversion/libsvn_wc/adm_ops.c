@@ -1000,6 +1000,10 @@ svn_wc_get_ancestry(char **url,
   const svn_wc_entry_t *ent;
 
   SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+  if (! ent)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   if (url)
     *url = apr_pstrdup(pool, ent->url);

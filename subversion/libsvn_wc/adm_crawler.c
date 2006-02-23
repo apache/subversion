@@ -463,10 +463,14 @@ svn_wc_crawl_revisions2(const char *path,
   base_rev = entry->revision;
   if (base_rev == SVN_INVALID_REVNUM)
     {
-      SVN_ERR(svn_wc_entry(&parent_entry, 
-                           svn_path_dirname(path, pool),
-                           adm_access,
-                           FALSE, pool));
+      const char *dirname = svn_path_dirname(path, pool);
+
+      SVN_ERR(svn_wc_entry(&parent_entry, dirname, adm_access, FALSE, pool));
+      if (! parent_entry)
+        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_path_local_style(dirname, pool));
+
       base_rev = parent_entry->revision;
     }
 
@@ -740,7 +744,11 @@ svn_wc_transmit_text_deltas(const char *path,
          Otherwise we could send corrupt data and never know it. */ 
       const svn_wc_entry_t *ent;
       SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
-      
+      if (! ent)
+        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_path_local_style(path, pool));
+
       /* For backwards compatibility, no checksum means assume a match. */
       if (ent->checksum)
         {
