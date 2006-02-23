@@ -42,19 +42,19 @@
  * This enum represents the current state of our XML parsing for a MERGE.
  */
 typedef enum {
-    MERGE_RESPONSE,
-    UPDATED_SET,
-    RESPONSE,
-    HREF,
-    PROPSTAT,
-    PROP,
-    RESOURCE_TYPE,
-    AUTHOR,
-    NAME,
-    DATE,
-    IGNORE_PROP_NAME,
-    NEED_PROP_NAME,
-    PROP_VAL,
+  MERGE_RESPONSE,
+  UPDATED_SET,
+  RESPONSE,
+  HREF,
+  PROPSTAT,
+  PROP,
+  RESOURCE_TYPE,
+  AUTHOR,
+  NAME,
+  DATE,
+  IGNORE_PROP_NAME,
+  NEED_PROP_NAME,
+  PROP_VAL,
 } merge_state_e;
 
 typedef enum {
