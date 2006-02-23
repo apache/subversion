@@ -78,6 +78,25 @@ typedef struct {
   serf_response_handler_t handler;
 } checkout_context_t;
 
+
+/* Structure associated with a DELETE request. */
+typedef struct {
+  apr_pool_t *pool;
+
+  ra_serf_session_t *session;
+
+  const char *activity_url;
+  apr_size_t activity_url_len;
+
+  int status;
+
+  svn_boolean_t done;
+
+  serf_response_acceptor_t acceptor;
+  void *acceptor_baton;
+  serf_response_handler_t handler;
+} delete_context_t;
+
 /* Baton passed back with the commit editor. */
 typedef struct {
   /* Pool for our commit. */
@@ -333,6 +352,39 @@ handle_put(serf_bucket_t *response,
   file_context_t *ctx = handler_baton;
 
   return handle_status_only(response, &ctx->put_status, &ctx->put_done, pool);
+}
+
+static apr_status_t
+setup_delete(serf_request_t *request,
+             void *setup_baton,
+             serf_bucket_t **req_bkt,
+             serf_response_acceptor_t *acceptor,
+             void **acceptor_baton,
+             serf_response_handler_t *handler,
+             void **handler_baton,
+             apr_pool_t *pool)
+{
+  delete_context_t *ctx = setup_baton;
+
+  setup_serf_req(request, req_bkt, NULL, ctx->session,
+                 "DELETE", ctx->activity_url, NULL, NULL);
+
+  *acceptor = ctx->acceptor;
+  *acceptor_baton = ctx->acceptor_baton;
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t
+handle_delete(serf_bucket_t *response,
+              void *handler_baton,
+              apr_pool_t *pool)
+{
+  delete_context_t *ctx = handler_baton;
+
+  return handle_status_only(response, &ctx->status, &ctx->done, pool);
 }
 
 /* Helper function to write the svndiff stream to temporary file. */
@@ -732,30 +784,53 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   commit_context_t *ctx = edit_baton;
+  merge_context_t *merge_ctx;
+  delete_context_t *delete_ctx;
+  svn_boolean_t *merge_done;
   apr_status_t status;
 
-  /* TODO: MERGE our activity */
-  /* TODO: DELETE our activity */
+  /* MERGE our activity */
+  SVN_ERR(merge_create_req(&merge_ctx, ctx->session,
+                           ctx->session->conns[0],
+                           ctx->session->repos_url.path,
+                           ctx->activity_url, ctx->activity_url_len,
+                           pool));
 
-  abort();
+  merge_done = merge_get_done_ptr(merge_ctx);
+ 
+  SVN_ERR(context_run_wait(merge_done, ctx->session, pool));
 
-  /* At this point, we want to run through all of our pending requests. */
-  while (1)
+  if (merge_get_status(merge_ctx) != 200)
     {
-      status = serf_context_run(ctx->session->context, SERF_DURATION_FOREVER,
-                                pool);
-      if (APR_STATUS_IS_TIMEUP(status))
-        {
-          continue;
-        }
-      if (status)
-        {
-          return svn_error_wrap_apr(status, _("Error committing"));
-        }
-
-      /* Are we done or something? */
-
+      abort();
     }
+
+  /* Inform the WC that we did a commit.  */
+  ctx->callback(merge_get_commit_info(merge_ctx), ctx->callback_baton, pool);
+
+  /* DELETE our activity */
+  delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+
+  delete_ctx->pool = pool;
+  delete_ctx->session = ctx->session;
+
+  delete_ctx->acceptor = accept_response;
+  delete_ctx->acceptor_baton = ctx->session;
+  delete_ctx->handler = handle_delete;
+  delete_ctx->activity_url = ctx->activity_url;
+  delete_ctx->activity_url_len = ctx->activity_url_len;
+
+  serf_connection_request_create(ctx->session->conns[0],
+                                 setup_delete, delete_ctx);
+
+  SVN_ERR(context_run_wait(&delete_ctx->done, ctx->session, pool));
+
+  if (delete_ctx->status != 204)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

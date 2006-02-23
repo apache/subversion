@@ -152,10 +152,11 @@ is_conn_closing(serf_bucket_t *response)
 }
 
 apr_status_t
-handle_xml_parser(serf_bucket_t *response,
-                  XML_Parser xmlp,
-                  svn_boolean_t *done,
-                  apr_pool_t *pool)
+handle_status_xml_parser(serf_bucket_t *response,
+                         int *status_code,
+                         XML_Parser xmlp,
+                         svn_boolean_t *done,
+                         apr_pool_t *pool)
 {
   const char *data;
   apr_size_t len;
@@ -173,6 +174,11 @@ handle_xml_parser(serf_bucket_t *response,
       abort();
     }
 
+  if (status_code)
+    {
+      *status_code = sl.code;
+    }
+
   while (1)
     {
       status = serf_bucket_read(response, 8000, &data, &len);
@@ -182,18 +188,24 @@ handle_xml_parser(serf_bucket_t *response,
           return status;
         }
 
-      xml_status = XML_Parse(xmlp, data, len, 0);
-      if (xml_status == XML_STATUS_ERROR)
+      if (xmlp)
         {
-          abort();
+          xml_status = XML_Parse(xmlp, data, len, 0);
+          if (xml_status == XML_STATUS_ERROR)
+            {
+              abort();
+            }
         }
 
       if (APR_STATUS_IS_EOF(status))
         {
-          xml_status = XML_Parse(xmlp, NULL, 0, 1);
-          if (xml_status == XML_STATUS_ERROR)
+          if (xmlp)
             {
-              abort();
+              xml_status = XML_Parse(xmlp, NULL, 0, 1);
+              if (xml_status == XML_STATUS_ERROR)
+                {
+                  abort();
+                }
             }
 
           *done = TRUE;
@@ -210,50 +222,18 @@ handle_xml_parser(serf_bucket_t *response,
 }
 
 apr_status_t
+handle_xml_parser(serf_bucket_t *response,
+                  XML_Parser xmlp,
+                  svn_boolean_t *done,
+                  apr_pool_t *pool)
+{
+  return handle_status_xml_parser(response, NULL, xmlp, done, pool);
+}
+apr_status_t
 handle_status_only(serf_bucket_t *response,
                    int *status_code,
                    svn_boolean_t *done,
                    apr_pool_t *pool)
 {
-  apr_status_t status;
-  serf_status_line sl;
-
-  status = serf_bucket_response_status(response, &sl);
-  if (status)
-    {
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return APR_SUCCESS;
-        }
-      abort();
-    }
-
-  *status_code = sl.code;
-
-  /* We don't care what the body is. */
-  while (1)
-    {
-      const char *data;
-      apr_size_t len;
-
-      status = serf_bucket_read(response, 8000, &data, &len);
-
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return status;
-        }
-
-      if (APR_STATUS_IS_EOF(status))
-        {
-          *done = TRUE;
-          return is_conn_closing(response);
-        }
-
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return APR_SUCCESS;
-        }
-      /* feed me! */
-    }
-  /* not reached */
+  return handle_status_xml_parser(response, status_code, NULL, done, pool);
 }
