@@ -2058,7 +2058,12 @@ merge_file(svn_stringbuf_t *log_accum,
               /* Create strings representing the revisions of the
                  old and new text-bases. */
               SVN_ERR(svn_wc_entry(&e, file_path, adm_access, FALSE, pool));
-              assert(e != NULL);
+              if (! e)
+                return svn_error_createf(
+                  SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                  _("'%s' is not under version control"),
+                  svn_path_local_style(file_path, pool));
+
               oldrev_str = apr_psprintf(pool, ".r%ld",
                                         e->revision);
               newrev_str = apr_psprintf(pool, ".r%ld",
@@ -2844,6 +2849,11 @@ svn_wc_add_repos_file2(const char *dst_path,
      copyfrom URL to be in the same repository. */
   {
     SVN_ERR(svn_wc_entry(&ent, dir_name, adm_access, FALSE, pool));
+    if (! ent)
+      return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                               _("'%s' is not under version control"),
+                               svn_path_local_style(dir_name, pool));
+
     new_URL = svn_path_url_add_component(ent->url, base_name, pool);
 
     if (copyfrom_url && ent->repos &&

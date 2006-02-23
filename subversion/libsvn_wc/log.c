@@ -734,7 +734,7 @@ log_do_modify_entry(struct log_runner *loggy,
       if (err)
         signal_error(loggy, err);
 
-      if (! entry)
+      if (! tfile_entry)
         return SVN_NO_ERROR;
 
       err = svn_wc__prop_path(&pfile, tfile, tfile_entry->kind, FALSE,

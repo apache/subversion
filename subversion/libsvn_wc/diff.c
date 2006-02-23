@@ -55,6 +55,7 @@
 #include "props.h"
 #include "adm_files.h"
 
+#include "svn_private_config.h"
 
 /*-------------------------------------------------------------------------*/
 /* A little helper function.
@@ -1733,6 +1734,10 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, anchor, target_path,
                                     eb->pool));
   SVN_ERR(svn_wc_entry(&entry, target_path, adm_access, FALSE, eb->pool));
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(target_path, pool));
 
   if (entry->kind == svn_node_dir)
     b = make_dir_baton(target_path, NULL, eb, FALSE, eb->pool);

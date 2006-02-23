@@ -716,7 +716,13 @@ handle_dir_entry(struct edit_baton *eb,
       const svn_wc_entry_t *full_entry = entry;
           
       if (entry->kind == kind)
-        SVN_ERR(svn_wc_entry(&full_entry, path, adm_access, FALSE, pool));
+        {
+          SVN_ERR(svn_wc_entry(&full_entry, path, adm_access, FALSE, pool));
+          if (! full_entry)
+            return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                     _("'%s' is not under version control"),
+                                     svn_path_local_style(path, pool));
+        }
 
       /* Descend only if the subdirectory is a working copy directory
          (and DESCEND is non-zero ofcourse)  */

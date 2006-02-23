@@ -188,6 +188,10 @@ svn_wc__get_keywords(apr_hash_t **keywords,
     }
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     list,
