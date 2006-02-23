@@ -97,7 +97,7 @@ static const apr_getopt_option_t svnsync_options[] =
     {"config-dir",     svnsync_opt_config_dir, 1,
                        N_("read user configuration files from directory ARG")},
     {"revision",       'r', 1,
-                       N_("specifiy revision number ARG")},
+                       N_("specify revision number ARG")},
     {"version",        svnsync_opt_version, 0,
                        N_("show version information")},
     {"help",           'h', 0,

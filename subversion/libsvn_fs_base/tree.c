@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2932,7 +2932,7 @@ copy_helper(svn_fs_root_t *from_root,
   if (! same_p)
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Cannot copy between two different filesystems ('%s' and '%s')."),
+       _("Cannot copy between two different filesystems ('%s' and '%s')"),
        from_root->fs->path, to_root->fs->path);
 
   if (! to_root->is_txn_root)
