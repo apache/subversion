@@ -31,7 +31,7 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# Differences from official svnmerge:
+# Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
 # - "svnmerge avail" now only shows commits in head, not also commits in other
