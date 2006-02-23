@@ -330,24 +330,34 @@ class RevisionList:
         revs.update(RL._revs)
         return RevisionList(revs)
 
-def get_revlist_prop(dir, propname):
-    """Extract the values of a property which store per-head revision lists,
-    as a dictionary: key is a relative path to a head (in the repository), and
-    value is the integrated revisions for that head."""
+def dict_from_revlist_prop(propvalue):
+    """Given a property value as a string containing per-head revision
+    lists, return a dictionary whose key is a relative path to a head
+    (in the repository), and whose value is the revisions for that
+    head."""
     prop = {}
 
-    # Note that propget does not return error if the property does not exist:
-    # it simply does not output anything. So we do not need to check for
-    # LaunchError here.
-    out = launchsvn('propget "%s" "%s"' % (propname, dir),
-                    split_lines=False)
-
-    # multiple heads are separated by any whitespace
-    for L in out.split():
-        # We use rsplit to play safe and allow colons in paths
+    # Multiple heads are separated by any whitespace.
+    for L in propvalue.split():
+        # We use rsplit to play safe and allow colons in paths.
         head, revs = rsplit(L.strip(), ":", 1)
         prop[head] = revs
     return prop
+
+def get_revlist_prop(url_or_dir, propname):
+    """Given a repository URL or working copy path and a property
+    name, extract the values of the property which store per-head
+    revision lists and return a dictionary whose key is a relative
+    path to a head (in the repository), and whose value is the
+    revisions for that head."""
+
+    # Note that propget does not return an error if the property does
+    # not exist, it simply does not output anything. So we do not need
+    # to check for LaunchError here.
+    out = launchsvn('propget "%s" "%s"' % (propname, url_or_dir),
+                    split_lines=False)
+
+    return dict_from_revlist_prop(out)
 
 def get_merge_props(dir):
     """Extract the merged revisions."""
