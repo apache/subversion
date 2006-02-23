@@ -18,6 +18,9 @@
 
 
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+
 #include <apr_uri.h>
 
 #include <expat.h>
