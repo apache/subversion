@@ -233,6 +233,13 @@ handle_status_only(serf_bucket_t *response,
                    svn_boolean_t *done,
                    apr_pool_t *pool);
 
+apr_status_t
+handle_status_xml_parser(serf_bucket_t *response,
+                         int *status_code,
+                         XML_Parser xmlp,
+                         svn_boolean_t *done,
+                         apr_pool_t *pool);
+
 /** XML helper functions. **/
 
 void
@@ -380,6 +387,25 @@ void
 set_prop(apr_hash_t *props, const char *path,
          const char *ns, const char *name,
          const char *val, apr_pool_t *pool);
+
+/** MERGE-related functions */
+typedef struct merge_context_t merge_context_t;
+
+svn_boolean_t* merge_get_done_ptr(merge_context_t *ctx);
+
+svn_commit_info_t* merge_get_commit_info(merge_context_t *ctx);
+
+int merge_get_status(merge_context_t *ctx);
+
+/* Create an MERGE request */
+svn_error_t *
+merge_create_req(merge_context_t **merge_ctx,
+                 ra_serf_session_t *session,
+                 serf_connection_t *conn,
+                 const char *path,
+                 const char *activity_url,
+                 apr_size_t activity_url_len,
+                 apr_pool_t *pool);
 
 /** OPTIONS-related functions */
 
