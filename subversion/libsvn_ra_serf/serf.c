@@ -80,7 +80,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   apr_pool_create(&serf_sess->pool, pool);
-  serf_sess->bkt_alloc = serf_bucket_allocator_create(pool, NULL, NULL);
+  serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
+                                                      NULL);
   serf_sess->cached_props = apr_hash_make(pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
