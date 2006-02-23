@@ -117,6 +117,10 @@ class TestCase_SvnMerge(unittest.TestCase):
         sys.stdout = sys.stderr = out
         try:
             try:
+                # Clear svnmerge's internal cache before running any
+                # commands.
+                svnmerge._cache_svninfo = {}
+
                 ret = svnmerge.main(args)
             except SystemExit, e:
                 ret = e.code
@@ -257,6 +261,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                 svn ci -m "add test4"
                 svn add test5
                 svn ci -m "add test5"
+                svn cp -r6 -m "create branch" %(REPO)s/trunk %(REPO)s/branches/testXXX-branch
+                svn mv -m "rename branch" %(REPO)s/branches/testXXX-branch %(REPO)s/branches/testYYY-branch
                 svn cp -r6 -m "create branch" %(REPO)s/trunk %(REPO)s/branches/test-branch
             """)
 
@@ -342,7 +348,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testCheckInitializeEverything(self):
         self.svnmerge2(["init", self.repo + "/trunk"])
         p = self.getproperty()
-        self.assertEqual("/trunk:1-11", p)
+        r = svnmerge.get_svninfo(".")["Revision"]
+        self.assertEqual("/trunk:1-%d" % long(r), p)
 
     def testCheckNoCopyfrom(self):
         os.chdir("..")
@@ -361,4 +368,15 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
 
 if __name__ == "__main__":
+    # If an existing template repository and working copy for testing
+    # exists, then always remove it.  This prevents any problems if
+    # this test suite is modified and there exists an older template
+    # directory that may be used.  This will also prevent problems if
+    # in a previous run of this script, the template was being created
+    # when the script was canceled, leaving it in an inconsistent
+    # state.
+    basepath = template_path()
+    if os.path.exists(basepath):
+        rmtree(basepath)
+
     unittest.main()
