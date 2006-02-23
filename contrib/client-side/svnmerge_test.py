@@ -36,7 +36,9 @@ except NameError:
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
         self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")
-        self.assertEqual(svnmerge.kwextract("$Date: 2005-09-25 13:45 CET+1$"), "2005-09-25 13:45 CET+1")
+        self.assertEqual(svnmerge.kwextract("$Date: 2005-09-25 13:45 CET+1$"),
+                         "2005-09-25 13:45 CET+1")
+
     def test_failure(self):
         self.assertEqual(svnmerge.kwextract("$Rev: $"), "<unknown>")
         self.assertEqual(svnmerge.kwextract("$Date$"), "<unknown>")
@@ -46,13 +48,16 @@ class TestCase_launch(unittest.TestCase):
         cmd = "dir"
     else:
         cmd = "ls"
+
     def test_basic(self):
         out = svnmerge.launch(self.cmd)
         self.assert_(out)
         for o in out:
             self.assertEqual(o[-1], "\n")
+
     def test_failure(self):
         self.assertRaises(svnmerge.LaunchError, svnmerge.launch, self.cmd*10)
+
     def test_failurecode(self):
         try:
             svnmerge.launch(self.cmd*10)
@@ -70,19 +75,23 @@ class TestCase_RevisionList(unittest.TestCase):
         self.assert_(17 in rl)
         self.assert_(2 in rl)
         self.assert_(9 not in rl)
+
     def test_constr_dict(self):
         rl = svnmerge.RevisionList({18:1, 24:1, 25:1, 43:1})
         self.assert_(24 in rl)
         self.assert_(18 in rl)
         self.assert_(44 not in rl)
+
     def test_constr_error(self):
         self.assertRaises(ValueError, svnmerge.RevisionList, "10-12-15")
         self.assertRaises(ValueError, svnmerge.RevisionList, "10;12-15")
         self.assertRaises(ValueError, svnmerge.RevisionList, "10,foo,3-15")
+
     def test_normalized(self):
         rl = svnmerge.RevisionList("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
         self.assertEqual(rl.normalized(), [(1,1), (3,6), (8,18)])
         self.assertEqual(str(rl), "1,3-6,8-18")
+
     def test_iter(self):
         try:
             iter
@@ -91,12 +100,16 @@ class TestCase_RevisionList(unittest.TestCase):
         else:
             rl = svnmerge.RevisionList("4-13,1-5,34,20-22,18-21")
             self.assertEqual(list(iter(rl)), range(1,14)+range(18,23)+[34])
+
     def test_union(self):
         rl = svnmerge.RevisionList("3-8,4-10") | svnmerge.RevisionList("7-14,1")
         self.assertEqual(str(rl), "1,3-14")
+
     def test_subtraction(self):
+
         rl = svnmerge.RevisionList("3-8,4-10") - svnmerge.RevisionList("7-14,1")
         self.assertEqual(str(rl), "3-6")
+
     def test_constr_empty(self):
         rl = svnmerge.RevisionList("")
         self.assertEqual(str(rl), "")
@@ -147,10 +160,10 @@ class TestCase_SvnMerge(unittest.TestCase):
 
         return out.getvalue()
 
-
 class TestCase_CommandLineOptions(TestCase_SvnMerge):
     def test_empty(self):
         self.svnmerge("")
+
     def test_help_commands(self):
         self.svnmerge("help")
         self.svnmerge("--help")
@@ -159,14 +172,17 @@ class TestCase_CommandLineOptions(TestCase_SvnMerge):
             self.svnmerge("help %s" % cmd)
             self.svnmerge("%s --help" % cmd)
             self.svnmerge("%s -h" % cmd)
+
     def test_wrong_commands(self):
         self.svnmerge("asijdoiasjd", error=True)
         self.svnmerge("help asijdoiasjd", error=True)
+
     def test_wrong_option(self):
         self.svnmerge("--asdsad", error=True)
         self.svnmerge("help --asdsad", error=True)
         self.svnmerge("init --asdsad", error=True)
         self.svnmerge("--asdsad init", error=True)
+
     def test_version(self):
         out = self.svnmerge("--version")
         self.assert_(out.find("Giovanni Bajo") >= 0)
@@ -174,24 +190,31 @@ class TestCase_CommandLineOptions(TestCase_SvnMerge):
         self.assert_(out.find("Giovanni Bajo") >= 0)
         out = self.svnmerge("init -V")
         self.assert_(out.find("Giovanni Bajo") >= 0)
+
     def testOptionOrder(self):
         """Make sure you can intermix command name, arguments and
         options in any order."""
-        self.svnmerge("--log avail", error=True,
+        self.svnmerge("--log avail",
+                      error=True,
                       match="no integration info")  # accepted
-        self.svnmerge("-l avail", error=True,
+        self.svnmerge("-l avail",
+                      error=True,
                       match="no integration info")  # accepted
-        self.svnmerge("-r123 merge", error=True,
+        self.svnmerge("-r123 merge",
+                      error=True,
                       match="no integration info")  # accepted
-        self.svnmerge("-s -v -r92481 merge", error=True,
+        self.svnmerge("-s -v -r92481 merge",
+                      error=True,
                       match="no integration info")  # accepted
-        self.svnmerge("--log merge", error=True,
+        self.svnmerge("--log merge",
+                      error=True,
                       match="option --log not recognized")
         self.svnmerge("--diff foobar", error=True, match="foobar")
 
         # This requires gnu_getopt support to be parsed
         if hasattr(getopt, "gnu_getopt"):
-            self.svnmerge("-r123 merge . --log", error=True,
+            self.svnmerge("-r123 merge . --log",
+                          error=True,
                           match="option --log not recognized")
 
 def temp_path():
