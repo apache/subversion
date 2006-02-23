@@ -580,7 +580,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
      svn_cl__config_dir_opt},
-    {{'F', N_("read propery value from file ARG")}} },
+    {{'F', N_("read property value from file ARG")}} },
 
   { "resolved", svn_cl__resolved, {0}, N_
     ("Remove 'conflicted' state on working copy files or directories.\n"
