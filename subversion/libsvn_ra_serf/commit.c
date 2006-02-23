@@ -466,9 +466,10 @@ open_root(void *edit_baton,
 
   SVN_ERR(context_run_wait(&mkact_ctx->done, ctx->session, ctx->pool));
 
-  if (mkact_ctx->status != 201) {
+  if (mkact_ctx->status != 201)
+    {
       abort();
-  }
+    }
 
   /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
   props = apr_hash_make(ctx->pool);
@@ -515,9 +516,10 @@ open_root(void *edit_baton,
 
   SVN_ERR(context_run_wait(&checkout_ctx->done, ctx->session, ctx->pool));
 
-  if (checkout_ctx->status != 201) {
+  if (checkout_ctx->status != 201)
+    {
       abort();
-  }
+    }
 
 
   /* TODO: PROPPATCH the log message on the checked-out baseline */
@@ -684,9 +686,10 @@ open_file(const char *path,
   SVN_ERR(context_run_wait(&checkout_ctx->done, new_file->commit->session,
                            new_file->pool));
 
-  if (checkout_ctx->status != 201) {
+  if (checkout_ctx->status != 201)
+    {
       abort();
-  }
+    }
 
   new_file->checkout = checkout_ctx;
 
@@ -751,7 +754,8 @@ close_file(void *file_baton,
   ctx->result_checksum = text_checksum;
 
   /* If we had a stream of changes, push them to the server... */
-  if (ctx->stream) {
+  if (ctx->stream)
+    {
       serf_connection_request_create(ctx->commit->session->conns[0],
                                      setup_put, ctx);
 
@@ -762,7 +766,7 @@ close_file(void *file_baton,
         {
           abort();
         }
-  }
+    }
 
   /* TODO: If we had any prop changes, push them via PROPPATCH. */
 

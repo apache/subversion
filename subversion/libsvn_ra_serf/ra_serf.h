@@ -32,7 +32,7 @@
 #include "svn_dav.h"
 
 
-/**
+/*
  * The master serf RA session.
  *
  * This is stored in the ra session ->priv field.
@@ -75,7 +75,7 @@ typedef struct {
   void *wc_callback_baton;
 } ra_serf_session_t;
 
-/**
+/*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
  */
 typedef struct {
@@ -85,7 +85,7 @@ typedef struct {
   const char *name;
 } dav_props_t;
 
-/**
+/*
  * Structure which represents an XML namespace.
  */
 typedef struct ns_t {
@@ -97,7 +97,7 @@ typedef struct ns_t {
   struct ns_t *next;
 } ns_t;
 
-/**
+/*
  * An incredibly simple list.
  */
 typedef struct ra_serf_list_t {
@@ -105,7 +105,8 @@ typedef struct ra_serf_list_t {
   struct ra_serf_list_t *next;
 } ra_serf_list_t;
 
-/** DAV property sets */
+/** DAV property sets **/
+
 static const dav_props_t base_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
@@ -188,7 +189,7 @@ is_conn_closing(serf_bucket_t *response);
 apr_status_t
 cleanup_serf_session(void *data);
 
-/**
+/*
  * Create a REQUEST with an associated REQ_BKT in the SESSION.
  *
  * If HDRS_BKT is not-NULL, it will be set to a headers_bucket that
@@ -207,7 +208,7 @@ setup_serf_req(serf_request_t *request,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type);
 
-/**
+/*
  * This function will run the serf context in SESS until *DONE is TRUE.
  */
 svn_error_t *
@@ -215,7 +216,7 @@ context_run_wait(svn_boolean_t *done,
                  ra_serf_session_t *sess,
                  apr_pool_t *pool);
 
-/**
+/*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
  *
@@ -248,7 +249,7 @@ add_tag_buckets(serf_bucket_t *agg_bucket,
                 const char *value,
                 serf_bucket_alloc_t *bkt_alloc);
 
-/**
+/*
  * Look up the ATTRS array for namespace definitions and add each one
  * to the NS_LIST of namespaces.
  *
@@ -261,7 +262,7 @@ define_ns(ns_t **ns_list,
           const char **attrs,
           apr_pool_t *pool);
 
-/**
+/*
  * Look up NAME in the NS_LIST list for previously declared namespace
  * definitions and return a DAV_PROPS_T-tuple.
  */
@@ -269,7 +270,7 @@ dav_props_t
 expand_ns(ns_t *ns_list,
           const char *name);
 
-/**
+/*
  * look for ATTR_NAME in the attrs array and return its value.
  *
  * Returns NULL if no matching name is found.
@@ -298,7 +299,7 @@ serf_bucket_t * serf_bucket_propfind_create(const char *host,
                                             const dav_props_t *find_props,
                                             serf_bucket_alloc_t *allocator);
 
-/**
+/*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
  * DEPTH ("0","1","infinity").
@@ -320,7 +321,7 @@ deliver_props(propfind_context_t **prop_ctx,
               ra_serf_list_t **done_list,
               apr_pool_t *pool);
 
-/**
+/*
  * This helper function will block until the PROP_CTX indicates that is done
  * or another error is returned.
  */
@@ -329,7 +330,7 @@ wait_for_props(propfind_context_t *prop_ctx,
                ra_serf_session_t *sess,
                apr_pool_t *pool);
 
-/**
+/*
  * This is a blocking version of deliver_props.
  */
 svn_error_t *
@@ -342,7 +343,8 @@ retrieve_props(apr_hash_t *prop_vals,
                const dav_props_t *props,
                apr_pool_t *pool);
 
-/** Property walker functions */
+/** Property walker functions **/
+
 typedef void (*walker_visitor_t)(void *baton,
                                  const void *ns, apr_ssize_t ns_len,
                                  const void *name, apr_ssize_t name_len,
@@ -388,7 +390,8 @@ set_prop(apr_hash_t *props, const char *path,
          const char *ns, const char *name,
          const char *val, apr_pool_t *pool);
 
-/** MERGE-related functions */
+/** MERGE-related functions **/
+
 typedef struct merge_context_t merge_context_t;
 
 svn_boolean_t* merge_get_done_ptr(merge_context_t *ctx);
@@ -407,7 +410,7 @@ merge_create_req(merge_context_t **merge_ctx,
                  apr_size_t activity_url_len,
                  apr_pool_t *pool);
 
-/** OPTIONS-related functions */
+/** OPTIONS-related functions **/
 
 typedef struct options_context_t options_context_t;
 
@@ -425,7 +428,7 @@ create_options_req(options_context_t **opt_ctx,
                    const char *path,
                    apr_pool_t *pool);
 
-/** RA functions */
+/** RA functions **/
 
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *session,

@@ -38,7 +38,7 @@
 #include "ra_serf.h"
 
 
-/**
+/*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum {
