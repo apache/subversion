@@ -145,6 +145,93 @@ io_check_path(const char *path,
 }
 
 
+/* Wrapper for apr_file_open() that handles CCSID problems on OS400 V5R4. */
+static apr_status_t
+file_open(apr_file_t **f,
+          const char *fname,
+          apr_int32_t flag,
+          apr_fileperms_t perm,
+          apr_pool_t *pool) 
+{
+#ifdef AS400
+/* All files in OS400 are tagged with a metadata CCSID (Coded Character Set
+ * Identifier) which indicates the character encoding of the file's
+ * contents.  Even binary files are assigned a CCSID, typically the system
+ * CCSID of the machine, which is some variant of EBCDIC (there are many
+ * variants of EBCDIC: CCSID 37 - COM EUROPE EBCDIC, CCSID 273 - AUSTRIAN/
+ * GERMAN EBCDIC, CCSID 284 - SPANISH EBCDIC, etc..  In this comment the
+ * assumed system CCSID is 37).
+ * 
+ * APR on OS400 V5R4 is built with what IBM calls "UTF support" which means
+ * that within the application text file contents are assumed to be in CCSID
+ * 1208.
+ *
+ * On OS400 when using apr_file_open() to read, write, and/or create a file
+ * there is an interplay between the APR_BINARY flag and the file's CCSID:
+ * 
+ * File    | APR_BINARY  | Existing | Created | Conversion | Conversion
+ * Exists? | Flag        | File's   | File's  | When       | When  
+ *         | Passed      | CCSID    | CCSID   | Writing    | Reading
+ * --------------------------------------------------------------------
+ * Yes     | Yes         | 1208     | N/A     | None       | None
+ * Yes     | Yes         | 37       | N/A     | None       | None
+ * Yes     | No          | 1208     | N/A     | None       | None
+ * Yes     | No          | 37       | N/A     | 1208-->37  | 37-->1208
+ * No      | Yes         | N/A      | 37      | None       | None
+ * No      | No          | N/A      | 1208    | None       | None
+ *
+ * For example: If an existing file with CCSID 37 is opened for reading
+ *              without the APR_BINARY flag, the OS will attempt to convert
+ *              the file's contents from EBCDIC 37 to UTF-8.
+ *
+ * Now for the problem...
+ * 
+ *  - The files Subversion handles have either binary or UTF-8 content.
+ * 
+ *  - Subversion is not structured to differentiate between text files and
+ *    binary files.  It just always passes the APR_BINARY flag when calling
+ *    apr_file_open().
+ * 
+ * So when Subversion creates a new file it always has a CCSID of 37 even
+ * though the file *may* contain UTF-8 encoded text.  This isn't a problem
+ * for Subversion directly since it always passes APR_BINARY when opening
+ * files, therefore the content is never converted when reading/writing the
+ * file.
+ * 
+ * The problem is that other OS400 applications/utilities rely on the CCSID
+ * to represent the file's contents.  For example, when a text editor opens
+ * a svnserve.conf file tagged with CCSID 37 but actually containing UTF-8
+ * text, the OS will attempt to convert what it thinks is EBCDIC text to
+ * UTF-8.  Worse, if the file is empty, the text editor would save the
+ * contents as EBCDIC.  Later, when Subversion opens the conf file it's
+ * reading in "UTF-8" data that is actually EBCDIC.
+ * 
+ * The solution to this problem is to catch the case where Subversion wants
+ * to create a file and make an initial call to apr_file_open() in text mode
+ * (i.e. without the APR_BINARY flag), close the file, and then re-open the
+ * file in binary mode (i.e. with the APR_BINARY flag).
+ */
+  apr_status_t apr_err;
+  if (flag & APR_CREATE)
+    {
+      /* If we are trying to create a file on OS400 ensure it's CCSID is
+       * 1208. */  
+      apr_err = apr_file_open(f, fname, flag & ~APR_BINARY, perm, pool);
+
+      if (apr_err)
+        return apr_err;
+
+      apr_file_close(*f);
+
+      /* Unset APR_EXCL so the next call to apr_file_open() doesn't
+       * return an error. */
+      flag &= ~APR_EXCL;
+    }
+#endif /* AS400 */
+  return apr_file_open(f, fname, flag, perm, pool);
+}
+
+
 svn_error_t *
 svn_io_check_resolved_path(const char *path,
                            svn_node_kind_t *kind,
@@ -264,8 +351,8 @@ svn_io_open_unique_file2(apr_file_t **f,
       SVN_ERR(svn_path_cstring_from_utf8(&unique_name_apr, unique_name,
                                          pool));
 
-      apr_err = apr_file_open(&file, unique_name_apr, flag | APR_BINARY,
-                              APR_OS_DEFAULT, pool);
+      apr_err = file_open(&file, unique_name_apr, flag | APR_BINARY,
+                          APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
         continue;
@@ -2237,7 +2324,7 @@ svn_io_file_open(apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR(svn_path_cstring_from_utf8(&fname_apr, fname, pool));
-  status = apr_file_open(new_file, fname_apr, flag | APR_BINARY, perm, pool);
+  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, pool);
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't open file '%s'"),
