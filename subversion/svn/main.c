@@ -66,7 +66,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"quiet",         'q', 0, N_("print as little as possible")},
   {"recursive",     'R', 0, N_("descend recursively")},
   {"non-recursive", 'N', 0, N_("operate on single directory only")},
-  {"change",        'c', 1, N_("the change made by revision ARG (like -r ARG-1:ARG)")},
+  {"change",        'c', 1, N_
+   ("the change made by revision ARG (like -r ARG-1:ARG)\n"
+    "                             If ARG is negative this is like -r ARG:ARG-1")
+  },
   {"revision",      'r', 1, N_
    ("ARG (some commands also take ARG1:ARG2 range)\n"
     "                             A revision argument can be one of:\n"
@@ -284,6 +287,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     must be specified.  M defaults to the current working version if any\n"
      "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
      "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
+     "     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
      "\n"
      "  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
      "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
@@ -292,6 +296,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n"
      "     to N, -r N:M makes OLDREV default to N and NEWREV default to M,\n"
      "     -c M makes OLDREV default to M-1 and NEWREV default to M.\n"
+     "     -c -M makes OLDREV default to M and NEWREV default to M-1.\n"
      "\n"
      "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
      "\n"
@@ -436,8 +441,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  3. In the third form, SOURCE can be a URL, or working copy item\n"
      "     in which case the corresponding URL is used.  This URL in\n"
      "     revision REV is compared as it existed between revisions N and \n"
-     "     M.  If REV is not specified, HEAD is assumed.  The '-c M'\n"
-     "     option is equivalent to '-r N:M' where N = M-1.\n"
+     "     M.  If REV is not specified, HEAD is assumed.\n"
+     "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
+     "     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -882,6 +888,7 @@ main(int argc, const char *argv[])
       case 'c':
         {
           char *end;
+          svn_revnum_t changeno;
           if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
             {
               err = svn_error_create
@@ -890,28 +897,35 @@ main(int argc, const char *argv[])
                    "can't specify -c twice, or both -c and -r"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          opt_state.end_revision.value.number = strtol(opt_arg, &end, 10);
-          opt_state.end_revision.kind = svn_opt_revision_number;
+          changeno = strtol(opt_arg, &end, 10);
           if (end == opt_arg || *end != '\0')
             {
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                      _("Non-numeric change argument given to -c"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          else if (opt_state.end_revision.value.number == 0)
+          if (changeno == 0)
             {
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                      _("There is no change 0"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          else if (opt_state.end_revision.value.number < 0)
+          /* Figure out the range:
+                -c N  -> -r N-1:N
+                -c -N -> -r N:N-1 */
+          if (changeno > 0)
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Argument to -c must be positive"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+              opt_state.start_revision.value.number = changeno-1;
+              opt_state.end_revision.value.number = changeno;
             }
-          opt_state.start_revision.value.number = opt_state.end_revision.value.number - 1;
-          opt_state.start_revision.kind = svn_opt_revision_number;      
+          else
+            {
+              changeno = -changeno;
+              opt_state.start_revision.value.number = changeno;
+              opt_state.end_revision.value.number = changeno-1;
+            }
+          opt_state.start_revision.kind = svn_opt_revision_number;
+          opt_state.end_revision.kind = svn_opt_revision_number;
         }
         break;
       case 'r':

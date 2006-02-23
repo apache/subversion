@@ -1066,9 +1066,7 @@ def merge_similar_unrelated_trees(sbox):
   svntest.actions.run_and_verify_status(apply_path, expected_status)
 
 #----------------------------------------------------------------------
-def merge_one_file(sbox):
-  "merge one file (issue #1150)"
-
+def merge_one_file_helper(sbox, arg_flav):
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1099,10 +1097,19 @@ def merge_one_file(sbox):
   # ### Yes, it would be nice to use run_and_verify_merge(), but it
   # appears to be impossible to get the expected_foo trees working
   # right.  I think something is still assuming a directory target.
-  svntest.actions.run_and_verify_svn(None,
-                                     ['U    ' + rho_path + '\n'], [],
-                                     'merge', '-r', '1:2',
-                                     rho_url, rho_path)
+  if arg_flav == 'r':
+    svntest.actions.run_and_verify_svn(None ,
+                                       ['U    ' + rho_path + '\n'], [],
+                                       'merge', '-r', '1:2',
+                                       rho_url, rho_path)
+  elif arg_flav == 'c':
+    svntest.actions.run_and_verify_svn(None ,
+                                       ['U    ' + rho_path + '\n'], [],
+                                       'merge', '-c', '2',
+                                       rho_url, rho_path)
+  else:
+    raise svntest.Failure
+
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/G/rho', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1124,9 +1131,16 @@ def merge_one_file(sbox):
   try:
     os.chdir(G_path)
     # Cannot use run_and_verify_merge with a file target
-    svntest.actions.run_and_verify_svn(None,
-                                       ['U    rho\n'], [],
-                                       'merge', '-r', '1:2', rho_url)
+    if arg_flav == 'r':
+      svntest.actions.run_and_verify_svn(None,
+                                         ['U    rho\n'], [],
+                                         'merge', '-r', '1:2', rho_url)
+    elif arg_flav == 'c':
+      svntest.actions.run_and_verify_svn(None,
+                                         ['U    rho\n'], [],
+                                         'merge', '-c', '2', rho_url)
+    else:
+      raise svntest.Failure
 
     # Inspect rho, make sure it's right.
     rho_text = svntest.tree.get_text('rho')
@@ -1139,86 +1153,18 @@ def merge_one_file(sbox):
   expected_status.tweak('A/D/G/rho', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-#----------------------------------------------------------------------
-def merge_one_file_with_c(sbox):
-  "merge one file using -c"
+def merge_one_file_using_r(sbox):
+  "merge one file (issue #1150) using the -r option"
+  merge_one_file_helper(sbox, 'r')
 
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  
-  rho_rel_path = os.path.join('A', 'D', 'G', 'rho')
-  rho_path = os.path.join(wc_dir, rho_rel_path)
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
-  
-  # Change rho for revision 2
-  svntest.main.file_append(rho_path, 'A new line in rho.\n')
-
-  expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/D/G/rho', wc_rev=2)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
-  
-  # Backdate rho to revision 1, so we can merge in the rev 2 changes.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', '-r', '1', rho_path)
-
-  # Try one merge with an explicit target; it should succeed.
-  # ### Yes, it would be nice to use run_and_verify_merge(), but it
-  # appears to be impossible to get the expected_foo trees working
-  # right.  I think something is still assuming a directory target.
-  svntest.actions.run_and_verify_svn(None,
-                                     ['U    ' + rho_path + '\n'], [],
-                                     'merge', '-c', '2',
-                                     rho_url, rho_path)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/D/G/rho', status='M ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # Inspect rho, make sure it's right.
-  rho_text = svntest.tree.get_text(rho_path)
-  if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
-    print "Unexpected text in merged '" + rho_path + "'"
-    raise svntest.Failure
-
-  # Restore rho to pristine revision 1, for another merge.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', rho_path)
-  expected_status.tweak('A/D/G/rho', status='  ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # Cd into the directory and run merge with no targets.
-  # It should still merge into rho.
-  saved_cwd = os.getcwd()
-  try:
-    os.chdir(G_path)
-    # Cannot use run_and_verify_merge with a file target
-    svntest.actions.run_and_verify_svn(None,
-                                       ['U    rho\n'], [],
-                                       'merge', '-c', '2', rho_url)
-
-    # Inspect rho, make sure it's right.
-    rho_text = svntest.tree.get_text('rho')
-    if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
-      print "Unexpected text merging to 'rho' in '" + G_path + "'"
-      raise svntest.Failure
-  finally:
-    os.chdir(saved_cwd)
-
-  expected_status.tweak('A/D/G/rho', status='M ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+def merge_one_file_using_c(sbox):
+  "merge one file (issue #1150) using the -c option"
+  merge_one_file_helper(sbox, 'c')
 
 #----------------------------------------------------------------------
 # This is a regression for the enhancement added in issue #785.
 
-def merge_with_implicit_target (sbox):
-  "merging a file with no explicit target path"
-
+def merge_with_implicit_target_helper(sbox, arg_flav):
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1261,8 +1207,14 @@ def merge_with_implicit_target (sbox):
     os.chdir(os.path.join(other_wc, 'A'))
 
     # merge using URL for sourcepath
-    svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
-                                       'merge', '-r', '2:1', mu_url)
+    if arg_flav == 'r':
+      svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
+                                         'merge', '-r', '2:1', mu_url)
+    elif arg_flav == 'c':
+      svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
+                                         'merge', '-c', '-2', mu_url)
+    else:
+      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
@@ -1270,8 +1222,14 @@ def merge_with_implicit_target (sbox):
 
     # merge using filename for sourcepath
     # Cannot use run_and_verify_merge with a file target
-    svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
-                                       'merge', '-r', '1:2', 'mu')
+    if arg_flav == 'r':
+      svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
+                                         'merge', '-r', '1:2', 'mu')
+    elif arg_flav == 'c':
+      svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
+                                         'merge', '-c', '2', 'mu')
+    else:
+      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
@@ -1279,6 +1237,14 @@ def merge_with_implicit_target (sbox):
 
   finally:
     os.chdir(was_cwd)
+
+def merge_with_implicit_target_using_r(sbox):
+  "merging a file w/no explicit target path using -r"
+  merge_with_implicit_target_helper(sbox, 'r')
+
+def merge_with_implicit_target_using_c(sbox):
+  "merging a file w/no explicit target path using -c"
+  merge_with_implicit_target_helper(sbox, 'c')
 
 #----------------------------------------------------------------------
 
@@ -3207,14 +3173,15 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
-              merge_with_implicit_target,
+              merge_with_implicit_target_using_r,
+              merge_with_implicit_target_using_c,
               merge_catches_nonexistent_target,
               merge_tree_deleted_in_target,
               merge_similar_unrelated_trees,
               merge_with_prev,
               merge_binary_file,
-              merge_one_file,
-              merge_one_file_with_c,
+              merge_one_file_using_r,
+              merge_one_file_using_c,
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
               merge_into_missing,
