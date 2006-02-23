@@ -1,5 +1,5 @@
 # Swedish translations for subversion package
-# Copyright (C) 2004-2005 CollabNet.
+# Copyright (C) 2004-2006 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 # Translation dictionary:
@@ -42,8 +42,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-02-23 21:29+0100\n"
-"PO-Revision-Date: 2006-01-13 11:23+0100\n"
+"POT-Creation-Date: 2006-02-23 22:26+0100\n"
+"PO-Revision-Date: 2006-02-23 22:27+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -641,14 +641,12 @@ msgid "Svndiff data ends unexpectedly"
 msgstr "Svndiff-data tog oväntat slut"
 
 #: include/svn_error_codes.h:832
-#, fuzzy
 msgid "Svndiff compressed data is invalid"
-msgstr "Svndiff-data har ogiltigt huvud"
+msgstr "Komprimerad svndiff-data är ogiltig"
 
 #: include/svn_error_codes.h:838
-#, fuzzy
 msgid "Diff data source modified unexpectedly"
-msgstr "Svndiff-data tog oväntat slut"
+msgstr "Datakälla för diff ändrades oväntat"
 
 #: include/svn_error_codes.h:844
 msgid "Apache has no path to an SVN filesystem"
@@ -1075,9 +1073,9 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "Arkiveringsobjektet \"%s\" har kopieringsflagga men ogiltig revision"
 
 #: libsvn_client/copy.c:95 libsvn_client/copy.c:778
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a directory"
-msgstr "\"%s\" är ingen katalog"
+msgstr "Sökvägen \"%s\" är ingen katalog"
 
 #: libsvn_client/copy.c:138
 msgid "Move will not be attempted unless forced"
@@ -1421,15 +1419,15 @@ msgstr "Okänd revisionstyp begärd för \"%s\""
 
 #: libsvn_delta/svndiff.c:139
 msgid "Compression of svndiff data failed"
-msgstr ""
+msgstr "Misslyckades med att komprimera svndiff-data"
 
 #: libsvn_delta/svndiff.c:396
 msgid "Decompression of svndiff data failed"
-msgstr ""
+msgstr "Misslyckades med att packa upp svndiff-data"
 
 #: libsvn_delta/svndiff.c:403
 msgid "Size of uncompressed data does not match stored original length"
-msgstr ""
+msgstr "Storleken på uppackad data stämmer inte med lagrad originallängd"
 
 #: libsvn_delta/svndiff.c:473
 #, c-format
@@ -1490,17 +1488,17 @@ msgstr "Oväntat slut på svndiff"
 #: libsvn_diff/diff_file.c:593
 #, c-format
 msgid "The file '%s' changed unexpectedly during diff"
-msgstr ""
+msgstr "Filen '%s' ändrades oväntat vid diff-beräkning"
 
 #: libsvn_diff/diff_file.c:714
-#, fuzzy, c-format
+#, c-format
 msgid "Error parsing diff options"
-msgstr "Fel vid analys av \"%s\""
+msgstr "Fel vid tolkning av diff-flaggor"
 
 #: libsvn_diff/diff_file.c:737
 #, c-format
 msgid "Invalid argument '%s' in diff options"
-msgstr ""
+msgstr "Ogiltigt argument \"%s\" i diff-flaggor"
 
 #: libsvn_diff/diff_file.c:1019
 #, c-format
@@ -1556,9 +1554,9 @@ msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "Negativt utgånsgdatum till svn_fs_lock"
 
 #: libsvn_fs_base/bdb/bdb-err.c:101
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while %s:\n"
-msgstr "Berkeley DB-fel i filsystemet %s under %s:\n"
+msgstr "Berkeley DB-fel i filsystemet \"%s\" under %s:\n"
 
 #: libsvn_fs_base/bdb/changes-table.c:87
 msgid "creating change"
@@ -1940,19 +1938,19 @@ msgid "Filesystem object already open"
 msgstr "Filsystemet redan öppet"
 
 #: libsvn_fs_base/fs.c:189
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while closing environment:\n"
-msgstr "Berkeley DB-fel i filsystemet %s under %s:\n"
+msgstr "Berkeley DB-fel i filsystemet '%s' då databasmiljön skulle stängas:\n"
 
 #: libsvn_fs_base/fs.c:539
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while creating environment:\n"
-msgstr "Berkeley DB-fel i filsystemet %s under %s:\n"
+msgstr "Berkeley DB-fel i filsystemet \"%s\" då databasmiljön skulle skapas:\n"
 
 #: libsvn_fs_base/fs.c:545
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
-msgstr "Berkeley DB-fel i filsystemet %s under %s:\n"
+msgstr "Berkeley DB-fel i filsystemet \"%s\" då databasmiljön skulle öppnas:\n"
 
 #: libsvn_fs_base/fs.c:672 libsvn_fs_fs/fs_fs.c:277
 #, c-format
@@ -2173,9 +2171,9 @@ msgid "The root directory cannot be deleted"
 msgstr "Rotkatalogen kan inte raderas"
 
 #: libsvn_fs_base/tree.c:2935 libsvn_fs_fs/tree.c:1962
-#, fuzzy, c-format
-msgid "Cannot copy between two different filesystems ('%s' and '%s')."
-msgstr "Kan inte jämföra egenskapsvärde mellan två olika filsystem"
+#, c-format
+msgid "Cannot copy between two different filesystems ('%s' and '%s')"
+msgstr "Kan inte kopiera mellan två olika filsystem (\"%s\" och \"%s\")"
 
 #: libsvn_fs_base/tree.c:2944 libsvn_fs_fs/tree.c:1968
 msgid "Copy from mutable tree not currently supported"
@@ -2558,7 +2556,7 @@ msgstr ""
 
 #: libsvn_ra_dav/fetch.c:1151
 msgid "Server response missing the expected deadprop-count property"
-msgstr ""
+msgstr "Svaret från servern saknar den förväntade deadprop-count-egenskapen"
 
 #: libsvn_ra_dav/fetch.c:1324
 msgid "Server does not support date-based operations"
@@ -2934,27 +2932,26 @@ msgstr "Kunde inte öppna arkivet \"%s\""
 #: libsvn_ra_serf/commit.c:406
 #, c-format
 msgid "Failed writing updated file"
-msgstr ""
+msgstr "MIsslyckades att skriva uppdaterad fil"
 
 #: libsvn_ra_serf/serf.c:51
-#, fuzzy
 msgid "Access repository via WebDAV protocol through serf."
-msgstr "Modul för åtkomst av databas via protokollet WebDAV (DeltaV)."
+msgstr "Modul för åtkomst av arkiv via protokollet WebDAV med serf."
 
 #: libsvn_ra_serf/serf.c:112
 #, c-format
 msgid "Could not lookup hostname: %s://%s"
-msgstr ""
+msgstr "Kunde inte hitta värdnamn: %s://%s"
 
 #: libsvn_ra_serf/serf.c:562
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
-msgstr "Versionen för RA-laddaren (%d) stöds ej för ra_svn"
+msgstr "Versionen för RA-laddaren (%d) stöds ej för ra_serf"
 
 #: libsvn_ra_serf/update.c:1536
 #, c-format
 msgid "Error retrieving REPORT"
-msgstr ""
+msgstr "Fel vid hämtning av rapport"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -3325,14 +3322,14 @@ msgid "Can't create pipe for hook '%s'"
 msgstr "Kan inte skapa rör för hookskriptet \"%s\""
 
 #: libsvn_repos/hooks.c:79
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
-msgstr "Kan inte skapa rör för hookskriptet \"%s\""
+msgstr "Kan inte slå av arv på läshandtag för rör för hookskriptet \"%s\""
 
 #: libsvn_repos/hooks.c:85
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
-msgstr "Kan inte skapa rör för hookskriptet \"%s\""
+msgstr "Kan inte slå av arv på skrivhandtag för rör för hookskriptet \"%s\""
 
 #: libsvn_repos/hooks.c:94
 #, c-format
@@ -3397,12 +3394,13 @@ msgstr "Dumöströmmen verkar vara felaktig"
 #: libsvn_repos/load.c:173
 #, c-format
 msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
-msgstr ""
+msgstr "Dumpströmmen innehåller ett felaktigt huvud (utan \":\") vid \"%.20s\""
 
 #: libsvn_repos/load.c:186
 #, c-format
 msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
 msgstr ""
+"Dumpströmmen innehåller ett felaktigt huvud (som saknar värde) vid '%.20s'"
 
 #: libsvn_repos/load.c:270
 msgid "Incomplete or unterminated property block"
@@ -3629,7 +3627,7 @@ msgstr "En sökväg som ej är läsbar har påträffats; åtkomst nekas"
 #: libsvn_subr/cmdline.c:486
 #, c-format
 msgid "Error initializing command line arguments"
-msgstr ""
+msgstr "Fel vid initiering av kommandoradsargument"
 
 #: libsvn_subr/config.c:630
 #, c-format
@@ -4285,9 +4283,9 @@ msgid "Can't create a character converter from '%s' to '%s'"
 msgstr "Kan inte skapa teckenkonverterare från \"%s\" till \"%s\""
 
 #: libsvn_subr/utf.c:254
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create a character converter from '%i' to '%i'"
-msgstr "Kan inte skapa teckenkonverterare från \"%s\" till \"%s\""
+msgstr "Kan inte skapa teckenkonverterare från \"%i\" till \"%i\""
 
 #: libsvn_subr/utf.c:482
 #, c-format
@@ -4305,9 +4303,9 @@ msgid "Can't convert string from '%s' to '%s':"
 msgstr "Kan inte konvertera sträng från \"%s\" till \"%s\""
 
 #: libsvn_subr/utf.c:496
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
-msgstr "Kan inte konvertera sträng från \"%s\" till \"%s\""
+msgstr "Kan inte konvertera sträng från CCSID \"%i\" till CCSID \"%i\""
 
 #: libsvn_subr/utf.c:541
 #, c-format
@@ -5449,7 +5447,6 @@ msgid "show help on a subcommand"
 msgstr "visa hjälp för ett underkommando"
 
 #: svn/main.c:65
-#, fuzzy
 msgid "specify log message ARG"
 msgstr "ange loggmeddelande ARG"
 
@@ -5470,6 +5467,10 @@ msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
+"ändringen som motsvaras av revisionen ARG\n"
+"                             (som -r ARG-1:ARG). Om ARG är negativt är "
+"detta\n"
+"                             samma som -r ARG:ARG-1."
 
 #: svn/main.c:74
 msgid ""
@@ -5498,9 +5499,8 @@ msgstr ""
 "                                \"PREV\"       revisionen före COMMITTED"
 
 #: svn/main.c:84
-#, fuzzy
 msgid "read log message from file ARG"
-msgstr "läs data från filen ARG"
+msgstr "läs loggmeddelande från filen ARG"
 
 #: svn/main.c:86
 msgid "give output suitable for concatenation"
@@ -5653,7 +5653,7 @@ msgstr "lås inte upp målen"
 
 #: svn/main.c:153
 msgid "show a summary of the results"
-msgstr ""
+msgstr "visa en sammanfattning av resultatet"
 
 #: svn/main.c:192
 msgid ""
@@ -5795,7 +5795,6 @@ msgstr ""
 "     omedelbar arkivering.\n"
 
 #: svn/main.c:277
-#, fuzzy
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5850,7 +5849,8 @@ msgstr ""
 "     sätter standardvärdet för GAMMALREV till N. -r N:M sätter\n"
 "     standardvädet för GAMMALREV till N och för NYREV till M; -c M sätter\n"
 "     standardvärdet för GAMMALREV till M-1 och för NYREV till M.\n"
-"\n"
+"     -c M sätter standardvärdet för GAMMALREV till M och för NYREV till M-"
+"1.\n"
 "  3. Kortare sätt att skriva \"svn diff --old=GAMMAL-URL[@GAMMALREV]\n"
 "     --new=NY-URL[@NYREV]\".\n"
 "\n"
@@ -5993,14 +5993,12 @@ msgstr ""
 "  arbetskopia.\n"
 
 #: svn/main.c:395
-#, fuzzy
 msgid "read lock comment from file ARG"
-msgstr "läs data från filen ARG"
+msgstr "läs låskommentar från filen ARG"
 
 #: svn/main.c:396
-#, fuzzy
 msgid "specify lock comment ARG"
-msgstr "ange loggmeddelande ARG"
+msgstr "ange låskommentar ARG"
 
 #: svn/main.c:399
 msgid ""
@@ -6057,7 +6055,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:428
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6103,7 +6100,8 @@ msgstr ""
 "bestämmer\n"
 "     vad som ska jämföras. Om REV inte anges, används HEAD. Flaggan \"-c M"
 "\"\n"
-"     är liktydig med \"-r N:M\", där N = M-1.\n"
+"     är liktydig med \"-r N:M\", där N = M-1. Används -c -M, görs det\n"
+"     omvända: \"-r M:N\", där N = M-1.\n"
 "\n"
 "  AKSÖKVÄG är sökvägen till den arbetskopia där ändringarna kommer att\n"
 "  införas. Om AKSÖKVÄG utelämnas används \".\" som standardvärde, såvida "
@@ -6362,9 +6360,8 @@ msgstr ""
 "  på de av katalogens barn som är filer.\n"
 
 #: svn/main.c:583
-#, fuzzy
 msgid "read propery value from file ARG"
-msgstr "läs data från filen ARG"
+msgstr "läs egenskapsvärde från filen ARG"
 
 #: svn/main.c:586
 msgid ""
@@ -7204,11 +7201,12 @@ msgstr ""
 "                             [Berkeley DB]"
 
 #: svnadmin/main.c:272
-#, fuzzy
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
-msgstr "ta bort redundanta loggfiler från källdatabasen"
+msgstr ""
+"ta bort redundanta Berkeley DB-loggfiler\n"
+"                             från källarkivet [Berkeley DB]"
 
 #: svnadmin/main.c:276
 msgid "call pre-commit hook before committing revisions"
@@ -7231,6 +7229,8 @@ msgid ""
 "disallow use of SVNDIFF1 in on-disk storage,\n"
 "                             for backwards compatibility"
 msgstr ""
+"tillåt ej användning av svndiff1 vid lagring på disk,\n"
+"                             for bakåtkompatibilitet"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -7770,7 +7770,7 @@ msgstr ""
 "Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
 "Skriv \"svndumpfilter help %s\" för användning.\n"
 
-#: svnlook/main.c:99
+#: svnlook/main.c:99 svnsync/main.c:100
 msgid "specify revision number ARG"
 msgstr "ange revisionsnummer ARG"
 
@@ -8285,14 +8285,14 @@ msgstr ""
 "Överför väntande revisioner från källa till destination.\n"
 
 #: svnsync/main.c:74
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL --revision REV\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"användning: svnsync synchronize DEST_URL\n"
-"Överför väntande revisioner från källa till destination.\n"
+"användning: svnsync copy-revprops DEST_URL --revision REV\n"
+"Kopiera alla revisionsegenskaper för revisionen REV från källan till\n"
+"destinationen.\n"
 
 #: svnsync/main.c:79
 msgid ""
@@ -8305,11 +8305,6 @@ msgstr ""
 #: svnsync/main.c:88
 msgid "The url to synchronize from"
 msgstr "URL:en att synkronisera från"
-
-#: svnsync/main.c:100
-#, fuzzy
-msgid "specifiy revision number ARG"
-msgstr "ange revisionsnummer ARG"
 
 #: svnsync/main.c:169
 #, c-format
@@ -8368,6 +8363,8 @@ msgstr "Arkiveringen skapade revision %ld, men den borde ha skapat %ld"
 #: svnsync/main.c:1085
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr ""
+"Kan inte kopiera revisionsegenskaper för en revision som ej har "
+"synkroniserats"
 
 #: svnsync/main.c:1135
 msgid ""
@@ -8472,21 +8469,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Unrecognized node kind of '%s'"
-#~ msgstr "Okänd nodtyp för \"%s\""
-
-#~ msgid "'%s' is in the way"
-#~ msgstr "\"%s\" är i vägen"
-
-#~ msgid "'%s' is not supported"
-#~ msgstr "\"%s\" stöds ej"
-
-#~ msgid "Found malformed header block in dumpfile stream"
-#~ msgstr "Hittade felaktigt huvud i dumpfilsström"
-
-#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
-#~ msgstr "ändringen i revision ARG (som -rARG-1:ARG)"
-
-#~ msgid "Argument to -c must be positive"
-#~ msgstr "Argumentet till -c måste vara positivt"
