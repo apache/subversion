@@ -76,7 +76,7 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
     }
 }
 
-/**
+/*
  * Look up NAME in the NS_LIST list for previously declared namespace
  * definitions and return a DAV_PROPS_T-tuple that has values that
  * has a lifetime tied to POOL.
@@ -117,8 +117,8 @@ expand_ns(ns_t *ns_list, const char *name)
   return prop_name;
 }
 
-/**
- * look for ATTR_NAME in the attrs array and return its value.
+/*
+ * Look for ATTR_NAME in the attrs array and return its value.
  *
  * Returns NULL if no matching name is found.
  */

@@ -402,9 +402,10 @@ end_merge(void *userData, const char *raw_name)
     {
       merge_info_t *info = ctx->state->info;
 
-      if (!info->prop_name) {
+      if (!info->prop_name)
+        {
           info->prop_name = apr_pstrdup(info->pool, prop_name.name);
-      }
+        }
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
 

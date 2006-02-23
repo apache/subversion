@@ -23,7 +23,7 @@
 #include "ra_serf.h"
 
 
-/**
+/*
  * This structure represents a pending PROPFIND response.
  */
 struct propfind_context_t {
@@ -177,7 +177,7 @@ set_prop(apr_hash_t *props,
   return set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name, val, pool);
 }
 
-/**
+/*
  * Expat callback invoked on a start element tag for a PROPFIND response.
  */
 static void XMLCALL
@@ -207,7 +207,7 @@ start_propfind(void *userData, const char *name, const char **attrs)
     }
 }
 
-/**
+/*
  * Expat callback invoked on an end element tag for a PROPFIND response.
  */
 static void XMLCALL
@@ -256,7 +256,7 @@ end_propfind(void *userData, const char *name)
   /* FIXME: destroy namespaces as we end a handler */
 }
 
-/**
+/*
  * Expat callback invoked on CDATA elements in a PROPFIND response.
  *
  * This callback can be called multiple times.
@@ -388,7 +388,7 @@ check_cache(apr_hash_t *ret_props,
   return cache_hit;
 }
 
-/**
+/*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
  * DEPTH ("0","1","infinity").
@@ -468,7 +468,7 @@ is_propfind_done(propfind_context_t *ctx)
   return ctx->done;
 }
 
-/**
+/*
  * This helper function will block until the PROP_CTX indicates that is done
  * or another error is returned.
  */
@@ -480,7 +480,7 @@ wait_for_props(propfind_context_t *prop_ctx,
   return context_run_wait(&prop_ctx->done, sess, pool);
 }
 
-/**
+/*
  * This is a blocking version of deliver_props.
  */
 svn_error_t *

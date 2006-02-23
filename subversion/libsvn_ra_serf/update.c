@@ -531,9 +531,10 @@ close_dir(report_dir_t *dir)
 {
   report_dir_t *prev, *sibling;
 
-  if (dir->ref_count) {
+  if (dir->ref_count)
+    {
       abort();
-  }
+    }
 
   walk_all_props(dir->props, dir->base_name, SVN_INVALID_REVNUM,
                  set_dir_props, dir, dir->dir_baton_pool);
