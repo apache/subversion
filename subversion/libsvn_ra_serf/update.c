@@ -1448,7 +1448,25 @@ delete_path(void *report_baton,
             apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  abort();
+  serf_bucket_t *tmp;
+  const char *path_copy;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:missing>",
+                                      sizeof("<S:missing>")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  path_copy = apr_pstrdup(report->pool, path);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(path_copy, report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:missing>",
+                                      sizeof("</S:missing>")-1,
+                                      report->sess->bkt_alloc);
+
+  serf_bucket_aggregate_append(report->buckets, tmp);
+  return APR_SUCCESS;
 }
 
 static svn_error_t *

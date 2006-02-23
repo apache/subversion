@@ -60,6 +60,7 @@ typedef enum {
 typedef enum {
   NONE,
   BASELINE,
+  COLLECTION,
   CHECKED_IN,
 } resource_type_e;
 
@@ -273,6 +274,11 @@ start_merge(void *userData, const char *name, const char **attrs)
            strcmp(prop_name.name, "baseline") == 0)
     {
       ctx->state->info->type = BASELINE;
+    }
+  else if (ctx->state->state == RESOURCE_TYPE &&
+           strcmp(prop_name.name, "collection") == 0)
+    {
+      ctx->state->info->type = COLLECTION;
     }
   else if (ctx->state->state == PROP &&
            strcmp(prop_name.name, "checked-in") == 0)

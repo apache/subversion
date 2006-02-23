@@ -86,7 +86,6 @@ typedef struct {
   ra_serf_session_t *session;
 
   const char *activity_url;
-  apr_size_t activity_url_len;
 
   int status;
 
@@ -116,6 +115,13 @@ typedef struct {
   const char *activity_url;
   apr_size_t activity_url_len;
 
+  /* The checkout for the baseline. */
+  checkout_context_t *baseline;
+
+  /* The checked-in root to base CHECKOUTs from */
+  const char *checked_in_url;
+ 
+  /* The root baseline collection */ 
   const char *baseline_url;
 } commit_context_t;
 
@@ -126,6 +132,15 @@ typedef struct dir_context_t {
 
   /* The root commit we're in progress for. */
   commit_context_t *commit;
+
+  /* The checked out context for this directory.
+   *
+   * May be NULL; if so call checkout_dir() first.
+   */
+  checkout_context_t *checkout;
+
+  /* Our URL to CHECKOUT */
+  const char *checked_in_url;
 
   /* How many pending changes we have left in this directory. */
   unsigned int ref_count;
@@ -297,6 +312,61 @@ handle_checkout(serf_bucket_t *response,
   return status;
 }
 
+static svn_error_t *
+checkout_dir(dir_context_t *dir)
+{
+  checkout_context_t *checkout_ctx;
+
+  if (dir->checkout)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  if (dir->parent_dir)
+    {
+      SVN_ERR(checkout_dir(dir->parent_dir));
+    }
+
+  /* Checkout our directory into the activity URL now. */
+  checkout_ctx = apr_pcalloc(dir->pool, sizeof(*checkout_ctx));
+
+  checkout_ctx->pool = dir->pool;
+  checkout_ctx->session = dir->commit->session;
+
+  checkout_ctx->acceptor = accept_response;
+  checkout_ctx->acceptor_baton = dir->commit->session;
+  checkout_ctx->handler = handle_checkout;
+  checkout_ctx->activity_url = dir->commit->activity_url;
+  checkout_ctx->activity_url_len = dir->commit->activity_url_len;
+
+  /* We could be called twice for the root: once to checkout the baseline;
+   * once to checkout the directory itself if we need to do so.
+   */
+  if (!dir->parent_dir && !dir->commit->baseline)
+    {
+      checkout_ctx->checkout_url = dir->commit->baseline_url;
+      dir->commit->baseline = checkout_ctx;
+    }
+  else
+    {
+      checkout_ctx->checkout_url = dir->checked_in_url;
+      dir->checkout = checkout_ctx;
+    }
+
+  serf_connection_request_create(dir->commit->session->conns[0],
+                                 setup_checkout, checkout_ctx);
+
+  SVN_ERR(context_run_wait(&checkout_ctx->done, dir->commit->session,
+                           dir->pool));
+
+  if (checkout_ctx->status != 201)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static apr_status_t
 setup_put(serf_request_t *request,
           void *setup_baton,
@@ -424,18 +494,9 @@ open_root(void *edit_baton,
   checkout_context_t *checkout_ctx;
   dir_context_t *dir;
   const char *activity_str;
-  const char *vcc_url, *baseline_url, *version_name;
+  const char *vcc_url, *version_name;
   svn_boolean_t *opt_done;
   apr_hash_t *props;
-
-  dir = apr_pcalloc(dir_pool, sizeof(*dir));
-
-  dir->pool = dir_pool;
-  dir->commit = ctx;
-  dir->base_revision = base_revision;
-  dir->name = "";
-
-  *root_baton = dir;
 
   /* Create a UUID for this commit. */
   ctx->uuid = svn_uuid_generate(ctx->pool);
@@ -497,10 +558,10 @@ open_root(void *edit_baton,
                          SVN_INVALID_REVNUM, "0",
                          checked_in_props, ctx->pool));
 
-  ctx->baseline_url = get_prop(props, ctx->session->repos_url.path, "DAV:",
-                               "checked-in");
+  ctx->checked_in_url = get_prop(props, ctx->session->repos_url.path, "DAV:",
+                                 "checked-in");
 
-  if (!ctx->baseline_url)
+  if (!ctx->checked_in_url)
     {
       abort();
     }
@@ -510,39 +571,28 @@ open_root(void *edit_baton,
                          vcc_url, SVN_INVALID_REVNUM, "0",
                          checked_in_props, ctx->pool));
 
-  baseline_url = get_prop(props, vcc_url, "DAV:", "checked-in");
+  ctx->baseline_url = get_prop(props, vcc_url, "DAV:", "checked-in");
 
-  if (!baseline_url)
+  if (!ctx->baseline_url)
     {
       abort();
     }
 
-  /* Checkout our baseline into our activity URL now. */
-  checkout_ctx = apr_pcalloc(ctx->pool, sizeof(*checkout_ctx));
+  dir = apr_pcalloc(dir_pool, sizeof(*dir));
 
-  checkout_ctx->pool = ctx->pool;
-  checkout_ctx->session = ctx->session;
+  dir->pool = dir_pool;
+  dir->commit = ctx;
+  dir->base_revision = base_revision;
+  dir->name = "";
+  dir->checked_in_url = ctx->checked_in_url;
 
-  checkout_ctx->acceptor = accept_response;
-  checkout_ctx->acceptor_baton = ctx->session;
-  checkout_ctx->handler = handle_checkout;
-  checkout_ctx->activity_url = ctx->activity_url;
-  checkout_ctx->activity_url_len = ctx->activity_url_len;
-  checkout_ctx->checkout_url = baseline_url;
-
-  serf_connection_request_create(ctx->session->conns[0],
-                                 setup_checkout, checkout_ctx);
-
-  SVN_ERR(context_run_wait(&checkout_ctx->done, ctx->session, ctx->pool));
-
-  if (checkout_ctx->status != 201)
-    {
-      abort();
-    }
-
+  /* Checkout our root dir */
+  checkout_dir(dir);
 
   /* TODO: PROPPATCH the log message on the checked-out baseline */
-  printf("PROPPATCH on %s\n", checkout_ctx->resource_url);
+  printf("PROPPATCH on %s\n", ctx->baseline->resource_url);
+
+  *root_baton = dir;
 
   return SVN_NO_ERROR;
 }
@@ -553,9 +603,36 @@ delete_entry(const char *path,
              void *parent_baton,
              apr_pool_t *pool)
 {
-  dir_context_t *ctx = parent_baton;
+  dir_context_t *dir = parent_baton;
+  delete_context_t *delete_ctx;
 
-  abort();
+  /* Ensure our directory has been checked out */
+  checkout_dir(dir);
+
+  /* DELETE our activity */
+  delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+
+  delete_ctx->pool = pool;
+  delete_ctx->session = dir->commit->session;
+
+  delete_ctx->acceptor = accept_response;
+  delete_ctx->acceptor_baton = dir->commit->session;
+  delete_ctx->handler = handle_delete;
+  delete_ctx->activity_url =
+      svn_path_url_add_component(dir->checkout->resource_url,
+                                 path, delete_ctx->pool);
+
+  serf_connection_request_create(dir->commit->session->conns[0],
+                                 setup_delete, delete_ctx);
+
+  SVN_ERR(context_run_wait(&delete_ctx->done, dir->commit->session, pool));
+
+  if (delete_ctx->status != 204)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -590,6 +667,9 @@ open_directory(const char *path,
 
   dir->base_revision = base_revision;
   dir->name = path;
+  dir->checked_in_url =
+      svn_path_url_add_component(parent->commit->checked_in_url,
+                                 path, dir->pool);
 
   *child_baton = dir;
 
@@ -688,7 +768,7 @@ open_file(const char *path,
 
   /* Append our file name to the baseline to get the resulting checkout. */
   checkout_ctx->checkout_url =
-      svn_path_url_add_component(new_file->commit->baseline_url,
+      svn_path_url_add_component(new_file->commit->checked_in_url,
                                  path, new_file->pool);
 
   serf_connection_request_create(new_file->commit->session->conns[0],
@@ -836,7 +916,6 @@ close_edit(void *edit_baton,
   delete_ctx->acceptor_baton = ctx->session;
   delete_ctx->handler = handle_delete;
   delete_ctx->activity_url = ctx->activity_url;
-  delete_ctx->activity_url_len = ctx->activity_url_len;
 
   serf_connection_request_create(ctx->session->conns[0],
                                  setup_delete, delete_ctx);
