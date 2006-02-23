@@ -7,6 +7,7 @@
 # '' - «»
 # allocate - reservere
 # ancestor - opprinnelse
+# argument - argument
 # bump - øke
 # cached - lagrede
 # checkout - hente ut, uthenting
@@ -19,6 +20,7 @@
 # destination - mål
 # directory - katalog
 # entry - post
+# file handle - filreferanse
 # hook - påhakning
 # item - element
 # lock token - låsnøkkel
@@ -658,14 +660,12 @@ msgid "Svndiff data ends unexpectedly"
 msgstr "Svndiff-data sluttet uventet"
 
 #: include/svn_error_codes.h:832
-#, fuzzy
 msgid "Svndiff compressed data is invalid"
-msgstr "Svndiff-data har ugyldig hode"
+msgstr "Komprimerte svndiff-data er ugyldig"
 
 #: include/svn_error_codes.h:838
-#, fuzzy
 msgid "Diff data source modified unexpectedly"
-msgstr "Svndiff-data sluttet uventet"
+msgstr "Uventet forandring i diff-datakilde"
 
 #: include/svn_error_codes.h:844
 msgid "Apache has no path to an SVN filesystem"
@@ -1084,9 +1084,9 @@ msgstr ""
 "Objekt «%s» for innsending har kopimerke satt, men har en ugyldig revisjon"
 
 #: libsvn_client/copy.c:95 libsvn_client/copy.c:778
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a directory"
-msgstr "«%s» er ikke en katalog"
+msgstr "Stien «%s» er ikke en katalog"
 
 #: libsvn_client/copy.c:138
 msgid "Move will not be attempted unless forced"
@@ -1430,15 +1430,15 @@ msgstr "Det ble bedt om en ukjent revisjonstype for «%s»"
 
 #: libsvn_delta/svndiff.c:139
 msgid "compression of svndiff data failed"
-msgstr ""
+msgstr "komprimering av svndiff-data feilet"
 
 #: libsvn_delta/svndiff.c:396
 msgid "decompression of svndiff data failed"
-msgstr ""
+msgstr "dekomprimering av svndiff-data feilet"
 
 #: libsvn_delta/svndiff.c:403
 msgid "size of uncompressed data does not match stored original length"
-msgstr ""
+msgstr "størrelsen på ukomprimerte data stemmer ikke med original lengde"
 
 #: libsvn_delta/svndiff.c:473
 #, c-format
@@ -1502,17 +1502,17 @@ msgstr "Uventet slutt på svndiff-inndata"
 #: libsvn_diff/diff_file.c:593
 #, c-format
 msgid "The file '%s' changed unexpectedly during diff"
-msgstr ""
+msgstr "Uventet forandring i filen «%s» under diff"
 
 #: libsvn_diff/diff_file.c:714
-#, fuzzy, c-format
+#, c-format
 msgid "Error parsing diff options"
-msgstr "Feil under tolking av «%s»"
+msgstr "Feil under tolking av diff-valg"
 
 #: libsvn_diff/diff_file.c:737
 #, c-format
 msgid "Invalid argument '%s' in diff options"
-msgstr ""
+msgstr "Ugyldig argument «%s» i diff-valg"
 
 #: libsvn_diff/diff_file.c:1019
 #, c-format
@@ -1947,19 +1947,19 @@ msgid "Filesystem object already open"
 msgstr "Filsystemobjekt er allerede åpent"
 
 #: libsvn_fs_base/fs.c:189
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem %s while closing environment:\n"
-msgstr "Berkeley DB-feil for filsystem %s mens %s:\n"
+msgstr "Berkeley DB-feil for filsystem %s under lukking av miljø:\n"
 
 #: libsvn_fs_base/fs.c:539
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem %s while creating environment:\n"
-msgstr "Berkeley DB-feil for filsystem %s mens %s:\n"
+msgstr "Berkeley DB-feil for filsystem %s under opprettelse av miljø:\n"
 
 #: libsvn_fs_base/fs.c:545
-#, fuzzy, c-format
+#, c-format
 msgid "Berkeley DB error for filesystem %s while opening environment:\n"
-msgstr "Berkeley DB-feil for filsystem %s mens %s:\n"
+msgstr "Berkeley DB-feil for filsystem %s under åpning av miljø:\n"
 
 #: libsvn_fs_base/fs.c:672 libsvn_fs_fs/fs_fs.c:277
 #, c-format
@@ -2175,9 +2175,9 @@ msgid "The root directory cannot be deleted"
 msgstr "Rotkatalogen kan ikke slettes"
 
 #: libsvn_fs_base/tree.c:2935 libsvn_fs_fs/tree.c:1962
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')."
-msgstr "Kan ikke sammenligne egenskapsverdi mellom to forskjellige filsystemer"
+msgstr "Kan ikke kopiere mellom to forskjellige filsystemer («%s» og «%s»)."
 
 #: libsvn_fs_base/tree.c:2944 libsvn_fs_fs/tree.c:1968
 msgid "Copy from mutable tree not currently supported"
@@ -2559,7 +2559,7 @@ msgstr ""
 
 #: libsvn_ra_dav/fetch.c:1151
 msgid "Server response missing the expected deadprop-count property"
-msgstr ""
+msgstr "Tjenerresponsen mangler den forventede «deadprop-count»-egenskapen"
 
 #: libsvn_ra_dav/fetch.c:1324
 msgid "Server does not support date-based operations"
@@ -2935,27 +2935,26 @@ msgstr "Kunne ikke åpne depotet «%s»"
 #: libsvn_ra_serf/commit.c:406
 #, c-format
 msgid "Failed writing updated file"
-msgstr ""
+msgstr "Feil under skriving av oppdatert fil"
 
 #: libsvn_ra_serf/serf.c:51
-#, fuzzy
 msgid "Access repository via WebDAV protocol through serf."
-msgstr "Modul for tilgang til depot via WebDAV-protokollen (DeltaV)."
+msgstr "Aksesser depotet via WebDAV-protokollen gjennom serf."
 
 #: libsvn_ra_serf/serf.c:112
 #, c-format
 msgid "Could not lookup hostname: %s://%s"
-msgstr ""
+msgstr "Klarte ikke å lete opp tjenernavn: %s://%s"
 
 #: libsvn_ra_serf/serf.c:562
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
-msgstr "Versjon av RA-laster (%d) for ra_svn er ikke støttet"
+msgstr "Versjonen av RA-lasteren (%d) for ra_serf støttes ikke"
 
 #: libsvn_ra_serf/update.c:1536
 #, c-format
 msgid "Error retrieving REPORT"
-msgstr ""
+msgstr "Feil under henting av REPORT"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -3325,14 +3324,16 @@ msgid "Can't create pipe for hook '%s'"
 msgstr "Kan ikke opprette rør for påhakning «%s»"
 
 #: libsvn_repos/hooks.c:79
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
-msgstr "Kan ikke opprette rør for påhakning «%s»"
+msgstr "Kan ikke få røret til å bruke ubeslektet lesing fra filreferanse\n"
+"for påhakning «%s»"
 
 #: libsvn_repos/hooks.c:85
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
-msgstr "Kan ikke opprette rør for påhakning «%s»"
+msgstr "Kan ikke få røret til å bruke ubeslektet skriving til filreferanse\n"
+"for påhakning «%s»"
 
 #: libsvn_repos/hooks.c:94
 #, c-format
@@ -3631,7 +3632,7 @@ msgstr "Uleselig sti funnet; tilgang nektes"
 #: libsvn_subr/cmdline.c:486
 #, c-format
 msgid "Error initializing command line arguments"
-msgstr ""
+msgstr "Feil under initialisering av kommandolinjeargumenter"
 
 #: libsvn_subr/config.c:630
 #, c-format
@@ -4290,9 +4291,9 @@ msgid "Can't create a character converter from '%s' to '%s'"
 msgstr "Kan ikke opprette tegnkonvertering fra «%s» til «%s»"
 
 #: libsvn_subr/utf.c:254
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create a character converter from '%i' to '%i'"
-msgstr "Kan ikke opprette tegnkonvertering fra «%s» til «%s»"
+msgstr "Kan ikke opprette en tegnkonverterer fra «%i» til «%i»"
 
 #: libsvn_subr/utf.c:482
 #, c-format
@@ -4310,9 +4311,9 @@ msgid "Can't convert string from '%s' to '%s':"
 msgstr "Kan ikke konvertere streng fra «%s» til «%s»:"
 
 #: libsvn_subr/utf.c:496
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
-msgstr "Kan ikke konvertere streng fra «%s» til «%s»:"
+msgstr "Kan ikke konvertere streng fra CCSID «%i» til CCSID «%i»:"
 
 #: libsvn_subr/utf.c:541
 #, c-format
@@ -5456,7 +5457,6 @@ msgid "show help on a subcommand"
 msgstr "vis hjelp for en delkommando"
 
 #: svn/main.c:65
-#, fuzzy
 msgid "specify log message ARG"
 msgstr "angi loggmelding ARG"
 
@@ -5476,7 +5476,8 @@ msgstr "jobb kun i én katalog"
 msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
-msgstr ""
+msgstr "forandringen gjort av revisjon ARG (som -r ARG-1:ARG)\n"
+"                             Hvis ARG er negativ er dette som -r ARG:ARG-1"
 
 #: svn/main.c:74
 msgid ""
@@ -5503,9 +5504,8 @@ msgstr ""
 "                                «PREV»       revisjonen rett før COMMITTED"
 
 #: svn/main.c:84
-#, fuzzy
 msgid "read log message from file ARG"
-msgstr "les data fra filen ARG"
+msgstr "les loggmelding fra filen ARG"
 
 #: svn/main.c:86
 msgid "give output suitable for concatenation"
@@ -5653,7 +5653,7 @@ msgstr "ikke lås opp målene"
 
 #: svn/main.c:153
 msgid "show a summary of the results"
-msgstr ""
+msgstr "vis et sammendrag av resultatene"
 
 #: svn/main.c:192
 msgid ""
@@ -5799,7 +5799,6 @@ msgstr ""
 "     umiddelbar innsending.\n"
 
 #: svn/main.c:277
-#, fuzzy
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5853,8 +5852,8 @@ msgstr ""
 "     NYTT-MÅL kan være arbeidskopi-stier eller URL[@REV]. NYTT-MÅL sin\n"
 "     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV sin\n"
 "     standardverdi til N, -r N:M setter GMLREV sin standardverdi til N\n"
-"     og NYREV sin til M, -c setter GMLREV til M-1 som standard og NYREV til "
-"M.\n"
+"     og NYREV sin til M, -c M setter GMLREV til M-1 som standard og NYREV\n"
+"     til M. -c -M setter standardverdien for GMLREV til M og NYREV til M-1.\n"
 "\n"
 "  3. Kortform for «svn diff --old=GML-URL[@GMLREV] --new=NY-URL[@NYREV]».\n"
 "\n"
@@ -5997,14 +5996,12 @@ msgstr ""
 "  Bruk --force for å stjele låsen fra en annen bruker eller arbeidskopi.\n"
 
 #: svn/main.c:395
-#, fuzzy
 msgid "read lock comment from file ARG"
-msgstr "les data fra filen ARG"
+msgstr "les låsekommentar fra filen ARG"
 
 #: svn/main.c:396
-#, fuzzy
 msgid "specify lock comment ARG"
-msgstr "angi loggmelding ARG"
+msgstr "angi låsekommentar ARG"
 
 #: svn/main.c:399
 msgid ""
@@ -6058,7 +6055,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:428
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6101,8 +6097,9 @@ msgstr ""
 "  3. I den tredje formen kan KILDE være en URL eller en arbeidskopi.\n"
 "     Tilsvarende URL brukes hvis arbeidskopi velges. URLen ved revisjon\n"
 "     REV blir sammenlignet slik den var mellom revisjonene N og M. Hvis\n"
-"     REV utelates, settes den til HEAD. Valget «-c M» tilsvarer «-r N:M»\n"
-"     der N = M-1.\n"
+"     REV utelates, settes den til HEAD.\n"
+"     Valget «-c M» tilsvarer «-r N:M» der N = M-1. Bruk av «-c -M» gjør\n"
+"     det motsatte: «-r M:N» der N = M-1.\n"
 "\n"
 "  AKSTI er filstien for arbeidskopien som mottar endringene. Hvis\n"
 "  AKSTI utelates, er standardverdien «.» med mindre kildene har\n"
@@ -6344,9 +6341,8 @@ msgstr ""
 "  som ligger under katalogen.\n"
 
 #: svn/main.c:583
-#, fuzzy
 msgid "read propery value from file ARG"
-msgstr "les data fra filen ARG"
+msgstr "les egenskapsverdi fra filen ARG"
 
 #: svn/main.c:586
 msgid ""
@@ -7206,7 +7202,8 @@ msgstr ""
 msgid ""
 "disallow use of SVNDIFF1 in on-disk storage,\n"
 "                             for backwards compatibility"
-msgstr ""
+msgstr "forby bruk av SVNDIFF1 i lagring på disk\n"
+"                             for bakoverkompatibilitet"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -8244,14 +8241,14 @@ msgstr ""
 "Overfør alle utestående revisjoner fra kilde til mål.\n"
 
 #: svnsync/main.c:74
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL --revision REV\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"bruk: svnsync synchronize MÅLURL\n"
-"Overfør alle utestående revisjoner fra kilde til mål.\n"
+"bruk: svnsync copy-revprops MÅLURL --revision REV\n"
+"Kopier alle revisjonsegenskaper for revisjon REV fra kilde\n"
+"til mål.\n"
 
 #: svnsync/main.c:79
 msgid ""
@@ -8267,7 +8264,6 @@ msgid "The url to synchronize from"
 msgstr "URL som det skal synkroniseres fra"
 
 #: svnsync/main.c:100
-#, fuzzy
 msgid "specifiy revision number ARG"
 msgstr "angi revisjonsnummer ARG"
 
@@ -8325,7 +8321,8 @@ msgstr "Innleggingen opprettet revisjon %ld, men skulle laget %ld"
 
 #: svnsync/main.c:1085
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
-msgstr ""
+msgstr "Kan ikke kopiere revisjonsegenskaper for en revisjon som ikke er\n"
+"blitt synkronisert enda"
 
 #: svnsync/main.c:1135
 msgid ""
