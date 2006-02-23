@@ -115,10 +115,12 @@ typedef struct {
   const char *uuid;
   const char *activity_url;
   apr_size_t activity_url_len;
+
+  const char *baseline_url;
 } commit_context_t;
 
 /* Represents a directory. */
-typedef struct {
+typedef struct dir_context_t {
   /* Pool for our directory. */
   apr_pool_t *pool;
 
@@ -127,6 +129,9 @@ typedef struct {
 
   /* How many pending changes we have left in this directory. */
   unsigned int ref_count;
+
+  /* Our parent */
+  struct dir_context_t *parent_dir;
 
   /* The directory name; if NULL, we're the 'root' */
   const char *name;
@@ -428,6 +433,7 @@ open_root(void *edit_baton,
   dir->pool = dir_pool;
   dir->commit = ctx;
   dir->base_revision = base_revision;
+  dir->name = "";
 
   *root_baton = dir;
 
@@ -482,6 +488,19 @@ open_root(void *edit_baton,
                      "version-controlled-configuration");
 
   if (!vcc_url)
+    {
+      abort();
+    }
+
+  SVN_ERR(retrieve_props(props, ctx->session, ctx->session->conns[0],
+                         ctx->session->repos_url.path,
+                         SVN_INVALID_REVNUM, "0",
+                         checked_in_props, ctx->pool));
+
+  ctx->baseline_url = get_prop(props, ctx->session->repos_url.path, "DAV:",
+                               "checked-in");
+
+  if (!ctx->baseline_url)
     {
       abort();
     }
@@ -559,9 +578,22 @@ open_directory(const char *path,
                apr_pool_t *dir_pool,
                void **child_baton)
 {
-  dir_context_t *ctx = parent_baton;
+  dir_context_t *parent = parent_baton;
+  dir_context_t *dir;
 
-  abort();
+  dir = apr_pcalloc(dir_pool, sizeof(*dir));
+
+  dir->pool = dir_pool;
+
+  dir->parent_dir = parent;
+  dir->commit = parent->commit;
+
+  dir->base_revision = base_revision;
+  dir->name = path;
+
+  *child_baton = dir;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -621,7 +653,6 @@ open_file(const char *path,
   dir_context_t *ctx = parent_baton;
   file_context_t *new_file;
   checkout_context_t *checkout_ctx;
-  const char *baseline_url;
   apr_hash_t *props;
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
@@ -643,24 +674,6 @@ open_file(const char *path,
   new_file->acceptor_baton = ctx->commit->session;
   new_file->handler = handle_put;
 
-  /* Fetch the root checked-in property. */
-  props = apr_hash_make(new_file->pool);
-
-  SVN_ERR(retrieve_props(props, new_file->commit->session,
-                         new_file->commit->session->conns[0],
-                         new_file->commit->session->repos_url.path,
-                         SVN_INVALID_REVNUM, "0", checked_in_props,
-                         new_file->pool));
-
-  baseline_url = get_prop(props, new_file->commit->session->repos_url.path,
-                          "DAV:", "checked-in");
-
-  if (!baseline_url)
-    {
-      abort();
-    }
-
-  
   /* CHECKOUT the file into our activity. */
   checkout_ctx = apr_pcalloc(new_file->pool, sizeof(*checkout_ctx));
 
@@ -674,8 +687,9 @@ open_file(const char *path,
   checkout_ctx->activity_url_len = new_file->commit->activity_url_len;
 
   /* Append our file name to the baseline to get the resulting checkout. */
-  checkout_ctx->checkout_url = apr_pstrcat(new_file->pool,
-                                           baseline_url, path, NULL);
+  checkout_ctx->checkout_url =
+      svn_path_url_add_component(new_file->commit->baseline_url,
+                                 path, new_file->pool);
 
   serf_connection_request_create(new_file->commit->session->conns[0],
                                  setup_checkout, checkout_ctx);
