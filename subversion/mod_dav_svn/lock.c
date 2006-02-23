@@ -139,7 +139,7 @@ unescape_xml(const char **output,
   if (apr_err)
     {
       char errbuf[1024];
-      (void *)apr_xml_parser_geterror(xml_parser, errbuf, sizeof(errbuf));
+      (void)apr_xml_parser_geterror(xml_parser, errbuf, sizeof(errbuf));
       return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR,
                            DAV_ERR_LOCK_SAVE_LOCK, errbuf);
     }
