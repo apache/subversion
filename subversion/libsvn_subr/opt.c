@@ -18,8 +18,10 @@
 
 
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_general.h>

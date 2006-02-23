@@ -19,8 +19,9 @@
 /* ==================================================================== */
 
 /*** Includes. ***/
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 
-#include <string.h>
 #include <apr.h>
 #include <apr_strings.h>
 #include <apr_pools.h>

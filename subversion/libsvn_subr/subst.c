@@ -18,8 +18,10 @@
 
 
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <apr_general.h>  /* for strcasecmp() */
 #include <apr_pools.h>
