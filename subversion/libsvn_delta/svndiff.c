@@ -136,7 +136,7 @@ zlib_encode(svn_stringbuf_t *in, svn_stringbuf_t *out)
                     SVNDIFF1_COMPRESS_LEVEL) != Z_OK)        
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, 
                                 NULL,
-                                _("compression of svndiff data failed"));
+                                _("Compression of svndiff data failed"));
 
       /* Compression didn't help :(, just append the original text */
       if (endlen >= in->len)
@@ -393,14 +393,14 @@ zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out)
                        (const unsigned char *)in->data, in->len) != Z_OK)
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, 
                                 NULL,
-                                _("decompression of svndiff data failed"));
+                                _("Decompression of svndiff data failed"));
       
       /* Zlib should not produce something that has a different size than the
          original length we stored. */
       if (zliblen != len)
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, 
                                 NULL,
-                                _("size of uncompressed data "
+                                _("Size of uncompressed data "
                                   "does not match stored original length"));
       out->len = zliblen;
     }

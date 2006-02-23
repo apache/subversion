@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -186,7 +186,7 @@ cleanup_fs(svn_fs_t *fs)
     if (err)
       return svn_error_createf
         (err->apr_err, err,
-         _("Berkeley DB error for filesystem %s"
+         _("Berkeley DB error for filesystem '%s'"
            " while closing environment:\n"),
          fs->path);
   }
@@ -536,13 +536,13 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
         if (create)
           return svn_error_createf
             (err->apr_err, err,
-             _("Berkeley DB error for filesystem %s"
+             _("Berkeley DB error for filesystem '%s'"
                " while creating environment:\n"),
              fs->path);
         else
           return svn_error_createf
             (err->apr_err, err,
-             _("Berkeley DB error for filesystem %s"
+             _("Berkeley DB error for filesystem '%s'"
                " while opening environment:\n"),
              fs->path);
       }

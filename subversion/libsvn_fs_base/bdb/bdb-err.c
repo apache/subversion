@@ -2,7 +2,7 @@
  * err.c : implementation of fs-private error functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -98,6 +98,6 @@ svn_fs_bdb__wrap_db(svn_fs_t *fs, const char *operation, int db_err)
   bfd = fs->fsap_data;
   return svn_fs_bdb__dberrf
     (bfd->bdb, db_err,
-     _("Berkeley DB error for filesystem %s while %s:\n"),
+     _("Berkeley DB error for filesystem '%s' while %s:\n"),
      fs->path ? fs->path : "(none)", operation);
 }
