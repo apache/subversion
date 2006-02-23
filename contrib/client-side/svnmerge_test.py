@@ -128,14 +128,18 @@ class TestCase_SvnMerge(unittest.TestCase):
             ret = 0
 
         if error:
-            self.assertNotEqual(ret, 0)
+            self.assertNotEqual(ret, 0,
+                "svnmerge did not fail, with this output:\n%s" % out.getvalue())
         else:
-            self.assertEqual(ret, 0)
+            self.assertEqual(ret, 0,
+                "svnmerge failed, with this output:\n%s" % out.getvalue())
 
         if match is not None:
-            self.assert_(re.search(match, out.getvalue()), "pattern %r not found in output: %r" % (match, out.getvalue()))
+            self.assert_(re.search(match, out.getvalue()),
+                "pattern %r not found in output:\n%s" % (match, out.getvalue()))
         if nonmatch is not None:
-            self.assert_(not re.search(nonmatch, out.getvalue()), "pattern %r found in output: %r" % (nonmatch, out.getvalue()))
+            self.assert_(not re.search(nonmatch, out.getvalue()),
+                "pattern %r found in output:\n%s" % (nonmatch, out.getvalue()))
 
         return out.getvalue()
 
