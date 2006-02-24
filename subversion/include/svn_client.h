@@ -41,6 +41,7 @@
 #include "svn_opt.h"
 #include "svn_version.h"
 #include "svn_ra.h"
+#include "svn_diff.h"
 
 
 #ifdef __cplusplus
@@ -1280,7 +1281,28 @@ svn_client_log(const apr_array_header_t *targets,
  * revisions of @a path_or_url have a binary mime-type, return the
  * error @c SVN_ERR_CLIENT_IS_BINARY_FILE.
  *
+ * Use @a diff_options to determine how to compare different revisions of the
+ * target.
+ *
  * Use @a pool for any temporary allocation.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_blame3(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/** Similar to svn_client_blame3(), but with @a diff_options set to
+ * default options as returned by svn_diff_file_options_parse().
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  *
  * @since New in 1.2.
  */
