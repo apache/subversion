@@ -216,7 +216,53 @@ was on a different historical branch than "/trunk", our copy of
 remembers that the copy operation associated with that ID was a soft
 copy.
 
-   ### todo:  put the copy-id choosing algorithm here
+   [### Right about here, C-Mike's memory starts getting fuzzy ###]
+
+The following is the copy ID inheritence algorithm, used to calculate
+what copy ID a node revision will use when cloned for mutability.
+Remember that a node revision is never cloned until its parent is
+first cloned.
+
+  1.  If the node revision is already mutable, its copy ID never
+      changes.
+
+  2.  If the node revision has a copy ID of "0" (which is to say, it's
+      never been itself copied or cloned as a child of a copied
+      parent), then it inherits whatever copy ID its parent winds up
+      with.
+
+  3.  If the node revision is on the same branch as its parent before
+      cloning, it will remain on the same branch as its parent after
+      cloning.  A node revision can be said to be on the same branch
+      as its parent if:
+       
+        a) their copy IDs are the same, or
+
+        b) the node revision is not a branch point (meaning, it was
+           not the node revision created by the copy associated with
+           its copy ID), or
+
+        c) the node revision is a branch point which being accessed via
+           its copy destination path.
+
+   4.  If, however, the node revision is *not* on the same branch as
+       its parent before cloning, it cannot be on the same branch as
+       its parent after cloning.  This breaks down to two cases:
+
+        a) If the node revision was the target of the copy operation
+           whose ID it holds, then it gets to keep its same copy ID.
+
+        b) Otherwise, the node revision is the unedited child of some
+           parent that was copied, and wasn't on the same branch as
+           that parent before the copy.  In this special case, the
+           cloned node revision will get a brand new copy ID which
+           points to one of those "soft copy" things we've been
+           talking about.
+
+The initial root directory's node revision, created when the
+filesystem is initialized, begins life with a magical "0" copy ID.
+Afterward, any new nodes (as in, freshly created files and
+directories) begin life with the same copy ID as their parent.
 
 
 Traversing History
