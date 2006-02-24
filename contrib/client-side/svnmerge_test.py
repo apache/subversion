@@ -342,9 +342,9 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         return dict(TEMPLATE_PATH=self.template_path,
                     TEMPLATE_REPO_PATH=self.template_repo_path,
                     TEMPLATE_REPO_URL=self.template_repo_url,
-                    TEST_PATH=self.template_path,
-                    TEST_REPO_PATH=self.template_repo_path,
-                    TEST_REPO_URL=self.template_repo_url)
+                    TEST_PATH=self.test_path,
+                    TEST_REPO_PATH=self.test_repo_path,
+                    TEST_REPO_URL=self.test_repo_url)
 
     def launch(self, cmd, *args, **kwargs):
         cmd = cmd % self.command_dict()
