@@ -176,6 +176,7 @@ svn_cl__blame(apr_getopt_t *os,
   blame_baton_t bl;
   int i;
   svn_boolean_t end_revision_unspecified = FALSE;
+  svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
@@ -228,6 +229,13 @@ svn_cl__blame(apr_getopt_t *os,
   bl.opt_state = opt_state;
 
   subpool = svn_pool_create(pool);
+
+  if (opt_state->extensions)
+    {
+      apr_array_header_t *opts;
+      opts = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
+      SVN_ERR(svn_diff_file_options_parse(diff_options, opts, pool));
+    }
 
   if (opt_state->xml)
     {
@@ -284,20 +292,22 @@ svn_cl__blame(apr_getopt_t *os,
           svn_xml_make_open_tag(&bl.sbuf, pool, svn_xml_normal, "target",
                                 "path", outpath, NULL);
 
-          err = svn_client_blame2(truepath,
+          err = svn_client_blame3(truepath,
                                   &peg_revision,
                                   &opt_state->start_revision,
                                   &opt_state->end_revision,
+                                  diff_options,
                                   blame_receiver_xml,
                                   &bl,
                                   ctx,
                                   subpool);
         }
       else
-        err = svn_client_blame2(truepath,
+        err = svn_client_blame3(truepath,
                                 &peg_revision,
                                 &opt_state->start_revision,
                                 &opt_state->end_revision,
+                                diff_options,
                                 blame_receiver,
                                 &bl,
                                 ctx,

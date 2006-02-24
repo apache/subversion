@@ -58,6 +58,7 @@ struct file_rev_baton {
   svn_revnum_t start_rev, end_rev;
   const char *target;
   svn_client_ctx_t *ctx;
+  const svn_diff_file_options_t *diff_options;
   /* name of file containing the previous revision of the file */
   const char *last_filename;
   /* name of file containing the previous revision of the file, translated
@@ -305,8 +306,8 @@ add_file_blame(const char *last_file, const char *cur_file,
       svn_diff_t *diff;
 
       /* We have a previous file.  Get the diff and adjust blame info. */
-      SVN_ERR(svn_diff_file_diff(&diff, last_file, cur_file,
-                                 frb->currpool));
+      SVN_ERR(svn_diff_file_diff_2(&diff, last_file, cur_file,
+                                 frb->diff_options, frb->currpool));
       SVN_ERR(svn_diff_output(diff, frb, &output_fns));
     }
 
@@ -532,10 +533,11 @@ old_blame(const char *target, const char *url,
           struct file_rev_baton *frb);
 
 svn_error_t *
-svn_client_blame2(const char *target,
+svn_client_blame3(const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
                   svn_client_blame_receiver_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
@@ -573,6 +575,7 @@ svn_client_blame2(const char *target,
   frb.end_rev = end_revnum;
   frb.target = target;
   frb.ctx = ctx;
+  frb.diff_options = diff_options;
   frb.last_filename = NULL;
   frb.last_filename_translated = NULL;
   frb.eol_style = svn_subst_eol_style_none;
@@ -656,7 +659,20 @@ svn_client_blame2(const char *target,
   return SVN_NO_ERROR;
 }
 
-
+svn_error_t *
+svn_client_blame2(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_blame3(target, peg_revision, start, end,
+                           svn_diff_file_options_create(pool),
+                           receiver, receiver_baton, ctx, pool);
+}
 svn_error_t *
 svn_client_blame(const char *target,
                  const svn_opt_revision_t *start,
