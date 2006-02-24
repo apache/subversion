@@ -79,16 +79,6 @@ const char *
 svn_fs_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
 
-/*** Filesystem Revision ***/
-typedef struct
-{
-  /* id of the transaction that was committed to create this
-     revision. */
-  const char *txn_id;
-
-} revision_t;
-
-
 /*** Transaction Kind ***/
 typedef enum
 {
@@ -121,14 +111,6 @@ typedef struct
   apr_array_header_t *copies;
 
 } transaction_t;
-
-/*** Copy Kind ***/
-typedef enum
-{
-  copy_kind_real = 1, /* real copy */
-  copy_kind_soft      /* soft copy */
-
-} copy_kind_t;
 
 
 /*** Representation ***/
@@ -200,60 +182,6 @@ typedef struct
   const char *created_path;
 
 } node_revision_t;
-
-
-/*** Representation Kind ***/
-typedef enum
-{
-  rep_kind_fulltext = 1, /* fulltext */
-  rep_kind_delta         /* delta */
-
-} rep_kind_t;
-
-
-/*** "Delta" Offset/Window Chunk ***/
-typedef struct 
-{
-  /* diff format version number ### at this point, "svndiff" is the
-     only format used. */
-  apr_byte_t version;
-
-  /* starting offset of the data represented by this chunk */
-  svn_filesize_t offset;
-
-  /* string-key to which this representation points. */
-  const char *string_key; 
-
-  /* size of the fulltext data represented by this delta window. */
-  apr_size_t size;
-
-  /* represenatation-key to use when needed source data for
-     undeltification. */
-  const char *rep_key;
-
-  /* apr_off_t rep_offset;  ### not implemented */
-
-} rep_delta_chunk_t;
-
-
-
-
-/*** Copy ***/
-typedef struct
-{
-  /* What kind of copy occurred. */
-  copy_kind_t kind;
-
-  /* Path of copy source. */
-  const char *src_path;
-
-  /* Transaction id of copy source. */
-  const char *src_txn_id;
-
-  /* Node-revision of copy destination. */
-  const svn_fs_id_t *dst_noderev_id;
-
-} copy_t;
 
 
 /*** Change ***/
