@@ -236,10 +236,11 @@ def check_dir_clean(dir):
         report('skipping status check because of --force')
         return
     report('checking status of "%s"' % dir)
-    # Checking with -q does not show unversioned files, or external directories.
-    # Though it displays a debug message for external directories, after a
-    # blank line. So, practically, the first line matters: if it's non-empty
-    # there is a modification.
+
+    # Checking with -q does not show unversioned files or external
+    # directories.  Though it displays a debug message for external
+    # directories, after a blank line.  So, practically, the first line
+    # matters: if it's non-empty there is a modification.
     out = launchsvn("status -q %s" % dir)
     if out and out[0].strip():
         error('"%s" has local modifications; it must be clean' % dir)
@@ -496,7 +497,8 @@ def get_copyfrom(dir):
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
     rlpath = url_to_rlpath(target_to_url(dir))
-    out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir, split_lines=False)
+    out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
+                    split_lines=False)
     out = out.replace("\n", " ")
     try:
         m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)' % rlpath, out)
@@ -1152,8 +1154,9 @@ class CommandOpts:
         try:
             lopts,args = getopt.gnu_getopt(args, sfl, lfl)
         except AttributeError:
-            # Before Python 2.3, there was not gnu_getopt support. So
-            # we can't parse intermixed positional arguments and options.
+            # Before Python 2.3, there was no gnu_getopt support.
+            # So we can't parse intermixed positional arguments
+            # and options.
             lopts,args = getopt.getopt(args, sfl, lfl)
 
         for o,v in lopts:
