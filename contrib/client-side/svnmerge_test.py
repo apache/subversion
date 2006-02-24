@@ -336,8 +336,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
             self.launch("svn co %(TEMPLATE_REPO_URL)s/branches/test-branch")
 
-            atexit.register(lambda: rmtree(template_path))
-
         os.chdir(self.cwd)
 
         rmtree(self.test_path)
@@ -350,6 +348,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn switch --relocate %(TEMPLATE_REPO_URL)s %(TEST_REPO_URL)s trunk test-branch")
         
         os.chdir("test-branch")
+
+        # Always remove the template directory when the tests have
+        # completed.
+        atexit.register(lambda: rmtree(template_path))
 
     def command_dict(self):
         return dict(TEMPLATE_PATH=self.template_path,
