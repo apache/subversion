@@ -160,6 +160,33 @@ class TestCase_SvnMerge(unittest.TestCase):
 
         return out.getvalue()
 
+    def _parseoutput(self, ret, out, error=False, match=None, nonmatch=None):
+        if error:
+            self.assertNotEqual(ret,
+                                0,
+                                "svnmerge did not fail, with this output:\n%s" % out)
+        else:
+            self.assertEqual(ret,
+                             0,
+                             "svnmerge failed, with this output:\n%s" % out)
+
+        if match is not None:
+            self.assert_(re.search(match, out),
+                         "pattern %r not found in output:\n%s" % (match, out))
+
+        if nonmatch is not None:
+            self.assert_(not re.search(nonmatch, out),
+                         "pattern %r found in output:\n%s" % (nonmatch, out))
+
+        return out
+
+    def launch(self, cmd, **kwargs):
+        try:
+            out = svnmerge.launch(cmd, split_lines=False)
+        except svnmerge.LaunchError, (ret, cmd, out):
+            return self._parseoutput(ret, out, **kwargs)
+        return self._parseoutput(0, out, **kwargs)
+
 class TestCase_CommandLineOptions(TestCase_SvnMerge):
     def test_empty(self):
         self.svnmerge("")
@@ -313,6 +340,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
             p = '/' + p
         self.repo = "file://" + p
 
+    def launch(self, cmd, *args, **kwargs):
+        return TestCase_SvnMerge.launch(self,
+                                        cmd % dict(PATH=self.path,
+                                                   REPO=self.repo),
+                                        *args,
+                                        **kwargs)
+
     def multilaunch(self, cmds):
         for cmd in cmds.split("\n"):
             cmd = cmd.strip()
@@ -320,6 +354,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
     def revert(self):
         self.multilaunch("svn revert -R .")
+
     def getproperty(self):
         out = svnmerge.launch("svn pg %s ." % svnmerge.opts["prop"])
         return out[0].strip()
