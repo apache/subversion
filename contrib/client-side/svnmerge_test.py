@@ -263,32 +263,41 @@ def rmtree(path):
     if os.path.isdir(path):
         shutil.rmtree(path, onerror=onerror)
 
-def template_path():
-    basepath = os.path.join(temp_path(), "__svnmerge_test_template")
-    basepath = os.path.abspath(basepath)
-    return basepath
+def get_template_path():
+    p = os.path.join(temp_path(), "__svnmerge_test_template")
+    return os.path.abspath(p)
+
+def get_test_path():
+    p = os.path.join(temp_path(), "__svnmerge_test")
+    return os.path.abspath(p)
 
 class TestCase_TestRepo(TestCase_SvnMerge):
     def setUp(self):
         self.cwd = os.getcwd()
-        basepath = template_path()
 
-        if not os.path.isdir(basepath):
-            rmtree(basepath)
-            os.makedirs(basepath)
-            self.path = os.path.join(basepath, "repo")
-            os.makedirs(self.path)
+        test_path = get_test_path()
+        template_path = get_template_path()
 
-            self.repo = "file:///" + self.path.replace("\\", "/")
+        self.template_path = template_path
+        self.test_path = test_path
 
-            os.chdir(basepath)
+        self.template_repo_path = os.path.join(template_path, "repo")
+        self.template_repo_url = "file://" + self.template_repo_path.replace("\\", "/")
+
+        self.test_repo_path = os.path.join(test_path, "repo")
+        self.test_repo_url = "file://" + self.test_repo_path.replace("\\", "/")
+
+        if not os.path.isdir(template_path):
+            rmtree(template_path)
+            os.makedirs(template_path)
+            os.chdir(template_path)
 
             self.multilaunch("""
-                svnadmin create --fs-type fsfs %(PATH)s
-                svn mkdir -m "create /branches" %(REPO)s/branches
-                svn mkdir -m "create /tags" %(REPO)s/tags
-                svn mkdir -m "create /trunk" %(REPO)s/trunk
-                svn co %(REPO)s/trunk trunk
+                svnadmin create --fs-type fsfs %(TEMPLATE_REPO_PATH)s
+                svn mkdir -m "create /branches" %(TEMPLATE_REPO_URL)s/branches
+                svn mkdir -m "create /tags" %(TEMPLATE_REPO_URL)s/tags
+                svn mkdir -m "create /trunk" %(TEMPLATE_REPO_URL)s/trunk
+                svn co %(TEMPLATE_REPO_URL)s/trunk trunk
             """)
 
             os.chdir("trunk")
@@ -305,52 +314,46 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                 svn ci -m "add test2"
                 svn add test3
                 svn ci -m "add test3"
-                svn mkdir -m "create /foobar" %(REPO)s/foobar
-                svn rm -m "remove /foobar" %(REPO)s/foobar
+                svn mkdir -m "create /foobar" %(TEMPLATE_REPO_URL)s/foobar
+                svn rm -m "remove /foobar" %(TEMPLATE_REPO_URL)s/foobar
                 svn add test4
                 svn ci -m "add test4"
                 svn add test5
                 svn ci -m "add test5"
-                svn cp -r6 -m "create branch" %(REPO)s/trunk %(REPO)s/branches/testXXX-branch
-                svn mv -m "rename branch" %(REPO)s/branches/testXXX-branch %(REPO)s/branches/testYYY-branch
-                svn cp -r6 -m "create branch" %(REPO)s/trunk %(REPO)s/branches/test-branch
+                svn cp -r6 -m "create branch" %(TEMPLATE_REPO_URL)s/trunk %(TEMPLATE_REPO_URL)s/branches/testXXX-branch
+                svn mv -m "rename branch" %(TEMPLATE_REPO_URL)s/branches/testXXX-branch %(TEMPLATE_REPO_URL)s/branches/testYYY-branch
+                svn cp -r6 -m "create branch" %(TEMPLATE_REPO_URL)s/trunk %(TEMPLATE_REPO_URL)s/branches/test-branch
             """)
 
             os.chdir("..")
 
-            self.multilaunch("""
-                svn co %(REPO)s/branches/test-branch
-            """)
+            self.launch("svn co %(TEMPLATE_REPO_URL)s/branches/test-branch")
 
-            atexit.register(lambda: rmtree(basepath))
+            atexit.register(lambda: rmtree(template_path))
 
         os.chdir(self.cwd)
 
-        self.testpath = os.path.join(temp_path(), "__svnmerge_test")
-        self.testpath = os.path.abspath(self.testpath)
-
-        rmtree(self.testpath)
-        shutil.copytree(basepath, self.testpath)
-        os.chdir(self.testpath)
+        rmtree(self.test_path)
+        shutil.copytree(self.template_path, self.test_path)
+        os.chdir(self.test_path)
         os.chdir("test-branch")
-        self.path = os.path.join(self.testpath, "repo")
 
-        p = self.path.replace("\\", "/")
-        if p[0] != '/':
-            p = '/' + p
-        self.repo = "file://" + p
+    def command_dict(self):
+        return dict(TEMPLATE_PATH=self.template_path,
+                    TEMPLATE_REPO_PATH=self.template_repo_path,
+                    TEMPLATE_REPO_URL=self.template_repo_url,
+                    TEST_PATH=self.template_path,
+                    TEST_REPO_PATH=self.template_repo_path,
+                    TEST_REPO_URL=self.template_repo_url)
 
     def launch(self, cmd, *args, **kwargs):
-        return TestCase_SvnMerge.launch(self,
-                                        cmd % dict(PATH=self.path,
-                                                   REPO=self.repo),
-                                        *args,
-                                        **kwargs)
+        cmd = cmd % self.command_dict()
+        return TestCase_SvnMerge.launch(self, cmd, *args, **kwargs)
 
     def multilaunch(self, cmds):
         for cmd in cmds.split("\n"):
             cmd = cmd.strip()
-            svnmerge.launch(cmd % dict(PATH=self.path, REPO=self.repo))
+            svnmerge.launch(cmd % self.command_dict())
 
     def revert(self):
         self.multilaunch("svn revert -R .")
@@ -404,7 +407,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.assertEqual("/trunk:1-6", p)
 
     def testCheckInitializeEverything(self):
-        self.svnmerge2(["init", self.repo + "/trunk"])
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
         p = self.getproperty()
         r = svnmerge.get_svninfo(".")["Revision"]
         self.assertEqual("/trunk:1-%d" % long(r), p)
@@ -416,7 +419,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
     def tearDown(self):
         os.chdir(self.cwd)
-        rmtree(self.testpath)
+        rmtree(self.test_path)
 
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
@@ -433,8 +436,8 @@ if __name__ == "__main__":
     # in a previous run of this script, the template was being created
     # when the script was canceled, leaving it in an inconsistent
     # state.
-    basepath = template_path()
-    if os.path.exists(basepath):
-        rmtree(basepath)
+    template_path = get_template_path()
+    if os.path.exists(template_path):
+        rmtree(template_path)
 
     unittest.main()
