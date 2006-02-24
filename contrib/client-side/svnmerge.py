@@ -1244,32 +1244,37 @@ class CommandOpts:
 ###############################################################################
 
 global_opts = [
-    Option("-v", "--verbose",
-           help="verbose mode: output more information about progress"),
-    Option("-s", "--show-changes",
-           help="show subversion commands that make changes"),
-    Option("-n", "--dry-run",
-           help="don't actually change anything, just pretend; "
-                "implies --show-changes"),
     Option("-F", "--force",
            help="force operation even if the working copy is not clean, or "
                 "there are pending updates"),
+    Option("-n", "--dry-run",
+           help="don't actually change anything, just pretend; "
+                "implies --show-changes"),
+    Option("-s", "--show-changes",
+           help="show subversion commands that make changes"),
+    Option("-v", "--verbose",
+           help="verbose mode: output more information about progress"),
 ]
 
 common_opts = [
-    OptionArg("-r", "--revision", metavar="REVLIST", default="",
-              help="specify a revision list, consisting of revision numbers "
-                   'and ranges separated by commas, e.g., "534,537-539,540"'),
+    Option("-b", "--bidirectional",
+           value=True,
+           default=False,
+           help="remove reflected revisions from merge candidates"),
     OptionArg("-f", "--commit-file", metavar="FILE",
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
                    "is written to"),
-    OptionArg("-S", "--head", "--source", default=None,
+    OptionArg("-r", "--revision",
+              metavar="REVLIST",
+              default="",
+              help="specify a revision list, consisting of revision numbers "
+                   'and ranges separated by commas, e.g., "534,537-539,540"'),
+    OptionArg("-S", "--head", "--source",
+              default=None,
               help="specify the head for this branch. It can be either a path "
-                   "or an URL. Needed only to disambiguate in case of multiple "
-                   "merge tracking (merging from multiple heads)"),
-    Option("-b", "--bidirectional", value=True, default=False,
-           help="remove reflected revisions from merge candidates"),
+                   "or an URL. Needed only to disambiguate in case of "
+                   "multiple merge tracking (merging from multiple heads)"),
 ]
 
 command_table = {
@@ -1287,7 +1292,7 @@ command_table = {
     case, %s assumes that no revision has been integrated yet since
     the branch point (unless you teach it with --revision).""" % NAME,
     [
-        "-r", "-f", # import common opts
+        "-f", "-r", # import common opts
     ]),
 
     "avail": (action_avail,
@@ -1305,20 +1310,28 @@ command_table = {
     so-called "reflected" revisions if you specify the --bidirectional
     or -b command line option.""",
     [
-        Option("-l", "--log",
-               dest="avail_display", value="logs", default="revisions",
-               help="show corresponding log history instead of revision list"),
-        Option("-d", "--diff",
-               dest="avail_display", value="diffs",
-               help="show corresponding diff instead of revision list"),
-        Option("-B", "--blocked",
-               dest="avail_showwhat", value=["blocked"], default=["avail"],
-               help='show the blocked revision list (see "%s block")' % NAME),
         Option("-A", "--all",
-               dest="avail_showwhat", value=["blocked", "avail"],
+               dest="avail_showwhat",
+               value=["blocked", "avail"],
+               default=["avail"],
                help="show both available and blocked revisions (aka ignore "
                     "blocked revisions)"),
-        "-b", "-r", "-S", # import common opts
+        "-b",
+        Option("-B", "--blocked",
+               dest="avail_showwhat",
+               value=["blocked"],
+               help='show the blocked revision list (see "%s block")' % NAME),
+        Option("-d", "--diff",
+               dest="avail_display",
+               value="diffs",
+               default="revisions",
+               help="show corresponding diff instead of revision list"),
+        Option("-l", "--log",
+               dest="avail_display",
+               value="logs",
+               help="show corresponding log history instead of revision list"),
+        "-r",
+        "-S",
     ]),
 
     "merge": (action_merge,
@@ -1336,7 +1349,7 @@ command_table = {
     so-called "reflected" revisions if you specify the --bidirectional
     or -b command line option.""",
     [
-        "-b", "-r", "-S", "-f", # import common opts
+        "-b", "-f", "-r", "-S", # import common opts
     ]),
 
     "block": (action_block,
@@ -1345,7 +1358,7 @@ command_table = {
     list. This is useful to hide revisions which will not be integrated.
     If --revision is omitted, it defaults to all the available revisions.""",
     [
-        "-r", "-S", "-f", # import common opts
+        "-f", "-r", "-S", # import common opts
     ]),
 
     "unblock": (action_unblock,
@@ -1353,7 +1366,7 @@ command_table = {
     """Revert the effect of "%s block". If --revision is omitted, all the
     blocked revisions are unblocked""" % NAME,
     [
-        "-r", "-S", "-f", # import common opts
+        "-f", "-r", "-S", # import common opts
     ]),
 }
 
