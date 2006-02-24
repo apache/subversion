@@ -79,13 +79,13 @@ typedef struct {
 } checkout_context_t;
 
 
-/* Structure associated with a DELETE request. */
+/* Structure associated with a DELETE/HEAD/etc request. */
 typedef struct {
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
 
-  const char *activity_url;
+  const char *path;
 
   int status;
 
@@ -94,7 +94,7 @@ typedef struct {
   serf_response_acceptor_t acceptor;
   void *acceptor_baton;
   serf_response_handler_t handler;
-} delete_context_t;
+} simple_request_context_t;
 
 /* Baton passed back with the commit editor. */
 typedef struct {
@@ -184,6 +184,9 @@ typedef struct {
 
   /* Our resulting checksum as reported by the WC. */
   const char *result_checksum;
+
+  /* URL to PUT the file at. */
+  const char *put_url;
 
   /* Is our PUT completed? */
   svn_boolean_t put_done;
@@ -396,7 +399,7 @@ setup_put(serf_request_t *request,
   body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
 
   setup_serf_req(request, req_bkt, &hdrs_bkt, ctx->commit->session,
-                 "PUT", ctx->checkout->resource_url, body_bkt,
+                 "PUT", ctx->put_url, body_bkt,
                  "application/vnd.svn-svndiff");
 
   if (ctx->base_checksum)
@@ -439,10 +442,10 @@ setup_delete(serf_request_t *request,
              void **handler_baton,
              apr_pool_t *pool)
 {
-  delete_context_t *ctx = setup_baton;
+  simple_request_context_t *ctx = setup_baton;
 
   setup_serf_req(request, req_bkt, NULL, ctx->session,
-                 "DELETE", ctx->activity_url, NULL, NULL);
+                 "DELETE", ctx->path, NULL, NULL);
 
   *acceptor = ctx->acceptor;
   *acceptor_baton = ctx->acceptor_baton;
@@ -457,7 +460,56 @@ handle_delete(serf_bucket_t *response,
               void *handler_baton,
               apr_pool_t *pool)
 {
-  delete_context_t *ctx = handler_baton;
+  simple_request_context_t *ctx = handler_baton;
+
+  return handle_status_only(response, &ctx->status, &ctx->done, pool);
+}
+
+static apr_status_t
+setup_head(serf_request_t *request,
+           void *setup_baton,
+           serf_bucket_t **req_bkt,
+           serf_response_acceptor_t *acceptor,
+           void **acceptor_baton,
+           serf_response_handler_t *handler,
+           void **handler_baton,
+           apr_pool_t *pool)
+{
+  simple_request_context_t *ctx = setup_baton;
+
+  setup_serf_req(request, req_bkt, NULL, ctx->session,
+                 "HEAD", ctx->path, NULL, NULL);
+
+  *acceptor = ctx->acceptor;
+  *acceptor_baton = ctx->acceptor_baton;
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
+}
+
+serf_bucket_t*
+accept_head(serf_request_t *request,
+            serf_bucket_t *stream,
+            void *acceptor_baton,
+            apr_pool_t *pool)
+{
+  serf_bucket_t *response;
+    
+  response = accept_response(request, stream, acceptor_baton, pool);
+
+  /* We know we shouldn't get a response body. */
+  serf_bucket_response_set_head(response);
+
+  return response;
+}
+
+static apr_status_t
+handle_head(serf_bucket_t *response,
+            void *handler_baton,
+            apr_pool_t *pool)
+{
+  simple_request_context_t *ctx = handler_baton;
 
   return handle_status_only(response, &ctx->status, &ctx->done, pool);
 }
@@ -604,7 +656,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   dir_context_t *dir = parent_baton;
-  delete_context_t *delete_ctx;
+  simple_request_context_t *delete_ctx;
 
   /* Ensure our directory has been checked out */
   checkout_dir(dir);
@@ -618,7 +670,7 @@ delete_entry(const char *path,
   delete_ctx->acceptor = accept_response;
   delete_ctx->acceptor_baton = dir->commit->session;
   delete_ctx->handler = handle_delete;
-  delete_ctx->activity_url =
+  delete_ctx->path =
       svn_path_url_add_component(dir->checkout->resource_url,
                                  path, delete_ctx->pool);
 
@@ -718,9 +770,69 @@ add_file(const char *path,
          apr_pool_t *file_pool,
          void **file_baton)
 {
-  dir_context_t *ctx = parent_baton;
+  dir_context_t *dir = parent_baton;
+  simple_request_context_t *head_ctx;
+  file_context_t *new_file;
 
-  abort();
+  /* Ensure our directory has been checked out */
+  checkout_dir(dir);
+
+  new_file = apr_pcalloc(file_pool, sizeof(*new_file));
+
+  new_file->pool = file_pool;
+
+  dir->ref_count++;
+  new_file->parent_dir = dir;
+
+  new_file->commit = dir->commit;
+  
+  /* TODO: Remove directory names? */
+  new_file->name = path;
+
+  new_file->base_revision = SVN_INVALID_REVNUM;
+
+  /* Set up so that we can perform the PUT later. */
+  new_file->acceptor = accept_response;
+  new_file->acceptor_baton = dir->commit->session;
+  new_file->handler = handle_put;
+
+  /* Ensure that the file doesn't exist by doing a HEAD on the resource. */
+  head_ctx = apr_pcalloc(new_file->pool, sizeof(*head_ctx));
+
+  head_ctx->pool = new_file->pool;
+  head_ctx->session = new_file->commit->session;
+
+  head_ctx->acceptor = accept_head;
+  head_ctx->acceptor_baton = new_file->commit->session;
+  head_ctx->handler = handle_head;
+  head_ctx->path = 
+      svn_path_url_add_component(new_file->commit->session->repos_url.path,
+                                 path, new_file->pool);
+
+  serf_connection_request_create(dir->commit->session->conns[0],
+                                 setup_head, head_ctx);
+
+  SVN_ERR(context_run_wait(&head_ctx->done, dir->commit->session,
+                           new_file->pool));
+
+  if (head_ctx->status != 404)
+    { 
+      abort();
+    }
+
+  if (copy_path)
+    {
+      /* Issue a COPY */
+      abort();
+    }
+
+  new_file->put_url =
+      svn_path_url_add_component(dir->checkout->resource_url,
+                                 path, new_file->pool);
+
+  *file_baton = new_file;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -786,6 +898,7 @@ open_file(const char *path,
     }
 
   new_file->checkout = checkout_ctx;
+  new_file->put_url = checkout_ctx->resource_url;
 
   *file_baton = new_file;
 
@@ -856,7 +969,8 @@ close_file(void *file_baton,
       SVN_ERR(context_run_wait(&ctx->put_done, ctx->commit->session,
                                ctx->pool));
 
-      if (ctx->put_status != 204)
+      if ((ctx->checkout && ctx->put_status != 204) &&
+          (!ctx->checkout && ctx->put_status != 201))
         {
           abort();
         }
@@ -883,7 +997,7 @@ close_edit(void *edit_baton,
 {
   commit_context_t *ctx = edit_baton;
   merge_context_t *merge_ctx;
-  delete_context_t *delete_ctx;
+  simple_request_context_t *delete_ctx;
   svn_boolean_t *merge_done;
   apr_status_t status;
 
@@ -915,7 +1029,7 @@ close_edit(void *edit_baton,
   delete_ctx->acceptor = accept_response;
   delete_ctx->acceptor_baton = ctx->session;
   delete_ctx->handler = handle_delete;
-  delete_ctx->activity_url = ctx->activity_url;
+  delete_ctx->path = ctx->activity_url;
 
   serf_connection_request_create(ctx->session->conns[0],
                                  setup_delete, delete_ctx);
