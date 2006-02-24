@@ -158,3 +158,24 @@ QUESTIONS/ANSWERS
 
     A: Yes.  That's why tools/dev/svn-move exists (you'll need to
        build the Python bindings).
+
+TODO (LIKELY INCOMPLETE)
+
+    * Teach the copy ID inheritance code how to deal with moves.  Not
+      sure how easy/tricky this will be.
+
+    * Make sure that we don't carry around delayed move ID information
+      on entries where not necessary.
+
+    * Add new copy and move changes table items.  'Move' is brand new,
+      so there's no compat code.  For 'copy', code that today asks "Is
+      this a copy?" (by asking, "Is this an add with a non-NULL response
+      from svn_fs_copied_from()?") will be able to have quicker access
+      to that answer, and fall back to the old query where necessary.
+
+    * Teach the node history algorithm about moves.  I anticipate this
+      to be pretty straightforward, more or less mimicking the way
+      that copies and soft-copies are handled.
+
+    * Make sure that code that reads copy types doesn't assume that
+      !soft-copy == copy (because there are now two more copy types).
