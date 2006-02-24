@@ -69,28 +69,28 @@ class TestCase_launch(unittest.TestCase):
         else:
             self.fail("svnmerge.launch did not cause a LaunchError as expected")
 
-class TestCase_RevisionList(unittest.TestCase):
+class TestCase_RevisionSet(unittest.TestCase):
     def test_constr_string(self):
-        rl = svnmerge.RevisionList("10- 15, 12-48,2 ")
-        self.assert_(17 in rl)
-        self.assert_(2 in rl)
-        self.assert_(9 not in rl)
+        rs = svnmerge.RevisionSet("10- 15, 12-48,2 ")
+        self.assert_(17 in rs)
+        self.assert_(2 in rs)
+        self.assert_(9 not in rs)
 
     def test_constr_dict(self):
-        rl = svnmerge.RevisionList({18:1, 24:1, 25:1, 43:1})
-        self.assert_(24 in rl)
-        self.assert_(18 in rl)
-        self.assert_(44 not in rl)
+        rs = svnmerge.RevisionSet({18:1, 24:1, 25:1, 43:1})
+        self.assert_(24 in rs)
+        self.assert_(18 in rs)
+        self.assert_(44 not in rs)
 
     def test_constr_error(self):
-        self.assertRaises(ValueError, svnmerge.RevisionList, "10-12-15")
-        self.assertRaises(ValueError, svnmerge.RevisionList, "10;12-15")
-        self.assertRaises(ValueError, svnmerge.RevisionList, "10,foo,3-15")
+        self.assertRaises(ValueError, svnmerge.RevisionSet, "10-12-15")
+        self.assertRaises(ValueError, svnmerge.RevisionSet, "10;12-15")
+        self.assertRaises(ValueError, svnmerge.RevisionSet, "10,foo,3-15")
 
     def test_normalized(self):
-        rl = svnmerge.RevisionList("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
-        self.assertEqual(rl.normalized(), [(1,1), (3,6), (8,18)])
-        self.assertEqual(str(rl), "1,3-6,8-18")
+        rs = svnmerge.RevisionSet("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
+        self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
+        self.assertEqual(str(rs), "1,3-6,8-18")
 
     def test_iter(self):
         try:
@@ -98,27 +98,26 @@ class TestCase_RevisionList(unittest.TestCase):
         except NameError:
             pass
         else:
-            rl = svnmerge.RevisionList("4-13,1-5,34,20-22,18-21")
-            self.assertEqual(list(iter(rl)), range(1,14)+range(18,23)+[34])
+            rs = svnmerge.RevisionSet("4-13,1-5,34,20-22,18-21")
+            self.assertEqual(list(iter(rs)), range(1,14)+range(18,23)+[34])
 
     def test_union(self):
-        rl = svnmerge.RevisionList("3-8,4-10") | svnmerge.RevisionList("7-14,1")
-        self.assertEqual(str(rl), "1,3-14")
+        rs = svnmerge.RevisionSet("3-8,4-10") | svnmerge.RevisionSet("7-14,1")
+        self.assertEqual(str(rs), "1,3-14")
 
     def test_subtraction(self):
-
-        rl = svnmerge.RevisionList("3-8,4-10") - svnmerge.RevisionList("7-14,1")
-        self.assertEqual(str(rl), "3-6")
+        rs = svnmerge.RevisionSet("3-8,4-10") - svnmerge.RevisionSet("7-14,1")
+        self.assertEqual(str(rs), "3-6")
 
     def test_constr_empty(self):
-        rl = svnmerge.RevisionList("")
-        self.assertEqual(str(rl), "")
+        rs = svnmerge.RevisionSet("")
+        self.assertEqual(str(rs), "")
 
 class TestCase_MinimalMergeIntervals(unittest.TestCase):
     def test_basic(self):
-        rl = svnmerge.RevisionList("4-8,12,18,24")
-        phantom = svnmerge.RevisionList("8-11,13-16,19-23")
-        revs = svnmerge.minimal_merge_intervals(rl, phantom)
+        rs = svnmerge.RevisionSet("4-8,12,18,24")
+        phantom = svnmerge.RevisionSet("8-11,13-16,19-23")
+        revs = svnmerge.minimal_merge_intervals(rs, phantom)
         self.assertEqual(revs, [(4,12), (18,24)])
 
 class TestCase_SvnMerge(unittest.TestCase):

@@ -245,14 +245,14 @@ def check_dir_clean(dir):
         if len(L) > 7 and L[7] == '*':
             error('"%s" is not up to date; please "svn update" first' % dir)
 
-class RevisionList:
+class RevisionSet:
     """
     A set of revisions, held in dictionary form for easy manipulation. If we
     were to rewrite this script for Python 2.3+, we would subclass this from
     set (or UserSet).
     """
     def __init__(self, parm):
-        """Constructs a RevisionList from a string in property form, or from
+        """Constructs a RevisionSet from a string in property form, or from
         a dictionary whose keys are the revisions. Raises ValueError if the
         input string is invalid."""
         if isinstance(parm, types.DictType):
@@ -276,7 +276,7 @@ class RevisionList:
         return revnums
 
     def normalized(self):
-        """Returns a normalized version of the revision list, which is an
+        """Returns a normalized version of the revision set, which is an
         ordered list of couples (start,end), with the minimum number of
         intervals."""
         revnums = self.sorted()
@@ -290,7 +290,7 @@ class RevisionList:
         return ret
 
     def __str__(self):
-        """Convert the revision list to a string, using its normalized form."""
+        """Convert the revision set to a string, using its normalized form."""
         L = []
         for s,e in self.normalized():
             if s == e:
@@ -302,21 +302,21 @@ class RevisionList:
     def __contains__(self, rev):
         return self._revs.has_key(rev)
 
-    def __sub__(self, RL):
+    def __sub__(self, rs):
         """Compute subtraction as in sets."""
         revs = {}
         for r in self._revs.keys():
-            if r not in RL:
+            if r not in rs:
                 revs[r] = 1
-        return RevisionList(revs)
+        return RevisionSet(revs)
 
-    def __and__(self, RL):
+    def __and__(self, rs):
         """Compute intersections as in sets."""
         revs = {}
         for r in self._revs.keys():
-            if r in RL:
+            if r in rs:
                 revs[r] = 1
-        return RevisionList(revs)
+        return RevisionSet(revs)
 
     def __nonzero__(self):
         return len(self._revs) != 0
@@ -324,11 +324,11 @@ class RevisionList:
     def __iter__(self):
         return iter(self.sorted())
 
-    def __or__(self, RL):
+    def __or__(self, rs):
         """Compute set union."""
         revs = self._revs.copy()
-        revs.update(RL._revs)
-        return RevisionList(revs)
+        revs.update(rs._revs)
+        return RevisionSet(revs)
 
 def dict_from_revlist_prop(propvalue):
     """Given a property value as a string containing per-head revision
@@ -372,8 +372,8 @@ def get_block_props(dir):
 def get_blocked_revs(dir, head_path):
     p = get_block_props(dir)
     if p.has_key(head_path):
-        return RevisionList(p[head_path])
-    return RevisionList("")
+        return RevisionSet(p[head_path])
+    return RevisionSet("")
 
 def format_merge_props(props, sep=" "):
     """Formats the hash PROPS as a string suitable for use as a
@@ -590,7 +590,7 @@ def analyze_revs(url, begin=1, end=None):
     """For the given url, analyze the revisions in the interval begin-end
     (which defaults to 1-HEAD), to find out which revisions are changes in
     the URL and which are changes elsewhere (so-called 'phantom' revisions).
-    Return a tuple of two RevisionsList: (real_revs, phantom_revs).
+    Return a tuple of two RevisionsSet's: (real_revs, phantom_revs).
 
     NOTE: To maximize speed, if "end" is not provided, the function is not
     able to find phantom revisions following the last real revision in the URL.
@@ -601,20 +601,20 @@ def analyze_revs(url, begin=1, end=None):
     else:
         end = str(end)
         if long(begin) > long(end):
-            return RevisionList(""), RevisionList("")
+            return RevisionSet(""), RevisionSet("")
 
     out = launchsvn('log --quiet -r%s:%s "%s"' % (begin, end, url),
                     split_lines=False)
     revs = re.compile(r"^r(\d+)", re.M).findall(out)
-    revs = RevisionList(",".join(revs))
+    revs = RevisionSet(",".join(revs))
 
     if end == "HEAD":
         # If end is not provided, we do not know which is the latest revision
-        # in the repository. So return the phantom revision list only up to
+        # in the repository. So return the phantom revision set only up to
         # the latest known revision.
         end = str(list(revs)[-1])
 
-    phantom_revs = RevisionList("%s-%s" % (begin, end)) - revs
+    phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
     return revs, phantom_revs
 
 def analyze_head_revs(branch_dir, head_url):
@@ -631,10 +631,10 @@ def analyze_head_revs(branch_dir, head_url):
     if r and r[0][0] == 1:
         base = r[0][1]
 
-    # See if the user filtered the revision list. If so, we are not interested
-    # in something outside that range.
+    # See if the user filtered the revision set. If so, we are not
+    # interested in something outside that range.
     if opts["revision"]:
-        revs = RevisionList(opts["revision"]).sorted()
+        revs = RevisionSet(opts["revision"]).sorted()
         if base < revs[0]:
             base = revs[0]
         if end_rev > revs[-1]:
@@ -644,7 +644,7 @@ def analyze_head_revs(branch_dir, head_url):
 
 def minimal_merge_intervals(revs, phantom_revs):
     """Produce the smallest number of intervals suitable for merging. revs
-    is the RevisionList which we want to merge, and phantom_revs are phantom
+    is the RevisionSet which we want to merge, and phantom_revs are phantom
     revisions which can be used to concatenate intervals, thus minimizing the
     number of operations."""
     revnums = revs.normalized()
@@ -672,9 +672,9 @@ def action_init(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    # Get initial revision list if not explicitly specified
+    # Get the initial revision set if not explicitly specified.
     revs = opts["revision"] or "1-" + get_latestrev(opts["head_url"])
-    revs = RevisionList(revs)
+    revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
            (branch_dir, revs, opts["head_url"]))
@@ -702,8 +702,8 @@ def action_avail(branch_dir, branch_props):
     blocked_revs = get_blocked_revs(branch_dir, opts["head_path"])
     avail_revs = head_revs - opts["merged_revs"] - blocked_revs
 
-    # Compose the list of revisions to show
-    revs = RevisionList("")
+    # Compose the set of revisions to show
+    revs = RevisionSet("")
     if "avail" in opts["avail_showwhat"]:
         revs |= avail_revs
     if "blocked" in opts["avail_showwhat"]:
@@ -711,7 +711,7 @@ def action_avail(branch_dir, branch_props):
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
-        revs = revs & RevisionList(opts["revision"])
+        revs = revs & RevisionSet(opts["revision"])
 
     # Show them, either numerically, in log format, or as diffs
     if opts["avail_display"] == "revisions":
@@ -747,7 +747,7 @@ def action_merge(branch_dir, branch_props):
     head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
 
     if opts["revision"]:
-        revs = RevisionList(opts["revision"])
+        revs = RevisionSet(opts["revision"])
     else:
         revs = head_revs
 
@@ -764,7 +764,7 @@ def action_merge(branch_dir, branch_props):
         if blocked_revs & revs:
             report('skipping blocked revisions(s): %s' % (blocked_revs & revs))
 
-    # Compute final merge list
+    # Compute final merge set.
     revs = revs - merged_revs - blocked_revs
     if not revs:
         report('no revisions to merge, exiting')
@@ -791,7 +791,7 @@ def action_merge(branch_dir, branch_props):
         f.close()
         report('wrote commit message to "%s"' % opts["commit_file"])
 
-    # Update list of merged revisions
+    # Update the set of merged revisions.
     merged_revs = merged_revs | revs | phantom_revs
     branch_props[opts["head_path"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
@@ -806,7 +806,7 @@ def action_block(branch_dir, branch_props):
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
-        revs_to_block = RevisionList(opts["revision"]) & revs_to_block
+        revs_to_block = RevisionSet(opts["revision"]) & revs_to_block
 
     if not revs_to_block:
         error('no available revisions to block')
@@ -838,7 +838,7 @@ def action_unblock(branch_dir, branch_props):
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
-        revs_to_unblock = revs_to_unblock & RevisionList(opts["revision"])
+        revs_to_unblock = revs_to_unblock & RevisionSet(opts["revision"])
 
     if not revs_to_unblock:
         error('no available revisions to unblock')
@@ -1321,7 +1321,7 @@ def main(args):
                   % opts["head_path"])
 
         revs = branch_props[opts["head_path"]]
-        opts["merged_revs"] = RevisionList(revs)
+        opts["merged_revs"] = RevisionSet(revs)
 
     # Perform the action
     cmd(branch_dir, branch_props)
