@@ -26,6 +26,11 @@
 #include "svn_private_config.h"
 #include <zlib.h>
 
+/* This macro is taken from zlib, and was originally the function
+   compressBound.  It shouldn't ever change, but once every millenium,
+   it may be useful for someone to make sure. */
+#define svnCompressBound(LEN) ((LEN) + ((LEN) >> 12) + ((LEN) >> 14) + 11)
+
 /* For svndiff1, address/instruction/new data under this size will not
    be compressed using zlib as a secondary compressor.  */
 #define MIN_COMPRESS_SIZE 512
@@ -128,7 +133,7 @@ zlib_encode(svn_stringbuf_t *in, svn_stringbuf_t *out)
     }
   else
     {
-      svn_stringbuf_ensure(out, compressBound(in->len) + intlen);
+      svn_stringbuf_ensure(out, svnCompressBound(in->len) + intlen);
       endlen = out->blocksize;    
       
       if (compress2((unsigned char *)out->data + intlen, &endlen, 
