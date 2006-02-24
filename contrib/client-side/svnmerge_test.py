@@ -443,6 +443,154 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
 
+    def testBidirectionalMerges(self):
+        """Check that reflected revisions are recognized properly for bidirectional merges."""
+
+        os.chdir("..")
+        os.chdir("test-branch")
+
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        os.chdir("..")
+        os.chdir("trunk")
+
+        # Not using switch, so must update to get latest repository rev.
+        self.launch("svn update", match=r"At revision 14")
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 15")
+        os.remove("svnmerge-commit-message.txt")
+
+        open("test1", "w").write("test 1-changed_on_trunk")
+
+        self.launch("svn commit -m \"Change to test1 on trunk\"",
+                    match=r"Committed revision 16")
+
+        os.chdir("..")
+        os.chdir("test-branch")
+
+        # Not using switch, so must update to get latest repository rev.
+        self.launch("svn update", match=r"At revision 16")
+
+        self.svnmerge("avail -vv", match=r"15-16$")
+        self.svnmerge("merge -vv", match=r"merge -r 14:16")
+        p = self.getproperty()
+        self.assertEqual("/trunk:1-16", p)
+
+        # There will be directory property conflict on 'test-branch'
+        # due to the attempted merge from trunk of the addition of the
+        # svnmerge-integrated property, which already exists in the
+        # branch since 'svnmerge.py init' was run in it.  So just
+        # resolve it, as it currently has the correct value.
+        self.launch("svn resolved .",
+                    match=r"Resolved conflicted state of '\.'")
+
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 17")
+        os.remove("svnmerge-commit-message.txt")
+
+        open("test1", "w").write("test 1-changed_on_branch_after_merge_from_trunk")
+
+        self.launch("svn commit -m \"Change to test1 on branch\"",
+                    match=r"Committed revision 18")
+
+        os.chdir("..")
+        os.chdir("trunk")
+
+        # Not using switch, so must update to get latest repository rev.
+        self.launch("svn update", match=r"At revision 18")
+
+        # Ensure default is not to check for reflected revisions.
+        self.svnmerge("avail -vv", match=r"17-18$")
+
+        # Now check reflected revision is excluded with --bidirectional flag.
+        self.svnmerge("avail -vv --bidirectional", match=r"18$")
+
+        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:18")
+        p = self.getproperty()
+        self.assertEqual("/branches/test-branch:1-18", p)
+
+    def testBidirectionalMergesMultiBranch(self):
+        """Check that merges from a second branch are not considered reflected for other branches."""
+
+        os.chdir("..")
+
+        self.multilaunch("""
+            svn cp -m "Create test-branch2" %(TEST_REPO_URL)s/trunk %(TEST_REPO_URL)s/branches/test-branch2
+            svn co %(TEST_REPO_URL)s/branches/test-branch2 test-branch2
+        """)
+
+        os.chdir("test-branch")
+
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 15")
+        os.remove("svnmerge-commit-message.txt")
+
+        os.chdir("..")
+        os.chdir("test-branch2")
+
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 16")
+        os.remove("svnmerge-commit-message.txt")
+
+        os.chdir("..")
+        os.chdir("trunk")
+
+        # Not using switch, so must update to get latest repository rev.
+        self.launch("svn update", match=r"At revision 16")
+
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 17")
+        os.remove("svnmerge-commit-message.txt")
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch2"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 18")
+        os.remove("svnmerge-commit-message.txt")
+
+        os.chdir("..")
+        os.chdir("test-branch2")
+
+        open("test1", "w").write("test 1-changed_on_branch2")
+
+        self.launch("svn commit -m \"Change to test1 on branch2\"",
+                    match=r"Committed revision 19")
+
+        os.chdir("..")
+        os.chdir("trunk")
+
+        # Not using switch, so must update to get latest repository rev.
+        self.launch("svn update", match=r"At revision 19")
+
+        # Merge into trunk
+        self.svnmerge("merge -vv --head ../test-branch2",
+                      match=r"merge -r 18:19")
+        p = self.getproperty()
+        self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
+
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 20")
+        os.remove("svnmerge-commit-message.txt")
+
+        os.chdir("..")
+        os.chdir("test-branch")
+
+        # Not using switch, so must update to get latest repository rev.
+        self.launch("svn update", match=r"At revision 20")
+
+        # Latest revision on trunk which was merged from test-branch2
+        # should be available for test-branch with --bidirectional flag.
+        self.svnmerge("avail -vv --bidirectional", match=r"20$")
+
+        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:20")
+        p = self.getproperty()
+        self.assertEqual("/trunk:1-20", p)
+
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing
     # exists, then always remove it.  This prevents any problems if

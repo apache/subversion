@@ -25,6 +25,8 @@
 #   John Belmonte <john at neggie dot net> - metadata and usability
 #     improvements
 #   Blair Zajac <blair at orcaware dot com> - random improvements
+#   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional merging
+#     support
 #
 # $HeadURL$
 # $LastChangedDate$
@@ -568,6 +570,7 @@ def get_default_head(branch_dir, branch_props):
 def check_old_prop_version(branch_dir, props):
     """Check if props (of branch_dir) are svnmerge properties in old format,
     and emit an error if so."""
+
     # Previous svnmerge versions allowed trailing /'s in the repository
     # local path.  Newer versions of svnmerge will trim trailing /'s
     # appearing in the command line, so if there are any properties with
@@ -590,26 +593,78 @@ def check_old_prop_version(branch_dir, props):
             (opts["prop"], format_merge_props(fixed), branch_dir)
         sys.exit(1)
 
-def analyze_revs(url, begin=1, end=None):
-    """For the given url, analyze the revisions in the interval begin-end
-    (which defaults to 1-HEAD), to find out which revisions are changes in
-    the URL and which are changes elsewhere (so-called 'phantom' revisions).
-    Return a tuple of two RevisionsSet's: (real_revs, phantom_revs).
+def analyze_revs(target_dir, url, begin=1, end=None):
+    """For the source of the merges in the head url being merged into
+    target_dir, analyze the revisions in the interval begin-end (which
+    defaults to 1-HEAD), to find out which revisions are changes in
+    the url, which are changes elsewhere (so-called 'phantom'
+    revisions), and optionally which are reflected changes (to avoid
+    conflicts that can occur when doing bidirectional merging between
+    branches).  Return a tuple of three RevisionSet's:
+        (real_revs, phantom_revs, reflected_revs).
 
-    NOTE: To maximize speed, if "end" is not provided, the function is not
-    able to find phantom revisions following the last real revision in the URL.
+    NOTE: To maximize speed, if "end" is not provided, the function is
+    not able to find phantom revisions following the last real
+    revision in the URL.
     """
+
     begin = str(begin)
     if end is None:
         end = "HEAD"
     else:
         end = str(end)
         if long(begin) > long(end):
-            return RevisionSet(""), RevisionSet("")
+            return RevisionSet(""), RevisionSet(""), RevisionSet("")
 
-    out = launchsvn('log --quiet -r%s:%s "%s"' % (begin, end, url),
-                    split_lines=False)
-    revs = re.compile(r"^r(\d+)", re.M).findall(out)
+    # Find all the revisions where the source of the merge revisions
+    # was modified.  Generate two lists of revisions, the first with
+    # all the revisions, and the second with a list of revisions where
+    # the source directory itself that is the source of the merges was
+    # modified, as these may be reflected merges.
+
+    # If bidirectional merge support is enabled, then add the
+    # --verbose flag to the 'svn log' command to get a list of files
+    # and directories that were added, modified or deleted.  Even with
+    # the --verbose flag, the --quiet flag prevents the commit log
+    # message from being printed.
+    log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
+    if opts["bidirectional"]:
+        log_opts = "--verbose " + log_opts
+    lines = launchsvn("log %s" % log_opts)
+
+    current_rev = None
+    rlpath = url_to_rlpath(url)
+
+    # This holds a list of all the revisions that changed something in
+    # the head branch.
+    revs = []
+
+    # This holds a list of all the revisions that changed a property
+    # on the head branch directory itself.  These revisions may
+    # contain changes on the integrated revision property list which
+    # are checked below.
+    prop_changed_revs = []
+
+    find_revision_re = re.compile(r"^r(\d+)")
+    source_dir_modified_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
+
+    source_dir_modified = False
+    for line in lines:
+        find_revision_match = find_revision_re.match(line)
+        if find_revision_match:
+            rev = find_revision_match.groups()[0]
+            current_rev = int(rev)
+            revs.append(rev)
+            source_dir_modified = False
+            continue
+
+        if not current_rev:
+            continue
+
+        if not source_dir_modified and source_dir_modified_re.match(line):
+            source_dir_modified = True
+            prop_changed_revs.append(current_rev)
+
     revs = RevisionSet(",".join(revs))
 
     if end == "HEAD":
@@ -619,14 +674,44 @@ def analyze_revs(url, begin=1, end=None):
         end = str(list(revs)[-1])
 
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
-    return revs, phantom_revs
+    reflected_revs = []
+
+    if opts["bidirectional"]:
+        report("checking for reflected changes in %d revision(s)"
+               % len(prop_changed_revs))
+
+        previous_rev = None
+        previous_props = None
+
+        for rev in prop_changed_revs:
+            if rev-1 == previous_rev:
+                old_props = previous_props
+            else:
+                old_props = get_revlist_prop(url, opts["prop"], rev-1)
+
+            new_props = get_revlist_prop(url, opts["prop"], rev)
+            previous_props = new_props
+            previous_rev = rev
+
+            old_revisions = old_props.get(target_dir)
+            new_revisions = new_props.get(target_dir)
+
+            if new_revisions != old_revisions:
+                reflected_revs.append("%s" % rev)
+
+    reflected_revs = RevisionSet(",".join(reflected_revs))
+
+    return revs, phantom_revs, reflected_revs
 
 def analyze_head_revs(branch_dir, head_url):
     """For the given branch and head, extract the real and phantom
     head revisions."""
+    branch_url = target_to_url(branch_dir)
+    target_dir = url_to_rlpath(branch_url)
+
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    end_rev = get_latestrev(target_to_url(branch_dir))
+    end_rev = get_latestrev(branch_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
@@ -644,7 +729,7 @@ def analyze_head_revs(branch_dir, head_url):
         if end_rev > revs[-1]:
             end_rev = revs[-1]
 
-    return analyze_revs(head_url, base, end_rev)
+    return analyze_revs(target_dir, head_url, base, end_rev)
 
 def minimal_merge_intervals(revs, phantom_revs):
     """Produce the smallest number of intervals suitable for merging. revs
@@ -700,11 +785,14 @@ def action_init(branch_dir, branch_props):
 
 def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
-    head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
+    head_revs, phantom_revs, reflected_revs = \
+               analyze_head_revs(branch_dir, opts["head_url"])
     report('skipping phantom revisions: %s' % phantom_revs)
+    if reflected_revs:
+        report('skipping reflected revisions: %s' % reflected_revs)
 
     blocked_revs = get_blocked_revs(branch_dir, opts["head_path"])
-    avail_revs = head_revs - opts["merged_revs"] - blocked_revs
+    avail_revs = head_revs - opts["merged_revs"] - blocked_revs - reflected_revs
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
@@ -748,7 +836,8 @@ def action_merge(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
+    head_revs, phantom_revs, reflected_revs = \
+               analyze_head_revs(branch_dir, opts["head_url"])
 
     if opts["revision"]:
         revs = RevisionSet(opts["revision"])
@@ -765,11 +854,13 @@ def action_merge(branch_dir, branch_props):
                                                            merged_revs & revs))
         if phantom_revs:
             report('memorizing phantom revision(s): %s' % phantom_revs)
+        if reflected_revs:
+            report('memorizing reflected revision(s): %s' % reflected_revs)
         if blocked_revs & revs:
             report('skipping blocked revisions(s): %s' % (blocked_revs & revs))
 
     # Compute final merge set.
-    revs = revs - merged_revs - blocked_revs
+    revs = revs - merged_revs - blocked_revs - reflected_revs
     if not revs:
         report('no revisions to merge, exiting')
         return
@@ -796,7 +887,7 @@ def action_merge(branch_dir, branch_props):
         report('wrote commit message to "%s"' % opts["commit_file"])
 
     # Update the set of merged revisions.
-    merged_revs = merged_revs | revs | phantom_revs
+    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
     branch_props[opts["head_path"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
 
@@ -805,7 +896,8 @@ def action_block(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
+    head_revs, phantom_revs, reflected_revs = \
+               analyze_head_revs(branch_dir, opts["head_url"])
     revs_to_block = head_revs - opts["merged_revs"]
 
     # Limit to revisions specified by -r (if any)
@@ -1176,6 +1268,8 @@ common_opts = [
               help="specify the head for this branch. It can be either a path "
                    "or an URL. Needed only to disambiguate in case of multiple "
                    "merge tracking (merging from multiple heads)"),
+    Option("-b", "--bidirectional", value=True, default=False,
+           help="remove reflected revisions from merge candidates"),
 ]
 
 command_table = {
@@ -1200,7 +1294,16 @@ command_table = {
     "avail [OPTION...] [PATH]",
     """Show unmerged revisions available for PATH as a revision list.
     If --revision is given, the revisions shown will be limited to those
-    also specified in the option.""",
+    also specified in the option.
+
+    When svnmerge is used to bidirectionally merge changes between a
+    branch and its head, it is necessary to not merge the same changes
+    forth and back: e.g., if you committed a merge of a certain
+    revision of the branch into the head, you do not want that commit
+    to appear as available to merged into the branch (as the code
+    originated in the branch itself!).  svnmerge can not show these
+    so-called "reflected" revisions if you specify the --bidirectional
+    or -b command line option.""",
     [
         Option("-l", "--log",
                dest="avail_display", value="logs", default="revisions",
@@ -1215,16 +1318,25 @@ command_table = {
                dest="avail_showwhat", value=["blocked", "avail"],
                help="show both available and blocked revisions (aka ignore "
                     "blocked revisions)"),
-        "-r", "-S", # import common opts
+        "-b", "-r", "-S", # import common opts
     ]),
 
     "merge": (action_merge,
     "merge [OPTION...] [PATH]",
     """Merge in revisions into PATH from its head. If --revision is omitted,
     all the available revisions will be merged. In any case, already merged-in
-    revisions will NOT be merged again.""",
+    revisions will NOT be merged again.
+
+    When svnmerge is used to bidirectionally merge changes between a
+    branch and its head, it is necessary to not merge the same changes
+    forth and back: e.g., if you committed a merge of a certain
+    revision of the branch into the head, you do not want that commit
+    to appear as available to merged into the branch (as the code
+    originated in the branch itself!).  svnmerge can skip these
+    so-called "reflected" revisions if you specify the --bidirectional
+    or -b command line option.""",
     [
-        "-r", "-S", "-f", # import common opts
+        "-b", "-r", "-S", "-f", # import common opts
     ]),
 
     "block": (action_block,
