@@ -435,7 +435,13 @@ def is_url(url):
 
 def is_wc(dir):
     """Check if a directory is a working copy."""
-    return os.path.isdir(dir) and os.path.isdir(os.path.join(dir, ".svn"))
+    if not os.path.isdir(dir):
+        return False
+    if os.path.isdir(os.path.join(dir, ".svn")):
+        return True
+    if os.path.isdir(os.path.join(dir, "_svn")):
+        return True
+    return False
 
 _cache_svninfo = {}
 def get_svninfo(path):
