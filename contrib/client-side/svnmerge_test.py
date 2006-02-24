@@ -92,6 +92,14 @@ class TestCase_RevisionSet(unittest.TestCase):
         self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
         self.assertEqual(str(rs), "1,3-6,8-18")
 
+    def test_length(self):
+        rs = svnmerge.RevisionSet("3-8")
+        self.assertEqual(len(rs), 6)
+        rs = svnmerge.RevisionSet("3-8,4-10")
+        self.assertEqual(len(rs), 8)
+        rs = svnmerge.RevisionSet("1,3,5")
+        self.assertEqual(len(rs), 3)
+
     def test_iter(self):
         try:
             iter

@@ -321,6 +321,10 @@ class RevisionSet:
     def __nonzero__(self):
         return len(self._revs) != 0
 
+    def __len__(self):
+        """Return the number of revisions in the set."""
+        return len(self._revs)
+
     def __iter__(self):
         return iter(self.sorted())
 
