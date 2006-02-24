@@ -1279,7 +1279,9 @@ svn_client_log(const apr_array_header_t *targets,
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.  If any of the
  * revisions of @a path_or_url have a binary mime-type, return the
- * error @c SVN_ERR_CLIENT_IS_BINARY_FILE.
+ * error @c SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is TRUE,
+ * in which case blame information will be generated regardless of the
+ * MIME types of the revisions.
  *
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
@@ -1294,13 +1296,15 @@ svn_client_blame3(const char *path_or_url,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
                   svn_client_blame_receiver_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
 /** Similar to svn_client_blame3(), but with @a diff_options set to
- * default options as returned by svn_diff_file_options_parse().
+ * default options as returned by svn_diff_file_options_parse() and
+ * @a ignore_mime_type set to FALSE.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *

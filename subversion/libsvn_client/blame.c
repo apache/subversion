@@ -59,6 +59,7 @@ struct file_rev_baton {
   const char *target;
   svn_client_ctx_t *ctx;
   const svn_diff_file_options_t *diff_options;
+  svn_boolean_t ignore_mime_type;
   /* name of file containing the previous revision of the file */
   const char *last_filename;
   /* name of file containing the previous revision of the file, translated
@@ -431,7 +432,8 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   svn_pool_clear(frb->currpool);
 
   /* If this file has a non-textual mime-type, bail out. */
-  SVN_ERR(check_mimetype(prop_diffs, frb->target, frb->currpool));
+  if (! frb->ignore_mime_type)
+    SVN_ERR(check_mimetype(prop_diffs, frb->target, frb->currpool));
 
   update_eol_style(&frb->eol_style, &frb->eol_str, prop_diffs);
 
@@ -538,6 +540,7 @@ svn_client_blame3(const char *target,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
                   svn_client_blame_receiver_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
@@ -576,6 +579,7 @@ svn_client_blame3(const char *target,
   frb.target = target;
   frb.ctx = ctx;
   frb.diff_options = diff_options;
+  frb.ignore_mime_type = ignore_mime_type;
   frb.last_filename = NULL;
   frb.last_filename_translated = NULL;
   frb.eol_style = svn_subst_eol_style_none;
@@ -670,7 +674,7 @@ svn_client_blame2(const char *target,
                   apr_pool_t *pool)
 {
   return svn_client_blame3(target, peg_revision, start, end,
-                           svn_diff_file_options_create(pool),
+                           svn_diff_file_options_create(pool), FALSE,
                            receiver, receiver_baton, ctx, pool);
 }
 svn_error_t *
@@ -812,7 +816,7 @@ old_blame(const char *target, const char *url,
       SVN_ERR(svn_io_file_close(file, frb->currpool));
 
       /* If this file has a non-textual mime-type, bail out. */
-      if (props && 
+      if (! frb->ignore_mime_type && props && 
           ((mimetype = apr_hash_get(props, SVN_PROP_MIME_TYPE, 
                                     sizeof(SVN_PROP_MIME_TYPE) - 1))))
         {

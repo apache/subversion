@@ -204,7 +204,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"),
     {'r', 'v', svn_cl__incremental_opt, svn_cl__xml_opt, 'x',
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0}, N_
     ("Output the content of specified files or URLs.\n"
