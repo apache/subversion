@@ -901,10 +901,29 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
 {
   apr_status_t status;
   const char *native_path;
+#ifdef AS400
+  apr_utimbuf_t aubuf;
+  apr_finfo_t finfo;
+#endif
 
   SVN_ERR(svn_path_cstring_from_utf8(&native_path, path, pool));
 
+#ifndef AS400
   status = apr_file_mtime_set(native_path, apr_time, pool);
+#else
+  /* apr_file_mtime_set() isn't implemented on OS400, but IBM does provide
+   * the OS400 specific function apr_utime() which can be used instead. */
+
+  /* Get the file's current access time, we don't want to change that,
+   * just the mod time. */
+  status = apr_stat(&finfo, native_path, APR_FINFO_ATIME, pool);
+  if (!status)
+    {
+      aubuf.atime = finfo.atime;
+      aubuf.mtime = apr_time;
+      status = apr_utime(native_path, &aubuf);
+    }
+#endif
   if (status)
     return svn_error_wrap_apr
       (status, _("Can't set access time of '%s'"),
