@@ -273,9 +273,9 @@ Also stored in the digest file for a given FS path are pointers to
 other digest files which contain information associated with other FS
 paths that are our path's immediate children.
 
-To answer the question, "Does path FOO have a lock associate with
+To answer the question, "Does path FOO have a lock associated with
 it?", one need only generate the MD5 digest of FOO's
-absolute-in-the-FS path (say, 3b1b011fed614a263986b5c4869604e8), lock
+absolute-in-the-FS path (say, 3b1b011fed614a263986b5c4869604e8), look
 for a file located like so:
 
    /path/to/repos/locks/3b1/3b1b011fed614a263986b5c4869604e8
@@ -284,6 +284,6 @@ And then see if that file contains lock information.
 
 To inquire about locks on children of the path FOO, you would
 reference the same path as above, but look for a list of children in
-that file (instead of lock information).  Children as listed as MD5
+that file (instead of lock information).  Children are listed as MD5
 digests, too, so you would simply iterate over those digests and
 consult the files they reference, and so on, recursively.
