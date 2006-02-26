@@ -1297,6 +1297,14 @@ close_file(void *file_baton,
   apr_hash_t *repos_props;
   int i;
 
+  /* The path to the wc file: either BASE or WORKING. */
+  const char *localfile;
+  /* The path to the temporary copy of the pristine repository version. */
+  const char *temp_file_path;
+  /* The working copy properties at the base of the wc->repos
+     comparison: either BASE or WORKING. */
+  apr_hash_t *originalprops;
+
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, b->edit_baton->anchor,
                                     b->wc_path, b->pool));
@@ -1325,14 +1333,13 @@ close_file(void *file_baton,
   repos_mimetype = get_prop_mimetype(repos_props);
 
 
+  /* If the file isn't in the working copy, we show either an addition or
+     a deletion of the complete contents of the repository file, depending
+     upon the direction of the diff. */
   if (b->added)
     {
-      /* Remember that the default diff order is to show repos->wc,
-         but we ask the server for a wc->repos diff.  So if
-         'reverse_order' is TRUE, then we do what the server says:
-         show an add. */
       if (eb->reverse_order)
-        SVN_ERR(b->edit_baton->callbacks->file_added
+        return b->edit_baton->callbacks->file_added
                 (NULL, NULL, NULL, b->path,
                  empty_file,
                  b->temp_file_path,
@@ -1342,87 +1349,72 @@ close_file(void *file_baton,
                  repos_mimetype,
                  b->propchanges,
                  apr_hash_make(pool),
-                 b->edit_baton->callback_baton));
+                 b->edit_baton->callback_baton);
       else
-        {
-          /* Add is required to change working-copy into requested revision, so
-             diff should show this as a delete. Thus compare the repository
-             file against the empty file. */
-          SVN_ERR(b->edit_baton->callbacks->file_deleted
+          return b->edit_baton->callbacks->file_deleted
                   (NULL, NULL, b->path,
                    b->temp_file_path,
                    empty_file,
                    repos_mimetype,
                    NULL,
                    repos_props,
-                   b->edit_baton->callback_baton));
-        }
+                   b->edit_baton->callback_baton);
+    }
+
+  if (b->temp_file) /* A props-only change will not have opened a file */
+    {
+      if (eb->use_text_base)
+        localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
+      else if (entry && entry->schedule == svn_wc_schedule_delete)
+        localfile = empty_file;
+      else
+        /* a detranslated version of the working file */
+        SVN_ERR(svn_wc_translated_file2
+                (&localfile, b->path,
+                 b->path, adm_access,
+                 SVN_WC_TRANSLATE_TO_NF,
+                 pool));
+
+      temp_file_path = b->temp_file_path;
+    }
+  else
+    localfile = temp_file_path = NULL;
+
+  if (eb->use_text_base)
+    {
+      originalprops = base_props;
     }
   else
     {
-      /* The path to the wc file: either BASE or WORKING. */
-      const char *localfile;
-      /* The path to the temporary copy of the pristine repository version. */
-      const char *temp_file_path;
-      /* The working copy properties at the base of the wc->repos
-         comparison: either BASE or WORKING. */
-      apr_hash_t *originalprops;
+      SVN_ERR(svn_wc_prop_list(&originalprops,
+                               b->path, adm_access, pool));
 
-      if (b->temp_file) /* A props-only change will not have opened a file */
-        {
-          if (eb->use_text_base)
-            localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
-          else if (entry && entry->schedule == svn_wc_schedule_delete)
-            localfile = empty_file;
-          else
-            /* a detranslated version of the working file */
-            SVN_ERR(svn_wc_translated_file2
-                    (&localfile, b->path,
-                     b->path, adm_access,
-                     SVN_WC_TRANSLATE_TO_NF,
-                     pool));
+      /* We have the repository properties in repos_props, and the
+         WORKING properties in originalprops.  Recalculate
+         b->propchanges as the change between WORKING and repos. */
+      SVN_ERR(svn_prop_diffs(&b->propchanges,
+                             repos_props, originalprops, b->pool));
+    }
 
-          temp_file_path = b->temp_file_path;
-        }
-      else
-        localfile = temp_file_path = NULL;
+  if (localfile || b->propchanges->nelts > 0)
+    {
+      const char *original_mimetype = get_prop_mimetype(originalprops);
 
-      if (eb->use_text_base)
-        {
-          originalprops = base_props;
-        }
-      else
-        {
-          SVN_ERR(svn_wc_prop_list(&originalprops,
-                                   b->path, adm_access, pool));
+      if (b->propchanges->nelts > 0
+          && ! eb->reverse_order)
+        reverse_propchanges(originalprops, b->propchanges, b->pool);
 
-          /* We have the repository properties in repos_props, and the
-             WORKING properties in originalprops.  Recalculate
-             b->propchanges as the change between WORKING and repos. */
-          SVN_ERR(svn_prop_diffs(&b->propchanges,
-                                 repos_props, originalprops, b->pool));
-        }
-
-      if (localfile || b->propchanges->nelts > 0)
-        {
-          const char *original_mimetype = get_prop_mimetype(originalprops);
-
-          if (b->propchanges->nelts > 0
-              && ! eb->reverse_order)
-            reverse_propchanges(originalprops, b->propchanges, b->pool);
-
-          SVN_ERR(b->edit_baton->callbacks->file_changed
-                  (NULL, NULL, NULL,
-                   b->path,
-                   eb->reverse_order ? localfile : temp_file_path,
-                   eb->reverse_order ? temp_file_path : localfile,
-                   eb->reverse_order ? SVN_INVALID_REVNUM : b->edit_baton->revnum,
-                   eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
-                   eb->reverse_order ? original_mimetype : repos_mimetype,
-                   eb->reverse_order ? repos_mimetype : original_mimetype,
-                   b->propchanges, originalprops,
-                   b->edit_baton->callback_baton));
-        }
+      SVN_ERR(b->edit_baton->callbacks->file_changed
+              (NULL, NULL, NULL,
+               b->path,
+               eb->reverse_order ? localfile : temp_file_path,
+               eb->reverse_order ? temp_file_path : localfile,
+               eb->reverse_order ? SVN_INVALID_REVNUM : b->edit_baton->revnum,
+               eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
+               eb->reverse_order ? original_mimetype : repos_mimetype,
+               eb->reverse_order ? repos_mimetype : original_mimetype,
+               b->propchanges, originalprops,
+               b->edit_baton->callback_baton));
     }
 
   return SVN_NO_ERROR;
