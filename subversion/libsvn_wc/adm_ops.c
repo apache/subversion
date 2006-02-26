@@ -540,15 +540,19 @@ svn_wc_process_committed(const char *path,
 static svn_error_t *
 remove_file_if_present(const char *file, apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
+  svn_error_t *err;
 
-  /* Does this file exist?  If not, get outta here. */
-  SVN_ERR(svn_io_check_path(file, &kind, pool));
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR;
+  /* Try, remove the file. */
+  err = svn_io_remove_file(file, pool);
 
-  /* Else, remove the file. */
-  return svn_io_remove_file(file, pool);
+  /* Ignore file not found error. */
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+
+  return err;
 }
 
 

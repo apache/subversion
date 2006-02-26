@@ -696,15 +696,7 @@ log_do_modify_entry(struct log_runner *loggy,
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
       && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
     {
-      svn_node_kind_t tfile_kind;
       apr_time_t text_time;
-
-      err = svn_io_check_path(tfile, &tfile_kind, loggy->pool);
-      if (err)
-        return svn_error_createf
-          (pick_error_code(loggy), err,
-           _("Error checking path '%s'"), svn_path_local_style(tfile,
-                                                               loggy->pool));
           
       err = svn_io_file_affected_time(&text_time, tfile, loggy->pool);
       if (err)
@@ -724,7 +716,6 @@ log_do_modify_entry(struct log_runner *loggy,
       && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       const char *pfile;
-      svn_node_kind_t pfile_kind;
       apr_time_t prop_time;
       const svn_wc_entry_t *tfile_entry;
 
@@ -742,26 +733,19 @@ log_do_modify_entry(struct log_runner *loggy,
       if (err)
         signal_error(loggy, err);
 
-      err = svn_io_check_path(pfile, &pfile_kind, loggy->pool);
-      if (err)
-        return svn_error_createf
-          (pick_error_code(loggy), err,
-           _("Error checking path '%s'"),
-           svn_path_local_style(pfile, loggy->pool));
-
-      if (pfile_kind == svn_node_none)
-        entry->prop_time = 0;
-      else
+      err = svn_io_file_affected_time(&prop_time, pfile, loggy->pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          err = svn_io_file_affected_time(&prop_time, pfile, loggy->pool);
-          if (err)
-            return svn_error_createf
-              (pick_error_code(loggy), NULL,
-               _("Error getting 'affected time' on '%s'"),
-               svn_path_local_style(pfile, loggy->pool));
-
-          entry->prop_time = prop_time;
+          svn_error_clear(err);
+          prop_time = 0;
         }
+      else if (err)
+        return svn_error_createf
+          (pick_error_code(loggy), NULL,
+            _("Error getting 'affected time' on '%s'"),
+            svn_path_local_style(pfile, loggy->pool));
+
+      entry->prop_time = prop_time;
     }
 
   /* Now write the new entry out */
