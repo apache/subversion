@@ -1531,9 +1531,9 @@ information on the revision level of a working copy given a path (see
 <p>
 You can incorporate it into your build or release process to get the
 information you need into the source itself.  For example, in a build
-environment based on <tt>make</tt>, add <a
+environment based on <tt>GNU&nbsp;make</tt>, add <a
 href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112564"
->something like this</a> to your <tt>Makefile</tt>:</p>
+>something like this</a> to your <tt>Makefile</tt>:
 
 <pre>
 ##
@@ -1541,9 +1541,12 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112564"
 ## printf("this program was compiled from SVN revision %s\n",SVN_REV);
 ##
 
-SVNDEF = -D'SVN_REV="$(shell svnversion -n .)"'
-CFLAGS = $(SVNDEF) ... continue with your other flags ...
+SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
+CFLAGS := $(SVNDEF) ... continue with your other flags ...
 </pre>
+
+(Note that this will not work on non-GNU versions of <tt>make</tt>.
+Don't use it if your build process needs to be portable.)</p>
 
 <p>Or try this recipe:</p>
 
