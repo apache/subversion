@@ -1526,8 +1526,21 @@ information on the revision level of a working copy given a path (see
 <p>
 You can incorporate it into your build or release process to get the
 information you need into the source itself.  For example, in a build
-environment based on <tt>make</tt>, add something like this to your
-<tt>Makefile</tt>:</p>
+environment based on <tt>make</tt>, add <a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112564"
+>something like this</a> to your <tt>Makefile</tt>:</p>
+
+<pre>
+##
+## To use this, in yourfile.c do something like this:
+## printf("this program was compiled from SVN revision %s\n",SVN_REV);
+##
+
+SVNDEF = -D'SVN_REV="$(shell svnversion -n .)"'
+CFLAGS = $(SVNDEF) ... continue with your other flags ...
+</pre>
+
+<p>Or try this recipe:</p>
 
 <pre>
 ##
@@ -1539,13 +1552,12 @@ svn_version.c: FORCE
     svnversion -n .                   &gt;&gt; svn_version.c
     echo '"; return SVN_Version; }'   &gt;&gt; svn_version.c
 
+##
+## Then any executable that links in <tt>svn_version.o</tt> will be able
+## to call the function <tt>svn_version()</tt> to get a string that
+## describes exactly what revision was built.
+##
 </pre>
-
-<p>
-any executable that links in <tt>svn_version.o</tt> will be able to
-call the function <tt>svn_version()</tt> to get a string that
-describes exactly what revision was built.
-</p>
 
 <p>
 Windows users may want to use <tt>SubWCRev.exe</tt>, available from
