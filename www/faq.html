@@ -1357,18 +1357,23 @@ the credentials.</p>
 <h3>I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</h3>
 
-<p>We recommend that you live with ".svn" if you possibly can.  If you
-use some other name, your working copy may not work with Subversion
-clients other than the one you regularly use.  However, if you
-absolutely must, you can simply change this line in
-<tt>subversion/include/svn_wc.h</tt> from </p>
+<p>We recommend that you live with ".svn" if you possibly can.
+However, if you are using ASP.NET under Windows, you might need to set
+the environment variable SVN_ASP_DOT_NET_HACK, as
+described <a href="#vs-asp-net">here</a>.</p>
+
+<p>Or you could use a completely custom name for the administrative
+directory.  We recommend against this, because your working copy would
+probably not work with Subversion clients other than the one you
+customized.  However, if you absolutely must do this, just change this
+line in <tt>subversion/include/svn_wc.h</tt> from</p>
 
 <pre>
 #define SVN_WC_ADM_DIR_NAME   ".svn"
 </pre>
 
 <p>
-to
+to (for example)
 </p>
 
 <pre>
@@ -2499,41 +2504,15 @@ publish a Subversion working copy, because of the ".svn"
 subdirectories.  The error message says something like "unable to
 read project information".</p>
 
-<p>There are a few solutions:</p>
+<p>To work around this, set the environment variable
+SVN_ASP_DOT_NET_HACK to any value&nbsp;&mdash;&nbsp;this will tell
+Windows clients to use "_svn" as a directory name in your working
+copy.  See <a
+href="http://subversion.tigris.org/svn_1.3_releasenotes.html#_svn-hack"
+>the relevant section of the Subversion 1.3 release notes</a> for more
+details, and see <a href="#adm-dir">this question</a> for other ways to
+customize the administrative directory name.</p>
 
-<ul>
-<li><p>Recompile your client to use a different working copy name, as
-    described <a href="#adm-dir">here</a>.  Or,</p>
-</li>
-<li><p>If you use TortoiseSVN, you can download a client that is
-    already modified to work around the problem, see
-    <a href="http://tortoisesvn.tigris.org/download.html"
-            >http://tortoisesvn.tigris.org/download.html</a>.  Or,</p>
-</li>
-<li><p>Take Jim Bolla's advice from
-    <a href="http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx"
-            >http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx</a>:
-    <i>"If you're working on web projects locally or across a file
-    share, you can get around this by converting it to a regular class
-    library project.  I have some docementation on how to do this that
-    i've compiled from various sources on the internet about how to do
-    this."</i> (We've contacted Jim Bolla about getting that
-    documentation, and will include it here if we can.).  Or, </p>
-</li>
-<li><p>Steele Price, also on
-    <a href="http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx"
-            >http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx</a>,
-    says:
-    <i>"You can get around the .SVN directory pretty easily by
-    following instructions here: <a
-    href="http://staff.develop.com/onion/Samples/aspdotnet_without_web_projects.htm">http://staff.develop.com/onion/Samples/aspdotnet_without_web_projects.htm</a>
-    further instruction for making new projects is here:
-    <a href="http://blog.steeleprice.net/archive/2003/11/09/134.aspx"
-            >http://blog.steeleprice.net/archive/2003/11/09/134.aspx</a>"
-    </i></p>
-
-</li>
-</ul>
 </div>
 
 <![CDATA[-----------------------------------------------------------]]>
