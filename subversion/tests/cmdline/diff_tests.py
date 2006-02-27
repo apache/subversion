@@ -1961,22 +1961,95 @@ def diff_schedule_delete(sbox):
   "scheduled deleted"
   
   sbox.build()
+
+  expected_output_r2_working = [
+  "Index: foo\n",
+  "===================================================================\n",
+  "--- foo\t(revision 2)\n",
+  "+++ foo\t(working copy)\n",
+  "@@ -1 +0,0 @@\n",
+  "-xxx\n"
+  ]
+
+  expected_output_r2_base = [
+  "Index: foo\n",
+  "===================================================================\n",
+  "--- foo\t(revision 2)\n",
+  "+++ foo\t(working copy)\n",
+  "@@ -1 +1,2 @@\n",
+  " xxx\n",
+  "+yyy\n"
+  ]
+  expected_output_base_r2 = [
+  "Index: foo\n",
+  "===================================================================\n",
+  "--- foo\t(working copy)\n",
+  "+++ foo\t(revision 2)\n",
+  "@@ -1,2 +1 @@\n",
+  " xxx\n",
+  "-yyy\n"
+  ]
+
+  expected_output_r1_base = [
+  "Index: foo\n",
+  "===================================================================\n",
+  "--- foo\t(revision 0)\n",
+  "+++ foo\t(revision 3)\n",
+  "@@ -0,0 +1,2 @@\n",
+  "+xxx\n",
+  "+yyy\n"
+  ]
+  expected_output_base_r1 = [
+  "Index: foo\n",
+  "===================================================================\n",
+  "--- foo\t(working copy)\n",
+  "+++ foo\t(revision 1)\n",
+  "@@ -1,2 +0,0 @@\n",
+  "-xxx\n",
+  "-yyy\n"
+  ]
+  expected_output_base_working = expected_output_base_r1[:]
+  expected_output_base_working[2] = "--- foo\t(revision 3)\n"
+  expected_output_base_working[3] = "+++ foo\t(working copy)\n"
+
   wc_dir = sbox.wc_dir
   current_dir = os.getcwd()
   os.chdir(wc_dir)
 
   try:
-    svntest.main.file_append('foo', "xxx")
+    svntest.main.file_append('foo', "xxx\n")
     svntest.main.run_svn(None, 'add', 'foo')
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+    svntest.main.run_svn(None, 'ci', '-m', 'log msg r2')
 
+    svntest.main.file_append('foo', "yyy\n")
+    svntest.main.run_svn(None, 'ci', '-m', 'log msg r3')
+
+    # Update everyone's BASE to r3, and mark 'foo' as schedule-deleted.
+    svntest.main.run_svn(None, 'up')
     svntest.main.run_svn(None, 'rm', 'foo')
-    expected_output = [
-    "Index: foo\n", 
-    "===================================================================\n"
-    ]
-    svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                       'diff', '-r', '1' )
+
+    # A file marked as schedule-delete should act as if were not present
+    # in WORKING, but diffs against BASE should remain unaffected.
+
+    # 1. repos-wc diff: file not present in repos.
+    svntest.actions.run_and_verify_svn(None, [], [],
+                                       'diff', '-r', '1')
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
+                                       'diff', '-r', '1:BASE')
+    svntest.actions.run_and_verify_svn(None, expected_output_base_r1, [],
+                                       'diff', '-r', 'BASE:1')
+
+    # 2. repos-wc diff: file present in repos.
+    svntest.actions.run_and_verify_svn(None, expected_output_r2_working, [],
+                                       'diff', '-r', '2')
+    svntest.actions.run_and_verify_svn(None, expected_output_r2_base, [],
+                                       'diff', '-r', '2:BASE')
+    svntest.actions.run_and_verify_svn(None, expected_output_base_r2, [],
+                                       'diff', '-r', 'BASE:2')
+
+    # 3. wc-wc diff.
+    svntest.actions.run_and_verify_svn(None, expected_output_base_working, [],
+                                       'diff')
 
   finally:
     os.chdir(current_dir)
