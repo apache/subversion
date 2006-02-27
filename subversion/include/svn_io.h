@@ -422,8 +422,8 @@ svn_error_t *svn_io_file_checksum(unsigned char digest[],
                                   apr_pool_t *pool);
 
 
-/** Set @a *same to non-zero if @a file1 and @a file2 have the same
- * contents, else set it to zero.  Use @a pool for temporary allocations.
+/** Set @a *same to TRUE if @a file1 and @a file2 have the same
+ * contents, else set it to FALSE.  Use @a pool for temporary allocations.
  */
 svn_error_t *svn_io_files_contents_same_p(svn_boolean_t *same,
                                           const char *file1,
@@ -688,6 +688,17 @@ svn_stream_readline(svn_stream_t *stream,
  */
 svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
                              apr_pool_t *pool);
+
+/** Set @a *same to non-zero if @a stream1 and @a stream2 have the same
+ * contents, else set it to zero.  Use @a pool for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_stream_contents_same(svn_boolean_t *same,
+                         svn_stream_t *stream1,
+                         svn_stream_t *stream2,
+                         apr_pool_t *pool);
 
 /** @} */
 

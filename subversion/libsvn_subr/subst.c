@@ -1200,6 +1200,79 @@ translated_stream_close(void *baton)
   return SVN_NO_ERROR;
 }
 
+/* Given a special file at SRC, set TRANSLATED_STREAM_P to a stream
+   with the textual representation of it. Perform all allocations in POOL. */
+static svn_error_t *
+detranslated_stream_special(svn_stream_t **translated_stream_p,
+                            const char *src,
+                            apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  apr_file_t *s;
+  svn_string_t *buf;
+  svn_stringbuf_t *strbuf;
+  
+  /* First determine what type of special file we are
+     detranslating. */
+  SVN_ERR(svn_io_stat(&finfo, src, APR_FINFO_MIN | APR_FINFO_LINK, pool));
+  
+  switch (finfo.filetype) {
+  case APR_REG:
+    /* Nothing special to do here, just create stream from the original
+       file's contents. */
+    SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
+    *translated_stream_p = svn_stream_from_aprfile2(s, FALSE, pool);
+
+    break;
+  case APR_LNK:
+    /* Determine the destination of the link. */
+    SVN_ERR(svn_io_read_link(&buf, src, pool));
+    strbuf = svn_stringbuf_createf(pool, "link %s", buf->data);
+    *translated_stream_p = svn_stream_from_stringbuf(strbuf, pool);
+    
+    break;
+  default:
+    abort();
+  }
+  
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_subst_stream_detranslated(svn_stream_t **stream_p, 
+                              const char *src,
+                              svn_subst_eol_style_t eol_style,
+                              const char *eol_str,
+                              svn_boolean_t always_repair_eols,
+                              apr_hash_t *keywords,
+                              svn_boolean_t special,
+                              apr_pool_t *pool)
+{
+  apr_file_t *file_h;
+  svn_stream_t *src_stream;
+
+  if (special)
+    return detranslated_stream_special(stream_p, src, pool);
+  
+  if (eol_style == svn_subst_eol_style_native)
+    eol_str = SVN_SUBST__DEFAULT_EOL_STR;
+  else if (! (eol_style == svn_subst_eol_style_fixed
+              || eol_style == svn_subst_eol_style_none))
+    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
+  SVN_ERR(svn_io_file_open(&file_h, src, APR_READ,
+                           APR_OS_DEFAULT, pool));
+
+  src_stream = svn_stream_from_aprfile2(file_h, FALSE, pool);
+
+  *stream_p = svn_subst_stream_translated(
+    src_stream, eol_str,
+    eol_style == svn_subst_eol_style_fixed || always_repair_eols,
+    keywords, FALSE, pool);
+
+  return SVN_NO_ERROR;
+}
 
 svn_stream_t *
 svn_subst_stream_translated(svn_stream_t *stream,
@@ -1397,44 +1470,23 @@ detranslate_special_file(const char *src,
                          const char *dst,
                          apr_pool_t *pool)
 {
+  svn_stream_t *translated_stream, *dst_stream;
   const char *dst_tmp;
-  svn_string_t *buf;
-  apr_file_t *s, *d;
-  svn_stream_t *src_stream, *dst_stream;
-  apr_finfo_t finfo;
-  
-  /* First determine what type of special file we are
-     detranslating. */
-  SVN_ERR(svn_io_stat(&finfo, src, APR_FINFO_MIN | APR_FINFO_LINK, pool));
+  apr_file_t *d;
 
+  SVN_ERR(detranslated_stream_special(&translated_stream, src, pool));
+  
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
   SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
                                    ".tmp", svn_io_file_del_none, pool));
 
   dst_stream = svn_stream_from_aprfile(d, pool);
-  
-  switch (finfo.filetype) {
-  case APR_REG:
-    /* Nothing special to do here, just copy the original file's
-       contents. */
-    SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
-                             APR_OS_DEFAULT, pool));
-    src_stream = svn_stream_from_aprfile(s, pool);
 
-    SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
-    break;
-  case APR_LNK:
-    /* Determine the destination of the link. */
-    SVN_ERR(svn_io_read_link(&buf, src, pool));
+  SVN_ERR(svn_stream_copy(translated_stream, dst_stream, pool));
 
-    SVN_ERR(svn_stream_printf(dst_stream, pool, "link %s",
-                              buf->data));
-    break;
-  default:
-    abort();
-  }
-
+  SVN_ERR(svn_stream_close(dst_stream));
+  SVN_ERR(svn_stream_close(translated_stream));
   SVN_ERR(svn_io_file_close(d, pool));
 
   /* Do the atomic rename from our temporary location. */

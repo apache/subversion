@@ -410,6 +410,34 @@ svn_subst_translate_to_normal_form(const char *src,
                                    apr_hash_t *keywords,
                                    svn_boolean_t special,
                                    apr_pool_t *pool);
+
+/**
+ * Set @a *stream_p to a stream that detranslates the file @a src from
+ * working copy form to normal form, allocated in @a pool.
+ *
+ * The values specified for @a eol_style, @a *eol_str, @a keywords and
+ * @a special, should be the ones used to translate the file to its
+ * working copy form.  Usually, these are the values specified by the
+ * user in the files' properties.
+ *
+ * Inconsistent line endings in the file will be automatically repaired
+ * (made consistent) for some eol styles.  For all others, an error is
+ * returned.  By setting @a always_repair_eols to @c TRUE, eols will be
+ * made consistent even for those styles which don't have it by default.
+ *
+ * @since New in 1.4.
+ *
+ */
+svn_error_t *
+svn_subst_stream_detranslated(svn_stream_t **stream_p, 
+                              const char *src,
+                              svn_subst_eol_style_t eol_style,
+                              const char *eol_str,
+                              svn_boolean_t always_repair_eols,
+                              apr_hash_t *keywords,
+                              svn_boolean_t special,
+                              apr_pool_t *pool);
+
 
 /* EOL conversion and character encodings */
 
