@@ -849,7 +849,7 @@ write_revision_record(svn_stream_t *stream,
   SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
 
   /* Run revision date properties through the time conversion to
-     canonize them. */
+     canonicalize them. */
   /* ### Remove this when it is no longer needed for sure. */
   datevalue = apr_hash_get(props, SVN_PROP_REVISION_DATE,
                            APR_HASH_KEY_STRING);

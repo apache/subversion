@@ -494,8 +494,8 @@ def set_repos_paths(repo_dir):
     current_repo_url = string.replace(current_repo_url, '\\', '/')
 
 
-def canonize_url(input):
-  "Canonize the url, if the scheme is unknown, returns intact input"
+def canonicalize_url(input):
+  "Canonicalize the url, if the scheme is unknown, returns intact input"
   
   m = re.match(r"^((file://)|((svn|svn\+ssh|http|https)(://)))", input)
   if m:
