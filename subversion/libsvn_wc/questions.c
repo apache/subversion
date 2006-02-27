@@ -53,42 +53,41 @@ svn_wc_check_wc(const char *path,
                 apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_node_kind_t kind;
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
-  
-  if (kind == svn_node_none)
+  const char *format_file_path
+    = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
+
+  err = svn_io_read_version_file(wc_format, format_file_path, pool);
+
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
-      return svn_error_createf
-        (APR_ENOENT, NULL, _("'%s' does not exist"),
-         svn_path_local_style(path, pool));
+      svn_node_kind_t kind;
+
+      svn_error_clear(err);
+
+      /* Check path itself exists. */
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+
+      if (kind == svn_node_none)
+        {
+          return svn_error_createf
+            (APR_ENOENT, NULL, _("'%s' does not exist"),
+            svn_path_local_style(path, pool));
+        }
+
+      /* If the format file does not exist or path not directory, then for
+         our purposes this is not a working copy, so return 0. */
+      *wc_format = 0;
     }
-  else if (kind != svn_node_dir)
-    *wc_format = 0;
-  else  /* okay, it's a directory, but is it a working copy? */
+  else if (err)
+    return err;
+  else
     {
-      const char *format_file_path
-        = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
-
-      err = svn_io_read_version_file(wc_format, format_file_path, pool);
-
-      if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-                  || APR_STATUS_IS_ENOTDIR(err->apr_err)))
-        {
-          /* If the format file does not exist, then for our purposes
-             this is not a working copy, so return 0. */
-          svn_error_clear(err);
-          *wc_format = 0;
-        }
-      else if (err)
-        return err;
-      else
-        {
-          /* If we managed to read the format file we assume that we
-             are dealing with a real wc so we can return a nice
-             error. */
-          SVN_ERR(svn_wc__check_format(*wc_format, path, pool));
-        }
+      /* If we managed to read the format file we assume that we
+          are dealing with a real wc so we can return a nice
+          error. */
+      SVN_ERR(svn_wc__check_format(*wc_format, path, pool));
     }
 
   return SVN_NO_ERROR;
