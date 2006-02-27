@@ -223,24 +223,64 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
                                 apr_pool_t *pool)
 {
   svn_boolean_t same;
-  const char *tmp_vfile;
+  svn_subst_eol_style_t eol_style;
+  const char *eol_str;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
 
-  if (compare_textbases)
-    SVN_ERR(svn_wc_translated_file2
-            (&tmp_vfile, versioned_file,
-             versioned_file, adm_access,
-             SVN_WC_TRANSLATE_TO_NF,
-             pool));
-  else
-    SVN_ERR(svn_wc_translated_file2
-            (&tmp_vfile, base_file,
-             versioned_file, adm_access,
-             SVN_WC_TRANSLATE_FROM_NF,
-             pool));
+  SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, versioned_file,
+                                adm_access, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
+                              adm_access, NULL, pool));
+  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
-  SVN_ERR(svn_io_files_contents_same_p(&same, tmp_vfile,
-                                       compare_textbases
-                                       ? base_file : versioned_file, pool));
+
+  if (! svn_subst_translation_required(eol_style, eol_str, keywords,
+                                       special, TRUE))
+    {
+      /* Translation would be a no-op, so compare the original file. */
+      SVN_ERR(svn_io_files_contents_same_p(&same, base_file, versioned_file,
+                                            pool));
+
+    }
+  else  /* some translation is necessary */
+    {
+      /* "v_" means versioned_file, "b_" means base_file. */
+      apr_file_t *v_file_h, *b_file_h;
+      svn_stream_t *v_stream, *b_stream;
+      
+      SVN_ERR(svn_io_file_open(&b_file_h, base_file, APR_READ,
+                              APR_OS_DEFAULT, pool));
+
+      b_stream = svn_stream_from_aprfile2(b_file_h, FALSE, pool);
+
+      if (compare_textbases)
+        {
+          /* Create stream for detranslate versioned file to normal form. */
+          SVN_ERR(svn_subst_stream_detranslated(&v_stream,
+                                                versioned_file,
+                                                eol_style,
+                                                eol_str, FALSE,
+                                                keywords, special,
+                                                pool));
+        }
+      else
+        {
+          /* Translate text-base to working copy form. */
+          SVN_ERR(svn_io_file_open(&v_file_h, versioned_file, APR_READ,
+                              APR_OS_DEFAULT, pool));
+          v_stream = svn_stream_from_aprfile2(v_file_h, FALSE, pool);
+          
+          b_stream = svn_subst_stream_translated(b_stream, eol_str, FALSE,
+                                                keywords, TRUE, pool);
+        }
+
+      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream, pool));
+      
+      SVN_ERR(svn_stream_close(v_stream));
+      SVN_ERR(svn_stream_close(b_stream));
+    }
+
   *modified_p = (! same);
 
   return SVN_NO_ERROR;
