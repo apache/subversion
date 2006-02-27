@@ -806,12 +806,6 @@ get_dir_status(struct edit_baton *eb,
   /* Get this directory's entry. */
   SVN_ERR(svn_wc_entry(&dir_entry, path, adm_access, FALSE, subpool));
 
-  /* Unless specified, add default ignore regular expressions and try
-     to add any svn:ignore properties from the parent directory. */
-  if (ignores)
-    SVN_ERR(collect_ignore_patterns(&patterns, ignores, 
-                                    adm_access, subpool));
-
   /* If "this dir" has "svn:externals" property set on it, store its
      name and value in traversal_info.  Also, we want to track the
      externals internally so we can report status more accurately. */
@@ -879,6 +873,9 @@ get_dir_status(struct edit_baton *eb,
       /* Otherwise, if it exists, send its unversioned status. */
       else if (dirent_p)
         {
+          if (ignores && ! patterns)
+            SVN_ERR(collect_ignore_patterns(&patterns, ignores, 
+                                            adm_access, subpool));
           SVN_ERR(send_unversioned_item(entry, dirent_p->kind,
                                         dirent_p->special, adm_access, 
                                         patterns, eb->externals, no_ignore,
@@ -912,8 +909,11 @@ get_dir_status(struct edit_baton *eb,
           || svn_wc_is_adm_dir(key, subpool))
         continue;
 
-      /* Clear the iteration subpool. */
       svn_pool_clear(iterpool);
+
+      if (ignores && ! patterns)
+        SVN_ERR(collect_ignore_patterns(&patterns, ignores, 
+                                        adm_access, subpool));
 
       /* Make an unversioned status item for KEY, and put it into our
          return hash. */
