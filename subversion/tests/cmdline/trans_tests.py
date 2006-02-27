@@ -194,11 +194,11 @@ def keywords_from_birth(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  canonized_repo_url = svntest.main.canonize_url(sbox.repo_url)
-  if canonized_repo_url[-1:] != '/':
-    url_expand_test_data = canonized_repo_url + '/fixed_length_keywords'
+  canonical_repo_url = svntest.main.canonicalize_url(sbox.repo_url)
+  if canonical_repo_url[-1:] != '/':
+    url_expand_test_data = canonical_repo_url + '/fixed_length_keywords'
   else:
-    url_expand_test_data = canonized_repo_url + 'fixed_length_keywords'
+    url_expand_test_data = canonical_repo_url + 'fixed_length_keywords'
   
   setup_working_copy (wc_dir, len(url_expand_test_data))
 
