@@ -9,6 +9,19 @@ Status of 1.3.1:
 
 Candidate changes:
 
+  * r18637 from branches/1.3.x-svnmerge.py:
+    Update the 1.3.x branch with all improvements and fixes for
+      svnmerge.* on trunk (r17383:18635).
+    Justification:
+      Contains bidirectional merge support, the ability to remove
+      revisions from consideration for a merge that originated where
+      the merge is taking place (e.g. 1) commit on trunk; 2) merge to
+      per-user-branch; 3) additional commits on branch; 4) merge back
+      to trunk).  Additional test suite fixes.  Improved compatibility
+      with older versions of Python.
+    Votes:
+      +1: blair
+
   * r18549:
     Prevent svn_load_dirs.pl from trying to import .svn or _svn
       directories, which can cause svn core dumps since it treads over
