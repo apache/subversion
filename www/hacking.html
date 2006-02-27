@@ -619,7 +619,7 @@ as you might think, and if you'd like to become one of them, then add
      to quote them. (e.g. "Can't find '/path/to/repos/userfile'").</p></li>
 
 <li><p>When including path or filenames in the error string, be sure
-     to convert them using 'svn_path_local_style ()' before inclusion.</p></li>
+     to convert them using 'svn_path_local_style()' before inclusion.</p></li>
 
 <li><p>If you want to add an explanation to the error, report it
      followed by a colon and the explanation like this:</p>
@@ -672,8 +672,8 @@ conventions:</p>
       then use two underscores following the module prefix.  For
       example:</p>
       <pre>
-         svn_fs_get_rev_prop ()       /* Part of published API. */
-         svn_fs__parse_props ()       /* For internal use only. */
+         svn_fs_get_rev_prop()       /* Part of published API. */
+         svn_fs__parse_props()       /* For internal use only. */
       </pre>
 </li>
 
@@ -779,15 +779,15 @@ principles:</p>
        it at the start of each iteration, then destroy it after the loop 
        is done, like so:</p>
        <pre>
-         apr_pool_t *subpool = svn_pool_create (pool);
+         apr_pool_t *subpool = svn_pool_create(pool);
 
          for (i = 0; i &lt; n; ++i)
          {
-           svn_pool_clear (subpool);
-           do_operation (..., subpool);
+           svn_pool_clear(subpool);
+           do_operation(..., subpool);
          }
 
-         svn_pool_destroy (subpool);
+         svn_pool_destroy(subpool);
        </pre>
 </li>
 </ol>
@@ -809,20 +809,20 @@ example, pool choices indicate a lot about what's going on in this
 code:</p>
 
 <pre>
-      apr_hash_t *persistent_objects = apr_hash_make (pool);
-      apr_pool_t *subpool = svn_pool_create (pool);
+      apr_hash_t *persistent_objects = apr_hash_make(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       for (i = 0; i &lt; n; ++i)
       {
         const char *intermediate_result;
         const char *key, *val;
         
-        svn_pool_clear (subpool);
-        SVN_ERR (do_something (&amp;intermediate_result, ..., subpool));
-        SVN_ERR (get_result (intermediate_result, &amp;key, &amp;val, ..., pool));
-        apr_hash_set (persistent_objects, key, APR_HASH_KEY_STRING, val);
+        svn_pool_clear(subpool);
+        SVN_ERR(do_something(&amp;intermediate_result, ..., subpool));
+        SVN_ERR(get_result(intermediate_result, &amp;key, &amp;val, ..., pool));
+        apr_hash_set(persistent_objects, key, APR_HASH_KEY_STRING, val);
       }
-      svn_pool_destroy (subpool);
+      svn_pool_destroy(subpool);
 
       return persistent_objects;
 </pre>
@@ -841,10 +841,10 @@ directly or through a close_foo() function) to destroy the object.</p>
    <span style="color: red;">/*** Example of how NOT to use pools.  Don't be like this. ***/</span>
 
    static foo_t *
-   make_foo_object (arg1, arg2, apr_pool_t *pool)
+   make_foo_object(arg1, arg2, apr_pool_t *pool)
    {
-      apr_pool_t *subpool = svn_pool_create (pool);
-      foo_t *foo = apr_palloc (subpool, sizeof (*foo));
+      apr_pool_t *subpool = svn_pool_create(pool);
+      foo_t *foo = apr_palloc(subpool, sizeof(*foo));
 
       foo-&gt;field1 = arg1;
       foo-&gt;field2 = arg2;
@@ -957,8 +957,8 @@ typedef struct svn_error
        something like this:</p>
 
     <pre>
-return svn_error_create (SVN_ERR_FOO, NULL, 
-                         "User not permitted to write file");
+return svn_error_create(SVN_ERR_FOO, NULL, 
+                        "User not permitted to write file");
     </pre>
 
     <p>NOTICE the NULL field... indicating that this error has no
@@ -990,7 +990,7 @@ return svn_error_create (SVN_ERR_FOO, NULL,
     <li><p>Throw the error upwards, unmodified:</p>
 
         <pre>
-        error = some_routine (foo);
+        error = some_routine(foo);
         if (error)
           return (error);
         </pre>
@@ -998,7 +998,7 @@ return svn_error_create (SVN_ERR_FOO, NULL,
         <p>Actually, a better way to do this would be with the
         SVN_ERR() macro, which does the same thing:</p>
         <pre>
-        SVN_ERR (some_routine (foo));
+        SVN_ERR(some_routine(foo));
         </pre>
      </li>
 
@@ -1006,11 +1006,11 @@ return svn_error_create (SVN_ERR_FOO, NULL,
            structure by including it as the "child" argument:</p>
 
         <pre>
-        error = some_routine (foo);
+        error = some_routine(foo);
         if (error)
           {
-           svn_error_t *wrapper = svn_error_create (SVN_ERR_FOO, error,
-                                                    "Authorization failed");
+           svn_error_t *wrapper = svn_error_create(SVN_ERR_FOO, error,
+                                                   "Authorization failed");
            return wrapper;
           }
         </pre>
@@ -1020,11 +1020,11 @@ return svn_error_create (SVN_ERR_FOO, NULL,
            your custom message:</p>
 
         <pre>
-        error = some_routine (foo);
+        error = some_routine(foo);
         if (error)
           {
-           return svn_error_quick_wrap (error, 
-                                        "Authorization failed");
+           return svn_error_quick_wrap(error, 
+                                       "Authorization failed");
           }
         </pre>
 
@@ -1032,7 +1032,7 @@ return svn_error_create (SVN_ERR_FOO, NULL,
            macro:</p>
 
         <pre>
-          SVN_ERR_W (some_routine (foo), "Authorization failed");
+          SVN_ERR_W(some_routine(foo), "Authorization failed");
         </pre>
     </li>
     </ol>
@@ -1453,7 +1453,7 @@ example of doing it right:</p>
 <p>And then, in `consume_count' in `cplus-dem.c':</p>
 
 <pre>
-   while (isdigit ((unsigned char)**type))
+   while (isdigit((unsigned char)**type))
      {
        count *= 10;
        count += **type - '0';
@@ -1461,7 +1461,7 @@ example of doing it right:</p>
          `_Utf390_1__1_9223372036854775807__9223372036854775'
          can cause this function to return a negative value.
          In this case we just consume until the end of the string.  */
-      if (count &gt; strlen (*type))
+      if (count &gt; strlen(*type))
         {
           *type = save;
           return 0;
@@ -2311,15 +2311,15 @@ API documentation with a diff to the new one.  For example:</p>
     * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
     * parameter always set to @c FALSE.
     */
-   svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
-                                   svn_stream_t *dumpstream,
-                                   svn_stream_t *feedback_stream,
-                                   svn_revnum_t start_rev,
-                                   svn_revnum_t end_rev,
-                                   svn_boolean_t incremental,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   apr_pool_t *pool);
+   svn_error_t *svn_repos_dump_fs(svn_repos_t *repos,
+                                  svn_stream_t *dumpstream,
+                                  svn_stream_t *feedback_stream,
+                                  svn_revnum_t start_rev,
+                                  svn_revnum_t end_rev,
+                                  svn_boolean_t incremental,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *pool);
 </pre>
 
 <p>When the major release number changes, the "best" new API in a
