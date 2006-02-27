@@ -438,7 +438,7 @@ _svn()
 		         --no-ignore $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
-		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml"
+		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml --force"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
