@@ -753,17 +753,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
-  /* If the file is schedule-deleted, comparisons against WORKING will
-     just show the addition of an empty file. */
-  if (entry->schedule == svn_wc_schedule_delete && !eb->use_text_base)
-    return eb->callbacks->file_added
-             (adm_access, NULL, NULL,
-              path,
-              empty_file, empty_file,
-              0, entry->revision,
-              NULL, NULL,
-              apr_array_make(pool, 1, sizeof(svn_prop_t)), NULL,
-              eb->callback_baton);
+  /* We can't show additions for files that don't exist. */
+  assert(!(entry->schedule == svn_wc_schedule_delete && !eb->use_text_base));
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
@@ -884,6 +875,11 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
       if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
+      /* If comparing against WORKING, skip entries that are
+         schedule-deleted - they don't really exist. */
+      if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
+        continue;
+
       path = svn_path_join(dir_baton->path, name, subpool);
 
       switch (entry->kind)
@@ -978,6 +974,11 @@ delete_entry(const char *path,
   /* Mark this entry as compared in the parent directory's baton. */
   apr_hash_set(pb->compared, full_path, APR_HASH_KEY_STRING, "");
 
+  /* If comparing against WORKING, skip entries that are schedule-deleted
+     - they don't really exist. */
+  if (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete)
+    return SVN_NO_ERROR;
+
   SVN_ERR(get_empty_file(pb->edit_baton, &empty_file));
   switch (entry->kind)
     {
@@ -995,9 +996,6 @@ delete_entry(const char *path,
                                                         FALSE, pool);
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
-
-          if (entry->schedule == svn_wc_schedule_delete)
-            SVN_ERR(get_empty_file(pb->edit_baton, &textbase));
 
           SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
                                     adm_access, full_path, pool));
@@ -1333,16 +1331,27 @@ close_file(void *file_baton,
   repos_mimetype = get_prop_mimetype(repos_props);
 
 
-  /* If the file isn't in the working copy, we show either an addition or
-     a deletion of the complete contents of the repository file, depending
-     upon the direction of the diff. */
-  if (b->added)
+  /* The repository version of the file is in the temp file we applied
+     the BASE->repos delta to.  If we haven't seen any changes, it's
+     the same as BASE. */
+  temp_file_path = b->temp_file_path;
+  if (!temp_file_path)
+    temp_file_path = svn_wc__text_base_path(b->path, FALSE, b->pool);
+
+
+  /* If the file isn't in the working copy (either because it was added
+     in the BASE->repos diff or because we're diffing against WORKING
+     and it was marked as schedule-deleted), we show either an addition
+     or a deletion of the complete contents of the repository file,
+     depending upon the direction of the diff. */
+  if (b->added ||
+      (!eb->use_text_base && entry->schedule == svn_wc_schedule_delete))
     {
       if (eb->reverse_order)
         return b->edit_baton->callbacks->file_added
                 (NULL, NULL, NULL, b->path,
                  empty_file,
-                 b->temp_file_path,
+                 temp_file_path,
                  0,
                  eb->revnum,
                  NULL,
@@ -1353,7 +1362,7 @@ close_file(void *file_baton,
       else
           return b->edit_baton->callbacks->file_deleted
                   (NULL, NULL, b->path,
-                   b->temp_file_path,
+                   temp_file_path,
                    empty_file,
                    repos_mimetype,
                    NULL,
@@ -1365,8 +1374,6 @@ close_file(void *file_baton,
     {
       if (eb->use_text_base)
         localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
-      else if (entry && entry->schedule == svn_wc_schedule_delete)
-        localfile = empty_file;
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc_translated_file2
