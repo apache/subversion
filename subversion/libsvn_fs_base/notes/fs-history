@@ -178,14 +178,14 @@ is cloned (again, earning a new copy ID), not every child of that
 tree.  This makes the svn_fs_copy() operation quite fast, at least
 compared to the alternative.  From that point, any children of the
 copy target are lazily migrated.  The first time they are themselves
-modified after the original copy, they are clone from their original
+modified after the original copy, they are cloned from their original
 source location into the new target location.  This lazy migration
 procedure costs about the same as a regular cloning operation, which
 keeps the "cheap copy" cheap, even the morning after.
 
 Copies of files behave no differently than copies of directories.  But
 files never have children, so effectively the "tree" being copied is
-exactly one node-revision.  This node-revision is explicitly clone at
+exactly one node-revision.  This node-revision is explicitly cloned at
 the time of the copy, and there is nothing to lazily migrate
 afterwards.
 
@@ -205,7 +205,7 @@ new copy ID to the new node-revision for "/trunk/README", which is
 necessarily different from the copy ID assigned to the node-revision
 for "/trunk".  
 
-Now, later, you decide to copy "/trunk" to "/branches/mine".  So the new
+Later, you decide to copy "/trunk" to "/branches/mine".  So the new
 "/branches/mine" also gets a brand new copy ID, since it is now a
 historical branch of "/trunk".  But what happens when
 "/branches/mine/README" is cloned later as part of some edits you are

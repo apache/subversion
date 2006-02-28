@@ -1011,7 +1011,7 @@ svn_fs_fs__things_different(svn_boolean_t *props_changed,
   if (! props_changed && ! contents_changed)
     return SVN_NO_ERROR;
 
-  /* The the node revision skels for these two nodes. */
+  /* The node revision skels for these two nodes. */
   SVN_ERR(get_node_revision(&noderev1, node1, pool));
   SVN_ERR(get_node_revision(&noderev2, node2, pool));
 
