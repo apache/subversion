@@ -485,7 +485,7 @@ dump_node(struct edit_baton *eb,
     }
 
   /* If we are supposed to dump text, write out a text length header
-     here, and a md5 checksum (if available.) */
+     here, and a MD5 checksum (if available). */
   if (must_dump_text && (kind == svn_node_file))
     {
       unsigned char md5_digest[APR_MD5_DIGESTSIZE];
@@ -523,9 +523,8 @@ dump_node(struct edit_baton *eb,
     }
 
   /* 'Content-length:' is the last header before we dump the content,
-     and is the summation of the text and prop contents lengths.  We
-     write this only for the benefit of non-Subversion RFC-822
-     parsers. */
+     and is the sum of the text and prop contents lengths.  We write
+     this only for the benefit of non-Subversion RFC-822 parsers. */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
                             SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
                             ": %" SVN_FILESIZE_T_FMT "\n\n",
@@ -1016,7 +1015,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
       SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
 
       /* If this is the first revision of a non-incremental dump,
-         we're in for a full tree dump.  Othersise, we want to simply
+         we're in for a full tree dump.  Otherwise, we want to simply
          replay the revision.  */
       if ((i == start_rev) && (! incremental))
         {

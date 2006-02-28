@@ -116,7 +116,7 @@ copy_one_versioned_file(const char *from,
 
      Don't export 'deleted' files and directories unless it's a
      revision other than WORKING.  These files and directories
-     don't really exists in WORKING. */
+     don't really exist in WORKING. */
   if ((revision->kind != svn_opt_revision_working &&
        entry->schedule == svn_wc_schedule_add) ||
       (revision->kind == svn_opt_revision_working &&
@@ -159,7 +159,7 @@ copy_one_versioned_file(const char *from,
   
   if (local_mod && (! special))
     {
-      /* Use the modified time from the working copy if
+      /* Use the modified time from the working copy of
          the file */
       SVN_ERR(svn_io_file_affected_time(&tm, from, pool));
     }
