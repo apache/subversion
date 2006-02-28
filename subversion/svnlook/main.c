@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -692,10 +692,10 @@ prepare_tmpfiles(const char **tmpfile1,
     }
 
   /* Now, prepare the two temporary files, each of which will either
-     be empty, or will have real contents.  The first file we will
-     make in our temporary directory. */
-  *tmpfile2 = svn_path_join(tmpdir, path2, pool);
-  SVN_ERR(open_writable_binary_file(&fh, *tmpfile2, pool));
+     be empty, or will have real contents.  */
+  SVN_ERR(svn_io_open_unique_file2(&fh, tmpfile2,
+                                   apr_psprintf(pool, "%s/diff", tmpdir),
+                                   ".tmp", svn_io_file_del_none, pool));
   if (root2)
     SVN_ERR(dump_contents(fh, root2, path2, pool));
   apr_file_close(fh);
@@ -897,24 +897,15 @@ print_diff_tree(svn_fs_root_t *root,
            diff.
            
          - Second, dump the contents of the new version of the file
-           into the svnlook temporary directory, building out the
-           actual directories that need to be created in order to
-           fully represent the filesystem path inside the tmp
-           directory.
+           into the temporary directory.
 
          - Then, dump the contents of the old version of the file into
-           the svnlook temporary directory, also building out intermediate
-           directories as needed, using a unique temporary file name (we
-           do this *after* putting the new version of the file
-           there in case something actually versioned has a name
-           that looks like one of our unique identifiers).
+           the temporary directory.
 
          - Next, we run 'diff', passing the repository paths as the
            labels.
 
-         - Finally, we delete the temporary files (but leave the
-           built-out directories in place until after all diff
-           handling has been finished).  */
+         - Finally, we delete the temporary files.  */
       if (node->action == 'R' && node->text_mod)
         {
           do_diff = TRUE;
@@ -1347,47 +1338,6 @@ do_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Create a new temporary directory with an 'svnlook' prefix. */
-static svn_error_t *
-create_unique_tmpdir(const char **name, apr_pool_t *pool)
-{
-  const char *unique_name;
-  const char *sys_tmp_dir;
-  const char *base;
-  unsigned int i;
-
-  SVN_ERR(svn_io_temp_dir(&sys_tmp_dir, pool));
-  base = svn_path_join(sys_tmp_dir, "svnlook", pool);
-
-  for (i = 1; i <= 99999; i++)
-    {
-      svn_error_t *err;
-
-      unique_name = apr_psprintf(pool, "%s.%u", base, i);
-      /* The directory has a predictable name so it is made writeable for
-         the owner only (without relying on the umask) to inhibit symlink
-         attacks on the filenames; the filenames are also, to a certain
-         extent, predictable. */
-      err = svn_io_dir_make(unique_name,
-                            APR_UREAD | APR_UWRITE | APR_UEXECUTE,
-                            pool);
-
-      if (!err)
-        {
-          *name = unique_name;
-          return SVN_NO_ERROR;
-        }
-
-      if (! APR_STATUS_IS_EEXIST(err->apr_err))
-        return err;
-
-      svn_error_clear(err);
-    }
-
-  *name = NULL;
-  return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
-                           NULL, _("Can't create temporary directory"));
-}
 
 /* Print some diff-y stuff in a TBD way. :-) */
 static svn_error_t *
@@ -1414,18 +1364,12 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       const char *tmpdir;
-      svn_error_t *err;
 
       SVN_ERR(svn_fs_revision_root(&base_root, c->fs, base_rev_id, pool));
-      SVN_ERR(create_unique_tmpdir(&tmpdir, pool));
-      err = print_diff_tree(root, base_root, tree, "", "",
-                            c, tmpdir, pool);
-      if (err)
-        {
-          svn_error_clear(svn_io_remove_dir(tmpdir, pool));
-          return err;
-        }
-      SVN_ERR(svn_io_remove_dir(tmpdir, pool));
+      SVN_ERR(svn_io_temp_dir(&tmpdir, pool));
+
+      SVN_ERR(print_diff_tree(root, base_root, tree, "", "",
+                              c, tmpdir, pool));
     }
   return SVN_NO_ERROR;
 }
