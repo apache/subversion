@@ -1299,6 +1299,7 @@ close_file(void *file_baton,
   const char *localfile;
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path;
+  svn_boolean_t modified;
   /* The working copy properties at the base of the wc->repos
      comparison: either BASE or WORKING. */
   apr_hash_t *originalprops;
@@ -1370,7 +1371,16 @@ close_file(void *file_baton,
                    b->edit_baton->callback_baton);
     }
 
-  if (b->temp_file) /* A props-only change will not have opened a file */
+  /* If we didn't see any content changes between the BASE and repository
+     versions (i.e. we only saw property changes), then, if we're diffing
+     against WORKING, we also need to check whether there are any local
+     (BASE:WORKING) modifications. */
+  modified = (b->temp_file_path != NULL);
+  if (!modified && !eb->use_text_base)
+    SVN_ERR(svn_wc_text_modified_p2(&modified, b->path, FALSE,
+                                    adm_access, TRUE, pool));
+
+  if (modified)
     {
       if (eb->use_text_base)
         localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
@@ -1381,8 +1391,6 @@ close_file(void *file_baton,
                  b->path, adm_access,
                  SVN_WC_TRANSLATE_TO_NF,
                  pool));
-
-      temp_file_path = b->temp_file_path;
     }
   else
     localfile = temp_file_path = NULL;
