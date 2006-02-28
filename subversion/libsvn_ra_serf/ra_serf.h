@@ -462,6 +462,15 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__get_file_revs(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_ra_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                const svn_delta_editor_t **editor,
                                void **edit_baton,

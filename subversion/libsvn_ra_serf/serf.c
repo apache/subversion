@@ -443,18 +443,6 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_file_revs(svn_ra_session_t *session,
-                           const char *path,
-                           svn_revnum_t start,
-                           svn_revnum_t end,
-                           svn_ra_file_rev_handler_t handler,
-                           void *handler_baton,
-                           apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
 svn_ra_serf__lock(svn_ra_session_t *session,
                   apr_hash_t *path_revs,
                   const char *comment,
