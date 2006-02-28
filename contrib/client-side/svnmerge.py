@@ -130,7 +130,7 @@ __revision__ = kwextract('$Rev$')
 __date__ = kwextract('$Date$')
 
 # Additional options, not (yet?) mapped to command line flags
-opts = {
+default_opts = {
     "svn": "svn",
     "prop": NAME + "-integrated",
     "block_prop": NAME + "-blocked",
@@ -1377,6 +1377,9 @@ command_table = {
 
 def main(args):
     global opts
+
+    # Initialize default options
+    opts = default_opts.copy()
 
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"
