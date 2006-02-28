@@ -345,6 +345,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   loc_ctx->path = req_url;
   loc_ctx->acceptor = accept_response;
   loc_ctx->handler = handle_getloc;
+  loc_ctx->session = session;
 
   serf_connection_request_create(session->conns[0], setup_getloc, loc_ctx);
 
