@@ -631,7 +631,7 @@ def analyze_revs(target_dir, url, begin=1, end=None):
     # the --verbose flag, the --quiet flag prevents the commit log
     # message from being printed.
     log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
-    if opts["bidirectional"]:
+    if opts.has_key("bidirectional") and opts["bidirectional"]:
         log_opts = "--verbose " + log_opts
     lines = launchsvn("log %s" % log_opts)
 
@@ -679,7 +679,7 @@ def analyze_revs(target_dir, url, begin=1, end=None):
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
     reflected_revs = []
 
-    if opts["bidirectional"]:
+    if opts.has_key("bidirectional") and opts["bidirectional"]:
         report("checking for reflected changes in %d revision(s)"
                % len(prop_changed_revs))
 
