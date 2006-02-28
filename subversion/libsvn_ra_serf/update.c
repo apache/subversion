@@ -692,11 +692,24 @@ handle_fetch(serf_bucket_t *response,
           return status;
         }
 
+      /* If we didn't read anything and we haven't read our headers yet,
+       * and we're not guaranteed to not get any more, skip so that we
+       * ensure we only get our headers when they are ready.
+       */
+      if (!len && fetch_ctx->read_headers == FALSE &&
+          !APR_STATUS_IS_EOF(status))
+        {
+          if (APR_STATUS_IS_EAGAIN(status))
+            {
+              return APR_SUCCESS;
+            }
+          continue;
+        }
+
       if (fetch_ctx->read_headers == FALSE)
         {
           serf_bucket_t *hdrs;
           const char *val;
-          fetch_ctx->read_headers = TRUE;
           report_info_t *info;
           svn_error_t *err;
 
@@ -747,14 +760,16 @@ handle_fetch(serf_bucket_t *response,
           if (val && strcasecmp(val, "application/vnd.svn-svndiff") == 0)
             {
               fetch_ctx->delta_stream =
-                  svn_txdelta_parse_svndiff(fetch_ctx->info->textdelta,
-                                            fetch_ctx->info->textdelta_baton,
+                  svn_txdelta_parse_svndiff(info->textdelta,
+                                            info->textdelta_baton,
                                             TRUE, info->editor_pool);
             }
           else
             {
               fetch_ctx->delta_stream = NULL;
             }
+
+          fetch_ctx->read_headers = TRUE;
         }
 
       fetch_ctx->read_size += len;
