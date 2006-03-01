@@ -214,19 +214,31 @@ svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
 }
 
 
-svn_error_t *
-svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
-                                const char *versioned_file,
-                                svn_wc_adm_access_t *adm_access,
-                                const char *base_file,
-                                svn_boolean_t compare_textbases,
-                                apr_pool_t *pool)
+/* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE
+ * differs from BASE_FILE, else to FALSE if not.  Also verify that
+ * BASE_FILE matches the entry checksum for VERSIONED_FILE, if
+ * verify_checksum is TRUE. If checksum does not match, return the error
+ * SVN_ERR_WC_CORRUPT_TEXT_BASE.
+ *
+ * ADM_ACCESS is an access baton for VERSIONED_FILE.  Use POOL for
+ * temporary allocation.
+ */
+static svn_error_t *
+compare_and_verify(svn_boolean_t *modified_p,
+                   const char *versioned_file,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *base_file,
+                   svn_boolean_t compare_textbases,
+                   svn_boolean_t verify_checksum,
+                   apr_pool_t *pool)
 {
   svn_boolean_t same;
   svn_subst_eol_style_t eol_style;
   const char *eol_str;
   apr_hash_t *keywords;
   svn_boolean_t special;
+  svn_boolean_t need_translation;
+
 
   SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, versioned_file,
                                 adm_access, pool));
@@ -235,26 +247,39 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
   SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
 
-  if (! svn_subst_translation_required(eol_style, eol_str, keywords,
-                                       special, TRUE))
+  need_translation = svn_subst_translation_required(eol_style, eol_str,
+                                                    keywords, special, TRUE);
+  if (verify_checksum || need_translation)
     {
-      /* Translation would be a no-op, so compare the original file. */
-      SVN_ERR(svn_io_files_contents_same_p(&same, base_file, versioned_file,
-                                            pool));
-
-    }
-  else  /* some translation is necessary */
-    {
+      /* Reading files is necessary. */
+      unsigned char *digest;
       /* "v_" means versioned_file, "b_" means base_file. */
       apr_file_t *v_file_h, *b_file_h;
       svn_stream_t *v_stream, *b_stream;
+      const svn_wc_entry_t *entry;
       
       SVN_ERR(svn_io_file_open(&b_file_h, base_file, APR_READ,
                               APR_OS_DEFAULT, pool));
 
       b_stream = svn_stream_from_aprfile2(b_file_h, FALSE, pool);
 
-      if (compare_textbases)
+      if (verify_checksum)
+        {
+          /* Need checksum verification, so read checksum from entries file
+           * and setup checksummed stream for base file. */
+          SVN_ERR(svn_wc_entry(&entry, versioned_file, adm_access, TRUE,
+                               pool));
+          if (! entry)
+            return svn_error_createf
+              (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                _("'%s' is not under version control"),
+                svn_path_local_style(versioned_file, pool));
+
+          if (entry->checksum)
+            b_stream = svn_stream_checksummed(b_stream, &digest, NULL, pool);
+        }
+
+      if (compare_textbases && need_translation)
         {
           /* Create stream for detranslate versioned file to normal form. */
           SVN_ERR(svn_subst_stream_detranslated(&v_stream,
@@ -266,154 +291,67 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
         }
       else
         {
-          /* Translate text-base to working copy form. */
           SVN_ERR(svn_io_file_open(&v_file_h, versioned_file, APR_READ,
                               APR_OS_DEFAULT, pool));
           v_stream = svn_stream_from_aprfile2(v_file_h, FALSE, pool);
-          
-          b_stream = svn_subst_stream_translated(b_stream, eol_str, FALSE,
-                                                keywords, TRUE, pool);
+
+          if (need_translation)
+            {
+              /* Translate text-base to working copy form. */
+              b_stream = svn_subst_stream_translated(b_stream, eol_str,
+                                                     FALSE, keywords, TRUE,
+                                                     pool);
+            }
         }
 
-      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream, pool));
+      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream,
+                                       verify_checksum && entry->checksum,
+                                       pool));
       
       SVN_ERR(svn_stream_close(v_stream));
       SVN_ERR(svn_stream_close(b_stream));
+
+      if (verify_checksum && entry->checksum)
+        {
+          const char *checksum;
+          checksum = svn_md5_digest_to_cstring_display(digest, pool);
+          if (strcmp(checksum, entry->checksum) != 0)
+            {
+              return svn_error_createf
+                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                  _("Checksum mismatch indicates corrupt text base: '%s'\n"
+                    "   expected:  %s\n"
+                    "     actual:  %s\n"),
+                  svn_path_local_style(base_file, pool),
+                  entry->checksum,
+                  checksum);
+            }
+        }
+    }
+  else
+    {
+      /* Translation would be a no-op, so compare the original file. */
+      SVN_ERR(svn_io_files_contents_same_p(&same, base_file, versioned_file,
+                                           pool));
     }
 
+
+
   *modified_p = (! same);
-
   return SVN_NO_ERROR;
 }
 
-
-/* Set *MODIFIED_P to true if (after translation) VERSIONED_FILE
- * differs from BASE_FILE, else to false if not.  Also, verify that
- * BASE_FILE matches the entry checksum for VERSIONED_FILE; if it
- * does not match, return the error SVN_ERR_WC_CORRUPT_TEXT_BASE.
- *
- * ADM_ACCESS is an access baton for VERSIONED_FILE.  Use POOL for
- * temporary allocation.
- */
-static svn_error_t *
-compare_and_verify(svn_boolean_t *modified_p,
-                   const char *versioned_file,
-                   svn_wc_adm_access_t *adm_access,
-                   const char *base_file,
-                   svn_boolean_t compare_textbases,
-                   apr_pool_t *pool)
-
+svn_error_t *
+svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
+                                const char *versioned_file,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *base_file,
+                                svn_boolean_t compare_textbases,
+                                apr_pool_t *pool)
 {
-  const char *tmp_vfile;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc_entry(&entry, versioned_file, adm_access, TRUE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(versioned_file, pool));
-
-  if (compare_textbases)
-    SVN_ERR(svn_wc_translated_file2
-            (&tmp_vfile, versioned_file,
-             versioned_file, adm_access,
-             SVN_WC_TRANSLATE_TO_NF,
-             pool));
-  else
-    SVN_ERR(svn_wc_translated_file2
-            (&tmp_vfile, base_file,
-             versioned_file, adm_access,
-             SVN_WC_TRANSLATE_FROM_NF,
-             pool));
-
-
-  /* Compare the files, while maybe calculating the base file's checksum. */
-  {
-    /* "v_" means versioned_file, "b_" means base_file. */
-    svn_error_t *v_err = SVN_NO_ERROR;
-    svn_error_t *b_err = SVN_NO_ERROR;
-    apr_size_t v_file_bytes_read, b_file_bytes_read;
-    char v_buf[BUFSIZ], b_buf[BUFSIZ];
-    apr_file_t *v_file_h = NULL;
-    apr_file_t *b_file_h = NULL;
-    apr_pool_t *loop_pool;
-
-    int identical = TRUE;
-    unsigned char digest[APR_MD5_DIGESTSIZE];
-    apr_md5_ctx_t context;
-
-    SVN_ERR(svn_io_file_open(&v_file_h, tmp_vfile,
-                             APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR(svn_io_file_open(&b_file_h,
-                             compare_textbases ? base_file : versioned_file,
-                             APR_READ, APR_OS_DEFAULT, pool));
-    if (entry->checksum)
-      apr_md5_init(&context);
-
-    loop_pool = svn_pool_create(pool);
-    do
-      {
-        svn_pool_clear(loop_pool);
-
-        /* The only way v_err can be true here is if we hit EOF. */
-        if (! v_err)
-          {
-            v_err = svn_io_file_read_full(v_file_h, v_buf, sizeof(v_buf),
-                                          &v_file_bytes_read, loop_pool);
-            if (v_err && !APR_STATUS_IS_EOF(v_err->apr_err))
-              return v_err;
-          }
-        
-        b_err = svn_io_file_read_full(b_file_h, b_buf, sizeof(b_buf),
-                                      &b_file_bytes_read, loop_pool);
-        if (b_err && !APR_STATUS_IS_EOF(b_err->apr_err))
-          return b_err;
-        
-        if (entry->checksum)
-          apr_md5_update(&context, b_buf, b_file_bytes_read);
-
-        if ((v_err && (! b_err))
-            || (v_file_bytes_read != b_file_bytes_read)
-            || (memcmp(v_buf, b_buf, v_file_bytes_read)))
-          {
-            identical = FALSE;
-          }
-      } while (! b_err);
-    
-    svn_pool_destroy(loop_pool);
-
-    /* Clear any errors, but don't set the error variables to null, as
-       we still depend on them for conditionals. */
-    svn_error_clear(v_err);
-    svn_error_clear(b_err);
-    
-    SVN_ERR(svn_io_file_close(v_file_h, pool));
-    SVN_ERR(svn_io_file_close(b_file_h, pool));
-
-    if (entry->checksum)
-      {
-        const char *checksum;
-        apr_md5_final(digest, &context);
-        checksum = svn_md5_digest_to_cstring_display(digest, pool);
-        if (strcmp(checksum, entry->checksum) != 0)
-          {
-            return svn_error_createf
-              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-               _("Checksum mismatch indicates corrupt text base: '%s'\n"
-                 "   expected:  %s\n"
-                 "     actual:  %s\n"),
-               svn_path_local_style(base_file, pool),
-               entry->checksum,
-               checksum);
-          }
-      }
-
-    *modified_p = ! identical;
-  }
-
-  return SVN_NO_ERROR;
+  return compare_and_verify(modified_p, versioned_file, adm_access,
+                            base_file, compare_textbases, FALSE, pool);
 }
-
 
 svn_error_t *
 svn_wc_text_modified_p2(svn_boolean_t *modified_p,
@@ -478,24 +416,14 @@ svn_wc_text_modified_p2(svn_boolean_t *modified_p,
     }
 
 
-  if (force_comparison)  /* Check all bytes, and verify checksum. */
-    {
-      SVN_ERR(compare_and_verify(modified_p,
-                                 filename,
-                                 adm_access,
-                                 textbase_filename,
-                                 compare_textbases,
-                                 subpool));
-    }
-  else  /* Else, fall back on the standard mod detector. */
-    {
-      SVN_ERR(svn_wc__versioned_file_modcheck(modified_p,
-                                              filename,
-                                              adm_access,
-                                              textbase_filename,
-                                              compare_textbases,
-                                              subpool));
-    }
+  /* Check all bytes, and verify checksum if requested. */
+  SVN_ERR(compare_and_verify(modified_p,
+                             filename,
+                             adm_access,
+                             textbase_filename,
+                             compare_textbases,
+                             force_comparison,
+                             subpool));
 
   /* It is quite legitimate for modifications to the working copy to
      produce a timestamp variation with no text variation. If it turns out
