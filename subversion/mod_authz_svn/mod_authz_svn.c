@@ -78,8 +78,11 @@ static const command_rec authz_svn_cmds[] =
     AP_INIT_FLAG("AuthzSVNAnonymous", ap_set_flag_slot,
                  (void *)APR_OFFSETOF(authz_svn_config_rec, anonymous),
                  OR_AUTHCFG,
-                 "Set to 'Off' to skip access control when no authenticated "
-                 "user is required. (default is On.)"),
+                 "Set to 'Off' to disable two special-case behaviours of "
+                 "this module: (1) interaction with the 'Satisfy Any' "
+                 "directive, and (2) enforcement of the authorization "
+                 "policy even when no 'Require' directives are present. "
+                 "(default is On.)"),
     { NULL }
 };
 
