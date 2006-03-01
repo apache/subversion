@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005 CollabNet.  All rights reserved.
+# Copyright (c) 2005-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1429,6 +1429,50 @@ def info_moved_path(sbox):
     print "Info didn't output an URL."
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+def ls_url_encoded(sbox):
+  "ls locked path needing URL encoding"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  dirname = os.path.join(wc_dir, "space dir")
+  fname = os.path.join(dirname, "f")
+
+  # Create a dir with a space in its name and a file therein.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "mkdir", dirname)
+  svntest.main.file_append(fname, "someone was here")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", fname)
+  expected_output = svntest.wc.State(wc_dir, {
+    'space dir' : Item(verb='Adding'),
+    'space dir/f' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    "space dir" : Item(status='  ', wc_rev=2),
+    "space dir/f" : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Lock the file.
+  svntest.actions.run_and_verify_svn("Lock space dir/f", None, [],
+                                     "lock", fname,
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd)
+
+  # Make sure ls shows it being locked.
+  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f"
+  svntest.actions.run_and_verify_svn("List space dir",
+                                     expected_output, [],
+                                     "list", "-v", dirname)  
+
 ########################################################################
 # Run the tests
 
@@ -1464,6 +1508,7 @@ test_list = [ None,
               repos_lock_with_info,
               unlock_already_unlocked_files,
               info_moved_path,
+              ls_url_encoded,
             ]
 
 if __name__ == '__main__':
