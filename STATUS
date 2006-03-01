@@ -128,6 +128,16 @@ Candidate changes:
     Votes:
       +1: rooneg, lundblad
 
+  * r18660
+    Be more thorough about checking for canonical paths.
+    Justification:
+      Small change, all current clients already canonicalize everything,
+      paranoia about client provided input is a good thing.
+    Votes:
+      +1: rooneg
+
+Approved changes:
+
   * r18539, r18541
     Fix crash with diff and non-recursive checkout.
     Justification:
@@ -135,8 +145,6 @@ Candidate changes:
     Branch: 1.3.x-r18539
     Votes:
       +1: rooneg, lundblad, dlr
-
-Approved changes:
 
   * r18254
     Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
