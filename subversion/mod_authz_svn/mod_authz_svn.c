@@ -356,6 +356,45 @@ static int req_check_access(request_rec *r,
     return OK;
 }
 
+/* Log a message indicating the access control decision made about a
+ * request.  FILE and LINE should be supplied via the APLOG_MARK macro.
+ * ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
+ * about the request.  DEST_REPOS_PATH may be NULL. */
+static void log_access_verdict(const char *file, int line,
+                               const request_rec *r,
+                               int allowed,
+                               const char *repos_path,
+                               const char *dest_repos_path)
+{
+  int level = allowed ? APLOG_INFO : APLOG_ERR;
+  const char *verdict = allowed ? "granted" : "denied";
+
+  if (r->user) {
+      if (dest_repos_path) {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: '%s' %s %s %s", verdict, r->user,
+                        r->method, repos_path, dest_repos_path);
+      }
+      else {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: '%s' %s %s", verdict, r->user,
+                        r->method, repos_path);
+      }
+  }
+  else {
+      if (dest_repos_path) {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: - %s %s %s", verdict,
+                        r->method, repos_path, dest_repos_path);
+      }
+      else {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: - %s %s", verdict,
+                        r->method, repos_path);
+      }
+  }
+}
+
 /*
  * Hooks
  */
@@ -400,17 +439,7 @@ static int access_checker(request_rec *r)
             return DECLINED;
 
         if (!ap_some_auth_required(r)) {
-            if (dest_repos_path) {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: - %s %s %s",
-                    r->method, repos_path, dest_repos_path);
-            }
-            else {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: - %s %s",
-                    r->method, repos_path);
-            }
-
+            log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
         }
 
         return HTTP_FORBIDDEN;
@@ -419,16 +448,7 @@ static int access_checker(request_rec *r)
     if (status != OK)
         return status;
 
-    if (dest_repos_path) {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: - %s %s %s",
-            r->method, repos_path, dest_repos_path);
-    }
-    else {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: - %s %s",
-            r->method, repos_path);
-    }
+    log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
 
     return OK;
 }
@@ -448,16 +468,7 @@ static int auth_checker(request_rec *r)
     status = req_check_access(r, conf, &repos_path, &dest_repos_path);
     if (status == DECLINED) {
         if (conf->authoritative) {
-            if (dest_repos_path) {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: '%s' %s %s %s",
-                    r->user, r->method, repos_path, dest_repos_path);
-            }
-            else {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: '%s' %s %s",
-                    r->user, r->method, repos_path);
-            }
+            log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
             ap_note_auth_failure(r);
             return HTTP_FORBIDDEN;
         }
@@ -468,16 +479,7 @@ static int auth_checker(request_rec *r)
     if (status != OK)
         return status;
 
-    if (dest_repos_path) {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: '%s' %s %s %s",
-            r->user, r->method, repos_path, dest_repos_path);
-    }
-    else {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: '%s' %s %s",
-            r->user, r->method, repos_path);
-    }
+    log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
 
     return OK;
 }
