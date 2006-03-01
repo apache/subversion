@@ -21,6 +21,7 @@ Candidate changes:
       with older versions of Python.
     Votes:
       +1: blair
+      -0: dlr (needs some incarnation of r18649 trunk, and could use r18651)
 
   * r18549:
     Prevent svn_load_dirs.pl from trying to import .svn or _svn
