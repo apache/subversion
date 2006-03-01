@@ -232,6 +232,7 @@ svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,
                          svn_stream_t *stream2,
+                         svn_boolean_t read_all,
                          apr_pool_t *pool)
 {
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
@@ -252,6 +253,15 @@ svn_stream_contents_same(svn_boolean_t *same,
           *same = FALSE;
           break;
         }
+    }
+
+  if (read_all)
+    {
+      while (bytes_read1 == SVN__STREAM_CHUNK_SIZE)
+        SVN_ERR(svn_stream_read(stream1, buf1, &bytes_read1));
+
+      while (bytes_read2 == SVN__STREAM_CHUNK_SIZE)
+        SVN_ERR(svn_stream_read(stream2, buf2, &bytes_read2));
     }
 
   return SVN_NO_ERROR;
