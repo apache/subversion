@@ -763,7 +763,7 @@ svn_error_t *svn_io_get_dirents2(apr_hash_t **dirents,
                                  const char *path,
                                  apr_pool_t *pool);
 
-/** similar to svn_io_get_dirents2(), but *DIRENTS is a hash table
+/** Similar to svn_io_get_dirents2(), but @a *dirents is a hash table
  * with @c svn_node_kind_t values.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.

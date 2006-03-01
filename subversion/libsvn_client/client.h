@@ -673,7 +673,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
 /* Retrieves log message using *CTX->log_msg_func or
  * *CTX->log_msg_func2 callbacks.
- * Other argements same as svn_client_get_commit_log2_t */
+ * Other arguments same as svn_client_get_commit_log2_t. */
 svn_error_t * svn_client__get_log_msg(const char **log_msg,
                                       const char **tmp_file,
                                       const apr_array_header_t *commit_items,

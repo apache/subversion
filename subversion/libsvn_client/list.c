@@ -263,7 +263,7 @@ struct ls_baton {
   apr_pool_t *pool;
 };
 
-/* This implements svn_client_list_funct_t. */
+/* This implements svn_client_list_func_t. */
 static svn_error_t *
 store_dirent(void *baton, const char *path, const svn_dirent_t *dirent,
              const svn_lock_t *lock, const char *abs_path, apr_pool_t *pool)

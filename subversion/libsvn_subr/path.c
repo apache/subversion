@@ -1030,11 +1030,6 @@ svn_path_get_absolute(const char **pabsolute,
                       const char *relative,
                       apr_pool_t *pool)
 {
-  /* We call svn_path_canonicalize() on the input data, rather
-     than the output, so that `buffer' can be returned directly
-     without const vs non-const issues. */
-  /* ### This comment seems totally wrong, what? --xbc */
-
   char *buffer;
   apr_status_t apr_err;
   const char *path_apr;

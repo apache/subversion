@@ -167,7 +167,7 @@ skel represents a file, and has the form:
     (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY])
 
 where DATA-KEY identifies the representation for the file's current
-contents, and EDIT-DATA-KEY identifies the a representation currently
+contents, and EDIT-DATA-KEY identifies the representation currently
 available for receiving new contents for the file.
 
 See discussion of representations later.

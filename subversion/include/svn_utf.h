@@ -117,7 +117,7 @@ svn_error_t *svn_utf_cstring_from_utf8(const char **dest,
                                        apr_pool_t *pool);
 
 
-/** Set @a *dest to a @a frompage encoded C string from utf8 C string
+/** Set @a *dest to a @a topage encoded C string from utf8 C string
  * @a src; allocate @a *dest in @a pool.  Use @a convset_key as the
  * cache key for the charset converter; if it's NULL, don't cache the
  * converter.

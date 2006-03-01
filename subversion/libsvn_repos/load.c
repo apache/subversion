@@ -418,11 +418,11 @@ parse_text_block(svn_stream_t *stream,
 
 
 
+/* Parse VERSIONSTRING and verify that we support the dumpfile format
+   version number, setting *VERSION appropriately. */
 static svn_error_t *
 parse_format_version(const char *versionstring, int *version)
 {
-  /* parse string and verify that we support the dumpfile format
-     version number, setting *version appropriately. */
   static const int magic_len = sizeof(SVN_REPOS_DUMPFILE_MAGIC_HEADER) - 1;
   const char *p = strchr(versionstring, ':');
   int value;
