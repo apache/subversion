@@ -392,6 +392,49 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("block", error=True, match="no integration")
         self.svnmerge("unblock", error=True, match="no integration")
 
+    def testBlocked(self):
+
+        # Initialize svnmerge
+        self.svnmerge("init")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        # Block revisions that have already been merged
+        self.svnmerge("block -r5", error=True, match="no available revisions")
+
+        # Block phantom revisions
+        self.svnmerge("block -r8", error=True, match="no available revisions")
+
+        # Block available revisions
+        self.svnmerge("block -r9", match="'svnmerge-blocked' set")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        # Check that the revision was blocked correctly
+        out = self.svnmerge("avail")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "10")
+
+        # Block all remaining revisions
+        self.svnmerge("block", match="'svnmerge-blocked' set")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        # Check that all revisions were blocked correctly
+        out = self.svnmerge("avail")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "")
+
+        # Unblock all revisions
+        self.svnmerge("unblock", match="'svnmerge-blocked' deleted")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        # Check that all revisions are available
+        out = self.svnmerge("avail")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "9-10")
+
     def testBasic(self):
         self.svnmerge("init")
         p = self.getproperty()

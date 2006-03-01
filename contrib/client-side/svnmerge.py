@@ -130,7 +130,7 @@ __revision__ = kwextract('$Rev$')
 __date__ = kwextract('$Date$')
 
 # Additional options, not (yet?) mapped to command line flags
-opts = {
+default_opts = {
     "svn": "svn",
     "prop": NAME + "-integrated",
     "block_prop": NAME + "-blocked",
@@ -631,7 +631,7 @@ def analyze_revs(target_dir, url, begin=1, end=None):
     # the --verbose flag, the --quiet flag prevents the commit log
     # message from being printed.
     log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
-    if opts["bidirectional"]:
+    if opts.has_key("bidirectional") and opts["bidirectional"]:
         log_opts = "--verbose " + log_opts
     lines = launchsvn("log %s" % log_opts)
 
@@ -679,7 +679,7 @@ def analyze_revs(target_dir, url, begin=1, end=None):
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
     reflected_revs = []
 
-    if opts["bidirectional"]:
+    if opts.has_key("bidirectional") and opts["bidirectional"]:
         report("checking for reflected changes in %d revision(s)"
                % len(prop_changed_revs))
 
@@ -863,7 +863,7 @@ def action_merge(branch_dir, branch_props):
             report('skipping blocked revisions(s): %s' % (blocked_revs & revs))
 
     # Compute final merge set.
-    revs = revs - merged_revs - blocked_revs - reflected_revs
+    revs = revs - merged_revs - blocked_revs - reflected_revs - phantom_revs
     if not revs:
         report('no revisions to merge, exiting')
         return
@@ -880,7 +880,8 @@ def action_merge(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit_file"]:
         f = open(opts["commit_file"], "w")
-        print >>f, 'Merged revisions %s via %s from ' % (revs, NAME)
+        print >>f, 'Merged revisions %s via %s from ' % \
+                    (revs | phantom_revs, NAME)
         print >>f, '%s' % opts["head_url"]
         if opts["commit_verbose"]:
             print >>f
@@ -1377,6 +1378,9 @@ command_table = {
 
 def main(args):
     global opts
+
+    # Initialize default options
+    opts = default_opts.copy()
 
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"
