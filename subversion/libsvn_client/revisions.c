@@ -2,7 +2,7 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -94,6 +94,10 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         *revnum = ent->revision;
       else
         {
+          if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
+            return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                     _("Path '%s' has no committed revision"),
+                                     path);
           *revnum = ent->cmt_rev;
           if (revision->kind == svn_opt_revision_previous)
             (*revnum)--;
