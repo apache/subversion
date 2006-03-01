@@ -39,6 +39,9 @@ conn_setup(apr_socket_t *sock,
     {
       bucket = serf_bucket_ssl_decrypt_create(bucket, sess->ssl_context,
                                               sess->bkt_alloc);
+      if (!sess->ssl_context) {
+          sess->ssl_context = serf_bucket_ssl_decrypt_context_get(bucket);
+      }
     }
 
   return bucket;
@@ -107,6 +110,18 @@ setup_serf_req(serf_request_t *request,
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
+
+  /* Set up SSL if we need to */
+  if (session->using_ssl)
+    {
+      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt, session->ssl_context,
+                                            serf_request_get_alloc(request));
+      if (!session->ssl_context)
+        {
+          session->ssl_context = serf_bucket_ssl_encrypt_context_get(*req_bkt);
+        }
+    }
+
   if (ret_hdrs_bkt)
     {
       *ret_hdrs_bkt = hdrs_bkt;
