@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1695,6 +1695,25 @@ def ls_nonhead(sbox):
                                      'ls', '--verbose', rho_url + '@1')
   
 
+#----------------------------------------------------------------------
+# Issue #2315.
+def cat_added_PREV(sbox):
+  "cat added file using -rPREV"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  f_path = os.path.join(wc_dir, 'f')
+
+  # Create and add a file.
+  svntest.main.file_append (f_path, 'new text')
+  svntest.actions.run_and_verify_svn("adding file",
+                                     None, [], 'add', f_path)
+  
+  # Cat'ing the previous version should fail.
+  svntest.actions.run_and_verify_svn("cat PREV version of file",
+                                     None, ".*has no committed revision.*",
+                                     'cat', '-rPREV', f_path)
+
 ########################################################################
 # Run the tests
 
@@ -1729,7 +1748,8 @@ test_list = [ None,
               repos_root,
               basic_peg_revision,
               info_nonhead,
-              ls_nonhead
+              ls_nonhead,
+              cat_added_PREV,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
