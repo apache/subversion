@@ -292,6 +292,18 @@ setup_propfind(serf_request_t *request,
                                          ctx->find_props,
                                          serf_request_get_alloc(request));
 
+  if (ctx->sess->using_ssl)
+    {
+      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt,
+                                            ctx->sess->ssl_context,
+                                            serf_request_get_alloc(request));
+      if (!ctx->sess->ssl_context)
+        {
+          ctx->sess->ssl_context =
+              serf_bucket_ssl_encrypt_context_get(*req_bkt);
+        }
+    }
+
   *acceptor = ctx->acceptor;
   *acceptor_baton = ctx->sess;
   *handler = ctx->handler;
