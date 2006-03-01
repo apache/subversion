@@ -605,7 +605,7 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
  * (revision or transaction).
  *
  * Changes will be limited to those within @a base_dir, and if 
- * @a low_water_mark is set to something other than @c SVN_INVALID_REVISION
+ * @a low_water_mark is set to something other than @c SVN_INVALID_REVNUM
  * it is assumed that the client has no knowledge of revisions prior to
  * @a low_water_mark.  Together, these two arguments define the portion of
  * the tree that the client is assumed to have knowledge of, and thus any

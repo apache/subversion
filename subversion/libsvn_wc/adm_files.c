@@ -859,7 +859,7 @@ svn_wc__sync_props(const char *path,
 
 /*** Checking for and creating administrative subdirs. ***/
 
-/* Set *EXISTS to iff there's an adm area for PATH, and it matches URL
+/* Set *EXISTS to true iff there's an adm area for PATH, and it matches URL
  * and REVISION.  If there's no adm area, set *EXISTS to false; if
  * there's an adm area but it doesn't match URL and REVISION, then
  * return error and don't touch *EXISTS.

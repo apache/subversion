@@ -485,7 +485,7 @@ dump_node(struct edit_baton *eb,
     }
 
   /* If we are supposed to dump text, write out a text length header
-     here, and a MD5 checksum (if available). */
+     here, and an MD5 checksum (if available). */
   if (must_dump_text && (kind == svn_node_file))
     {
       unsigned char md5_digest[APR_MD5_DIGESTSIZE];
