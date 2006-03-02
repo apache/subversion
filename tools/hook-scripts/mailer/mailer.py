@@ -1136,12 +1136,13 @@ class Config:
 
     # compute the default repository-based parameters. start with some
     # basic parameters, then bring in the regex-based params.
-    default_params = self._global_params.copy()
+    self._default_params = self._global_params
 
     try:
       match = re.match(self.defaults.for_repos, repos_dir)
       if match:
-        default_params.update(match.groupdict())
+        self._default_params = self._default_params.copy()
+        self._default_params.update(match.groupdict())
     except AttributeError:
       # there is no self.defaults.for_repos
       pass
@@ -1149,7 +1150,7 @@ class Config:
     # select the groups that apply to this repository
     for group in self._groups:
       sub = getattr(self, group)
-      params = default_params
+      params = self._default_params
       if hasattr(sub, 'for_repos'):
         match = re.match(sub.for_repos, repos_dir)
         if not match:
@@ -1174,7 +1175,7 @@ class Config:
       self._group_re.append((None,
                              re.compile(self.defaults.for_paths),
                              None,
-                             default_params))
+                             self._default_params))
     except AttributeError:
       # there is no self.defaults.for_paths
       pass
@@ -1191,7 +1192,7 @@ class Config:
         params.update(match.groupdict())
         groups.append((group, params))
     if not groups:
-      groups.append((None, self._global_params))
+      groups.append((None, self._default_params))
     return groups
 
 
