@@ -145,15 +145,16 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-Approved changes:
-
-  * r18539, r18541
+  * r17231, r18539, r18541
     Fix crash with diff and non-recursive checkout.
     Justification:
-      Crash bad.
+      Crash bad.  r17231 is needed so the new tests pass.
     Branch: 1.3.x-r18539
     Votes:
-      +1: rooneg, lundblad, dlr
+      +1: rooneg
+      +1: lundblad, dlr (not r17231)
+
+Approved changes:
 
   * r18254
     Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
