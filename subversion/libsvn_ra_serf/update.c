@@ -176,7 +176,7 @@ typedef struct report_fetch_t {
   ra_serf_session_t *sess;
 
   /* The connection we should use to fetch file. */
-  serf_connection_t *conn;
+  ra_serf_connection_t *conn;
 
   /* Stores the information for the file we want to fetch. */
   report_info_t *info;
@@ -236,6 +236,7 @@ typedef struct {
   apr_pool_t *pool;
 
   ra_serf_session_t *sess;
+  ra_serf_connection_t *conn;
 
   /* What is the target revision that we want for this REPORT? */
   const char *target;
@@ -612,7 +613,7 @@ setup_fetch(serf_request_t *request,
 
   /* create GET request */
   setup_serf_req(request, req_bkt, &hdrs_bkt,
-                 fetch_ctx->sess, "GET", fetch_ctx->info->url,
+                 fetch_ctx->conn, "GET", fetch_ctx->info->url,
                  NULL, NULL);
 
   /* note that we have old VC URL */
@@ -664,7 +665,7 @@ handle_fetch(serf_bucket_t *response,
           fetch_ctx->read_size = 0;
         }
 
-      serf_connection_request_create(fetch_ctx->conn, setup_fetch,
+      serf_connection_request_create(fetch_ctx->conn->conn, setup_fetch,
                                      fetch_ctx);
 
       return APR_SUCCESS;
@@ -869,7 +870,7 @@ handle_fetch(serf_bucket_t *response,
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
   const char *checked_in_url, *checksum;
-  serf_connection_t *conn;
+  ra_serf_connection_t *conn;
   serf_request_t *request;
   serf_bucket_t *req_bkt, *hdrs_bkt;
   report_fetch_t *fetch_ctx;
@@ -912,7 +913,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   fetch_ctx->acceptor = accept_response;
   fetch_ctx->handler = handle_fetch;
 
-  serf_connection_request_create(conn, setup_fetch,
+  serf_connection_request_create(conn->conn, setup_fetch,
                                  fetch_ctx);
 
   ctx->active_fetches++;
@@ -1362,7 +1363,7 @@ setup_report(serf_request_t *request,
 
   /* create REPORT request */
   setup_serf_req(request, req_bkt, NULL,
-                 ctx->sess, "REPORT", ctx->path,
+                 ctx->conn, "REPORT", ctx->path,
                  ctx->buckets, "text/xml");
 
   *acceptor = ctx->acceptor;
@@ -1509,6 +1510,7 @@ finish_report(void *report_baton,
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
+  int i;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
                                       sizeof("</S:update-report>")-1,
@@ -1534,26 +1536,23 @@ finish_report(void *report_baton,
   report->acceptor = accept_response;
   report->handler = handle_report;
 
-  serf_connection_request_create(sess->conns[0], setup_report, report);
+  serf_connection_request_create(sess->conns[0]->conn, setup_report, report);
 
-  sess->conns[1] = serf_connection_create(sess->context,
-                                         sess->address,
-                                         conn_setup, sess,
-                                         conn_closed, sess,
-                                         sess->pool);
-  sess->num_conns++;
-  sess->conns[2] = serf_connection_create(sess->context,
-                                         sess->address,
-                                         conn_setup, sess,
-                                         conn_closed, sess,
-                                         sess->pool);
-  sess->num_conns++;
-  sess->conns[3] = serf_connection_create(sess->context,
-                                         sess->address,
-                                         conn_setup, sess,
-                                         conn_closed, sess,
-                                         sess->pool);
-  sess->num_conns++;
+  for (i = 1; i < 4; i++) {
+      sess->conns[i] = apr_palloc(pool, sizeof(*sess->conns[i]));
+      sess->conns[i]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
+                                                               NULL, NULL);
+      sess->conns[i]->address = sess->conns[0]->address;
+      sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
+      sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
+      sess->conns[i]->ssl_context = NULL;
+      sess->conns[i]->conn = serf_connection_create(sess->context,
+                                                    sess->conns[i]->address,
+                                                    conn_setup, sess->conns[i],
+                                                    conn_closed, sess->conns[i],
+                                                    sess->pool);
+      sess->num_conns++;
+  }
 
   sess->cur_conn = 1;
 
@@ -1681,6 +1680,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   report = apr_pcalloc(pool, sizeof(*report));
   report->pool = pool;
   report->sess = ra_session->priv;
+  report->conn = report->sess->conns[0];
   report->target = update_target;
   report->target_rev = revision_to_update_to;
   report->recurse = recurse;

@@ -42,6 +42,7 @@
 typedef struct {
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *activity_url;
   apr_size_t activity_url_len;
@@ -61,6 +62,7 @@ typedef struct {
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *activity_url;
   apr_size_t activity_url_len;
@@ -84,6 +86,7 @@ typedef struct {
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *path;
 
@@ -102,6 +105,7 @@ typedef struct {
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *log_msg;
 
@@ -185,6 +189,9 @@ typedef struct {
   /* Our resulting checksum as reported by the WC. */
   const char *result_checksum;
 
+  /* Connection to do the PUT with */
+  ra_serf_connection_t *conn;
+
   /* URL to PUT the file at. */
   const char *put_url;
 
@@ -215,7 +222,7 @@ setup_mkactivity(serf_request_t *request,
 {
   mkactivity_context_t *ctx = setup_baton;
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "MKACTIVITY", ctx->activity_url, NULL, NULL);
 
   *acceptor = ctx->acceptor;
@@ -273,7 +280,7 @@ setup_checkout(serf_request_t *request,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "CHECKOUT", ctx->checkout_url, body_bkt, "text/xml");
 
   *acceptor = ctx->acceptor;
@@ -335,6 +342,7 @@ checkout_dir(dir_context_t *dir)
 
   checkout_ctx->pool = dir->pool;
   checkout_ctx->session = dir->commit->session;
+  checkout_ctx->conn = dir->commit->conn;
 
   checkout_ctx->acceptor = accept_response;
   checkout_ctx->acceptor_baton = dir->commit->session;
@@ -356,7 +364,7 @@ checkout_dir(dir_context_t *dir)
       dir->checkout = checkout_ctx;
     }
 
-  serf_connection_request_create(dir->commit->session->conns[0],
+  serf_connection_request_create(checkout_ctx->conn->conn,
                                  setup_checkout, checkout_ctx);
 
   SVN_ERR(context_run_wait(&checkout_ctx->done, dir->commit->session,
@@ -398,7 +406,7 @@ setup_put(serf_request_t *request,
 
   body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
 
-  setup_serf_req(request, req_bkt, &hdrs_bkt, ctx->commit->session,
+  setup_serf_req(request, req_bkt, &hdrs_bkt, ctx->conn,
                  "PUT", ctx->put_url, body_bkt,
                  "application/vnd.svn-svndiff");
 
@@ -444,7 +452,7 @@ setup_delete(serf_request_t *request,
 {
   simple_request_context_t *ctx = setup_baton;
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "DELETE", ctx->path, NULL, NULL);
 
   *acceptor = ctx->acceptor;
@@ -477,7 +485,7 @@ setup_head(serf_request_t *request,
 {
   simple_request_context_t *ctx = setup_baton;
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "HEAD", ctx->path, NULL, NULL);
 
   *acceptor = ctx->acceptor;
@@ -573,6 +581,7 @@ open_root(void *edit_baton,
   /* Create our activity URL now on the server. */
   mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
   mkact_ctx->session = ctx->session;
+  mkact_ctx->conn = ctx->conn;
 
   mkact_ctx->acceptor = accept_response;
   mkact_ctx->acceptor_baton = ctx->session;
@@ -580,7 +589,7 @@ open_root(void *edit_baton,
   mkact_ctx->activity_url = ctx->activity_url;
   mkact_ctx->activity_url_len = ctx->activity_url_len;
 
-  serf_connection_request_create(ctx->session->conns[0],
+  serf_connection_request_create(mkact_ctx->conn->conn,
                                  setup_mkactivity, mkact_ctx);
 
   SVN_ERR(context_run_wait(&mkact_ctx->done, ctx->session, ctx->pool));
@@ -666,6 +675,7 @@ delete_entry(const char *path,
 
   delete_ctx->pool = pool;
   delete_ctx->session = dir->commit->session;
+  delete_ctx->conn = dir->commit->conn;
 
   delete_ctx->acceptor = accept_response;
   delete_ctx->acceptor_baton = dir->commit->session;
@@ -674,7 +684,7 @@ delete_entry(const char *path,
       svn_path_url_add_component(dir->checkout->resource_url,
                                  path, delete_ctx->pool);
 
-  serf_connection_request_create(dir->commit->session->conns[0],
+  serf_connection_request_create(delete_ctx->conn->conn,
                                  setup_delete, delete_ctx);
 
   SVN_ERR(context_run_wait(&delete_ctx->done, dir->commit->session, pool));
@@ -801,6 +811,7 @@ add_file(const char *path,
 
   head_ctx->pool = new_file->pool;
   head_ctx->session = new_file->commit->session;
+  head_ctx->conn = new_file->commit->conn;
 
   head_ctx->acceptor = accept_head;
   head_ctx->acceptor_baton = new_file->commit->session;
@@ -809,7 +820,7 @@ add_file(const char *path,
       svn_path_url_add_component(new_file->commit->session->repos_url.path,
                                  path, new_file->pool);
 
-  serf_connection_request_create(dir->commit->session->conns[0],
+  serf_connection_request_create(head_ctx->conn->conn,
                                  setup_head, head_ctx);
 
   SVN_ERR(context_run_wait(&head_ctx->done, dir->commit->session,
@@ -825,6 +836,8 @@ add_file(const char *path,
       /* Issue a COPY */
       abort();
     }
+
+  new_file->conn = new_file->commit->conn;
 
   new_file->put_url =
       svn_path_url_add_component(dir->checkout->resource_url,
@@ -862,6 +875,7 @@ open_file(const char *path,
   new_file->base_revision = base_revision;
 
   /* Set up so that we can perform the PUT later. */
+  new_file->conn = new_file->commit->conn;
   new_file->acceptor = accept_response;
   new_file->acceptor_baton = ctx->commit->session;
   new_file->handler = handle_put;
@@ -871,6 +885,7 @@ open_file(const char *path,
 
   checkout_ctx->pool = new_file->pool;
   checkout_ctx->session = new_file->commit->session;
+  checkout_ctx->conn = new_file->commit->conn;
 
   checkout_ctx->acceptor = accept_response;
   checkout_ctx->acceptor_baton = new_file->commit->session;
@@ -883,7 +898,7 @@ open_file(const char *path,
       svn_path_url_add_component(new_file->commit->checked_in_url,
                                  path, new_file->pool);
 
-  serf_connection_request_create(new_file->commit->session->conns[0],
+  serf_connection_request_create(checkout_ctx->conn->conn,
                                  setup_checkout, checkout_ctx);
 
   /* There's no need to wait here as we only need this when we start the
@@ -963,7 +978,7 @@ close_file(void *file_baton,
   /* If we had a stream of changes, push them to the server... */
   if (ctx->stream)
     {
-      serf_connection_request_create(ctx->commit->session->conns[0],
+      serf_connection_request_create(ctx->conn->conn,
                                      setup_put, ctx);
 
       SVN_ERR(context_run_wait(&ctx->put_done, ctx->commit->session,
@@ -1025,13 +1040,14 @@ close_edit(void *edit_baton,
 
   delete_ctx->pool = pool;
   delete_ctx->session = ctx->session;
+  delete_ctx->conn = ctx->conn;
 
   delete_ctx->acceptor = accept_response;
   delete_ctx->acceptor_baton = ctx->session;
   delete_ctx->handler = handle_delete;
   delete_ctx->path = ctx->activity_url;
 
-  serf_connection_request_create(ctx->session->conns[0],
+  serf_connection_request_create(delete_ctx->conn->conn,
                                  setup_delete, delete_ctx);
 
   SVN_ERR(context_run_wait(&delete_ctx->done, ctx->session, pool));
@@ -1073,6 +1089,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->pool = pool;
 
   ctx->session = session;
+  ctx->conn = session->conns[0];
   ctx->log_msg = log_msg;
 
   ctx->callback = callback;

@@ -32,6 +32,27 @@
 #include "svn_dav.h"
 
 
+/* A serf connection and optionally associated SSL context.  */
+typedef struct {
+  /* Our connection to a server. */
+  serf_connection_t *conn;
+
+  /* Bucket allocator for this connection. */
+  serf_bucket_alloc_t *bkt_alloc;
+
+  /* Host name */
+  const char *hostinfo;
+
+  /* The address where the connections are made to */
+  apr_sockaddr_t *address;
+
+  /* Are we using ssl */
+  svn_boolean_t using_ssl;
+
+  /* Optional SSL context for this connection. */
+  serf_ssl_context_t *ssl_context;
+} ra_serf_connection_t;
+
 /*
  * The master serf RA session.
  *
@@ -43,19 +64,15 @@ typedef struct {
 
   /* The current context */
   serf_context_t *context;
-  serf_ssl_context_t *ssl_context;
-
-  /* Are we using ssl */
-  svn_boolean_t using_ssl;
 
   /* Bucket allocator for this context. */
   serf_bucket_alloc_t *bkt_alloc;
 
-  /* The address where the connections are made to */
-  apr_sockaddr_t *address;
+  /* Are we using ssl */
+  svn_boolean_t using_ssl;
 
   /* The current connection */
-  serf_connection_t **conns;
+  ra_serf_connection_t **conns;
   int num_conns;
   int cur_conn;
 
@@ -204,7 +221,7 @@ cleanup_serf_session(void *data);
 void
 setup_serf_req(serf_request_t *request,
                serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
-               ra_serf_session_t *session,
+               ra_serf_connection_t *conn,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type);
 
@@ -312,7 +329,7 @@ svn_error_t *
 deliver_props(propfind_context_t **prop_ctx,
               apr_hash_t *prop_vals,
               ra_serf_session_t *sess,
-              serf_connection_t *conn,
+              ra_serf_connection_t *conn,
               const char *url,
               svn_revnum_t rev,
               const char *depth,
@@ -336,7 +353,7 @@ wait_for_props(propfind_context_t *prop_ctx,
 svn_error_t *
 retrieve_props(apr_hash_t *prop_vals,
                ra_serf_session_t *sess,
-               serf_connection_t *conn,
+               ra_serf_connection_t *conn,
                const char *url,
                svn_revnum_t rev,
                const char *depth,
@@ -404,7 +421,7 @@ int merge_get_status(merge_context_t *ctx);
 svn_error_t *
 merge_create_req(merge_context_t **merge_ctx,
                  ra_serf_session_t *session,
-                 serf_connection_t *conn,
+                 ra_serf_connection_t *conn,
                  const char *path,
                  const char *activity_url,
                  apr_size_t activity_url_len,
@@ -424,7 +441,7 @@ options_get_activity_collection(options_context_t *ctx);
 svn_error_t *
 create_options_req(options_context_t **opt_ctx,
                    ra_serf_session_t *session,
-                   serf_connection_t *conn,
+                   ra_serf_connection_t *conn,
                    const char *path,
                    apr_pool_t *pool);
 

@@ -103,8 +103,14 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_pool_cleanup_register(serf_sess->pool, serf_sess, cleanup_serf_session,
                             apr_pool_cleanup_null);
 
+  serf_sess->conns = apr_palloc(pool, sizeof(*serf_sess->conns) * 4);
+
+  serf_sess->conns[0] = apr_palloc(pool, sizeof(*serf_sess->conns[0]));
+  serf_sess->conns[0]->bkt_alloc =
+          serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
+
   /* fetch the DNS record for this host */
-  status = apr_sockaddr_info_get(&serf_sess->address, url.hostname,
+  status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
                                  APR_UNSPEC, url.port, 0, pool);
   if (status)
     {
@@ -113,12 +119,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                url.scheme, url.hostname);
     }
 
-  serf_sess->conns = apr_palloc(pool, sizeof(*serf_sess->conns) * 4);
+  serf_sess->conns[0]->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+  serf_sess->conns[0]->ssl_context = NULL;
+  serf_sess->conns[0]->hostinfo = url.hostinfo;
+
   /* go ahead and tell serf about the connection. */
-  serf_sess->conns[0] = serf_connection_create(serf_sess->context,
-                                               serf_sess->address,
-                                               conn_setup, serf_sess,
-                                               conn_closed, serf_sess, pool);
+  serf_sess->conns[0]->conn =
+      serf_connection_create(serf_sess->context, serf_sess->conns[0]->address,
+                             conn_setup, serf_sess->conns[0],
+                             conn_closed, serf_sess->conns[0],
+                             serf_sess->pool);
+
   serf_sess->num_conns = 1;
 
   session->priv = serf_sess;

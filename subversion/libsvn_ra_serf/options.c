@@ -80,6 +80,7 @@ struct options_context_t {
   svn_boolean_t done;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *path;
 
@@ -218,7 +219,7 @@ setup_options(serf_request_t *request,
                                            sizeof(OPTIONS_BODY) - 1,
                                            ctx->session->bkt_alloc);
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "OPTIONS", ctx->path,
                  body_bkt, "text/xml");
 
@@ -272,7 +273,7 @@ options_get_activity_collection(options_context_t *ctx)
 svn_error_t *
 create_options_req(options_context_t **opt_ctx,
                    ra_serf_session_t *session,
-                   serf_connection_t *conn,
+                   ra_serf_connection_t *conn,
                    const char *path,
                    apr_pool_t *pool)
 {
@@ -284,11 +285,12 @@ create_options_req(options_context_t **opt_ctx,
 
   new_ctx->path = path;
   new_ctx->session = session;
+  new_ctx->conn = conn;
 
   new_ctx->acceptor = accept_response;
   new_ctx->handler = handle_options;
 
-  serf_connection_request_create(conn, setup_options, new_ctx);
+  serf_connection_request_create(new_ctx->conn->conn, setup_options, new_ctx);
 
   *opt_ctx = new_ctx;
 

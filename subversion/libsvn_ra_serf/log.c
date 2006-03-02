@@ -106,6 +106,8 @@ typedef struct {
   void *receiver_baton;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
+
   const char *path;
   serf_bucket_t *buckets;
   serf_response_acceptor_t acceptor;
@@ -328,7 +330,7 @@ setup_log(serf_request_t *request,
 {
   log_context_t *ctx = setup_baton;
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "REPORT", ctx->path, ctx->buckets, "text/xml");
 
   *acceptor = ctx->acceptor;
@@ -499,10 +501,11 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->session = session;
   log_ctx->buckets = buckets;
   log_ctx->path = req_url;
+  log_ctx->conn = session->conns[0];
   log_ctx->acceptor = accept_response;
   log_ctx->handler = handle_log;
 
-  serf_connection_request_create(session->conns[0], setup_log, log_ctx);
+  serf_connection_request_create(log_ctx->conn->conn, setup_log, log_ctx);
 
   SVN_ERR(context_run_wait(&log_ctx->done, session, pool));
 

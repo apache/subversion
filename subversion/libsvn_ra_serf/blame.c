@@ -105,6 +105,7 @@ typedef struct {
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   /* parameters set by our caller */
   const char *path;
@@ -419,7 +420,7 @@ setup_blame(serf_request_t *request,
 {
   blame_context_t *ctx = setup_baton;
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "REPORT", ctx->path, ctx->buckets, "text/xml");
 
   *acceptor = ctx->acceptor;
@@ -561,10 +562,12 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->session = session;
   blame_ctx->buckets = buckets;
   blame_ctx->path = req_url;
+  blame_ctx->conn = session->conns[0];
   blame_ctx->acceptor = accept_response;
   blame_ctx->handler = handle_blame;
 
-  serf_connection_request_create(session->conns[0], setup_blame, blame_ctx);
+  serf_connection_request_create(blame_ctx->conn->conn, setup_blame,
+                                 blame_ctx);
 
   SVN_ERR(context_run_wait(&blame_ctx->done, session, pool));
 
