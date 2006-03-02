@@ -697,18 +697,16 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         report("checking for reflected changes in %d revision(s)"
                % len(prop_changed_revs))
 
-        previous_rev = None
         previous_props = None
 
         for rev in prop_changed_revs:
-            if rev-1 == previous_rev:
+            if previous_props:
                 old_props = previous_props
             else:
                 old_props = get_revlist_prop(url, opts["prop"], rev-1)
 
             new_props = get_revlist_prop(url, opts["prop"], rev)
             previous_props = new_props
-            previous_rev = rev
 
             old_revisions = old_props.get(target_dir)
             new_revisions = new_props.get(target_dir)
