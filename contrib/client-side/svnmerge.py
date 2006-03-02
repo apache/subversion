@@ -68,6 +68,9 @@ LOG_SEPARATOR = 8 * '.'
 LOG_SEPARATOR_RE = re.compile('^((%s)+)' % re.escape(LOG_SEPARATOR),
                               re.MULTILINE)
 
+# Each line of the embedded log messages will be prefixed by LOG_LINE_PREFIX.
+LOG_LINE_PREFIX = 2 * ' '
+
 # We expect non-localized output from SVN
 os.environ["LC_MESSAGES"] = "C"
 
@@ -178,6 +181,13 @@ def report(s):
     """Subroutine to output progress message, unless in quiet mode."""
     if opts["verbose"]:
         print "%s: %s" % (NAME, s)
+
+def prefix_lines(prefix, lines):
+    """Given a string representing one or more lines of text, insert the
+    specified prefix at the beginning of each line, and return the result.
+    The input must be terminated by a newline."""
+    assert lines[-1] == "\n"
+    return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
 
 class LaunchError(Exception):
     """Signal a failure in execution of an external command. Parameters are the
@@ -534,16 +544,19 @@ def construct_merged_log_message(url, revnums):
     svnmerge separator existing in the commit log messages and
     extending it by one more separator.  This results in a new commit
     log message that is clearer in describing merges that contain
-    other merges."""
+    other merges. Trailing newlines are removed from the embedded
+    log messages."""
     logs = ['']
     longest_sep = ''
     for r in revnums.sorted():
         message = get_commit_log(opts["head_url"], r)
-        logs.append(message)
-        for match in LOG_SEPARATOR_RE.findall(message):
-            sep = match[1]
-            if len(sep) > len(longest_sep):
-                longest_sep = sep
+        if message:
+            message = rstrip(message, "\n") + "\n"
+            logs.append(prefix_lines(LOG_LINE_PREFIX, message) + "\n")
+            for match in LOG_SEPARATOR_RE.findall(message):
+                sep = match[1]
+                if len(sep) > len(longest_sep):
+                    longest_sep = sep
 
     longest_sep += LOG_SEPARATOR + "\n"
     logs.append('')
