@@ -50,10 +50,11 @@ Candidate changes:
       +0: dlr
       -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
 
-  * r18114
+  * r18114, r18681
     In mailer.py:
     Fix bug: named substitutions gathered from defaults.for_repos were being
-    ignored for sections which contained a specific for_repos option.
+    ignored for sections which contained a specific for_repos option (r18114),
+    and for fallback invocations of the [defaults] section (r18681).
     Justification:
       This can enable extensive simplification of configurations which want
       to put the repository name into the *_subject_prefix options.
