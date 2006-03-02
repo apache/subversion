@@ -552,10 +552,13 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   const svn_fs_id_t *child_id, *parent_id;
   const char *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
-  copy_t *copy;
 
   /* Make some assertions about the function input. */
   assert(child && child->parent && txn_id);
+
+  /* Initialize our return variables (default: self-inheritance). */
+  *inherit_p = copy_id_inherit_self;
+  *copy_src_path = NULL;
 
   /* Initialize some convenience variables. */
   child_id = svn_fs_base__dag_get_id(child->node);
@@ -563,57 +566,61 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   child_copy_id = svn_fs_base__id_copy_id(child_id);
   parent_copy_id = svn_fs_base__id_copy_id(parent_id);
 
-  /* If this child is already mutable, we have nothing to do. */
-  if (svn_fs_base__key_compare(svn_fs_base__id_txn_id(child_id),
-                               txn_id) == 0)
+  /* Easy out: if this child is already mutable, we have nothing to do. */
+  if (svn_fs_base__key_compare(svn_fs_base__id_txn_id(child_id), txn_id) == 0)
+    return SVN_NO_ERROR;
+
+  /* If the child and its parent are on the same branch, then the
+     child will inherit the copy ID of its parent when made mutable.
+     This is trivially detectable when the child and its parent have
+     the same copy ID.  But that's not the sole indicator of
+     same-branchness.  It might be the case that the parent was the
+     result of a copy, but the child has not yet been cloned for
+     mutability since that copy.  Detection of this latter case
+     basically means making sure the copy IDs don't differ for some
+     other reason, such as that the child was the direct target of the
+     copy whose ID it has.  There is a special case here, too -- if
+     the child's copy ID is the special ID "0", it can't have been the
+     target of any copy, and therefore must be on the same branch as
+     its parent.  */
+  if ((strcmp(child_copy_id, "0") == 0)
+      || (svn_fs_base__key_compare(child_copy_id, parent_copy_id) == 0))
     {
-      *inherit_p = copy_id_inherit_self;
-      *copy_src_path = NULL;
+      *inherit_p = copy_id_inherit_parent;
       return SVN_NO_ERROR;
     }
+  else
+    {
+      copy_t *copy;
+      SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, child_copy_id, trail, pool));
+      if (svn_fs_base__id_compare(copy->dst_noderev_id, child_id) == -1)
+        {
+          *inherit_p = copy_id_inherit_parent;
+          return SVN_NO_ERROR;
+        }
+    }
 
-  /* From this point on, we'll assume that the child will just take
-     its copy ID from its parent. */
-  *inherit_p = copy_id_inherit_parent;
-  *copy_src_path = NULL;
+  /* If we get here, the child and its parent are not on speaking
+     terms -- there will be no parental inheritence handed down in
+     *this* generation. */
 
-  /* Special case: if the child's copy ID is '0', use the parent's
-     copy ID. */
-  if (strcmp(child_copy_id, "0") == 0)
-    return SVN_NO_ERROR;
-
-  /* Compare the copy IDs of the child and its parent.  If they are
-     the same, then the child is already on the same branch as the
-     parent, and should use the same mutability copy ID that the
-     parent will use. */
-  if (svn_fs_base__key_compare(child_copy_id, parent_copy_id) == 0)
-    return SVN_NO_ERROR;
-
-  /* If the child is on the same branch that the parent is on, the
-     child should just use the same copy ID that the parent would use.
-     Else, the child needs to generate a new copy ID to use should it
-     need to be made mutable.  We will claim that child is on the same
-     branch as its parent if the child itself is not a branch point,
-     or if it is a branch point that we are accessing via its original
-     copy destination path. */
-  SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, child_copy_id, trail, pool));
-  if (svn_fs_base__id_compare(copy->dst_noderev_id, child_id) == -1)
-    return SVN_NO_ERROR;
-
-  /* Determine if we are looking at the child via its original path or
-     as a subtree item of a copied tree. */
+  /* If the child was created at a different path than the one we are
+     expecting its clone to live, one of its parents must have been
+     created via a copy since the child was created.  The child isn't
+     on the same branch as its parent (we caught those cases early);
+     it can't keep its current copy ID because there's been an
+     affecting copy (its clone won't be on the same branch as the
+     child is).  That leaves only one course of action -- to assign
+     the child a brand new "soft" copy ID. */
   id_path = svn_fs_base__dag_get_created_path(child->node);
-  if (strcmp(id_path, parent_path_path(child, pool)) == 0)
+  if (strcmp(id_path, parent_path_path(child, pool)) != 0)
     {
-      *inherit_p = copy_id_inherit_self;
+      *inherit_p = copy_id_inherit_new;
+      *copy_src_path = id_path;
       return SVN_NO_ERROR;
     }
 
-  /* We are pretty sure that the child node is an unedited nested
-     branched node.  When it needs to be made mutable, it should claim
-     a new copy ID. */
-  *inherit_p = copy_id_inherit_new;
-  *copy_src_path = id_path;
+  /* The node gets to keep its own ID. */
   return SVN_NO_ERROR;
 }
 
