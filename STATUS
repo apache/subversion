@@ -151,8 +151,8 @@ Candidate changes:
       Crash bad.  r17231 is needed so the new tests pass.
     Branch: 1.3.x-r18539
     Votes:
-      +1: rooneg
-      +1: lundblad, dlr (not r17231)
+      +1: rooneg, dlr
+      +1: lundblad (not r17231)
 
 Approved changes:
 
