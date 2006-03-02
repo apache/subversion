@@ -596,7 +596,8 @@ def check_old_prop_version(branch_dir, props):
             (opts["prop"], format_merge_props(fixed), branch_dir)
         sys.exit(1)
 
-def analyze_revs(target_dir, url, begin=1, end=None):
+def analyze_revs(target_dir, url, begin=1, end=None,
+                 find_reflected=False):
     """For the source of the merges in the head url being merged into
     target_dir, analyze the revisions in the interval begin-end (which
     defaults to 1-HEAD), to find out which revisions are changes in
@@ -625,13 +626,13 @@ def analyze_revs(target_dir, url, begin=1, end=None):
     # the source directory itself that is the source of the merges was
     # modified, as these may be reflected merges.
 
-    # If bidirectional merge support is enabled, then add the
+    # If we were asked to look for reflected revisions, then add the
     # --verbose flag to the 'svn log' command to get a list of files
     # and directories that were added, modified or deleted.  Even with
     # the --verbose flag, the --quiet flag prevents the commit log
     # message from being printed.
     log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
-    if opts.has_key("bidirectional") and opts["bidirectional"]:
+    if find_reflected:
         log_opts = "--verbose " + log_opts
     lines = launchsvn("log %s" % log_opts)
 
@@ -679,7 +680,7 @@ def analyze_revs(target_dir, url, begin=1, end=None):
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
     reflected_revs = []
 
-    if opts.has_key("bidirectional") and opts["bidirectional"]:
+    if find_reflected:
         report("checking for reflected changes in %d revision(s)"
                % len(prop_changed_revs))
 
@@ -706,7 +707,7 @@ def analyze_revs(target_dir, url, begin=1, end=None):
 
     return revs, phantom_revs, reflected_revs
 
-def analyze_head_revs(branch_dir, head_url):
+def analyze_head_revs(branch_dir, head_url, **kwargs):
     """For the given branch and head, extract the real and phantom
     head revisions."""
     branch_url = target_to_url(branch_dir)
@@ -732,7 +733,7 @@ def analyze_head_revs(branch_dir, head_url):
         if end_rev > revs[-1]:
             end_rev = revs[-1]
 
-    return analyze_revs(target_dir, head_url, base, end_rev)
+    return analyze_revs(target_dir, head_url, base, end_rev, **kwargs)
 
 def minimal_merge_intervals(revs, phantom_revs):
     """Produce the smallest number of intervals suitable for merging. revs
@@ -789,7 +790,8 @@ def action_init(branch_dir, branch_props):
 def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
     head_revs, phantom_revs, reflected_revs = \
-               analyze_head_revs(branch_dir, opts["head_url"])
+               analyze_head_revs(branch_dir, opts["head_url"],
+                                 find_reflected=opts["bidirectional"])
     report('skipping phantom revisions: %s' % phantom_revs)
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
@@ -840,7 +842,8 @@ def action_merge(branch_dir, branch_props):
     check_dir_clean(branch_dir)
 
     head_revs, phantom_revs, reflected_revs = \
-               analyze_head_revs(branch_dir, opts["head_url"])
+               analyze_head_revs(branch_dir, opts["head_url"],
+                                 find_reflected=opts["bidirectional"])
 
     if opts["revision"]:
         revs = RevisionSet(opts["revision"])
