@@ -32,16 +32,17 @@ conn_setup(apr_socket_t *sock,
            apr_pool_t *pool)
 {
   serf_bucket_t *bucket;
-  ra_serf_session_t *sess = baton;
+  ra_serf_connection_t *conn = baton;
 
-  bucket = serf_bucket_socket_create(sock, sess->bkt_alloc);
-  if (sess->using_ssl)
+  bucket = serf_bucket_socket_create(sock, conn->bkt_alloc);
+  if (conn->using_ssl)
     {
-      bucket = serf_bucket_ssl_decrypt_create(bucket, sess->ssl_context,
-                                              sess->bkt_alloc);
-      if (!sess->ssl_context) {
-          sess->ssl_context = serf_bucket_ssl_decrypt_context_get(bucket);
-      }
+      bucket = serf_bucket_ssl_decrypt_create(bucket, conn->ssl_context,
+                                              conn->bkt_alloc);
+      if (!conn->ssl_context)
+        {
+          conn->ssl_context = serf_bucket_ssl_decrypt_context_get(bucket);
+        }
     }
 
   return bucket;
@@ -68,9 +69,16 @@ conn_closed(serf_connection_t *conn,
             apr_status_t why,
             apr_pool_t *pool)
 {
+  ra_serf_connection_t *our_conn = closed_baton;
+
   if (why)
     {
       abort();
+    }
+
+  if (our_conn->using_ssl)
+    {
+      our_conn->ssl_context = NULL;
     }
 }
 
@@ -84,7 +92,7 @@ cleanup_serf_session(void *data)
     {
       if (serf_sess->conns[i])
         {
-          serf_connection_close(serf_sess->conns[i]);
+          serf_connection_close(serf_sess->conns[i]->conn);
           serf_sess->conns[i] = NULL;
         }
     }
@@ -94,7 +102,7 @@ cleanup_serf_session(void *data)
 void
 setup_serf_req(serf_request_t *request,
                serf_bucket_t **req_bkt, serf_bucket_t **ret_hdrs_bkt,
-               ra_serf_session_t *session,
+               ra_serf_connection_t *conn,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type)
 {
@@ -104,7 +112,7 @@ setup_serf_req(serf_request_t *request,
                                         serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
-  serf_bucket_headers_setn(hdrs_bkt, "Host", session->repos_url.hostinfo);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
   if (content_type)
     {
@@ -112,13 +120,13 @@ setup_serf_req(serf_request_t *request,
     }
 
   /* Set up SSL if we need to */
-  if (session->using_ssl)
+  if (conn->using_ssl)
     {
-      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt, session->ssl_context,
+      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt, conn->ssl_context,
                                             serf_request_get_alloc(request));
-      if (!session->ssl_context)
+      if (!conn->ssl_context)
         {
-          session->ssl_context = serf_bucket_ssl_encrypt_context_get(*req_bkt);
+          conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*req_bkt);
         }
     }
 

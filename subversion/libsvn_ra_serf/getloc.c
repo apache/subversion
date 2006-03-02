@@ -78,6 +78,7 @@ typedef struct {
   svn_boolean_t done;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *path;
   serf_bucket_t *buckets;
@@ -199,7 +200,7 @@ setup_getloc(serf_request_t *request,
 {
   loc_context_t *ctx = setup_baton;
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "REPORT", ctx->path, ctx->buckets, "text/xml");
 
   *acceptor = ctx->acceptor;
@@ -343,11 +344,12 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   loc_ctx->buckets = buckets;
   loc_ctx->path = req_url;
+  loc_ctx->conn = session->conns[0];
   loc_ctx->acceptor = accept_response;
   loc_ctx->handler = handle_getloc;
   loc_ctx->session = session;
 
-  serf_connection_request_create(session->conns[0], setup_getloc, loc_ctx);
+  serf_connection_request_create(loc_ctx->conn->conn, setup_getloc, loc_ctx);
 
   SVN_ERR(context_run_wait(&loc_ctx->done, session, pool));
 

@@ -107,6 +107,7 @@ struct merge_context_t
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
 
   const char *activity_url;
   apr_size_t activity_url_len;
@@ -477,7 +478,7 @@ setup_merge(serf_request_t *request,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  setup_serf_req(request, req_bkt, NULL, ctx->session,
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
                  "MERGE", ctx->merge_url, body_bkt, "text/xml");
 
   /* Create our XML parser */
@@ -517,7 +518,7 @@ handle_merge(serf_bucket_t *response,
 svn_error_t *
 merge_create_req(merge_context_t **ret_ctx,
                  ra_serf_session_t *session,
-                 serf_connection_t *conn,
+                 ra_serf_connection_t *conn,
                  const char *path,
                  const char *activity_url,
                  apr_size_t activity_url_len,
@@ -529,6 +530,7 @@ merge_create_req(merge_context_t **ret_ctx,
 
   merge_ctx->pool = pool;
   merge_ctx->session = session;
+  merge_ctx->conn = conn;
 
   merge_ctx->acceptor = accept_response;
   merge_ctx->acceptor_baton = session;
@@ -541,7 +543,7 @@ merge_create_req(merge_context_t **ret_ctx,
   merge_ctx->merge_url = session->repos_url.path;
   merge_ctx->merge_url_len = strlen(merge_ctx->merge_url);
 
-  serf_connection_request_create(conn, setup_merge, merge_ctx);
+  serf_connection_request_create(conn->conn, setup_merge, merge_ctx);
 
   *ret_ctx = merge_ctx;
 

@@ -32,7 +32,7 @@ struct propfind_context_t {
 
   /* associated serf session */
   ra_serf_session_t *sess;
-  serf_connection_t *conn;
+  ra_serf_connection_t *conn;
 
   /* The acceptor and handler for this response. */
   serf_response_acceptor_t acceptor;
@@ -292,14 +292,14 @@ setup_propfind(serf_request_t *request,
                                          ctx->find_props,
                                          serf_request_get_alloc(request));
 
-  if (ctx->sess->using_ssl)
+  if (ctx->conn->using_ssl)
     {
       *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt,
-                                            ctx->sess->ssl_context,
+                                            ctx->conn->ssl_context,
                                             serf_request_get_alloc(request));
-      if (!ctx->sess->ssl_context)
+      if (!ctx->conn->ssl_context)
         {
-          ctx->sess->ssl_context =
+          ctx->conn->ssl_context =
               serf_bucket_ssl_encrypt_context_get(*req_bkt);
         }
     }
@@ -413,7 +413,7 @@ svn_error_t *
 deliver_props(propfind_context_t **prop_ctx,
               apr_hash_t *ret_props,
               ra_serf_session_t *sess,
-              serf_connection_t *conn,
+              ra_serf_connection_t *conn,
               const char *path,
               svn_revnum_t rev,
               const char *depth,
@@ -469,7 +469,7 @@ deliver_props(propfind_context_t **prop_ctx,
     }
 
   /* create and deliver request */
-  serf_connection_request_create(conn, setup_propfind, *prop_ctx);
+  serf_connection_request_create(conn->conn, setup_propfind, *prop_ctx);
 
   return SVN_NO_ERROR;
 }
@@ -498,7 +498,7 @@ wait_for_props(propfind_context_t *prop_ctx,
 svn_error_t *
 retrieve_props(apr_hash_t *prop_vals,
                ra_serf_session_t *sess,
-               serf_connection_t *conn,
+               ra_serf_connection_t *conn,
                const char *url,
                svn_revnum_t rev,
                const char *depth,
