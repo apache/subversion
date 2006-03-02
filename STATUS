@@ -40,8 +40,7 @@ Candidate changes:
     Branch: 1.3.x-r17333
     Justification:
       Backport of a change to trunk which resolves buggy behavior on
-      (at least) Windows and Mac OS X, behavior which is inconsistent
-      with Linux.
+      Windows, behavior which is inconsistent with Linux.
     Notes:
       dlr does not have a Windows development environment, and thus
       cannot adequately test this change.  Additional testing is
