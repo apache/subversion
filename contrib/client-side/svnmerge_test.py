@@ -69,6 +69,14 @@ class TestCase_launch(unittest.TestCase):
         else:
             self.fail("svnmerge.launch did not cause a LaunchError as expected")
 
+class TestCase_PrefixLines(unittest.TestCase):
+    def test_basic(self):
+        self.assertEqual("zz\n", svnmerge.prefix_lines("zz", "\n"))
+        self.assertEqual("zzfoo\n", svnmerge.prefix_lines("zz", "foo\n"))
+        self.assertEqual("zzfoo\nzzbar\n", svnmerge.prefix_lines("zz", "foo\nbar\n"))
+        self.assertEqual("zz\nzzfoo\n", svnmerge.prefix_lines("zz", "\nfoo\n"))
+        self.assertEqual("zz\nzzfoo\nzzbar\n", svnmerge.prefix_lines("zz", "\nfoo\nbar\n"))
+
 class TestCase_RevisionSet(unittest.TestCase):
     def test_constr_string(self):
         rs = svnmerge.RevisionSet("10- 15, 12-48,2 ")
