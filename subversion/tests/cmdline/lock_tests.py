@@ -1501,8 +1501,10 @@ def unlock_wrong_token(sbox):
                                      "--force", file_url)
 
   # Then, unlocking the WC path should fail.
-  # ### Change expected error message.
-  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput,
+  # ### The error message returned is actually this, but let's worry about that
+  # ### another day...
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*((No lock on path)|(400 Bad Request))",
                                      'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1545,7 +1547,7 @@ test_list = [ None,
               unlock_already_unlocked_files,
               info_moved_path,
               ls_url_encoded,
-              XFail(unlock_wrong_token),
+              unlock_wrong_token,
             ]
 
 if __name__ == '__main__':
