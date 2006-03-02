@@ -84,8 +84,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"file",          'F', 1, N_("read log message from file ARG")},
   {"incremental",   svn_cl__incremental_opt, 0,
                     N_("give output suitable for concatenation")},
+#ifndef AS400
   {"encoding",      svn_cl__encoding_opt, 1,
                     N_("treat value as being in charset encoding ARG")},
+#endif
   {"version",       svn_cl__version_opt, 0, N_("print client version info")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
@@ -93,8 +95,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("specify a username ARG")},
   {"password",      svn_cl__auth_password_opt, 1,
                     N_("specify a password ARG")},
+#ifndef AS400
   {"extensions",    'x', 1,
                     N_("pass ARG to --diff-cmd as options (default: '-u')")},
+#endif
   {"targets",       svn_cl__targets_opt, 1,
                     N_("pass contents of file ARG as additional args")},
   {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
@@ -117,12 +121,14 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("ignore ancestry when calculating merges")},
   {"ignore-externals", svn_cl__ignore_externals_opt, 0,
                     N_("ignore externals definitions")},
+#ifndef AS400
   {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                     N_("use ARG as diff command")},
   {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
                     N_("use ARG as merge command")},
   {"editor-cmd",    svn_cl__editor_cmd_opt, 1,
                     N_("use ARG as external editor")},
+#endif
   {"old",           svn_cl__old_cmd_opt, 1,
                     N_("use ARG as the older target")},
   {"new",           svn_cl__new_cmd_opt, 1,
@@ -234,14 +240,25 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: cleanup [PATH...]\n"),
     {svn_cl__merge_cmd_opt, svn_cl__config_dir_opt} },
 
-  { "commit", svn_cl__commit, {"ci"}, N_
-    ("Send changes from your working copy to the repository.\n"
-     "usage: commit [PATH...]\n"
-     "\n"
-     "  A log message must be provided, but it can be empty.  If it is not\n"
-     "  given by a --message or --file option, an editor will be started.\n"
-     "  If any targets are (or contain) locked items, those will be\n"
-     "  unlocked after a successful commit.\n"),
+  { "commit", svn_cl__commit, {"ci"},
+#ifndef AS400
+    N_("Send changes from your working copy to the repository.\n"
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.  If it is not\n"
+       "  given by a --message or --file option, an editor will be started.\n"
+       "  If any targets are (or contain) locked items, those will be\n"
+       "  unlocked after a successful commit.\n"),
+#else
+    N_("Send changes from your working copy to the repository.\n"
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.\n"
+       "  OS400 does not support the starting of an editor,\n"
+       "  so --message or --file must be used. If any targets are\n"
+       "  (or contain) locked items, those will be unlocked after a\n"
+       "  successful commit.\n"),
+#endif
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -494,6 +511,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
+#ifndef AS400
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
     ("Edit a property with an external editor.\n"
      "usage: 1. propedit PROPNAME PATH...\n"
@@ -505,6 +523,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
+#endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
     ("Print the value of a property on files, dirs, or revisions.\n"
