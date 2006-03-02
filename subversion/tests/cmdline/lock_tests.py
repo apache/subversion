@@ -60,7 +60,7 @@ def lock_file(sbox):
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', file_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path)
@@ -118,7 +118,7 @@ def commit_file_keep_lock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock fname as wc_author
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'some lock comment', file_path)
@@ -129,7 +129,6 @@ def commit_file_keep_lock(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-#  expected_status.tweak(fname, wc_rev=2, writelocked='K')
   expected_status.tweak(fname, wc_rev=2)
   expected_status.tweak(fname, writelocked='K')
 
@@ -146,7 +145,7 @@ def commit_file_unlock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock fname as wc_author
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'some lock comment', file_path)
@@ -173,7 +172,7 @@ def commit_propchange(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock fname as wc_author
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'some lock comment', file_path)
@@ -214,7 +213,7 @@ def break_lock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   file_path_b = os.path.join(wc_b, fname)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path)
@@ -226,13 +225,13 @@ def break_lock(sbox):
   # attempt (and fail) to unlock file
 
   # This should give a "iota' is not locked in this working copy" error
-  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, ".*not locked",
                                      'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      file_path_b)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [],
                                      'unlock', '--force',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -263,7 +262,7 @@ def steal_lock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   file_path_b = os.path.join(wc_b, fname)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path)
@@ -274,14 +273,15 @@ def steal_lock(sbox):
 
   # attempt (and fail) to lock file
 
-  # This should give a "iota' is not locked in this working copy" error
-  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput,
+  # This should give a "iota' is already locked... error.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*((already locked)|(423 Locked))",
                                      'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'trying to break', file_path_b)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
                                      'lock', '--force',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -301,7 +301,7 @@ def examine_lock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock a file as wc_author
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', comment, file_path)
@@ -337,7 +337,7 @@ def handle_defunct_lock(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
   # lock the file
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path)
@@ -350,7 +350,7 @@ def handle_defunct_lock(sbox):
   # --- Meanwhile, in our other working copy... ---
 
   # Try unlocking the file in the second wc.
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      file_path_b)
@@ -405,7 +405,7 @@ def enforce_lock(sbox):
       raise svntest.Failure
 
     # obtain a lock on one of these files...
-    svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+    svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
                                        '-m', '', iota_path)
@@ -416,7 +416,7 @@ def enforce_lock(sbox):
       raise svntest.Failure
 
     # ...and unlock it...
-    svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+    svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
                                        iota_path)
@@ -448,7 +448,7 @@ def update_while_needing_lock(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # Lock, modify, commit, unlock, to create r3.
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path)
@@ -492,14 +492,14 @@ def defunct_lock(sbox):
   svntest.main.run_svn(None, 'update', wc_b)
 
   # lock iota in wc_b
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path_b)
 
 
   # break the lock iota in wc a
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock', '--force',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock', '--force',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path)
@@ -525,7 +525,7 @@ def deleted_path_lock(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   iota_url = svntest.main.current_repo_url + '/iota'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', iota_path)
@@ -539,7 +539,7 @@ def deleted_path_lock(sbox):
                                      '-m', '', iota_path)
 
   # Now make sure that we can delete the lock from iota via a URL
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      iota_url)
@@ -561,7 +561,7 @@ def lock_unlock(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', writelocked='K')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', pi_path, rho_path, tau_path)
@@ -570,7 +570,7 @@ def lock_unlock(sbox):
 
   expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', writelocked=None)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      pi_path, rho_path, tau_path)
@@ -590,7 +590,7 @@ def deleted_dir_lock(sbox):
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', pi_path, rho_path, tau_path)
@@ -791,7 +791,9 @@ def out_of_date(sbox):
                        '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput, 'lock',
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*newer version of '/iota' exists", 
+                                     'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path_b)
@@ -854,7 +856,7 @@ def revert_lock(sbox):
   extra_name = 'xx'
 
   # now lock the file
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', iota_path)
@@ -890,7 +892,7 @@ def examine_lock_via_url(sbox):
   file_url = svntest.main.current_repo_url + '/' + fname
 
   # lock a file as wc_author
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -917,7 +919,7 @@ def lock_several_files(sbox):
   lambda_path = os.path.join(sbox.wc_dir, 'A', 'B', 'lambda')
   alpha_path = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -928,7 +930,7 @@ def lock_several_files(sbox):
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -958,7 +960,7 @@ def lock_switched_files(sbox):
   expected_status.tweak('A/D/gamma', 'A/B/lambda', switched='S')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -969,7 +971,7 @@ def lock_switched_files(sbox):
   expected_status.tweak('A/B/E/alpha', 'iota', writelocked='O')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -1008,7 +1010,7 @@ def lock_uri_encoded(sbox):
                                         None, None,
                                         file_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path)
@@ -1017,7 +1019,7 @@ def lock_uri_encoded(sbox):
   expected_status.tweak(fname, writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      file_path)
@@ -1028,7 +1030,7 @@ def lock_uri_encoded(sbox):
 
   # And now the URL case.
   file_url = svntest.main.current_repo_url + '/' + fname
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_url)
@@ -1037,7 +1039,7 @@ def lock_uri_encoded(sbox):
   expected_status.tweak(fname, writelocked='O')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      file_url)
@@ -1083,7 +1085,7 @@ def lock_and_exebit1(sbox):
     raise svntest.Failure
 
   # lock
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', gamma_path)
@@ -1100,7 +1102,7 @@ def lock_and_exebit1(sbox):
   svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
   
   # unlock
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      gamma_path)
@@ -1165,7 +1167,7 @@ def lock_and_exebit2(sbox):
     raise svntest.Failure
 
   # lock
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', gamma_path)
@@ -1209,7 +1211,7 @@ def commit_xml_unsafe_file_unlock(sbox):
   svntest.main.run_svn(None, 'commit', '-m', '', file_path)
 
   # lock fname as wc_author
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'some lock comment', file_path)
@@ -1238,7 +1240,7 @@ def repos_lock_with_info(sbox):
   file_url = svntest.main.current_repo_url + '/' + fname
 
   # lock wc file
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -1248,7 +1250,7 @@ def repos_lock_with_info(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Steal lock on wc file
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -1312,7 +1314,7 @@ def unlock_already_unlocked_files(sbox):
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -1334,7 +1336,7 @@ def unlock_already_unlocked_files(sbox):
   expected_status.tweak('A/D/gamma', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
                                      '--no-auth-cache',
@@ -1405,7 +1407,7 @@ def info_moved_path(sbox):
                                          wc_dir)
 
   # Lock the new iota.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
                                      "lock", fname,
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd)
@@ -1462,8 +1464,8 @@ def ls_url_encoded(sbox):
                                         wc_dir)
 
   # Lock the file.
-  svntest.actions.run_and_verify_svn("Lock space dir/f", None, [],
-                                     "lock", fname,
+  svntest.actions.run_and_verify_svn("Lock space dir/f", ".*locked by user",
+                                     [], "lock", fname,
                                      "--username", svntest.main.wc_author,
                                      "--password", svntest.main.wc_passwd)
 
