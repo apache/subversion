@@ -527,9 +527,9 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # due to the attempted merge from trunk of the addition of the
         # svnmerge-integrated property, which already exists in the
         # branch since 'svnmerge.py init' was run in it.  So just
-        # resolve it, as it currently has the correct value.
-        self.launch("svn resolved .",
-                    match=r"Resolved conflicted state of '\.'")
+        # resolve it, as it currently has the correct value (only on
+        # svn 1.3.x, so do not execute a match assertion).
+        self.launch("svn resolved .")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")
