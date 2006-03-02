@@ -398,7 +398,7 @@ The Berkeley DB "nodes" table
 The database contains a table called "nodes", which is a btree indexed
 by node revision ID's, mapping them onto REPRESENTATION skels.  Node 0
 is always the root directory, and node revision ID 0.0.0 is always the
-empty directory.  We use the value of the key 'next-id' to indicate
+empty directory.  We use the value of the key 'next-key' to indicate
 the next unused node ID.
 
 Assuming that we store the most recent revision on every branch as
@@ -487,7 +487,7 @@ where:
      committed transactions, but it could be useful in the future.
 
 As the sole exception to the rule above, the `transactions' table
-always has one entry whose key is `next-id', and whose value is the
+always has one entry whose key is `next-key', and whose value is the
 lowest transaction ID that has never yet been used.  We use this entry
 to allocate ID's for new transactions.
 
@@ -563,7 +563,7 @@ where:
      of the copy.
 
 As the sole exception to the rule above, the `copies' table always has
-one entry whose key is `next-id', and whose value is the lowest copy ID
+one entry whose key is `next-key', and whose value is the lowest copy ID
 that has never yet been used.  We use this entry to allocate new
 copy ID's.
 
@@ -834,13 +834,13 @@ Appendix: Filesystem structure summary
 Berkeley DB tables
 ------------------
 
-                "nodes" : btree(ID -> NODE-REVISION)
+                "nodes" : btree(ID -> NODE-REVISION, "next-key" -> NODE-ID)
             "revisions" : recno(REVISION)
-         "transactions" : btree(TXN -> TRANSACTION, "next-id" -> TXN)
+         "transactions" : btree(TXN -> TRANSACTION, "next-key" -> TXN)
               "changes" : btree(TXN -> CHANGE)
-               "copies" : btree(CPY -> COPY, "next-id" -> CPY)
-              "strings" : btree(STR -> STRING, "next-id" -> STR)
-      "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
+               "copies" : btree(CPY -> COPY, "next-key" -> CPY)
+              "strings" : btree(STR -> STRING, "next-key" -> STR)
+      "representations" : btree(REP -> REPRESENTATION, "next-key" -> REP)
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
