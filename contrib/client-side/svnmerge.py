@@ -552,7 +552,7 @@ def construct_merged_log_message(url, revnums):
         message = get_commit_log(opts["head_url"], r)
         if message:
             message = rstrip(message, "\n") + "\n"
-            logs.append(prefix_lines(LOG_LINE_PREFIX, message) + "\n")
+            logs.append(prefix_lines(LOG_LINE_PREFIX, message))
             for match in LOG_SEPARATOR_RE.findall(message):
                 sep = match[1]
                 if len(sep) > len(longest_sep):
