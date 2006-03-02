@@ -18,7 +18,7 @@ use File::Path qw(rmtree);
 
 # do not use cleanup because it will fail, some files we
 # will not have write perms to.
-my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
+my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repospath = catdir($testpath,'repo');
 my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')

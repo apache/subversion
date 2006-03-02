@@ -32,55 +32,8 @@ public class SVNClient implements SVNClientInterface
      */
     static
     {
-        loadNativeLibrary();
+        NativeResources.loadNativeLibrary();
     }
-
-    /**
-     * Called upon class initialization.
-     *
-     * @throws UnsatisfiedLinkError If the native library cannot be
-     * loaded.
-     */
-    private static void loadNativeLibrary()
-    {
-        // If the user specified the fully qualified path to the
-        // native library, try loading that first.
-        try
-        {
-            String specifiedLibraryName =
-                System.getProperty("subversion.native.library");
-            if (specifiedLibraryName != null)
-            {
-                System.load(specifiedLibraryName);
-                return;
-            }
-        }
-        catch (UnsatisfiedLinkError ex)
-        {
-            // ignore that error to try again
-        }
-
-        // Try to load the library by its name.  Failing that, try to
-        // load it by its old name.
-        try
-        {
-            System.loadLibrary("svnjavahl-1");
-            return;
-        }
-        catch (UnsatisfiedLinkError ex)
-        {
-            try
-            {
-                System.loadLibrary("libsvnjavahl-1");
-                return;
-            }
-            catch (UnsatisfiedLinkError e)
-            {
-                System.loadLibrary("svnjavahl");
-            }
-        }
-    }
-
 
     /**
      * Standard empty contructor, builds just the native peer.
@@ -108,6 +61,30 @@ public class SVNClient implements SVNClientInterface
      */
     protected long cppAddr;
     /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        return NativeResources.version;
+    }
+    /**
+     * @return The name of the working copy's administrative
+     * directory, which is usually <code>.svn</code>.
+     * @see <a
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
+     * on changing this as a work-around for the behavior of ASP.Net
+     * on Windows.
+     * @since 1.3
+     */
+    public native String getAdminDirectoryName();
+    /**
+     * @param name The name of the directory to compare.
+     * @return Whether <code>name</code> is that of a working copy
+     * administrative directory.
+     * @since 1.3
+     */
+    public native boolean isAdminDirectory(String name);
+    /**
       * Returns the last destination path submitted.
       * @deprecated
       * @return path in Subversion format.
@@ -117,7 +94,7 @@ public class SVNClient implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
@@ -131,7 +108,7 @@ public class SVNClient implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
@@ -148,7 +125,7 @@ public class SVNClient implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path            Path to explore.
-     * @param descend         Recurse into subdirectories if existant.
+     * @param descend         Recurse into subdirectories if they exist.
      * @param onServer        Request status information from server.
      * @param getAll          get status for uninteristing files (unchanged).
      * @param noIgnore        get status for normaly ignored files and
@@ -951,7 +928,7 @@ public class SVNClient implements SVNClientInterface
      * @param path        the path of the file
      * @param revision    the revision to retrieve
      * @param pegRevision the revision at which to interpret the path
-     * @param the stream to write the file's content to
+     * @param stream      the stream to write the file's content to
      * @throws ClientException
      * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedOutputStream.html">PipedOutputStream</a>
      * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
@@ -1146,4 +1123,9 @@ public class SVNClient implements SVNClientInterface
     public native Info2[] info2(String pathOrUrl, Revision revision,
                                 Revision pegRevision, boolean recurse)
             throws ClientException;
+    /**
+     * Internal method to initialize the native layer. Only to be called by
+     * NativeResources.loadNativeLibrary
+     */
+    static native void initNative();
 }

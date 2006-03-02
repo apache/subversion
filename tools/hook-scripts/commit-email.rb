@@ -68,7 +68,7 @@ def parse(args)
     
     opts.on_tail("--help", "Show this message") do
       puts opts
-      exit
+      exit!
     end
   end
 
@@ -205,7 +205,7 @@ INFO
    end + info.deleted_dirs.collect do |dir|
      <<-INFO
   Deleted: #{dir}
-    % svn ls -r #{rev} #{[uri, dir].compact.join("/")}
+    % svn ls #{[uri, dir].compact.join("/")}@#{rev - 1}
 INFO
    end + info.updated_dirs.collect do |dir|
      "  Modified: #{dir}\n"
@@ -217,22 +217,24 @@ def diff_info(info, uri, add_diff)
     [
       key,
       values.collect do |type, value|
+        args = []
+        rev = info.revision
         case type
         when :added
           command = "cat"
-          rev = info.revision.to_s
         when :modified, :property_changed
           command = "diff"
-          rev = "#{info.revision - 1}:#{info.revision}"
+          args.concat(["-r", "#{info.revision - 1}:#{info.revision}"])
         when :deleted
           command = "cat"
-          rev = (info.revision - 1).to_s
+          rev -= 1
         when :copied
           command = "cat"
-          rev = (info.revision - 1).to_s
         else
           raise "unknown diff type: #{value.type}"
         end
+
+        command += " #{args.join(' ')}" unless args.empty?
 
         link = [uri, key].compact.join("/")
 
@@ -246,7 +248,7 @@ HEADER
           desc << value.body
         else
           desc << <<-CONTENT
-    % svn #{command} -r #{rev} #{link}
+    % svn #{command} #{link}@#{rev}
 CONTENT
         end
       
@@ -276,8 +278,8 @@ def make_subject(name, info)
   subject = ""
   subject << "#{name}:" if name
   subject << "r#{info.revision}: "
-  subject << NKF.nkf("-WM", info.log.lstrip.to_a.first.to_s.chomp)
-  subject
+  subject << info.log.lstrip.to_a.first.to_s.chomp
+  NKF.nkf("-WM", subject)
 end
 
 def x_author(info)
@@ -375,8 +377,12 @@ def rss_items(items, info, repos_uri)
 end
 
 def main
-  repos, revision, to, *rest = ARGV
-  options = parse(rest)
+  if ARGV.find {|arg| arg == "--help"}
+    parse(ARGV)
+  else
+    repos, revision, to, *rest = ARGV
+    options = parse(rest)
+  end
   
   require "svn/info"
   info = Svn::Info.new(repos, revision)

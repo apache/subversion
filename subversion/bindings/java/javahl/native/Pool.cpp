@@ -23,7 +23,7 @@
 #include "JNIUtil.h"
 #include "JNIMutex.h"
 #include "JNICriticalSection.h"
-#include <svn_pools.h>
+#include "svn_pools.h"
 
 /**
  * Constructor to create one apr pool as the subpool of the global pool

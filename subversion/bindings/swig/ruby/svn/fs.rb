@@ -42,7 +42,7 @@ module Svn
       end
 
       def set_warning_func(&func)
-        Fs.set_warning_func(self, func)
+        Fs.set_warning_func_wrapper(self, func)
       end
 
       def path
@@ -271,7 +271,7 @@ module Svn
       end
 
       def fs
-        Fs.root_fs(self)
+        Fs.root_fs_wrapper(self)
       end
       
       def node_id(path)

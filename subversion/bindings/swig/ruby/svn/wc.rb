@@ -9,6 +9,7 @@ module Svn
   module Wc
     Util.set_constants(Ext::Wc, self)
     Util.set_methods(Ext::Wc, self)
+    self.swig_init_asp_dot_net_hack()
 
     @@alias_targets = %w(parse_externals_description
                          ensure_adm cleanup)
@@ -89,9 +90,11 @@ module Svn
           adm = Wc.__send__(name, *args, &block)
           
           if block_given?
-            ret = yield adm
-            adm.close
-            ret
+            begin
+              yield adm
+            ensure
+              adm.close
+            end
           else
             adm
           end

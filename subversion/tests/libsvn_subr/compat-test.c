@@ -24,10 +24,10 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_version_compatibility (const char **msg, 
-                            svn_boolean_t msg_only,
-                            svn_test_opts_t *opts,
-                            apr_pool_t *pool)
+test_version_compatibility(const char **msg, 
+                           svn_boolean_t msg_only,
+                           svn_test_opts_t *opts,
+                           apr_pool_t *pool)
 {
   unsigned int i;
 
@@ -77,8 +77,8 @@ test_version_compatibility (const char **msg,
 
   for (i = 0; i < sizeof(versions)/sizeof(versions[0]); ++i)
     {
-      if (svn_ver_compatible (&versions[i].my_version,
-                              &versions[i].lib_version) != versions[i].result)
+      if (svn_ver_compatible(&versions[i].my_version,
+                             &versions[i].lib_version) != versions[i].result)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_ver_compatible (%d.%d.%d(%s), %d.%d.%d(%s)) failed",
@@ -99,6 +99,6 @@ test_version_compatibility (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test_version_compatibility),
+    SVN_TEST_PASS(test_version_compatibility),
     SVN_TEST_NULL
   };

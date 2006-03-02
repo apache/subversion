@@ -79,7 +79,7 @@ typedef struct svn_error_t
 
 /** easier array-pushing syntax */
 #ifndef APR_ARRAY_PUSH
-#define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push (ary)))
+#define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push(ary)))
 #endif
 
 /** @} */
@@ -199,6 +199,38 @@ enum svn_recurse_kind
   svn_recursive
 };
 
+/**
+ * It is sometimes convenient to indicate which parts of an @c svn_dirent_t
+ * object you are actually interested in, so that calculating and sending
+ * the data corresponding to the other fields can be avoided.  These values
+ * can be used for that purpose.
+ *
+ * @defgroup svn_dirent_fields dirent fields
+ * @{
+ */
+
+/** An indication that you are interested in the @c kind field */
+#define SVN_DIRENT_KIND        0x00001
+
+/** An indication that you are interested in the @c size field */
+#define SVN_DIRENT_SIZE        0x00002
+
+/** An indication that you are interested in the @c has_props field */
+#define SVN_DIRENT_HAS_PROPS   0x00004
+
+/** An indication that you are interested in the @c created_rev field */
+#define SVN_DIRENT_CREATED_REV 0x00008
+
+/** An indication that you are interested in the @c time field */
+#define SVN_DIRENT_TIME        0x00010
+
+/** An indication that you are interested in the @c last_author field */
+#define SVN_DIRENT_LAST_AUTHOR 0x00020
+
+/** A combination of all the dirent fields */
+#define SVN_DIRENT_ALL ~((apr_uint32_t ) 0)
+
+/** @} */
 
 /** A general subversion directory entry. */
 typedef struct svn_dirent_t
@@ -221,8 +253,16 @@ typedef struct svn_dirent_t
   /** author of created_rev */
   const char *last_author;
 
+  /* IMPORTANT: If you extend this struct, check svn_dirent_dup(). */
 } svn_dirent_t;
 
+
+/** Return a deep copy of @a dirent, allocated in @a pool.
+ *
+ * @since New in 1.4.
+ */
+svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
+                             apr_pool_t *pool);
 
 
 
@@ -336,7 +376,17 @@ typedef struct svn_commit_info_t
  * @since New in 1.3.
  */
 svn_commit_info_t *
-svn_create_commit_info (apr_pool_t *pool);
+svn_create_commit_info(apr_pool_t *pool);
+
+
+/**
+ * Return a deep copy @a src_commit_info allocated in @a pool.
+ *
+ * @since New in 1.4.
+ */
+svn_commit_info_t *
+svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
+                    apr_pool_t *pool);
 
 
 /** A structure to represent a path that changed for a log entry. */
@@ -352,6 +402,16 @@ typedef struct svn_log_changed_path_t
   svn_revnum_t copyfrom_rev;
 
 } svn_log_changed_path_t;
+
+
+/**
+ * Return a deep copy of @a changed_path, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_log_changed_path_t *
+svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
+                         apr_pool_t *pool);
 
 
 /** The callback invoked by log message loopers, such as
@@ -384,35 +444,78 @@ typedef struct svn_log_changed_path_t
  * clear it after each iteration, destroy it after the loop is done.)
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
-     (void *baton,
-      apr_hash_t *changed_paths,
-      svn_revnum_t revision,
-      const char *author,
-      const char *date,  /* use svn_time_from_string() if need apr_time_t */
-      const char *message,
-      apr_pool_t *pool);
+  (void *baton,
+   apr_hash_t *changed_paths,
+   svn_revnum_t revision,
+   const char *author,
+   const char *date,  /* use svn_time_from_string() if need apr_time_t */
+   const char *message,
+   apr_pool_t *pool);
 
 
 /** Callback function type for commits.
  *
- * When a commit succeeds, an instance of this is invoked on the @a
- * new_revision, @a date, and @a author of the commit, along with the
- * @a baton closure.
+ * When a commit succeeds, an instance of this is invoked with the
+ * @a commit_info, along with the @a baton closure.
+ * @a pool can be used for temporary allocations.
+ *
+ * @since New in 1.4.
  */
-typedef svn_error_t * (*svn_commit_callback_t) (
-    svn_revnum_t new_revision,
-    const char *date,
-    const char *author,
-    void *baton);
+typedef svn_error_t *(*svn_commit_callback2_t)
+  (const svn_commit_info_t *commit_info,
+   void *baton,
+   apr_pool_t *pool);
+
+/** Same as @c svn_commit_callback2_t, but uses individual
+ * data elements instead of the @c svn_commit_info_t structure
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ */
+typedef svn_error_t *(*svn_commit_callback_t)
+  (svn_revnum_t new_revision,
+   const char *date,
+   const char *author,
+   void *baton);
 
 
-/** The maximum amount we (ideally) hold in memory at a time when
+/** Return, in @a *callback2 and @a *callback2_baton a function/baton that
+ * will call @a callback/@a callback_baton, allocating the @a *callback2_baton
+ * in @a pool.
+ *
+ * @note This is used by compatibility wrappers, which exist in more than
+ * Subversion core library.
+ *
+ * @since New in 1.4.
+ */
+void svn_compat_wrap_commit_callback(svn_commit_callback_t callback,
+                                     void *callback_baton,
+                                     svn_commit_callback2_t *callback2,
+                                     void **callback2_baton,
+                                     apr_pool_t *pool);
+
+
+/** A buffer size that may be used when processing a stream of data.
+ *
+ * @note We don't use this constant any longer, since it is considered to be
+ * unnecessarily large.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
+ */
+#define SVN_STREAM_CHUNK_SIZE 102400
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+/*
+ * The maximum amount we (ideally) hold in memory at a time when
  * processing a stream of data.
  *
  * For example, when copying data from one stream to another, do it in
  * blocks of this size.
+ *
+ * NOTE: This is an internal macro, put here for convenience.
+ * No public API may depend on the particular value of this macro.
  */
-#define SVN_STREAM_CHUNK_SIZE 102400
+#define SVN__STREAM_CHUNK_SIZE 16384
+#endif
 
 /** The maximum amount we can ever hold in memory. */
 /* FIXME: Should this be the same as SVN_STREAM_CHUNK_SIZE? */
@@ -438,8 +541,8 @@ typedef svn_error_t * (*svn_commit_callback_t) (
  * quotes, newlines, or other garbage on the end, such as might be
  * unsafe in an HTTP header.
  */
-svn_error_t *svn_mime_type_validate (const char *mime_type,
-                                     apr_pool_t *pool);
+svn_error_t *svn_mime_type_validate(const char *mime_type,
+                                    apr_pool_t *pool);
 
 
 /** Return false iff @a mime_type is a textual type.
@@ -447,7 +550,7 @@ svn_error_t *svn_mime_type_validate (const char *mime_type,
  * All mime types that start with "text/" are textual, plus some special 
  * cases (for example, "image/x-xbitmap").
  */
-svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
+svn_boolean_t svn_mime_type_is_binary(const char *mime_type);
 
 
 
@@ -456,7 +559,7 @@ svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
  * should continue, the function should return @c SVN_NO_ERROR, if not, it 
  * should return @c SVN_ERR_CANCELLED.
  */
-typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
+typedef svn_error_t *(*svn_cancel_func_t)(void *cancel_baton);
 
 
 
@@ -501,7 +604,7 @@ typedef struct svn_lock_t
  * @since New in 1.2.
  */
 svn_lock_t *
-svn_lock_create (apr_pool_t *pool);
+svn_lock_create(apr_pool_t *pool);
 
 /**
  * Return a deep copy of @a lock, allocated in @a pool.
@@ -509,7 +612,15 @@ svn_lock_create (apr_pool_t *pool);
  * @since New in 1.2.
  */
 svn_lock_t *
-svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool);
+svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
+
+/**
+ * Return a formatted universal Universal Unique IDentifier (UUID) string.
+ *
+ * @since New in 1.4.
+ */
+const char *
+svn_uuid_generate(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

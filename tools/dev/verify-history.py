@@ -32,9 +32,9 @@ class HistoryChecker:
   def __init__(self, fs_ptr):
     self.fs_ptr = fs_ptr
         
-  def _check_history(self, path, revision, pool):
-    root = fs.revision_root(self.fs_ptr, revision, pool)
-    changes = fs.paths_changed(root, pool)
+  def _check_history(self, path, revision):
+    root = fs.revision_root(self.fs_ptr, revision)
+    changes = fs.paths_changed(root)
     while 1:
       if changes.has_key(path):
         return 1
@@ -46,17 +46,17 @@ class HistoryChecker:
       else:
         return 0
 
-  def add_history(self, path, revision, pool):
-    if not self._check_history(path, revision, pool):
+  def add_history(self, path, revision, pool=None):
+    if not self._check_history(path, revision):
       print "**WRONG** %8d %s" % (revision, path)
     else:
       print "          %8d %s" % (revision, path)
 
 
-def check_history(fs_ptr, path, revision, pool):
+def check_history(fs_ptr, path, revision):
   history = HistoryChecker(fs_ptr)
   repos.history(fs_ptr, path, history.add_history,
-		1, revision, 1, pool)
+		1, revision, 1)
 
 
 def main():
@@ -65,14 +65,12 @@ def main():
     print "Usage: %s PATH-TO-REPOS PATH-IN-REPOS [REVISION]"
     sys.exit(1)
 
-  core.apr_initialize()
-  pool = core.svn_pool_create(None)
-  fs_ptr = repos.fs(repos.open(sys.argv[1], pool))
+  fs_ptr = repos.fs(repos.open(sys.argv[1]))
   if argc == 3:
-    revision = fs.youngest_rev(fs_ptr, pool)
+    revision = fs.youngest_rev(fs_ptr)
   else:
     revision = int(sys.argv[3])
-  check_history(fs_ptr, sys.argv[2], revision, pool)
+  check_history(fs_ptr, sys.argv[2], revision)
   sys.exit(0)
 
 

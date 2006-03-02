@@ -22,6 +22,7 @@
 				Name="VCNMakeTool"
 				BuildCommandLine="NMAKE /nologo /f Makefile.win BUILD_MODE=release BIND_MODE=shared"
 				ReBuildCommandLine="NMAKE /nologo /f Makefile.win BUILD_MODE=release BIND_MODE=shared /a"
+				CleanCommandLine="NMAKE /nologo /f Makefile.win clean BUILD_MODE=release BIND_MODE=shared"
 				Output="Release"/>
 		</Configuration>
 		<Configuration
@@ -35,6 +36,7 @@
 				Name="VCNMakeTool"
 				BuildCommandLine="NMAKE /nologo /f Makefile.win BUILD_MODE=debug BIND_MODE=shared"
 				ReBuildCommandLine="NMAKE /nologo /f Makefile.win BUILD_MODE=debug BIND_MODE=shared /a"
+				CleanCommandLine="NMAKE /nologo /f Makefile.win clean BUILD_MODE=debug BIND_MODE=shared"
 				Output="Debug"/>
 		</Configuration>
 	</Configurations>

@@ -11,7 +11,7 @@ import sys
 import os
 
 def usage():
-  print 'USAGE: %s WHAT' % sys.argv[0]
+  print 'USAGE: python %s WHAT' % sys.argv[0]
   print '  Returns information about how to build Python extensions.'
   print '  WHAT may be one of:'
   print "    --includes : return -I include flags"
@@ -84,22 +84,24 @@ def link_options():
       sysconfig.get_config_var('PYTHON'))
     add_option_if_missing(options, "-bundle_loader", python_exe)
 
-  else:
+  elif sys.platform == 'cygwin':
 
-    # Initialize config variables
+    # Add flags to build against the Python library (also necessary
+    # for Darwin, but handled elsewhere).
+
+    # Find the path to the library, and add a flag to include it as a
+    # library search path.
     shared_libdir = sysconfig.get_config_var('LIBDIR')
     static_libdir = sysconfig.get_config_var('LIBPL')
     ldlibrary = sysconfig.get_config_var('LDLIBRARY')
-    python_version = sysconfig.get_config_var('VERSION')
-
-    # Find the path to the library
     if os.path.exists(os.path.join(shared_libdir, ldlibrary)):
       if shared_libdir != '/usr/lib':
         add_option_if_missing(options, '-L%s' % shared_libdir)
     elif os.path.exists(os.path.join(static_libdir, ldlibrary)):
       add_option_if_missing(options, "-L%s" % static_libdir)
-
-    # Load in the library
+    
+    # Add a flag to build against the library itself.
+    python_version = sysconfig.get_config_var('VERSION')
     add_option_if_missing(options, "-lpython%s" % python_version)
 
   return options

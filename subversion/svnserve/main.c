@@ -42,6 +42,10 @@
 
 #include "svn_private_config.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>   /* For getpid() */
+#endif
+
 #include "server.h"
 
 /* The strategy for handling incoming connections.  Some of these may be
@@ -54,6 +58,7 @@ enum connection_handling_mode {
 
 /* The mode in which to run svnserve */
 enum run_mode {
+  run_mode_unspecified,
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
@@ -83,9 +88,6 @@ enum run_mode {
 
 /* Option codes and descriptions for svnserve.
  *
- * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
- * need more, increase that limit first.
- *
  * The entire list must be terminated with an entry of nulls.
  *
  * APR requires that options without abbreviations
@@ -96,6 +98,7 @@ enum run_mode {
 #define SVNSERVE_OPT_FOREGROUND  258
 #define SVNSERVE_OPT_TUNNEL_USER 259
 #define SVNSERVE_OPT_VERSION     260
+#define SVNSERVE_OPT_PID_FILE    261
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -111,7 +114,8 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("show version information")},
     {"inetd",            'i', 0, N_("inetd mode")},
     {"root",             'r', 1, N_("root of directory to serve")},
-    {"read-only",        'R', 0, N_("deprecated; use repository config file")},
+    {"read-only",        'R', 0,
+     N_("force read only, overriding repository config file")},
     {"tunnel",           't', 0, N_("tunnel mode")},
     {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
      N_("tunnel username (default is current uid's name)")},
@@ -119,6 +123,8 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, N_("use threads instead of fork")},
 #endif
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
+    {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
+     N_("write server process ID to file arg")},
     {0,                  0,   0, 0}
   };
 
@@ -159,8 +165,8 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 
   svn_stringbuf_t *version_footer;
 
-  version_footer = svn_stringbuf_create (fs_desc_start, pool);
-  SVN_ERR (svn_fs_print_modules (version_footer, pool));
+  version_footer = svn_stringbuf_create(fs_desc_start, pool);
+  SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
   return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);
@@ -184,9 +190,12 @@ static apr_status_t redirect_stdout(void *arg)
 {
   apr_pool_t *pool = arg;
   apr_file_t *out_file, *err_file;
+  apr_status_t apr_err;
 
-  apr_file_open_stdout(&out_file, pool);
-  apr_file_open_stderr(&err_file, pool);
+  if ((apr_err = apr_file_open_stdout(&out_file, pool)))
+    return apr_err;
+  if ((apr_err = apr_file_open_stderr(&err_file, pool)))
+    return apr_err;
   return apr_file_dup2(out_file, err_file, pool);
 }
 
@@ -209,6 +218,25 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 }
 #endif
 
+/* Write the PID of the current process as a decimal number, followed by a
+   newline to the file FILENAME, using POOL for temporary allocations. */
+static svn_error_t *write_pid_file(const char *filename, apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *contents = apr_psprintf(pool, "%" APR_PID_T_FMT "\n",
+                                             getpid());
+
+  SVN_ERR(svn_io_file_open(&file, filename,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_write_full(file, contents, strlen(contents), NULL,
+                                 pool));
+
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions(void)
@@ -228,9 +256,9 @@ check_lib_versions(void)
 }
 
 
-int main(int argc, const char *const *argv)
+int main(int argc, const char *argv[])
 {
-  enum run_mode run_mode;
+  enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
@@ -239,7 +267,6 @@ int main(int argc, const char *const *argv)
   apr_pool_t *connection_pool;
   svn_error_t *err;
   apr_getopt_t *os;
-  char errbuf[256];
   int opt;
   serve_params_t params;
   const char *arg;
@@ -257,6 +284,7 @@ int main(int argc, const char *const *argv)
   const char *host = NULL;
   int family = APR_INET;
   int mode_opt_count = 0;
+  const char *pid_filename = NULL;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -285,7 +313,9 @@ int main(int argc, const char *const *argv)
       return EXIT_FAILURE;
     }
 
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
   params.root = "/";
   params.tunnel = FALSE;
@@ -353,25 +383,31 @@ int main(int argc, const char *const *argv)
 
         case 'R':
           params.read_only = TRUE;
-          svn_error_clear
-            (svn_cmdline_fprintf
-               (stderr, pool,
-                _("Warning: -R is deprecated.\n"
-                  "Anonymous access is now read-only by default.\n"
-                  "To change, use conf/svnserve.conf in repos:\n"
-                  "  [general]\n"
-                  "  anon-access = read|write|none (default read)\n"
-                  "  auth-access = read|write|none (default write)\n"
-                  "Forcing all access to read-only for now\n")));
           break;
 
         case 'T':
           handling_mode = connection_mode_thread;
           break;
+
+        case SVNSERVE_OPT_PID_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
+          pid_filename = svn_path_internal_style(pid_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&pid_filename, pid_filename,
+                                            pool));
+          break;
+
         }
     }
   if (os->ind != argc)
     usage(argv[0], pool);
+
+  if (mode_opt_count != 1)
+    {
+      svn_error_clear(svn_cmdline_fputs
+                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
+                       stderr, pool));
+      usage(argv[0], pool);
+    }
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
@@ -382,21 +418,29 @@ int main(int argc, const char *const *argv)
       exit(1);
     }
 
-  if (mode_opt_count != 1)
-    {
-      svn_error_clear(svn_cmdline_fputs
-                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
-                       stderr, pool));
-      usage(argv[0], pool);
-    }
-
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
       params.tunnel = (run_mode == run_mode_tunnel);
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
-      apr_file_open_stdin(&in_file, pool);
-      apr_file_open_stdout(&out_file, pool);
+      status = apr_file_open_stdin(&in_file, pool);
+      if (status)
+        {
+          err = svn_error_wrap_apr(status, _("Can't open stdin"));
+          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+          svn_error_clear(err);
+          exit(1);
+        }
+
+      status = apr_file_open_stdout(&out_file, pool);
+      if (status)
+        {
+          err = svn_error_wrap_apr(status, _("Can't open stdout"));
+          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+          svn_error_clear(err);
+          exit(1);
+        }
+                                
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
       svn_error_clear(serve(conn, &params, pool));
       exit(0);
@@ -424,10 +468,9 @@ int main(int argc, const char *const *argv)
   status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
   if (status)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("Can't get address info: %s\n"),
-            apr_strerror(status, errbuf, sizeof(errbuf))));
+      err = svn_error_wrap_apr(status, _("Can't get address info"));
+      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+      svn_error_clear(err);
       exit(1);
     }
 
@@ -441,10 +484,9 @@ int main(int argc, const char *const *argv)
 #endif
   if (status)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("Can't create server socket: %s\n"),
-            apr_strerror(status, errbuf, sizeof(errbuf))));
+      err = svn_error_wrap_apr(status, _("Can't create server socket"));
+      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+      svn_error_clear(err);
       exit(1);
     }
 
@@ -455,10 +497,9 @@ int main(int argc, const char *const *argv)
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("Can't bind server socket: %s\n"),
-            apr_strerror(status, errbuf, sizeof(errbuf))));
+      err = svn_error_wrap_apr(status, _("Can't bind server socket"));
+      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+      svn_error_clear(err);
       exit(1);
     }
 
@@ -475,6 +516,16 @@ int main(int argc, const char *const *argv)
   /* Disable SIGPIPE generation for the platforms that have it. */
   apr_signal(SIGPIPE, SIG_IGN);
 #endif
+
+#ifdef SIGXFSZ
+  /* Disable SIGXFSZ generation for the platforms that have it, otherwise
+   * working with large files when compiled against an APR that doesn't have
+   * large file support will crash the program, which is uncool. */
+  apr_signal(SIGXFSZ, SIG_IGN);
+#endif
+
+  if (pid_filename)
+    SVN_INT_ERR(write_pid_file(pid_filename, pool));
 
   while (1)
     {
@@ -498,10 +549,10 @@ int main(int argc, const char *const *argv)
         }
       if (status)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool, _("Can't accept client connection: %s\n"),
-              apr_strerror(status, errbuf, sizeof(errbuf))));
+          err = svn_error_wrap_apr
+            (status, _("Can't accept client connection"));
+          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+          svn_error_clear(err);
           exit(1);
         }
 
@@ -553,19 +604,17 @@ int main(int argc, const char *const *argv)
           status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
-              svn_error_clear
-                (svn_cmdline_fprintf
-                 (stderr, pool, _("Can't create threadattr: %s\n"),
-                  apr_strerror(status, errbuf, sizeof(errbuf))));
+              err = svn_error_wrap_apr(status, _("Can't create threadattr"));
+              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+              svn_error_clear(err);
               exit(1);
             }
           status = apr_threadattr_detach_set(tattr, 1);
           if (status)
             {
-              svn_error_clear
-                (svn_cmdline_fprintf
-                 (stderr, pool, _("Can't set detached state: %s\n"),
-                  apr_strerror(status, errbuf, sizeof(errbuf))));
+              err = svn_error_wrap_apr(status, _("Can't set detached state"));
+              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+              svn_error_clear(err);
               exit(1);
             }
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
@@ -576,10 +625,9 @@ int main(int argc, const char *const *argv)
                                      connection_pool);
           if (status)
             {
-              svn_error_clear
-                (svn_cmdline_fprintf
-                 (stderr, pool, _("Can't create thread: %s\n"),
-                  apr_strerror(status, errbuf, sizeof(errbuf))));
+              err = svn_error_wrap_apr(status, _("Can't create thread"));
+              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+              svn_error_clear(err);
               exit(1);
             }
 #endif

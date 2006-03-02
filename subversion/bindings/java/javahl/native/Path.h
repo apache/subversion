@@ -43,7 +43,7 @@ private:
      *
      * @param pi_path Path string
      */
-    void init (const char * pi_path);
+    void init(const char * pi_path);
 public:
     /**
      * Constructor that takes a string as parameter.
@@ -52,7 +52,7 @@ public:
      *
      * @param pi_path Path string
      */
-    Path (const std::string & pi_path = "");
+    Path(const std::string & pi_path = "");
     
     /**
      * Constructor
@@ -60,14 +60,14 @@ public:
      * @see Path::Path (const std::string &)
      * @param pi_path Path string
      */
-    Path (const char * pi_path);
+    Path(const char * pi_path);
 
     /**
      * Copy constructor
      *
      * @param pi_path Path to be copied
      */
-    Path (const Path & pi_path);
+    Path(const Path & pi_path);
 
     /**
      * Assignment operator
@@ -78,7 +78,7 @@ public:
      * @return Path string
      */
     const std::string &
-    path () const;
+      path() const;
 
     /**
      * @return Path string as c string

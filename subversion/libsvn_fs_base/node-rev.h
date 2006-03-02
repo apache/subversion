@@ -42,13 +42,13 @@ extern "C" {
 
    After this call, the node table manager assumes that the new node's
    contents will change frequently.  */
-svn_error_t *svn_fs_base__create_node (const svn_fs_id_t **id_p,
-                                       svn_fs_t *fs,
-                                       node_revision_t *noderev,
-                                       const char *copy_id,
-                                       const char *txn_id,
-                                       trail_t *trail,
-                                       apr_pool_t *pool);
+svn_error_t *svn_fs_base__create_node(const svn_fs_id_t **id_p,
+                                      svn_fs_t *fs,
+                                      node_revision_t *noderev,
+                                      const char *copy_id,
+                                      const char *txn_id,
+                                      trail_t *trail,
+                                      apr_pool_t *pool);
 
 /* Create a node revision in FS which is an immediate successor of
    OLD_ID, whose contents are NEW_NR, as part of TRAIL.  Set *NEW_ID_P
@@ -64,23 +64,23 @@ svn_error_t *svn_fs_base__create_node (const svn_fs_id_t **id_p,
    After this call, the deltification code assumes that the new node's
    contents will change frequently, and will avoid representing other
    nodes as deltas against this node's contents.  */
-svn_error_t *svn_fs_base__create_successor (const svn_fs_id_t **new_id_p,
-                                            svn_fs_t *fs,
-                                            const svn_fs_id_t *old_id,
-                                            node_revision_t *new_nr,
-                                            const char *copy_id,
-                                            const char *txn_id,
-                                            trail_t *trail,
-                                            apr_pool_t *pool);
+svn_error_t *svn_fs_base__create_successor(const svn_fs_id_t **new_id_p,
+                                           svn_fs_t *fs,
+                                           const svn_fs_id_t *old_id,
+                                           node_revision_t *new_nr,
+                                           const char *copy_id,
+                                           const char *txn_id,
+                                           trail_t *trail,
+                                           apr_pool_t *pool);
 
 
 /* Delete node revision ID from FS's `nodes' table, as part of TRAIL.
    WARNING: This does not check that the node revision is mutable!
    Callers should do that check themselves.  */
-svn_error_t *svn_fs_base__delete_node_revision (svn_fs_t *fs,
-                                                const svn_fs_id_t *id,
-                                                trail_t *trail,
-                                                apr_pool_t *pool);
+svn_error_t *svn_fs_base__delete_node_revision(svn_fs_t *fs,
+                                               const svn_fs_id_t *id,
+                                               trail_t *trail,
+                                               apr_pool_t *pool);
 
 
 #ifdef __cplusplus

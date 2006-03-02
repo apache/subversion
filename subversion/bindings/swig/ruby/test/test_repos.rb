@@ -77,14 +77,12 @@ class SvnReposTest < Test::Unit::TestCase
   def test_create
     tmp_repos_path = File.join(@tmp_path, "repos")
     fs_config = {Svn::Fs::CONFIG_FS_TYPE => Svn::Fs::TYPE_BDB}
-    Svn::Repos.create(tmp_repos_path, {}, fs_config)
+    repos = Svn::Repos.create(tmp_repos_path, {}, fs_config)
     assert(File.exist?(tmp_repos_path))
-    repos = Svn::Repos.open(tmp_repos_path)
     fs_type_path = File.join(repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
     assert_equal(Svn::Fs::TYPE_BDB,
                  File.open(fs_type_path) {|f| f.read.chop})
-    repos = nil
-    GC.start
+    repos.fs.set_warning_func(&warning_func)
     Svn::Repos.delete(tmp_repos_path)
     assert(!File.exist?(tmp_repos_path))
   end
@@ -113,6 +111,13 @@ class SvnReposTest < Test::Unit::TestCase
     end_rev = info3.revision
 
     logs = @repos.logs(file, start_rev, end_rev, end_rev - start_rev + 1)
+    logs = logs.collect do |changed_paths, revision, author, date, message|
+      paths = {}
+      changed_paths.each do |key, changed_path|
+        paths[key] = changed_path.action
+      end
+      [paths, revision, author, date, message]
+    end
     assert_equal([
                    [
                      {"/#{file}" => "A"},
@@ -174,6 +179,7 @@ class SvnReposTest < Test::Unit::TestCase
     fs_config = {}
 
     repos = Svn::Repos.create(dest_path, config, fs_config)
+    repos.fs.set_warning_func(&warning_func)
 
     FileUtils.mv(@repos.path, backup_path)
     FileUtils.mv(repos.path, @repos.path)
@@ -462,6 +468,12 @@ EOF
     assert(authz.can_access?(name, "/", @author, Svn::Repos::AUTHZ_READ))
     assert(!authz.can_access?(name, "/", @author, Svn::Repos::AUTHZ_WRITE))
     assert(!authz.can_access?(name, "/", "FOO", Svn::Repos::AUTHZ_READ))
+  end
+
+  def warning_func
+    Proc.new do |err|
+      STDERR.puts err if $DEBUG
+    end
   end
   
   class TestEditor < Svn::Delta::BaseEditor

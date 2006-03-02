@@ -59,16 +59,16 @@ extern "C" {
    missing directories.  If NOTIFY_FUNC is non-null, invoke it with 
    NOTIFY_BATON for each missing entry deleted.
 */
-svn_error_t *svn_wc__do_update_cleanup (const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        svn_boolean_t recursive,
-                                        const char *base_url,
-                                        const char *repos,
-                                        svn_revnum_t new_revision,
-                                        svn_wc_notify_func2_t notify_func,
-                                        void *notify_baton,
-                                        svn_boolean_t remove_missing_dirs,
-                                        apr_pool_t *pool);
+svn_error_t *svn_wc__do_update_cleanup(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t recursive,
+                                       const char *base_url,
+                                       const char *repos,
+                                       svn_revnum_t new_revision,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_boolean_t remove_missing_dirs,
+                                       apr_pool_t *pool);
 
 
 #ifdef __cplusplus

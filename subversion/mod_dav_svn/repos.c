@@ -19,6 +19,7 @@
 
 
 #include <httpd.h>
+#include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
 #include <http_core.h>  /* for ap_construct_url */
@@ -28,10 +29,12 @@
 #include <apr_want.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+#include <apr_lib.h>
 
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_dav.h"
@@ -1171,7 +1174,7 @@ static apr_status_t cleanup_fs_access(void *data)
   svn_error_t *serr;
   struct cleanup_fs_access_baton *baton = data;
   
-  serr = svn_fs_set_access (baton->fs, NULL);
+  serr = svn_fs_set_access(baton->fs, NULL);
   if (serr)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
@@ -1239,6 +1242,183 @@ get_parentpath_resource(request_rec *r,
   return NULL;
 }
 
+/* --------------- Borrowed from httpd's mod_negotiation.c -------------- */
+
+typedef struct accept_rec {
+  char *name;                 /* MUST be lowercase */
+  float quality;
+} accept_rec;
+
+/*
+ * Get a single Accept-encoding line from ACCEPT_LINE, and place the
+ * information we have parsed out of it into RESULT.
+ */
+
+static const char *get_entry(apr_pool_t *p, accept_rec *result,
+                             const char *accept_line)
+{
+    result->quality = 1.0f;
+
+    /*
+     * Note that this handles what I gather is the "old format",
+     *
+     *    Accept: text/html text/plain moo/zot
+     *
+     * without any compatibility kludges --- if the token after the
+     * MIME type begins with a semicolon, we know we're looking at parms,
+     * otherwise, we know we aren't.  (So why all the pissing and moaning
+     * in the CERN server code?  I must be missing something).
+     */
+
+    result->name = ap_get_token(p, &accept_line, 0);
+    ap_str_tolower(result->name);     /* You want case insensitive,
+                                       * you'll *get* case insensitive.
+                                       */
+
+    while (*accept_line == ';')
+      {
+        /* Parameters ... */
+
+        char *parm;
+        char *cp;
+        char *end;
+
+        ++accept_line;
+        parm = ap_get_token(p, &accept_line, 1);
+
+        /* Look for 'var = value' --- and make sure the var is in lcase. */
+
+        for (cp = parm; (*cp && !apr_isspace(*cp) && *cp != '='); ++cp)
+          {
+            *cp = apr_tolower(*cp);
+          }
+
+        if (!*cp)
+          {
+            continue;           /* No '='; just ignore it. */
+          }
+
+        *cp++ = '\0';           /* Delimit var */
+        while (*cp && (apr_isspace(*cp) || *cp == '='))
+          {
+            ++cp;
+          }
+
+        if (*cp == '"')
+          {
+            ++cp;
+            for (end = cp;
+                 (*end && *end != '\n' && *end != '\r' && *end != '\"');
+                 end++);
+          }
+        else
+          {
+            for (end = cp; (*end && !apr_isspace(*end)); end++);
+          }
+        if (*end)
+          {
+            *end = '\0';        /* strip ending quote or return */
+          }
+        ap_str_tolower(cp);
+
+        if (parm[0] == 'q'
+            && (parm[1] == '\0' || (parm[1] == 's' && parm[2] == '\0')))
+          {
+            result->quality = (float) atof(cp);
+          }
+      }
+
+    if (*accept_line == ',')
+      {
+        ++accept_line;
+      }
+
+    return accept_line;
+}
+
+/* @a accept_line is the Accept-Encoding header, which is of the
+   format:
+
+     Accept-Encoding: name; q=N;
+
+   This function will return an array of accept_rec structures that
+   contain the accepted encodings and the quality each one has
+   associated with them.
+*/
+static apr_array_header_t *do_header_line(apr_pool_t *p,
+                                          const char *accept_line)
+{
+    apr_array_header_t *accept_recs;
+
+    if (!accept_line)
+      return NULL;
+
+    accept_recs = apr_array_make(p, 10, sizeof(accept_rec));
+
+    while (*accept_line)
+      {
+        accept_rec *prefs = (accept_rec *) apr_array_push(accept_recs);
+        accept_line = get_entry(p, prefs, accept_line);
+      }
+
+    return accept_recs;
+}
+
+/* ---------------------------------------------------------------------- */
+
+
+/* qsort comparison function for the quality field of the accept_rec
+   structure */
+static int sort_encoding_pref(const void *accept_rec1, const void *accept_rec2)
+{
+  float diff = ((const accept_rec *) accept_rec1)->quality -
+      ((const accept_rec *) accept_rec2)->quality;
+  return (diff == 0 ? 0 : (diff > 0 ? -1 : 1));
+}
+
+/* Parse and handle any possible Accept-Encoding header that has been
+   sent as part of the request.  */
+static void
+svn_dav__negotiate_encoding_prefs(request_rec *r,
+                                  int *svndiff_version)
+{
+  /* It would be nice if mod_negotiation
+     <http://httpd.apache.org/docs-2.1/mod/mod_negotiation.html> could
+     handle the Accept-Encoding header parsing for us.  Sadly, it
+     looks like its data structures and routines are private (see
+     httpd/modules/mappers/mod_negotiation.c).  Thus, we duplicate the
+     necessary ones in this file. */
+  int i;
+  const apr_array_header_t *encoding_prefs;
+  encoding_prefs = do_header_line(r->pool, 
+                                  apr_table_get(r->headers_in, 
+                                                "Accept-Encoding"));
+
+  if (!encoding_prefs || apr_is_empty_array(encoding_prefs))
+    {
+      *svndiff_version = 0;
+      return;
+    }
+
+  *svndiff_version = 0;
+  qsort(encoding_prefs->elts, (size_t) encoding_prefs->nelts,
+        sizeof(accept_rec), sort_encoding_pref);
+  for (i = 0; i < encoding_prefs->nelts; i++)
+    {
+      struct accept_rec rec = APR_ARRAY_IDX(encoding_prefs, i,
+                                            struct accept_rec);
+      if (strcmp(rec.name, "svndiff1") == 0)
+        {
+          *svndiff_version = 1;
+          break;
+        }
+      else if (strcmp(rec.name, "svndiff") == 0)
+        {
+          *svndiff_version = 0;
+          break;
+        }
+    } 
+}
 
 
 static dav_error * dav_svn_get_resource(request_rec *r,
@@ -1264,6 +1444,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   int had_slash;
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
+  void *userdata;
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
@@ -1334,6 +1515,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
   }
 
+  svn_dav__negotiate_encoding_prefs(r, &comb->priv.svndiff_version);
+
   /* ### and another hack for computing diffs to send to the client */
   comb->priv.delta_base = apr_table_get(r->headers_in,
                                         SVN_DAV_DELTA_BASE_HEADER);
@@ -1401,7 +1584,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   
   /* Retrieve/cache open repository */
   repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
-  apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);
+  apr_pool_userdata_get(&userdata, repos_key, r->connection->pool);
+  repos->repos = userdata;
   if (repos->repos == NULL)
     {
       serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
@@ -1444,7 +1628,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                 apr_pool_cleanup_null);      
       
       /* Create an access context based on the authenticated username. */
-      serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
+      serr = svn_fs_create_access(&access_ctx, r->user, r->pool);
       if (serr)
         {
           return dav_svn__sanitize_error(serr,
@@ -1453,7 +1637,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }
 
       /* Attach the access context to the fs. */
-      serr = svn_fs_set_access (repos->fs, access_ctx);
+      serr = svn_fs_set_access(repos->fs, access_ctx);
       if (serr)
         {
           return dav_svn__sanitize_error(serr, "Could not attach access "
@@ -1481,7 +1665,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       svn_fs_access_t *access_ctx;
       dav_locktoken_list *list = ltl;
 
-      serr = svn_fs_get_access (&access_ctx, repos->fs);
+      serr = svn_fs_get_access(&access_ctx, repos->fs);
       if (serr)
         {
           return dav_svn__sanitize_error(serr, "Lock token is in request, "
@@ -1490,12 +1674,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }
 
       do {
-        serr = svn_fs_access_add_lock_token (access_ctx,
-                                             list->locktoken->uuid_str);
+        serr = svn_fs_access_add_lock_token(access_ctx,
+                                            list->locktoken->uuid_str);
         if (serr)
-          return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error pushing token into filesystem.",
-                                      r->pool);
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Error pushing token into filesystem.",
+                                     r->pool);
         list = list->next;
 
       } while (list);
@@ -1905,11 +2089,11 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
     {
       svn_string_t *mime_type;
 
-      serr = svn_fs_node_prop (&mime_type,
-                               resource->info->root.root,
-                               resource->info->repos_path,
-                               SVN_PROP_MIME_TYPE,
-                               resource->pool);
+      serr = svn_fs_node_prop(&mime_type,
+                              resource->info->root.root,
+                              resource->info->repos_path,
+                              SVN_PROP_MIME_TYPE,
+                              resource->pool);
       
       if (serr != NULL)
         {
@@ -2061,21 +2245,68 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
                        "(at this time)");
 }
 
+/* Returns whether the DAV resource lacks potential for generation of
+   an ETag (defined as any of the following):
+   - it doesn't exist
+   - the resource type isn't REGULAR or VERSION
+   - the resource is a Baseline */
+#define RESOURCE_LACKS_ETAG_POTENTIAL(resource) \
+  (!resource->exists \
+   || (resource->type != DAV_RESOURCE_TYPE_REGULAR \
+       && resource->type != DAV_RESOURCE_TYPE_VERSION) \
+   || (resource->type == DAV_RESOURCE_TYPE_VERSION \
+       && resource->baselined))
+
+/* Return the last modification time of RESOURCE, or -1 if the DAV
+   resource type is not handled, or if an error occurs.  Temporary
+   allocations are made from RESOURCE->POOL. */
+static apr_time_t get_last_modified(const dav_resource *resource)
+{
+  apr_time_t last_modified;
+  svn_error_t *serr;
+  svn_revnum_t created_rev;
+  svn_string_t *date_time;
+
+  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
+    return -1;
+
+  if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
+                                      resource->info->repos_path,
+                                      resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  if ((serr = svn_fs_revision_prop(&date_time, resource->info->repos->fs,
+                                   created_rev, "svn:date", resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  if (date_time == NULL || date_time->data == NULL)
+    return -1;
+
+  if ((serr = svn_time_from_cstring(&last_modified, date_time->data,
+                                    resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  return last_modified;
+}
+
 const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
 {
   svn_error_t *serr;
   svn_revnum_t created_rev;
 
-  /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
-     resource, or it is a Baseline, then it has no etag. */
-  /* ### we should assign etags to all resources at some point */
-  if (!resource->exists
-      || (resource->type != DAV_RESOURCE_TYPE_REGULAR
-          && resource->type != DAV_RESOURCE_TYPE_VERSION)
-      || (resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined))
+  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
     return "";
 
-  /* ### what kind of etag to return for collections, activities, etc? */
+  /* ### what kind of etag to return for activities, etc.? */
 
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
                                       resource->info->repos_path,
@@ -2109,25 +2340,32 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   svn_error_t *serr;
   svn_filesize_t length;
   const char *mimetype = NULL;
+  apr_time_t last_modified;
   
   if (!resource->exists)
     return NULL;
 
-  /* ### what to do for collections, activities, etc */
-
-  /* make sure the proper mtime is in the request record */
-#if 0
-  ap_update_mtime(r, resource->info->finfo.mtime);
-#endif
-
-  /* ### note that these use r->filename rather than <resource> */
-#if 0
-  ap_set_last_modified(r);
-#endif
+  last_modified = get_last_modified(resource);
+  if (last_modified != -1)
+    {
+      /* Note the modification time for the requested resource, and
+         include the Last-Modified header in the response. */
+      ap_update_mtime(r, last_modified);
+      ap_set_last_modified(r);
+    }
 
   /* generate our etag and place it into the output */
   apr_table_setn(r->headers_out, "ETag",
                  dav_svn_getetag(resource, resource->pool));
+
+#if 0
+  /* As version resources don't change, encourage caching. */
+  /* ### FIXME: This conditional is wrong -- type is often REGULAR,
+     ### and the resource doesn't seem to be baselined. */
+  if (resource->type == DAV_RESOURCE_TYPE_VERSION)
+    /* Cache resource for one week (specified in seconds). */
+    apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
+#endif
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -2323,7 +2561,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         const char *fs_parent_path = 
           dav_svn_get_fs_parent_path(resource->info->r);
 
-        serr = svn_io_get_dirents(&dirents, fs_parent_path, resource->pool);
+        serr = svn_io_get_dirents2(&dirents, fs_parent_path, resource->pool);
         if (serr != NULL)
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "couldn't fetch dirents of SVNParentPath",
@@ -2332,23 +2570,23 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         /* convert an io dirent hash to an fs dirent hash. */
         entries = apr_hash_make(resource->pool);
         for (hi = apr_hash_first(resource->pool, dirents);
-             hi; hi = apr_hash_next (hi))
+             hi; hi = apr_hash_next(hi))
           {
             const void *key;
             apr_ssize_t klen;
             void *val;
-            svn_node_kind_t *path_kind;
+            svn_io_dirent_t *dirent;
             svn_fs_dirent_t *ent = apr_pcalloc(resource->pool, sizeof(*ent));
 
             apr_hash_this(hi, &key, &klen, &val);
-            path_kind = val;
+            dirent = val;
 
-            if (*path_kind != svn_node_dir)
+            if (dirent->kind != svn_node_dir)
               continue;
 
             ent->name = key;
             ent->id = NULL;     /* ### does it matter? */
-            ent->kind = *path_kind;
+            ent->kind = dirent->kind;
 
             apr_hash_set(entries, key, APR_HASH_KEY_STRING, ent);
           }
@@ -2458,7 +2696,14 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 	/* We quote special characters in both XML and HTML. */
 	name = apr_xml_quote_string(entry_pool, name, !gen_html);
 
-        href = ap_escape_uri(entry_pool, href);
+        /* According to httpd-2.0.54/include/httpd.h, ap_os_escape_path()
+           behaves differently on different platforms.  It claims to
+           "convert an OS path to a URL in an OS dependant way".
+           Nevertheless, there appears to be only one implementation
+           of the function in httpd, and the code seems completely
+           platform independent, so we'll assume it's appropriate for
+           mod_dav_svn to use it to quote outbound paths. */
+        href = ap_os_escape_path(entry_pool, href, 0);
 	href = apr_xml_quote_string(entry_pool, href, 1);
 
         if (gen_html)
@@ -2564,7 +2809,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           svn_stream_set_close(o_stream, dav_svn_close_filter);
 
           /* get a handler/baton for writing into the output stream */
-          svn_txdelta_to_svndiff(o_stream, resource->pool, &handler, &h_baton);
+          svn_txdelta_to_svndiff2(o_stream, resource->pool, &handler, &h_baton,
+                                  resource->info->svndiff_version);
 
           /* got everything set up. read in delta windows and shove them into
              the handler, which pushes data into the output stream, which goes
@@ -2604,9 +2850,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       /* ### one day in the future, we can create a custom bucket type
          ### which will read from the FS stream on demand */
 
-      block = apr_palloc(resource->pool, SVN_STREAM_CHUNK_SIZE);
+      block = apr_palloc(resource->pool, SVN__STREAM_CHUNK_SIZE);
       while (1) {
-        apr_size_t bufsize = SVN_STREAM_CHUNK_SIZE;
+        apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
 
         /* read from the FS ... */
         serr = svn_stream_read(stream, block, &bufsize);
@@ -3044,7 +3290,8 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(params->pool,
                              "list-dir '%s'",
-                             ctx->info.repos_path));
+                             svn_path_uri_encode(ctx->info.repos_path,
+                                                 params->pool)));
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,

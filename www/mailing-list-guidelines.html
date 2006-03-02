@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
   @import "tigris-branding/css/tigris.css";
@@ -219,6 +219,11 @@ away.  If the patch addresses a particular issue, include the issue
 number as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".
 Developers who are interested in that particular issue will know to
 read the mail.</p>
+
+<p>Generate the patch with <tt>svn&nbsp;diff</tt> from the top of a
+Subversion trunk working copy.  If the file you're diffing is not
+under revision control, you can achieve the same effect by using
+<tt>diff&nbsp;-u</tt>.</p>
 
 <p>If you can, send your patch as an attachment, using a mime-type of
 text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders

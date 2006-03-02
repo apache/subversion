@@ -32,10 +32,10 @@ const char *test_old_timestring =
 
 
 static svn_error_t *
-test_time_to_cstring (const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
+test_time_to_cstring(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   const char *timestring;
 
@@ -60,10 +60,10 @@ test_time_to_cstring (const char **msg,
 
 
 static svn_error_t *
-test_time_from_cstring (const char **msg,
-                        svn_boolean_t msg_only,
-                        svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+test_time_from_cstring(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
 {
   apr_time_t timestamp;
 
@@ -72,7 +72,7 @@ test_time_from_cstring (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_time_from_cstring (&timestamp, test_timestring, pool));
+  SVN_ERR(svn_time_from_cstring(&timestamp, test_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
@@ -108,10 +108,10 @@ static const char *failure_old_tests[] = {
 };
 
 static svn_error_t *
-test_time_from_cstring_old (const char **msg,
-                            svn_boolean_t msg_only,
-                            svn_test_opts_t *opts,
-                            apr_pool_t *pool)
+test_time_from_cstring_old(const char **msg,
+                           svn_boolean_t msg_only,
+                           svn_test_opts_t *opts,
+                           apr_pool_t *pool)
 {
   apr_time_t timestamp;
   const char **ft;
@@ -121,7 +121,7 @@ test_time_from_cstring_old (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_time_from_cstring (&timestamp, test_old_timestring, pool));
+  SVN_ERR(svn_time_from_cstring(&timestamp, test_old_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
@@ -141,13 +141,13 @@ test_time_from_cstring_old (const char **msg,
      * all platforms. */
     for (ft = failure_old_tests; *ft; ft++)
       {
-        svn_error_t *err = svn_time_from_cstring (&timestamp, *ft, pool);
+        svn_error_t *err = svn_time_from_cstring(&timestamp, *ft, pool);
         if (! err)
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
              "svn_time_from_cstring (%s) succeeded when it should have failed",
              *ft);
-        svn_error_clear (err);
+        svn_error_clear(err);
       }
 
   return SVN_NO_ERROR;
@@ -155,10 +155,10 @@ test_time_from_cstring_old (const char **msg,
 
 
 static svn_error_t *
-test_time_invariant (const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+test_time_invariant(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   apr_time_t current_timestamp = apr_time_now();
   const char *timestring;
@@ -170,7 +170,7 @@ test_time_invariant (const char **msg,
     return SVN_NO_ERROR;
 
   timestring = svn_time_to_cstring(current_timestamp, pool);
-  SVN_ERR (svn_time_from_cstring (&timestamp, timestring, pool));
+  SVN_ERR(svn_time_from_cstring(&timestamp, timestring, pool));
 
   if (timestamp != current_timestamp)
     {
@@ -287,8 +287,8 @@ static const char *failure_tests[] = {
 };
 
 static svn_error_t *
-compare_results (struct date_test *dt,
-                 apr_time_exp_t *expt)
+compare_results(struct date_test *dt,
+                apr_time_exp_t *expt)
 {
   if (expt->tm_year + 1900 != dt->year || expt->tm_mon + 1 != dt->mon
       || expt->tm_mday != dt->mday || expt->tm_hour != dt->hour
@@ -300,10 +300,10 @@ compare_results (struct date_test *dt,
 }
 
 static svn_error_t *
-test_parse_date (const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+test_parse_date(const char **msg,
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   apr_time_t now, result;
   apr_time_exp_t nowexp, expt;
@@ -317,51 +317,51 @@ test_parse_date (const char **msg,
     return SVN_NO_ERROR;
 
   now = apr_time_now();
-  if (apr_time_exp_lt (&nowexp, now) != APR_SUCCESS)
-    return svn_error_create (SVN_ERR_TEST_FAILED, NULL, "Can't expand time");
+  if (apr_time_exp_lt(&nowexp, now) != APR_SUCCESS)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, "Can't expand time");
 
   for (dt = localtz_tests; dt->str; dt++)
     {
-      SVN_ERR (svn_parse_date (&matched, &result, dt->str, now, pool));
+      SVN_ERR(svn_parse_date(&matched, &result, dt->str, now, pool));
       if (!matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match failed for '%s'", dt->str);
-      if (apr_time_exp_lt (&expt, result) != APR_SUCCESS)
+      if (apr_time_exp_lt(&expt, result) != APR_SUCCESS)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Expand failed for '%s'", dt->str);
-      SVN_ERR (compare_results (dt, &expt));
+      SVN_ERR(compare_results(dt, &expt));
     }
 
   for (dt = gmt_tests; dt->str; dt++)
     {
-      SVN_ERR (svn_parse_date (&matched, &result, dt->str, now, pool));
+      SVN_ERR(svn_parse_date(&matched, &result, dt->str, now, pool));
       if (!matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match failed for '%s'", dt->str);
-      if (apr_time_exp_gmt (&expt, result) != APR_SUCCESS)
+      if (apr_time_exp_gmt(&expt, result) != APR_SUCCESS)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Expand failed for '%s'", dt->str);
-      SVN_ERR (compare_results (dt, &expt));
+      SVN_ERR(compare_results(dt, &expt));
     }
 
   for (dt = daytime_tests; dt->str; dt++)
     {
-      SVN_ERR (svn_parse_date (&matched, &result, dt->str, now, pool));
+      SVN_ERR(svn_parse_date(&matched, &result, dt->str, now, pool));
       if (!matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match failed for '%s'", dt->str);
-      if (apr_time_exp_lt (&expt, result) != APR_SUCCESS)
+      if (apr_time_exp_lt(&expt, result) != APR_SUCCESS)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Expand failed for '%s'", dt->str);
       dt->year = nowexp.tm_year + 1900;
       dt->mon = nowexp.tm_mon + 1;
       dt->mday = nowexp.tm_mday;
-      SVN_ERR (compare_results (dt, &expt));
+      SVN_ERR(compare_results(dt, &expt));
     }
 
   for (ft = failure_tests; *ft; ft++)
     {
-      SVN_ERR (svn_parse_date (&matched, &result, *ft, now, pool));
+      SVN_ERR(svn_parse_date(&matched, &result, *ft, now, pool));
       if (matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match succeeded for '%s'", *ft);
@@ -377,10 +377,10 @@ test_parse_date (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test_time_to_cstring),
-    SVN_TEST_PASS (test_time_from_cstring),
-    SVN_TEST_PASS (test_time_from_cstring_old),
-    SVN_TEST_PASS (test_time_invariant),
-    SVN_TEST_PASS (test_parse_date),
+    SVN_TEST_PASS(test_time_to_cstring),
+    SVN_TEST_PASS(test_time_from_cstring),
+    SVN_TEST_PASS(test_time_from_cstring_old),
+    SVN_TEST_PASS(test_time_invariant),
+    SVN_TEST_PASS(test_parse_date),
     SVN_TEST_NULL
   };

@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style type="text/css"> /* <![CDATA[ */
@@ -110,9 +110,15 @@ I avoid having to type it so often?</a></li>
 <tt>svnserve</tt> binary is in a directory that isn't on my
 users' default <tt>PATH</tt>s, they use svn+ssh, and I can't figure
 out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a></li>
+<li><a href="#ssh-authorized-keys-trick">
+I want to allow access via svn+ssh://, but am paranoid.  I hate the
+idea of giving each user a login; I would then have to worry about
+what they are, and are not, allowed to access on my machine.
+</a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
+<li><a href="#svn-editor">How do I handle spaces in the editor path?</a></li>
 <li><a href="#divining-bdb-version">How do I determine which version of
 Berkeley DB a repository is using?</a></li>
 <li><a href="#website-auto-update">I'm managing a website in my
@@ -152,8 +158,6 @@ to FSFS or from FSFS to BDB?</a></li>
     but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
-<li><a href="#linux-bdb42-build">I'm having trouble building
-    Subversion under *NIX with BerkeleyDB 4.2 What should I do?</a></li>
 <li><a href="#windows-mod_dav_svn-build">I'm getting errors trying to build
     Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
@@ -176,7 +180,7 @@ a <tt>file:</tt> URL?</a></li>
     a "bad database version", that it found db-3.X, rather than
     db-4.X.</a></li>
 <li><a href="#redhat-db">I'm getting "Function not implemented" errors on
-    RedHat 9, and nothing works.  How do I fix this?</a></li>
+    Red Hat 9, and nothing works.  How do I fix this?</a></li>
 <li><a href="#no-author">Why does SVN log say "(no author)" for files
     committed or imported via Apache (ra_dav)?</a></li>
 <li><a href="#windows-access-denied">I'm getting occasional "Access Denied"
@@ -214,10 +218,13 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#hidden-log">I cannot see the log entry for the file
     I just committed.  Why?</a></li>
 <li><a href="#bdb43-upgrade">After upgrading to Berkeley DB
-    4.3, I'm seeing repository errors.</a></li>
+    4.3 or later, I'm seeing repository errors.</a></li>
 <li><a href="#tiger-apr-0.9.6">Why do I get occasional, seemingly
     inconsistent errors checking out over http:// from a repository
     running on MacOS X 10.4 (Tiger)?</a></li>
+<li><a href="#debian-libtool">I can't build Subversion from working
+    copy source on Debian GNU/Linux; I get errors at the final link
+    stage.  What's wrong?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -327,7 +334,7 @@ to Subversion</a>.</p>
 href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
 portability layer.  The Subversion client will run anywhere APR runs,
 which is most places.  The Subversion server (i.e., the repository
-side) is the same, except that it will not host a BDB repository
+side) is the same, except that it will not host a Berkeley DB repository
 on Win9x platforms (Win95/Win98/WinME), because <a
 href="http://www.sleepycat.com">Berkeley DB</a> has
 shared-memory segment problems on Win9x.  FSFS repositories
@@ -691,7 +698,7 @@ href="http://lev.serebryakov.spb.ru/refinecvs/"
 
 </ul>
 
-<p>See also the <a href="project_links.html">Subversion links</a>
+<p>See also the <a href="links.html">Subversion links</a>
 page.</p>
 
 </div>
@@ -837,7 +844,6 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 
 <p>Some links on SSH port forwarding</p>
 
-</div>
 <ul>
 <li><a href="http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html"
 >http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html</a></li>
@@ -845,6 +851,8 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 >http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
 <li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
 </ul>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -874,8 +882,6 @@ repositories.</p>
 The difference between these two approaches is this (as explained by
 Ben Collins-Sussman &lt;sussman@collab.net&gt;):</p>
 
-</div>
-
 <ul>
   <li>
      In the first case, code can easily be copied or moved around
@@ -900,6 +906,8 @@ Ben Collins-Sussman &lt;sussman@collab.net&gt;):</p>
      course, we already have such a script, ready for you to use.
   </li>
 </ul>
+
+</div>
 
 <![CDATA[=========================================================]]>
   
@@ -944,12 +952,14 @@ equivalent to CVS modules:</p>
 server?</h3>
 
 <p>If you are using a repository with the Berkeley DB back end
-(currently the default), do <i>not</i> access the repository via NFS.
-BDB <a href="http://www.sleepycat.com/docs/ref/env/remote.html">does
-not support storage of databases on remote file systems</a>.  Some NFS
-servers claim that they explicitly support use of BDB on NFS-mounted
-partitions, but we've only ever seen BDB databases get corrupted when
-living on an NFS or SMB network drive.</p>
+(default for repositories created with Subversion 1.0 and 1.1, not the
+default thereafter), do <i>not</i> access the repository via NFS.
+Berkeley DB <a
+href="http://www.sleepycat.com/docs/ref/env/remote.html">does not
+support storage of databases on remote file systems</a>.  Some NFS
+servers claim that they explicitly support use of Berkeley DB on
+NFS-mounted partitions, but we've only ever seen Berkeley DB databases
+get corrupted when living on an NFS or SMB network drive.</p>
 
 <p>If you are using the <a
 href="http://svn.collab.net/repos/svn/trunk/notes/fsfs">FSFS</a>
@@ -1016,10 +1026,10 @@ $ db_archive -a -h /repos/db | xargs rm
 
 <p>See also <code>svnadmin hotcopy</code> or <code>hotbackup.py</code>.</p>
 
-<p><strong>Note:</strong> If you use Berkeley DB 4.2, Subversion 0.35
-or later will create new repositories with automatic log file removal
-enabled. You can change this by passing the <code>--bdb-log-keep</code>
-option to <code>svnadmin create</code>. Refer to the section about the <a
+<p><strong>Note:</strong> If you use Berkeley DB 4.2, Subversion will
+create new repositories with automatic log file removal enabled. You
+can change this by passing the <code>--bdb-log-keep</code> option to
+<code>svnadmin create</code>. Refer to the section about the <a
 href="http://www.sleepycat.com/docs/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
 <code>DB_LOG_AUTOREMOVE</code></a> flag in the Berkeley DB manual.</p>
 
@@ -1046,7 +1056,7 @@ section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
-<b>Note for SELinux / Fedora Core 3+ / RedHat Enterprise users:</b>
+<b>Note for SELinux / Fedora Core 3+ / Red Hat Enterprise users:</b>
 
 <p>In addition to regular Unix permissions, under SELinux every file,
 directory, process, etc. has a 'security context'.  When a process
@@ -1078,7 +1088,7 @@ access the repository.</p>
 write access?</h3>
 
 <p>Certain client operations are "read-only", like checkouts and
-updates.  From an access-control standpoint, apache treats them as
+updates.  From an access-control standpoint, Apache treats them as
 such.  But libsvn_fs (the repository filesystem API) still has to
 write temporary data in order to produce tree-deltas.  So the process
 accessing the repository always requires both read <em>and</em> write
@@ -1089,7 +1099,7 @@ operations by comparing two trees.  One tree is the usually the HEAD
 revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
-<p>This limitation only applies to the bdb backend; the <a
+<p>This limitation only applies to the Berkeley DB backend; the <a
 href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
 backend</a> does not exhibit this behaviour.</p>
 
@@ -1194,7 +1204,6 @@ formatting or content changes necessary), and check it in.</p>
 
 <p>The basic process looks like this:</p>
 
-</div>
 <blockquote><pre>
 	$ svn co http://svn.collab.net/repos/svn/trunk subversion
 	$ cd subversion/www
@@ -1206,11 +1215,13 @@ formatting or content changes necessary), and check it in.</p>
 	$ Mail -s "[PATCH] FAQ updates" &lt; /tmp/foo
 </pre></blockquote>
 
-Of course, the email you send should contain a nice long
+<p>Of course, the email you send should contain a nice long
 explanation about what the patch does, as per the
 <a href="hacking.html">Hacker's Guide to Subversion</a>, but you
 already know that, since you read and completely understood
-it <em>before</em> actually hacking the code, right? :)
+it <em>before</em> actually hacking the code, right? :)</p>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1320,18 +1331,18 @@ change, and no dump/load is necessary. </p>
 
 <p><a href="http://tortoisesvn.tigris.org">TortoiseSVN</a> has an excellent
 document that describes setting up a Subversion server on Windows. Go to
-<a href="http://tortoisesvn.tigris.org/docs/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5"
->http://tortoisesvn.tigris.org/docs/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5</a>,
+<a href="http://tortoisesvn.sourceforge.net/docs/release/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5"
+>http://tortoisesvn.sourceforge.net/docs/release/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5</a>,
 to see the section on SSPI authentication.</p>
 
-<p>An earlier version of this document left out a line:</p>
+<p>An important part of the configuration is the line:</p>
 <pre>
    SSPIOfferBasic On
 </pre>
 
-<p>Without this line, a browser will prompt for the user's credentials,
-but Subversion clients will not. (The browser understands SSPI
-authentication, but the current release of Neon - Subversion's HTTP
+<p>Without this line, browsers that support SSPI will prompt for the user's
+credentials, but clients that do not suppport SSPI such as Subversion
+will not prompt. (The current release of Neon - Subversion's HTTP
 library - handles only basic authentication.)  Because the client never
 asks for credentials, any action that requires authentication will fail.
 Adding this line tells <tt>mod_auth_sspi</tt> to use basic authentication with
@@ -1346,18 +1357,23 @@ the credentials.</p>
 <h3>I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</h3>
 
-<p>We recommend that you live with ".svn" if you possibly can.  If you
-use some other name, your working copy may not work with Subversion
-clients other than the one you regularly use.  However, if you
-absolutely must, you can simply change this line in
-<tt>subversion/include/svn_wc.h</tt> from </p>
+<p>We recommend that you live with ".svn" if you possibly can.
+However, if you are using ASP.NET under Windows, you might need to set
+the environment variable SVN_ASP_DOT_NET_HACK, as
+described <a href="#vs-asp-net">here</a>.</p>
+
+<p>Or you could use a completely custom name for the administrative
+directory.  We recommend against this, because your working copy would
+probably not work with Subversion clients other than the one you
+customized.  However, if you absolutely must do this, just change this
+line in <tt>subversion/include/svn_wc.h</tt> from</p>
 
 <pre>
 #define SVN_WC_ADM_DIR_NAME   ".svn"
 </pre>
 
 <p>
-to
+to (for example)
 </p>
 
 <pre>
@@ -1430,7 +1446,11 @@ svn update
 
 <p>As you can see, adding a file with the wrong case is tricky to fix on
 an operating system that has a case insensitive filesystem.  Do try to
-get it right when you add the file the first time!</p>
+get it right when you add the file the first time!  To prevent the
+problem from occurring in the first place, you can create a pre-commit hook that
+calls the file <tt>check-case-insensitive.pl</tt>.  That file lives
+in the Subversion
+source tarball, in the directory <tt>contrib/hook-scripts</tt>.</p>
 
 </div>
 
@@ -1450,8 +1470,6 @@ named <tt>foo</tt> you are going to edit.</p>
 
 <p>For the purpose of tracing branch merges, this repository has set up
 <tt>tags/branch_traces/</tt> to keep tags.</p>
-
-</div>
 
 <pre># setup branch and tags
 $ svn copy file:///home/repos/trunk \
@@ -1487,6 +1505,8 @@ $ svn copy file:///home/repos/branches/bar_branch                     \
            -m "Reflect merge of change X."
 </pre>
 
+</div>
+
 <![CDATA[=========================================================]]>
 
 <div class="h3" id="version-value-in-source" title="version-value-in-source">
@@ -1511,8 +1531,24 @@ information on the revision level of a working copy given a path (see
 <p>
 You can incorporate it into your build or release process to get the
 information you need into the source itself.  For example, in a build
-environment based on <tt>make</tt>, add something like this to your
-<tt>Makefile</tt>:</p>
+environment based on <tt>GNU&nbsp;make</tt>, add <a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112564"
+>something like this</a> to your <tt>Makefile</tt>:
+
+<pre>
+##
+## To use this, in yourfile.c do something like this:
+## printf("this program was compiled from SVN revision %s\n",SVN_REV);
+##
+
+SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
+CFLAGS := $(SVNDEF) ... continue with your other flags ...
+</pre>
+
+(Note that this will not work on non-GNU versions of <tt>make</tt>.
+Don't use it if your build process needs to be portable.)</p>
+
+<p>Or try this recipe:</p>
 
 <pre>
 ##
@@ -1524,13 +1560,12 @@ svn_version.c: FORCE
     svnversion -n .                   &gt;&gt; svn_version.c
     echo '"; return SVN_Version; }'   &gt;&gt; svn_version.c
 
+##
+## Then any executable that links in <tt>svn_version.o</tt> will be able
+## to call the function <tt>svn_version()</tt> to get a string that
+## describes exactly what revision was built.
+##
 </pre>
-
-<p>
-any executable that links in <tt>svn_version.o</tt> will be able to
-call the function <tt>svn_version()</tt> to get a string that
-describes exactly what revision was built.
-</p>
 
 <p>
 Windows users may want to use <tt>SubWCRev.exe</tt>, available from
@@ -1622,8 +1657,6 @@ href="http://www.google.com/search?hl=en&amp;lr=&amp;ie=UTF-8&amp;q=%22ssh-agent
 >Google search for "ssh-agent"</a> will quickly get you answers.  Or
 if you're <i>really</i> impatient, try one of these:</p>
 
-</div>
-
 <pre>
    <a href="http://www.csua.berkeley.edu/ssh-howto.html"
             >http://www.csua.berkeley.edu/ssh-howto.html</a>
@@ -1632,6 +1665,8 @@ if you're <i>really</i> impatient, try one of these:</p>
    <a href="http://kimmo.suominen.com/docs/ssh/"
            >http://kimmo.suominen.com/docs/ssh/</a>
 </pre>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1687,13 +1722,28 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
       the private half of their keypair, by doing something like this
       (for the Bourne Again shell):</p>
 
-</div>
 <pre>
 SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
 export SVN_SSH
 </pre>
+
+      <p><a
+      href="http://svn.collab.net/repos/svn/trunk/notes/ssh-tricks">This
+      file</a> discusses this topic in more detail.</p>
       
-      
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
+<h3>I want to allow access via svn+ssh://, but am paranoid.  I hate the
+idea of giving each user a login; I would then have to worry about
+what they are, and are not, allowed to access on my machine.</h3>
+<p>See the section about hacking
+the <tt>~/.ssh/authorized_keys</tt> file in the answer
+to <a href="#ssh-svnserve-location">this other question</a>; ignore the stuff
+about getting <tt>svnserve</tt> on your PATH.</p>
+</div>      
 
 <![CDATA[=========================================================]]>
 
@@ -1744,34 +1794,99 @@ and isn't being worked on yet.</p>
 
 <![CDATA[=========================================================]]>
 
+<div class="h3" id="svn-editor" title="auto-props">
+<h3>How do I deal with spaces in the editor path?&nbsp; Also, how can
+I define command line options for the editor?</h3>
+
+<p>The Subversion command line client will invoke the editor defined
+in the environment variable SVN_EDITOR.&nbsp; This environment variable
+is passed directly to the operating system along with the name of a
+temporary file used to enter/edit the log message.</p>
+
+<p>Due to the fact that the SVN_EDITOR string is passed as-is to the
+system's command shell, spaces in the editor name, or in the path name
+to the editor, will not work unless the editor name is in quotes.</p>
+
+<p>For example, on Windows if your editor is in
+<code>C:\Program&nbsp;Files\Posix&nbsp;Tools\bin\vi</code> you would
+want to set the variable as follows:
+</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi"
+</pre>
+
+<p>Note that there is no need to escape the quotes in the Windows
+shell as they are not part of the syntax for the <code>set</code>
+command.
+</p>
+
+<p>On UNIX systems you would need to follow your shell's specific
+methods for setting the variable.&nbsp; For example, in a bash shell,
+the following should work:
+</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs"'
+   export SVN_EDITOR
+</pre>
+
+<p>In case a command line option would be needed for the invocation
+of the editor, just add that after the editor name in the SVN_EDITOR
+environment variable just like you would us on the command line.&nbsp;
+For example, if the options <code>-nx -r</code> would be wanted for
+the above editors, the following will provide those options:
+</p>
+
+<p>For Windows:</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi" -nx -r
+</pre>
+
+<p>For UNIX/bash:</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs" -nx -r'
+   export SVN_EDITOR
+</pre>
+
+<p>Note that SVN_EDITOR is the Subversion specific environment variable
+setting for the editor selection.&nbsp; Subversion also supports
+using the more generic EDITOR variable but if you need special behaviors
+with Subversion it is best to use the SVN_EDITOR variable.
+</p>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
 <div class="h3" id="divining-bdb-version" title="divining-bdb-version">
 <h3>How do I determine which version of
 Berkeley DB a repository is using?</h3>
 
-<p>If it's a live repository, then the easy answer is "Whatever version
-of BDB you have installed".  If, however, it is a repository from a
-backup, or some unknown source, and you have no idea which version of
-BDB it was made with, here's how you find out:</p>
+<p>If it's a live repository, then the easy answer is "Whatever
+version of Berkeley DB you have installed".  If, however, it is a
+repository from a backup, or some unknown source, and you have no idea
+which version of Berkeley DB it was made with, here's how you find
+out:</p>
 
-<p>Run some command to view the two 4-byte integers at offsets 12 and 16
-(decimal) in the highest-numbered db/log.* file in the repository.  Here
-is an example using GNU od: "<tt>od -j12 -N8 -tx4
-  log.<i>&lt;number&gt;</i></tt>".  Here is an example using Mac OS X
-hexdump: "<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>".  The
-first integer should be the magic number 0x00040988, which identifies
-the file as a BDB logfile.  The second number is the log format version
-- match it to a BDB program version
-using the table below:</p>
-
-</div>
+<p>Run some command to view the two 4-byte integers at offsets 12 and
+16 (decimal) in the highest-numbered db/log.* file in the repository.
+Here is an example using GNU od: "<tt>od -j12 -N8 -tx4
+log.<i>&lt;number&gt;</i></tt>".  Here is an example using Mac OS X
+hexdump: "<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>".
+The first integer should be the magic number 0x00040988, which
+identifies the file as a Berkeley DB logfile.  The second number is
+the log format version
+- match it to a Berkeley DB version using the table below:</p>
 
 <table border="1" cellspacing="2" cellpadding="2">
-  <tr><th>Log format version</th><th>BDB program version</th></tr>
+  <tr><th>Log format version</th><th>Berkeley DB version</th></tr>
   <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
   <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
   <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
   <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
+  <tr><td>11 (0x0000000b)</td><td>4.4</td></tr>
 </table>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1802,10 +1917,14 @@ a +s binary program to run the update, since Unix won't allow scripts
 to run +s.  Compile a tiny C program:</p>
 
 <pre>
+#include &lt;stddef.h&gt;
 #include &lt;stdlib.h&gt;
-int main(int argc, const char *argv[])
+#include &lt;unistd.h&gt;
+int main(void)
 {
-  system("/usr/local/bin/svn update /home/joe/public_html/");
+  execl("/usr/local/bin/svn", "svn", "update", "/home/joe/public_html/",
+        (const char *) NULL);
+  return(EXIT_FAILURE);
 }
 </pre>
 
@@ -1817,8 +1936,6 @@ binary.</p>
 .svn/ directories in the live working copy.  Add this to your
 <tt>httpd.conf</tt>:</p>
 
-</div>
-
 <pre>
 # Disallow browsing of Subversion working copy administrative dirs.
 &lt;DirectoryMatch "^/.*/\.svn/"&gt;
@@ -1826,6 +1943,8 @@ binary.</p>
     Deny from all
 &lt;/DirectoryMatch&gt;
 </pre>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1851,7 +1970,7 @@ happened?</h3>
 <p>You don't.  It's a bad idea to try.</p>
 
 <p>The basic design of the working copy has two rules: (1) edit files
-as you please, and (2) use a Subversion cilent to make any
+as you please, and (2) use a Subversion client to make any
 tree-changes (add, delete, move, copy).  If these rules are followed,
 the client can sucessfully manage the working copy.  If renames or
 other rearrangements happen outside of Subversion, then the UI has
@@ -1894,6 +2013,11 @@ is a free tool written by Magnus Norddahl</li>
 <li><a href="http://support.microsoft.com/kb/q137890/">SrvAny</a>
 is avaliable free of charge from Microsoft</li>
 </ul>
+
+<p>There is a bit more about running <tt>svnserve</tt> as a service in
+<a
+href="http://tortoisesvn.sourceforge.net/docs/release/TortoiseSVN_en/ch03s02.html#tsvn-serversetup-svnserve-2">the
+TortoiseSVN manual</a>.</p>
 
 </div>
 
@@ -2011,7 +2135,7 @@ command.</p>
 time, giving me errors about needing recovery (DB_RUNRECOVERY). What
 could be the cause?</h3>
 
-<p>The BerkeleyDB database in your repository is sensitive to
+<p>The Berkeley DB database in your repository is sensitive to
 interruptions.  If a process accessing the database exits without
 "cleanly" closing the environment, then the database is left in an
 inconsistent state.  Common causes of this include:</p>
@@ -2121,10 +2245,10 @@ give errors like this:</p>
 <p>In that case, try Berkeley DB's native <b>db_recover</b> utility
 (see <a href="http://www.sleepycat.com/docs/utility/db_recover.html"
 >http://www.sleepycat.com/docs/utility/db_recover.html</a>).  It
-usually lives in a "bin/" subdirectory of the Berkeley installation,
+usually lives in a "bin/" subdirectory of the Berkeley DB installation,
 for example if you installed Berkeley DB from source, it might be
 <tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>; or on systems where
-Berkeley comes prepackaged it might just be
+Berkeley DB comes prepackaged it might just be
 <tt>/usr/bin/db_recover</tt>.  If you have multiple versions of
 Berkeley DB installed, make sure that the version of db_recover you
 use matches the version of Berkeley DB with which your repository was
@@ -2200,11 +2324,11 @@ working copy will fail when it sees the locks.  To awaken your working
 copy, you need to tell the svn client to finish the work.  Simply
 run:</p>
 
-</div>
-
 <pre>
 svn cleanup working-copy
 </pre>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2320,85 +2444,6 @@ building with are completely up-to-date, and try again.
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="linux-bdb42-build" title="linux-bdb42-build">
-<h3>I'm having trouble building
-    Subversion under *NIX with BerkeleyDB 4.2.x What should I do?</h3>
-
-<p>Subversion compiles against BerkeleyDB by asking apr-util for the
-appropriate BDB build options.  This means that either the apr-util in
-your Subversion tarball or the one in your Apache tree must
-successfully detect BDB.  Normally one does this by passing
-"--with-berkeley-db" to apr-util's ./configure.  (When you pass this
-argument to either Apache or Subversion's ./configure, it's really
-just getting passed down to apr-util's ./configure.)</p>
-
-<p>The problem is that BerkeleyDB 4.2 is newer than the latest
-released version of apr-util, so apr-util doesn't know how to detect
-it.</p>
-
-<p>The long-term solution is already in place: the latest apr-util in
-CVS has code to explicitly detect BDB 4.2.  When either apr-util or
-Apache httpd does another release, this ability will widely
-available.</p>
-
-<p>In the short term, the best thing to do is apply <a
-href="db42-support-patch.txt">this patch</a> to your apr-util's
-./configure script -- either to the apr-util in your apache tree (if
-you're building Apache before Subversion), or to the apr-util in your
-Subversion tarball (if you're not building Apache at all.)  This patch
-is the new DB 4.2 detection code already in the latest apr-util
-CVS.</p>
-
-<p>If you've building Apache first, apply the patch to httpd-2.0.48's
-apr-util's configure script, and then build with these options:</p>
-
-<pre>
-  $ configure \
-  --enable-dav \
-  --enable-so \
-  --with-berkeley-db=/usr/local/BerkeleyDB.4.2 \
-  --with-dbm=db42
-</pre>
-<p>
-You can confirm that Apache is built with the proper BDB libraries with the
-following command:
-</p>
-<pre>
-  $ ldd /usr/local/apache2/bin/httpd | fgrep libdb
-      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
-</pre>
-
-<p>And then you can simply build Subversion with no mention of BDB.
-(...although Subversion <i>might</i> need to be told where to find
-your Apache installation, if it's in a non-standard place.)</p>
-
-<p>If you're not building Apache, apply the patch to the apr-util
- ./configure script in your Subversion tree, and use similar build
- options:</p>
-
-<pre>
-  $ configure \
-  --with-berkeley-db=/usr/local/BerkeleyDB.4.2 \
-  --with-dbm=db42
-</pre>
-
-<p>
-Again, you can confirm that Subversion was built against the proper BDB
-library with the following:
-</p>
-<pre>
-  $ ldd /usr/local/bin/svn | fgrep libdb
-      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
-</pre>
-
-<p>
-If you install your libraries in locations other than the defaults, you would
-need to adjust the paths at each step accordingly.</p>
-
-</div>
-
-<![CDATA[-----------------------------------------------------------]]>
-
 <div class="h3" id="windows-mod_dav_svn-build"
   title="windows-mod_dav_svn-build">
 <h3>I'm getting errors trying to build
@@ -2462,41 +2507,15 @@ publish a Subversion working copy, because of the ".svn"
 subdirectories.  The error message says something like "unable to
 read project information".</p>
 
-<p>There are a few solutions:</p>
+<p>To work around this, set the environment variable
+SVN_ASP_DOT_NET_HACK to any value&nbsp;&mdash;&nbsp;this will tell
+Windows clients to use "_svn" as a directory name in your working
+copy.  See <a
+href="http://subversion.tigris.org/svn_1.3_releasenotes.html#_svn-hack"
+>the relevant section of the Subversion 1.3 release notes</a> for more
+details, and see <a href="#adm-dir">this question</a> for other ways to
+customize the administrative directory name.</p>
 
-<ul>
-<li><p>Recompile your client to use a different working copy name, as
-    described <a href="#adm-dir">here</a>.  Or,</p>
-</li>
-<li><p>If you use TortoiseSVN, you can download a client that is
-    already modified to work around the problem, see
-    <a href="http://tortoisesvn.tigris.org/download.html"
-            >http://tortoisesvn.tigris.org/download.html</a>.  Or,</p>
-</li>
-<li><p>Take Jim Bolla's advice from
-    <a href="http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx"
-            >http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx</a>:
-    <i>"If you're working on web projects locally or across a file
-    share, you can get around this by converting it to a regular class
-    library project.  I have some docementation on how to do this that
-    i've compiled from various sources on the internet about how to do
-    this."</i> (We've contacted Jim Bolla about getting that
-    documentation, and will include it here if we can.).  Or, </p>
-</li>
-<li><p>Steele Price, also on
-    <a href="http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx"
-            >http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx</a>,
-    says:
-    <i>"You can get around the .SVN directory pretty easily by
-    following instructions here: <a
-    href="http://staff.develop.com/onion/Samples/aspdotnet_without_web_projects.htm">http://staff.develop.com/onion/Samples/aspdotnet_without_web_projects.htm</a>
-    further instruction for making new projects is here:
-    <a href="http://blog.steeleprice.net/archive/2003/11/09/134.aspx"
-            >http://blog.steeleprice.net/archive/2003/11/09/134.aspx</a>"
-    </i></p>
-
-</li>
-</ul>
 </div>
 
 <![CDATA[-----------------------------------------------------------]]>
@@ -2542,12 +2561,12 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 <p>You need to install Window XP Service Pack 1.  You can get all
 sorts of information about that Service Pack here:</p>
 
-</div>
-
     <ul><li>
     <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
     >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
     </li></ul>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2556,7 +2575,7 @@ sorts of information about that Service Pack here:</p>
     trace of the conversation between a Subversion client and
     server?</h3>
 
-<p>Use <a href="http://ethereal.ntop.org/">Ethereal</a> to eavesdrop
+<p>Use <a href="http://www.ethereal.com/">Ethereal</a> to eavesdrop
 on the conversation:</p>
 
 <!-- TODO: Make these instructions less specific to ra_dav. -->
@@ -2575,20 +2594,19 @@ on the conversation:</p>
 </ol>
 
 <p>The above instructions are specific to the graphical version of
-Ethereal, and may not apply to the commandline version (whose binary
+Ethereal, and do not apply to the commandline version (whose binary
 is usually named tethereal).</p>
 
-<p>Alternatively, if you have an up-to-date client (more recent than
-the 0.16 tarball) you may set the <tt>neon-debug-mask</tt> parameter in your
+<p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
 <tt>servers</tt> configuration file to cause neon's debugging output
 to appear when you run the <tt>svn</tt> client.  The numeric value of
 <tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
-in the header file <tt>ne_utils.h</tt>.  For neon 0.23.7 setting
+in the header file <tt>ne_utils.h</tt>.  For current versions of neon, setting
 <tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
 will cause the HTTP data to be shown.</p>
 
 <p>You may well want to disable compression when doing a network
-trace, see the <tt>compression</tt> parameter in the <tt>config</tt>
+trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
 configuration file.</p>
 
 </div>
@@ -2640,16 +2658,16 @@ apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
 <![CDATA[=========================================================]]>
 
 <div class="h3" id="redhat-db" title="redhat-db">
-<h3>I'm getting "Function not implemented" errors on RedHat
+<h3>I'm getting "Function not implemented" errors on Red Hat
 9, and nothing works.  How do I fix this?</h3>
 
 <p>This is not really a problem with Subversion, but it often affects
 Subversion users.</p>
 
-<p>RedHat 9 and Fedora ship with a Berkeley DB library that relies on the kernel
-support for NPTL (the Native Posix Threads Library).</p>
+<p>Red Hat 9 and Fedora ship with a Berkeley DB library that relies on
+the kernel support for NPTL (the Native Posix Threads Library).</p>
 
-<p>The kernels that RedHat provides have this support built in, but if you
+<p>The kernels that Red Hat provides have this support built in, but if you
 compile your own kernel, then you may well not have the NPTL support.  If that
 is the case, then you will see errors like this:</p>
 <blockquote><pre>
@@ -2659,14 +2677,14 @@ Function not implemented
 </pre></blockquote>
 <p>This can be fixed in one of several ways:</p>
 <ul>
-<li>Rebuild db4 for the kernel you're using.</li>
-<li>Use a RedHat 9 kernel.</li>
+<li>Rebuild Berkeley DB for the kernel you're using.</li>
+<li>Use a Red Hat 9 kernel.</li>
 <li>Apply the NPTL patches to the kernel you're using.</li>
 <li>Use a recent (2.5.x) kernel with the NPTL support included.</li>
 <li>Check if environment variable <code>LD_ASSUME_KERNEL</code> is set
     to <code>2.2.5</code>, and if so, unset it before starting
     Subversion (Apache). (You usually would set this variable to run
-    Wine or Winex on RedHat 9)</li>
+    Wine or Winex on Red Hat 9)</li>
 </ul>
 <p>To use the NPTL version of Berkeley DB you also need to use a glibc
 library with NPTL support, which probably means the i686 version. See
@@ -2763,6 +2781,16 @@ former case wins, and hence the "Moved Permanently" error.</p>
 <tt>&lt;Location&gt;</tt> does <b>not</b> overlap or live within any
 areas already exported as normal web shares.</p>
 
+<p>It's also possible that you have an object in the web root 
+which has the same name as your repository URL. For example,
+imagine your web server's document root is  <tt>/var/www</tt>
+and your Subversion repository is located at
+<tt>/home/svn/repo</tt>. You then configure Apache to serve
+the repository at <tt>http://localhost/myrepo</tt>. If you then
+create the directory <tt>/var/www/myrepo/</tt> this will cause
+a 301 error to occur.</p>
+
+
 </div>
 
 <![CDATA[-----------------------------------------------------------]]>
@@ -2804,8 +2832,6 @@ discover them yourself using <tt>svn log -v</tt>, and then provide
 them explicitly to the svn client.  For example, instead of
 running</p>
 
-</div>
-
 <pre>
 $ svn diff -r 1000:2000 http://host/repos/branches/mybranch/foo.c
 svn: Filesystem has no item
@@ -2818,6 +2844,8 @@ svn: '/branches/mybranch/fooc..c' not found in the repository at revision 1000
 $ svn diff -r1000:2000 http://host/repos/trunk/foo.c
 ...
 </pre>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2918,7 +2946,6 @@ spell out that program's absolute name.</p>
 If you're using Linux or Unix, try running the script "by hand", by
 following these steps:</p>
 
-</div>
           <ol>
             <li>Use "su", "sudo", or something similar, to become the user who
               normally would run the script.  This might be <tt>httpd</tt> or
@@ -2942,6 +2969,8 @@ following these steps:</p>
               Check your console for errors.
             </li>
           </ol>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -3015,14 +3044,12 @@ and 4.2 are better.  This error message is a symptom of one unique way
 in which 4.1 will sometimes break.</p>
 
 <p>The problem is that the database format field for one of the tables
-that make up a Subversion BDB-type repository has become corrupted.
-For unknown reasons, this is almost always the 'copies' table, which
-switches from the 'btree' type to the 'recno' type.  Simple recovery
-procedures are outlined below - if they do not succeed, you should
-contact the Subversion Users <a
+that make up a Subversion repository using the Berkeley DB backend has
+become corrupted.  For unknown reasons, this is almost always the
+'copies' table, which switches from the 'btree' type to the 'recno'
+type.  Simple recovery procedures are outlined below - if they do not
+succeed, you should contact the Subversion Users <a
   href="mailto:users@subversion.tigris.org">mailing list</a>.</p>
-
-</div>
 
 <ul>
   <li>Ensure that no other processes will attempt to access your
@@ -3043,6 +3070,8 @@ contact the Subversion Users <a
   highest revision number in the new repository is what you think it
   should be.</li>
 </ul>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -3107,14 +3136,14 @@ is still at r7, you do not see the log information for r8.</p>
 
 <div class="h3" id="bdb43-upgrade" title="bdb43-upgrade">
 <h3>After upgrading to Berkeley DB
-    4.3, I'm seeing repository errors.</h3>
+    4.3 or later, I'm seeing repository errors.</h3>
 
-<p>Normally one can simply run <tt>svnadmin recover</tt> to upgrade a
-  Berkeley DB repository in-place.  However, due to a bug in the way
-  this command invokes the <tt>db_recover()</tt> API, this won't work
-  correctly when upgrading from BDB 4.0/4.1/4.2 to BDB 4.3.</p>
+<p>Prior to Berkeley DB 4.3, <tt>svnadmin recover</tt> worked to upgrade a
+Berkeley DB repository in-place.  However, due to a change in the behaviour
+of Berkeley DB in version 4.3, this now fails.</p>
 
-<p>Use this procedure to upgrade your repository in-place to BDB 4.3:</p>
+<p>Use this procedure to upgrade your repository in-place to Berkeley
+DB 4.3 or later:</p>
 
 <ul>
 
@@ -3123,7 +3152,7 @@ Apache, svnserve, restrict access via file://, svnlook, svnadmin,
 etc.)</li>
 
 <li>Using an <i>older</i> <tt>svnadmin</tt> binary (that is, linked to
-  an older BerkeleyDB):
+  an older Berkeley DB):
 
   <ol>
 
@@ -3210,6 +3239,46 @@ where the problem lies.</p>
 
 </div>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="debian-libtool" title="debian-libtool">
+<h3>I can't build Subversion from working copy
+    source on Debian GNU/Linux; I get errors at the final link
+    stage.  What's wrong?</h3>
+    
+<p>If you see errors like this in the final link stage of a Subversion
+trunk source build:</p>
+
+<pre>
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_create'
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_strerror'
+</pre>
+
+<p>it might be because you're on a Debian GNU/Linux system and need to
+upgrade 'libtool'.  (I've also heard that the Debian packagers had to
+tweak 'libtool' and that this may cause some problems for Subversion
+builds.  But that's hearsay&nbsp;&mdash;&nbsp;I didn't have time to
+verify the details before writing this FAQ entry.  However, see
+<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112617"
+>http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112617</a>
+and the <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&by=thread&from=435265"
+>thread</a> it spawned for a detailed discussion.)</p>
+
+<p>In any case, after encountering this problem on a Debian GNU/Linux
+system running a newly-dist-upgraded 'testing' distribution on 15 Nov
+2005, the solution was to build <a
+href="http://www.gnu.org/software/libtool/libtool.html">libtool&nbsp;1.5.20</a>
+from source, using the standard "./configure &amp;&amp; make &amp;&amp;
+sudo&nbsp;make&nbsp;install" recipe.  After that, I did a 'make&nbsp;clean' in
+my Subversion working copy tree, './autogen.sh', './configure', 'make',
+and everything worked fine.</p>
+
+<p>Note that another report of these symptoms appeared at <a
+href="http://svn.haxx.se/dev/archive-2003-01/1125.shtml"
+>http://svn.haxx.se/dev/archive-2003-01/1125.shtml</a>, though the
+solution described here was not mentioned in that thread.</p>
+
+</div>
 
 <![CDATA[=========================================================]]>
 

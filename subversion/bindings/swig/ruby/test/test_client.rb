@@ -240,15 +240,17 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    assert_raises(Svn::Error::CLIENT_MODIFIED) do
-      ctx.delete(path)
-    end
-    assert_raises(Svn::Error::WC_LOCKED) do
+    gc_disable do
+      assert_raises(Svn::Error::CLIENT_MODIFIED) do
+        ctx.delete(path)
+      end
+      assert_raises(Svn::Error::WC_LOCKED) do
+        ctx.delete(path, true)
+      end
+      ctx.cleanup(@wc_path)
       ctx.delete(path, true)
+      ctx.commit(@wc_path)
     end
-    ctx.cleanup(@wc_path)
-    ctx.delete(path, true)
-    ctx.commit(@wc_path)
     assert(!File.exist?(path))
   end
  
@@ -278,15 +280,17 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    assert_raises(Svn::Error::CLIENT_MODIFIED) do
-      ctx.rm(path)
-    end
-    assert_raises(Svn::Error::WC_LOCKED) do
+    gc_disable do
+      assert_raises(Svn::Error::CLIENT_MODIFIED) do
+        ctx.rm(path)
+      end
+      assert_raises(Svn::Error::WC_LOCKED) do
+        ctx.rm_f(path)
+      end
+      ctx.cleanup(@wc_path)
       ctx.rm_f(path)
+      ctx.commit(@wc_path)
     end
-    ctx.cleanup(@wc_path)
-    ctx.rm_f(path)
-    ctx.commit(@wc_path)
     assert(!File.exist?(path))
 
     File.open(path, "w") {|f| f.print(src)}
@@ -771,30 +775,32 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx.up(@wc_path, rev - 1)
     File.open(path, "w") {|f| f.print(src)}
-    assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
-      ctx.up(@wc_path, rev)
-    end
+    
+    gc_disable do
+      assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
+        ctx.up(@wc_path, rev)
+      end
+      assert_raise(Svn::Error::WC_LOCKED) do
+        ctx.commit(@wc_path)
+      end
 
-    assert_raise(Svn::Error::WC_LOCKED) do
-      ctx.commit(@wc_path)
-    end
+      ctx.set_cancel_func do
+        raise Svn::Error::CANCELLED
+      end
+      assert_raise(Svn::Error::CANCELLED) do
+        ctx.cleanup(@wc_path)
+      end
+      assert_raise(Svn::Error::WC_LOCKED) do
+        ctx.commit(@wc_path)
+      end
 
-    ctx.set_cancel_func do
-      raise Svn::Error::CANCELLED
-    end
-    assert_raise(Svn::Error::CANCELLED) do
-      ctx.cleanup(@wc_path)
-    end
-    assert_raise(Svn::Error::WC_LOCKED) do
-      ctx.commit(@wc_path)
-    end
-
-    ctx.set_cancel_func(nil)
-    assert_nothing_raised do
-      ctx.cleanup(@wc_path)
-    end
-    assert_nothing_raised do
-      ctx.commit(@wc_path)
+      ctx.set_cancel_func(nil)
+      assert_nothing_raised do
+        ctx.cleanup(@wc_path)
+      end
+      assert_nothing_raised do
+        ctx.commit(@wc_path)
+      end
     end
   end
 
@@ -936,7 +942,6 @@ class SvnClientTest < Test::Unit::TestCase
     file2 = "sample2.txt"
     path1 = File.join(@wc_path, file1)
     path2 = File.join(@wc_path, file2)
-    full_path2 = File.join(@full_wc_path, file2)
 
     ctx = make_context(log)
     File.open(path1, "w") {|f| f.print(src1)}
@@ -955,21 +960,39 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.mv_f(path1, path2)
     end
 
-    infos = []
+    notifies = []
     ctx.set_notify_func do |notify|
-      infos << [notify.path, notify]
+      notifies << notify
     end
     ctx.ci(@wc_path)
 
-    assert_equal([path1, path2, full_path2].sort,
-                 infos.collect{|path, notify| path}.sort)
-    path1_notify = infos.assoc(path1)[1]
-    assert(path1_notify.commit_deleted?)
-    path2_notify = infos.assoc(path2)[1]
-    assert(path2_notify.commit_added?)
+    paths = notifies.collect do |notify|
+      notify.path
+    end
+    assert_equal([path1, path2, path2].sort, paths.sort)
+
+    deleted_paths = notifies.find_all do |notify|
+      notify.commit_deleted?
+    end.collect do |notify|
+      notify.path
+    end
+    assert_equal([path1].sort, deleted_paths.sort)
+
+    added_paths = notifies.find_all do |notify|
+      notify.commit_added?
+    end.collect do |notify|
+      notify.path
+    end
+    assert_equal([path2].sort, added_paths.sort)
+
+    postfix_txdelta_paths = notifies.find_all do |notify|
+      notify.commit_postfix_txdelta?
+    end.collect do |notify|
+      notify.path
+    end
+    assert_equal([path2].sort, postfix_txdelta_paths.sort)
+
     assert_equal(src2, File.open(path2) {|f| f.read})
-    full_path2_notify = infos.assoc(full_path2)[1]
-    assert(full_path2_notify.commit_postfix_txdelta?)
   end
 
   def test_prop
@@ -1476,7 +1499,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_windows_simple_provider
-    return unless Svn::Client.respond_to?(:add_windows_simple_provider)
+    return unless Svn::Core.respond_to?(:add_windows_simple_provider)
 
     log = "sample log"
     src = "source\n"

@@ -10,7 +10,7 @@ import sys, os
 import getopt
 import re
 
-__author__ = "Gustavo Niemeyer <niemeyer@conectiva.com>"
+__author__ = "Gustavo Niemeyer <gustavo@niemeyer.net>"
 
 class Error(Exception): pass
 

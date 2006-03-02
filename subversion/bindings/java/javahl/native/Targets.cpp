@@ -25,7 +25,7 @@
 #include "JNIStringHolder.h"
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include <svn_path.h>
+#include "svn_path.h"
 #include <iostream>
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction

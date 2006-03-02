@@ -255,7 +255,10 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   diff_stream = svn_stream_create(b, pool);
   svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
-  svn_txdelta_to_svndiff(diff_stream, pool, wh, wh_baton);
+  if (svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
+    svn_txdelta_to_svndiff2(diff_stream, pool, wh, wh_baton, 1);
+  else
+    svn_txdelta_to_svndiff2(diff_stream, pool, wh, wh_baton, 0);
   return SVN_NO_ERROR;
 }
   

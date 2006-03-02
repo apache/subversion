@@ -89,9 +89,10 @@ svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                        APR_HASH_KEY_STRING) != NULL);
 }
 
-void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
-                                   ra_svn_block_handler_t handler,
-                                   void *baton)
+void
+svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
+                              ra_svn_block_handler_t handler,
+                              void *baton)
 {
   apr_interval_time_t interval = (handler) ? 0 : -1;
 
@@ -121,7 +122,12 @@ svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
     }
   pfd.p = pool;
   pfd.reqevents = APR_POLLIN;
+#ifndef AS400
   return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
+#else
+  /* OS400 requires a pool argument for apr_poll(). */
+  return ((apr_poll(&pfd, 1, &n, 0, pool) == APR_SUCCESS) && n);
+#endif
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -206,7 +212,7 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
-    __attribute__ ((format (printf, 3, 4)));
+  __attribute__ ((format(printf, 3, 4)));
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
 {
@@ -491,7 +497,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   char readbuf[4096];
   apr_size_t readbuf_len;
-  svn_stringbuf_t *stringbuf = svn_stringbuf_create ("", pool);
+  svn_stringbuf_t *stringbuf = svn_stringbuf_create("", pool);
 
   /* We can't store strings longer than the maximum size of apr_size_t,
    * so check for wrapping */

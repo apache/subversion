@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include <svn_io.h>
+#include "svn_io.h"
 #include "Pool.h"
 
 /**

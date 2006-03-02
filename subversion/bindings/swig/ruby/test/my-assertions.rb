@@ -1,3 +1,4 @@
+require "test/unit"
 require "test/unit/assertions"
 
 module Test

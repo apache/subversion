@@ -211,6 +211,9 @@ struct dav_resource_private {
   /* ### record the base for computing a delta during a GET */
   const char *delta_base;
 
+  /* SVNDIFF version we can transmit to the client.  */
+  int svndiff_version;
+
   /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
   const char *svn_client_options;
 
@@ -332,7 +335,10 @@ dav_error *dav_svn_convert_err(svn_error_t *serr, int status,
 
 /* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
    instead of the mod_dav function to enable special mod_dav_svn specific
-   processing.  See dav_new_error_tag for parameter documentation. */
+   processing.  See dav_new_error_tag for parameter documentation.
+   Note that DESC may be null (it's hard to track this down from
+   dav_new_error_tag()'s documentation, but see the dav_error type,
+   which says that its desc field may be NULL). */
 dav_error *dav_svn__new_error_tag(apr_pool_t *pool, int status,
                                   int errno_id, const char *desc,
                                   const char *namespace,
@@ -496,10 +502,10 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
    version controled configurations, activities, histories, and other
    private resources.
 */
-dav_error * dav_svn_resource_kind (request_rec *r,
-                                   const char *uri,
-                                   const char *root_path,
-                                   svn_node_kind_t *kind);
+dav_error * dav_svn_resource_kind(request_rec *r,
+                                  const char *uri,
+                                  const char *root_path,
+                                  svn_node_kind_t *kind);
 
 
 /* Generate the HTTP response body for a successful MERGE. */
@@ -507,6 +513,7 @@ dav_error * dav_svn_resource_kind (request_rec *r,
 dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     const dav_svn_repos *repos,
                                     svn_revnum_t new_rev,
+                                    char *post_commit_err,
                                     apr_xml_elem *prop_elem,
                                     svn_boolean_t disable_merge_response,
                                     apr_pool_t *pool);
@@ -526,6 +533,10 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
 dav_error * dav_svn__file_revs_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
                                       ap_filter_t *output);
+
+dav_error * dav_svn__replay_report(const dav_resource *resource,
+                                   const apr_xml_doc *doc,
+                                   ap_filter_t *output);
 
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
@@ -549,11 +560,11 @@ enum dav_svn_time_format {
    If @a timeval or @a datestring is NULL, don't touch it.
 
    Return zero on success, non-zero if an error occurs. */
-int dav_svn_get_last_modified_time (const char **datestring,
-                                    apr_time_t *timeval,
-                                    const dav_resource *resource,
-                                    enum dav_svn_time_format format,
-                                    apr_pool_t *pool);
+int dav_svn_get_last_modified_time(const char **datestring,
+                                   apr_time_t *timeval,
+                                   const dav_resource *resource,
+                                   enum dav_svn_time_format format,
+                                   apr_pool_t *pool);
 
 dav_error * dav_svn__get_locations_report(const dav_resource *resource,
                                           const apr_xml_doc *doc,
@@ -598,6 +609,10 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
                                 void *baton,
                                 apr_pool_t *pool);
 
+/* If authz is enabled in the specified BATON, return a read authorization
+   function. Otherwise, return NULL. */
+svn_repos_authz_func_t
+dav_svn_authz_read_func(dav_svn_authz_read_baton *baton);
 
 /* Every provider needs to define an opaque locktoken type. */
 struct dav_locktoken

@@ -31,11 +31,11 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_path_condense_targets (const char **pcommon,
-                           apr_array_header_t **pcondensed_targets,
-                           const apr_array_header_t *targets,
-                           svn_boolean_t remove_redundancies,
-                           apr_pool_t *pool)
+svn_path_condense_targets(const char **pcommon,
+                          apr_array_header_t **pcondensed_targets,
+                          const apr_array_header_t *targets,
+                          svn_boolean_t remove_redundancies,
+                          apr_pool_t *pool)
 {
   int i, j, num_condensed = targets->nelts;
   svn_boolean_t *removed;
@@ -52,15 +52,15 @@ svn_path_condense_targets (const char **pcommon,
     }
 
   /* Get the absolute path of the first target. */
-  SVN_ERR (svn_path_get_absolute (pcommon,
-                                  APR_ARRAY_IDX (targets, 0, const char *),
-                                  pool));
+  SVN_ERR(svn_path_get_absolute(pcommon,
+                                APR_ARRAY_IDX(targets, 0, const char *),
+                                pool));
 
   /* Early exit when there's only one path to work on. */
   if (targets->nelts == 1)
     {
       if (pcondensed_targets)
-        *pcondensed_targets = apr_array_make (pool, 0, sizeof (const char *));
+        *pcondensed_targets = apr_array_make(pool, 0, sizeof(const char *));
       return SVN_NO_ERROR;
     }
 
@@ -73,18 +73,18 @@ svn_path_condense_targets (const char **pcommon,
      because I thought it would be simpler, since this way, we don't
      even do the loop if we don't need to condense the targets. */
   
-  removed = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));
-  abs_targets = apr_array_make (pool, targets->nelts, sizeof (const char *));
+  removed = apr_pcalloc(pool, (targets->nelts * sizeof(svn_boolean_t)));
+  abs_targets = apr_array_make(pool, targets->nelts, sizeof(const char *));
   
-  (*((const char **)apr_array_push (abs_targets))) = *pcommon;
+  (*((const char **)apr_array_push(abs_targets))) = *pcommon;
   
   for (i = 1; i < targets->nelts; ++i)
     {
       const char *rel = ((const char **)targets->elts)[i];
       const char *absolute;
-      SVN_ERR (svn_path_get_absolute (&absolute, rel, pool));
-      (*((const char **)apr_array_push (abs_targets))) = absolute;
-      *pcommon = svn_path_get_longest_ancestor (*pcommon, absolute, pool);
+      SVN_ERR(svn_path_get_absolute(&absolute, rel, pool));
+      (*((const char **)apr_array_push(abs_targets))) = absolute;
+      *pcommon = svn_path_get_longest_ancestor(*pcommon, absolute, pool);
     }
   
   if (pcondensed_targets != NULL)
@@ -121,12 +121,12 @@ svn_path_condense_targets (const char **pcommon,
                   if (*ancestor == '\0')
                     continue;
                   
-                  if (strcmp (ancestor, abs_targets_i) == 0)
+                  if (strcmp(ancestor, abs_targets_i) == 0)
                     {
                       removed[j] = TRUE;
                       num_condensed--;
                     }
-                  else if (strcmp (ancestor, abs_targets_j) == 0)
+                  else if (strcmp(ancestor, abs_targets_j) == 0)
                     {
                       removed[i] = TRUE;
                       num_condensed--;
@@ -141,7 +141,7 @@ svn_path_condense_targets (const char **pcommon,
               const char *abs_targets_i 
                 = ((const char **) abs_targets->elts)[i];
 
-              if ((strcmp (abs_targets_i, *pcommon) == 0) && (! removed[i]))
+              if ((strcmp(abs_targets_i, *pcommon) == 0) && (! removed[i]))
                 {
                   removed[i] = TRUE;
                   num_condensed--;
@@ -150,9 +150,9 @@ svn_path_condense_targets (const char **pcommon,
         }
       
       /* Now create the return array, and copy the non-removed items */
-      basedir_len = strlen (*pcommon);
-      *pcondensed_targets = apr_array_make (pool, num_condensed,
-                                            sizeof (const char *));
+      basedir_len = strlen(*pcommon);
+      *pcondensed_targets = apr_array_make(pool, num_condensed,
+                                           sizeof(const char *));
       
       for (i = 0; i < abs_targets->nelts; ++i)
         {
@@ -173,8 +173,8 @@ svn_path_condense_targets (const char **pcommon,
                 rel_item++;
             }
           
-          (*((const char **)apr_array_push (*pcondensed_targets)))
-            = apr_pstrdup (pool, rel_item);
+          (*((const char **)apr_array_push(*pcondensed_targets)))
+            = apr_pstrdup(pool, rel_item);
         }
     }
   
@@ -183,9 +183,9 @@ svn_path_condense_targets (const char **pcommon,
 
 
 svn_error_t *
-svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
-                              const apr_array_header_t *targets,
-                              apr_pool_t *pool)
+svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
+                             const apr_array_header_t *targets,
+                             apr_pool_t *pool)
 {
   apr_pool_t *temp_pool;
   apr_array_header_t *abs_targets;
@@ -202,15 +202,15 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
     }
 
   /* Initialize our temporary pool. */
-  temp_pool = svn_pool_create (pool);
+  temp_pool = svn_pool_create(pool);
 
   /* Create our list of absolute paths for our "keepers" */
-  abs_targets = apr_array_make (temp_pool, targets->nelts, 
-                                sizeof (const char *));
+  abs_targets = apr_array_make(temp_pool, targets->nelts, 
+                               sizeof(const char *));
 
   /* Create our list of untainted paths for our "keepers" */
-  rel_targets = apr_array_make (pool, targets->nelts,
-                                sizeof (const char *));
+  rel_targets = apr_array_make(pool, targets->nelts,
+                               sizeof(const char *));
 
   /* For each target in our list we do the following:
 
@@ -228,7 +228,7 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
       svn_boolean_t keep_me;
 
       /* Get the absolute path for this target. */
-      SVN_ERR (svn_path_get_absolute (&abs_path, rel_path, temp_pool));
+      SVN_ERR(svn_path_get_absolute(&abs_path, rel_path, temp_pool));
 
       /* For each keeper in ABS_TARGETS, see if this target is the
          same as or a child of that keeper. */
@@ -238,14 +238,14 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
           const char *keeper = ((const char **)abs_targets->elts)[j];
           
           /* Quit here if we find this path already in the keepers. */
-          if (strcmp (keeper, abs_path) == 0)
+          if (strcmp(keeper, abs_path) == 0)
             {
               keep_me = FALSE;
               break;
             }
           
           /* Quit here if this path is a child of one of the keepers. */
-          if (svn_path_is_child (keeper, abs_path, temp_pool))
+          if (svn_path_is_child(keeper, abs_path, temp_pool))
             { 
               keep_me = FALSE;
               break;
@@ -256,13 +256,13 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
          and its original path to REL_TARGETS. */
       if (keep_me)
         {
-          (* ((const char **) apr_array_push (abs_targets))) = abs_path;
-          (* ((const char **) apr_array_push (rel_targets))) = rel_path;
+          (* ((const char **) apr_array_push(abs_targets))) = abs_path;
+          (* ((const char **) apr_array_push(rel_targets))) = rel_path;
         }
     }
   
   /* Destroy our temporary pool. */
-  svn_pool_destroy (temp_pool);
+  svn_pool_destroy(temp_pool);
 
   /* Make sure we return the list of untainted keeper paths. */
   *pcondensed_targets = rel_targets;

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # strip-po-charset.py
 #

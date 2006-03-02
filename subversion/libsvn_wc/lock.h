@@ -45,36 +45,36 @@ extern "C" {
    *ADM_ACCESS.  ASSOCIATED can be another lock in which case the locks
    will be in the same set, or it can be NULL.
 */
-svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
-                                           svn_wc_adm_access_t *associated,
-                                           const char *path, apr_pool_t *pool);
+svn_error_t *svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
+                                          svn_wc_adm_access_t *associated,
+                                          const char *path, apr_pool_t *pool);
 
 
 /* Set *CLEANUP to TRUE if the directory ADM_ACCESS requires cleanup
    processing, set *CLEANUP to FALSE otherwise. */
-svn_error_t *svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
-                                              svn_wc_adm_access_t *adm_access,
-                                              apr_pool_t *pool);
+svn_error_t *svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
+                                             svn_wc_adm_access_t *adm_access,
+                                             apr_pool_t *pool);
 
 /* Store ENTRIES in the cache in ADM_ACCESS appropriate for SHOW_DELETED.
    ENTRIES may be NULL. */
-void svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
-                                     svn_boolean_t show_deleted,
-                                     apr_hash_t *entries);
+void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
+                                    svn_boolean_t show_deleted,
+                                    apr_hash_t *entries);
 
 /* Return the entries hash appropriate for SHOW_DELETED cached in
    ADM_ACCESS.  The returned hash may be NULL.  POOL is used for local,
    short term, memory allocations. */
-apr_hash_t *svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
-                                        svn_boolean_t show_deleted,
-                                        apr_pool_t *pool);
+apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t show_deleted,
+                                       apr_pool_t *pool);
 
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
    to lock the working copy during construction of the admin area, it
    necessarily does less checking than svn_wc_adm_open3. */
-svn_error_t *svn_wc__adm_pre_open (svn_wc_adm_access_t **adm_access,
-                                   const char *path,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__adm_pre_open(svn_wc_adm_access_t **adm_access,
+                                  const char *path,
+                                  apr_pool_t *pool);
 
 /* Returns TRUE if PATH is a working copy directory that is obstructed or
    missing such that an access baton is not available for PATH.  This means
@@ -82,20 +82,20 @@ svn_error_t *svn_wc__adm_pre_open (svn_wc_adm_access_t **adm_access,
    the parent of PATH and when that access baton was opened it must have
    attempted to open PATH, i.e. it must have been opened with the TREE_LOCK
    parameter set TRUE. */
-svn_boolean_t svn_wc__adm_missing (svn_wc_adm_access_t *adm_access,
-                                   const char *path);
+svn_boolean_t svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
+                                  const char *path);
 
 /* Sets *ADM_ACCESS to an access baton for PATH from the set ASSOCIATED.
    This function is similar to svn_wc_adm_retrieve except that if the baton
    for PATH is not found, this function sets *ADM_ACCESS to NULL and does
    not return an error. */
-svn_error_t * svn_wc__adm_retrieve_internal (svn_wc_adm_access_t **adm_access,
-                                             svn_wc_adm_access_t *associated,
-                                             const char *path,
-                                             apr_pool_t *pool);
+svn_error_t * svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
+                                            svn_wc_adm_access_t *associated,
+                                            const char *path,
+                                            apr_pool_t *pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
-int svn_wc__adm_wc_format (svn_wc_adm_access_t *adm_access);
+int svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
  * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to
@@ -104,7 +104,7 @@ int svn_wc__adm_wc_format (svn_wc_adm_access_t *adm_access);
  * when the library expects a write lock, and where it is an error for the
  * lock not to be present.  Applications are not expected to call it.
  */
-svn_error_t *svn_wc__adm_write_check (svn_wc_adm_access_t *adm_access);
+svn_error_t *svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access);
 
 #ifdef __cplusplus
 }

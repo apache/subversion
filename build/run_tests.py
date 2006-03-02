@@ -2,7 +2,7 @@
 # run_tests.py - run the tests in the regression test suite.
 #
 
-'''usage: run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
+'''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
                     [--verbose] [--cleanup]
                     <abs_srcdir> <abs_builddir>
                     <prog ...>

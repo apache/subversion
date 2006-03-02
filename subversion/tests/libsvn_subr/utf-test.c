@@ -25,13 +25,13 @@ static apr_uint32_t diff_diff3_seed;
 /* Return the value of the current random number seed, initializing it if
    necessary */
 static apr_uint32_t
-seed_val (void)
+seed_val(void)
 {
   static svn_boolean_t first = TRUE;
 
   if (first)
     {
-      diff_diff3_seed = (apr_uint32_t) apr_time_now ();
+      diff_diff3_seed = (apr_uint32_t) apr_time_now();
       first = FALSE;
     }
 
@@ -40,21 +40,21 @@ seed_val (void)
 
 /* Return a random number N such that MIN_VAL <= N <= MAX_VAL */
 static apr_uint32_t
-range_rand (apr_uint32_t min_val,
-            apr_uint32_t max_val)
+range_rand(apr_uint32_t min_val,
+           apr_uint32_t max_val)
 {
   apr_uint64_t diff = max_val - min_val;
-  apr_uint64_t val = diff * svn_test_rand (&diff_diff3_seed);
+  apr_uint64_t val = diff * svn_test_rand(&diff_diff3_seed);
   val /= 0xffffffff;
   return min_val + (apr_uint32_t) val;
 }
 
 /* Explicit tests of various valid/invalid sequences */
 static svn_error_t *
-utf_validate (const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
+utf_validate(const char **msg,
+             svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
+             apr_pool_t *pool)
 {
   struct data {
     svn_boolean_t valid;
@@ -155,12 +155,12 @@ utf_validate (const char **msg,
   while (tests[i].valid != -1)
     {
       const char *last = svn_utf__last_valid(tests[i].string,
-                                             strlen (tests[i].string));
+                                             strlen(tests[i].string));
       apr_size_t len = strlen(tests[i].string);
 
-      if ((svn_utf__cstring_is_valid (tests[i].string) != tests[i].valid)
+      if ((svn_utf__cstring_is_valid(tests[i].string) != tests[i].valid)
           ||
-          (svn_utf__is_valid (tests[i].string, len) != tests[i].valid))
+          (svn_utf__is_valid(tests[i].string, len) != tests[i].valid))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "is_valid test %d failed", i);
       
@@ -178,15 +178,15 @@ utf_validate (const char **msg,
 
 /* Compare the two different implementations using random data. */
 static svn_error_t *
-utf_validate2 (const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
-               apr_pool_t *pool)
+utf_validate2(const char **msg,
+              svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
+              apr_pool_t *pool)
 {
   int i;
 
-  *msg = apr_psprintf (pool,
-                       "test last_valid/last_valid2 (seed:%u)", seed_val());
+  *msg = apr_psprintf(pool,
+                      "test last_valid/last_valid2 (seed:%u)", seed_val());
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -204,16 +204,16 @@ utf_validate2 (const char **msg,
 
       /* A random string; experiment shows that it's occasionally (less
          than 1%) valid but usually invalid. */
-      for (j = 0; j < sizeof (str) - 1; ++j)
-        str[j] = range_rand (0, 255);
-      str[sizeof (str) - 1] = 0;
-      len = strlen (str);
+      for (j = 0; j < sizeof(str) - 1; ++j)
+        str[j] = range_rand(0, 255);
+      str[sizeof(str) - 1] = 0;
+      len = strlen(str);
 
-      if (svn_utf__last_valid (str, len) != svn_utf__last_valid2 (str, len))
+      if (svn_utf__last_valid(str, len) != svn_utf__last_valid2(str, len))
         {
           /* Duplicate calls for easy debugging */
-          svn_utf__last_valid (str, len);
-          svn_utf__last_valid2 (str, len);
+          svn_utf__last_valid(str, len);
+          svn_utf__last_valid2(str, len);
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL, "is_valid2 test %d failed", i);
         }
@@ -228,7 +228,7 @@ utf_validate2 (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (utf_validate),
-    SVN_TEST_PASS (utf_validate2),
+    SVN_TEST_PASS(utf_validate),
+    SVN_TEST_PASS(utf_validate2),
     SVN_TEST_NULL
   };

@@ -38,6 +38,7 @@
 %ignore svn_ra_svn_init;
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
+%ignore svn_ra_serf_init;
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
@@ -55,11 +56,30 @@
 
 %apply const char *MAY_BE_NULL {
     const char *comment
-}
+};
+
+%apply apr_hash_t *STRING_TO_STRING {
+  apr_hash_t *lock_tokens,
+  apr_hash_t *path_tokens
+};
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
+
+/* -----------------------------------------------------------------------
+   handle svn_ra_get_locations()
+*/
+%typemap(python,in) apr_array_header_t *location_revisions {
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input, 
+                                                             _global_pool);
+    if ($1 == NULL)
+        SWIG_fail;
+}
+%typemap(python,in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **locations {
+    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
+}
 
 /* -----------------------------------------------------------------------
    thunk ra_callback
@@ -101,32 +121,18 @@
 %typemap(ruby, in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
   $1 = svn_swig_rb_ra_lock_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
 {
   $1 = svn_swig_rb_ra_file_rev_handler;
-  $2 = (void *)$input;
-}
-
-%typemap(perl5, in) apr_hash_t *lock_tokens {
-    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
-}
-
-%typemap(ruby, in) apr_hash_t *lock_tokens
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, in) apr_hash_t *path_revs
 {
   $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
-}
-
-%typemap(ruby, in) apr_hash_t *path_tokens
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 
 /* ----------------------------------------------------------------------- */

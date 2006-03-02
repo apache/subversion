@@ -43,6 +43,23 @@ dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
   return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
 }
 
+/* Build up a chain of DAV errors that correspond to the underlying SVN
+   errors that caused this problem. */
+static dav_error *build_error_chain(apr_pool_t *pool, svn_error_t *err,
+                                    int status)
+{
+  char *msg = err->message ? apr_pstrdup(pool, err->message) : NULL;
+
+  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err, msg,
+                                           SVN_DAV_ERROR_NAMESPACE,
+                                           SVN_DAV_ERROR_TAG);
+
+  if (err->child)
+    derr->prev = build_error_chain(pool, err->child, status);
+
+  return derr;
+}
+
 dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool)
 {
@@ -68,10 +85,7 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
         /* add other mappings here */
       }
 
-    derr = dav_svn__new_error_tag(pool, status, serr->apr_err,
-                                  apr_pstrdup(pool, serr->message),
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+    derr = build_error_chain(pool, serr, status);
     if (message != NULL)
       derr = dav_push_error(pool, status, serr->apr_err, message, derr);
 
@@ -86,19 +100,19 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
    history item (a modification, or a copy) occurred for PATH under
    ROOT.  Use POOL for scratchwork. */
 static svn_error_t *
-get_last_history_rev (svn_revnum_t *revision,
-                      svn_fs_root_t *root,
-                      const char *path,
-                      apr_pool_t *pool)
+get_last_history_rev(svn_revnum_t *revision,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *pool)
 {
   svn_fs_history_t *history;
   const char *ignored;
 
   /* Get an initial HISTORY baton. */
-  SVN_ERR( svn_fs_node_history(&history, root, path, pool) );
+  SVN_ERR(svn_fs_node_history(&history, root, path, pool));
 
   /* Now get the first *real* point of interesting history. */
-  SVN_ERR( svn_fs_history_prev(&history, history, FALSE, pool) );
+  SVN_ERR(svn_fs_history_prev(&history, history, FALSE, pool));
 
   /* Fetch the location information for this history step. */
   return svn_fs_history_location(&ignored, revision, history, pool);
@@ -159,7 +173,7 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
-  const char *path_uri = path ? svn_path_uri_encode (path, pool) : NULL;
+  const char *path_uri = path ? svn_path_uri_encode(path, pool) : NULL;
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
@@ -280,7 +294,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
     {
       /* this is an ordinary "public" URI, so back up to include the
          leading '/' and just return... no need to parse further. */
-      info->repos_path = svn_path_uri_decode (path - 1, pool);
+      info->repos_path = svn_path_uri_decode(path - 1, pool);
       return NULL;
     }
 
@@ -319,7 +333,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
         {
           created_rev_str = apr_pstrndup(pool, path, slash - path);
           info->rev = SVN_STR_TO_REV(created_rev_str);
-          info->repos_path = svn_path_uri_decode (slash, pool);
+          info->repos_path = svn_path_uri_decode(slash, pool);
         }
       if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;
@@ -369,16 +383,9 @@ svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
 }
 
 
-/* ### Much of this is duplicated from libsvn_subr/path.c */
-#define PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 {
-  apr_size_t len = strlen(path);
-
-  /* Is it canonical enough to not die in the path library?  Return
-     error-free. */
-  if (! PATH_IS_PLATFORM_EMPTY(path, len)
-      && (len <= 1 || path[len-1] != '/'))
+  if (strcmp(path, svn_path_canonicalize(path, pool)) == 0)
     return NULL;
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */

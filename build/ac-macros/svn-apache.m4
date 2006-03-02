@@ -9,14 +9,17 @@ dnl       source dir, we cannot create static builds of the system.
 dnl
 
 AC_DEFUN(SVN_FIND_APACHE,[
+AC_REQUIRE([AC_CANONICAL_HOST])
 
 HTTPD_WANTED_MMN="$1"
 
 AC_MSG_CHECKING(for static Apache module support)
 AC_ARG_WITH(apache,
 AC_HELP_STRING([--with-apache=DIR],
-	       [Build static Apache module.  DIR is the path to the top-level
-		Apache source directory.]),
+	       [Build static Apache modules.  DIR is the path to the top-level
+		Apache source directory. IMPORTANT: Unless you are *absolutely*
+                certain that you want to build the modules *statically*, you
+                probably want --with-apxs, and not this option.]),
 [
 	if test "$withval" = "yes"; then
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)
@@ -56,7 +59,7 @@ VERSION_OKAY
 
 AC_MSG_CHECKING(for Apache module support via DSO through APXS)
 AC_ARG_WITH(apxs,
-[[  --with-apxs[=FILE]      Build shared Apache module.  FILE is the optional
+[[  --with-apxs[=FILE]      Build shared Apache modules.  FILE is the optional
                           pathname to the Apache apxs tool; defaults to "apxs".]],
 [
     if test "$BINNAME" != ""; then
@@ -71,7 +74,7 @@ AC_ARG_WITH(apxs,
     APXS_EXPLICIT=1
 ])
 
-if test "$BINNAME" = "" -a "$APXS" = ""; then
+if test -z "$BINNAME" && test -z "$APXS"; then
   for i in /usr/sbin /usr/local/apache/bin /usr/local/apache2/bin /usr/bin ; do
     if test -f "$i/apxs2"; then
       APXS="$i/apxs2"
@@ -84,7 +87,7 @@ if test "$BINNAME" = "" -a "$APXS" = ""; then
   done
 fi
 
-if test -n "$APXS" -a "$APXS" != "no"; then
+if test -n "$APXS" && test "$APXS" != "no"; then
     APXS_INCLUDE="`$APXS -q INCLUDEDIR`"
     if test -r $APXS_INCLUDE/mod_dav.h; then
         AC_MSG_RESULT(found at $APXS)
@@ -115,13 +118,19 @@ else
     AC_MSG_RESULT(no)
 fi
 
-if test -n "$APXS" -a "$APXS" != "no"; then
+if test -n "$APXS" && test "$APXS" != "no"; then
     BINNAME=mod_dav_svn.so
     INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
     APXS_CC="`$APXS -q CC`"
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
     APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
+
+    case $host in
+      *-*-cygwin*)
+        APACHE_LDFLAGS="-shrext .so"
+        ;;
+    esac
 
     INSTALL_APACHE_RULE=install-mods-shared
 
@@ -139,6 +148,7 @@ if test "$BINNAME" = ""; then
 else
     BUILD_APACHE_RULE=apache-mod
 fi
+AC_SUBST(APACHE_LDFLAGS)
 AC_SUBST(APACHE_TARGET)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)
@@ -146,7 +156,7 @@ AC_SUBST(BUILD_APACHE_RULE)
 AC_SUBST(INSTALL_APACHE_RULE)
 
 # there aren't any flags that interest us ...
-#if test -n "$APXS" -a "$APXS" != "no"; then
+#if test -n "$APXS" && test "$APXS" != "no"; then
 #  CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"
 #fi
 

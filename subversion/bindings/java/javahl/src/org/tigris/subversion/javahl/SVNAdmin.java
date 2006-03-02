@@ -22,44 +22,11 @@ package org.tigris.subversion.javahl;
 public class SVNAdmin
 {
     /**
-     * load the needed native library
+     * Load the required native library.
      */
     static
     {
-        /*
-         * see if the user has specified the fully qualified path to the native
-         * library
-         */
-        try
-        {
-            String specifiedLibraryName =
-                    System.getProperty("subversion.native.library");
-            if(specifiedLibraryName != null)
-                System.load(specifiedLibraryName);
-        }
-        catch(UnsatisfiedLinkError ex)
-        {
-            // ignore that error to try again
-        }
-        /*
-         * first try to load the library by the new names.
-         * if that fails, try to load the library by the old name.
-         */
-        try
-        {
-            System.loadLibrary("svnjavahl-1");
-        }
-        catch(UnsatisfiedLinkError ex)
-        {
-            try
-            {
-                System.loadLibrary("libsvnjavahl-1");
-            }
-            catch (UnsatisfiedLinkError e)
-            {
-                System.loadLibrary("svnjavahl");
-            }
-        }
+        NativeResources.loadNativeLibrary();
     }
 
     /**
@@ -95,6 +62,14 @@ public class SVNAdmin
      * Filesystem in the filesystem
      */
     public static final String FSFS = "fsfs";
+
+    /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion()
+    {
+        return NativeResources.version;
+    }
 
     /**
      * create a subversion repository.
@@ -197,7 +172,7 @@ public class SVNAdmin
     public native void lstxns(String path, MessageReceiver receiver)
             throws ClientException;
     /**
-     * recover the berkeley db of a repostory, returns youngest revision
+     * recover the berkeley db of a repository, returns youngest revision
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
      */

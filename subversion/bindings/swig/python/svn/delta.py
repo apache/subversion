@@ -28,36 +28,36 @@ class Editor:
   def set_target_revision(self, target_revision):
     pass
 
-  def open_root(self, base_revision, dir_pool):
+  def open_root(self, base_revision, dir_pool=None):
     return None
 
-  def delete_entry(self, path, revision, parent_baton, pool):
+  def delete_entry(self, path, revision, parent_baton, pool=None):
     pass
 
   def add_directory(self, path, parent_baton,
-                    copyfrom_path, copyfrom_revision, dir_pool):
+                    copyfrom_path, copyfrom_revision, dir_pool=None):
     return None
 
-  def open_directory(self, path, parent_baton, base_revision, dir_pool):
+  def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
     return None
 
-  def change_dir_prop(self, dir_baton, name, value, pool):
+  def change_dir_prop(self, dir_baton, name, value, pool=None):
     pass
 
   def close_directory(self, dir_baton):
     pass
 
   def add_file(self, path, parent_baton,
-               copyfrom_path, copyfrom_revision, file_pool):
+               copyfrom_path, copyfrom_revision, file_pool=None):
     return None
 
-  def open_file(self, path, parent_baton, base_revision, file_pool):
+  def open_file(self, path, parent_baton, base_revision, file_pool=None):
     return None
 
   def apply_textdelta(self, file_baton, base_checksum):
     return None
 
-  def change_file_prop(self, file_baton, name, value, pool):
+  def change_file_prop(self, file_baton, name, value, pool=None):
     pass
 
   def close_file(self, file_baton, text_checksum):
@@ -70,5 +70,5 @@ class Editor:
     pass
 
 
-def make_editor(editor, pool):
+def make_editor(editor, pool=None):
   return svn_swig_py_make_editor(editor, pool)

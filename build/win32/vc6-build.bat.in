@@ -91,8 +91,8 @@ msdev httpd-2.0.50\apache.dsw /MAKE "BuildBin - Win32 Release"
 rem ====== Subversion
 cd src-%DIR%
 msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
-mkdir Release\subversion\tests\clients
-xcopy /S /Y subversion\tests\clients Release\subversion\tests\clients
+mkdir Release\subversion\tests\svn
+xcopy /S /Y subversion\tests\svn Release\subversion\tests\svn
 copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
 copy Release\subversion\mod_authz_svn\mod_authz_svn.so "%APACHEDIR%"\modules
 cd ..
@@ -111,7 +111,7 @@ copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
 copy httpd-2.0.50\srclib\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
 copy gettext\bin\intl.dll svn-win32-%VER%\bin
 copy gettext\bin\iconv.dll svn-win32-%VER%\bin
-copy src-%DIR%\Release\subversion\clients\cmdline\svn.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svn\svn.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnadmin\svnadmin.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svndumpfilter\svndumpfilter.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnlook\svnlook.exe svn-win32-%VER%\bin
@@ -134,11 +134,11 @@ echo LoadModule authz_svn_module   modules/mod_authz_svn.so
 echo And further down the file add:
 echo ^<Location /svn-test-work/repositories^>
 echo  DAV svn
-echo  SVNParentPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/clients/cmdline/svn-test-work/repositories
+echo  SVNParentPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/svn/svn-test-work/repositories
 echo ^</Location^>
 echo ^<Location /svn-test-work/local_tmp/repos^>
 echo  DAV svn
-echo  SVNPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/clients/cmdline/svn-test-work/local_tmp/repos
+echo  SVNPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/svn/svn-test-work/local_tmp/repos
 echo ^</Location^>
 echo Then restart Apache.
 

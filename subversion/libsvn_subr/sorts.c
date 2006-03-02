@@ -60,8 +60,8 @@
 
 
 int
-svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
-                                 const svn_sort__item_t *b)
+svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
+                                const svn_sort__item_t *b)
 {
   const char *astr, *bstr;
 
@@ -69,20 +69,20 @@ svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
   bstr = b->key;
   assert(astr[a->klen] == '\0');
   assert(bstr[b->klen] == '\0');
-  return svn_path_compare_paths (astr, bstr);
+  return svn_path_compare_paths(astr, bstr);
 }
 
 
 int
-svn_sort_compare_items_lexically (const svn_sort__item_t *a,
-                                  const svn_sort__item_t *b)
+svn_sort_compare_items_lexically(const svn_sort__item_t *a,
+                                 const svn_sort__item_t *b)
 {
   int val;
   apr_size_t len;
 
   /* Compare bytes of a's key and b's key up to the common length. */
   len = (a->klen < b->klen) ? a->klen : b->klen;
-  val = memcmp (a->key, b->key, len);
+  val = memcmp(a->key, b->key, len);
   if (val != 0)
     return val;
 
@@ -92,7 +92,7 @@ svn_sort_compare_items_lexically (const svn_sort__item_t *a,
 
 
 int
-svn_sort_compare_revisions (const void *a, const void *b)
+svn_sort_compare_revisions(const void *a, const void *b)
 {
   svn_revnum_t a_rev = *(const svn_revnum_t *)a;
   svn_revnum_t b_rev = *(const svn_revnum_t *)b;
@@ -105,39 +105,39 @@ svn_sort_compare_revisions (const void *a, const void *b)
 
 
 int 
-svn_sort_compare_paths (const void *a, const void *b)
+svn_sort_compare_paths(const void *a, const void *b)
 {
   const char *item1 = *((const char * const *) a);
   const char *item2 = *((const char * const *) b);
 
-  return svn_path_compare_paths (item1, item2);
+  return svn_path_compare_paths(item1, item2);
 }
 
 
 
 apr_array_header_t *
-svn_sort__hash (apr_hash_t *ht,
-                int (*comparison_func) (const svn_sort__item_t *,
-                                        const svn_sort__item_t *),
-                apr_pool_t *pool)
+svn_sort__hash(apr_hash_t *ht,
+               int (*comparison_func)(const svn_sort__item_t *,
+                                      const svn_sort__item_t *),
+               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
 
   /* allocate an array with only one element to begin with. */
-  ary = apr_array_make (pool, 1, sizeof(svn_sort__item_t));
+  ary = apr_array_make(pool, 1, sizeof(svn_sort__item_t));
 
   /* loop over hash table and push all keys into the array */
-  for (hi = apr_hash_first (pool, ht); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, ht); hi; hi = apr_hash_next(hi))
     {
-      svn_sort__item_t *item = apr_array_push (ary);
+      svn_sort__item_t *item = apr_array_push(ary);
 
-      apr_hash_this (hi, &item->key, &item->klen, &item->value);
+      apr_hash_this(hi, &item->key, &item->klen, &item->value);
     }
   
   /* now quicksort the array.  */
-  qsort (ary->elts, ary->nelts, ary->elt_size,
-         (int (*)(const void *, const void *))comparison_func);
+  qsort(ary->elts, ary->nelts, ary->elt_size,
+        (int (*)(const void *, const void *))comparison_func);
 
   return ary;
 }
@@ -147,29 +147,29 @@ svn_sort__hash (apr_hash_t *ht,
 /** Sorting properties **/
 
 svn_boolean_t
-svn_prop_is_svn_prop (const char *prop_name)
+svn_prop_is_svn_prop(const char *prop_name)
 {
-  return strncmp (prop_name, SVN_PROP_PREFIX, (sizeof (SVN_PROP_PREFIX) - 1)) 
+  return strncmp(prop_name, SVN_PROP_PREFIX, (sizeof(SVN_PROP_PREFIX) - 1)) 
          ? FALSE 
          : TRUE;
 }
 
 
 svn_prop_kind_t
-svn_property_kind (int *prefix_len,
-                   const char *prop_name)
+svn_property_kind(int *prefix_len,
+                  const char *prop_name)
 {
-  apr_size_t wc_prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
-  apr_size_t entry_prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
+  apr_size_t wc_prefix_len = sizeof(SVN_PROP_WC_PREFIX) - 1;
+  apr_size_t entry_prefix_len = sizeof(SVN_PROP_ENTRY_PREFIX) - 1;
 
-  if (strncmp (prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
+  if (strncmp(prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
     {
       if (prefix_len)
         *prefix_len = wc_prefix_len;
       return svn_prop_wc_kind;     
     }
 
-  if (strncmp (prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
+  if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
     {
       if (prefix_len)
         *prefix_len = entry_prefix_len;
@@ -184,50 +184,50 @@ svn_property_kind (int *prefix_len,
 
 
 svn_error_t *
-svn_categorize_props (const apr_array_header_t *proplist,
-                      apr_array_header_t **entry_props,
-                      apr_array_header_t **wc_props,
-                      apr_array_header_t **regular_props,
-                      apr_pool_t *pool)
+svn_categorize_props(const apr_array_header_t *proplist,
+                     apr_array_header_t **entry_props,
+                     apr_array_header_t **wc_props,
+                     apr_array_header_t **regular_props,
+                     apr_pool_t *pool)
 {
   int i;
   if (entry_props)
-    *entry_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+    *entry_props = apr_array_make(pool, 1, sizeof(svn_prop_t));
   if (wc_props)
-    *wc_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+    *wc_props = apr_array_make(pool, 1, sizeof(svn_prop_t));
   if (regular_props)
-    *regular_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+    *regular_props = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   for (i = 0; i < proplist->nelts; i++)
     {
       svn_prop_t *prop, *newprop;
       enum svn_prop_kind kind;
       
-      prop = &APR_ARRAY_IDX (proplist, i, svn_prop_t);      
-      kind = svn_property_kind (NULL, prop->name);
+      prop = &APR_ARRAY_IDX(proplist, i, svn_prop_t);      
+      kind = svn_property_kind(NULL, prop->name);
       newprop = NULL;
 
       if (kind == svn_prop_regular_kind)
         {
           if (regular_props)
-            newprop = apr_array_push (*regular_props);
+            newprop = apr_array_push(*regular_props);
         }
       else if (kind == svn_prop_wc_kind)
         {
           if (wc_props)
-            newprop = apr_array_push (*wc_props);
+            newprop = apr_array_push(*wc_props);
         }
       else if (kind == svn_prop_entry_kind)
         {
           if (entry_props)
-            newprop = apr_array_push (*entry_props);
+            newprop = apr_array_push(*entry_props);
         }
       else
         /* Technically this can't happen, but might as well have the
            code ready in case that ever changes. */
-        return svn_error_createf (SVN_ERR_BAD_PROP_KIND, NULL,
-                                  "Bad property kind for property '%s'",
-                                  prop->name);
+        return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                                 "Bad property kind for property '%s'",
+                                 prop->name);
 
       if (newprop)
         {
@@ -241,13 +241,13 @@ svn_categorize_props (const apr_array_header_t *proplist,
 
 
 svn_error_t *
-svn_prop_diffs (apr_array_header_t **propdiffs,
-                apr_hash_t *target_props,
-                apr_hash_t *source_props,
-                apr_pool_t *pool)
+svn_prop_diffs(apr_array_header_t **propdiffs,
+               apr_hash_t *target_props,
+               apr_hash_t *source_props,
+               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_array_header_t *ary = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  apr_array_header_t *ary = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   /* Note: we will be storing the pointers to the keys (from the hashes)
      into the propdiffs array.  It is acceptable for us to
@@ -255,7 +255,7 @@ svn_prop_diffs (apr_array_header_t **propdiffs,
 
   /* Loop over SOURCE_PROPS and examine each key.  This will allow us to
      detect any `deletion' events or `set-modification' events.  */
-  for (hi = apr_hash_first (pool, source_props); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, source_props); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -263,31 +263,31 @@ svn_prop_diffs (apr_array_header_t **propdiffs,
       const svn_string_t *propval1, *propval2;
 
       /* Get next property */
-      apr_hash_this (hi, &key, &klen, &val);
+      apr_hash_this(hi, &key, &klen, &val);
       propval1 = val;
 
       /* Does property name exist in TARGET_PROPS? */
-      propval2 = apr_hash_get (target_props, key, klen);
+      propval2 = apr_hash_get(target_props, key, klen);
 
       if (propval2 == NULL)
         {
           /* Add a delete event to the array */
-          svn_prop_t *p = apr_array_push (ary);
+          svn_prop_t *p = apr_array_push(ary);
           p->name = key;
           p->value = NULL;
         }
-      else if (! svn_string_compare (propval1, propval2))
+      else if (! svn_string_compare(propval1, propval2))
         {
           /* Add a set (modification) event to the array */
-          svn_prop_t *p = apr_array_push (ary);
+          svn_prop_t *p = apr_array_push(ary);
           p->name = key;
-          p->value = svn_string_dup (propval2, pool);
+          p->value = svn_string_dup(propval2, pool);
         }
     }
 
   /* Loop over TARGET_PROPS and examine each key.  This allows us to
      detect `set-creation' events */
-  for (hi = apr_hash_first (pool, target_props); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, target_props); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -295,16 +295,16 @@ svn_prop_diffs (apr_array_header_t **propdiffs,
       const svn_string_t *propval;
 
       /* Get next property */
-      apr_hash_this (hi, &key, &klen, &val);
+      apr_hash_this(hi, &key, &klen, &val);
       propval = val;
 
       /* Does property name exist in SOURCE_PROPS? */
-      if (NULL == apr_hash_get (source_props, key, klen))
+      if (NULL == apr_hash_get(source_props, key, klen))
         {
           /* Add a set (creation) event to the array */
-          svn_prop_t *p = apr_array_push (ary);
+          svn_prop_t *p = apr_array_push(ary);
           p->name = key;
-          p->value = svn_string_dup (propval, pool);
+          p->value = svn_string_dup(propval, pool);
         }
     }
 
@@ -316,11 +316,11 @@ svn_prop_diffs (apr_array_header_t **propdiffs,
 
 
 svn_boolean_t
-svn_prop_needs_translation (const char *propname)
+svn_prop_needs_translation(const char *propname)
 {
   /* ### Someday, we may want to be picky and choosy about which
      properties require UTF8 and EOL conversion.  For now, all "svn:"
      props need it.  */
 
-  return svn_prop_is_svn_prop (propname);
+  return svn_prop_is_svn_prop(propname);
 }

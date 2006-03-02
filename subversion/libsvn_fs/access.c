@@ -29,17 +29,17 @@
 
 
 svn_error_t *
-svn_fs_create_access (svn_fs_access_t **access_ctx,
-                      const char *username,
-                      apr_pool_t *pool)
+svn_fs_create_access(svn_fs_access_t **access_ctx,
+                     const char *username,
+                     apr_pool_t *pool)
 {
   svn_fs_access_t *ac;
 
-  assert (username != NULL);
+  assert(username != NULL);
 
-  ac = apr_pcalloc (pool, sizeof(*ac));
-  ac->username = apr_pstrdup (pool, username);
-  ac->lock_tokens = apr_hash_make (pool);
+  ac = apr_pcalloc(pool, sizeof(*ac));
+  ac->username = apr_pstrdup(pool, username);
+  ac->lock_tokens = apr_hash_make(pool);
   *access_ctx = ac;
 
   return SVN_NO_ERROR;
@@ -47,8 +47,8 @@ svn_fs_create_access (svn_fs_access_t **access_ctx,
 
 
 svn_error_t *
-svn_fs_set_access (svn_fs_t *fs,
-                   svn_fs_access_t *access_ctx)
+svn_fs_set_access(svn_fs_t *fs,
+                  svn_fs_access_t *access_ctx)
 {
   fs->access_ctx = access_ctx;
 
@@ -57,8 +57,8 @@ svn_fs_set_access (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_get_access (svn_fs_access_t **access_ctx,
-                   svn_fs_t *fs)
+svn_fs_get_access(svn_fs_access_t **access_ctx,
+                  svn_fs_t *fs)
 {
   *access_ctx = fs->access_ctx;
 
@@ -67,8 +67,8 @@ svn_fs_get_access (svn_fs_access_t **access_ctx,
 
 
 svn_error_t *
-svn_fs_access_get_username (const char **username,
-                            svn_fs_access_t *access_ctx)
+svn_fs_access_get_username(const char **username,
+                           svn_fs_access_t *access_ctx)
 {
   *username = access_ctx->username;
 
@@ -77,11 +77,11 @@ svn_fs_access_get_username (const char **username,
 
 
 svn_error_t *
-svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
-                              const char *token)
+svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
+                             const char *token)
 {
-  apr_hash_set (access_ctx->lock_tokens,
-                token, APR_HASH_KEY_STRING, (void *) 1);
+  apr_hash_set(access_ctx->lock_tokens,
+               token, APR_HASH_KEY_STRING, (void *) 1);
 
   return SVN_NO_ERROR;
 }

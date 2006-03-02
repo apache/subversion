@@ -10,6 +10,7 @@ Usage: python win-tests.py [option] [test-path]
 
     --svnserve-args=list   comma-separated list of arguments for svnserve;
                            default is '-d,-r,<test-path-root>'
+    --asp.net-hack     use '_svn' instead of '.svn' for the admin dir name
 """
 
 import os, sys
@@ -25,6 +26,9 @@ try:
 except AttributeError:
     my_getopt = getopt.getopt
 
+CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
+CMDLINE_TEST_SCRIPT_NATIVE_PATH = CMDLINE_TEST_SCRIPT_PATH.replace('/', os.sep)
+
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
@@ -33,12 +37,12 @@ version_header = os.path.join('subversion', 'include', 'svn_version.h')
 gen_obj = gen_win.GeneratorBase('build.conf', version_header, [])
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
+client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                        'svnserve-args=', 'fs-type='])
+                        'svnserve-args=', 'fs-type=', 'asp.net-hack'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -77,6 +81,8 @@ for opt, val in opts:
   elif opt == '--svnserve-args':
     svnserve_args = val.split(',')
     run_svnserve = 1
+  elif opt == '--asp.net-hack':
+    os.environ['SVN_ASP_DOT_NET_HACK'] = opt
 
 
 # Calculate the source and test directory names
@@ -180,8 +186,7 @@ class Svnserve:
     self.kind = objdir
     self.path = os.path.join(abs_objdir,
                              'subversion', 'svnserve', self.name)
-    self.root = os.path.join(abs_builddir,
-                             'subversion', 'tests', 'clients', 'cmdline')
+    self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH)
     self.proc_handle = None
 
   def __del__(self):
@@ -231,7 +236,7 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     os.path.walk('subversion', copy_execs, baton)
-    create_target_dir('subversion/tests/clients/cmdline')
+    create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
   except:
     os.chdir(old_cwd)
     raise

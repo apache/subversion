@@ -27,6 +27,7 @@ Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.2.52
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel >= 4.2.52
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -103,6 +104,16 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r18013
+- Simplify apache regression testing.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
+- Figured out how to disable module configuration with --disable-mod-activation.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
+  NFS server/client.
+
 * Wed Aug 31 2005 David Summers <david@summersoft.fay.ar.us> r16011
 - Update to SWIG 1.3.25.  This makes it so that only the developer/packager
   needs the SWIG package installed.
@@ -384,10 +395,6 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-
-# Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/rhel-4/install.patch
-
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
    1)
@@ -410,6 +417,7 @@ rm -rf apr apr-util neon
 
 
 %configure \
+	--disable-mod-activation \
 	--with-swig \
 	--with-berkeley-db \
 	--with-python=/usr/bin/python2.3 \
@@ -438,7 +446,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -446,17 +454,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_bdb_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-4/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=bdb
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -470,7 +468,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=fsfs
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -480,15 +478,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-4/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=fsfs
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -520,6 +510,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
+
 %post -n mod_dav_svn
 # Restart apache server if needed.
 source /etc/init.d/functions
@@ -546,6 +540,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnsync
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
@@ -570,9 +565,7 @@ rm -rf $RPM_BUILD_ROOT
 %files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.la
 %{apache_dir}/lib/httpd/modules/mod_authz_svn.so
 
 %files perl

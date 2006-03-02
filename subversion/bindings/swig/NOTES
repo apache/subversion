@@ -29,7 +29,7 @@ svn_hash.h        (1)
 svn_io.h          _core (only stream functions)
 svn_md5.h         (1)
 svn_opt.h         _core (some symbols)
-svn_path.h        (1)
+svn_path.h        _core (some symbols, 1)
 svn_pools.h       _core (only pool manipulation)
 svn_props.h       _core (some symbols)
 svn_quoprint.h    (1)
@@ -60,12 +60,6 @@ apr*.h            (3)
 (3) A SWIG interface file exists, but only to export types used by other
     modules.  No binding module is actually constructed from this
     header.
-
-
-NOTE: The bindings code is being developed using SWIG 1.3.24 or
-later.  Earlier versions of SWIG will simply *not* work.
-
-
 
 
 SWIG MODULES

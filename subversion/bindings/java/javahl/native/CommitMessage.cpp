@@ -22,7 +22,7 @@
 #include "CommitMessage.h"
 #include "JNIUtil.h"
 #include <apr_tables.h>
-#include <svn_client.h>
+#include "svn_client.h"
 #include "../include/org_tigris_subversion_javahl_CommitItemStateFlags.h"
 /**
  * Create a commit message object

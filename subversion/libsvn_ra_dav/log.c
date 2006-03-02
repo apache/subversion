@@ -73,6 +73,14 @@ struct log_baton
   int limit;
   int count;
 
+  /* If we're in backwards compatibility mode for the svn log --limit
+     stuff, we need to be able to bail out while parsing log messages.
+     The way we do that is returning an error to neon, but we need to
+     be able to tell that the error we returned wasn't actually a
+     problem, so if this is TRUE it means we can safely ignore that
+     error and return success. */
+  svn_boolean_t limit_compat_bailout;
+
   /* If `receiver' returns error, it is stored here. */
   svn_error_t *err;
 };
@@ -83,7 +91,7 @@ struct log_baton
  * which they were allocated.  Do not touch any stored error, however.
  */
 static void
-reset_log_item (struct log_baton *lb)
+reset_log_item(struct log_baton *lb)
 {
   lb->revision      = SVN_INVALID_REVNUM;
   lb->author        = NULL;
@@ -91,7 +99,7 @@ reset_log_item (struct log_baton *lb)
   lb->msg           = NULL;
   lb->changed_paths = NULL;
 
-  svn_pool_clear (lb->subpool);
+  svn_pool_clear(lb->subpool);
 }
 
 
@@ -139,7 +147,7 @@ log_start_element(void *userdata,
           copyfrom_revstr = svn_xml_get_attr_value("copyfrom-rev", atts);
           if (copyfrom_path && copyfrom_revstr
               && (SVN_IS_VALID_REVNUM
-                  (copyfrom_rev = SVN_STR_TO_REV (copyfrom_revstr))))
+                  (copyfrom_rev = SVN_STR_TO_REV(copyfrom_revstr))))
             {
               lb->this_path_item->copyfrom_path = apr_pstrdup(lb->subpool,
                                                               copyfrom_path);
@@ -177,20 +185,20 @@ log_end_element(void *userdata,
   switch (elm->id)
     {
     case ELEM_version_name:
-      lb->revision = SVN_STR_TO_REV (cdata);
+      lb->revision = SVN_STR_TO_REV(cdata);
       break;
     case ELEM_creator_displayname:
-      lb->author = apr_pstrdup (lb->subpool, cdata);
+      lb->author = apr_pstrdup(lb->subpool, cdata);
       break;
     case ELEM_log_date:
-      lb->date = apr_pstrdup (lb->subpool, cdata);
+      lb->date = apr_pstrdup(lb->subpool, cdata);
       break;
     case ELEM_added_path:
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
       {
-        char *path = apr_pstrdup (lb->subpool, cdata);
+        char *path = apr_pstrdup(lb->subpool, cdata);
         if (! lb->changed_paths)
           lb->changed_paths = apr_hash_make(lb->subpool);
         apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, 
@@ -198,7 +206,7 @@ log_end_element(void *userdata,
         break;
       }
     case ELEM_comment:
-      lb->msg = apr_pstrdup (lb->subpool, cdata);
+      lb->msg = apr_pstrdup(lb->subpool, cdata);
       break;
     case ELEM_log_item:
       {
@@ -213,6 +221,7 @@ log_end_element(void *userdata,
         if (lb->limit && (++lb->count > lb->limit))
           {
             lb->err = SVN_NO_ERROR;
+            lb->limit_compat_bailout = TRUE;
             return SVN_RA_DAV__XML_INVALID;
           }
  
@@ -224,7 +233,7 @@ log_end_element(void *userdata,
                                              lb->msg,
                                              lb->subpool);
 
-        reset_log_item (lb);
+        reset_log_item(lb);
         
         if (err)
           {
@@ -269,7 +278,7 @@ log_end_element(void *userdata,
          *         emitting "<S:log-report>" and "</S:log-report>"
          *         instead.
          *
-         *    - clients/cmdline/log-cmd.c:
+         *    - svn/log-cmd.c:
          *         svn_cl__log() would no longer be responsible for
          *         emitting the "<log>" and "</log>" elements.  The
          *         body of this function would get a lot simpler, mmm!
@@ -317,7 +326,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   int i;
   svn_ra_dav__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
@@ -359,31 +368,31 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, log_request_head);
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool,
+                           apr_psprintf(pool,
                                         "<S:start-revision>%ld"
                                         "</S:start-revision>", start));
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool,
+                           apr_psprintf(pool,
                                         "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
   if (limit)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:limit>%d</S:limit>", limit));
     }
 
   if (discover_changed_paths)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:discover-changed-paths/>"));
     }
 
   if (strict_node_history)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:strict-node-history/>"));
     }
 
@@ -392,7 +401,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *this_path =
-            apr_xml_quote_string(ras->pool,
+            apr_xml_quote_string(pool,
                                  ((const char **)paths->elts)[i],
                                  0);
           svn_stringbuf_appendcstr(request_body, "<S:path>");
@@ -405,11 +414,12 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
-  lb.subpool = svn_pool_create (ras->pool);
+  lb.subpool = svn_pool_create(pool);
   lb.err = NULL;
   lb.limit = limit;
   lb.count = 0;
-  reset_log_item (&lb);
+  lb.limit_compat_bailout = FALSE;
+  reset_log_item(&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
@@ -417,11 +427,11 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras->sess, ras->url, use_rev,
-                                         ras->pool) );
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                        ras->sess, ras->url->data, use_rev,
+                                        pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            ras->pool);
+                                            pool);
 
 
   err = svn_ra_dav__parsed_request_compat(ras->sess,
@@ -438,7 +448,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                           NULL, 
                                           NULL,
                                           FALSE,
-                                          ras->pool);
+                                          pool);
   
   if (lb.err)
     {
@@ -448,7 +458,10 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
       return lb.err;
     }
 
-  svn_pool_destroy (lb.subpool);
+  svn_pool_destroy(lb.subpool);
+
+  if (err && lb.limit_compat_bailout)
+    return SVN_NO_ERROR;
 
   return err;
 }

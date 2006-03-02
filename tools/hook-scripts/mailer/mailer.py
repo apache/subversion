@@ -8,8 +8,8 @@
 # $LastChangedRevision$
 #
 # USAGE: mailer.py commit      REPOS REVISION [CONFIG-FILE]
-#        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
-#        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
+#        mailer.py propchange  REPOS REVISION AUTHOR REVPROPNAME [CONFIG-FILE]
+#        mailer.py propchange2 REPOS REVISION AUTHOR REVPROPNAME ACTION \
 #                              [CONFIG-FILE]
 #        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
 #        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
@@ -67,6 +67,8 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   elif cmd == 'lock' or cmd == 'unlock':
     author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
+    # Override the repos revision author with the author of the lock/unlock
+    repos.author = author
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
@@ -242,7 +244,7 @@ class StandardOutput(OutputBase):
 
 
 class PipeOutput(MailedOutput):
-  "Deliver a mail message to an MDA via a pipe."
+  "Deliver a mail message to an MTA via a pipe."
 
   def __init__(self, cfg, repos, prefix_param):
     MailedOutput.__init__(self, cfg, repos, prefix_param)
@@ -598,9 +600,9 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, diffsels, diffurls, pool),
+                                group, params, diffsels, diffurls, pool)
   else:
-    other_diffs = [ ]
+    other_diffs = None
 
   data = _data(
     author=repos.author,
@@ -900,10 +902,11 @@ class TextCommitRenderer:
 
     w('\nLog:\n%s\n' % data.log)
 
-    self._render_diffs(data.diffs)
+    self._render_diffs(data.diffs, '')
     if data.other_diffs:
-      w('\nDiffs of changes in other areas also in this revision:\n')
-      self._render_diffs(data.other_diffs)
+      self._render_diffs(data.other_diffs,
+                         '\nDiffs of changes in other areas also'
+                         ' in this revision:\n')
 
   def _render_list(self, header, data_list):
     if not data_list:
@@ -934,30 +937,31 @@ class TextCommitRenderer:
         w('      - copied%s from r%d, %s%s\n'
           % (text, d.base_rev, d.base_path, is_dir))
 
-  def _render_diffs(self, diffs):
+  def _render_diffs(self, diffs, section_header):
+    """Render diffs. Write the SECTION_HEADER iff there are actually
+    any diffs to render."""
     w = self.output.write
+    section_header_printed = False
 
     for diff in diffs:
       if not diff.diff and not diff.diff_url:
         continue
+      if not section_header_printed:
+        w(section_header)
+        section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'A':
         w('\nAdded: %s\n' % diff.path)
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
-        if diff.diff_url:
-          w('Url: %s\n' % diff.diff_url)
+
+      if diff.diff_url:
+        w('Url: %s\n' % diff.diff_url)
 
       if not diff.diff:
         continue
@@ -1132,12 +1136,13 @@ class Config:
 
     # compute the default repository-based parameters. start with some
     # basic parameters, then bring in the regex-based params.
-    default_params = self._global_params.copy()
+    self._default_params = self._global_params
 
     try:
       match = re.match(self.defaults.for_repos, repos_dir)
       if match:
-        default_params.update(match.groupdict())
+        self._default_params = self._default_params.copy()
+        self._default_params.update(match.groupdict())
     except AttributeError:
       # there is no self.defaults.for_repos
       pass
@@ -1145,12 +1150,12 @@ class Config:
     # select the groups that apply to this repository
     for group in self._groups:
       sub = getattr(self, group)
-      params = default_params
+      params = self._default_params
       if hasattr(sub, 'for_repos'):
         match = re.match(sub.for_repos, repos_dir)
         if not match:
           continue
-        params = self._global_params.copy()
+        params = params.copy()
         params.update(match.groupdict())
 
       # if a matching rule hasn't been given, then use the empty string
@@ -1170,7 +1175,7 @@ class Config:
       self._group_re.append((None,
                              re.compile(self.defaults.for_paths),
                              None,
-                             default_params))
+                             self._default_params))
     except AttributeError:
       # there is no self.defaults.for_paths
       pass
@@ -1187,7 +1192,7 @@ class Config:
         params.update(match.groupdict())
         groups.append((group, params))
     if not groups:
-      groups.append((None, self._global_params))
+      groups.append((None, self._default_params))
     return groups
 
 
@@ -1222,8 +1227,8 @@ if __name__ == '__main__':
     scriptname = os.path.basename(sys.argv[0])
     sys.stderr.write(
 """USAGE: %s commit      REPOS REVISION [CONFIG-FILE]
-       %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
-       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
+       %s propchange  REPOS REVISION AUTHOR REVPROPNAME [CONFIG-FILE]
+       %s propchange2 REPOS REVISION AUTHOR REVPROPNAME ACTION [CONFIG-FILE]
        %s lock        REPOS AUTHOR [CONFIG-FILE]
        %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
@@ -1253,7 +1258,7 @@ if the property was added, modified or deleted, respectively.
     usage()
 
   cmd = sys.argv[1]
-  repos_dir = sys.argv[2]
+  repos_dir = svn.core.svn_path_canonicalize(sys.argv[2])
   try:
     expected_args = cmd_list[cmd]
   except KeyError:

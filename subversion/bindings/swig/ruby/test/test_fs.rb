@@ -24,12 +24,13 @@ class SvnFsTest < Test::Unit::TestCase
 
   def test_create
     path = File.join(@tmp_path, "fs")
-    config = {}
+    fs_type = Svn::Fs::TYPE_BDB
+    config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
 
     assert(!File.exist?(path))
-    Svn::Fs::FileSystem.create(path, config)
+    fs = Svn::Fs::FileSystem.create(path, config)
     assert(File.exist?(path))
-    fs = Svn::Fs::FileSystem.open(path, config)
+    assert_equal(fs_type, Svn::Fs.type(path))
     fs.set_warning_func do |err|
       p err
       abort

@@ -41,6 +41,9 @@ struct file_rev_baton {
      writes to support mod_dav-based error handling. */
   svn_boolean_t needs_header;
 
+  /* SVNDIFF version to use when sending to client.  */
+  int svndiff_version;
+
   /* Used by the delta iwndow handler. */
   svn_txdelta_window_handler_t window_handler;
   void *window_baton;
@@ -145,10 +148,10 @@ file_rev_handler(void *baton,
       const svn_string_t *pval;
 
       svn_pool_clear(subpool);
-      apr_hash_this (hi, &key, NULL, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       pname = key;
       pval = val;
-      SVN_ERR(send_prop (frb, "rev-prop", pname, pval, subpool));
+      SVN_ERR(send_prop(frb, "rev-prop", pname, pval, subpool));
     }
 
   /* Send file prop changes. */
@@ -176,8 +179,8 @@ file_rev_handler(void *baton,
 
       base64_stream = dav_svn_make_base64_output_stream(frb->bb, frb->output,
                                                         pool);
-      svn_txdelta_to_svndiff(base64_stream, pool, &frb->window_handler,
-                             &frb->window_baton);
+      svn_txdelta_to_svndiff2(base64_stream, pool, &frb->window_handler,
+                              &frb->window_baton, frb->svndiff_version);
       *window_handler = delta_window_handler;
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window
@@ -243,7 +246,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
-          if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
+          if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
           path = svn_path_join(resource->info->repos_path, rel_path, 
                                resource->pool);
@@ -255,12 +258,14 @@ dav_svn__file_revs_report(const dav_resource *resource,
                               output->c->bucket_alloc);
   frb.output = output;
   frb.needs_header = TRUE;
+  frb.svndiff_version = resource->info->svndiff_version;
 
   /* file_rev_handler will send header first time it is called. */
 
   /* Get the revisions and send them. */
   serr = svn_repos_get_file_revs(resource->info->repos->repos,
-                                 path, start, end, dav_svn_authz_read, &arb,
+                                 path, start, end,
+                                 dav_svn_authz_read_func(&arb), &arb,
                                  file_rev_handler, &frb, resource->pool);
 
   if (serr)
@@ -296,7 +301,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->pool, "blame '%s'", path));
+                apr_psprintf(resource->pool, "blame '%s'",
+                             svn_path_uri_encode(path, resource->pool)));
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

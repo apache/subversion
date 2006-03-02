@@ -25,14 +25,14 @@ module Svn
       ext_mod.constants.each do |const|
         target_name = nil
         case const
+        when /^SVN__/
+          # ignore private constants
         when /^SVN_(?:#{target_mod.name.split("::").last.upcase}_)?/
           target_name = $POSTMATCH
         when /^SWIG_SVN_/
           target_name = "SWIG_#{$POSTMATCH}"
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?(.+)_t$/
           target_name = to_ruby_class_name($1)
-        when /^Svn_(?=fs_type_)?/
-          target_name = to_ruby_const_name($POSTMATCH)
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?/
           target_name = to_ruby_const_name($POSTMATCH)
 #         else

@@ -196,6 +196,45 @@
 %ignore svn_io_read_version_file;
 %ignore svn_io_write_version_file;
 
+/* svn_path.h: We cherry-pick certain functions from this file. To aid in this,
+ * EVERY function in the file is listed in the order it appears, and is either
+ * %ignore-d, or present as a comment, explicitly documenting that we wrap it.
+ */
+%ignore svn_path_internal_style;
+%ignore svn_path_local_style;
+%ignore svn_path_join;
+%ignore svn_path_join_many;
+%ignore svn_path_basename;
+%ignore svn_path_dirname;
+%ignore svn_path_component_count;
+%ignore svn_path_add_component;
+%ignore svn_path_remove_component;
+%ignore svn_path_remove_components;
+%ignore svn_path_split;
+// svn_path_is_empty;
+// svn_path_canonicalize;
+// svn_path_compare_paths;
+// svn_path_get_longest_ancestor;
+%ignore svn_path_get_absolute;
+%ignore svn_path_split_if_file;
+%ignore svn_path_condense_targets;
+%ignore svn_path_remove_redundancies;
+%ignore svn_path_decompose;
+%ignore svn_path_is_single_path_component;
+%ignore svn_path_is_backpath_present;
+%ignore svn_path_is_child;
+%ignore svn_path_is_ancestor;
+%ignore svn_path_check_valid;
+%ignore svn_path_is_url;
+// svn_path_is_uri_safe;
+%ignore svn_path_uri_encode;
+%ignore svn_path_uri_decode;
+%ignore svn_path_url_add_component;
+%ignore svn_path_uri_from_iri;
+%ignore svn_path_uri_autoescape;
+%ignore svn_path_cstring_from_utf8;
+%ignore svn_path_cstring_to_utf8;
+
 /* Other files */
 %ignore apr_check_dir_empty;
 
@@ -211,7 +250,16 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-  svn_auth_baton_t **, svn_diff_t **, svn_config_t **
+  svn_auth_baton_t **, svn_diff_t **, svn_config_t **,
+  svn_auth_provider_object_t **
+}
+
+/* -----------------------------------------------------------------------
+   Diff options are strings in array.
+*/
+
+%apply const apr_array_header_t *STRINGLIST {
+  const apr_array_header_t *args
 }
 
 /* -----------------------------------------------------------------------
@@ -483,7 +531,7 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
 apr_pool_t *current_pool;
 
-#if SWIG_VERSION <= 0x10324
+#if SWIG_VERSION <= 0x010324
 %{
 #define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
 %}
@@ -535,13 +583,13 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(ruby, in) (svn_config_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(ruby, in) (svn_config_section_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_section_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(python,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
@@ -594,6 +642,44 @@ PyObject *svn_swig_py_exception_type(void);
   apr_array_header_t **regular_props
 };
 
+/* -----------------------------------------------------------------------
+  thunk the various authentication prompt functions.
+*/
+%typemap(ruby, in) (svn_auth_simple_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_simple_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_username_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_username_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+%typemap(ruby, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                    void *prompt_baton)
+{
+  $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_types_h.swg
@@ -615,7 +701,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_version_h.swg
 %include svn_utf_h.swg
 %include svn_nls_h.swg
-
+%include svn_path_h.swg
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
@@ -624,17 +710,32 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_io_h.swg
 
 #ifdef SWIGPERL
+%include svn_md5_h.swg
 %include svn_diff_h.swg
 %include svn_error_h.swg
+
+%{
+#include "svn_private_config.h"
+%}
+%init %{
+#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
+  svn_swig_pl_bind_current_pool_fns (&svn_swig_pl_get_current_pool,
+                                     &svn_swig_pl_set_current_pool);
+#endif
+%}
 #endif
 
 #ifdef SWIGPYTHON
 
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
 void svn_swig_py_clear_application_pool();
-PyObject *svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
 
 %init %{
+/* Theoretically, we should be checking for errors here,
+   but I do not know of any useful way to signal an error to Python
+   from within a module initialization function. */
+svn_swig_py_initialize();
+
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
 PyModule_AddObject(m, "SubversionException", 
                    svn_swig_py_register_exception());
@@ -650,23 +751,89 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
+%init %{
+  svn_swig_rb_initialize();
+%}
+
+%header %{
+static void apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self);
+static void apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self);
+%}
+
 /* Dummy declaration */
-struct apr_pool_t 
+struct apr_pool_wrapper_t
 {
 };
 
 /* Leave memory administration to ruby's GC */
-%extend apr_pool_t
+%extend apr_pool_wrapper_t
 {
-  apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
-    /* Disable parent pool. */
-    return svn_pool_create_ex(NULL, NULL);
+  apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
+    apr_pool_wrapper_t *self;
+    apr_pool_t *parent_pool;
+
+    self = ALLOC(apr_pool_wrapper_t);
+    if (parent) {
+      parent_pool = parent->pool;
+      APR_ARRAY_PUSH(parent->children, apr_pool_wrapper_t *) = self;
+    } else {
+      parent_pool = NULL;
+    }
+    self->pool = svn_pool_create_ex(parent_pool, NULL);
+    self->destroyed = FALSE;
+    self->parent = parent;
+    self->children = apr_array_make(self->pool, 0,
+                                    sizeof(apr_pool_wrapper_t *));
+    return self;
   }
 
-  ~apr_pool_t() {
-    apr_pool_destroy(self);
+  ~apr_pool_wrapper_t() {
+    if (!self->destroyed) {
+      apr_pool_wrapper_destroy_children(self);
+      apr_pool_wrapper_remove_from_parent(self);
+      apr_pool_destroy(self->pool);
+    }
+    free(self);
   }
 };
+
+%ignore apr_pool_wrapper_destroy_children;
+%ignore apr_pool_wrapper_remove_from_parent;
+%inline %{
+static void
+apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self)
+{
+  if (!self->destroyed) {
+    apr_pool_wrapper_t **child;
+
+    self->destroyed = TRUE;
+    while (child = apr_array_pop(self->children)) {
+      if (*child) {
+        apr_pool_wrapper_destroy_children(*child);
+      }
+    }
+  }
+}
+
+static void
+apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self)
+{
+  if (self->parent) {
+    apr_pool_wrapper_t *child;
+    int i, len;
+
+    len = self->parent->children->nelts;
+    for (i = 0; i < len; i++) {
+      child = APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *);
+      if (child == self) {
+        APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *) = NULL;
+        break;
+      }
+    }
+  }
+}
+%}
+
 
 %include svn_diff_h.swg
 
@@ -682,7 +849,72 @@ svn_locale_charset(void)
 {
   return INT2NUM((int)APR_LOCALE_CHARSET);
 }
+
+/* prompt providers return baton for protecting GC */
+static VALUE
+svn_swig_rb_auth_get_simple_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_simple_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_simple_prompt_provider(provider, prompt_func, prompt_baton,
+                                      retry_limit, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_prompt_provider(provider, prompt_func,
+                                               prompt_baton, retry_limit,
+                                               pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_pw_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_pw_prompt_provider(provider, prompt_func,
+                                                  prompt_baton, retry_limit,
+                                                  pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_server_trust_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+  void *prompt_baton,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_server_trust_prompt_provider(provider, prompt_func,
+                                                prompt_baton, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_username_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_username_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_username_prompt_provider(provider, prompt_func, prompt_baton,
+                                        retry_limit, pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
 %}
-
 #endif
-

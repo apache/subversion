@@ -16,7 +16,7 @@
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"
-#include "svn_client.h"
+#include "svn_wc.h"
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
@@ -24,57 +24,6 @@
 #include "svn_private_config.h"
 
 #define SVNVERSION_OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
-
-struct status_baton
-{
-  svn_revnum_t min_rev;   /* lowest revision found. */
-  svn_revnum_t max_rev;   /* highest revision found. */
-  svn_boolean_t switched; /* is anything switched? */
-  svn_boolean_t modified; /* is anything modified? */
-  svn_boolean_t committed; /* examine last committed revisions */
-  const char *wc_path;    /* path whose URL we're looking for. */
-  const char *wc_url;     /* URL for the path whose URL we're looking for. */
-  apr_pool_t *pool;       /* pool in which to store alloc-needy things. */
-};
-
-
-/* An svn_wc_status_func_t callback function for anaylyzing status
-   structures. */
-static void
-analyze_status (void *baton,
-                const char *path,
-                svn_wc_status2_t *status)
-{
-  struct status_baton *sb = baton;
-  
-  if (! status->entry)
-    return;
-
-  /* Added files have a revision of no interest */
-  if (status->text_status != svn_wc_status_added)
-    {
-      svn_revnum_t item_rev = (sb->committed
-                               ? status->entry->cmt_rev
-                               : status->entry->revision);
-
-      if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
-        sb->min_rev = item_rev;
-
-      if (sb->max_rev == SVN_INVALID_REVNUM || item_rev > sb->max_rev)
-        sb->max_rev = item_rev;
-    }
-
-  sb->switched |= status->switched;
-  sb->modified |= (status->text_status != svn_wc_status_normal);
-  sb->modified |= (status->prop_status != svn_wc_status_normal
-                   && status->prop_status != svn_wc_status_none);
-  
-  if (sb->wc_path 
-      && (! sb->wc_url) 
-      && (strcmp (path, sb->wc_path) == 0)
-      && (status->entry))
-    sb->wc_url = apr_pstrdup (sb->pool, status->entry->url);
-}
 
 
 static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
@@ -86,8 +35,8 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 static void
 usage(apr_pool_t *pool)
 {
-  svn_error_clear (svn_cmdline_fprintf
-                    (stderr, pool, _("Type 'svnversion --help' for usage.\n")));
+  svn_error_clear(svn_cmdline_fprintf
+                  (stderr, pool, _("Type 'svnversion --help' for usage.\n")));
   exit(1);
 }
 
@@ -121,57 +70,50 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "  If invoked on a directory that is not a working copy, an\n"
         "  exported directory say, the program will output 'exported'.\n"
         "\n"
-        "  If invoked without arguments WC_PATH will be the current "
-        "directory.\n"
+        "  If invoked without arguments WC_PATH will be the current directory.\n"
         "\n"
         "Valid options:\n")));
   while (options->description)
     {
       const char *optstr;
       svn_opt_format_option(&optstr, options, TRUE, pool);
-      svn_error_clear (svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
+      svn_error_clear(svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
       ++options;
     }
-  svn_error_clear (svn_cmdline_fprintf(stdout, pool, "\n"));
+  svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
   exit(0);
 }
 
 
 /* Version compatibility check */
 static svn_error_t *
-check_lib_versions (void)
+check_lib_versions(void)
 {
   static const svn_version_checklist_t checklist[] =
     {
       { "svn_subr",   svn_subr_version },
-      { "svn_client", svn_client_version },
       { "svn_wc",     svn_wc_version },
       { NULL, NULL }
     };
 
-   SVN_VERSION_DEFINE (my_version);
-   return svn_ver_check_list (&my_version, checklist);
+  SVN_VERSION_DEFINE(my_version);
+  return svn_ver_check_list(&my_version, checklist);
 }
-
 
 /*
  * Why is this not an svn subcommand?  I have this vague idea that it could
  * be run as part of the build process, with the output embedded in the svn
  * program.  Obviously we don't want to have to run svn when building svn.
- * We could always put this into libsvn_client and share it between
- * svnversion and svn.
  */
 int
 main(int argc, const char *argv[])
 {
-  const char *wc_path;
+  const char *wc_path, *trail_url;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
   int wc_format;
-  svn_client_ctx_t ctx = { 0 };
-  struct status_baton sb;
-  svn_opt_revision_t rev;
-  svn_boolean_t no_newline = FALSE;
+  svn_wc_revision_status_t *res;
+  svn_boolean_t no_newline = FALSE, committed = FALSE;
   svn_error_t *err;
   apr_getopt_t *os;
   const apr_getopt_option_t options[] =
@@ -184,40 +126,47 @@ main(int argc, const char *argv[])
     };
 
   /* Initialize the app. */
-  if (svn_cmdline_init ("svnversion", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svnversion", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create (&allocator))
+  if (apr_allocator_create(&allocator))
     return EXIT_FAILURE;
 
-  apr_allocator_max_free_set (allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
 
-  pool = svn_pool_create_ex (NULL, allocator);
-  apr_allocator_owner_set (allocator, pool);
+  pool = svn_pool_create_ex(NULL, allocator);
+  apr_allocator_owner_set(allocator, pool);
 
   /* Check library versions */
-  err = check_lib_versions ();
+  err = check_lib_versions();
   if (err)
     {
-      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
+      svn_handle_error2(err, stderr, FALSE, "svnversion: ");
+      svn_error_clear(err);
+      svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
 
-  sb.switched = FALSE;
-  sb.modified = FALSE;
-  sb.committed = FALSE;
-  sb.min_rev = SVN_INVALID_REVNUM;
-  sb.max_rev = SVN_INVALID_REVNUM;
-  sb.wc_path = NULL;
-  sb.wc_url = NULL;
-  sb.pool = pool;
+#if defined(WIN32) || defined(__CYGWIN__)
+  /* Set the working copy administrative directory name. */
+  if (getenv("SVN_ASP_DOT_NET_HACK"))
+    {
+      err = svn_wc_set_adm_dir("_svn", pool);
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svnversion: ");
+          return EXIT_FAILURE;
+        }
+    }
+#endif
 
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnversion: ");
+
   os->interleave = 1;
   while (1)
     {
@@ -237,11 +186,11 @@ main(int argc, const char *argv[])
           no_newline = TRUE;
           break;
         case 'c':
-          sb.committed = TRUE;
+          committed = TRUE;
           break;
-	case 'h':
-	  help(options, pool);
-	  break;
+        case 'h':
+          help(options, pool);
+          break;
         case SVNVERSION_OPT_VERSION:
           SVN_INT_ERR(version(os, pool));
           exit(0);
@@ -258,79 +207,60 @@ main(int argc, const char *argv[])
       return EXIT_FAILURE;
     }
 
-  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, 
-			  (os->ind == argc) ? "." : os->argv[os->ind++], 
-			  pool));
-  wc_path = svn_path_internal_style (wc_path, pool);
-  SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
+  SVN_INT_ERR(svn_utf_cstring_to_utf8
+              (&wc_path, (os->ind < argc) ? os->argv[os->ind] : ".",
+               pool));
+  wc_path = svn_path_internal_style(wc_path, pool);
+
+  if (os->ind+1 < argc)
+    SVN_INT_ERR(svn_utf_cstring_to_utf8
+                (&trail_url, os->argv[os->ind+1], pool));
+  else
+    trail_url = NULL;
+
+  SVN_INT_ERR(svn_wc_check_wc(wc_path, &wc_format, pool));
   if (! wc_format)
     {
       svn_node_kind_t kind;
-      SVN_INT_ERR(svn_io_check_path (wc_path, &kind, pool));
+      SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
       if (kind == svn_node_dir)
         {
-          SVN_INT_ERR (svn_cmdline_printf (pool, _("exported%s"), 
-                                           no_newline ? "" : "\n"));
-          svn_pool_destroy (pool);
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("exported%s"), 
+                                         no_newline ? "" : "\n"));
+          svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
       else
         {
           svn_error_clear
-            (svn_cmdline_fprintf (stderr, pool,
-                                  _("'%s' not versioned, and not exported\n"),
-                                  wc_path));
-          svn_pool_destroy (pool);
+            (svn_cmdline_fprintf(stderr, pool,
+                                 _("'%s' not versioned, and not exported\n"),
+                                 wc_path));
+          svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
     }
 
-  sb.wc_path = wc_path;
-  rev.kind = svn_opt_revision_unspecified;
-  ctx.config = apr_hash_make (pool);
 
-  err = svn_client_status2 (NULL, wc_path, &rev, analyze_status, 
-                            &sb, TRUE, TRUE, FALSE, FALSE, TRUE, &ctx, pool);
-  if (err && (err->apr_err == SVN_ERR_CANCELLED))
-    svn_error_clear (err);
-  else
-    SVN_INT_ERR (err);
+  SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
+                                     NULL, NULL, pool));
 
-  if ((! sb.switched ) && (os->ind < argc))
-    {
-      /* If the trailing part of the URL of the working copy directory
-         does not match the given trailing URL then the whole working
-         copy is switched. */
-      const char *trail_url;
-      SVN_INT_ERR (svn_utf_cstring_to_utf8 (&trail_url, os->argv[os->ind],
-                                            pool));
-      if (! sb.wc_url)
-        {
-          sb.switched = TRUE;
-        }
-      else
-        {
-          apr_size_t len1 = strlen (trail_url);
-          apr_size_t len2 = strlen (sb.wc_url);
-          if ((len1 > len2) || strcmp (sb.wc_url + len2 - len1, trail_url))
-            sb.switched = TRUE;
-        }
-    }
+  /* Build compact '123[:456]M?S?' string. */
+  SVN_INT_ERR(svn_cmdline_printf(pool, "%ld", res->min_rev));
+  if (res->min_rev != res->max_rev)
+    SVN_INT_ERR(svn_cmdline_printf(pool, ":%ld", res->max_rev));
+  if (res->modified)
+    SVN_INT_ERR(svn_cmdline_fputs("M", stdout, pool));
+  if (res->switched)
+    SVN_INT_ERR(svn_cmdline_fputs("S", stdout, pool));
 
-  SVN_INT_ERR (svn_cmdline_printf (pool, "%ld", sb.min_rev));
-  if (sb.min_rev != sb.max_rev)
-    SVN_INT_ERR (svn_cmdline_printf (pool, ":%ld", sb.max_rev));
-  if (sb.modified)
-    SVN_INT_ERR (svn_cmdline_fputs ("M", stdout, pool));
-  if (sb.switched)
-    SVN_INT_ERR (svn_cmdline_fputs ("S", stdout, pool));
   if (! no_newline)
-    SVN_INT_ERR (svn_cmdline_fputs ("\n", stdout, pool));
+    SVN_INT_ERR(svn_cmdline_fputs("\n", stdout, pool));
 
-  svn_pool_destroy (pool);
+  svn_pool_destroy(pool);
 
   /* Flush stdout to make sure that the user will see any printing errors. */
-  SVN_INT_ERR (svn_cmdline_fflush (stdout));
+  SVN_INT_ERR(svn_cmdline_fflush(stdout));
 
   return EXIT_SUCCESS;
 }

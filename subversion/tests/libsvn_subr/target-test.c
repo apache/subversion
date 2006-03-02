@@ -89,14 +89,14 @@ int main(int argc, char **argv)
       else
         printf("NULL, "); 
     }
-  printf ("\n");
+  printf("\n");
 
   /* Now ensure it works without the pbasename */
   err = svn_path_condense_targets(&common_path2, NULL, targets, TRUE, pool);
   if (err != SVN_NO_ERROR)
     svn_handle_error2(err, stderr, TRUE, "target-test: ");
 
-  if (strcmp (common_path, common_path2) != 0)
+  if (strcmp(common_path, common_path2) != 0)
     {
       printf("Common path without getting targets does not match common path "
              "with targets\n");

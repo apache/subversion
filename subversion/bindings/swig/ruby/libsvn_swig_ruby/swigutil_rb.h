@@ -22,7 +22,15 @@ extern "C" {
 
 #include <rubyio.h>
 
-void svn_swig_rb_nls_initialize(void);
+typedef struct apr_pool_wrapper_t
+{
+  apr_pool_t *pool;
+  svn_boolean_t destroyed;
+  struct apr_pool_wrapper_t *parent;
+  apr_array_header_t *children;
+} apr_pool_wrapper_t;
+
+void svn_swig_rb_initialize(void);
 
 VALUE svn_swig_rb_svn_delta_editor(void);
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
@@ -78,6 +86,8 @@ void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
                                    VALUE rb_editor,
                                    apr_pool_t *pool);
 
+VALUE svn_swig_rb_make_baton(VALUE proc, VALUE pool);
+
 svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
                                       svn_revnum_t revision,
@@ -99,12 +109,11 @@ svn_error_t *svn_swig_rb_repos_authz_callback(svn_repos_authz_access_t required,
                                               void *baton,
                                               apr_pool_t *pool);
   
-svn_error_t *svn_swig_rb_get_commit_log_func(const char **log_msg,
-                                             const char **tmp_file,
-                                             apr_array_header_t *commit_items,
-                                             void *baton,
-                                             apr_pool_t *pool);
-
+svn_error_t *svn_swig_rb_get_commit_log_func2(const char **log_msg,
+                                              const char **tmp_file,
+                                              const apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,
@@ -139,6 +148,8 @@ svn_error_t *svn_swig_rb_txdelta_window_handler(svn_txdelta_window_t *window,
                                                 void *baton);
 
 void svn_swig_rb_fs_warning_callback(void *baton, svn_error_t *err);
+void svn_swig_rb_fs_warning_callback_baton_register(VALUE baton,
+                                                    apr_pool_t *pool);
 
 svn_error_t *svn_swig_rb_fs_get_locks_callback(void *baton,
                                                svn_lock_t *lock,

@@ -41,10 +41,10 @@ typedef struct svn_test_opts_t
 } svn_test_opts_t;
 
 /* Prototype for test driver functions. */
-typedef svn_error_t* (*svn_test_driver_t) (const char **msg, 
-                                           svn_boolean_t msg_only,
-                                           svn_test_opts_t *opts,
-                                           apr_pool_t *pool);
+typedef svn_error_t* (*svn_test_driver_t)(const char **msg, 
+                                          svn_boolean_t msg_only,
+                                          svn_test_opts_t *opts,
+                                          apr_pool_t *pool);
 
 /* Test modes. */
 enum svn_test_mode_t
@@ -89,11 +89,11 @@ extern struct svn_test_descriptor_t test_funcs[];
  * This is a "good" pseudo-random number generator, intended to replace 
  * all those "bad" rand() implementations out there.
  */
-apr_uint32_t svn_test_rand (apr_uint32_t *seed);
+apr_uint32_t svn_test_rand(apr_uint32_t *seed);
 
 
 /* Add PATH to the test cleanup list.  */
-void svn_test_add_dir_cleanup (const char *path);
+void svn_test_add_dir_cleanup(const char *path);
 
 
 
@@ -173,14 +173,14 @@ void svn_test_add_dir_cleanup (const char *path);
  * [COMMIT-TEST] close_edit
  *
  */
-svn_error_t *svn_test_get_editor (const svn_delta_editor_t **editor,
-                                  void **edit_baton,
-                                  const char *editor_name,
-                                  svn_stream_t *out_stream,
-                                  int indentation,
-                                  svn_boolean_t verbose,
-                                  const char *path,
-                                  apr_pool_t *pool);
+svn_error_t *svn_test_get_editor(const svn_delta_editor_t **editor,
+                                 void **edit_baton,
+                                 const char *editor_name,
+                                 svn_stream_t *out_stream,
+                                 int indentation,
+                                 svn_boolean_t verbose,
+                                 const char *path,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

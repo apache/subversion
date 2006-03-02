@@ -55,7 +55,7 @@ struct dav_deadprop_rollback {
 
 
 /* retrieve the "right" string to use as a repos path */
-static const char *get_repos_path (struct dav_resource_private *info)
+static const char *get_repos_path(struct dav_resource_private *info)
 {
   return info->repos_path;
 }
@@ -170,7 +170,8 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                       apr_psprintf(db->resource->pool,
                                    "revprop-change r%" SVN_REVNUM_T_FMT 
                                    " '%s'", db->resource->info->root.rev,
-                                   propname));
+                                   svn_path_uri_encode(propname,
+                                                       db->resource->pool)));
       }
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
@@ -231,7 +232,7 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
   arb->r = resource->info->r;
   arb->repos = resource->info->repos;
   db->authz_read_baton = arb;
-  db->authz_read_func = dav_svn_authz_read;
+  db->authz_read_func = dav_svn_authz_read_func(arb);
 
   /* ### use RO and node's mutable status to look for an error? */
 
@@ -352,16 +353,16 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
   /* Check for special encodings of the property value. */
   while (attr)
     {
-      if (strcmp (attr->name, "encoding") == 0) /* ### namespace check? */
+      if (strcmp(attr->name, "encoding") == 0) /* ### namespace check? */
         {
           const char *enc_type = attr->value;
 
           /* Handle known encodings here. */
-          if (enc_type && (strcmp (enc_type, "base64") == 0))
+          if (enc_type && (strcmp(enc_type, "base64") == 0))
             propval = svn_base64_decode_string(propval, pool);
           else
-            return dav_new_error (pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                                  "Unknown property encoding");
+            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 "Unknown property encoding");
           break;
         }
       /* Next attribute, please. */

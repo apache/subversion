@@ -63,8 +63,8 @@ typedef struct svn_sort__item_t {
  * The key strings must be null-terminated, even though klen does not
  * include the terminator.
  */
-int svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
-                                     const svn_sort__item_t *b);
+int svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
+                                    const svn_sort__item_t *b);
 
 
 /** Compare two @c svn_sort__item_t's, returning an integer greater than,
@@ -72,8 +72,8 @@ int svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
  * or less than @a b according to a lexical key comparison.  The keys are
  * not required to be zero-terminated.
  */
-int svn_sort_compare_items_lexically (const svn_sort__item_t *a,
-                                      const svn_sort__item_t *b);
+int svn_sort_compare_items_lexically(const svn_sort__item_t *a,
+                                     const svn_sort__item_t *b);
 
 /** Compare two @c svn_revnum_t's, returning an integer greater than, equal
  * to, or less than 0, according as @a b is greater than, equal to, or less
@@ -86,7 +86,7 @@ int svn_sort_compare_items_lexically (const svn_sort__item_t *a,
  * @c apr_array_header_t. You are responsible for detecting, preventing or
  * removing duplicates.
  */
-int svn_sort_compare_revisions (const void *a, const void *b);
+int svn_sort_compare_revisions(const void *a, const void *b);
 
 
 /**
@@ -98,7 +98,7 @@ int svn_sort_compare_revisions (const void *a, const void *b);
  *
  * @since New in 1.1.
  */
-int svn_sort_compare_paths (const void *a, const void *b);
+int svn_sort_compare_paths(const void *a, const void *b);
 
 
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
@@ -118,10 +118,10 @@ int svn_sort_compare_paths (const void *a, const void *b);
  * @note This function and the @c svn_sort__item_t should go over to APR.
  */
 apr_array_header_t *
-svn_sort__hash (apr_hash_t *ht,
-                int (*comparison_func) (const svn_sort__item_t *,
-                                        const svn_sort__item_t *),
-                apr_pool_t *pool);
+svn_sort__hash(apr_hash_t *ht,
+               int (*comparison_func)(const svn_sort__item_t *,
+                                      const svn_sort__item_t *),
+               apr_pool_t *pool);
 
 
 #ifdef __cplusplus

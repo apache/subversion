@@ -35,7 +35,7 @@ typedef struct {
 /* Accessing ID Pieces.  */
 
 const char *
-svn_fs_fs__id_node_id (const svn_fs_id_t *id)
+svn_fs_fs__id_node_id(const svn_fs_id_t *id)
 {
   id_private_t *pvt = id->fsap_data;
 
@@ -44,7 +44,7 @@ svn_fs_fs__id_node_id (const svn_fs_id_t *id)
 
 
 const char *
-svn_fs_fs__id_copy_id (const svn_fs_id_t *id)
+svn_fs_fs__id_copy_id(const svn_fs_id_t *id)
 {
   id_private_t *pvt = id->fsap_data;
 
@@ -53,7 +53,7 @@ svn_fs_fs__id_copy_id (const svn_fs_id_t *id)
 
 
 const char *
-svn_fs_fs__id_txn_id (const svn_fs_id_t *id)
+svn_fs_fs__id_txn_id(const svn_fs_id_t *id)
 {
   id_private_t *pvt = id->fsap_data;
 
@@ -62,7 +62,7 @@ svn_fs_fs__id_txn_id (const svn_fs_id_t *id)
 
 
 svn_revnum_t
-svn_fs_fs__id_rev (const svn_fs_id_t *id)
+svn_fs_fs__id_rev(const svn_fs_id_t *id)
 {
   id_private_t *pvt = id->fsap_data;
 
@@ -71,7 +71,7 @@ svn_fs_fs__id_rev (const svn_fs_id_t *id)
 
 
 apr_off_t
-svn_fs_fs__id_offset (const svn_fs_id_t *id)
+svn_fs_fs__id_offset(const svn_fs_id_t *id)
 {
   id_private_t *pvt = id->fsap_data;
 
@@ -80,45 +80,45 @@ svn_fs_fs__id_offset (const svn_fs_id_t *id)
 
 
 svn_string_t *
-svn_fs_fs__id_unparse (const svn_fs_id_t *id,
-                       apr_pool_t *pool)
+svn_fs_fs__id_unparse(const svn_fs_id_t *id,
+                      apr_pool_t *pool)
 {
   const char *txn_rev_id;
   id_private_t *pvt = id->fsap_data;
 
   if ((! pvt->txn_id))
     {
-      txn_rev_id = apr_psprintf (pool, "%ld/%"
-                                 APR_OFF_T_FMT, pvt->rev, pvt->offset);
+      txn_rev_id = apr_psprintf(pool, "%ld/%"
+                                APR_OFF_T_FMT, pvt->rev, pvt->offset);
     }
   else
     {
       txn_rev_id = pvt->txn_id;
     }
-  return svn_string_createf (pool, "%s.%s.%c%s",
-                             pvt->node_id, pvt->copy_id,
-                             (pvt->txn_id ? 't' : 'r'),
-                             txn_rev_id);
+  return svn_string_createf(pool, "%s.%s.%c%s",
+                            pvt->node_id, pvt->copy_id,
+                            (pvt->txn_id ? 't' : 'r'),
+                            txn_rev_id);
 }
 
 
 /*** Comparing node IDs ***/
 
 svn_boolean_t
-svn_fs_fs__id_eq (const svn_fs_id_t *a,
-                  const svn_fs_id_t *b)
+svn_fs_fs__id_eq(const svn_fs_id_t *a,
+                 const svn_fs_id_t *b)
 {
   id_private_t *pvta = a->fsap_data, *pvtb = b->fsap_data;
 
   if (a == b)
     return TRUE;
-  if (strcmp (pvta->node_id, pvtb->node_id) != 0)
+  if (strcmp(pvta->node_id, pvtb->node_id) != 0)
      return FALSE;
-  if (strcmp (pvta->copy_id, pvtb->copy_id) != 0)
+  if (strcmp(pvta->copy_id, pvtb->copy_id) != 0)
     return FALSE;
   if ((pvta->txn_id == NULL) != (pvtb->txn_id == NULL))
     return FALSE;
-  if (pvta->txn_id && pvtb->txn_id && strcmp (pvta->txn_id, pvtb->txn_id) != 0)
+  if (pvta->txn_id && pvtb->txn_id && strcmp(pvta->txn_id, pvtb->txn_id) != 0)
     return FALSE;
   if (pvta->rev != pvtb->rev)
     return FALSE;
@@ -129,8 +129,8 @@ svn_fs_fs__id_eq (const svn_fs_id_t *a,
 
 
 svn_boolean_t
-svn_fs_fs__id_check_related (const svn_fs_id_t *a,
-                             const svn_fs_id_t *b)
+svn_fs_fs__id_check_related(const svn_fs_id_t *a,
+                            const svn_fs_id_t *b)
 {
   id_private_t *pvta = a->fsap_data, *pvtb = b->fsap_data;
 
@@ -141,21 +141,21 @@ svn_fs_fs__id_check_related (const svn_fs_id_t *a,
   if (pvta->node_id[0] == '_')
     {
       if (pvta->txn_id && pvtb->txn_id &&
-          (strcmp (pvta->txn_id, pvtb->txn_id) != 0))
+          (strcmp(pvta->txn_id, pvtb->txn_id) != 0))
         return FALSE;
     }
 
-  return (strcmp (pvta->node_id, pvtb->node_id) == 0) ? TRUE : FALSE;
+  return (strcmp(pvta->node_id, pvtb->node_id) == 0) ? TRUE : FALSE;
 }
 
 
 int
-svn_fs_fs__id_compare (const svn_fs_id_t *a,
-                       const svn_fs_id_t *b)
+svn_fs_fs__id_compare(const svn_fs_id_t *a,
+                      const svn_fs_id_t *b)
 {
-  if (svn_fs_fs__id_eq (a, b))
+  if (svn_fs_fs__id_eq(a, b))
     return 0;
-  return (svn_fs_fs__id_check_related (a, b) ? 1 : -1);
+  return (svn_fs_fs__id_check_related(a, b) ? 1 : -1);
 }
 
 
@@ -169,17 +169,17 @@ static id_vtable_t id_vtable = {
 
 
 svn_fs_id_t *
-svn_fs_fs__id_txn_create (const char *node_id,
-                          const char *copy_id,
-                          const char *txn_id,
-                          apr_pool_t *pool)
+svn_fs_fs__id_txn_create(const char *node_id,
+                         const char *copy_id,
+                         const char *txn_id,
+                         apr_pool_t *pool)
 {
-  svn_fs_id_t *id = apr_palloc (pool, sizeof (*id));
-  id_private_t *pvt = apr_palloc (pool, sizeof (*pvt));
+  svn_fs_id_t *id = apr_palloc(pool, sizeof(*id));
+  id_private_t *pvt = apr_palloc(pool, sizeof(*pvt));
 
-  pvt->node_id = apr_pstrdup (pool, node_id);
-  pvt->copy_id = apr_pstrdup (pool, copy_id);
-  pvt->txn_id = apr_pstrdup (pool, txn_id);
+  pvt->node_id = apr_pstrdup(pool, node_id);
+  pvt->copy_id = apr_pstrdup(pool, copy_id);
+  pvt->txn_id = apr_pstrdup(pool, txn_id);
   pvt->rev = SVN_INVALID_REVNUM;
   pvt->offset = -1;
   id->vtable = &id_vtable;
@@ -189,17 +189,17 @@ svn_fs_fs__id_txn_create (const char *node_id,
 
 
 svn_fs_id_t *
-svn_fs_fs__id_rev_create (const char *node_id,
-                          const char *copy_id,
-                          svn_revnum_t rev,
-                          apr_off_t offset,
-                          apr_pool_t *pool)
+svn_fs_fs__id_rev_create(const char *node_id,
+                         const char *copy_id,
+                         svn_revnum_t rev,
+                         apr_off_t offset,
+                         apr_pool_t *pool)
 {
-  svn_fs_id_t *id = apr_palloc (pool, sizeof (*id));
-  id_private_t *pvt = apr_palloc (pool, sizeof (*pvt));
+  svn_fs_id_t *id = apr_palloc(pool, sizeof(*id));
+  id_private_t *pvt = apr_palloc(pool, sizeof(*pvt));
 
-  pvt->node_id = apr_pstrdup (pool, node_id);
-  pvt->copy_id = apr_pstrdup (pool, copy_id);
+  pvt->node_id = apr_pstrdup(pool, node_id);
+  pvt->copy_id = apr_pstrdup(pool, copy_id);
   pvt->txn_id = NULL;
   pvt->rev = rev;
   pvt->offset = offset;
@@ -210,15 +210,15 @@ svn_fs_fs__id_rev_create (const char *node_id,
 
 
 svn_fs_id_t *
-svn_fs_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_fs__id_copy(const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  svn_fs_id_t *new_id = apr_palloc (pool, sizeof (*new_id));
-  id_private_t *new_pvt = apr_palloc (pool, sizeof (*new_pvt));
+  svn_fs_id_t *new_id = apr_palloc(pool, sizeof(*new_id));
+  id_private_t *new_pvt = apr_palloc(pool, sizeof(*new_pvt));
   id_private_t *pvt = id->fsap_data;
 
-  new_pvt->node_id = apr_pstrdup (pool, pvt->node_id);
-  new_pvt->copy_id = apr_pstrdup (pool, pvt->copy_id);
-  new_pvt->txn_id = pvt->txn_id ? apr_pstrdup (pool, pvt->txn_id) : NULL;
+  new_pvt->node_id = apr_pstrdup(pool, pvt->node_id);
+  new_pvt->copy_id = apr_pstrdup(pool, pvt->copy_id);
+  new_pvt->txn_id = pvt->txn_id ? apr_pstrdup(pool, pvt->txn_id) : NULL;
   new_pvt->rev = pvt->rev;
   new_pvt->offset = pvt->offset;
   new_id->vtable = &id_vtable;
@@ -228,9 +228,9 @@ svn_fs_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
 
 
 svn_fs_id_t *
-svn_fs_fs__id_parse (const char *data,
-                     apr_size_t len,
-                     apr_pool_t *pool)
+svn_fs_fs__id_parse(const char *data,
+                    apr_size_t len,
+                    apr_pool_t *pool)
 {
   svn_fs_id_t *id;
   id_private_t *pvt;
@@ -238,11 +238,11 @@ svn_fs_fs__id_parse (const char *data,
 
   /* Dup the ID data into POOL.  Our returned ID will have references
      into this memory. */
-  data_copy = apr_pstrmemdup (pool, data, len);
+  data_copy = apr_pstrmemdup(pool, data, len);
 
   /* Alloc a new svn_fs_id_t structure. */
-  id = apr_palloc (pool, sizeof (*id));
-  pvt = apr_palloc (pool, sizeof (*pvt));
+  id = apr_palloc(pool, sizeof(*id));
+  pvt = apr_palloc(pool, sizeof(*pvt));
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
 
@@ -252,19 +252,19 @@ svn_fs_fs__id_parse (const char *data,
      reference string locations inside our duplicate string.*/
 
   /* Node Id */
-  str = apr_strtok (data_copy, ".", &last_str);
+  str = apr_strtok(data_copy, ".", &last_str);
   if (str == NULL)
     return NULL;
   pvt->node_id = str;
 
   /* Copy Id */
-  str = apr_strtok (NULL, ".", &last_str);
+  str = apr_strtok(NULL, ".", &last_str);
   if (str == NULL)
     return NULL;
   pvt->copy_id = str;
 
   /* Txn/Rev Id */
-  str = apr_strtok (NULL, ".", &last_str);
+  str = apr_strtok(NULL, ".", &last_str);
   if (str == NULL)
     return NULL;
 
@@ -273,15 +273,15 @@ svn_fs_fs__id_parse (const char *data,
       /* This is a revision type ID */
       pvt->txn_id = NULL;
 
-      str = apr_strtok (str + 1, "/", &last_str);
+      str = apr_strtok(str + 1, "/", &last_str);
       if (str == NULL)
         return NULL;
-      pvt->rev = SVN_STR_TO_REV (str);
+      pvt->rev = SVN_STR_TO_REV(str);
 
-      str = apr_strtok (NULL, "/", &last_str);
+      str = apr_strtok(NULL, "/", &last_str);
       if (str == NULL)
         return NULL;
-      pvt->offset = apr_atoi64 (str);
+      pvt->offset = apr_atoi64(str);
     }
   else if (str[0] == 't')
     {

@@ -115,7 +115,7 @@ Notify2::notify (
    */
 void
 Notify2::onNotify (
-    const svn_wc_notify_t *notify,
+    const svn_wc_notify_t *wcNotify,
     apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
@@ -159,36 +159,36 @@ Notify2::onNotify (
     }
 
     // convert the parameter to their java relatives
-    jstring jPath = JNIUtil::makeJString(notify->path);
+    jstring jPath = JNIUtil::makeJString(wcNotify->path);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
-    jint jAction = EnumMapper::mapNotifyAction(notify->action);
-    jint jKind = EnumMapper::mapNodeKind(notify->kind);
-    jstring jMimeType = JNIUtil::makeJString(notify->mime_type);
+    jint jAction = EnumMapper::mapNotifyAction(wcNotify->action);
+    jint jKind = EnumMapper::mapNodeKind(wcNotify->kind);
+    jstring jMimeType = JNIUtil::makeJString(wcNotify->mime_type);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
-    jobject jLock = SVNClient::createJavaLock(notify->lock);
+    jobject jLock = SVNClient::createJavaLock(wcNotify->lock);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
-    jstring jErr = JNIUtil::makeSVNErrorMessage(notify->err);
+    jstring jErr = JNIUtil::makeSVNErrorMessage(wcNotify->err);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
-    jint jContentState = EnumMapper::mapNotifyState(notify->content_state);
-    jint jPropState = EnumMapper::mapNotifyState(notify->prop_state);
-    jint jLockState = EnumMapper::mapNotifyLockState(notify->lock_state);
+    jint jContentState = EnumMapper::mapNotifyState(wcNotify->content_state);
+    jint jPropState = EnumMapper::mapNotifyState(wcNotify->prop_state);
+    jint jLockState = EnumMapper::mapNotifyLockState(wcNotify->lock_state);
     // call the java method
     jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction, jKind, 
         jMimeType, jLock, jErr, jContentState, jPropState, jLockState, 
-        (jlong)notify->revision);
+        (jlong) wcNotify->revision);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return;

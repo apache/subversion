@@ -37,6 +37,8 @@ extern "C" {
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
+#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
+                                               file */
 
 
 
@@ -55,10 +57,18 @@ extern "C" {
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
  *
+ * The change from 4 to 5 was the addition of support for replacing files
+ * with history.
+ *
+ * The change from 5 to 6 was the introduction of caching of property
+ * modification state and certain properties in the entries file.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       4
+#define SVN_WC__VERSION       6
 
+/* A version <= this doesn't have property caching in the entries file. */
+#define SVN_WC__NO_PROPCACHING_VERSION 5
 
 /*** Update traversals. ***/
 
@@ -94,13 +104,8 @@ struct svn_wc_traversal_info_t
 
 /*** Names and file/dir operations in the administrative area. ***/
 
-/* kff todo: namespace-protecting these #defines so we never have to
-   worry about them conflicting with future all-caps symbols that may
-   be defined in svn_wc.h. */
-
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
-#define SVN_WC__ADM_README              "README.txt"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
@@ -109,11 +114,11 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
+#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_WCPROPS             "wcprops"
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
-#define SVN_WC__ADM_EMPTY_FILE          "empty-file"
 
 
 /* The basename of the ".prej" file, if a directory ever has property
@@ -123,11 +128,20 @@ struct svn_wc_traversal_info_t
 
 
 
+/* A space separated list of properties that we cache presence/absence of.
+ *
+ * Note that each entry contains information about which properties are cached
+ * in that particular entry.  This constant is only used when writing entries.
+ */
+#define SVN_WC__CACHABLE_PROPS                                         \
+SVN_PROP_SPECIAL " " SVN_PROP_EXTERNALS " " SVN_PROP_NEEDS_LOCK
+
+
 /* A few declarations for stuff in util.c.
  * If this section gets big, move it all out into a new util.h file. */
 
 /* Ensure that DIR exists. */
-svn_error_t *svn_wc__ensure_directory (const char *path, apr_pool_t *pool);
+svn_error_t *svn_wc__ensure_directory(const char *path, apr_pool_t *pool);
 
 /* Baton for svn_wc__compat_call_notify_func below. */
 typedef struct svn_wc__compat_notify_baton_t {
@@ -139,9 +153,9 @@ typedef struct svn_wc__compat_notify_baton_t {
 /* Implements svn_wc_notify_func2_t.  Call BATON->func (BATON is of type
    svn_wc__compat_notify_baton_t), passing BATON->baton and the appropriate
    arguments from NOTIFY. */
-void svn_wc__compat_call_notify_func (void *baton,
-                                      const svn_wc_notify_t *notify,
-                                      apr_pool_t *pool);
+void svn_wc__compat_call_notify_func(void *baton,
+                                     const svn_wc_notify_t *notify,
+                                     apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

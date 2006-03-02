@@ -46,30 +46,6 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
-    apr_initialize
-    at_exit do
-      if $DEBUG
-        i = 0
-        loop do
-          i += 1
-          print "number of pools before GC(#{i}): "
-          before_pools = ObjectSpace.each_object(Svn::Core::Pool) {}
-          p before_pools
-          GC.start
-          after_pools = ObjectSpace.each_object(Svn::Core::Pool) {}
-          print "number of pools after GC(#{i}): "
-          p after_pools
-          break if before_pools == after_pools
-        end
-        puts "GC ran #{i} times"
-      end
-      
-      # We don't need to call apr_termintae because pools
-      # are destroyed by ruby's GC.
-      # Svn::Core.apr_terminate
-    end
-    nls_init
-    
     class << self
       alias binary_mime_type? mime_type_is_binary
     end
@@ -83,12 +59,31 @@ module Svn
     AuthCredSSLServerTrust = AuthCredSslServerTrust
     
     
-    Pool = Svn::Ext::Core::Apr_pool_t
+    Pool = Svn::Ext::Core::Apr_pool_wrapper_t
+    
+    class Pool
+      class << self
+        def number_of_pools
+          ObjectSpace.each_object(Pool) {}
+        end
+      end
+
+      alias _initialize initialize
+      private :_initialize
+      def initialize(parent=nil)
+        _initialize(parent)
+        @parent = parent
+      end
+    end
 
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
-      CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      if Core.const_defined?(:STREAM_CHUNK_SIZE)
+        CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      else
+        CHUNK_SIZE = 8192
+      end
 
       def write(data)
         Core.stream_write(self, data)

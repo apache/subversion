@@ -14,15 +14,14 @@ module SvnTestUtil
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_path = File.join("test", "wc")
+    @wc_base_dir = File.join("test", "wc-tmp")
+    @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = File.join("test", "tmp")
     @config_path = File.join("test", "config")
     setup_tmp
     setup_repository
-    @repos = Svn::Repos.open(@repos_path)
     add_hooks
-    @fs = @repos.fs
     setup_svnserve
     setup_config
     setup_wc
@@ -35,6 +34,41 @@ module SvnTestUtil
     teardown_wc
     teardown_config
     teardown_tmp
+    gc
+  end
+
+  def gc
+    if $DEBUG
+      before_pools = Svn::Core::Pool.number_of_pools
+      puts
+      puts "before pools: #{before_pools}"
+    end
+    GC.start
+    if $DEBUG
+      after_pools = Svn::Core::Pool.number_of_pools
+      puts "after pools: #{after_pools}"
+      STDOUT.flush
+    end
+  end
+
+  def change_gc_status(prev_disabled)
+    begin
+      yield
+    ensure
+      if prev_disabled
+        GC.disable
+      else
+        GC.enable
+      end
+    end
+  end
+  
+  def gc_disable(&block)
+    change_gc_status(GC.disable, &block)
+  end
+
+  def gc_enable(&block)
+    change_gc_status(GC.enable, &block)
   end
 
   def setup_tmp(path=@tmp_path)
@@ -50,10 +84,14 @@ module SvnTestUtil
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
     Svn::Repos.create(path, config, fs_config)
+    @repos = Svn::Repos.open(@repos_path)
+    @fs = @repos.fs
   end
 
   def teardown_repository(path=@repos_path)
     Svn::Repos.delete(path)
+    @repos = nil
+    @fs = nil
   end
 
   def setup_svnserve
@@ -100,7 +138,7 @@ module SvnTestUtil
   end
 
   def teardown_wc
-    FileUtils.rm_rf(@wc_path)
+    FileUtils.rm_rf(@wc_base_dir)
   end
   
   def setup_config
@@ -184,5 +222,4 @@ exit 1
     auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
     auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
   end
-  
 end
