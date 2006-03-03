@@ -1556,8 +1556,8 @@ create_special_file(const char *src,
     {
       /* We should return a valid error here. */
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               "Unsupported special file type '%s'",
-                               identifier);
+                               "'%s' has unsupported special file type '%s'",
+                               src, identifier);
     }
 
   /* If we had an error, check to see if it was because this type of
