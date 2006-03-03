@@ -2,7 +2,7 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1556,8 +1556,8 @@ create_special_file(const char *src,
     {
       /* We should return a valid error here. */
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               "'%s' has unsupported special file type '%s'",
-                               src, identifier);
+                               _("'%s' has unsupported special file type "
+                                 "'%s'"), src, identifier);
     }
 
   /* If we had an error, check to see if it was because this type of
