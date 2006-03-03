@@ -609,15 +609,11 @@ def check_old_prop_version(branch_dir, props):
             (opts["prop"], format_merge_props(fixed), branch_dir)
         sys.exit(1)
 
-def find_changes(url, begin, end, show_merges=False):
+def find_changes(url, begin, end, find_merges=False):
     """Return a list of the revisions which affect the specified URL
-       between begin and end. If show_merges is True, also return a
+       between begin and end. If find_merges is True, also return a
        dictionary mapping each revision number to its associated
        merge properties. Returns a tuple (revs, merges)."""
-
-    revs = []
-    merges = {}
-    rev = None
 
     # Look for revisions
     revision_re = re.compile(r"^r(\d+)")
@@ -628,13 +624,15 @@ def find_changes(url, begin, end, show_merges=False):
 
     # Setup the log options (--quiet, so we don't show log messages)
     log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
-    if show_merges:
+    if find_merges:
         # The --verbose flag lets us grab merge tracking information
         # by looking at propchanges
         log_opts = "--verbose " + log_opts
 
     # Read the log to look for revision numbers and merge-tracking info
-    previous_merge_props = {}
+    revs = []
+    merges = {}
+    previous_merge_props = None
     for line in launchsvn("log %s" % log_opts):
         m = revision_re.match(line)
         if m:
@@ -692,16 +690,12 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         report("checking for reflected changes in %d revision(s)"
                % len(merge_revs))
 
-        old_props = {}
+        old_revs = None
         for rev in merge_revs:
-            new_props = merges[rev]
-            old_revisions = old_props.get(target_dir)
-            new_revisions = new_props.get(target_dir)
-
-            if new_revisions != old_revisions:
+            new_revs = merges[rev].get(target_dir)
+            if new_revs != old_revs:
                 reflected_revs.append("%s" % rev)
-
-            old_props = new_props
+            old_revs = new_revs
 
     reflected_revs = RevisionSet(",".join(reflected_revs))
 
