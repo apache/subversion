@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+### THIS TOOL SHOULD NOT SURVIVE THE DAY WHEN THE SUBVERSION CLIENT
+### CAN PERFORM REMOTE MOVE OPERATIONS
+
+import sys
+import os
+import os.path
+import shutil
+
+sys.path.insert(0, '../../subversion/bindings/swig/python/libsvn/.libs')
+sys.path.insert(0, '../../subversion/bindings/swig/python/libsvn')
+sys.path.insert(0, '../../subversion/bindings/swig/python/svn')
+
+import svn.core, svn.repos, svn.fs
+
+def do_move(pool, repos_path, from_path, to_path):
+    fsobj = svn.repos.fs(svn.repos.open(repos_path, pool))
+    youngest = svn.fs.youngest_rev(fsobj, pool)
+    from_root = svn.fs.revision_root(fsobj, youngest, pool)
+    to_txn = svn.fs.begin_txn2(fsobj, youngest,
+                               svn.fs.SVN_FS_TXN_CHECK_OOD
+                               | svn.fs.SVN_FS_TXN_CHECK_LOCKS, pool)
+    to_root = svn.fs.txn_root(to_txn, pool)
+    svn.fs.svn_fs_move(from_root, from_path, to_root, to_path, pool)
+    svn.fs.commit_txn(to_txn, pool)
+
+if len(sys.argv) < 4:
+    print "Usage: %s REPOS FROM_PATH TO_PATH" % os.path.basename(sys.argv[0])
+    sys.exit(1)
+svn.core.run_app(do_move, sys.argv[1], sys.argv[2], sys.argv[3])
+
