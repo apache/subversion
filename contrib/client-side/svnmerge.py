@@ -609,6 +609,46 @@ def check_old_prop_version(branch_dir, props):
             (opts["prop"], format_merge_props(fixed), branch_dir)
         sys.exit(1)
 
+def find_changes(url, begin, end, show_merges=False):
+    """Return a list of the revisions which affect the specified URL
+       between begin and end. If show_merges is True, also return a
+       dictionary mapping each revision number to its associated
+       merge properties. Returns a tuple (revs, merges)."""
+
+    revs = []
+    merges = {}
+    rev = None
+
+    # Look for revisions
+    revision_re = re.compile(r"^r(\d+)")
+
+    # Look for changes which contain merge tracking information
+    rlpath = url_to_rlpath(url)
+    srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
+
+    # Setup the log options (--quiet, so we don't show log messages)
+    log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
+    if show_merges:
+        # The --verbose flag lets us grab merge tracking information
+        # by looking at propchanges
+        log_opts = "--verbose " + log_opts
+
+    # Read the log to look for revision numbers and merge-tracking info
+    previous_merge_props = {}
+    for line in launchsvn("log %s" % log_opts):
+        m = revision_re.match(line)
+        if m:
+            rev = int(m.groups()[0])
+            revs.append(rev)
+        elif srcdir_change_re.match(line):
+            merge_props = get_revlist_prop(url, opts["prop"], rev)
+            if merge_props != previous_merge_props:
+                merges[rev] = merge_props
+                previous_merge_props = merge_props
+
+    return revs, merges
+
+
 def analyze_revs(target_dir, url, begin=1, end=None,
                  find_reflected=False):
     """For the source of the merges in the head url being merged into
@@ -633,56 +673,8 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         if long(begin) > long(end):
             return RevisionSet(""), RevisionSet(""), RevisionSet("")
 
-    # Find all the revisions where the source of the merge revisions
-    # was modified.  Generate two lists of revisions, the first with
-    # all the revisions, and the second with a list of revisions where
-    # the source directory itself that is the source of the merges was
-    # modified, as these may be reflected merges.
-
-    # If we were asked to look for reflected revisions, then add the
-    # --verbose flag to the 'svn log' command to get a list of files
-    # and directories that were added, modified or deleted.  Even with
-    # the --verbose flag, the --quiet flag prevents the commit log
-    # message from being printed.
-    log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
-    if find_reflected:
-        log_opts = "--verbose " + log_opts
-    lines = launchsvn("log %s" % log_opts)
-
-    current_rev = None
-    rlpath = url_to_rlpath(url)
-
-    # This holds a list of all the revisions that changed something in
-    # the head branch.
-    revs = []
-
-    # This holds a list of all the revisions that changed a property
-    # on the head branch directory itself.  These revisions may
-    # contain changes on the integrated revision property list which
-    # are checked below.
-    prop_changed_revs = []
-
-    find_revision_re = re.compile(r"^r(\d+)")
-    source_dir_modified_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
-
-    source_dir_modified = False
-    for line in lines:
-        find_revision_match = find_revision_re.match(line)
-        if find_revision_match:
-            rev = find_revision_match.groups()[0]
-            current_rev = int(rev)
-            revs.append(rev)
-            source_dir_modified = False
-            continue
-
-        if not current_rev:
-            continue
-
-        if not source_dir_modified and source_dir_modified_re.match(line):
-            source_dir_modified = True
-            prop_changed_revs.append(current_rev)
-
-    revs = RevisionSet(",".join(revs))
+    revs, merges = find_changes(url, begin, end, find_reflected)
+    revs = RevisionSet(",".join(map(str,revs)))
 
     if end == "HEAD":
         # If end is not provided, we do not know which is the latest revision
@@ -694,25 +686,22 @@ def analyze_revs(target_dir, url, begin=1, end=None,
     reflected_revs = []
 
     if find_reflected:
+        merge_revs = merges.keys()
+        merge_revs.sort()
+                
         report("checking for reflected changes in %d revision(s)"
-               % len(prop_changed_revs))
+               % len(merge_revs))
 
-        previous_props = None
-
-        for rev in prop_changed_revs:
-            if previous_props:
-                old_props = previous_props
-            else:
-                old_props = get_revlist_prop(url, opts["prop"], rev-1)
-
-            new_props = get_revlist_prop(url, opts["prop"], rev)
-            previous_props = new_props
-
+        old_props = {}
+        for rev in merge_revs:
+            new_props = merges[rev]
             old_revisions = old_props.get(target_dir)
             new_revisions = new_props.get(target_dir)
 
             if new_revisions != old_revisions:
                 reflected_revs.append("%s" % rev)
+
+            old_props = new_props
 
     reflected_revs = RevisionSet(",".join(reflected_revs))
 
