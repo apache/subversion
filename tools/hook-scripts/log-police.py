@@ -93,7 +93,7 @@ def main(ignored_pool, argv):
     usage(sys.stderr)
     sys.exit(1)
 
-  if len(args) > 1:
+  if len(args) != 1:
     sys.stderr.write("ERROR: only one argument allowed (the repository).\n\n")
     usage(sys.stderr)
     sys.exit(1)
