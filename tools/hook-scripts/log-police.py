@@ -35,16 +35,18 @@ def fix_txn(fs, txn_name):
   txn = svn.fs.svn_fs_open_txn(fs, txn_name)
   log_message = svn.fs.svn_fs_txn_prop(txn, "svn:log")
   if log_message is not None:
-    log_message = fix_log_message(log_message)
-    svn.fs.svn_fs_change_txn_prop(txn, "svn:log", log_message)
+    new_message = fix_log_message(log_message)
+    if new_message != log_message:
+      svn.fs.svn_fs_change_txn_prop(txn, "svn:log", new_message)
 
 
 def fix_rev(fs, revnum):
   "Fix up the log message for revision REVNUM in FS.  See fix_log_message()."
   log_message = svn.fs.svn_fs_revision_prop(fs, revnum, 'svn:log')
   if log_message is not None:
-    log_message = fix_log_message(log_message)
-    svn.fs.svn_fs_change_rev_prop(fs, revnum, "svn:log", log_message)
+    new_message = fix_log_message(log_message)
+    if new_message != log_message:
+      svn.fs.svn_fs_change_rev_prop(fs, revnum, "svn:log", new_message)
 
 
 def main(ignored_pool, argv):
