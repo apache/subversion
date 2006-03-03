@@ -526,18 +526,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge("avail -vv", match=r"15-16$")
-        self.svnmerge("merge -vv", match=r"merge -r 14:16")
+        self.svnmerge("avail -vv --bidirectional", match=r"16$")
+        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
-
-        # There will be directory property conflict on 'test-branch'
-        # due to the attempted merge from trunk of the addition of the
-        # svnmerge-integrated property, which already exists in the
-        # branch since 'svnmerge.py init' was run in it.  So just
-        # resolve it, as it currently has the correct value (only on
-        # svn 1.3.x, so do not execute a match assertion).
-        self.launch("svn resolved .")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")

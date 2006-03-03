@@ -519,21 +519,26 @@ def _run_propset(dir, prop, value):
     finally:
         os.remove(fname)
 
+def set_props(dir, name, props):
+    props = format_merge_props(props)
+    if props:
+        _run_propset(dir, name, props)
+    else:
+        svn_command('propdel "%s" "%s"' % (name, dir)) 
+
 def set_merge_props(dir, props):
-    _run_propset(dir, opts["prop"], format_merge_props(props))
+    set_props(dir, opts["prop"], props)
+
+def set_block_props(dir, props):
+    set_props(dir, opts["block_prop"], props)
 
 def set_blocked_revs(dir, head_path, revs):
     props = get_block_props(dir)
     if revs:
         props[head_path] = str(revs)
-    else:
-        if props.has_key(head_path):
-            del props[head_path]
-    props = format_merge_props(props)
-    if props:
-        _run_propset(dir, opts["block_prop"], props)
-    else:
-        svn_command('propdel "%s" "%s"' % (opts["block_prop"], dir))
+    elif props.has_key(head_path):
+        del props[head_path]
+    set_block_props(dir, props)
 
 def is_url(url):
     """Check if url is a valid url."""
@@ -931,7 +936,17 @@ def action_merge(branch_dir, branch_props):
     # is NOT inclusive so we have to subtract one from start.
     # We try to keep the number of merge operations as low as possible,
     # because it is faster and reduces the number of conflicts.
+    old_merge_props = branch_props
     for start,end in minimal_merge_intervals(revs, phantom_revs):
+
+        # Set merge props appropriately if bidirectional support is enabled
+        if opts["bidirectional"]:
+          new_merge_props = mergeprops[opts["head_url"]].get(start-1)
+          if new_merge_props != old_merge_props:
+              set_merge_props(branch_dir, new_merge_props)
+              old_merge_props = new_merge_props
+
+        # Do the merge
         svn_command('merge -r %d:%d %s %s' % \
                     (start-1, end, opts["head_url"], branch_dir))
 
