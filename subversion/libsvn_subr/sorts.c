@@ -2,7 +2,7 @@
  * sorts.c:   all sorts of sorts
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -124,8 +124,8 @@ svn_sort__hash(apr_hash_t *ht,
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
 
-  /* allocate an array with only one element to begin with. */
-  ary = apr_array_make(pool, 1, sizeof(svn_sort__item_t));
+  /* allocate an array with enough elements to hold all the keys. */
+  ary = apr_array_make(pool, apr_hash_count(ht), sizeof(svn_sort__item_t));
 
   /* loop over hash table and push all keys into the array */
   for (hi = apr_hash_first(pool, ht); hi; hi = apr_hash_next(hi))
