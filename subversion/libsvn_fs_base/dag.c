@@ -293,9 +293,9 @@ get_dir_entries(apr_hash_t **entries_p,
                 apr_pool_t *pool)
 {
   apr_hash_t *entries = apr_hash_make(pool);
+  apr_hash_index_t *hi;
   svn_string_t entries_raw;
   skel_t *entries_skel;
-  apr_hash_index_t *hi;
 
   /* Error if this is not a directory. */
   if (noderev->kind != svn_node_dir)
@@ -318,30 +318,8 @@ get_dir_entries(apr_hash_t **entries_p,
                                                 pool));
     }
 
-  /* No hash?  No problem.  */
-  *entries_p = NULL;
-  if (! entries)
-    return SVN_NO_ERROR;
-
-  /* Else, convert the hash from a name->id mapping to a name->dirent one.  */
-  *entries_p = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      svn_fs_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
-
-      /* KEY will be the entry name in ancestor, VAL the id.  */
-      apr_hash_this(hi, &key, &klen, &val);
-      dirent->name = key;
-      dirent->id = val;
-      dirent->kind = svn_node_unknown;
-      apr_hash_set(*entries_p, key, klen, dirent);
-    }
-
-  /* Return our findings. */
   *entries_p = entries;
+
   return SVN_NO_ERROR;
 }
 
