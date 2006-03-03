@@ -605,12 +605,12 @@ where:
      the lock will cease to be valid.  (see svn_time_to_cstring())
 
 In addition to creating a lock in the `locks' table, a new row is
-created in a `locks-nodes' table.  The `lock-nodes' table is a btree
+created in a `lock-tokens' table.  The `lock-tokens' table is a btree
 whose key is an absolute path in the filesystem.  The value of each
 key is a lock-token (which is a key into the `locks' table.)
 
 To test if a path is locked, simply check if the path is a key in the
-`locks-nodes' table.  To see if a certain directory has any locked
+`lock-tokens' table.  To see if a certain directory has any locked
 children below, we ask BerkeleyDB to do a "greater or equal match" on
 the directory path, and see if any results come back.  If they do,
 then at least one of the directory's children is locked, and thus the
@@ -619,7 +619,7 @@ directory cannot be deleted without further investigation.
 Locks are epheremal things, not historied in any way.  They are
 potentially created and deleted quite often.  When a lock is
 destroyed, the appropriate row is removed from the `locks' table.
-Additionally, the locked-path is removed from the `lock-nodes' table.
+Additionally, the locked-path is removed from the `lock-tokens' table.
 
 
 
@@ -883,7 +883,7 @@ Transactions:
 Changes:
 
                  CHANGE ::= ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD) ;
-            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" ;
+            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" | "reset";
                TEXT-MOD ::= atom ;
                PROP-MOD ::= atom ;
 
