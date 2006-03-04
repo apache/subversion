@@ -2850,6 +2850,7 @@ this is because marking a directory with \\[svn-status-set-user-mark]
 normally marks all of its files as well.
 If no files have been marked, commit recursively the file at point."
   (interactive)
+  (save-some-buffers)
   (let* ((selected-files (svn-status-marked-files))
          (marked-files-p (svn-status-some-files-marked-p)))
     (setq svn-status-files-to-commit selected-files
@@ -3523,6 +3524,7 @@ Commands:
 
 (defun svn-log-edit-done ()
   (interactive)
+  (save-some-buffers)
   (save-excursion
     (set-buffer (get-buffer "*svn-log-edit*"))
     (when svn-log-edit-insert-files-to-commit
@@ -3709,14 +3711,15 @@ When called with a prefix argument, ask the user for the revision."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-status-base-dir ()
-  (let ((base-dir (expand-file-name default-directory))
-        (dot-svn-dir)
+  (let* ((base-dir (expand-file-name default-directory))
+        (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
         (dir-below (expand-file-name default-directory)))
-    (setq dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
     (while (when (and dir-below (file-exists-p dot-svn-dir))
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
-             (setq dir-below (match-string 1 dir-below))
+             (setq dir-below
+                   (and (string-match "\(.*/\)[^/]+/" dir-below)
+                        (match-string 1 dir-below)))
              (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
     base-dir))
 
