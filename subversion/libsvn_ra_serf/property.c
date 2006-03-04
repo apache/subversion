@@ -281,7 +281,7 @@ setup_propfind(serf_request_t *request,
   propfind_context_t *ctx = setup_baton;
   ra_serf_xml_parser_t *parser_ctx;
 
-  *req_bkt = serf_bucket_propfind_create(ctx->sess->repos_url.hostinfo,
+  *req_bkt = serf_bucket_propfind_create(ctx->conn,
                                          ctx->path,
                                          ctx->label,
                                          ctx->depth,

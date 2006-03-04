@@ -49,6 +49,15 @@ typedef struct {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
+  /* What was the last HTTP status code we got on this connection? */
+  int last_status_code;
+
+  /* Current authorization header used for this connection; may be NULL */
+  const char *auth_header;
+
+  /* Current authorization value used for this connection; may be NULL */
+  char *auth_value;
+
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
 } ra_serf_connection_t;
@@ -86,6 +95,13 @@ typedef struct {
 
   /* Cached properties */
   apr_hash_t *cached_props;
+
+  /* Authentication related properties. */
+  const char *realm;
+  const char *auth_header;
+  char *auth_value;
+  svn_auth_iterstate_t *auth_state;
+  int auth_attempts;
 
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
@@ -389,7 +405,7 @@ svn_boolean_t
 is_propfind_done(propfind_context_t *ctx);
 
 /* Our PROPFIND bucket */
-serf_bucket_t * serf_bucket_propfind_create(const char *host,
+serf_bucket_t * serf_bucket_propfind_create(ra_serf_connection_t *conn,
                                             const char *path,
                                             const char *label,
                                             const char *depth,

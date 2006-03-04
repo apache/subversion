@@ -105,7 +105,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess->conns = apr_palloc(pool, sizeof(*serf_sess->conns) * 4);
 
-  serf_sess->conns[0] = apr_palloc(pool, sizeof(*serf_sess->conns[0]));
+  serf_sess->conns[0] = apr_pcalloc(pool, sizeof(*serf_sess->conns[0]));
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
 
@@ -120,7 +120,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
     }
 
   serf_sess->conns[0]->using_ssl = (strcasecmp(url.scheme, "https") == 0);
-  serf_sess->conns[0]->ssl_context = NULL;
   serf_sess->conns[0]->hostinfo = url.hostinfo;
 
   /* go ahead and tell serf about the connection. */
