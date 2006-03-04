@@ -1497,6 +1497,8 @@ finish_report(void *report_baton,
       sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[i]->ssl_context = NULL;
+      sess->conns[i]->auth_header = sess->auth_header;
+      sess->conns[i]->auth_value = sess->auth_value;
       sess->conns[i]->conn = serf_connection_create(sess->context,
                                                     sess->conns[i]->address,
                                                     conn_setup, sess->conns[i],

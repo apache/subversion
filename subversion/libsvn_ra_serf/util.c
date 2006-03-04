@@ -119,6 +119,10 @@ setup_serf_req(serf_request_t *request,
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
+  if (conn->auth_header && conn->auth_value)
+    {
+      serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
+    }
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)
@@ -202,6 +206,122 @@ handler_discard_body(serf_request_t *request,
 
       /* feed me */
     }
+}
+
+apr_status_t
+handle_auth(ra_serf_session_t *session,
+            ra_serf_connection_t *conn,
+            serf_request_t *request,
+            serf_bucket_t *response,
+            apr_pool_t *pool)
+{
+  void *creds;
+  svn_auth_cred_simple_t *simple_creds;
+  const char *tmp;
+  apr_size_t tmp_len, encoded_len;
+  svn_error_t *error;
+  int i;
+
+  if (!session->realm)
+    {
+      serf_bucket_t *hdrs;
+      char *cur, *last, *auth_hdr, *realm_name, *realmstring;
+
+      hdrs = serf_bucket_response_get_headers(response);
+      auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
+
+      if (!auth_hdr)
+        {
+          abort();
+        }
+
+      cur = apr_strtok(auth_hdr, " ", &last);
+      while (cur)
+        {
+          if (strcmp(cur, "Basic") == 0)
+            {
+              char *attr;
+
+              attr = apr_strtok(NULL, "=", &last);
+              if (strcmp(attr, "realm") == 0)
+                {
+                  realm_name = apr_strtok(NULL, "=", &last);
+                }
+              else
+                {
+                  abort();
+                }
+            }
+          else
+            {
+              /* Support more authentication mechanisms. */
+              abort();
+            }
+          cur = apr_strtok(NULL, " ", &last);
+        }
+
+      if (!realm_name)
+        {
+          abort();
+        }
+
+      session->realm = apr_psprintf(session->pool, "<%s://%s> %s",
+                                    session->repos_url.scheme,
+                                    session->repos_url.hostinfo,
+                                    realm_name);
+
+      error = svn_auth_first_credentials(&creds,
+                                         &session->auth_state,
+                                         SVN_AUTH_CRED_SIMPLE,
+                                         session->realm,
+                                         session->wc_callbacks->auth_baton,
+                                         session->pool);
+    }
+  else
+    {
+      error = svn_auth_next_credentials(&creds,
+                                        session->auth_state,
+                                        session->pool);
+    }
+  
+  session->auth_attempts++;
+
+  if (error)
+    {
+      abort();
+    }
+
+  if (!creds || session->auth_attempts > 4)
+    {
+      /* No more credentials. */
+      printf("No more credentials or we tried too many times.  Sorry.\n");
+      return APR_EGENERAL;
+    }
+
+  simple_creds = creds;
+
+  tmp = apr_pstrcat(session->pool,
+                    simple_creds->username, ":", simple_creds->password, NULL);
+  tmp_len = strlen(tmp);
+
+  encoded_len = apr_base64_encode_len(tmp_len);
+
+  session->auth_value = apr_palloc(session->pool, encoded_len + 6);
+
+  apr_cpystrn(session->auth_value, "Basic ", 7);
+
+  apr_base64_encode(&session->auth_value[6], tmp, tmp_len);
+
+  session->auth_header = "Authorization";
+
+  /* FIXME Come up with a cleaner way of changing the connection auth. */
+  for (i = 0; i < session->num_conns; i++)
+    {
+      session->conns[i]->auth_header = session->auth_header;
+      session->conns[i]->auth_value = session->auth_value;
+    }
+
+  return APR_SUCCESS;
 }
 
 apr_status_t
@@ -311,9 +431,27 @@ handler_default(serf_request_t *request,
       return status;
     }
 
-  headers = serf_bucket_response_get_headers(response);
-  status = ctx->response_handler(request, response, ctx->response_baton,
-                                 pool);
+  if (ctx->conn->last_status_code == 401 && sl.code < 400)
+    {
+      svn_auth_save_credentials(ctx->session->auth_state, ctx->session->pool);
+      ctx->session->auth_attempts = 0;
+      ctx->session->auth_state = NULL;
+    }
+
+  ctx->conn->last_status_code = sl.code;
+
+  if (sl.code == 401)
+    {
+      handle_auth(ctx->session, ctx->conn, request, response, pool);
+      ra_serf_request_create(ctx);
+      status = handler_discard_body(request, response, NULL, pool);
+    }
+  else
+    {
+      headers = serf_bucket_response_get_headers(response);
+      status = ctx->response_handler(request, response, ctx->response_baton,
+                                     pool);
+    }
 
   if (APR_STATUS_IS_EOF(status)) {
       status = is_conn_closing(response);
