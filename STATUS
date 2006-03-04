@@ -117,7 +117,7 @@ Candidate changes:
     Justification:
       Causes ls not to show locks always.
     Votes:
-      +1: lundblad
+      +1: lundblad, rooneg
 
   * r17231, r18539, r18541
     Fix crash with diff and non-recursive checkout.
