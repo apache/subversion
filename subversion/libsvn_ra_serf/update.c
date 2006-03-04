@@ -200,10 +200,6 @@ typedef struct report_fetch_t {
   ra_serf_list_t **done_list;
   ra_serf_list_t done_item;
 
-  /* The acceptor and handler for this GET request. */
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-
 } report_fetch_t;
 
 /*
@@ -287,10 +283,6 @@ typedef struct {
 
   /* The path to the REPORT request */
   const char *path;
-
-  /* The acceptor and handler for the REPORT request/response. */
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
 
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
@@ -599,56 +591,41 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 }
 
 static apr_status_t
-setup_fetch(serf_request_t *request,
-            void *setup_baton,
-            serf_bucket_t **req_bkt,
-            serf_response_acceptor_t *acceptor,
-            void **acceptor_baton,
-            serf_response_handler_t *handler,
-            void **handler_baton,
-            apr_pool_t *pool)
+headers_fetch(serf_bucket_t *headers,
+              void *baton,
+              apr_pool_t *pool)
 {
-  report_fetch_t *fetch_ctx = setup_baton;
-  serf_bucket_t *hdrs_bkt;
-
-  /* create GET request */
-  setup_serf_req(request, req_bkt, &hdrs_bkt,
-                 fetch_ctx->conn, "GET", fetch_ctx->info->url,
-                 NULL, NULL);
+  report_fetch_t *fetch_ctx = baton;
 
   /* note that we have old VC URL */
   if (SVN_IS_VALID_REVNUM(fetch_ctx->info->base_rev))
     {
-      serf_bucket_headers_setn(hdrs_bkt, SVN_DAV_DELTA_BASE_HEADER,
+      serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->info->delta_base->data);
-      serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding",
+      serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
   else
     {
-      serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip");
+      serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
-
-  *acceptor = fetch_ctx->acceptor;
-  *acceptor_baton = fetch_ctx->sess;
-  *handler = fetch_ctx->handler;
-  *handler_baton = fetch_ctx;
 
   return APR_SUCCESS;
 }
 
 static apr_status_t
-handle_fetch(serf_bucket_t *response,
-             void *handler_baton,
-             apr_pool_t *pool)
+error_fetch(serf_request_t *request,
+            serf_bucket_t *response,
+            int status_code,
+            void *baton)
 {
-  const char *data;
-  apr_size_t len;
-  serf_status_line sl;
-  apr_status_t status;
-  report_fetch_t *fetch_ctx = handler_baton;
+  report_fetch_t *fetch_ctx = baton;
 
-  /* uh-oh.  our connection died on us; requeue. */
+  /* Uh-oh.  Our connection died on us.
+   *
+   * The core ra_serf layer will requeue our request - we just need to note
+   * that we got cut off in the middle of our song.
+   */
   if (!response)
     {
       /* If we already started the fetch and opened the file handle, we need
@@ -665,20 +642,89 @@ handle_fetch(serf_bucket_t *response,
           fetch_ctx->read_size = 0;
         }
 
-      serf_connection_request_create(fetch_ctx->conn->conn, setup_fetch,
-                                     fetch_ctx);
-
       return APR_SUCCESS;
     }
 
-  status = serf_bucket_response_status(response, &sl);
-  if (status)
+  /* We have no idea what went wrong. */
+  abort();
+}
+
+static apr_status_t
+handle_fetch(serf_request_t *request,
+             serf_bucket_t *response,
+             void *handler_baton,
+             apr_pool_t *pool)
+{
+  const char *data;
+  apr_size_t len;
+  serf_status_line sl;
+  apr_status_t status;
+  report_fetch_t *fetch_ctx = handler_baton;
+
+  if (fetch_ctx->read_headers == FALSE)
     {
-      if (APR_STATUS_IS_EAGAIN(status))
+      serf_bucket_t *hdrs;
+      const char *val;
+      report_info_t *info;
+      svn_error_t *err;
+
+      hdrs = serf_bucket_response_get_headers(response);
+      val = serf_bucket_headers_get(hdrs, "Content-Type");
+      info = fetch_ctx->info;
+
+      if (!info->dir->dir_baton)
         {
-          return APR_SUCCESS;
+          open_dir(info->dir);
         }
-      abort();
+
+      apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+
+      /* Expand our full name now if we haven't done so yet. */
+      if (!info->name)
+        {
+          info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
+                                             info->dir->dir_baton_pool);
+          svn_path_add_component(info->name_buf, info->base_name);
+          info->name = info->name_buf->data;
+        }
+
+      if (SVN_IS_VALID_REVNUM(info->base_rev))
+        {
+          err = info->dir->update_editor->open_file(info->name,
+                                          info->dir->dir_baton,
+                                          info->base_rev,
+                                          info->editor_pool,
+                                          &info->file_baton);
+        }
+      else
+        {
+          err = info->dir->update_editor->add_file(info->name,
+                                          info->dir->dir_baton,
+                                          NULL,
+                                          info->base_rev,
+                                          info->editor_pool,
+                                          &info->file_baton);
+        }
+
+      info->dir->update_editor->apply_textdelta(info->file_baton,
+                                                NULL,
+                                                info->editor_pool,
+                                                &info->textdelta,
+                                                &info->textdelta_baton);
+
+      if (val && strcasecmp(val, "application/vnd.svn-svndiff") == 0)
+        {
+          fetch_ctx->delta_stream =
+              svn_txdelta_parse_svndiff(info->textdelta,
+                                        info->textdelta_baton,
+                                        TRUE, info->editor_pool);
+        }
+      else
+        {
+          fetch_ctx->delta_stream = NULL;
+        }
+
+      fetch_ctx->read_headers = TRUE;
     }
 
   while (1)
@@ -691,86 +737,6 @@ handle_fetch(serf_bucket_t *response,
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return status;
-        }
-
-      /* If we didn't read anything and we haven't read our headers yet,
-       * and we're not guaranteed to not get any more, skip so that we
-       * ensure we only get our headers when they are ready.
-       */
-      if (!len && fetch_ctx->read_headers == FALSE &&
-          !APR_STATUS_IS_EOF(status))
-        {
-          if (APR_STATUS_IS_EAGAIN(status))
-            {
-              return APR_SUCCESS;
-            }
-          continue;
-        }
-
-      if (fetch_ctx->read_headers == FALSE)
-        {
-          serf_bucket_t *hdrs;
-          const char *val;
-          report_info_t *info;
-          svn_error_t *err;
-
-          hdrs = serf_bucket_response_get_headers(response);
-          val = serf_bucket_headers_get(hdrs, "Content-Type");
-          info = fetch_ctx->info;
-
-          if (!info->dir->dir_baton)
-            {
-              open_dir(info->dir);
-            }
-
-          apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
-
-          /* Expand our full name now if we haven't done so yet. */
-          if (!info->name)
-            {
-              info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                                 info->dir->dir_baton_pool);
-              svn_path_add_component(info->name_buf, info->base_name);
-              info->name = info->name_buf->data;
-            }
-
-          if (SVN_IS_VALID_REVNUM(info->base_rev))
-            {
-              err = info->dir->update_editor->open_file(info->name,
-                                              info->dir->dir_baton,
-                                              info->base_rev,
-                                              info->editor_pool,
-                                              &info->file_baton);
-            }
-          else
-            {
-              err = info->dir->update_editor->add_file(info->name,
-                                              info->dir->dir_baton,
-                                              NULL,
-                                              info->base_rev,
-                                              info->editor_pool,
-                                              &info->file_baton);
-            }
-
-          info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                    NULL,
-                                                    info->editor_pool,
-                                                    &info->textdelta,
-                                                    &info->textdelta_baton);
-
-          if (val && strcasecmp(val, "application/vnd.svn-svndiff") == 0)
-            {
-              fetch_ctx->delta_stream =
-                  svn_txdelta_parse_svndiff(info->textdelta,
-                                            info->textdelta_baton,
-                                            TRUE, info->editor_pool);
-            }
-          else
-            {
-              fetch_ctx->delta_stream = NULL;
-            }
-
-          fetch_ctx->read_headers = TRUE;
         }
 
       fetch_ctx->read_size += len;
@@ -789,7 +755,7 @@ handle_fetch(serf_bucket_t *response,
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return APR_SUCCESS;
+                  return status;
                 }
               continue;
             }
@@ -855,11 +821,11 @@ handle_fetch(serf_bucket_t *response,
           apr_pool_destroy(info->editor_pool);
           apr_pool_destroy(info->pool);
 
-          return is_conn_closing(response);
+          return status;
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return APR_SUCCESS;
+          return status;
         }
     }
   /* not reached */
@@ -871,8 +837,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
   const char *checked_in_url, *checksum;
   ra_serf_connection_t *conn;
-  serf_request_t *request;
-  serf_bucket_t *req_bkt, *hdrs_bkt;
+  ra_serf_handler_t *handler;
   report_fetch_t *fetch_ctx;
   propfind_context_t *prop_ctx = NULL;
   apr_hash_t *props;
@@ -910,11 +875,21 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   fetch_ctx->done_list = &ctx->done_fetches;
   fetch_ctx->sess = ctx->sess;
   fetch_ctx->conn = conn;
-  fetch_ctx->acceptor = accept_response;
-  fetch_ctx->handler = handle_fetch;
 
-  serf_connection_request_create(conn->conn, setup_fetch,
-                                 fetch_ctx);
+  handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
+
+  handler->method = "GET";
+  handler->path = fetch_ctx->info->url;
+  handler->conn = conn;
+  handler->session = ctx->sess;
+
+  handler->header_delegate = headers_fetch;
+  handler->header_delegate_baton = fetch_ctx;
+
+  handler->response_handler = handle_fetch;
+  handler->response_baton = fetch_ctx;
+
+  ra_serf_request_create(handler);
 
   ctx->active_fetches++;
 }
@@ -1349,49 +1324,6 @@ cdata_report(void *userData, const char *data, int len)
     }
 }
 
-static apr_status_t
-setup_report(serf_request_t *request,
-             void *setup_baton,
-             serf_bucket_t **req_bkt,
-             serf_response_acceptor_t *acceptor,
-             void **acceptor_baton,
-             serf_response_handler_t *handler,
-             void **handler_baton,
-             apr_pool_t *pool)
-{
-  report_context_t *ctx = setup_baton;
-
-  /* create REPORT request */
-  setup_serf_req(request, req_bkt, NULL,
-                 ctx->conn, "REPORT", ctx->path,
-                 ctx->buckets, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->sess;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_report(serf_bucket_t *response,
-              void *handler_baton,
-              apr_pool_t *pool)
-{
-  report_context_t *ctx = handler_baton;
-
-  /* FIXME If we lost our connection, redeliver it. */
-  if (!response)
-    {
-      abort();
-    }
-
-  return handle_xml_parser(response,
-                           ctx->xmlp, &ctx->done,
-                           pool);
-}
-
 static svn_error_t *
 set_path(void *report_baton,
          const char *path,
@@ -1504,9 +1436,10 @@ finish_report(void *report_baton,
 {
   report_context_t *report = report_baton;
   ra_serf_session_t *sess = report->sess;
-  serf_request_t *request;
-  serf_bucket_t *req_bkt, *hdrs_bkt, *tmp;
+  ra_serf_handler_t *handler;
+  ra_serf_xml_parser_t *parser_ctx;
   ra_serf_list_t *done_list;
+  serf_bucket_t *tmp;
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
@@ -1533,10 +1466,28 @@ finish_report(void *report_baton,
 
   /* create and deliver request */
   report->path = vcc_url;
-  report->acceptor = accept_response;
-  report->handler = handle_report;
 
-  serf_connection_request_create(sess->conns[0]->conn, setup_report, report);
+  handler = apr_pcalloc(pool, sizeof(*handler));
+
+  handler->method = "REPORT";
+  handler->path = report->path;
+  handler->body_buckets = report->buckets;
+  handler->body_type = "text/xml";
+  handler->conn = sess->conns[0];
+  handler->session = sess;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = report;
+  parser_ctx->start = start_report;
+  parser_ctx->end = end_report;
+  parser_ctx->cdata = cdata_report;
+  parser_ctx->done = &report->done;
+
+  handler->response_handler = handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  ra_serf_request_create(handler);
 
   for (i = 1; i < 4; i++) {
       sess->conns[i] = apr_palloc(pool, sizeof(*sess->conns[i]));
@@ -1687,12 +1638,6 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   report->update_editor = update_editor;
   report->update_baton = update_baton;
   report->done = FALSE;
-
-  /* Create our XML parser */
-  report->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(report->xmlp, report);
-  XML_SetElementHandler(report->xmlp, start_report, end_report);
-  XML_SetCharacterDataHandler(report->xmlp, cdata_report);
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;

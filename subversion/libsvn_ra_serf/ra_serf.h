@@ -233,30 +233,110 @@ context_run_wait(svn_boolean_t *done,
                  ra_serf_session_t *sess,
                  apr_pool_t *pool);
 
+/* Callback for when a request body is needed. */
+typedef serf_bucket_t* (*request_body_delegate_t)(void *baton,
+                                                  serf_bucket_alloc_t *alloc,
+                                                  apr_pool_t *pool);
+
+/* Callback for when a request headers are needed. */
+typedef apr_status_t (*request_header_delegate_t)(serf_bucket_t *headers,
+                                                  void *baton,
+                                                  apr_pool_t *pool);
+
+/* Callback for when a response has an error. */
+typedef apr_status_t (*response_error_t)(serf_request_t *request,
+                                         serf_bucket_t *response,
+                                         int status_code,
+                                         void *baton);
+
+/*
+ * Structure that can be passed to our default handler to guide the
+ * execution of the request through its lifecycle.
+ */
+typedef struct {
+  const char *method;
+  const char *path;
+
+  serf_bucket_t *body_buckets;
+  const char *body_type;
+
+  serf_response_handler_t response_handler;
+  void *response_baton;
+
+  response_error_t response_error;
+  void *response_error_baton;
+
+  serf_request_setup_t delegate;
+  void *delegate_baton;
+
+  request_header_delegate_t header_delegate;
+  void *header_delegate_baton;
+
+  request_body_delegate_t body_delegate;
+  void *body_delegate_baton;
+
+  ra_serf_connection_t *conn;
+  ra_serf_session_t *session;
+} ra_serf_handler_t;
+
+/* 
+ * Default handler that does dispatching.
+ */
+apr_status_t
+handler_default(serf_request_t *request,
+                serf_bucket_t *response,
+                void *baton,
+                apr_pool_t *pool);
+
+/*
+ * Handler that discards the entire request body.
+ */
+apr_status_t
+handler_discard_body(serf_request_t *request,
+                     serf_bucket_t *response,
+                     void *baton,
+                     apr_pool_t *pool);
+
+/*
+ * Helper function to queue a request in the handler's connection.
+ */
+serf_request_t* ra_serf_request_create(ra_serf_handler_t *handler);
+
+/*
+ * Helper structure associated with handle_xml_parser handler that will
+ * specify how an XML response will be processed.
+ */
+typedef struct {
+  void *user_data;
+
+  XML_StartElementHandler start;
+  XML_EndElementHandler end;
+  XML_CharacterDataHandler cdata;
+
+  XML_Parser xmlp;
+
+  int *status_code;
+  svn_boolean_t *done;
+  ra_serf_list_t **done_list;
+
+  ra_serf_list_t *done_item;
+
+} ra_serf_xml_parser_t;
+
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
  *
+ * If an error occurs during processing RESP_ERR is invoked with the
+ * RESP_ERR_BATON.
+ *
  * Temporary allocations are made in POOL.
  */
 apr_status_t
-handle_xml_parser(serf_bucket_t *response,
-                  XML_Parser xmlp,
-                  svn_boolean_t *done,
+handle_xml_parser(serf_request_t *request,
+                  serf_bucket_t *response,
+                  void *handler_baton,
                   apr_pool_t *pool);
-
-apr_status_t
-handle_status_only(serf_bucket_t *response,
-                   int *status_code,
-                   svn_boolean_t *done,
-                   apr_pool_t *pool);
-
-apr_status_t
-handle_status_xml_parser(serf_bucket_t *response,
-                         int *status_code,
-                         XML_Parser xmlp,
-                         svn_boolean_t *done,
-                         apr_pool_t *pool);
 
 /** XML helper functions. **/
 

@@ -61,9 +61,6 @@ typedef struct {
   /* Returned location hash */
   apr_hash_t *paths;
 
-  /* XML Parser */
-  XML_Parser xmlp;
-
   /* Current namespace list */
   ns_t *ns_list;
 
@@ -74,18 +71,7 @@ typedef struct {
   /* Return error code */
   svn_error_t *error;
 
-  /* are we done? */
   svn_boolean_t done;
-
-  ra_serf_session_t *session;
-  ra_serf_connection_t *conn;
-
-  const char *path;
-  serf_bucket_t *buckets;
-
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-
 } loc_context_t;
 
 
@@ -187,47 +173,6 @@ end_getloc(void *userData, const char *raw_name)
     }
 }
 
-
-static apr_status_t
-setup_getloc(serf_request_t *request,
-               void *setup_baton,
-               serf_bucket_t **req_bkt,
-               serf_response_acceptor_t *acceptor,
-               void **acceptor_baton,
-               serf_response_handler_t *handler,
-               void **handler_baton,
-               apr_pool_t *pool)
-{
-  loc_context_t *ctx = setup_baton;
-
-  setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "REPORT", ctx->path, ctx->buckets, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->session;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_getloc(serf_bucket_t *response,
-           void *handler_baton,
-           apr_pool_t *pool)
-{
-  loc_context_t *ctx = handler_baton;
-
-  /* FIXME If we lost our connection, redeliver it. */
-  if (!response)
-    {
-      abort();
-    }
-
-  return handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
-}
-
-
 svn_error_t *
 svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                            apr_hash_t **locations,
@@ -238,6 +183,8 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 {
   loc_context_t *loc_ctx;
   ra_serf_session_t *session = ra_session->priv;
+  ra_serf_handler_t *handler;
+  ra_serf_xml_parser_t *parser_ctx;
   serf_request_t *request;
   serf_bucket_t *buckets, *req_bkt, *tmp;
   apr_hash_t *props;
@@ -249,10 +196,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   loc_ctx->error = SVN_NO_ERROR;
   loc_ctx->done = FALSE;
   loc_ctx->paths = apr_hash_make(loc_ctx->pool);
-
-  loc_ctx->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(loc_ctx->xmlp, loc_ctx);
-  XML_SetElementHandler(loc_ctx->xmlp, start_getloc, NULL);
 
   *locations = loc_ctx->paths;
 
@@ -342,14 +285,26 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
-  loc_ctx->buckets = buckets;
-  loc_ctx->path = req_url;
-  loc_ctx->conn = session->conns[0];
-  loc_ctx->acceptor = accept_response;
-  loc_ctx->handler = handle_getloc;
-  loc_ctx->session = session;
+  handler = apr_pcalloc(pool, sizeof(*handler));
 
-  serf_connection_request_create(loc_ctx->conn->conn, setup_getloc, loc_ctx);
+  handler->method = "REPORT";
+  handler->path = req_url;
+  handler->body_buckets = buckets;
+  handler->body_type = "text/xml";
+  handler->conn = session->conns[0];
+  handler->session = session;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = loc_ctx;
+  parser_ctx->start = start_getloc;
+  parser_ctx->end = end_getloc;
+  parser_ctx->done = &loc_ctx->done;
+
+  handler->response_handler = handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  ra_serf_request_create(handler);
 
   SVN_ERR(context_run_wait(&loc_ctx->done, session, pool));
 

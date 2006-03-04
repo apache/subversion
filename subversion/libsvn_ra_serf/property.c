@@ -30,13 +30,11 @@ struct propfind_context_t {
   /* pool to issue allocations from */
   apr_pool_t *pool;
 
+  ra_serf_handler_t *handler;
+
   /* associated serf session */
   ra_serf_session_t *sess;
   ra_serf_connection_t *conn;
-
-  /* The acceptor and handler for this response. */
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
 
   /* the requested path */
   const char *path;
@@ -59,9 +57,6 @@ struct propfind_context_t {
    * This can be shared between multiple propfind_context_t structures
    */
   apr_hash_t *ret_props;
-
-  /* the xml parser used */
-  XML_Parser xmlp;
 
   /* Current namespace list */
   ns_t *ns_list;
@@ -284,6 +279,7 @@ setup_propfind(serf_request_t *request,
                apr_pool_t *pool)
 {
   propfind_context_t *ctx = setup_baton;
+  ra_serf_xml_parser_t *parser_ctx;
 
   *req_bkt = serf_bucket_propfind_create(ctx->sess->repos_url.hostinfo,
                                          ctx->path,
@@ -304,66 +300,20 @@ setup_propfind(serf_request_t *request,
         }
     }
 
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->sess;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = ctx;
+  parser_ctx->start = start_propfind;
+  parser_ctx->end = end_propfind;
+  parser_ctx->cdata = cdata_propfind;
+  parser_ctx->done = &ctx->done;
+  parser_ctx->done_list = ctx->done_list;
+  parser_ctx->done_item = &ctx->done_item;
+
+  *handler = handle_xml_parser;
+  *handler_baton = parser_ctx;
 
   return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_propfind(serf_bucket_t *response,
-                void *handler_baton,
-                apr_pool_t *pool)
-{
-  propfind_context_t *ctx = handler_baton;
-  apr_status_t status;
-
-  if (!response)
-    {
-      /* uh-oh, we lost our connection! */
-      deliver_props(&ctx,
-                    ctx->ret_props,
-                    ctx->sess,
-                    ctx->conn,
-                    ctx->path,
-                    ctx->rev,
-                    ctx->depth,
-                    ctx->find_props,
-                    ctx->cache_props,
-                    ctx->done_list,
-                    ctx->pool);
-      if (ctx->xmlp)
-        {
-          XML_ParserFree(ctx->xmlp);
-          ctx->xmlp = NULL;
-        }
-      return APR_SUCCESS;
-    }
-
-  if (!ctx->xmlp)
-    {
-      ctx->xmlp = XML_ParserCreate(NULL);
-      XML_SetUserData(ctx->xmlp, ctx);
-      XML_SetElementHandler(ctx->xmlp, start_propfind, end_propfind);
-      XML_SetCharacterDataHandler(ctx->xmlp, cdata_propfind);
-    }
-
-  status = handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
-
-  if (ctx->done)
-    {
-      XML_ParserFree(ctx->xmlp);
-      if (ctx->done_list)
-        {
-          ctx->done_item.data = ctx;
-          ctx->done_item.next = *ctx->done_list;
-          *ctx->done_list = &ctx->done_item;
-        }
-    }
-
-  return status;
 }
 
 static svn_boolean_t
@@ -431,6 +381,7 @@ deliver_props(propfind_context_t **prop_ctx,
   if (!*prop_ctx)
     {
       svn_boolean_t cache_satisfy;
+      ra_serf_handler_t *handler;
 
       cache_satisfy = check_cache(ret_props, sess, path, rev, find_props, pool);
 
@@ -452,8 +403,6 @@ deliver_props(propfind_context_t **prop_ctx,
       new_prop_ctx->sess = sess;
       new_prop_ctx->conn = conn;
       new_prop_ctx->rev = rev;
-      new_prop_ctx->acceptor = accept_response;
-      new_prop_ctx->handler = handle_propfind;
       new_prop_ctx->done_list = done_list;
 
       if (SVN_IS_VALID_REVNUM(rev))
@@ -465,11 +414,20 @@ deliver_props(propfind_context_t **prop_ctx,
           new_prop_ctx->label = NULL;
         }
 
+      handler = apr_pcalloc(pool, sizeof(*handler));
+
+      handler->delegate = setup_propfind;
+      handler->delegate_baton = new_prop_ctx;
+      handler->session = new_prop_ctx->sess;
+      handler->conn = new_prop_ctx->conn;
+
+      new_prop_ctx->handler = handler;
+
       *prop_ctx = new_prop_ctx;
     }
 
-  /* create and deliver request */
-  serf_connection_request_create(conn->conn, setup_propfind, *prop_ctx);
+  /* create request */
+  ra_serf_request_create((*prop_ctx)->handler);
 
   return SVN_NO_ERROR;
 }

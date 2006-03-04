@@ -211,6 +211,36 @@ typedef struct {
 /* Setup routines and handlers for various requests we'll invoke. */
 
 static apr_status_t
+handle_status_only(serf_request_t *request,
+                   serf_bucket_t *response,
+                   int *status_code,
+                   svn_boolean_t *done,
+                   apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = handler_discard_body(request, response, NULL, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      serf_status_line sl;
+      apr_status_t rv;
+
+      rv = serf_bucket_response_status(response, &sl);
+
+      if (rv)
+        {
+          return rv;
+        }
+
+      *status_code = sl.code;
+      *done = TRUE;
+    }
+
+  return status;
+}
+
+static apr_status_t
 setup_mkactivity(serf_request_t *request,
                  void *setup_baton,
                  serf_bucket_t **req_bkt,
@@ -234,13 +264,14 @@ setup_mkactivity(serf_request_t *request,
 }
 
 static apr_status_t
-handle_mkactivity(serf_bucket_t *response,
+handle_mkactivity(serf_request_t *request,
+                  serf_bucket_t *response,
                   void *handler_baton,
-                   apr_pool_t *pool)
+                  apr_pool_t *pool)
 {
   mkactivity_context_t *ctx = handler_baton;
 
-  return handle_status_only(response, &ctx->status, &ctx->done, pool);
+  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
 }
 
 #define CHECKOUT_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:checkout xmlns:D=\"DAV:\"><D:activity-set><D:href>"
@@ -292,14 +323,16 @@ setup_checkout(serf_request_t *request,
 }
 
 static apr_status_t
-handle_checkout(serf_bucket_t *response,
+handle_checkout(serf_request_t *request,
+                serf_bucket_t *response,
                 void *handler_baton,
                 apr_pool_t *pool)
 {
   checkout_context_t *ctx = handler_baton;
   apr_status_t status;
 
-  status = handle_status_only(response, &ctx->status, &ctx->done, pool);
+  status = handle_status_only(request, response, &ctx->status, &ctx->done,
+                              pool);
 
   /* Get the resulting location. */
   if (ctx->done)
@@ -431,13 +464,15 @@ setup_put(serf_request_t *request,
 }
 
 static apr_status_t
-handle_put(serf_bucket_t *response,
+handle_put(serf_request_t *request,
+           serf_bucket_t *response,
            void *handler_baton,
            apr_pool_t *pool)
 {
   file_context_t *ctx = handler_baton;
 
-  return handle_status_only(response, &ctx->put_status, &ctx->put_done, pool);
+  return handle_status_only(request, response,
+                            &ctx->put_status, &ctx->put_done, pool);
 }
 
 static apr_status_t
@@ -464,13 +499,14 @@ setup_delete(serf_request_t *request,
 }
 
 static apr_status_t
-handle_delete(serf_bucket_t *response,
+handle_delete(serf_request_t *request,
+              serf_bucket_t *response,
               void *handler_baton,
               apr_pool_t *pool)
 {
   simple_request_context_t *ctx = handler_baton;
 
-  return handle_status_only(response, &ctx->status, &ctx->done, pool);
+  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
 }
 
 static apr_status_t
@@ -513,13 +549,14 @@ accept_head(serf_request_t *request,
 }
 
 static apr_status_t
-handle_head(serf_bucket_t *response,
+handle_head(serf_request_t *request,
+            serf_bucket_t *response,
             void *handler_baton,
             apr_pool_t *pool)
 {
   simple_request_context_t *ctx = handler_baton;
 
-  return handle_status_only(response, &ctx->status, &ctx->done, pool);
+  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
 }
 
 /* Helper function to write the svndiff stream to temporary file. */
