@@ -104,16 +104,10 @@ typedef struct {
   /* pool passed to get_file_revs */
   apr_pool_t *pool;
 
-  ra_serf_session_t *session;
-  ra_serf_connection_t *conn;
-
   /* parameters set by our caller */
   const char *path;
   svn_revnum_t start;
   svn_revnum_t end;
-
-  /* XML Parser */
-  XML_Parser xmlp;
 
   /* Current namespace list */
   ns_t *ns_list;
@@ -131,12 +125,6 @@ typedef struct {
   /* blame handler and baton */
   svn_ra_file_rev_handler_t file_rev;
   void *file_rev_baton;
-
-  serf_bucket_t *buckets;
-
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-
 } blame_context_t;
 
 
@@ -407,75 +395,31 @@ cdata_blame(void *userData, const char *data, int len)
     }
 }
 
-
-static apr_status_t
-setup_blame(serf_request_t *request,
-            void *setup_baton,
-            serf_bucket_t **req_bkt,
-            serf_response_acceptor_t *acceptor,
-            void **acceptor_baton,
-            serf_response_handler_t *handler,
-            void **handler_baton,
-            apr_pool_t *pool)
-{
-  blame_context_t *ctx = setup_baton;
-
-  setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "REPORT", ctx->path, ctx->buckets, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->session;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_blame(serf_bucket_t *response,
-           void *handler_baton,
-           apr_pool_t *pool)
-{
-  blame_context_t *ctx = handler_baton;
-
-  /* FIXME If we lost our connection, redeliver it. */
-  if (!response)
-    {
-      abort();
-    }
-
-  return handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
-}
-
 svn_error_t *
 svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
-                           svn_ra_file_rev_handler_t handler,
-                           void *handler_baton,
+                           svn_ra_file_rev_handler_t rev_handler,
+                           void *rev_handler_baton,
                            apr_pool_t *pool)
 {
   blame_context_t *blame_ctx;
   ra_serf_session_t *session = ra_session->priv;
-  serf_request_t *request;
-  serf_bucket_t *buckets, *req_bkt, *tmp;
+  ra_serf_handler_t *handler;
+  ra_serf_xml_parser_t *parser_ctx;
+  serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
-  blame_ctx->file_rev = handler;
-  blame_ctx->file_rev_baton = handler_baton;
+  blame_ctx->file_rev = rev_handler;
+  blame_ctx->file_rev_baton = rev_handler_baton;
   blame_ctx->start = start;
   blame_ctx->end = end;
   blame_ctx->done = FALSE;
   blame_ctx->error = SVN_NO_ERROR;
-
-  blame_ctx->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(blame_ctx->xmlp, blame_ctx);
-  XML_SetElementHandler(blame_ctx->xmlp, start_blame, end_blame);
-  XML_SetCharacterDataHandler(blame_ctx->xmlp, cdata_blame);
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
@@ -559,15 +503,27 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
-  blame_ctx->session = session;
-  blame_ctx->buckets = buckets;
-  blame_ctx->path = req_url;
-  blame_ctx->conn = session->conns[0];
-  blame_ctx->acceptor = accept_response;
-  blame_ctx->handler = handle_blame;
+  handler = apr_pcalloc(pool, sizeof(*handler));
 
-  serf_connection_request_create(blame_ctx->conn->conn, setup_blame,
-                                 blame_ctx);
+  handler->method = "REPORT";
+  handler->path = req_url;
+  handler->body_buckets = buckets;
+  handler->body_type = "text/xml";
+  handler->conn = session->conns[0];
+  handler->session = session;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = blame_ctx;
+  parser_ctx->start = start_blame;
+  parser_ctx->end = end_blame;
+  parser_ctx->cdata = cdata_blame;
+  parser_ctx->done = &blame_ctx->done;
+
+  handler->response_handler = handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  ra_serf_request_create(handler);
 
   SVN_ERR(context_run_wait(&blame_ctx->done, session, pool));
 

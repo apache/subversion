@@ -85,9 +85,6 @@ typedef struct {
   int count;
   svn_boolean_t changed_paths;
 
-  /* XML Parser */
-  XML_Parser xmlp;
-
   /* Current namespace list */
   ns_t *ns_list;
 
@@ -104,15 +101,6 @@ typedef struct {
   /* log receiver function and baton */
   svn_log_message_receiver_t receiver;
   void *receiver_baton;
-
-  ra_serf_session_t *session;
-  ra_serf_connection_t *conn;
-
-  const char *path;
-  serf_bucket_t *buckets;
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-
 } log_context_t;
 
 
@@ -317,46 +305,6 @@ cdata_log(void *userData, const char *data, int len)
     }
 }
 
-
-static apr_status_t
-setup_log(serf_request_t *request,
-          void *setup_baton,
-          serf_bucket_t **req_bkt,
-          serf_response_acceptor_t *acceptor,
-          void **acceptor_baton,
-          serf_response_handler_t *handler,
-          void **handler_baton,
-          apr_pool_t *pool)
-{
-  log_context_t *ctx = setup_baton;
-
-  setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "REPORT", ctx->path, ctx->buckets, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->session;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_log(serf_bucket_t *response,
-           void *handler_baton,
-           apr_pool_t *pool)
-{
-  log_context_t *ctx = handler_baton;
-
-  /* FIXME If we lost our connection, redeliver it. */
-  if (!response)
-    {
-      abort();
-    }
-
-  return handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
-}
-
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      const apr_array_header_t *paths,
@@ -371,8 +319,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 {
   log_context_t *log_ctx;
   ra_serf_session_t *session = ra_session->priv;
-  serf_request_t *request;
-  serf_bucket_t *buckets, *req_bkt, *tmp;
+  ra_serf_handler_t *handler;
+  ra_serf_xml_parser_t *parser_ctx;
+  serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
 
@@ -384,11 +333,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->changed_paths = discover_changed_paths;
   log_ctx->error = SVN_NO_ERROR;
   log_ctx->done = FALSE;
-
-  log_ctx->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(log_ctx->xmlp, log_ctx);
-  XML_SetElementHandler(log_ctx->xmlp, start_log, end_log);
-  XML_SetCharacterDataHandler(log_ctx->xmlp, cdata_log);
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
@@ -498,14 +442,27 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
-  log_ctx->session = session;
-  log_ctx->buckets = buckets;
-  log_ctx->path = req_url;
-  log_ctx->conn = session->conns[0];
-  log_ctx->acceptor = accept_response;
-  log_ctx->handler = handle_log;
+  handler = apr_pcalloc(pool, sizeof(*handler));
 
-  serf_connection_request_create(log_ctx->conn->conn, setup_log, log_ctx);
+  handler->method = "REPORT";
+  handler->path = req_url;
+  handler->body_buckets = buckets;
+  handler->body_type = "text/xml";
+  handler->conn = session->conns[0];
+  handler->session = session;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = log_ctx;
+  parser_ctx->start = start_log;
+  parser_ctx->end = end_log;
+  parser_ctx->cdata = cdata_log;
+  parser_ctx->done = &log_ctx->done;
+
+  handler->response_handler = handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  ra_serf_request_create(handler);
 
   SVN_ERR(context_run_wait(&log_ctx->done, session, pool));
 

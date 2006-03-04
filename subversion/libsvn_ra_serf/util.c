@@ -22,6 +22,7 @@
 #include <apr_want.h>
 
 #include <serf.h>
+#include <serf_bucket_types.h>
 
 #include "ra_serf.h"
 
@@ -177,32 +178,51 @@ is_conn_closing(serf_bucket_t *response)
   return APR_EOF;
 }
 
+SERF_DECLARE(apr_status_t)
+handler_discard_body(serf_request_t *request,
+                     serf_bucket_t *response,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  /* Just loop through and discard the body. */
+  while (1)
+    {
+      const char *data;
+      apr_size_t len;
+      apr_status_t status;
+
+      status = serf_bucket_read(response, SERF_READ_ALL_AVAIL, &data, &len);
+
+      if (status)
+        {
+          return status;
+        }
+
+      /* feed me */
+    }
+}
+
 apr_status_t
-handle_status_xml_parser(serf_bucket_t *response,
-                         int *status_code,
-                         XML_Parser xmlp,
-                         svn_boolean_t *done,
-                         apr_pool_t *pool)
+handle_xml_parser(serf_request_t *request,
+                  serf_bucket_t *response,
+                  void *baton,
+                  apr_pool_t *pool)
 {
   const char *data;
   apr_size_t len;
   serf_status_line sl;
   apr_status_t status;
   enum XML_Status xml_status;
+  ra_serf_xml_parser_t *ctx = baton;
 
-  status = serf_bucket_response_status(response, &sl);
-  if (status)
+  if (!ctx->xmlp)
     {
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return APR_SUCCESS;
-        }
-      abort();
-    }
-
-  if (status_code)
-    {
-      *status_code = sl.code;
+      ctx->xmlp = XML_ParserCreate(NULL);
+      XML_SetUserData(ctx->xmlp, ctx->user_data);
+      XML_SetElementHandler(ctx->xmlp, ctx->start, ctx->end);
+      XML_SetCharacterDataHandler(ctx->xmlp, ctx->cdata);
     }
 
   while (1)
@@ -214,32 +234,35 @@ handle_status_xml_parser(serf_bucket_t *response,
           return status;
         }
 
-      if (xmlp)
+      xml_status = XML_Parse(ctx->xmlp, data, len, 0);
+      if (xml_status == XML_STATUS_ERROR)
         {
-          xml_status = XML_Parse(xmlp, data, len, 0);
-          if (xml_status == XML_STATUS_ERROR)
-            {
-              abort();
-            }
+          abort();
+        }
+
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return status;
         }
 
       if (APR_STATUS_IS_EOF(status))
         {
-          if (xmlp)
+          xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+          if (xml_status == XML_STATUS_ERROR)
             {
-              xml_status = XML_Parse(xmlp, NULL, 0, 1);
-              if (xml_status == XML_STATUS_ERROR)
-                {
-                  abort();
-                }
+              abort();
             }
 
-          *done = TRUE;
-          return is_conn_closing(response);
-        }
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return APR_SUCCESS;
+          XML_ParserFree(ctx->xmlp);
+
+          *ctx->done = TRUE;
+          if (ctx->done_list)
+            {
+              ctx->done_item->data = ctx->user_data;
+              ctx->done_item->next = *ctx->done_list;
+              *ctx->done_list = ctx->done_item;
+            }
+          return status;
         }
 
       /* feed me! */
@@ -248,18 +271,117 @@ handle_status_xml_parser(serf_bucket_t *response,
 }
 
 apr_status_t
-handle_xml_parser(serf_bucket_t *response,
-                  XML_Parser xmlp,
-                  svn_boolean_t *done,
-                  apr_pool_t *pool)
+handler_default(serf_request_t *request,
+                serf_bucket_t *response,
+                void *baton,
+                apr_pool_t *pool)
 {
-  return handle_status_xml_parser(response, NULL, xmlp, done, pool);
+  ra_serf_handler_t *ctx = baton;
+  serf_bucket_t *headers;
+  serf_status_line sl;
+  apr_status_t status;
+
+  /* Uh-oh.  Our connection died.  Requeue. */
+  if (!response)
+    {
+      if (ctx->response_error)
+        {
+          status = ctx->response_error(request, response, 0,
+                                       ctx->response_error_baton);
+          if (status)
+            {
+              return status;
+            }
+        }
+
+      ra_serf_request_create(ctx);
+
+      return APR_SUCCESS;
+    }
+
+  status = serf_bucket_response_wait_for_headers(response);
+  if (status)
+    {
+      return status;
+    }
+
+  status = serf_bucket_response_status(response, &sl);
+  if (status)
+    {
+      return status;
+    }
+
+  headers = serf_bucket_response_get_headers(response);
+  status = ctx->response_handler(request, response, ctx->response_baton,
+                                 pool);
+
+  if (APR_STATUS_IS_EOF(status)) {
+      status = is_conn_closing(response);
+  }
+
+  return status;
+
 }
-apr_status_t
-handle_status_only(serf_bucket_t *response,
-                   int *status_code,
-                   svn_boolean_t *done,
-                   apr_pool_t *pool)
+
+static apr_status_t
+setup_default(serf_request_t *request,
+              void *setup_baton,
+              serf_bucket_t **req_bkt,
+              serf_response_acceptor_t *acceptor,
+              void **acceptor_baton,
+              serf_response_handler_t *handler,
+              void **handler_baton,
+              apr_pool_t *pool)
 {
-  return handle_status_xml_parser(response, status_code, NULL, done, pool);
+  ra_serf_handler_t *ctx = setup_baton;
+  serf_bucket_t *body_bkt, *headers_bkt;
+
+  *acceptor = accept_response;
+  *acceptor_baton = ctx->session;
+
+  if (ctx->delegate)
+    {
+      apr_status_t status;
+
+      status = ctx->delegate(request, ctx->delegate_baton, req_bkt,
+                             acceptor, acceptor_baton, handler, handler_baton,
+                             pool);
+      if (status)
+        {
+          return status;
+        }
+
+      ctx->response_handler = *handler;
+      ctx->response_baton = *handler_baton;
+    }
+  else
+    {
+      if (ctx->body_delegate)
+        {
+          ctx->body_buckets =
+              ctx->body_delegate(ctx->body_delegate_baton,
+                                 serf_request_get_alloc(request),
+                                 pool);
+        }
+
+      setup_serf_req(request, req_bkt, &headers_bkt, ctx->conn,
+                     ctx->method, ctx->path, ctx->body_buckets, ctx->body_type);
+
+      if (ctx->header_delegate)
+        {
+          ctx->header_delegate(headers_bkt, ctx->header_delegate_baton, pool);
+        }
+    }
+
+  *handler = handler_default;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
+}
+
+serf_request_t*
+ra_serf_request_create(ra_serf_handler_t *handler)
+{
+  return serf_connection_request_create(handler->conn->conn,
+                                        setup_default, handler);
 }

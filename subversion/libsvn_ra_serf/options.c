@@ -202,60 +202,13 @@ cdata_options(void *userData, const char *data, int len)
 
 #define OPTIONS_BODY "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:options xmlns:D=\"DAV:\"><D:activity-collection-set/></D:options>"
 
-static apr_status_t
-setup_options(serf_request_t *request,
-              void *setup_baton,
-              serf_bucket_t **req_bkt,
-              serf_response_acceptor_t *acceptor,
-              void **acceptor_baton,
-              serf_response_handler_t *handler,
-              void **handler_baton,
-              apr_pool_t *pool)
+static serf_bucket_t*
+create_options_body(void *baton,
+                    serf_bucket_alloc_t *alloc,
+                    apr_pool_t *pool)
 {
-  options_context_t *ctx = setup_baton;
-  serf_bucket_t *body_bkt;
-
-  body_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(OPTIONS_BODY,
-                                           sizeof(OPTIONS_BODY) - 1,
-                                           ctx->session->bkt_alloc);
-
-  setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "OPTIONS", ctx->path,
-                 body_bkt, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->session;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_options(serf_bucket_t *response,
-               void *handler_baton,
-               apr_pool_t *pool)
-{
-  options_context_t *ctx = handler_baton;
-  apr_status_t status;
- 
-  if (!ctx->xmlp)
-    {
-      ctx->xmlp = XML_ParserCreate(NULL);
-      XML_SetUserData(ctx->xmlp, ctx);
-      XML_SetElementHandler(ctx->xmlp, start_options, end_options);
-      XML_SetCharacterDataHandler(ctx->xmlp, cdata_options);
-    }
-
-  status = handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
-
-  if (ctx->done)
-    {
-      /* TODO: Fetch useful values from response headers. */
-      XML_ParserFree(ctx->xmlp);
-    }
-
-  return status;
+  return SERF_BUCKET_SIMPLE_STRING_LEN(OPTIONS_BODY,
+                                       sizeof(OPTIONS_BODY) - 1, alloc);
 }
 
 svn_boolean_t*
@@ -278,19 +231,39 @@ create_options_req(options_context_t **opt_ctx,
                    apr_pool_t *pool)
 {
   options_context_t *new_ctx;
+  ra_serf_handler_t *handler;
+  ra_serf_xml_parser_t *parser_ctx;
 
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
 
   new_ctx->pool = pool;
 
   new_ctx->path = path;
+
   new_ctx->session = session;
   new_ctx->conn = conn;
 
-  new_ctx->acceptor = accept_response;
-  new_ctx->handler = handle_options;
+  handler = apr_pcalloc(pool, sizeof(*handler));
 
-  serf_connection_request_create(new_ctx->conn->conn, setup_options, new_ctx);
+  handler->method = "OPTIONS";
+  handler->path = path;
+  handler->body_delegate = create_options_body;
+  handler->body_type = "text/xml";
+  handler->conn = conn;
+  handler->session = session;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = new_ctx;
+  parser_ctx->start = start_options;
+  parser_ctx->end = end_options;
+  parser_ctx->cdata = cdata_options;
+  parser_ctx->done = &new_ctx->done;
+
+  handler->response_handler = handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  ra_serf_request_create(handler);
 
   *opt_ctx = new_ctx;
 

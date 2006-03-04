@@ -107,7 +107,6 @@ struct merge_context_t
   apr_pool_t *pool;
 
   ra_serf_session_t *session;
-  ra_serf_connection_t *conn;
 
   const char *activity_url;
   apr_size_t activity_url_len;
@@ -119,7 +118,6 @@ struct merge_context_t
 
   svn_boolean_t done;
 
-  XML_Parser xmlp;
   ns_t *ns_list;
 
   svn_commit_info_t *commit_info;
@@ -136,9 +134,6 @@ struct merge_context_t
   /* A list of previous states that we have created but aren't using now. */
   merge_state_list_t *free_state;
 
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
 };
 
 
@@ -445,21 +440,13 @@ cdata_merge(void *userData, const char *data, int len)
  
 #define MERGE_TRAILER "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:version-name/><D:resourcetype/><D:creationdate/><D:creator-displayname/></D:prop></D:merge>"
 
-static apr_status_t
-setup_merge(serf_request_t *request,
-            void *setup_baton,
-            serf_bucket_t **req_bkt,
-            serf_response_acceptor_t *acceptor,
-            void **acceptor_baton,
-            serf_response_handler_t *handler,
-            void **handler_baton,
-            apr_pool_t *pool)
+static serf_bucket_t*
+create_merge_body(void *baton,
+                  serf_bucket_alloc_t *alloc,
+                  apr_pool_t *pool)
 {
-  merge_context_t *ctx = setup_baton;
+  merge_context_t *ctx = baton;
   serf_bucket_t *body_bkt, *tmp_bkt;
-  serf_bucket_alloc_t *alloc;
-
-  alloc = serf_request_get_alloc(request);
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -478,42 +465,8 @@ setup_merge(serf_request_t *request,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "MERGE", ctx->merge_url, body_bkt, "text/xml");
-
-  /* Create our XML parser */
-  ctx->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(ctx->xmlp, ctx);
-  XML_SetElementHandler(ctx->xmlp, start_merge, end_merge);
-  XML_SetCharacterDataHandler(ctx->xmlp, cdata_merge);
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
+  return body_bkt;
 }
-
-static apr_status_t
-handle_merge(serf_bucket_t *response,
-                void *handler_baton,
-                apr_pool_t *pool)
-{
-  merge_context_t *ctx = handler_baton;
-  apr_status_t status;
-
-  status = handle_status_xml_parser(response, &ctx->status, ctx->xmlp,
-                                    &ctx->done, pool);
-
-  if (ctx->done)
-    {
-      XML_ParserFree(ctx->xmlp);
-    }
-
-  return status;
-}
-
 
 svn_error_t *
 merge_create_req(merge_context_t **ret_ctx,
@@ -525,16 +478,14 @@ merge_create_req(merge_context_t **ret_ctx,
                  apr_pool_t *pool)
 {
   merge_context_t *merge_ctx;
+  ra_serf_handler_t *handler;
+  ra_serf_xml_parser_t *parser_ctx;
 
   merge_ctx = apr_pcalloc(pool, sizeof(*merge_ctx));
 
   merge_ctx->pool = pool;
   merge_ctx->session = session;
-  merge_ctx->conn = conn;
 
-  merge_ctx->acceptor = accept_response;
-  merge_ctx->acceptor_baton = session;
-  merge_ctx->handler = handle_merge;
   merge_ctx->activity_url = activity_url;
   merge_ctx->activity_url_len = activity_url_len;
 
@@ -543,7 +494,28 @@ merge_create_req(merge_context_t **ret_ctx,
   merge_ctx->merge_url = session->repos_url.path;
   merge_ctx->merge_url_len = strlen(merge_ctx->merge_url);
 
-  serf_connection_request_create(conn->conn, setup_merge, merge_ctx);
+  handler = apr_pcalloc(pool, sizeof(*handler));
+
+  handler->method = "MERGE";
+  handler->path = merge_ctx->merge_url;
+  handler->body_delegate = create_merge_body;
+  handler->body_delegate_baton = merge_ctx;
+  handler->conn = conn;
+  handler->session = session;
+
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = merge_ctx;
+  parser_ctx->start = start_merge;
+  parser_ctx->end = end_merge;
+  parser_ctx->cdata = cdata_merge;
+  parser_ctx->done = &merge_ctx->done;
+  parser_ctx->status_code = &merge_ctx->status;
+
+  handler->response_handler = handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  ra_serf_request_create(handler);
 
   *ret_ctx = merge_ctx;
 
