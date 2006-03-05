@@ -808,6 +808,17 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, pb->edit_baton->anchor,
                                       full_path, pool));
   SVN_ERR (svn_wc_entry (&entry, full_path, adm_access, FALSE, pool));
+
+  /* So, it turns out that this can be NULL in at least one actual case,
+     if you do a nonrecursive checkout and the diff involves the addition
+     of one of the directories that is not present due to the fact that
+     your checkout is nonrecursive.  There isn't really a good way to be
+     sure though, since nonrecursive checkouts suck, and don't leave any
+     indication in .svn/entries that the directories in question are just
+     missing. */
+  if (! entry)
+    return SVN_NO_ERROR;
+
   switch (entry->kind)
     {
     case svn_node_file:
