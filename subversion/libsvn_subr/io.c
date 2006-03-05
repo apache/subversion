@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2152,22 +2152,27 @@ svn_io_run_diff(const char *dir,
 
 
 svn_error_t *
-svn_io_run_diff3(const char *dir,
-                 const char *mine,
-                 const char *older,
-                 const char *yours,
-                 const char *mine_label,
-                 const char *older_label,
-                 const char *yours_label,
-                 apr_file_t *merged,
-                 int *exitcode,
-                 const char *diff3_cmd,
-                 apr_pool_t *pool)
+svn_io_run_diff3_2(const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   int *exitcode,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool)
 {
-  const char *args[14];
+  const char **args = apr_palloc(pool,
+                                 sizeof(char*) * (13
+                                                  + (user_args
+                                                     ? user_args->nelts
+                                                     : 1)));
   const char *diff3_utf8;
 #ifndef NDEBUG
-  int nargs = 13;
+  int nargs = 12;
 #endif
   int i = 0;
 
@@ -2183,9 +2188,24 @@ svn_io_run_diff3(const char *dir,
   
   /* Set up diff3 command line. */
   args[i++] = diff3_utf8;
-  args[i++] = "-E";             /* We tried "-A" here, but that caused
-                                   overlapping identical changes to
-                                   conflict.  See issue #682. */
+  if (user_args)
+    {
+      int j;
+      for (j = 0; j < user_args->nelts; ++j)
+        args[i++] = APR_ARRAY_IDX(user_args, j, const char *);
+#ifndef NDEBUG
+      nargs += user_args->nelts;
+#endif
+    }
+  else
+    {
+      args[i++] = "-E";             /* We tried "-A" here, but that caused
+                                       overlapping identical changes to
+                                       conflict.  See issue #682. */
+#ifndef NDEBUG
+      ++nargs;
+#endif
+    }
   args[i++] = "-m";
   args[i++] = "-L";
   args[i++] = mine_label;
@@ -2258,6 +2278,23 @@ svn_io_run_diff3(const char *dir,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_io_run_diff3(const char *dir,
+                 const char *mine,
+                 const char *older,
+                 const char *yours,
+                 const char *mine_label,
+                 const char *older_label,
+                 const char *yours_label,
+                 apr_file_t *merged,
+                 int *exitcode,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool)
+{
+  return svn_io_run_diff3_2(dir, mine, older, yours,
+                            mine_label, older_label, yours_label,
+                            merged, exitcode, diff3_cmd, NULL, pool);
+}
 
 svn_error_t *
 svn_io_detect_mimetype(const char **mimetype,
