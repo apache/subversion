@@ -72,14 +72,6 @@ Candidate changes:
     Votes:
       +1: brane
 
-  * r18395 and r18404
-    Fix scalability issues with svn_repos_get_logs3 and lots of targets.
-    Justification:
-      Memory usage that scales linearly with the number of targets means
-      clients can crash servers via big requests.
-    Votes:
-      +1: rooneg, dlr
-
   * r18451
     Avoid asserting in repos to repos copies where the destination is a
     prefix of the source.
@@ -147,4 +139,12 @@ Approved changes:
       with older versions of Python.
     Votes:
       +1: blair, dlr
+
+  * r18395 and r18404
+    Fix scalability issues with svn_repos_get_logs3 and lots of targets.
+    Justification:
+      Memory usage that scales linearly with the number of targets means
+      clients can crash servers via big requests.
+    Votes:
+      +1: rooneg, dlr, lundblad
 
