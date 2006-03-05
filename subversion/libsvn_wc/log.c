@@ -2,7 +2,7 @@
  * log.c:  handle the adm area's log file.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -119,7 +119,7 @@
 #define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
 
 
-/* A log command which runs svn_wc_merge().
+/* A log command which runs svn_wc_merge2().
    See its documentation for details.
 
    Here is a map of entry-attributes to svn_wc_merge arguments:
@@ -510,10 +510,10 @@ log_do_merge(struct log_runner *loggy,
                        loggy->pool);
 
   /* Now do the merge with our full paths. */
-  err = svn_wc_merge(left, right, name, loggy->adm_access,
-                     left_label, right_label, target_label,
-                     FALSE, &merge_outcome, loggy->diff3_cmd, 
-                     loggy->pool);
+  err = svn_wc_merge2(left, right, name, loggy->adm_access,
+                      left_label, right_label, target_label,
+                      FALSE, &merge_outcome, loggy->diff3_cmd, NULL,
+                      loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);

@@ -467,7 +467,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the sources have identical basenames that match a file within '.':\n"
      "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt,
+     svn_cl__merge_cmd_opt, 'x', svn_cl__ignore_ancestry_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_

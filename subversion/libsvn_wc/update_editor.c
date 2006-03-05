@@ -2049,7 +2049,7 @@ merge_file(svn_stringbuf_t *log_accum,
             }
           else  /* working file exists, and has local mods.*/
             {                  
-              /* Now we need to let loose svn_wc_merge() to merge the
+              /* Now we need to let loose svn_wc_merge2() to merge the
                  textual changes into the working file. */
               const char *oldrev_str, *newrev_str;
               const svn_wc_entry_t *e;
@@ -2090,14 +2090,14 @@ merge_file(svn_stringbuf_t *log_accum,
               /* ### FIXME: We force use of the internal diff3 here
                      because we don't want to run a graphical external
                      diff3 twice.  See issue 1914. */
-              SVN_ERR(svn_wc_merge(svn_path_join(base, txtb, pool),
-                                   svn_path_join(base, tmp_txtb, pool),
-                                   svn_path_join(base, base_name, pool),
-                                   adm_access,
-                                   oldrev_str, newrev_str, ".mine",
-                                   TRUE, &merge_outcome, NULL,
-                                   pool));
-              
+              SVN_ERR(svn_wc_merge2(svn_path_join(base, txtb, pool),
+                                    svn_path_join(base, tmp_txtb, pool),
+                                    svn_path_join(base, base_name, pool),
+                                    adm_access,
+                                    oldrev_str, newrev_str, ".mine",
+                                    TRUE, &merge_outcome, NULL, NULL,
+                                    pool));
+
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     }  /* end:  "textual" merging process */

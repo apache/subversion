@@ -695,6 +695,7 @@ struct merge_cmd_baton {
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
   const char *diff3_cmd;
+  const apr_array_header_t *merge_options;
 
   apr_pool_t *pool;
 };
@@ -783,7 +784,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
-     way svn_wc_merge() can do the merge. */
+     way svn_wc_merge2() can do the merge. */
   {
     const svn_wc_entry_t *entry;
     svn_node_kind_t kind;
@@ -806,7 +807,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   }
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge().  Thank goodness that all the
+     svn_wc_merge2().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -846,10 +847,11 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
       if (merge_required)
         {
-          SVN_ERR(svn_wc_merge(older, yours, mine, adm_access,
-                               left_label, right_label, target_label,
-                               merge_b->dry_run, &merge_outcome, 
-                               merge_b->diff3_cmd, subpool));
+          SVN_ERR(svn_wc_merge2(older, yours, mine, adm_access,
+                                left_label, right_label, target_label,
+                                merge_b->dry_run, &merge_outcome, 
+                                merge_b->diff3_cmd, merge_b->merge_options,
+                                subpool));
         }
 
       /* Philip asks "Why?"  Why does the notification depend on whether the
@@ -2728,17 +2730,18 @@ svn_client_diff_summarize_peg(const char *path,
 }
 
 svn_error_t *
-svn_client_merge(const char *source1,
-                 const svn_opt_revision_t *revision1,
-                 const char *source2,
-                 const svn_opt_revision_t *revision2,
-                 const char *target_wcpath,
-                 svn_boolean_t recurse,
-                 svn_boolean_t ignore_ancestry,
-                 svn_boolean_t force,
-                 svn_boolean_t dry_run,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+svn_client_merge2(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force,
+                  svn_boolean_t dry_run,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
@@ -2792,6 +2795,7 @@ svn_client_merge(const char *source1,
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
   merge_cmd_baton.url = URL2;
   merge_cmd_baton.revision = revision2;
@@ -2851,19 +2855,37 @@ svn_client_merge(const char *source1,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_merge(const char *source1,
+                 const svn_opt_revision_t *revision1,
+                 const char *source2,
+                 const svn_opt_revision_t *revision2,
+                 const char *target_wcpath,
+                 svn_boolean_t recurse,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t force,
+                 svn_boolean_t dry_run,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_merge2(source1, revision1, source2, revision2,
+                           target_wcpath, recurse, ignore_ancestry, force,
+                           dry_run, NULL, ctx, pool);
+}
 
 svn_error_t *
-svn_client_merge_peg(const char *source,
-                     const svn_opt_revision_t *revision1,
-                     const svn_opt_revision_t *revision2,
-                     const svn_opt_revision_t *peg_revision,
-                     const char *target_wcpath,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_ancestry,
-                     svn_boolean_t force,
-                     svn_boolean_t dry_run,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_merge_peg2(const char *source,
+                      const svn_opt_revision_t *revision1,
+                      const svn_opt_revision_t *revision2,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
@@ -2901,6 +2923,7 @@ svn_client_merge_peg(const char *source,
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
   merge_cmd_baton.url = URL;
   merge_cmd_baton.revision = revision2;
@@ -2958,4 +2981,22 @@ svn_client_merge_peg(const char *source,
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_merge_peg(const char *source,
+                     const svn_opt_revision_t *revision1,
+                     const svn_opt_revision_t *revision2,
+                     const svn_opt_revision_t *peg_revision,
+                     const char *target_wcpath,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t force,
+                     svn_boolean_t dry_run,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client_merge_peg2(source, revision1, revision2, peg_revision,
+                               target_wcpath, recurse, ignore_ancestry, force,
+                               dry_run, NULL, ctx, pool);
 }

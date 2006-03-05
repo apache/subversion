@@ -2,7 +2,7 @@
  * merge.c:  merging changes into a working file
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,17 +32,18 @@
 
 
 svn_error_t *
-svn_wc_merge(const char *left,
-             const char *right,
-             const char *merge_target,
-             svn_wc_adm_access_t *adm_access,
-             const char *left_label,
-             const char *right_label,
-             const char *target_label,
-             svn_boolean_t dry_run,
-             enum svn_wc_merge_outcome_t *merge_outcome,
-             const char *diff3_cmd,
-             apr_pool_t *pool)
+svn_wc_merge2(const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
   const char *mt_pt, *mt_bn;
@@ -107,10 +108,11 @@ svn_wc_merge(const char *left,
         {
           int exit_code;
 
-          SVN_ERR(svn_io_run_diff3(".",
-                                   tmp_target, tmp_left, tmp_right,
-                                   target_label, left_label, right_label,
-                                   result_f, &exit_code, diff3_cmd, pool));
+          SVN_ERR(svn_io_run_diff3_2(".",
+                                     tmp_target, tmp_left, tmp_right,
+                                     target_label, left_label, right_label,
+                                     result_f, &exit_code, diff3_cmd,
+                                     merge_options, pool));
           
           contains_conflicts = exit_code == 1;
         }
@@ -121,12 +123,17 @@ svn_wc_merge(const char *left,
           const char *left_marker;
           const char *right_marker;
           svn_stream_t *ostream;
+          svn_diff_file_options_t *options;
 
           ostream = svn_stream_from_aprfile(result_f, pool);
+          options = svn_diff_file_options_create(pool);
 
-          SVN_ERR(svn_diff_file_diff3(&diff,
-                                      tmp_left, tmp_target, tmp_right,
-                                      pool));
+          if (merge_options)
+            SVN_ERR(svn_diff_file_options_parse(options, merge_options, pool));
+
+          SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                        tmp_left, tmp_target, tmp_right,
+                                        options, pool));
 
           /* Labels fall back to sensible defaults if not specified. */
           if (target_label)
@@ -356,4 +363,22 @@ svn_wc_merge(const char *left,
 
     }
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_merge(const char *left,
+             const char *right,
+             const char *merge_target,
+             svn_wc_adm_access_t *adm_access,
+             const char *left_label,
+             const char *right_label,
+             const char *target_label,
+             svn_boolean_t dry_run,
+             enum svn_wc_merge_outcome_t *merge_outcome,
+             const char *diff3_cmd,
+             apr_pool_t *pool)
+{
+  return svn_wc_merge2(left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, merge_outcome, diff3_cmd, NULL, pool);
 }
