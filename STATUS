@@ -126,17 +126,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r18230
-    Fix a memory leak in the Python bindings which causes Trac resync to use
-    massive amounts of memory for large repositories.
-    Justification:
-      Without this fix, Trac can't handle extremely large repositories.
-    Notes:
-      See http://projects.edgewall.com/trac/ticket/2620
-    Votes:
-      +1: djames
-      +0: blair
-
   * r18254
     Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
     Justification:
