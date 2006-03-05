@@ -60,7 +60,10 @@
  */
 
 %pythoncode %{
+import threading
+
 application_pool = None
+application_pool_lock = threading.Lock()
 class GenericSWIGWrapper:
   def __init__(self, this, pool):
     """Create new Generic SWIG wrapper object"""
@@ -98,20 +101,25 @@ struct apr_pool_t {
       def set_parent_pool(self, parent_pool=None):
         """Create a new memory pool"""
         global application_pool
-  
-        self._parent_pool = parent_pool or application_pool
-        self._mark_valid()
-  
-        # Protect important functions from GC
-        self._apr_pool_destroy = _core.apr_pool_destroy
-        self._svn_swig_py_clear_application_pool = \
-          _core.svn_swig_py_clear_application_pool
-  
-        # If we are an application-level pool,
-        # then set this pool to be the application-level pool
-        if not self._parent_pool:
-          svn_swig_py_set_application_pool(self, self)
-          application_pool = self
+
+        try:
+          application_pool_lock.acquire()
+
+          self._parent_pool = parent_pool or application_pool
+          self._mark_valid()
+    
+          # Protect important functions from GC
+          self._apr_pool_destroy = _core.apr_pool_destroy
+          self._svn_swig_py_clear_application_pool = \
+            _core.svn_swig_py_clear_application_pool
+    
+          # If we are an application-level pool,
+          # then set this pool to be the application-level pool
+          if not self._parent_pool:
+            svn_swig_py_set_application_pool(self, self)
+            application_pool = self
+        finally:
+          application_pool_lock.release()
   
       def valid(self):
         """Check whether this memory pool and its parents
