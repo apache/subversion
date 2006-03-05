@@ -1,7 +1,7 @@
 /* fs_fs.c --- filesystem operations specific to fs_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2827,9 +2827,10 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
     {
       const char *val = unparse_dir_entry (kind, id, pool);
 
-      svn_stream_printf (out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
-                         "V %" APR_SIZE_T_FMT "\n%s\n", strlen (name), name,
-                         strlen (val), val);
+      SVN_ERR (svn_stream_printf (out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
+                                  "V %" APR_SIZE_T_FMT "\n%s\n",
+                                  strlen (name), name,
+                                  strlen (val), val));
       if (have_cached)
         {
           svn_fs_dirent_t *dirent;
@@ -2844,8 +2845,8 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
     }
   else
     {
-      svn_stream_printf (out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
-                         strlen (name), name);
+      SVN_ERR (svn_stream_printf (out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
+                                  strlen (name), name));
       if (have_cached)
         apr_hash_set (ffd->dir_cache, name, APR_HASH_KEY_STRING, NULL);
     }
@@ -4019,7 +4020,7 @@ svn_fs_fs__create (svn_fs_t *fs,
 
   apr_uuid_get (&uuid);
   apr_uuid_format (buffer, &uuid);
-  svn_fs_fs__set_uuid (fs, buffer, pool);
+  SVN_ERR (svn_fs_fs__set_uuid (fs, buffer, pool));
   
   SVN_ERR (svn_fs_fs__dag_init_fs (fs));
 

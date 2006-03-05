@@ -1,7 +1,7 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -145,8 +145,8 @@ check_authz (struct edit_baton *editor_baton, const char *path,
     {
       svn_boolean_t allowed;
 
-      editor_baton->authz_callback (required, &allowed, root, path,
-                                    editor_baton->authz_baton, pool);
+      SVN_ERR (editor_baton->authz_callback (required, &allowed, root, path,
+                                             editor_baton->authz_baton, pool));
       if (!allowed)
         return svn_error_create(required & svn_authz_write ?
                                 SVN_ERR_AUTHZ_UNWRITABLE :
@@ -786,8 +786,8 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
     {
       svn_boolean_t allowed;
 
-      authz_callback (svn_authz_write, &allowed, NULL, NULL,
-                      authz_baton, pool);
+      SVN_ERR (authz_callback (svn_authz_write, &allowed, NULL, NULL,
+                               authz_baton, pool));
       if (!allowed)
         return svn_error_create(SVN_ERR_AUTHZ_UNWRITABLE, NULL,
                                 "Not authorized to open a commit editor.");
