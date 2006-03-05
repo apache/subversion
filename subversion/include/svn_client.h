@@ -1602,6 +1602,8 @@ svn_client_diff_summarize_peg(const char *path,
  *
  * The authentication baton cached in @a ctx is used to communicate with the 
  * repository.
+ *
+ * @since New in 1.4.
  */
 svn_error_t *
 svn_client_merge2(const char *source1,
