@@ -90,7 +90,7 @@ Candidate changes:
       Small change, all current clients already canonicalize everything,
       paranoia about client provided input is a good thing.
     Votes:
-      +1: rooneg
+      +1: rooneg, lundblad
 
   * r18665, r18668
     Branch: 1.3.x-ls_url_encoded
