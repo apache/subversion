@@ -377,6 +377,116 @@ inclined to cause pain.</p></div>
 
 </div>  <!-- investment-banking -->
 
+<div class="h3" id="financial-information">
+<h3>Responses from a <i>Financial Information</i> company</h3>
+
+<p class="question">What tools you have used previously had merge
+tracking features, and did you like them?  Why or why not?</p>
+
+<div class="answer"><p>Pretty much just base Rational ClearCase -
+experimented with UCM a bit (didn't like the posted delivery bit)</p>
+
+<p>Nearly all merge tracking done through the CC merge manager.  Some
+tracking done by running findmerge commands and logging results.</p>
+
+<p>Like the CC merge manager gui and the flexibility of choosing
+between branch, label or view configuration.  Do not like the
+inability to export data from the merge manager into files (for
+example to export the list of files merged for a report)</p></div>
+
+<p class="question">What tasks did you use those features for?
+(Define "merge tracking" as broadly as you need to answer this --
+we're more interested in the tasks and how to make them easier than in
+niceties of categorization.)</p>
+
+<div class="answer"><p>Used the features to first preview potential
+candidates that would merge between branches and then migrate code
+changes from branch to branch.</p>
+
+<p>Previews used to:</p>
+
+<p>1) Provide evidence of needed merges so that merge
+activities could be better planned.</p>
+
+<p>Code migrations used to:</p>
+
+<p>1) provide baselines for new development
+efforts.</p>
+
+<p>2) Rebase existing development efforts with
+production changes</p></div>
+
+<p class="question">If you have used Subversion, what tasks do you
+feel would have been easier with merge tracking functionality?  What
+were you trying to accomplish, and how would you have liked Subversion
+to behave to help you accomplish it?</p>
+
+<div class="answer"><p>I have not really used Subversion much at all.  I
+did not find it very easy to figure out how to actually do a merge in
+Subversion - it seemed very cryptic in terms of trying to decide where
+the start and end points of a merge were.  I would like it to be
+easier to merge from well defined points on a given branch (e.g. merge
+from a label) and I would like to have reports of everything that
+actually merged.  I would also like the ability to preview a merge,
+getting a listing of potential merge candidates without having to
+actually perform a merge (note: CC does this in part but it requires
+merging of directory elements - this is acceptable to me as I can
+simply cancel the checkout of the directory elements once a preview
+has been generated)</p></div>
+
+<p class="question">What version control tools have you had experience
+with?</p>
+
+<div class="answer"><p>RCS</p>
+
+<p>Rational ClearCase</p></div>
+
+<p class="question">What does your organization use branches for?
+Select all that apply:<!-- the rest of this doesn't get nicely
+                           formatted in the browser, but that's
+                           probably okay -->
+
+   a)      Maintenance/releases
+   b)      Experimental efforts
+   c)      Customized versions for customers
+   d)      Other (describe)</p>
+
+<div class="answer"><p>How about e) all of the above?  We primarily uses
+branches for a) but we allow for local experiment branches and we
+reserve the right to branch for a variety of reasons.  We look at
+branches as ways to isolate changes from one another and there are
+lots of reasons we might want to do that.  Our projects and releases
+tend to be customer oriented so project requirements can differ
+significantly from one to another.</p></div>
+
+<p class="question"> What is the size of your organization's data set
+and what is the number of branches in your projects?</p>
+
+<div class="answer"><p>Our data set currently consists of 23 ClearCase
+Vobs, the largest of these is around 15 G.  Of these there are several
+that have multiple branches and are merged with regularity.  The
+largest of these contains approximately 9000 elements and has as many
+as 4-5 project branches active at any one time (main is not considered
+a project branch).  Each branch represents a single development effort
+(release) and the same branch type can exist in multiple Vobs.  There
+can be multiple projects that encompass a development effort.</p></div>
+
+<p class="question">Summarize your general branch and development
+strategy.</p>
+
+<div class="answer"><p>Our general strategy is to have the main branch
+always represent production code and to branch as much as possible
+from stable baselines off the main branch.  We do allow for cascading
+when the need arises but we prefer to not let branches get more than
+two levels deep.  New development efforts are given a branch when
+needed.  Once a branch goes into production it is merged to main and
+any other in-progress development efforts are rebased accordingly.
+The branch that has gone into production then becomes the "emergency
+fix" or "patch branch" so that emergency fixes can be made if
+necessary.</p></div>
+
+</div>  <!-- financial-information -->
+
 </div>  <!-- h2 -->
 </body>
 </html>
