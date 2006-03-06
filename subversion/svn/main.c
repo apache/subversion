@@ -934,14 +934,14 @@ main(int argc, const char *argv[])
                 -c -N -> -r N:N-1 */
           if (changeno > 0)
             {
-              opt_state.start_revision.value.number = changeno-1;
+              opt_state.start_revision.value.number = changeno - 1;
               opt_state.end_revision.value.number = changeno;
             }
           else
             {
               changeno = -changeno;
               opt_state.start_revision.value.number = changeno;
-              opt_state.end_revision.value.number = changeno-1;
+              opt_state.end_revision.value.number = changeno - 1;
             }
           opt_state.start_revision.kind = svn_opt_revision_number;
           opt_state.end_revision.kind = svn_opt_revision_number;
