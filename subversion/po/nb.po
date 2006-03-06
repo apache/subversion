@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-03-06 01:30+0100\n"
-"PO-Revision-Date: 2006-02-23 23:34+0100\n"
+"PO-Revision-Date: 2006-03-06 02:04+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1426,9 +1426,9 @@ msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
 msgstr "Depotet på «%s» har uuid «%s», men arbeidskopien har «%s»"
 
 #: libsvn_client/revisions.c:99
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' has no committed revision"
-msgstr "Filstien «%s» ble ikke funnet i hode-revisjonen"
+msgstr "Filstien «%s» har ingen innlagte revisjoner"
 
 #: libsvn_client/revisions.c:109
 #, c-format
@@ -4272,9 +4272,9 @@ msgid "Passphrase for '%s': "
 msgstr "Adgangsfrase/-setning for «%s»: "
 
 #: libsvn_subr/subst.c:1559
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' has unsupported special file type '%s'"
-msgstr "«%s» er ikke en fil i filsystem «%s»"
+msgstr "«%s» har spesialfiltypen «%s» som ikke støttes"
 
 #: libsvn_subr/subst.c:1660 libsvn_wc/props.c:1162
 #, c-format
@@ -5759,7 +5759,6 @@ msgstr ""
 "  låst opp etter en vellykket innlegging.\n"
 
 #: svn/main.c:253
-#, fuzzy
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -5773,8 +5772,8 @@ msgstr ""
 "Send endringer fra arbeidskopien til depotet.\n"
 "bruk: commit [STI...]\n"
 "\n"
-"  En loggmelding må være med, men den kan være tom. Hvis melding ikke\n"
-"  oppgis med valgene --message eller --file, startes en tekstredigerer.\n"
+"  En loggmelding må være med, men den kan være tom. OS400 støtter ikke\n"
+"  kjøring av en tekstbehandler, så --message eller --file må brukes.\n"
 "  Hvis noen mål er (eller inneholder) låste elementer, vil disse bli\n"
 "  låst opp etter en vellykket innlegging.\n"
 
@@ -7105,14 +7104,12 @@ msgid "--This line, and those below, will be ignored--"
 msgstr "--Denne linjen og de som er under vil bli ignorert--"
 
 #: svn/util.c:511
-#, fuzzy
 msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
 msgstr ""
-"Kunne ikke bruke en ekstern redigerer for å hente inn loggmeldingen. Du bør "
-"vurdere å sette miljøvariabelen $SVN_EDITOR eller bruke valgene --message (-"
-"m) eller --file (-F)"
+"Bruk av en ekstern tekstbehandler for å hente loggmelinger støttes ikke på OS400; "
+"vurder bruk av valgene --message (-m) eller --file (-F)"
 
 #: svn/util.c:593
 msgid "Cannot invoke editor to get log message when non-interactive"
