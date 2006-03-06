@@ -3046,8 +3046,7 @@ txn_body_move(void *baton,
       svn_fs_path_change_kind_t kind;
       dag_node_t *new_node;
 
-      /* ### TODO:  Get a real change type? ### */
-      kind = svn_fs_path_change_add;
+      kind = svn_fs_path_change_move;
 
       /* Make sure the source node's parents are mutable.  */
       SVN_ERR(make_path_mutable(to_root, from_parent_path->parent,

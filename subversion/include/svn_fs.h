@@ -848,7 +848,10 @@ typedef enum
   svn_fs_path_change_replace,
 
   /** ignore all previous change items for path (internal-use only) */
-  svn_fs_path_change_reset
+  svn_fs_path_change_reset,
+
+  /** path was moved in txn */
+  svn_fs_path_change_move
 
 } svn_fs_path_change_kind_t;
 

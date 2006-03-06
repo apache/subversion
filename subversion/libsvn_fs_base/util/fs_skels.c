@@ -337,6 +337,12 @@ is_valid_change_skel(skel_t *skel, svn_fs_path_change_kind_t *kind)
             *kind = svn_fs_path_change_modify;
           return TRUE;
         }
+      if (svn_fs_base__matches_atom(kind_skel, "move"))
+        {
+          if (kind)
+            *kind = svn_fs_path_change_move;
+          return TRUE;
+        }
     }
   return FALSE;
 }
@@ -1346,6 +1352,9 @@ svn_fs_base__unparse_change_skel(skel_t **skel_p,
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list(pool);
 
+  /* XXX Store the copy id for moves.  Holding off on that until we've
+   * actually got code that needs to use it. */
+
   /* PROP-MOD */
   if (change->prop_mod)
     svn_fs_base__prepend(svn_fs_base__str_atom("1", pool), skel);
@@ -1374,9 +1383,13 @@ svn_fs_base__unparse_change_skel(skel_t **skel_p,
       svn_fs_base__prepend(svn_fs_base__str_atom("replace", pool), skel);
       break;
     case svn_fs_path_change_modify:
-    default:
       svn_fs_base__prepend(svn_fs_base__str_atom("modify", pool), skel);
       break;
+    case svn_fs_path_change_move:
+      svn_fs_base__prepend(svn_fs_base__str_atom("move", pool), skel);
+      break;
+    default:
+      abort();
     }
 
   /* NODE-REV-ID */
