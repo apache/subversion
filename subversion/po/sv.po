@@ -290,7 +290,7 @@ msgstr "Konfliktegenskapsfil: %s\n"
 #: clients/cmdline/info-cmd.c:391
 #, c-format
 msgid "Lock Token: %s\n"
-msgstr "Låstoken: %s\n"
+msgstr "Låsidentifierare: %s\n"
 
 #: clients/cmdline/info-cmd.c:395
 #, c-format
@@ -667,7 +667,7 @@ msgstr ""
 "  Ett loggmeddelande måste anges, men det kan vara tomt. Om det inte anges\n"
 "  med en --message- eller --file-flagga, startas en editor.\n"
 "  Om något mål är låst (eller innehåller låsta objekt), kommer dessa att\n"
-"  låsas upp efter en lyckad incheckning.\n"
+"  låsas upp efter en lyckad arkivering.\n"
 
 #: clients/cmdline/main.c:249
 msgid ""
@@ -1369,8 +1369,7 @@ msgstr ""
 "Visa status för filer och kataloger i en arbetskopia.\n"
 "användning: status [SÖKVÄG...]\n"
 "\n"
-"  Utan argument visas endast lokala ändringar (kräver inte "
-"nätverksåtkomst).\n"
+"  Utan argument visas endast lokala ändringar (kräver inte nätverksåtkomst).\n"
 "  Om flaggan -u anges, visas dessutom revisioner i arbetskopian och\n"
 "  information om ändringar på servern.\n"
 "  Om -v anges, visas fullständig revisionsinformation för varje objekt.\n"
@@ -1409,11 +1408,11 @@ msgstr ""
 "      ' ' ingen låsidentifierare\n"
 "      'K' låsidentifierare finns\n"
 "      (med -u)\n"
-"      ' ' ej lås i arkivet, ingen låsidentifierare\n"
+"      ' ' ej låst i arkivet, ingen låsidentifierare\n"
 "      'K' låst i arkivet, låsidentifierare finns\n"
 "      'O' låst i arkivet, låsidentifierare i någon annan arbetskopia\n"
 "      'T' låst i arkivet; låsidentifierare finns, men låset är stulet\n"
-"      'B' ej lås i arkivet, låsidentifierare finns,men låset är uppbrutet\n"
+"      'B' ej låst i arkivet, låsidentifierare finns, men låset är uppbrutet\n"
 "\n"
 "  Information om uppdateringar på servern visas i den nionde kolumnen\n"
 "  (om -u angivits):\n"
@@ -1422,9 +1421,8 @@ msgstr ""
 "\n"
 "  De återstående fälten har varierande längd och avgränsas med mellanslag:\n"
 "    Arbetskopians revision (med -u eller -v)\n"
-"    Revision och författare för senaste incheckning (med -v)\n"
-"    Arbetskopians sökväg står alltid sist, så att den kan innehålla "
-"mellanslag.\n"
+"    Revision och författare för senaste arkivering (med -v)\n"
+"    Arbetskopians sökväg står alltid sist, så att den kan innehålla mellanslag.\n"
 "\n"
 "  Exempel på vad som kan visas:\n"
 "    svn status wc\n"
@@ -1435,14 +1433,14 @@ msgstr ""
 "     M           965    wc/bar.c\n"
 "           *     965    wc/foo.c\n"
 "    A  +         965    wc/qax.c\n"
-"    Huvudrevision:   981\n"
+"    Status gentemot revision:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
 "     M           965       938 kfogel       wc/bar.c\n"
 "           *     965       922 sussman      wc/foo.c\n"
 "    A  +         965       687 joe          wc/qax.c\n"
 "                 965       687 joe          wc/zig.c\n"
-"    Huvudrevision:   981\n"
+"    Status gentemot revision:   981\n"
 
 #: clients/cmdline/main.c:709
 msgid ""
@@ -2007,7 +2005,7 @@ msgstr "Försök med \"svn revert --recursive\" istället?"
 #: clients/cmdline/status.c:261
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
-msgstr "\"%s\" har lås-token, men ingen låsägare"
+msgstr "\"%s\" har låsidentifierare, men ingen låsägare"
 
 #: clients/cmdline/switch-cmd.c:58
 #, c-format
@@ -4673,7 +4671,7 @@ msgid ""
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
 "Protokollfel: MERGE-responsen för resursen \"%s\" returnerade inte alla\n"
-"egenskaper vi bad om (och behöver för att slutföra incheckningen)"
+"egenskaper vi bad om (och behöver för att slutföra arkiveringen)"
 
 #: libsvn_ra_dav/merge.c:260
 #, c-format
@@ -5276,14 +5274,14 @@ msgid "Can't create pipe for hook '%s'"
 msgstr "Kan inte skapa rör för hookskriptet \"%s\""
 
 #: libsvn_repos/hooks.c:78
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
-msgstr "Kan inte skapa rör för hookskriptet \"%s\""
+msgstr "Kan inte slå av arv på läshandtag för rör för hookskriptet \"%s\""
 
 #: libsvn_repos/hooks.c:84
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
-msgstr "Kan inte skapa rör för hookskriptet \"%s\""
+msgstr "Kan inte slå av arv på skrivhandtag för rör för hookskriptet \"%s\""
 
 #: libsvn_repos/hooks.c:93
 #, c-format
@@ -6071,7 +6069,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:747
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -6079,7 +6076,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2005 CollabNet.\n"
+"Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion är Open Source-programvara; se http://subversion.tigris.org/.\n"
 "Denna produkt innehåller programvara som är utvecklad av CollabNet\n"
 "(http://www.Collab.Net/).\n"
@@ -7479,7 +7476,7 @@ msgstr "Detta är en tom revision för att fylla ut."
 #: svndumpfilter/main.c:389
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
-msgstr "Revision %ld incheckad som %ld.\n"
+msgstr "Revision %ld arkiverad som %ld.\n"
 
 #: svndumpfilter/main.c:412
 #, c-format
@@ -8029,8 +8026,8 @@ msgstr "serverns rotkatalog"
 #: svnserve/main.c:116
 msgid "force read only, overriding repository config file"
 msgstr ""
-"tillåt endast läsning; överskuggar värdet i arkivets\n"
-"                             konfigurationsfil"
+"tillåt endast läsning; överskuggar värdet i\n"
+"                             arkivets konfigurationsfil"
 
 #: svnserve/main.c:117
 msgid "tunnel mode"
