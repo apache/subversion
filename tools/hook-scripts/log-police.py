@@ -49,6 +49,27 @@ def fix_rev(fs, revnum):
       svn.fs.svn_fs_change_rev_prop(fs, revnum, "svn:log", new_message)
 
 
+def usage_and_exit(error_msg=None):
+  """Write usage information and exit.  If ERROR_MSG is provide, that
+  error message is printed first (to stderr), the usage info goes to
+  stderr, and the script exits with a non-zero status.  Otherwise,
+  usage info goes to stdout and the script exits with a zero status."""
+  import os.path
+  stream = error_msg and sys.stderr or sys.stdout
+  if error_msg:
+    stream.write("ERROR: %s\n\n" % error_msg)
+  stream.write("USAGE: %s [-t TXN_NAME | -r REV_NUM | --all-revs] REPOS\n"
+               % (os.path.basename(sys.argv[0])))
+  stream.write("""
+Ensure that log messages end with exactly one newline and no other
+whitespace characters.  Use as a pre-commit hook by passing '-t TXN_NAME';
+fix up a single revision by passing '-r REV_NUM'; fix up all revisions by
+passing '--all-revs'.  (When used as a pre-commit hook, may modify the
+svn:log property on the txn.)
+""")
+  sys.exit(error_msg and 1 or 0)
+
+
 def main(ignored_pool, argv):
   repos_path = None
   txn_name = None
@@ -58,13 +79,10 @@ def main(ignored_pool, argv):
   try:
     opts, args = getopt.getopt(argv[1:], 't:r:h?', ["help", "all-revs"])
   except:
-    sys.stderr.write("ERROR: problem processing arguments / options.\n\n")
-    usage(sys.stderr)
-    sys.exit(1)
+    usage_and_exit("problem processing arguments / options.")
   for opt, value in opts:
     if opt == '--help' or opt == '-h' or opt == '-?':
-      usage()
-      sys.exit(0)
+      usage_and_exit()
     elif opt == '-t':
       txn_name = value
     elif opt == '-r':
@@ -72,35 +90,20 @@ def main(ignored_pool, argv):
     elif opt == '--all-revs':
       all_revs = True
     else:
-      sys.stderr.write("ERROR: unknown option '%s'.\n\n" % opt)
-      usage(sys.stderr)
-      sys.exit(1)
+      usage_and_exit("unknown option '%s'." % opt)
 
   if txn_name is not None and rev_name is not None:
-    sys.stderr.write("ERROR: Cannot pass both -t and -r.\n\n")
-    usage(sys.stderr)
-    sys.exit(1)
-
+    usage_and_exit("cannot pass both -t and -r.")
   if txn_name is not None and all_revs:
-    sys.stderr.write("ERROR: Cannot pass --all-revs with -t.\n\n")
-    usage(sys.stderr)
-    sys.exit(1)
-
+    usage_and_exit("cannot pass --all-revs with -t.")
   if rev_name is not None and all_revs:
-    sys.stderr.write("ERROR: Cannot pass --all-revs with -r.\n\n")
-    usage(sys.stderr)
-    sys.exit(1)
-
+    usage_and_exit("cannot pass --all-revs with -r.")
   if rev_name is None and txn_name is None and not all_revs:
-    usage(sys.stderr)
-    sys.exit(1)
-
+    usage_and_exit("must provide exactly one of -r, -t, or --all-revs.")
   if len(args) != 1:
-    sys.stderr.write("ERROR: only one argument allowed (the repository).\n\n")
-    usage(sys.stderr)
-    sys.exit(1)
+    usage_and_exit("only one argument allowed (the repository).")
     
-  repos_path = args[0]
+  repos_path = svn.core.svn_path_canonicalize(args[0])
 
   # A non-bindings version of this could be implemented by calling out
   # to 'svnlook getlog' and 'svnadmin setlog'.  However, using the
@@ -123,18 +126,6 @@ def main(ignored_pool, argv):
         last_youngest = youngest + 1
       else:
         break
-
-
-def usage(outfile=sys.stdout):
-  outfile.write("USAGE: %s [-t TXN_NAME | -r REV_NUM | --all-revs] REPOS\n"
-                % (sys.argv[0]))
-  outfile.write(
-    "\n"
-    "Ensure that log messages end with exactly one newline and no\n"
-    "other whitespace characters.  Use as a pre-commit hook by passing\n"
-    "'-t TXN_NAME'; fix up a single revision by passing '-r REV_NUM';\n"
-    "fix up all revisions by passing '--all-revs'.  (When used as a\n"
-    "pre-commit hook, may modify the svn:log property on the txn.)\n")
 
 
 if __name__ == '__main__':
