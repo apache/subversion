@@ -1,5 +1,5 @@
 # Norwegian Bokmål translations for the subversion package
-# Copyright (C) 2004–2005 Collab Net.
+# Copyright (C) 2004–2006 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 # Dictionary:
@@ -7,6 +7,7 @@
 # '' - «»
 # allocate - reservere
 # ancestor - opprinnelse
+# argument - argument
 # bump - øke
 # cached - lagrede
 # checkout - hente ut, uthenting
@@ -19,6 +20,7 @@
 # destination - mål
 # directory - katalog
 # entry - post
+# file handle - filreferanse
 # hook - påhakning
 # item - element
 # lock token - låsnøkkel
@@ -58,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-03-07 09:46+0100\n"
-"PO-Revision-Date: 2005-09-22 22:31+0200\n"
+"PO-Revision-Date: 2006-03-07 09:51+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5242,14 +5244,18 @@ msgid "Can't create pipe for hook '%s'"
 msgstr "Kan ikke opprette rør for påhakning «%s»"
 
 #: libsvn_repos/hooks.c:78
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
-msgstr "Kan ikke opprette rør for påhakning «%s»"
+msgstr ""
+"Kan ikke få røret til å bruke ubeslektet lesing fra filreferanse\n"
+"for påhakning «%s»"
 
 #: libsvn_repos/hooks.c:84
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
-msgstr "Kan ikke opprette rør for påhakning «%s»"
+msgstr ""
+"Kan ikke få røret til å bruke ubeslektet skriving til filreferanse\n"
+"for påhakning «%s»"
 
 #: libsvn_repos/hooks.c:93
 #, c-format
@@ -6042,7 +6048,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:747
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -6050,7 +6055,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Opphavsrettighet (C) 2000-2005 CollabNet.\n"
+"Opphavsrettighet (C) 2000-2006 CollabNet.\n"
 "Programvaren Subversion er åpen kildekode, se http://subversion.tigris.org/\n"
 "Dette produktet inneholder programvare laget av CollabNet (http://www.Collab."
 "Net/).\n"
@@ -8144,6 +8149,21 @@ msgstr "eksportert%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
 
+#~ msgid "Unable to parse lock data"
+#~ msgstr "Klarte ikke å tolke låsedata"
+
+#~ msgid "Creating readme file"
+#~ msgstr "Lager readme-fil"
+
+#~ msgid "Move failed"
+#~ msgstr "Flytting feilet"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "Node med droppet forelder sneket inn"
+
+#~ msgid "Can't set timeout"
+#~ msgstr "Kan ikke sette tidsavbrudd"
+
 #~ msgid ""
 #~ "Warning: -R is deprecated.\n"
 #~ "Anonymous access is now read-only by default.\n"
@@ -8160,18 +8180,3 @@ msgstr "«%s» er verken versjonert eller eksportert\n"
 #~ "  anon-access = read|write|none (standard: read)\n"
 #~ "  auth-access = read|write|none (standard: write)\n"
 #~ "Setter all tilgang til skrivebeskyttet i denne omgang\n"
-
-#~ msgid "Can't set timeout"
-#~ msgstr "Kan ikke sette tidsavbrudd"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "Node med droppet forelder sneket inn"
-
-#~ msgid "Move failed"
-#~ msgstr "Flytting feilet"
-
-#~ msgid "Creating readme file"
-#~ msgstr "Lager readme-fil"
-
-#~ msgid "Unable to parse lock data"
-#~ msgstr "Klarte ikke å tolke låsedata"
