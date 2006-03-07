@@ -1,0 +1,171 @@
+                       Merge-Tracking in Subversion
+                       ============================
+
+These notes try to break apart the various sub-problems of
+"merge-tracking".  People can mean a whole lot of different things
+when they utter that phrase, so this is an attempt to describe various
+aspects.
+
+This is NOT a design document.  It offers no solutions or proposals.
+It's just a place to enumerate potential problems that need solving.
+
+* Some thoughts about what "merge tracking" means.
+
+  - If you merge rN into some destination (e.g., into branch B), it
+    should be possible to query rN itself to ask what destinations it
+    has been merged to, and the answer set should contain B.
+
+  - If you merge rN into a branch B, and rN was committed by author A,
+    then 'svn blame' should show the changed lines in B as last
+    touched by A, even if the merge was committed by you and you are
+    not A.  (Hmm, this gets tough to implement when one merges a range
+    of revisions simultaneously!)
+
+  - It should be possible to query any path (file or directory) to
+    find out what changes (revisions) have been merged under it.  For
+    files, "under" just means "into".
+
+  - It should be easy to discover all the paths at which a particular
+    node revision (i.e., unique versioned file entity) exists,
+    especially in a given revision.  IOW, this is the "what branches
+    does this exact version of this file exist in" problem, often
+    requested by so-called enterprise-level users.
+
+  - Merge records should be transitive.  Often we merge a bunch of
+    changes to a backport branch, tweak them there, then later merge
+    the branch into a release line.  Later queries of the release line
+    should show that the original revisions are present, and queries
+    of the original revisions should show that they went to the
+    release line as well as the backport branch.
+
+* Repeated Merge
+
+  Solve the "repeated merge" problem at the level of whole changesets.
+
+  Track which changesets have been applied where, so users can
+  repeatedly merge branchA to branchB without having to remember the
+  last range of revisions ported.  This would also track "changeset
+  cherry-picking" done by users, so we don't accidentally re-merge
+  changesets that are already applied.
+
+  This is the problem that svk and arch claim to have already solved,
+  what they're calling "star-merge".  Need to investigate how they're
+  doing it, might be a good precedent to imitate.
+
+* Ancestry-Sensitive Line-Based Merge
+
+  Make 'hunks' of contextually-merged text sensitive to ancestry.
+
+  This is like a high-resolution version of "Repeated Merge".  Rather
+  than tracking whole changesets, we track the lineage of specific
+  lines of code within a file.  The basic idea is that when re-merging
+  a particular hunk of code, the contextual-merging process is aware
+  that certain lines of code already represent the merging of
+  particular lines of development.  Jack Repenning has a great example
+  of this from Clearcase, which we can draw in this space.  See
+  diagram at the bottom for an explanation.
+
+  See ../www/variance-adjusted-patching.html for an extended
+  discussion of how to implement this by composing diffs; see
+  svn_diff_diff4() for an implementation of same.  We may be closer to
+  ancestry-sensitive merging than we think.
+
+* Track Renames in Merge
+
+  'svn merge' needs to track renames better.  
+
+  (Actually, Subversion in general needs to track renames better.  See
+  http://subversion.tigris.org/issues/show_bug.cgi?id=898.)
+
+  Edit foo.c on branchA.  Rename foo.c to bar.c on branchB.
+
+  1. Try merging the branchA edit into a working copy of branchB:
+     'svn merge' will skip the file, because it can't find it.
+
+  2. Conversely, try merging branchB rename to branchA: 'svn merge'
+     will delete the 'newer' version of foo.c and add bar.c, which has
+     the older text.
+
+  Problem #2 stems from the fact that we don't have true renames, just
+  copies and deletes.  That's not fixable without an fs schema change
+  and (probably) a libsvn_wc rewrite.
+
+  It's not clear what it would take to solve problem #1.
+
+  See http://www.contactor.se/~dast/svn/archive-2004-07/0084.shtml
+  about our rename woes and the relationship to merge tracking.
+
+* Play Well With Dump/Load.
+
+  Whatever solution is chosen must play well with 'svnadmin dump' and
+  'svnadmin load'.  For example, the metadata used to store merge
+  tracking history must not be stored in terms of some filesystem
+  backend implementation detail (like "node-revision-ids") unless,
+  perhaps, those IDs are present for all items in the dump as a sort
+  of "soft data" (which would allow them to be used for "translating"
+  the merge tracking data at load time, where those IDs would be
+  otherwise irrelevant).  See
+  http://subversion.tigris.org/issues/show_bug.cgi?id=1525
+  about user-visible entity IDs.
+    
+-*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
+Here's an example of "Ancestry-Sensitive Line-Based Merge" above,
+demonstrating how individual lines of code can be tracked.
+
+In this diagram, we're drawing the lineage of a single file, with time
+flowing downwards.  The file begins life with three lines of text,
+"1\n2\n\3\n".  The file then splits into two lines of development.
+                                 
+                          
+                    1     
+                    2     
+                    3     
+                  /   \   
+                 /     \  
+                /       \ 
+            one           1   
+            two           2.5 
+            three         3   
+             |     \      |
+             |      \     |   
+             |       \    |            
+             |        \   |            
+             |         \ one                ## This node is a human's
+             |           two-point-five     ## merge of two sides.
+             |           three        
+             |            |
+             |            |
+             |            |
+            one          one
+            Two          two-point-five
+            three        newline       
+               \         three  
+                \         |   
+                 \        |
+                  \       |
+                   \      |
+                    \     |
+                     \    |
+                      \   |
+                       \  |
+                         one                ## This node is a human's
+                         Two-point-five     ## merge of the changes
+                         newline            ## since the last merge.
+                         three
+                              
+
+It's the second merge that's important here.  
+
+In a system like Subversion, the second merge of the left branch to
+the right will fail miserably: the whole file's contents will be
+placed within conflict markers.  That's because it's trying to dumbly
+apply a patch that changes "1\n2\n3" to "one\nTwo\nthree", and the
+target file has no matching lines at all.
+
+A smarter system (like Clearcase) would remember that the previous
+merge had happened, and specifically notice that the lines "one" and
+"three" are the results of that previous merge.  Therefore, it would
+ask the human only to deal with the "Two" versus "two-point-five"
+conflict; the earlier changes ("1\n2\n3" to "one\ntwo\nthree") would
+already be accounted for.
