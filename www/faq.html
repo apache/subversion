@@ -134,6 +134,8 @@ on Windows?</a></li>
 <li><a href="#bdb-fsfs-convert">How do I convert my repository from using BDB
 to FSFS or from FSFS to BDB?</a></li>
 <li><a href="#binary-files">How does Subversion handle binary files?</a></li>
+<li><a href="#terse-diff">How can I make <tt>svn diff</tt> show me
+    just the names of the changed files, not their contents?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -2117,6 +2119,13 @@ that works equally well on binary and text files; this is completely
 unrelated to the diffing method used by the 'svn&nbsp;diff'
 command.</p>
 
+</div>
+
+<div class="h3" id="terse-diff" title="terse-diff"><h3>How can I
+    make <tt>svn diff</tt> show me just the names of the changed
+    files, not their contents?</h3>
+<tt>svn diff</tt> doesn't have an option to do this, but <tt>svn log
+  -vq</tt> does exactly what you want.
 </div>
 
 <![CDATA[=========================================================]]>
