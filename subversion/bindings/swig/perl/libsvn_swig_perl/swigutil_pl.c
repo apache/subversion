@@ -1120,6 +1120,37 @@ svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
     return ret_val;
 }
 
+/* Thunked version of svn_client_info_t callback type. */
+svn_error_t *svn_swig_pl_info_receiver(void *baton,
+                                       const char *path,
+                                       const svn_info_t *info,
+                                       apr_pool_t *pool)
+{
+    SV *result;
+    svn_error_t *ret_val;
+    swig_type_info *infoinfo = _SWIG_TYPE("svn_info_t *");
+
+    if (!SvOK((SV *)baton))
+        return;
+   
+    svn_swig_pl_callback_thunk(CALL_SV, baton, &result, "sSS", path, info,
+                               infoinfo, pool, POOLINFO); 
+
+    if (sv_derived_from(result, "_p_svn_error_t")) {
+        swig_type_info *errorinfo = _SWIG_TYPE("svn_error_t *");
+        if (SWIG_ConvertPtr(result, (void *)&ret_val, errorinfo, 0) < 0) {
+            SvREFCNT_dec(result);
+            croak("Unable to convert from SWIG Type");
+        }
+    }
+    else
+        ret_val = SVN_NO_ERROR;
+    
+    SvREFCNT_dec(result);
+    return ret_val;
+}
+
+
 /* Thunked version of svn_wc_cancel_func_t callback type. */
 svn_error_t *svn_swig_pl_cancel_func(void *cancel_baton) {
     SV *result;

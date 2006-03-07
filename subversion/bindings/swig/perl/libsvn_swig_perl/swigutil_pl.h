@@ -194,6 +194,12 @@ svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
                                              void *baton,
                                              apr_pool_t *pool);
 
+/* Thunked version of svn_client_info_t callback type. */
+svn_error_t *svn_swig_pl_info_receiver(void *baton,
+                                       const char *path,
+                                       const svn_info_t *info,
+                                       apr_pool_t *pool);
+
 /* Thunked version of svn_wc_cancel_func_t callback type. */
 svn_error_t *svn_swig_pl_cancel_func(void *cancel_baton);
 
