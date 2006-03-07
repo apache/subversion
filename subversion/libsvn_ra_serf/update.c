@@ -319,11 +319,8 @@ static void push_state(report_context_t *ctx, report_state_e state)
                                         sizeof(*new_state->info->dir));
       new_state->info->dir->pool = new_state->info->pool;
 
-      new_state->info->dir->propfind = NULL;
-
       /* Create the root property tree. */
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
-      new_state->info->dir->ns_list = NULL;
 
       /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
@@ -343,8 +340,6 @@ static void push_state(report_context_t *ctx, report_state_e state)
       new_state->info->dir->pool = new_state->info->pool;
       new_state->info->dir->parent_dir = ctx->state->info->dir;
       new_state->info->dir->parent_dir->ref_count++;
-
-      new_state->info->dir->propfind = NULL;
 
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
 
@@ -488,7 +483,8 @@ open_dir(report_dir_t *dir)
       dir->name = dir->name_buf->data;
 
       SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
-                                            dir->pool, &dir->dir_baton));
+                                            dir->dir_baton_pool,
+                                            &dir->dir_baton));
     }
   else
     {
@@ -1443,6 +1439,7 @@ finish_report(void *report_baton,
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
+  svn_boolean_t closed_root;
   int i;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
@@ -1508,6 +1505,7 @@ finish_report(void *report_baton,
   }
 
   sess->cur_conn = 1;
+  closed_root = FALSE;
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
@@ -1560,15 +1558,19 @@ finish_report(void *report_baton,
             {
               do
                 {
+                  SVN_ERR(close_dir(cur_dir));
                   if (cur_dir->parent_dir)
                     {
                       cur_dir->parent_dir->ref_count--;
                     }
-                  SVN_ERR(close_dir(cur_dir));
+                  else
+                    {
+                      closed_root = TRUE;
+                    }
                   cur_dir = cur_dir->parent_dir;
                 }
-              while (cur_dir && !cur_dir->ref_count && cur_dir->propfind &&
-                     is_propfind_done(cur_dir->propfind));
+              while (cur_dir && !cur_dir->ref_count && 
+                     cur_dir->propfind && is_propfind_done(cur_dir->propfind));
             }
         }
       report->done_fetches = NULL;
@@ -1577,19 +1579,10 @@ finish_report(void *report_baton,
       serf_debug__closed_conn(sess->bkt_alloc);
     }
 
-  /* This is a funky edge case, but it makes sense:
-   * We could have empty directories, so we need to close them.
-   */
-  if (report->root_dir->ref_count)
+  /* Ensure that we opened and closed our root dir and that we closed
+   * all of our children. */
+  if (closed_root == FALSE)
     {
-      report_dir_t *child;
-
-      /* If we don't have a child dir, something went horribly wrong. */
-      if (!report->root_dir->children)
-        {
-          abort();
-        }
-
       close_all_dirs(report->root_dir);
     }
 
