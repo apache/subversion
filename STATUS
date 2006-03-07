@@ -116,6 +116,14 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r18462, r18482
+    Branch: TBD (space-reformatting happened *between* these revisions:-)
+    Fix issue #2398: assert in copy_helper of both FS backends.
+    Justification:
+      Leads to server crashes.
+    Votes:
+      +0: lundblad
+
 Approved changes:
 
   * r18254
