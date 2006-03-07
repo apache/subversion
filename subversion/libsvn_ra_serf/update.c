@@ -102,6 +102,12 @@ typedef struct report_dir_t
   /* The propfind request for our current directory */
   propfind_context_t *propfind;
 
+  /* Has the server told us to fetch the dir props? */
+  svn_boolean_t fetch_props;
+
+  /* Have we closed the directory tag (meaning no more additions)? */
+  svn_boolean_t tag_closed;
+
   /* The children of this directory  */
   struct report_dir_t *children;
 
@@ -146,6 +152,9 @@ typedef struct report_info_t
 
   /* our delta base, if present (NULL if we're adding the file) */
   const svn_string_t *delta_base;
+
+  /* Has the server told us to fetch the file props? */
+  svn_boolean_t fetch_props;
 
   /* pool passed to update->add_file, etc. */
   apr_pool_t *editor_pool;
@@ -852,17 +861,19 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   info->url = checked_in_url;
 
-  /* First, create the PROPFIND to retrieve the properties. */
-  deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
-                info->url, SVN_INVALID_REVNUM, "0", all_props,
-                FALSE, &ctx->done_propfinds, info->dir->pool);
-
-  if (!prop_ctx)
+  /* If needed, create the PROPFIND to retrieve the file's properties. */
+  if (info->fetch_props)
     {
-      abort();
-    }
+      deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
+                    info->url, SVN_INVALID_REVNUM, "0", all_props,
+                    FALSE, &ctx->done_propfinds, info->dir->pool);
+      if (!prop_ctx)
+        {
+          abort();
+        }
 
-  ctx->active_propfinds++;
+      ctx->active_propfinds++;
+    }
 
   /* Create the fetch context. */
   fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
@@ -948,6 +959,7 @@ start_report(void *userData, const char *name, const char **attrs)
 
       info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
+      info->fetch_props = TRUE;
 
       info->dir->base_name = "";
       info->dir->name = NULL;
@@ -987,6 +999,7 @@ start_report(void *userData, const char *name, const char **attrs)
 
       info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
+      info->fetch_props = FALSE;
 
       info->dir->base_name = apr_pstrdup(info->dir->pool, dirname);
       info->dir->name = NULL;
@@ -1015,6 +1028,7 @@ start_report(void *userData, const char *name, const char **attrs)
       /* Mark that we don't have a base. */
       ctx->state->info->base_rev = SVN_INVALID_REVNUM;
       dir_info->base_rev = ctx->state->info->base_rev;
+      dir_info->fetch_props = TRUE;
     }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "open-file") == 0)
@@ -1041,6 +1055,7 @@ start_report(void *userData, const char *name, const char **attrs)
       info = ctx->state->info;
 
       info->base_rev = apr_atoi64(rev);
+      info->fetch_props = FALSE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
@@ -1063,6 +1078,7 @@ start_report(void *userData, const char *name, const char **attrs)
       info = ctx->state->info;
 
       info->base_rev = SVN_INVALID_REVNUM;
+      info->fetch_props = TRUE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
@@ -1119,7 +1135,7 @@ start_report(void *userData, const char *name, const char **attrs)
         }
       else if (strcmp(prop_name.name, "fetch-props") == 0)
         {
-          /* do nothing */
+          ctx->state->info->dir->fetch_props = TRUE;
         }
       else
         {
@@ -1141,6 +1157,10 @@ start_report(void *userData, const char *name, const char **attrs)
         {
           /* need to fetch it. */
           push_state(ctx, NEED_PROP_NAME);
+        }
+      else if (strcmp(prop_name.name, "fetch-props") == 0)
+        {
+          ctx->state->info->fetch_props = TRUE;
         }
     }
   else if (ctx->state->state == IGNORE_PROP_NAME)
@@ -1176,12 +1196,11 @@ end_report(void *userData, const char *raw_name)
        (ctx->state->state == ADD_DIR &&
         (strcmp(name.name, "add-directory") == 0))))
     {
-      /* At this point, we should have the checked-in href.
-       * We need to go do a PROPFIND to get the dir props.
-       */
-      propfind_context_t *prop_ctx = NULL;
       const char *checked_in_url;
       report_info_t *info = ctx->state->info;
+
+      /* We've now closed this directory; note it. */
+      info->dir->tag_closed = TRUE;
 
       /* go fetch info->file_name from DAV:checked-in */
       checked_in_url = get_prop(info->dir->props, info->base_name,
@@ -1194,25 +1213,36 @@ end_report(void *userData, const char *raw_name)
 
       info->dir->url = checked_in_url;
 
-      /* First, create the PROPFIND to retrieve the properties. */
-      deliver_props(&prop_ctx, info->dir->props, ctx->sess,
-                    ctx->sess->conns[ctx->sess->cur_conn],
-                    info->dir->url, SVN_INVALID_REVNUM,
-                    "0", all_props, FALSE, &ctx->done_propfinds,
-                    info->dir->pool);
-
-      if (!prop_ctx)
+      /* At this point, we should have the checked-in href.
+       * If needed, create the PROPFIND to retrieve the dir's properties.
+       */
+      if (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props)
         {
-          abort();
+          /* Unconditionally set fetch_props now. */
+          info->dir->fetch_props = TRUE;
+
+          deliver_props(&info->dir->propfind, info->dir->props, ctx->sess,
+                        ctx->sess->conns[ctx->sess->cur_conn],
+                        info->dir->url, SVN_INVALID_REVNUM,
+                        "0", all_props, FALSE, &ctx->done_propfinds,
+                        info->dir->pool);
+
+          if (!info->dir->propfind)
+            {
+              abort();
+            }
+
+          ctx->active_propfinds++;
         }
-
-      ctx->active_propfinds++;
-
-      info->dir->propfind = prop_ctx;
+      else
+        {
+          info->dir->propfind = NULL;
+        }
 
       pop_state(ctx);
     }
-  else if (ctx->state->state == OPEN_FILE)
+  else if (ctx->state->state == OPEN_FILE &&
+           strcmp(name.name, "open-file") == 0)
     {
       report_info_t *info = ctx->state->info;
 
@@ -1241,7 +1271,8 @@ end_report(void *userData, const char *raw_name)
       fetch_file(ctx, info);
       pop_state(ctx);
     }
-  else if (ctx->state->state == ADD_FILE)
+  else if (ctx->state->state == ADD_FILE &&
+           strcmp(name.name, "add-file") == 0)
     {
       /* We should have everything we need to fetch the file. */
       fetch_file(ctx, ctx->state->info);
@@ -1550,27 +1581,27 @@ finish_report(void *report_baton,
 
           done_list = done_list->next;
 
-          /* If our parent has no remaining children and it is not possible
-           * for us to add more, it's time for us to close this dir.
+          /* If we have a valid directory and
+           * we have no open items in this dir and
+           * we've closed the directory tag (no more children can be added)
+           * and either:
+           *   we know we won't be fetching props or
+           *   we've already completed the propfind
+           * then, we know it's time for us to close this directory.
            */
-          if (!cur_dir->ref_count &&
-              cur_dir->propfind && is_propfind_done(cur_dir->propfind))
+          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed &&
+                 (!cur_dir->fetch_props || is_propfind_done(cur_dir->propfind)))
             {
-              do
+              SVN_ERR(close_dir(cur_dir));
+              if (cur_dir->parent_dir)
                 {
-                  SVN_ERR(close_dir(cur_dir));
-                  if (cur_dir->parent_dir)
-                    {
-                      cur_dir->parent_dir->ref_count--;
-                    }
-                  else
-                    {
-                      closed_root = TRUE;
-                    }
-                  cur_dir = cur_dir->parent_dir;
+                  cur_dir->parent_dir->ref_count--;
                 }
-              while (cur_dir && !cur_dir->ref_count && 
-                     cur_dir->propfind && is_propfind_done(cur_dir->propfind));
+              else
+                {
+                  closed_root = TRUE;
+                }
+              cur_dir = cur_dir->parent_dir;
             }
         }
       report->done_fetches = NULL;
