@@ -495,6 +495,11 @@ walk_all_props(apr_hash_t *props,
 
   path_props = apr_hash_get(ver_props, name, strlen(name));
 
+  if (!path_props)
+    {
+      return;
+    }
+
   for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
        ns_hi = apr_hash_next(ns_hi))
     {
