@@ -179,3 +179,8 @@ TODO (LIKELY INCOMPLETE)
 
     * Make sure that code that reads copy types doesn't assume that
       !soft-copy == copy (because there are now two more copy types).
+
+    * Does examine_copy_inheritance need to know about the same move
+      id stuff that get_copy_inheritance does?  It feels like it
+      should based on what kind of questions it's asking, but I'm
+      still finding my way around this stuff.
