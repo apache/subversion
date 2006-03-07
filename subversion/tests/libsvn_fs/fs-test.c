@@ -4466,6 +4466,79 @@ move_test(const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Confirm that HISTORY's current location matches EXPECTED_PATH and
+ * EXPECTED_REV, using POOL for alloation. */
+static svn_error_t *
+check_path_and_rev(svn_fs_history_t *history,
+                   const char *expected_path,
+                   svn_revnum_t expected_rev,
+                   apr_pool_t *pool)
+{
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  const char *path = NULL;
+
+  if (! history)
+    return svn_error_create(APR_EINVAL, NULL, "Got null history");
+
+  SVN_ERR(svn_fs_history_location(&path, &rev, history, pool));
+
+  if (strcmp(path, expected_path) != 0 || rev != expected_rev)
+    return svn_error_createf(APR_EINVAL, NULL,
+                             "Got '%s':'%ld' expected '%s':'%ld'\n",
+                             path, rev, expected_path, expected_rev);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_history_test(const char **msg,
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t after_rev;
+  svn_fs_history_t *history;
+
+  *msg = "testing svn_fs_move and svn_fs_node_history";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-move-test", 
+                              opts->fs_type, pool));
+
+  /* Revision 1:  create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Revision 2:  move the directory A to Z. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_move(rev_root, "A", txn_root, "Z", pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Let's get us some history! */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_node_history(&history, rev_root, "Z/D", pool));
+
+  /* First history_prev call should move us to the initial interesting rev. */
+  SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+  SVN_ERR(check_path_and_rev(history, "/Z/D", 2, pool));
+
+  /* And the second should move us back through the move */
+  SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+  SVN_ERR(check_path_and_rev(history, "/A/D", 1, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4504,5 +4577,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
     SVN_TEST_PASS(move_test),
+    SVN_TEST_XFAIL(move_history_test),
     SVN_TEST_NULL
   };
