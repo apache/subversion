@@ -150,6 +150,8 @@ context_run_wait(svn_boolean_t *done,
 
   while (!*done)
     {
+      int i;
+
       status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
         {
@@ -161,6 +163,10 @@ context_run_wait(svn_boolean_t *done,
         }
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
+      for (i = 0; i < sess->num_conns; i++)
+        {
+         serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
+        }
     }
 
   return SVN_NO_ERROR;
