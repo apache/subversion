@@ -343,19 +343,40 @@ handle_xml_parser(serf_request_t *request,
   enum XML_Status xml_status;
   ra_serf_xml_parser_t *ctx = baton;
 
+  serf_bucket_response_status(response, &sl);
+
+  if (ctx->status_code)
+    {
+      *ctx->status_code = sl.code;
+    }
+
+  /* Woo-hoo.  Nothing here to see.  */
+  if (sl.code == 404)
+    {
+      /* If our caller won't know about the 404, abort() for now. */
+      if (!ctx->status_code)
+        {
+          abort();
+        }
+      if (*ctx->done == FALSE)
+        {
+          *ctx->done = TRUE;
+          if (ctx->done_list)
+            {
+              ctx->done_item->data = ctx->user_data;
+              ctx->done_item->next = *ctx->done_list;
+              *ctx->done_list = ctx->done_item;
+            }
+        }
+      return handler_discard_body(request, response, NULL, pool);
+    }
+
   if (!ctx->xmlp)
     {
       ctx->xmlp = XML_ParserCreate(NULL);
       XML_SetUserData(ctx->xmlp, ctx->user_data);
       XML_SetElementHandler(ctx->xmlp, ctx->start, ctx->end);
       XML_SetCharacterDataHandler(ctx->xmlp, ctx->cdata);
-    }
-
-  if (ctx->status_code)
-    {
-      serf_status_line sl;
-      serf_bucket_response_status(response, &sl);
-      *ctx->status_code = sl.code;
     }
 
   while (1)
