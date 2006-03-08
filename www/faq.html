@@ -2121,9 +2121,10 @@ command.</p>
 
 </div>
 
-<div class="h3" id="terse-diff" title="terse-diff"><h3>How can I
-    make <tt>svn diff</tt> show me just the names of the changed
-    files, not their contents?</h3>
+<div class="h3" id="terse-diff" title="terse-diff">
+<h3>How can I make <tt>svn diff</tt> show me just the names of the
+changed files, not their contents?</h3>
+<p>
 <tt>svn diff</tt> doesn't have an option to do this, but 
 <ul>
 <li>
@@ -2136,6 +2137,7 @@ command.</p>
   <pre>
     svn log -vq -r123:456 working-copy | egrep '^ +M' | awk '{print $2}' | sort | uniq </pre> </li>
 </ul>
+</p>
 </div>
 
 <![CDATA[=========================================================]]>
