@@ -182,6 +182,10 @@ svn_client__get_auto_props (apr_hash_t **properties,
                       svn_string_create (autoprops.mimetype, pool));
     }
 
+  /* Don't automatically set the svn:executable property on added items
+   * on OS400.  While OS400 supports the executable permission its use is
+   * inconsistent at best. */
+#ifndef AS400
   /* if executable has not been set check the file */
   if (! autoprops.have_executable)
     {
@@ -192,6 +196,7 @@ svn_client__get_auto_props (apr_hash_t **properties,
                       strlen (SVN_PROP_EXECUTABLE), 
                       svn_string_create ("", pool));
     }
+#endif
 
   *mimetype = autoprops.mimetype;
   return SVN_NO_ERROR;
