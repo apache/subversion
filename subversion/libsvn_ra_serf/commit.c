@@ -80,6 +80,25 @@ typedef struct {
   serf_response_handler_t handler;
 } checkout_context_t;
 
+/* Structure associated with a PROPPATCH request. */
+typedef struct {
+  apr_pool_t *pool;
+
+  ra_serf_session_t *session;
+  ra_serf_connection_t *conn;
+
+  const char *path;
+
+  apr_hash_t *props;
+
+  int status;
+
+  svn_boolean_t done;
+
+  serf_response_acceptor_t acceptor;
+  void *acceptor_baton;
+  serf_response_handler_t handler;
+} proppatch_context_t;
 
 /* Structure associated with a DELETE/HEAD/etc request. */
 typedef struct {
@@ -411,6 +430,112 @@ checkout_dir(dir_context_t *dir)
   return SVN_NO_ERROR;
 }
 
+static void proppatch_walker(void *baton,
+                             const void *ns, apr_ssize_t ns_len,
+                             const void *name, apr_ssize_t name_len,
+                             void *val,
+                             apr_pool_t *pool)
+{
+  serf_bucket_t *body_bkt = baton;
+  serf_bucket_t *tmp_bkt;
+  serf_bucket_alloc_t *alloc;
+
+  alloc = body_bkt->allocator;
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:prop><",
+                                          sizeof("<D:prop><") - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(name, name_len, alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(" xmlns=\"",
+                                          sizeof(" xmlns=\"") - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(ns, ns_len, alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
+                                          sizeof("\">") - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING((char*)val, alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</",
+                                          sizeof("</") - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(name, name_len, alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("></D:prop>",
+                                          sizeof("></D:prop>") - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+}
+
+#define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:propertyupdate xmlns:D=\"DAV:\"><D:set>"
+  
+#define PROPPATCH_TRAILER "</D:set></D:propertyupdate>"
+
+static apr_status_t
+setup_proppatch(serf_request_t *request,
+                void *setup_baton,
+                serf_bucket_t **req_bkt,
+                serf_response_acceptor_t *acceptor,
+                void **acceptor_baton,
+                serf_response_handler_t *handler,
+                void **handler_baton,
+                apr_pool_t *pool)
+{
+  proppatch_context_t *ctx = setup_baton;
+  serf_bucket_t *body_bkt, *tmp_bkt;
+  serf_bucket_alloc_t *alloc;
+
+  alloc = serf_request_get_alloc(request);
+
+  body_bkt = serf_bucket_aggregate_create(alloc);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(PROPPATCH_HEADER,
+                                          sizeof(PROPPATCH_HEADER) - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  walk_all_props(ctx->props, ctx->path, SVN_INVALID_REVNUM,
+                 proppatch_walker, body_bkt, pool);
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(PROPPATCH_TRAILER,
+                                          sizeof(PROPPATCH_TRAILER) - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  setup_serf_req(request, req_bkt, NULL, ctx->conn,
+                 "PROPPATCH", ctx->path, body_bkt, "text/xml");
+
+  *handler = ctx->handler;
+  *handler_baton = ctx;
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t
+handle_proppatch(serf_request_t *request,
+                 serf_bucket_t *response,
+                 void *handler_baton,
+                 apr_pool_t *pool)
+{
+  proppatch_context_t *ctx = handler_baton;
+  apr_status_t status;
+
+  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
+}
+
 static apr_status_t
 setup_put(serf_request_t *request,
           void *setup_baton,
@@ -589,6 +714,7 @@ open_root(void *edit_baton,
   options_context_t *opt_ctx;
   mkactivity_context_t *mkact_ctx;
   checkout_context_t *checkout_ctx;
+  proppatch_context_t *proppatch_ctx;
   dir_context_t *dir;
   const char *activity_str;
   const char *vcc_url, *version_name;
@@ -687,8 +813,26 @@ open_root(void *edit_baton,
   /* Checkout our root dir */
   checkout_dir(dir);
 
-  /* TODO: PROPPATCH the log message on the checked-out baseline */
-  printf("PROPPATCH on %s\n", ctx->baseline->resource_url);
+  /* PROPPATCH our log message and pass it along.  */
+  proppatch_ctx = apr_pcalloc(dir_pool, sizeof(*proppatch_ctx));
+
+  proppatch_ctx->pool = dir_pool;
+  proppatch_ctx->session = dir->commit->session;
+  proppatch_ctx->conn = dir->commit->conn;
+
+  proppatch_ctx->acceptor = accept_response;
+  proppatch_ctx->acceptor_baton = dir->commit->session;
+  proppatch_ctx->handler = handle_proppatch;
+
+  proppatch_ctx->path = ctx->baseline->resource_url;
+  proppatch_ctx->props = apr_hash_make(proppatch_ctx->pool);
+
+  set_prop(proppatch_ctx->props, proppatch_ctx->path,
+           SVN_DAV_PROP_NS_SVN, "log",
+           dir->commit->log_msg, proppatch_ctx->pool);
+
+  serf_connection_request_create(proppatch_ctx->conn->conn,
+                                 setup_proppatch, proppatch_ctx);
 
   *root_baton = dir;
 
