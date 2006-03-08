@@ -355,7 +355,8 @@ recovery of ancestry information, the `representations' and `strings'
 tables together handle deltification and undeltification
 *independently* of ancestry.  At present, Subversion generally stores
 the youngest strings in "fulltext" form, and older strings as "delta"s
-against them.  However, there's nothing magic about that particular
+against them (unless the delta would save no space compared to the
+fulltext).  However, there's nothing magic about that particular
 arrangement.  Other interesting alternatives:
 
    * We could store the N most recently accessed strings as fulltexts,
