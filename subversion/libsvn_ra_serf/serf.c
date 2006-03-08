@@ -331,6 +331,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
                         apr_pool_t *pool)
 {
   ra_serf_session_t *session = ra_session->priv;
+  propfind_context_t *prop_ctx;
   apr_hash_t *props;
   const char *path, *res_type;
 
@@ -344,23 +345,32 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0], path, revision, "0",
-                         check_path_props, pool));
-  res_type = get_ver_prop(props, path, revision, "DAV:", "resourcetype");
+  prop_ctx = NULL;
+  deliver_props(&prop_ctx, props, session, session->conns[0], path, revision,
+                "0", check_path_props, TRUE, NULL, session->pool);
 
-  if (!res_type)
+  SVN_ERR(wait_for_props(prop_ctx, session, pool));
+
+  if (propfind_status_code(prop_ctx) == 404)
     {
-      /* if the file isn't there, return none; but let's abort for now. */
-      abort();
       *kind = svn_node_none;
-    }
-  else if (strcmp(res_type, "collection") == 0)
-    {
-      *kind = svn_node_dir;
     }
   else
     {
-      *kind = svn_node_file;
+      res_type = get_ver_prop(props, path, revision, "DAV:", "resourcetype");
+      if (!res_type)
+        {
+          /* How did this happen? */
+          abort();
+        }
+      else if (strcmp(res_type, "collection") == 0)
+        {
+          *kind = svn_node_dir;
+        }
+      else
+        {
+          *kind = svn_node_file;
+        }
     }
 
   return SVN_NO_ERROR;
