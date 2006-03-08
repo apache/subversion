@@ -4467,7 +4467,7 @@ move_test(const char **msg,
 }
 
 /* Confirm that HISTORY's current location matches EXPECTED_PATH and
- * EXPECTED_REV, using POOL for alloation. */
+ * EXPECTED_REV, using POOL for allocation. */
 static svn_error_t *
 check_path_and_rev(svn_fs_history_t *history,
                    const char *expected_path,
