@@ -2124,8 +2124,18 @@ command.</p>
 <div class="h3" id="terse-diff" title="terse-diff"><h3>How can I
     make <tt>svn diff</tt> show me just the names of the changed
     files, not their contents?</h3>
-<tt>svn diff</tt> doesn't have an option to do this, but <tt>svn log
-  -vq</tt> does exactly what you want.
+<tt>svn diff</tt> doesn't have an option to do this, but 
+<ul>
+<li>
+  If you only are interested in the diffs between two adjacent versions, 
+  <pre>svn log -vq -r10:11</pre> does exactly what you want;
+</li>
+<li>
+  otherwise, if you're fortunate enough to be using Unix, this works
+  for any range of versions:
+  <pre>
+    svn log -vq -r123:456 working-copy | egrep '^ +M' | awk '{print $2}' | sort | uniq </pre> </li>
+</ul>
 </div>
 
 <![CDATA[=========================================================]]>
