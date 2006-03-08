@@ -1,7 +1,7 @@
 /* fs_fs.c --- filesystem operations specific to fs_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,7 @@
 #include "svn_sorts.h"
 #include "../libsvn_delta/delta.h"
 #include "svn_utf.h"
+#include "svn_time.h"
 #include "svn_ebcdic.h"
 
 #include "fs.h"
@@ -2992,8 +2993,9 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
       SVN_ERR (svn_utf_cstring_to_utf8 (&name_len_str, name_len_str, pool));
       SVN_ERR (svn_utf_cstring_to_utf8 (&val_len_str, val_len_str, pool));
 #endif
-      svn_stream_printf (out, pool, "\x4B\x20%s\x0A%s\x0A\x56\x20%s\x0A%s\x0A",
-                         name_len_str, name, val_len_str, val);
+      SVN_ERR (svn_stream_printf (out, pool,
+                                  "\x4B\x20%s\x0A%s\x0A\x56\x20%s\x0A%s\x0A",
+                                  name_len_str, name, val_len_str, val));
       if (have_cached)
         {
           svn_fs_dirent_t *dirent;
@@ -3014,7 +3016,8 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
       SVN_ERR (svn_utf_cstring_to_utf8 (&name_len_str, name_len_str,
                                         pool));
 #endif
-      svn_stream_printf (out, pool, "\x44\x20%s\x0A%s\x0A", name_len_str, name);
+      SVN_ERR (svn_stream_printf (out, pool, "\x44\x20%s\x0A%s\x0A",
+                                  name_len_str, name));
       if (have_cached)
         apr_hash_set (ffd->dir_cache, name, APR_HASH_KEY_STRING, NULL);
     }
@@ -4220,12 +4223,12 @@ svn_fs_fs__create (svn_fs_t *fs,
   apr_uuid_format (buffer, &uuid);
   
 #if !APR_CHARSET_EBCDIC
-  svn_fs_fs__set_uuid (fs, buffer, pool);
+  SVN_ERR (svn_fs_fs__set_uuid (fs, buffer, pool));
 #else
   {
     char *buffer_utf8;
     SVN_ERR (svn_utf_cstring_to_utf8 (&buffer_utf8, buffer, pool));
-    svn_fs_fs__set_uuid (fs, buffer_utf8, pool);  
+    SVN_ERR (svn_fs_fs__set_uuid (fs, buffer_utf8, pool));  
   }
 #endif
 

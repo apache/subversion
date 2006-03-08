@@ -835,11 +835,11 @@ static item_baton *make_baton(apr_pool_t *pool,
 {
   item_baton *newb = apr_palloc(pool, sizeof(*newb));
 
-  /* one more reference to the editor. */
-  Py_INCREF(editor);
-
-  /* note: we take the caller's reference to 'baton' */
-
+  /* Note: We steal the caller's reference to 'baton'. Also, to avoid
+     memory leaks, we borrow the caller's reference to 'editor'. In this
+     case, borrowing the reference to 'editor' is safe because the contents
+     of an item_baton struct are only used by functino calls which operate on
+     the editor itself. */
   newb->editor = editor;
   newb->baton = baton;
 
@@ -873,7 +873,6 @@ static svn_error_t *close_baton(void *baton,
   /* We're now done with the baton. Since there isn't really a free, all
      we need to do is note that its objects are no longer referenced by
      the baton.  */
-  Py_DECREF(ib->editor);
   Py_XDECREF(ib->baton);
 
 #ifdef SVN_DEBUG
@@ -1281,7 +1280,6 @@ static svn_error_t *close_file(void *file_baton,
   /* We're now done with the baton. Since there isn't really a free, all
      we need to do is note that its objects are no longer referenced by
      the baton.  */
-  Py_DECREF(ib->editor);
   Py_XDECREF(ib->baton);
 
 #ifdef SVN_DEBUG
