@@ -2135,7 +2135,7 @@ changed files, not their contents?</h3>
   otherwise, if you're fortunate enough to be using Unix, this works
   for any range of versions:
   <pre>
-    svn log -vq -r123:456 working-copy | egrep '^ +M' | awk '{print $2}' | sort | uniq </pre> </li>
+    svn log -vq -r123:456 working-copy | egrep '^ +[ADM]' | awk '{print $2}' | sort | uniq </pre> </li>
 </ul>
 </p>
 </div>
