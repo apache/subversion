@@ -176,6 +176,11 @@ svn_cl__diff(apr_getopt_t *os,
         opt_state->end_revision.kind = svn_path_is_url(new_target)
           ? svn_opt_revision_head : svn_opt_revision_working;
     }
+  else if (opt_state->new_target)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("'new' option only valid with 'old' option"));
+    }
   else
     {
       svn_boolean_t working_copy_present = FALSE, url_present = FALSE;
