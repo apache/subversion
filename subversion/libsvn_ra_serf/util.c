@@ -345,6 +345,13 @@ handle_xml_parser(serf_request_t *request,
       XML_SetCharacterDataHandler(ctx->xmlp, ctx->cdata);
     }
 
+  if (ctx->status_code)
+    {
+      serf_status_line sl;
+      serf_bucket_response_status(response, &sl);
+      *ctx->status_code = sl.code;
+    }
+
   while (1)
     {
       status = serf_bucket_read(response, 8000, &data, &len);
