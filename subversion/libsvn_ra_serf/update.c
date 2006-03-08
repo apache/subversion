@@ -1608,6 +1608,10 @@ finish_report(void *report_baton,
 
       /* Debugging purposes only! */
       serf_debug__closed_conn(sess->bkt_alloc);
+      for (i = 0; i < sess->num_conns; i++)
+        {
+         serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
+        }
     }
 
   /* Ensure that we opened and closed our root dir and that we closed
