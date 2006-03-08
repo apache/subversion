@@ -402,7 +402,10 @@ expand_string(const char **cur, apr_size_t *cur_len,
 typedef struct propfind_context_t propfind_context_t;
 
 svn_boolean_t
-is_propfind_done(propfind_context_t *ctx);
+propfind_is_done(propfind_context_t *ctx);
+
+int
+propfind_status_code(propfind_context_t *ctx);
 
 /* Our PROPFIND bucket */
 serf_bucket_t * serf_bucket_propfind_create(ra_serf_connection_t *conn,

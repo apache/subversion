@@ -74,6 +74,9 @@ struct propfind_context_t {
   const char *attr_val;
   apr_size_t attr_val_len;
 
+  /* Returned status code. */
+  int status_code;
+
   /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
 
@@ -306,6 +309,7 @@ setup_propfind(serf_request_t *request,
   parser_ctx->start = start_propfind;
   parser_ctx->end = end_propfind;
   parser_ctx->cdata = cdata_propfind;
+  parser_ctx->status_code = &ctx->status_code;
   parser_ctx->done = &ctx->done;
   parser_ctx->done_list = ctx->done_list;
   parser_ctx->done_item = &ctx->done_item;
@@ -433,9 +437,15 @@ deliver_props(propfind_context_t **prop_ctx,
 }
 
 svn_boolean_t
-is_propfind_done(propfind_context_t *ctx)
+propfind_is_done(propfind_context_t *ctx)
 {
   return ctx->done;
+}
+
+int
+propfind_status_code(propfind_context_t *ctx)
+{
+  return ctx->status_code;
 }
 
 /*

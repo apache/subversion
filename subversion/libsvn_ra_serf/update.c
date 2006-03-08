@@ -1590,7 +1590,7 @@ finish_report(void *report_baton,
            * then, we know it's time for us to close this directory.
            */
           while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed &&
-                 (!cur_dir->fetch_props || is_propfind_done(cur_dir->propfind)))
+                 (!cur_dir->fetch_props || propfind_is_done(cur_dir->propfind)))
             {
               SVN_ERR(close_dir(cur_dir));
               if (cur_dir->parent_dir)
