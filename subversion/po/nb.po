@@ -59,8 +59,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-03-06 01:30+0100\n"
-"PO-Revision-Date: 2006-03-06 02:04+0100\n"
+"POT-Creation-Date: 2006-03-09 01:34+0100\n"
+"PO-Revision-Date: 2006-03-09 01:38+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1021,8 +1021,8 @@ msgstr "Objekt «%s» for innsending har kopimerke, men ingen copyfrom-URL\n"
 
 #: libsvn_client/commit_util.c:685 libsvn_client/commit_util.c:815
 #: libsvn_client/copy.c:1011 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1384 libsvn_client/diff.c:2123
-#: libsvn_client/diff.c:2793 libsvn_client/diff.c:2921
+#: libsvn_client/diff.c:1384 libsvn_client/diff.c:2111
+#: libsvn_client/diff.c:2696 libsvn_client/diff.c:2824
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:126
 #: libsvn_client/prop_commands.c:192 libsvn_client/prop_commands.c:425
 #: libsvn_client/prop_commands.c:581 libsvn_client/prop_commands.c:930
@@ -1223,24 +1223,24 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1463 libsvn_client/diff.c:1668
+#: libsvn_client/diff.c:1450 libsvn_client/diff.c:1656
 msgid "Not all required revisions are specified"
 msgstr "Noen nødvendige revisjoner er ikke spesifisert"
 
-#: libsvn_client/diff.c:1478
+#: libsvn_client/diff.c:1465
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Minst én revisjon må være ikke-lokal for en bundet diff"
 
-#: libsvn_client/diff.c:1589 libsvn_client/diff.c:1601
+#: libsvn_client/diff.c:1577 libsvn_client/diff.c:1589
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "«%s» ble ikke funnet i depotet ved revisjon %ld"
 
-#: libsvn_client/diff.c:1943
+#: libsvn_client/diff.c:1931
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr "svn_client_diff3 ble kalt på en måte som foreløpig ikke er støttet"
 
-#: libsvn_client/diff.c:1982
+#: libsvn_client/diff.c:1970
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -1248,17 +1248,17 @@ msgstr ""
 "For øyeblikket støttes kun forskjeller mellom filstiers tekstbase og deres "
 "arbeidsfiler"
 
-#: libsvn_client/diff.c:2127 libsvn_client/switch.c:108
+#: libsvn_client/diff.c:2115 libsvn_client/switch.c:108
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "Katalogen «%s» mangler adresse"
 
-#: libsvn_client/diff.c:2369
+#: libsvn_client/diff.c:2316
 msgid "Summarizing diff can only compare repository to repository"
 msgstr "Oppsummeringsdiff kan bare sammenligne depot med depot"
 
-#: libsvn_client/diff.c:2766 libsvn_client/diff.c:2772
-#: libsvn_client/diff.c:2906 libsvn_client/locking_commands.c:263
+#: libsvn_client/diff.c:2669 libsvn_client/diff.c:2675
+#: libsvn_client/diff.c:2809 libsvn_client/locking_commands.c:263
 #: libsvn_client/ra.c:372 libsvn_client/ra.c:738 libsvn_client/ra.c:875
 #, c-format
 msgid "'%s' has no URL"
@@ -2939,7 +2939,7 @@ msgstr "Lokal URL «%s» inneholder vertsnavn som ikke er støttet"
 msgid "Unable to open repository '%s'"
 msgstr "Kunne ikke åpne depotet «%s»"
 
-#: libsvn_ra_serf/commit.c:573
+#: libsvn_ra_serf/commit.c:698
 #, c-format
 msgid "Failed writing updated file"
 msgstr "Feil under skriving av oppdatert fil"
@@ -2953,12 +2953,12 @@ msgstr "Aksesser depotet via WebDAV-protokollen gjennom serf."
 msgid "Could not lookup hostname: %s://%s"
 msgstr "Klarte ikke å lete opp tjenernavn: %s://%s"
 
-#: libsvn_ra_serf/serf.c:560
+#: libsvn_ra_serf/serf.c:570
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versjonen av RA-lasteren (%d) for ra_serf støttes ikke"
 
-#: libsvn_ra_serf/update.c:1521
+#: libsvn_ra_serf/update.c:1550
 #, c-format
 msgid "Error retrieving REPORT"
 msgstr "Feil under henting av REPORT"
@@ -5168,7 +5168,11 @@ msgstr "Kan ikke åpne for standardutdata"
 msgid "Can't open stderr"
 msgstr "Kan ikke åpne for standardfeil"
 
-#: svn/diff-cmd.c:206
+#: svn/diff-cmd.c:182
+msgid "'new' option only valid with 'old' option"
+msgstr "«new»-valget er bare gyldig sammen med «old»-valget"
+
+#: svn/diff-cmd.c:211
 #, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr ""
@@ -6985,6 +6989,11 @@ msgstr "Ingen endring for egenskap «%s» på «%s»\n"
 msgid "Unversioned properties on revision %ld:\n"
 msgstr "Ikke-versjonerte egenskaper på revisjon %ld:\n"
 
+#: svn/proplist-cmd.c:119
+#, c-format
+msgid "Properties on '%s':\n"
+msgstr "Egenskaper for «%s»:\n"
+
 #: svn/props.c:51
 msgid ""
 "Must specify the revision as a number, a date or 'HEAD' when operating on a "
@@ -7108,8 +7117,8 @@ msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
 msgstr ""
-"Bruk av en ekstern tekstbehandler for å hente loggmelinger støttes ikke på OS400; "
-"vurder bruk av valgene --message (-m) eller --file (-F)"
+"Bruk av en ekstern tekstbehandler for å hente loggmelinger støttes ikke på "
+"OS400; vurder bruk av valgene --message (-m) eller --file (-F)"
 
 #: svn/util.c:593
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -8452,117 +8461,28 @@ msgstr "eksportert%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
 
-#~ msgid "specifiy revision number ARG"
-#~ msgstr "angi revisjonsnummer ARG"
+#~ msgid "Can't create temporary directory"
+#~ msgstr "Kan ikke lage midlertidig katalog"
 
-#~ msgid "Found malformed header block in dumpfile stream"
-#~ msgstr "Fant misdannet headerblokk i dumpfilstrømmen"
+#~ msgid "Error creating dir '%s' (path exists)"
+#~ msgstr "Feil under opprettelse av katalogen «%s» (stien eksisterer)"
 
-#~ msgid "'%s' has unknown value for svn:eol-style property"
-#~ msgstr "«%s» har en ukjent verdi for egenskapen svn:eol-style"
+#~ msgid "Error checking path '%s'"
+#~ msgstr "Feil under kontroll av filstien «%s»"
 
-#~ msgid "Working copy '%s' is missing or not locked"
-#~ msgstr "Arbeidskopien «%s» mangler eller er ikke låst"
+#~ msgid "Argument to -c must be positive"
+#~ msgstr "Argumentet til -c må være et positivt tall"
 
-#~ msgid ""
-#~ "The entry '%s' is no longer a directory; remove the entry before updating"
-#~ msgstr "Posten «%s» er ikke lengre en katalog. Slett den før oppdatering"
+#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
+#~ msgstr "forandringen gjort av revisjon ARG (samme som -r ARG-1:ARG)"
 
-#~ msgid "Too few arguments"
-#~ msgstr "For få argumenter"
+#~ msgid "'%s' is not supported"
+#~ msgstr "«%s» er ikke støttet"
 
-#~ msgid "Not enough args provided"
-#~ msgstr "For få argumenter"
+#~ msgid "'%s' is in the way"
+#~ msgstr "«%s» er i veien"
 
-#~ msgid "Wrong number of paths given"
-#~ msgstr "Feil antall filstier angitt"
-
-#~ msgid ""
-#~ "'%s' is scheduled for deletion; it must be committed before it can be "
-#~ "overwritten"
-#~ msgstr ""
-#~ "«%s» er klarert for sletting; den må legges inn før den kan overskrives"
-
-#~ msgid "Error removing props for '%s'"
-#~ msgstr "Feil ved sletting av egenskaper for «%s»"
-
-#~ msgid "Error restoring props for '%s'"
-#~ msgstr "Feil ved gjenoppretting av egenskaper for «%s»"
-
-#~ msgid "Creating readme file"
-#~ msgstr "Lager readme-fil"
-
-#~ msgid "Move failed"
-#~ msgstr "Flytting feilet"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "Node med droppet forelder sneket inn"
-
-#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-#~ msgstr "Ødelagt klonepost for «%s» i transaksjon «%s» i filsystem «%s»"
-
-#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Misdannet identifikator som nøkkel i tabellen «nodes» i filsystem «%s»"
-
-#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Ødelagt verdi for nøkkelen «next-id» i tabellen «%s» i filsystem «%s»"
-
-#~ msgid "Search for malformed path '%s' in filesystem '%s'"
-#~ msgstr "Søk etter misdannet sti «%s» i filsystem «%s»"
-
-#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-#~ msgstr "Ødelagt noderevisjon for node «%s» i filsystem «%s»"
-
-#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-#~ msgstr "Ødelagt noderevisjons-ID «%s» opptrer i filsystem «%s»"
-
-#~ msgid "Unable to delete temporary file"
-#~ msgstr "Klarte ikke å slette midlertidig fil"
-
-#~ msgid "Can't seek in '%s'"
-#~ msgstr "Kan ikke søke i «%s»"
-
-#~ msgid "Can't open file '%s' for reading"
-#~ msgstr "Kan ikke åpne filen «%s» for lesing"
-
-#~ msgid "Can't open file '%s' for writing"
-#~ msgstr "Kan ikke åpne filen «%s» for skriving"
-
-#~ msgid "Error reading file '%s'"
-#~ msgstr "Feil under lesing av filen «%s»"
-
-#~ msgid "Error writing file '%s'"
-#~ msgstr "Feil under skriving til filen «%s»"
-
-#~ msgid "Can't set timeout"
-#~ msgstr "Kan ikke sette tidsavbrudd"
-
-#~ msgid "Can't open config file '%s'"
-#~ msgstr "Kan ikke åpne konfigurasjonsfil «%s»"
-
-#~ msgid "Can't find config file '%s'"
-#~ msgstr "Fant ikke konfigurasjonsfil «%s»"
-
-#~ msgid "Can't stat new directory '%s'"
-#~ msgstr "Kan ikke lese status fra den nye katalogen «%s»"
-
-#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-#~ msgstr ""
-#~ "Egenskapen «%s» endret lokalt til «%s», men oppdateringen sletter den\n"
-
-#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Egenskapen «%s» slettet lokalt, men oppdateringen setter den den til «%"
-#~ "s»\n"
-
-#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Egenskapen «%s» er endret lokalt til «%s», men oppdateringen setter den "
-#~ "til «%s»\n"
-
-#~ msgid "Unknown node kind: '%s'"
+#~ msgid "Unrecognized node kind of '%s'"
 #~ msgstr "Ukjent nodetype: «%s»"
 
 #~ msgid ""
@@ -8582,26 +8502,115 @@ msgstr "«%s» er verken versjonert eller eksportert\n"
 #~ "  auth-access = read|write|none (standard: write)\n"
 #~ "Setter all tilgang til skrivebeskyttet i denne omgang\n"
 
-#~ msgid "Unrecognized node kind of '%s'"
+#~ msgid "Unknown node kind: '%s'"
 #~ msgstr "Ukjent nodetype: «%s»"
 
-#~ msgid "'%s' is in the way"
-#~ msgstr "«%s» er i veien"
+#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
+#~ msgstr ""
+#~ "Egenskapen «%s» er endret lokalt til «%s», men oppdateringen setter den "
+#~ "til «%s»\n"
 
-#~ msgid "'%s' is not supported"
-#~ msgstr "«%s» er ikke støttet"
+#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
+#~ msgstr ""
+#~ "Egenskapen «%s» slettet lokalt, men oppdateringen setter den den til «%"
+#~ "s»\n"
 
-#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
-#~ msgstr "forandringen gjort av revisjon ARG (samme som -r ARG-1:ARG)"
+#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
+#~ msgstr ""
+#~ "Egenskapen «%s» endret lokalt til «%s», men oppdateringen sletter den\n"
 
-#~ msgid "Argument to -c must be positive"
-#~ msgstr "Argumentet til -c må være et positivt tall"
+#~ msgid "Can't stat new directory '%s'"
+#~ msgstr "Kan ikke lese status fra den nye katalogen «%s»"
 
-#~ msgid "Error checking path '%s'"
-#~ msgstr "Feil under kontroll av filstien «%s»"
+#~ msgid "Can't find config file '%s'"
+#~ msgstr "Fant ikke konfigurasjonsfil «%s»"
 
-#~ msgid "Error creating dir '%s' (path exists)"
-#~ msgstr "Feil under opprettelse av katalogen «%s» (stien eksisterer)"
+#~ msgid "Can't open config file '%s'"
+#~ msgstr "Kan ikke åpne konfigurasjonsfil «%s»"
 
-#~ msgid "Can't create temporary directory"
-#~ msgstr "Kan ikke lage midlertidig katalog"
+#~ msgid "Can't set timeout"
+#~ msgstr "Kan ikke sette tidsavbrudd"
+
+#~ msgid "Error writing file '%s'"
+#~ msgstr "Feil under skriving til filen «%s»"
+
+#~ msgid "Error reading file '%s'"
+#~ msgstr "Feil under lesing av filen «%s»"
+
+#~ msgid "Can't open file '%s' for writing"
+#~ msgstr "Kan ikke åpne filen «%s» for skriving"
+
+#~ msgid "Can't open file '%s' for reading"
+#~ msgstr "Kan ikke åpne filen «%s» for lesing"
+
+#~ msgid "Can't seek in '%s'"
+#~ msgstr "Kan ikke søke i «%s»"
+
+#~ msgid "Unable to delete temporary file"
+#~ msgstr "Klarte ikke å slette midlertidig fil"
+
+#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
+#~ msgstr "Ødelagt noderevisjons-ID «%s» opptrer i filsystem «%s»"
+
+#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
+#~ msgstr "Ødelagt noderevisjon for node «%s» i filsystem «%s»"
+
+#~ msgid "Search for malformed path '%s' in filesystem '%s'"
+#~ msgstr "Søk etter misdannet sti «%s» i filsystem «%s»"
+
+#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
+#~ msgstr ""
+#~ "Ødelagt verdi for nøkkelen «next-id» i tabellen «%s» i filsystem «%s»"
+
+#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
+#~ msgstr ""
+#~ "Misdannet identifikator som nøkkel i tabellen «nodes» i filsystem «%s»"
+
+#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
+#~ msgstr "Ødelagt klonepost for «%s» i transaksjon «%s» i filsystem «%s»"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "Node med droppet forelder sneket inn"
+
+#~ msgid "Move failed"
+#~ msgstr "Flytting feilet"
+
+#~ msgid "Creating readme file"
+#~ msgstr "Lager readme-fil"
+
+#~ msgid "Error restoring props for '%s'"
+#~ msgstr "Feil ved gjenoppretting av egenskaper for «%s»"
+
+#~ msgid "Error removing props for '%s'"
+#~ msgstr "Feil ved sletting av egenskaper for «%s»"
+
+#~ msgid ""
+#~ "'%s' is scheduled for deletion; it must be committed before it can be "
+#~ "overwritten"
+#~ msgstr ""
+#~ "«%s» er klarert for sletting; den må legges inn før den kan overskrives"
+
+#~ msgid "Wrong number of paths given"
+#~ msgstr "Feil antall filstier angitt"
+
+#~ msgid "Not enough args provided"
+#~ msgstr "For få argumenter"
+
+#~ msgid "Too few arguments"
+#~ msgstr "For få argumenter"
+
+#~ msgid ""
+#~ "The entry '%s' is no longer a directory; remove the entry before updating"
+#~ msgstr "Posten «%s» er ikke lengre en katalog. Slett den før oppdatering"
+
+#~ msgid "Working copy '%s' is missing or not locked"
+#~ msgstr "Arbeidskopien «%s» mangler eller er ikke låst"
+
+#~ msgid "'%s' has unknown value for svn:eol-style property"
+#~ msgstr "«%s» har en ukjent verdi for egenskapen svn:eol-style"
+
+#~ msgid "Found malformed header block in dumpfile stream"
+#~ msgstr "Fant misdannet headerblokk i dumpfilstrømmen"
+
+#~ msgid "specifiy revision number ARG"
+#~ msgstr "angi revisjonsnummer ARG"
