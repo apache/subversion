@@ -556,7 +556,6 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   const char *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
   const char *move_id;
-  copy_t *copy;
   
   /* Make some assertions about the function input. */
   assert(child && child->parent && txn_id);
