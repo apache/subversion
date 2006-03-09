@@ -211,6 +211,9 @@ typedef struct report_fetch_t {
   /* If we're receiving an svndiff, this will be non-NULL. */
   svn_stream_t *delta_stream;
 
+  /* If we're writing this file to a stream, this will be non-NULL. */
+  svn_stream_t *target_stream;
+
   /* Are we done fetching this file? */
   svn_boolean_t done;
   ra_serf_list_t **done_list;
@@ -852,8 +855,87 @@ handle_fetch(serf_request_t *request,
         }
     }
   /* not reached */
+}
 
-  abort();
+static apr_status_t
+handle_stream(serf_request_t *request,
+              serf_bucket_t *response,
+              void *handler_baton,
+              apr_pool_t *pool)
+{
+  report_fetch_t *fetch_ctx = handler_baton;
+  serf_status_line sl;
+
+  serf_bucket_response_status(response, &sl);
+
+  /* Woo-hoo.  Nothing here to see.  */
+  if (sl.code == 404)
+    {
+      fetch_ctx->done = TRUE;
+      return handler_discard_body(request, response, NULL, pool);
+    }
+
+  while (1)
+    {
+      const char *data;
+      apr_size_t len;
+      apr_status_t status;
+
+      status = serf_bucket_read(response, 8000, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return status;
+        }
+
+      fetch_ctx->read_size += len;
+
+      if (fetch_ctx->aborted_read == TRUE)
+        {
+          /* We haven't caught up to where we were before. */
+          if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
+            {
+              /* Eek.  What did the file shrink or something? */
+              if (APR_STATUS_IS_EOF(status))
+                {
+                  abort();
+                }
+
+              /* Skip on to the next iteration of this loop. */
+              if (APR_STATUS_IS_EAGAIN(status))
+                {
+                  return status;
+                }
+              continue;
+            }
+
+          /* Woo-hoo.  We're back. */ 
+          fetch_ctx->aborted_read = FALSE;
+
+          /* Increment data and len by the difference. */
+          data += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+          len += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+        }
+      
+      if (len)
+        {
+          apr_size_t written_len;
+
+          written_len = len;
+
+          svn_stream_write(fetch_ctx->target_stream, data, &written_len);
+        }
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          fetch_ctx->done = TRUE;
+        }
+
+      if (status)
+        {
+          return status;
+        }
+    }
+  /* not reached */
 }
 
 static void fetch_file(report_context_t *ctx, report_info_t *info)
@@ -913,6 +995,9 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
 
   handler->response_handler = handle_fetch;
   handler->response_baton = fetch_ctx;
+
+  handler->response_error = error_fetch;
+  handler->response_error_baton = fetch_ctx;
 
   ra_serf_request_create(handler);
 
@@ -1284,12 +1369,78 @@ end_report(void *userData, const char *raw_name)
           info->name = info->name_buf->data;
         }
 
-      /* We now need to dive all the way into the WC to get the base VCC url. */
-      ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
-                                           info->name,
-                                           RA_SERF_WC_CHECKED_IN_URL,
-                                           &info->delta_base,
-                                           info->pool);
+      /* If we have a WC, we can dive all the way into the WC to get the
+       * previous URL so we can do an differential GET with the base URL.
+       *
+       * If we don't have a WC (as is the case for URL<->URL diff), we can
+       * manually reconstruct the base URL.  This avoids us having to grab
+       * two full-text for URL<->URL diffs.  Instead, we can just grab one
+       * full-text and a diff from the server against that other file.
+       */
+      if (ctx->sess->wc_callbacks->get_wc_prop)
+        {
+          ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
+                                               info->name,
+                                               RA_SERF_WC_CHECKED_IN_URL,
+                                               &info->delta_base,
+                                               info->pool);
+        }
+      else
+        {
+          const char *c;
+          apr_size_t comp_count, rel_size;
+          svn_stringbuf_t *path;
+          svn_boolean_t fix_root = FALSE;
+
+          c = get_ver_prop(info->dir->props, info->base_name,
+                           info->base_rev, "DAV:", "checked-in");
+
+          path = svn_stringbuf_create(c, info->pool);
+
+          comp_count = svn_path_component_count(info->name_buf->data);
+
+          svn_path_remove_components(path, comp_count);
+
+          /* Our paths may be relative to a file from the actual root, so
+           * we would need to strip out the difference from our fixed point
+           * to the root and then add it back in after we replace the
+           * version number.
+           */
+          if (strcmp(ctx->sess->repos_url.path,
+                     ctx->sess->repos_root.path) != 0)
+            {
+              apr_size_t root_count, rel_count;
+
+              root_count = svn_path_component_count(ctx->sess->repos_url.path);
+              rel_count = svn_path_component_count(ctx->sess->repos_root.path);
+
+              svn_path_remove_components(path, root_count - rel_count);
+
+              fix_root = TRUE;
+            }
+
+          /* At this point, we should just have the version number
+           * remaining.  We know our target revision, so we'll replace it
+           * and recreate what we just chopped off.
+          */
+          svn_path_remove_component(path);
+
+          svn_path_add_component(path, apr_ltoa(info->pool, info->base_rev));
+
+          if (fix_root == TRUE)
+            {
+              apr_size_t root_len;
+
+              root_len = strlen(ctx->sess->repos_root.path) + 1;
+
+              svn_path_add_component(path,
+                                     &ctx->sess->repos_url.path[root_len]);
+            }
+
+          svn_path_add_component(path, info->name);
+
+          info->delta_base = svn_string_create_from_buf(path, info->pool);
+        }
 
       fetch_file(ctx, info);
       pop_state(ctx);
@@ -1783,4 +1934,115 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                               session->repos_url.path, NULL, update_target,
                               recurse, FALSE, TRUE,
                               update_editor, update_baton, pool);
+}
+
+svn_error_t *
+svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
+                     const svn_ra_reporter2_t **reporter,
+                     void **report_baton,
+                     svn_revnum_t revision,
+                     const char *diff_target,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t text_deltas,
+                     const char *versus_url,
+                     const svn_delta_editor_t *diff_editor,
+                     void *diff_baton,
+                     apr_pool_t *pool)
+{
+  ra_serf_session_t *session = ra_session->priv;
+
+  return make_update_reporter(ra_session, reporter, report_baton,
+                              revision,
+                              versus_url, diff_target, NULL,
+                              recurse, ignore_ancestry, text_deltas,
+                              diff_editor, diff_baton, pool);
+}
+
+svn_error_t *
+svn_ra_serf__get_file(svn_ra_session_t *ra_session,
+                      const char *path,
+                      svn_revnum_t revision,
+                      svn_stream_t *stream,
+                      svn_revnum_t *fetched_rev,
+                      apr_hash_t **props,
+                      apr_pool_t *pool)
+{
+  ra_serf_session_t *session = ra_session->priv;
+  ra_serf_connection_t *conn;
+  ra_serf_handler_t *handler;
+  report_fetch_t *stream_ctx;
+  const char *fetch_url, *vcc_url, *baseline_url;
+  apr_hash_t *fetch_props;
+  svn_stringbuf_t *buf;
+
+  /* What connection should we go on? */
+  conn = session->conns[session->cur_conn];
+
+  /* Fetch properties. */
+  fetch_props = apr_hash_make(pool);
+
+  fetch_url = svn_path_url_add_component(session->repos_url.path, path, pool);
+
+  /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
+   *
+   * Otherwise, we need to get the baseline version for this particular
+   * revision and then fetch that file.
+   */
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      const char *rel_path;
+
+      SVN_ERR(retrieve_props(fetch_props, session, conn, fetch_url,
+                             SVN_INVALID_REVNUM, "0", base_props, pool));
+      
+      vcc_url = get_ver_prop(fetch_props, fetch_url, SVN_INVALID_REVNUM,
+                             "DAV:", "version-controlled-configuration");
+
+      rel_path = get_ver_prop(fetch_props, fetch_url, SVN_INVALID_REVNUM,
+                              SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
+
+      SVN_ERR(retrieve_props(fetch_props, session, conn, vcc_url,
+                             revision, "0", baseline_props, pool));
+
+      baseline_url = get_ver_prop(fetch_props, vcc_url, revision,
+                                  "DAV:", "baseline-collection");
+      
+      fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
+    }
+
+  SVN_ERR(retrieve_props(fetch_props, session, conn, fetch_url, revision, "0",
+                         all_props, pool));
+
+  /* TODO Filter out all of our props into a usable format. */
+  if (props)
+    {
+      *props = fetch_props;
+    }
+
+  /* Create the fetch context. */
+  stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
+  stream_ctx->pool = pool;
+  stream_ctx->target_stream = stream;
+  stream_ctx->sess = session;
+  stream_ctx->conn = conn;
+
+  handler = apr_pcalloc(pool, sizeof(*handler));
+
+  handler->method = "GET";
+  handler->path = fetch_url;
+  handler->conn = conn;
+  handler->session = session;
+
+  handler->response_handler = handle_stream;
+  handler->response_baton = stream_ctx;
+
+  handler->response_error = error_fetch;
+  handler->response_error_baton = stream_ctx;
+
+  ra_serf_request_create(handler);
+
+  SVN_ERR(context_run_wait(&stream_ctx->done, session, pool));
+
+  return SVN_NO_ERROR;
 }
