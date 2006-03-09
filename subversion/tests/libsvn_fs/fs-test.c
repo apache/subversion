@@ -4508,7 +4508,7 @@ move_history_test(const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-move-test", 
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-move-history-test", 
                               opts->fs_type, pool));
 
   /* Revision 1:  create and commit the greek tree. */
