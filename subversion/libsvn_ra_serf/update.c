@@ -97,13 +97,13 @@ typedef struct report_dir_t
   apr_size_t ref_count;
 
   /* Namespace list allocated out of this ->pool. */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* hashtable that stores all of the properties (shared with a dir) */
   apr_hash_t *props;
 
   /* The propfind request for our current directory */
-  propfind_context_t *propfind;
+  svn_ra_serf__propfind_context_t *propfind;
 
   /* Has the server told us to fetch the dir props? */
   svn_boolean_t fetch_props;
@@ -188,10 +188,10 @@ typedef struct report_fetch_t {
   apr_pool_t *pool;
 
   /* The session we should use to fetch the file. */
-  ra_serf_session_t *sess;
+  svn_ra_serf__session_t *sess;
 
   /* The connection we should use to fetch file. */
-  ra_serf_connection_t *conn;
+  svn_ra_serf__connection_t *conn;
 
   /* Stores the information for the file we want to fetch. */
   report_info_t *info;
@@ -216,8 +216,8 @@ typedef struct report_fetch_t {
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
-  ra_serf_list_t **done_list;
-  ra_serf_list_t done_item;
+  svn_ra_serf__list_t **done_list;
+  svn_ra_serf__list_t done_item;
 
 } report_fetch_t;
 
@@ -238,7 +238,7 @@ typedef struct report_state_list_t {
   apr_pool_t *pool;
 
   /* Temporary namespace list allocated from ->pool */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* The previous state we were in. */
   struct report_state_list_t *prev;
@@ -250,8 +250,8 @@ typedef struct report_state_list_t {
 typedef struct {
   apr_pool_t *pool;
 
-  ra_serf_session_t *sess;
-  ra_serf_connection_t *conn;
+  svn_ra_serf__session_t *sess;
+  svn_ra_serf__connection_t *conn;
 
   /* Source path and destination path */
   const char *source;
@@ -277,7 +277,7 @@ typedef struct {
 
   /* Our XML parser and root namespace for parsing the response. */
   XML_Parser xmlp;
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* the current state we are in for parsing the REPORT response.
    *
@@ -298,13 +298,13 @@ typedef struct {
   unsigned int active_fetches;
 
   /* completed fetches (contains report_fetch_t) */
-  ra_serf_list_t *done_fetches;
+  svn_ra_serf__list_t *done_fetches;
 
   /* number of pending PROPFIND requests */
   unsigned int active_propfinds;
 
   /* completed PROPFIND requests (contains propfind_context_t) */
-  ra_serf_list_t *done_propfinds;
+  svn_ra_serf__list_t *done_propfinds;
 
   /* free list of info structures */
   report_info_t *free_info;
@@ -458,7 +458,7 @@ set_baton_props(prop_set_t setprop, void *baton,
   else if (strcmp(name, "repository-uuid") == 0)
     prop_name = SVN_PROP_ENTRY_UUID;
   else if (strcmp(name, "checked-in") == 0)
-    prop_name = RA_SERF_WC_CHECKED_IN_URL;
+    prop_name = SVN_RA_SERF__WC_CHECKED_IN_URL;
   else
     {
       /* do nothing for now? */
@@ -556,10 +556,10 @@ close_dir(report_dir_t *dir)
       abort();
     }
 
-  walk_all_props(dir->props, dir->base_name, dir->base_rev,
-                 set_dir_props, dir, dir->dir_baton_pool);
-  walk_all_props(dir->props, dir->url, dir->target_rev, set_dir_props, dir,
-                 dir->dir_baton_pool);
+  svn_ra_serf__walk_all_props(dir->props, dir->base_name, dir->base_rev,
+                              set_dir_props, dir, dir->dir_baton_pool);
+  svn_ra_serf__walk_all_props(dir->props, dir->url, dir->target_rev,
+                              set_dir_props, dir, dir->dir_baton_pool);
   SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
                                               dir->dir_baton_pool));
 
@@ -823,12 +823,12 @@ handle_fetch(serf_request_t *request,
           info->textdelta(NULL, info->textdelta_baton);
 
           /* set all of the properties we received */
-          walk_all_props(info->dir->props,
+          svn_ra_serf__walk_all_props(info->dir->props,
                          info->base_name,
                          info->base_rev,
                          set_file_props,
                          info, info->editor_pool);
-          walk_all_props(info->dir->props,
+          svn_ra_serf__walk_all_props(info->dir->props,
                          info->url,
                          info->target_rev,
                          set_file_props,
@@ -872,7 +872,7 @@ handle_stream(serf_request_t *request,
   if (sl.code == 404)
     {
       fetch_ctx->done = TRUE;
-      return handler_discard_body(request, response, NULL, pool);
+      return svn_ra_serf__handler_discard_body(request, response, NULL, pool);
     }
 
   while (1)
@@ -941,17 +941,18 @@ handle_stream(serf_request_t *request,
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
   const char *checked_in_url, *checksum;
-  ra_serf_connection_t *conn;
-  ra_serf_handler_t *handler;
+  svn_ra_serf__connection_t *conn;
+  svn_ra_serf__handler_t *handler;
   report_fetch_t *fetch_ctx;
-  propfind_context_t *prop_ctx = NULL;
+  svn_ra_serf__propfind_context_t *prop_ctx = NULL;
   apr_hash_t *props;
 
   /* What connection should we go on? */
   conn = ctx->sess->conns[ctx->sess->cur_conn];
 
   /* go fetch info->name from DAV:checked-in */
-  checked_in_url = get_ver_prop(info->dir->props, info->base_name,
+  checked_in_url =
+      svn_ra_serf__get_ver_prop(info->dir->props, info->base_name,
                                 info->base_rev, "DAV:", "checked-in");
 
   if (!checked_in_url)
@@ -964,9 +965,9 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (info->fetch_props)
     {
-      deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
-                    info->url, info->target_rev, "0", all_props,
-                    FALSE, &ctx->done_propfinds, info->dir->pool);
+      svn_ra_serf__deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
+                                 info->url, info->target_rev, "0", all_props,
+                                 FALSE, &ctx->done_propfinds, info->dir->pool);
       if (!prop_ctx)
         {
           abort();
@@ -999,7 +1000,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   handler->response_error = error_fetch;
   handler->response_error_baton = fetch_ctx;
 
-  ra_serf_request_create(handler);
+  svn_ra_serf__request_create(handler);
 
   ctx->active_fetches++;
 }
@@ -1008,9 +1009,9 @@ static void XMLCALL
 start_report(void *userData, const char *name, const char **attrs)
 {
   report_context_t *ctx = userData;
-  dav_props_t prop_name;
+  svn_ra_serf__dav_props_t prop_name;
   apr_pool_t *pool;
-  ns_t **ns_list;
+  svn_ra_serf__ns_t **ns_list;
 
   if (!ctx->state)
     {
@@ -1024,16 +1025,16 @@ start_report(void *userData, const char *name, const char **attrs)
     }
 
   /* check for new namespaces */
-  define_ns(ns_list, attrs, pool);
+  svn_ra_serf__define_ns(ns_list, attrs, pool);
 
   /* look up name space if present */
-  prop_name = expand_ns(*ns_list, name);
+  prop_name = svn_ra_serf__expand_ns(*ns_list, name);
 
   if (!ctx->state && strcmp(prop_name.name, "target-revision") == 0)
     {
       const char *rev;
 
-      rev = find_attr(attrs, "rev");
+      rev = svn_ra_serf__find_attr(attrs, "rev");
 
       if (!rev)
         {
@@ -1049,7 +1050,7 @@ start_report(void *userData, const char *name, const char **attrs)
       const char *rev;
       report_info_t *info;
 
-      rev = find_attr(attrs, "rev");
+      rev = svn_ra_serf__find_attr(attrs, "rev");
 
       if (!rev)
         {
@@ -1082,14 +1083,14 @@ start_report(void *userData, const char *name, const char **attrs)
       report_dir_t *dir_info;
       report_info_t *info;
 
-      rev = find_attr(attrs, "rev");
+      rev = svn_ra_serf__find_attr(attrs, "rev");
 
       if (!rev)
         {
           abort();
         }
 
-      dirname = find_attr(attrs, "name");
+      dirname = svn_ra_serf__find_attr(attrs, "name");
 
       if (!dirname)
         {
@@ -1118,7 +1119,7 @@ start_report(void *userData, const char *name, const char **attrs)
       const char *dir_name;
       report_dir_t *dir_info;
 
-      dir_name = find_attr(attrs, "name");
+      dir_name = svn_ra_serf__find_attr(attrs, "name");
 
       push_state(ctx, ADD_DIR);
 
@@ -1142,14 +1143,14 @@ start_report(void *userData, const char *name, const char **attrs)
       const char *file_name, *rev;
       report_info_t *info;
 
-      file_name = find_attr(attrs, "name");
+      file_name = svn_ra_serf__find_attr(attrs, "name");
 
       if (!file_name)
         {
           abort();
         }
 
-      rev = find_attr(attrs, "rev");
+      rev = svn_ra_serf__find_attr(attrs, "rev");
 
       if (!rev)
         {
@@ -1173,7 +1174,7 @@ start_report(void *userData, const char *name, const char **attrs)
       const char *file_name;
       report_info_t *info;
 
-      file_name = find_attr(attrs, "name");
+      file_name = svn_ra_serf__find_attr(attrs, "name");
 
       if (!file_name)
         {
@@ -1196,7 +1197,7 @@ start_report(void *userData, const char *name, const char **attrs)
     {
       const char *file_name;
 
-      file_name = find_attr(attrs, "name");
+      file_name = svn_ra_serf__find_attr(attrs, "name");
 
       if (!file_name)
         {
@@ -1225,10 +1226,11 @@ start_report(void *userData, const char *name, const char **attrs)
       else if (strcmp(prop_name.name, "set-prop") == 0)
         {
           const char *full_prop_name;
-          dav_props_t new_prop_name;
+          svn_ra_serf__dav_props_t new_prop_name;
 
-          full_prop_name = find_attr(attrs, "name");
-          new_prop_name = expand_ns(ctx->state->ns_list, full_prop_name);
+          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          new_prop_name = svn_ra_serf__expand_ns(ctx->state->ns_list,
+                                                 full_prop_name);
 
           ctx->state->info->prop_ns = new_prop_name.namespace;
           ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
@@ -1289,7 +1291,7 @@ static void XMLCALL
 end_report(void *userData, const char *raw_name)
 {
   report_context_t *ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__dav_props_t name;
 
   if (!ctx->state)
     {
@@ -1297,7 +1299,7 @@ end_report(void *userData, const char *raw_name)
       return;
     }
 
-  name = expand_ns(ctx->state->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(ctx->state->ns_list, raw_name);
 
   if (((ctx->state->state == OPEN_DIR &&
         (strcmp(name.name, "open-directory") == 0)) ||
@@ -1311,7 +1313,8 @@ end_report(void *userData, const char *raw_name)
       info->dir->tag_closed = TRUE;
 
       /* go fetch info->file_name from DAV:checked-in */
-      checked_in_url = get_ver_prop(info->dir->props, info->base_name,
+      checked_in_url =
+          svn_ra_serf__get_ver_prop(info->dir->props, info->base_name,
                                     info->base_rev, "DAV:", "checked-in");
 
       if (!checked_in_url)
@@ -1329,11 +1332,12 @@ end_report(void *userData, const char *raw_name)
           /* Unconditionally set fetch_props now. */
           info->dir->fetch_props = TRUE;
 
-          deliver_props(&info->dir->propfind, info->dir->props, ctx->sess,
-                        ctx->sess->conns[ctx->sess->cur_conn],
-                        info->dir->url, info->dir->target_rev,
-                        "0", all_props, FALSE, &ctx->done_propfinds,
-                        info->dir->pool);
+          svn_ra_serf__deliver_props(&info->dir->propfind, info->dir->props,
+                                     ctx->sess,
+                                     ctx->sess->conns[ctx->sess->cur_conn],
+                                     info->dir->url, info->dir->target_rev,
+                                     "0", all_props, FALSE,
+                                     &ctx->done_propfinds, info->dir->pool);
 
           if (!info->dir->propfind)
             {
@@ -1381,7 +1385,7 @@ end_report(void *userData, const char *raw_name)
         {
           ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
                                                info->name,
-                                               RA_SERF_WC_CHECKED_IN_URL,
+                                               SVN_RA_SERF__WC_CHECKED_IN_URL,
                                                &info->delta_base,
                                                info->pool);
         }
@@ -1392,8 +1396,8 @@ end_report(void *userData, const char *raw_name)
           svn_stringbuf_t *path;
           svn_boolean_t fix_root = FALSE;
 
-          c = get_ver_prop(info->dir->props, info->base_name,
-                           info->base_rev, "DAV:", "checked-in");
+          c = svn_ra_serf__get_ver_prop(info->dir->props, info->base_name,
+                                        info->base_rev, "DAV:", "checked-in");
 
           path = svn_stringbuf_create(c, info->pool);
 
@@ -1457,7 +1461,7 @@ end_report(void *userData, const char *raw_name)
       /* We need to move the prop_ns, prop_name, and prop_val into the
        * same lifetime as the dir->pool.
        */
-      ns_t *ns, *ns_name_match;
+      svn_ra_serf__ns_t *ns, *ns_name_match;
       int found = 0;
       report_dir_t *dir;
 
@@ -1498,7 +1502,7 @@ end_report(void *userData, const char *raw_name)
           dir->ns_list = ns;
         }
 
-      set_ver_prop(dir->props, ctx->state->info->base_name,
+      svn_ra_serf__set_ver_prop(dir->props, ctx->state->info->base_name,
                    ctx->state->info->base_rev,
                    ns->namespace, ns->url,
                    apr_pstrmemdup(dir->pool, ctx->state->info->prop_val,
@@ -1519,9 +1523,9 @@ cdata_report(void *userData, const char *data, int len)
   report_context_t *ctx = userData;
   if (ctx->state && ctx->state->state == PROP)
     {
-      expand_string(&ctx->state->info->prop_val,
-                    &ctx->state->info->prop_val_len,
-                    data, len, ctx->state->pool);
+      svn_ra_serf__expand_string(&ctx->state->info->prop_val,
+                                 &ctx->state->info->prop_val_len,
+                                 data, len, ctx->state->pool);
 
     }
 }
@@ -1637,10 +1641,10 @@ finish_report(void *report_baton,
               apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  ra_serf_session_t *sess = report->sess;
-  ra_serf_handler_t *handler;
-  ra_serf_xml_parser_t *parser_ctx;
-  ra_serf_list_t *done_list;
+  svn_ra_serf__session_t *sess = report->sess;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_ra_serf__list_t *done_list;
   serf_bucket_t *tmp;
   const char *vcc_url;
   apr_hash_t *props;
@@ -1655,12 +1659,13 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, sess, sess->conns[0], sess->repos_url.path,
-                         SVN_INVALID_REVNUM, "0",
-                         vcc_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, sess, sess->conns[0],
+                                      sess->repos_url.path,
+                                      SVN_INVALID_REVNUM, "0",
+                                      vcc_props, pool));
 
-  vcc_url = get_prop(props, sess->repos_url.path, "DAV:",
-                       "version-controlled-configuration");
+  vcc_url = svn_ra_serf__get_prop(props, sess->repos_url.path,
+                                  "DAV:", "version-controlled-configuration");
 
   if (!vcc_url)
     {
@@ -1687,10 +1692,10 @@ finish_report(void *report_baton,
   parser_ctx->cdata = cdata_report;
   parser_ctx->done = &report->done;
 
-  handler->response_handler = handle_xml_parser;
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  ra_serf_request_create(handler);
+  svn_ra_serf__request_create(handler);
 
   for (i = 1; i < 4; i++) {
       sess->conns[i] = apr_palloc(pool, sizeof(*sess->conns[i]));
@@ -1704,8 +1709,10 @@ finish_report(void *report_baton,
       sess->conns[i]->auth_value = sess->auth_value;
       sess->conns[i]->conn = serf_connection_create(sess->context,
                                                     sess->conns[i]->address,
-                                                    conn_setup, sess->conns[i],
-                                                    conn_closed, sess->conns[i],
+                                                    svn_ra_serf__conn_setup,
+                                                    sess->conns[i],
+                                                    svn_ra_serf__conn_closed,
+                                                    sess->conns[i],
                                                     sess->pool);
       sess->num_conns++;
   }
@@ -1765,7 +1772,8 @@ finish_report(void *report_baton,
            * then, we know it's time for us to close this directory.
            */
           while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed &&
-                 (!cur_dir->fetch_props || propfind_is_done(cur_dir->propfind)))
+                 (!cur_dir->fetch_props ||
+                  svn_ra_serf__propfind_is_done(cur_dir->propfind)))
             {
               SVN_ERR(close_dir(cur_dir));
               if (cur_dir->parent_dir)
@@ -1834,7 +1842,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   report_context_t *report;
-  ra_serf_session_t *session = ra_session->priv;
+  svn_ra_serf__session_t *session = ra_session->priv;
   serf_bucket_t *tmp;
 
   report = apr_pcalloc(pool, sizeof(*report));
@@ -1927,7 +1935,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        void *update_baton,
                        apr_pool_t *pool)
 {
-  ra_serf_session_t *session = ra_session->priv;
+  svn_ra_serf__session_t *session = ra_session->priv;
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision_to_update_to,
@@ -1950,7 +1958,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
                      void *diff_baton,
                      apr_pool_t *pool)
 {
-  ra_serf_session_t *session = ra_session->priv;
+  svn_ra_serf__session_t *session = ra_session->priv;
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
@@ -1968,9 +1976,9 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       apr_hash_t **props,
                       apr_pool_t *pool)
 {
-  ra_serf_session_t *session = ra_session->priv;
-  ra_serf_connection_t *conn;
-  ra_serf_handler_t *handler;
+  svn_ra_serf__session_t *session = ra_session->priv;
+  svn_ra_serf__connection_t *conn;
+  svn_ra_serf__handler_t *handler;
   report_fetch_t *stream_ctx;
   const char *fetch_url, *vcc_url, *baseline_url;
   apr_hash_t *fetch_props;
@@ -1993,26 +2001,30 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
     {
       const char *rel_path;
 
-      SVN_ERR(retrieve_props(fetch_props, session, conn, fetch_url,
-                             SVN_INVALID_REVNUM, "0", base_props, pool));
+      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn,
+                                          fetch_url, SVN_INVALID_REVNUM, "0",
+                                          base_props, pool));
       
-      vcc_url = get_ver_prop(fetch_props, fetch_url, SVN_INVALID_REVNUM,
-                             "DAV:", "version-controlled-configuration");
+      vcc_url =
+          svn_ra_serf__get_ver_prop(fetch_props, fetch_url, SVN_INVALID_REVNUM,
+                                    "DAV:", "version-controlled-configuration");
 
-      rel_path = get_ver_prop(fetch_props, fetch_url, SVN_INVALID_REVNUM,
-                              SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
+      rel_path = svn_ra_serf__get_ver_prop(fetch_props, fetch_url,
+                                           SVN_INVALID_REVNUM,
+                                           SVN_DAV_PROP_NS_DAV,
+                                           "baseline-relative-path");
 
-      SVN_ERR(retrieve_props(fetch_props, session, conn, vcc_url,
-                             revision, "0", baseline_props, pool));
+      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
+                                          revision, "0", baseline_props, pool));
 
-      baseline_url = get_ver_prop(fetch_props, vcc_url, revision,
-                                  "DAV:", "baseline-collection");
+      baseline_url = svn_ra_serf__get_ver_prop(fetch_props, vcc_url, revision,
+                                               "DAV:", "baseline-collection");
       
       fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
     }
 
-  SVN_ERR(retrieve_props(fetch_props, session, conn, fetch_url, revision, "0",
-                         all_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
+                                      revision, "0", all_props, pool));
 
   /* TODO Filter out all of our props into a usable format. */
   if (props)
@@ -2040,9 +2052,9 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   handler->response_error = error_fetch;
   handler->response_error_baton = stream_ctx;
 
-  ra_serf_request_create(handler);
+  svn_ra_serf__request_create(handler);
 
-  SVN_ERR(context_run_wait(&stream_ctx->done, session, pool));
+  SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
 
   return SVN_NO_ERROR;
 }

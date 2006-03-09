@@ -26,15 +26,15 @@
 /*
  * This structure represents a pending PROPFIND response.
  */
-struct propfind_context_t {
+struct svn_ra_serf__propfind_context_t {
   /* pool to issue allocations from */
   apr_pool_t *pool;
 
-  ra_serf_handler_t *handler;
+  svn_ra_serf__handler_t *handler;
 
   /* associated serf session */
-  ra_serf_session_t *sess;
-  ra_serf_connection_t *conn;
+  svn_ra_serf__session_t *sess;
+  svn_ra_serf__connection_t *conn;
 
   /* the requested path */
   const char *path;
@@ -47,19 +47,19 @@ struct propfind_context_t {
   const char *depth;
 
   /* the list of requested properties */
-  const dav_props_t *find_props;
+  const svn_ra_serf__dav_props_t *find_props;
 
   /* should we cache the values of this propfind in our session? */
   svn_boolean_t cache_props;
 
   /* hash table that will be updated with the properties
    *
-   * This can be shared between multiple propfind_context_t structures
+   * This can be shared between multiple svn_ra_serf__propfind_context_t structures
    */
   apr_hash_t *ret_props;
 
   /* Current namespace list */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* TODO use the state object as in the report */
   /* Are we parsing a property right now? */
@@ -81,13 +81,13 @@ struct propfind_context_t {
   svn_boolean_t done;
 
   /* If not-NULL, add us to this list when we're done. */
-  ra_serf_list_t **done_list;
+  svn_ra_serf__list_t **done_list;
 
-  ra_serf_list_t done_item;
+  svn_ra_serf__list_t done_item;
 };
 
 const char *
-get_ver_prop(apr_hash_t *props,
+svn_ra_serf__get_ver_prop(apr_hash_t *props,
              const char *path,
              svn_revnum_t rev,
              const char *ns,
@@ -115,16 +115,16 @@ get_ver_prop(apr_hash_t *props,
 }
 
 const char *
-get_prop(apr_hash_t *props,
+svn_ra_serf__get_prop(apr_hash_t *props,
          const char *path,
          const char *ns,
          const char *name)
 {
-  return get_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name);
+  return svn_ra_serf__get_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name);
 }
 
 void
-set_ver_prop(apr_hash_t *props,
+svn_ra_serf__set_ver_prop(apr_hash_t *props,
              const char *path, svn_revnum_t rev,
              const char *ns, const char *name,
              const char *val, apr_pool_t *pool)
@@ -167,12 +167,13 @@ set_ver_prop(apr_hash_t *props,
 }
 
 void
-set_prop(apr_hash_t *props,
-         const char *path,
-         const char *ns, const char *name,
-         const char *val, apr_pool_t *pool)
+svn_ra_serf__set_prop(apr_hash_t *props,
+                      const char *path,
+                      const char *ns, const char *name,
+                      const char *val, apr_pool_t *pool)
 {
-  return set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name, val, pool);
+  return svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
+                                   val, pool);
 }
 
 /*
@@ -181,14 +182,14 @@ set_prop(apr_hash_t *props,
 static void XMLCALL
 start_propfind(void *userData, const char *name, const char **attrs)
 {
-  propfind_context_t *ctx = userData;
-  dav_props_t prop_name;
+  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__dav_props_t prop_name;
 
   /* check for new namespaces */
-  define_ns(&ctx->ns_list, attrs, ctx->pool);
+  svn_ra_serf__define_ns(&ctx->ns_list, attrs, ctx->pool);
 
   /* look up name space if present */
-  prop_name = expand_ns(ctx->ns_list, name);
+  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
 
   if (ctx->in_prop && !ctx->attr_name)
     {
@@ -211,7 +212,7 @@ start_propfind(void *userData, const char *name, const char **attrs)
 static void XMLCALL
 end_propfind(void *userData, const char *name)
 {
-  propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
       /* if we didn't see a CDATA element, we want the tag name. */
@@ -233,17 +234,18 @@ end_propfind(void *userData, const char *name)
         }
 
       /* set the return props and update our cache too. */
-      set_ver_prop(ctx->ret_props,
-                   ctx->path, ctx->rev,
-                   ctx->ns, ctx->attr_name, ctx->attr_val,
-                   ctx->pool);
+      svn_ra_serf__set_ver_prop(ctx->ret_props,
+                                ctx->path, ctx->rev,
+                                ctx->ns, ctx->attr_name, ctx->attr_val,
+                                ctx->pool);
       if (ctx->cache_props)
         {
-          set_ver_prop(ctx->sess->cached_props,
-                       ctx->path, ctx->rev,
-                       ctx->ns, ctx->attr_name,
-                       apr_pstrdup(ctx->sess->pool, ctx->attr_val),
-                       ctx->sess->pool);
+          svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
+                                    ctx->path, ctx->rev,
+                                    ctx->ns, ctx->attr_name,
+                                    apr_pstrdup(ctx->sess->pool,
+                                                ctx->attr_val),
+                                    ctx->sess->pool);
         }
 
       /* we're done with it. */
@@ -262,11 +264,11 @@ end_propfind(void *userData, const char *name)
 static void XMLCALL
 cdata_propfind(void *userData, const char *data, int len)
 {
-  propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
     {
-      expand_string(&ctx->attr_val, &ctx->attr_val_len,
-                    data, len, ctx->pool);
+      svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
+                                 data, len, ctx->pool);
     }
 
 }
@@ -281,21 +283,20 @@ setup_propfind(serf_request_t *request,
                void **handler_baton,
                apr_pool_t *pool)
 {
-  propfind_context_t *ctx = setup_baton;
-  ra_serf_xml_parser_t *parser_ctx;
+  svn_ra_serf__propfind_context_t *ctx = setup_baton;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 
-  *req_bkt = serf_bucket_propfind_create(ctx->conn,
-                                         ctx->path,
-                                         ctx->label,
-                                         ctx->depth,
-                                         ctx->find_props,
-                                         serf_request_get_alloc(request));
+  *req_bkt =
+      svn_ra_serf__bucket_propfind_create(ctx->conn, ctx->path, ctx->label,
+                                          ctx->depth, ctx->find_props,
+                                          serf_request_get_alloc(request));
 
   if (ctx->conn->using_ssl)
     {
-      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt,
-                                            ctx->conn->ssl_context,
-                                            serf_request_get_alloc(request));
+      *req_bkt =
+          serf_bucket_ssl_encrypt_create(*req_bkt, ctx->conn->ssl_context,
+                                         serf_request_get_alloc(request));
+
       if (!ctx->conn->ssl_context)
         {
           ctx->conn->ssl_context =
@@ -314,7 +315,7 @@ setup_propfind(serf_request_t *request,
   parser_ctx->done_list = ctx->done_list;
   parser_ctx->done_item = &ctx->done_item;
 
-  *handler = handle_xml_parser;
+  *handler = svn_ra_serf__handle_xml_parser;
   *handler_baton = parser_ctx;
 
   return APR_SUCCESS;
@@ -322,14 +323,14 @@ setup_propfind(serf_request_t *request,
 
 static svn_boolean_t
 check_cache(apr_hash_t *ret_props,
-            ra_serf_session_t *sess,
+            svn_ra_serf__session_t *sess,
             const char *path,
             svn_revnum_t rev,
-            const dav_props_t *find_props,
+            const svn_ra_serf__dav_props_t *find_props,
             apr_pool_t *pool)
 {
   svn_boolean_t cache_hit = TRUE;
-  const dav_props_t *prop;
+  const svn_ra_serf__dav_props_t *prop;
 
   /* check to see if we have any of this information cached */
   prop = find_props;
@@ -337,12 +338,12 @@ check_cache(apr_hash_t *ret_props,
     {
       const char *val;
 
-      val = get_ver_prop(sess->cached_props, path, rev, prop->namespace,
-                         prop->name);
+      val = svn_ra_serf__get_ver_prop(sess->cached_props, path, rev,
+                                      prop->namespace, prop->name);
       if (val)
         {
-          set_ver_prop(ret_props, path, rev, prop->namespace, prop->name, val,
-                       pool);
+          svn_ra_serf__set_ver_prop(ret_props, path, rev,
+                                    prop->namespace, prop->name, val, pool);
         }
       else
         {
@@ -364,28 +365,28 @@ check_cache(apr_hash_t *ret_props,
  * flag to be set.
  */
 svn_error_t *
-deliver_props(propfind_context_t **prop_ctx,
-              apr_hash_t *ret_props,
-              ra_serf_session_t *sess,
-              ra_serf_connection_t *conn,
-              const char *path,
-              svn_revnum_t rev,
-              const char *depth,
-              const dav_props_t *find_props,
-              svn_boolean_t cache_props,
-              ra_serf_list_t **done_list,
-              apr_pool_t *pool)
+svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
+                           apr_hash_t *ret_props,
+                           svn_ra_serf__session_t *sess,
+                           svn_ra_serf__connection_t *conn,
+                           const char *path,
+                           svn_revnum_t rev,
+                           const char *depth,
+                           const svn_ra_serf__dav_props_t *find_props,
+                           svn_boolean_t cache_props,
+                           svn_ra_serf__list_t **done_list,
+                           apr_pool_t *pool)
 {
-  const dav_props_t *prop;
+  const svn_ra_serf__dav_props_t *prop;
   serf_bucket_t *req_bkt;
   serf_request_t *request;
-  propfind_context_t *new_prop_ctx;
+  svn_ra_serf__propfind_context_t *new_prop_ctx;
   apr_status_t status;
 
   if (!*prop_ctx)
     {
       svn_boolean_t cache_satisfy;
-      ra_serf_handler_t *handler;
+      svn_ra_serf__handler_t *handler;
 
       cache_satisfy = check_cache(ret_props, sess, path, rev, find_props, pool);
 
@@ -431,19 +432,19 @@ deliver_props(propfind_context_t **prop_ctx,
     }
 
   /* create request */
-  ra_serf_request_create((*prop_ctx)->handler);
+  svn_ra_serf__request_create((*prop_ctx)->handler);
 
   return SVN_NO_ERROR;
 }
 
 svn_boolean_t
-propfind_is_done(propfind_context_t *ctx)
+svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx)
 {
   return ctx->done;
 }
 
 int
-propfind_status_code(propfind_context_t *ctx)
+svn_ra_serf__propfind_status_code(svn_ra_serf__propfind_context_t *ctx)
 {
   return ctx->status_code;
 }
@@ -453,45 +454,45 @@ propfind_status_code(propfind_context_t *ctx)
  * or another error is returned.
  */
 svn_error_t *
-wait_for_props(propfind_context_t *prop_ctx,
-               ra_serf_session_t *sess,
-               apr_pool_t *pool)
+svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
+                            svn_ra_serf__session_t *sess,
+                            apr_pool_t *pool)
 {
-  return context_run_wait(&prop_ctx->done, sess, pool);
+  return svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
 }
 
 /*
  * This is a blocking version of deliver_props.
  */
 svn_error_t *
-retrieve_props(apr_hash_t *prop_vals,
-               ra_serf_session_t *sess,
-               ra_serf_connection_t *conn,
-               const char *url,
-               svn_revnum_t rev,
-               const char *depth,
-               const dav_props_t *props,
-               apr_pool_t *pool)
+svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
+                            svn_ra_serf__session_t *sess,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t rev,
+                            const char *depth,
+                            const svn_ra_serf__dav_props_t *props,
+                            apr_pool_t *pool)
 {
-  propfind_context_t *prop_ctx = NULL;
+  svn_ra_serf__propfind_context_t *prop_ctx = NULL;
 
-  SVN_ERR(deliver_props(&prop_ctx, prop_vals, sess, conn, url, rev, depth,
-                        props, TRUE, NULL, pool));
+  SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, prop_vals, sess, conn, url,
+                                     rev, depth, props, TRUE, NULL, pool));
   if (prop_ctx)
     {
-      SVN_ERR(wait_for_props(prop_ctx, sess, pool));
+      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 void
-walk_all_props(apr_hash_t *props,
-               const char *name,
-               svn_revnum_t rev,
-               walker_visitor_t walker,
-               void *baton,
-               apr_pool_t *pool)
+svn_ra_serf__walk_all_props(apr_hash_t *props,
+                            const char *name,
+                            svn_revnum_t rev,
+                            svn_ra_serf__walker_visitor_t walker,
+                            void *baton,
+                            apr_pool_t *pool)
 {
   apr_hash_index_t *ns_hi;
   apr_hash_t *ver_props, *path_props;

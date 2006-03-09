@@ -55,7 +55,7 @@ typedef struct options_state_list_t {
   struct options_state_list_t *prev;
 } options_state_list_t;
 
-struct options_context_t {
+struct svn_ra_serf__options_context_t {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 
@@ -67,7 +67,7 @@ struct options_context_t {
   XML_Parser xmlp;
 
   /* Current namespace list */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* Current state we're in */
   options_state_list_t *state;
@@ -79,8 +79,8 @@ struct options_context_t {
   /* are we done? */
   svn_boolean_t done;
 
-  ra_serf_session_t *session;
-  ra_serf_connection_t *conn;
+  svn_ra_serf__session_t *session;
+  svn_ra_serf__connection_t *conn;
 
   const char *path;
 
@@ -92,7 +92,7 @@ struct options_context_t {
 };
 
 static void
-push_state(options_context_t *options_ctx, options_state_e state)
+push_state(svn_ra_serf__options_context_t *options_ctx, options_state_e state)
 {
   options_state_list_t *new_state;
 
@@ -112,7 +112,7 @@ push_state(options_context_t *options_ctx, options_state_e state)
   options_ctx->state = new_state;
 }
 
-static void pop_state(options_context_t *options_ctx)
+static void pop_state(svn_ra_serf__options_context_t *options_ctx)
 {
   options_state_list_t *free_state;
   free_state = options_ctx->state;
@@ -125,12 +125,12 @@ static void pop_state(options_context_t *options_ctx)
 static void XMLCALL
 start_options(void *userData, const char *raw_name, const char **attrs)
 {
-  options_context_t *options_ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__options_context_t *options_ctx = userData;
+  svn_ra_serf__dav_props_t name;
 
-  define_ns(&options_ctx->ns_list, attrs, options_ctx->pool);
+  svn_ra_serf__define_ns(&options_ctx->ns_list, attrs, options_ctx->pool);
 
-  name = expand_ns(options_ctx->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(options_ctx->ns_list, raw_name);
 
   if (!options_ctx->state && strcmp(name.name, "options-response") == 0)
     {
@@ -157,8 +157,8 @@ start_options(void *userData, const char *raw_name, const char **attrs)
 static void XMLCALL
 end_options(void *userData, const char *raw_name)
 {
-  options_context_t *options_ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__options_context_t *options_ctx = userData;
+  svn_ra_serf__dav_props_t name;
   options_state_list_t *cur_state;
 
   if (!options_ctx->state)
@@ -168,7 +168,7 @@ end_options(void *userData, const char *raw_name)
 
   cur_state = options_ctx->state;
 
-  name = expand_ns(options_ctx->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(options_ctx->ns_list, raw_name);
 
   if (cur_state->state == OPTIONS &&
       strcmp(name.name, "options-response") == 0)
@@ -192,10 +192,10 @@ end_options(void *userData, const char *raw_name)
 static void XMLCALL
 cdata_options(void *userData, const char *data, int len)
 {
-  options_context_t *ctx = userData;
+  svn_ra_serf__options_context_t *ctx = userData;
   if (ctx->collect_cdata == TRUE)
     {
-      expand_string(&ctx->attr_val, &ctx->attr_val_len,
+      svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
                     data, len, ctx->pool);
     }
 }
@@ -212,27 +212,27 @@ create_options_body(void *baton,
 }
 
 svn_boolean_t*
-get_options_done_ptr(options_context_t *ctx)
+svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx)
 {
   return &ctx->done;
 }
 
 const char *
-options_get_activity_collection(options_context_t *ctx)
+svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx)
 {
   return ctx->activity_collection;
 }
 
 svn_error_t *
-create_options_req(options_context_t **opt_ctx,
-                   ra_serf_session_t *session,
-                   ra_serf_connection_t *conn,
-                   const char *path,
-                   apr_pool_t *pool)
+svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
+                                svn_ra_serf__session_t *session,
+                                svn_ra_serf__connection_t *conn,
+                                const char *path,
+                                apr_pool_t *pool)
 {
-  options_context_t *new_ctx;
-  ra_serf_handler_t *handler;
-  ra_serf_xml_parser_t *parser_ctx;
+  svn_ra_serf__options_context_t *new_ctx;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
 
@@ -260,10 +260,10 @@ create_options_req(options_context_t **opt_ctx,
   parser_ctx->cdata = cdata_options;
   parser_ctx->done = &new_ctx->done;
 
-  handler->response_handler = handle_xml_parser;
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  ra_serf_request_create(handler);
+  svn_ra_serf__request_create(handler);
 
   *opt_ctx = new_ctx;
 

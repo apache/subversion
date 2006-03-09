@@ -86,7 +86,7 @@ typedef struct {
   svn_boolean_t changed_paths;
 
   /* Current namespace list */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* Current state we're in */
   log_state_list_t *state;
@@ -171,11 +171,11 @@ static void XMLCALL
 start_log(void *userData, const char *raw_name, const char **attrs)
 {
   log_context_t *log_ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__dav_props_t name;
 
-  define_ns(&log_ctx->ns_list, attrs, log_ctx->pool);
+  svn_ra_serf__define_ns(&log_ctx->ns_list, attrs, log_ctx->pool);
 
-  name = expand_ns(log_ctx->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(log_ctx->ns_list, raw_name);
 
   if (!log_ctx->state && strcmp(name.name, "log-report") == 0)
     {
@@ -219,7 +219,7 @@ static void XMLCALL
 end_log(void *userData, const char *raw_name)
 {
   log_context_t *log_ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__dav_props_t name;
   log_state_list_t *cur_state;
 
   if (!log_ctx->state)
@@ -229,7 +229,7 @@ end_log(void *userData, const char *raw_name)
 
   cur_state = log_ctx->state;
 
-  name = expand_ns(log_ctx->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(log_ctx->ns_list, raw_name);
 
   if (cur_state->state == REPORT &&
       strcmp(name.name, "log-report") == 0)
@@ -296,9 +296,9 @@ cdata_log(void *userData, const char *data, int len)
       case CREATOR:
       case DATE:
       case COMMENT:
-        expand_string(&log_ctx->state->info->tmp,
-                      &log_ctx->state->info->tmp_len,
-                      data, len, log_ctx->pool);
+        svn_ra_serf__expand_string(&log_ctx->state->info->tmp,
+                                   &log_ctx->state->info->tmp_len,
+                                   data, len, log_ctx->pool);
         break;
       default:
         break;
@@ -318,9 +318,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   log_context_t *log_ctx;
-  ra_serf_session_t *session = ra_session->priv;
-  ra_serf_handler_t *handler;
-  ra_serf_xml_parser_t *parser_ctx;
+  svn_ra_serf__session_t *session = ra_session->priv;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
@@ -397,13 +397,14 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0],
-                         session->repos_url.path,
-                         SVN_INVALID_REVNUM, "0", base_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      session->repos_url.path,
+                                      SVN_INVALID_REVNUM, "0", base_props,
+                                      pool));
 
   /* Send the request to the baseline URL */
-  vcc_url = get_prop(props, session->repos_url.path, "DAV:",
-                       "version-controlled-configuration");
+  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+                                  "DAV:", "version-controlled-configuration");
 
   if (!vcc_url)
     {
@@ -411,29 +412,31 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
     }
 
   /* Send the request to the baseline URL */
-  relative_url = get_prop(props, session->repos_url.path,
-                            SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
+  relative_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+                                       SVN_DAV_PROP_NS_DAV,
+                                       "baseline-relative-path");
 
   if (!relative_url)
     {
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0], vcc_url,
-                         SVN_INVALID_REVNUM, "0",
-                         checked_in_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      vcc_url, SVN_INVALID_REVNUM, "0",
+                                      checked_in_props, pool));
 
-  baseline_url = get_prop(props, vcc_url, "DAV:", "checked-in");
+  baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
 
   if (!baseline_url)
     {
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0], baseline_url,
-                         SVN_INVALID_REVNUM, "0", baseline_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      baseline_url, SVN_INVALID_REVNUM, "0",
+                                      baseline_props, pool));
 
-  basecoll_url = get_prop(props, baseline_url, "DAV:", "baseline-collection");
+  basecoll_url = svn_ra_serf__get_prop(props, baseline_url, "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {
@@ -459,12 +462,12 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   parser_ctx->cdata = cdata_log;
   parser_ctx->done = &log_ctx->done;
 
-  handler->response_handler = handle_xml_parser;
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  ra_serf_request_create(handler);
+  svn_ra_serf__request_create(handler);
 
-  SVN_ERR(context_run_wait(&log_ctx->done, session, pool));
+  SVN_ERR(svn_ra_serf__context_run_wait(&log_ctx->done, session, pool));
 
   return log_ctx->error;
 }

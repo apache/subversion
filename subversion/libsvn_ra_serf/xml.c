@@ -39,7 +39,9 @@
 
 
 void
-define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
+svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
+                       const char **attrs,
+                       apr_pool_t *pool)
 {
   const char **tmp_attrs = attrs;
 
@@ -48,7 +50,7 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
       if (strncmp(*tmp_attrs, "xmlns", 5) == 0)
         {
           const char *attr, *attr_val;
-          ns_t *new_ns, *cur_ns;
+          svn_ra_serf__ns_t *new_ns, *cur_ns;
           int found = 0;
 
           /* Have we already defined this ns previously? */
@@ -81,16 +83,17 @@ define_ns(ns_t **ns_list, const char **attrs, apr_pool_t *pool)
  * definitions and return a DAV_PROPS_T-tuple that has values that
  * has a lifetime tied to POOL.
  */
-dav_props_t
-expand_ns(ns_t *ns_list, const char *name)
+svn_ra_serf__dav_props_t
+svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
+                       const char *name)
 {
   const char *colon;
-  dav_props_t prop_name;
+  svn_ra_serf__dav_props_t prop_name;
 
   colon = strchr(name, ':');
   if (colon)
     {
-      ns_t *ns;
+      svn_ra_serf__ns_t *ns;
 
       for (ns = ns_list; ns; ns = ns->next)
         {
@@ -123,7 +126,8 @@ expand_ns(ns_t *ns_list, const char *name)
  * Returns NULL if no matching name is found.
  */
 const char *
-find_attr(const char **attrs, const char *attr_name)
+svn_ra_serf__find_attr(const char **attrs,
+                       const char *attr_name)
 {
   const char *attr_val = NULL;
   const char **tmp_attrs = attrs;
@@ -142,9 +146,9 @@ find_attr(const char **attrs, const char *attr_name)
 }
 
 void
-expand_string(const char **cur, apr_size_t *cur_len,
-              const char *new, apr_size_t new_len,
-              apr_pool_t *pool)
+svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
+                           const char *new, apr_size_t new_len,
+                           apr_pool_t *pool)
 {
   if (!*cur)
     {
