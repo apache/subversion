@@ -666,14 +666,29 @@ conventions:</p>
       line in two would be unreasonably messy.)</p>
 </li>
 
-<li><p>Signify internal variables by two underscores after the prefix.
-      That is, when a symbol must (for technical reasons) reside in the
-      global namespace despite not being part of a published interface,
-      then use two underscores following the module prefix.  For
-      example:</p>
+<li><p>All published functions, variables, and structures must be signified
+      with the corresponding library name - such as libsvn_wc's
+      svn_wc_adm_open.  All library-internal declarations made in a
+      library-private hader file (such as libsvn_wc/wc.h) must be signified
+      by two underscores after the library prefix (such as
+      svn_wc__ensure_directory).  All declarations private to a single file
+      (such as the static function get_entry_url inside
+      libsvn_wc/update_editor.c) do not require any additional namespace
+      decorations</p>
+      
+      <p>To recap:</p>
       <pre>
-         svn_fs_get_rev_prop()       /* Part of published API. */
-         svn_fs__parse_props()       /* For internal use only. */
+         /* Part of published API: subversion/include/svn_wc.h */
+         svn_wc_adm_open()            
+         #define SVN_WC_ADM_DIR_NAME ...
+         typedef enum svn_wc_schedule_t ...
+         /* For use within one library only: subversion/libsvn_wc/wc.h */
+         svn_wc__ensure_directory()   
+         #define SVN_WC__BASE_EXT ... 
+         typedef struct svn_wc__compat_notify_baton_t ...
+         /* For use within one file: subversion/libsvn_wc/update_editor.c */ 
+         get_entry_url()
+         struct handler_baton {
       </pre>
 </li>
 
