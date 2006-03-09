@@ -2334,7 +2334,7 @@ svn_client_diff2 (const apr_array_header_t *options,
 {
   return svn_client_diff3 (options, path1, revision1, path2, revision2,
                            recurse, ignore_ancestry, no_diff_deleted,
-                           ignore_content_type, APR_LOCALE_CHARSET,
+                           ignore_content_type, SVN_APR_LOCALE_CHARSET,
                            outfile, errfile, ctx, pool);
 }
 
@@ -2427,7 +2427,7 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
   return svn_client_diff_peg3 (options, path, peg_revision, start_revision,
                                end_revision, recurse, ignore_ancestry,
                                no_diff_deleted, ignore_content_type,
-                               APR_LOCALE_CHARSET, outfile, errfile,
+                               SVN_APR_LOCALE_CHARSET, outfile, errfile,
                                ctx, pool);
 }
 
