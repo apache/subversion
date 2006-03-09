@@ -140,10 +140,3 @@ Approved changes:
     Votes:
       +1: blair, dlr
 
-  * r18660
-    Be more thorough about checking for canonical paths.
-    Justification:
-      Small change, all current clients already canonicalize everything,
-      paranoia about client provided input is a good thing.
-    Votes:
-      +1: rooneg, lundblad, malcolm
