@@ -245,6 +245,18 @@ Possible values are: commit, revert."
   :type 'boolean
   :group 'psvn)
 
+(defcustom svn-status-do-prompt-for-save t
+  "*Ask before committing, if files from the working copy should be saved.
+Using 'before-log-edit: ask before log editing start
+      'before-commit: ask before a commit
+      t: Ask before log editing start and before a commit
+      nil: Never ask"
+  :type '(choice (const 'before-log-edit)
+                 (const 'before-commit)
+                 (const t)
+                 (const nil))
+  :group 'psvn)
+
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -1546,6 +1558,29 @@ in use before `svn-status' was called."
              (setq bl (cdr bl)))
            (when (string= (buffer-name) svn-status-buffer-name)
              (bury-buffer))))))
+
+(defun svn-status-save-some-buffers (&optional tree)
+  "Save all buffers visiting a file in TREE.
+If TREE is not given, try `svn-status-base-dir' as TREE."
+  (interactive)
+  (let ((ok t)
+        (tree (or (svn-status-base-dir)
+                  tree)))
+    (unless tree
+      (error "Not in a svn project tree"))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when (buffer-modified-p)
+          (let ((file (buffer-file-name)))
+            (when file
+              (let ((root (svn-status-base-dir (file-name-directory file))))
+                (when (and root
+                           (string= root tree)
+                           ;; buffer is modified and in the tree TREE.
+                           (or (y-or-n-p (concat "Save buffer " (buffer-name) "? "))
+                               (setq ok nil)))
+                  (save-buffer))))))))
+    ok))
 
 (defun svn-status-find-files ()
   "Open selected file(s) for editing.
@@ -2850,7 +2885,8 @@ this is because marking a directory with \\[svn-status-set-user-mark]
 normally marks all of its files as well.
 If no files have been marked, commit recursively the file at point."
   (interactive)
-  (save-some-buffers)
+  (when (member svn-status-do-prompt-for-save '(before-log-edit t))
+    (svn-status-save-some-buffers))
   (let* ((selected-files (svn-status-marked-files))
          (marked-files-p (svn-status-some-files-marked-p)))
     (setq svn-status-files-to-commit selected-files
@@ -3524,7 +3560,8 @@ Commands:
 
 (defun svn-log-edit-done ()
   (interactive)
-  (save-some-buffers)
+  (when (member svn-status-do-prompt-for-save '(before-commit t))
+    (svn-status-save-some-buffers))
   (save-excursion
     (set-buffer (get-buffer "*svn-log-edit*"))
     (when svn-log-edit-insert-files-to-commit
@@ -3710,10 +3747,13 @@ When called with a prefix argument, ask the user for the revision."
 ;; svn status persistent options
 ;; --------------------------------------------------------------------------------
 
-(defun svn-status-base-dir ()
-  (let* ((base-dir (expand-file-name default-directory))
-        (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
-        (dir-below (expand-file-name default-directory)))
+(defun svn-status-base-dir (&optional start-directory)
+  "Find the svn root directory for the current working copy.
+Return nil, if not in a svn working copy."
+  (let* ((base-dir (expand-file-name (or start-directory default-directory)))
+         (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
+         (in-tree (file-exists-p dot-svn-dir))
+         (dir-below (expand-file-name default-directory)))
     (while (when (and dir-below (file-exists-p dot-svn-dir))
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
@@ -3721,7 +3761,7 @@ When called with a prefix argument, ask the user for the revision."
                    (and (string-match "\(.*/\)[^/]+/" dir-below)
                         (match-string 1 dir-below)))
              (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
-    base-dir))
+    (and in-tree base-dir)))
 
 (defun svn-status-save-state ()
   "Save psvn persistent options for this working copy to a file."
