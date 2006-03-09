@@ -82,6 +82,9 @@ typedef struct report_dir_t
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
 
+  /* The target revision we're retrieving. */
+  svn_revnum_t target_rev;
+
   /* controlling dir baton - this is only created in open_dir() */
   void *dir_baton;
   apr_pool_t *dir_baton_pool;
@@ -150,6 +153,9 @@ typedef struct report_info_t
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this file. */
   svn_revnum_t base_rev;
 
+  /* The target revision we're retrieving. */
+  svn_revnum_t target_rev;
+
   /* our delta base, if present (NULL if we're adding the file) */
   const svn_string_t *delta_base;
 
@@ -206,6 +212,7 @@ typedef struct report_fetch_t {
   svn_stream_t *delta_stream;
 
   /* Are we done fetching this file? */
+  svn_boolean_t done;
   ra_serf_list_t **done_list;
   ra_serf_list_t done_item;
 
@@ -243,11 +250,20 @@ typedef struct {
   ra_serf_session_t *sess;
   ra_serf_connection_t *conn;
 
+  /* Source path and destination path */
+  const char *source;
+  const char *destination;
+
+  /* Our update target. */
+  const char *update_target;
+
   /* What is the target revision that we want for this REPORT? */
-  const char *target;
   svn_revnum_t target_rev;
 
+  /* Have we been asked to ignore ancestry, recursion, or textdeltas? */
+  svn_boolean_t ignore_ancestry;
   svn_boolean_t recurse;
+  svn_boolean_t text_deltas;
 
   /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
@@ -537,9 +553,9 @@ close_dir(report_dir_t *dir)
       abort();
     }
 
-  walk_all_props(dir->props, dir->base_name, SVN_INVALID_REVNUM,
+  walk_all_props(dir->props, dir->base_name, dir->base_rev,
                  set_dir_props, dir, dir->dir_baton_pool);
-  walk_all_props(dir->props, dir->url, SVN_INVALID_REVNUM, set_dir_props, dir,
+  walk_all_props(dir->props, dir->url, dir->target_rev, set_dir_props, dir,
                  dir->dir_baton_pool);
   SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
                                               dir->dir_baton_pool));
@@ -806,17 +822,19 @@ handle_fetch(serf_request_t *request,
           /* set all of the properties we received */
           walk_all_props(info->dir->props,
                          info->base_name,
-                         SVN_INVALID_REVNUM,
+                         info->base_rev,
                          set_file_props,
                          info, info->editor_pool);
           walk_all_props(info->dir->props,
                          info->url,
-                         SVN_INVALID_REVNUM,
+                         info->target_rev,
                          set_file_props,
                          info, info->editor_pool);
 
           info->dir->update_editor->close_file(info->file_baton, NULL,
                                                info->editor_pool);
+
+          fetch_ctx->done = TRUE;
 
           fetch_ctx->done_item.data = fetch_ctx;
           fetch_ctx->done_item.next = *fetch_ctx->done_list;
@@ -851,8 +869,8 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   conn = ctx->sess->conns[ctx->sess->cur_conn];
 
   /* go fetch info->name from DAV:checked-in */
-  checked_in_url = get_prop(info->dir->props, info->base_name,
-                         "DAV:", "checked-in");
+  checked_in_url = get_ver_prop(info->dir->props, info->base_name,
+                                info->base_rev, "DAV:", "checked-in");
 
   if (!checked_in_url)
     {
@@ -865,7 +883,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   if (info->fetch_props)
     {
       deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
-                    info->url, SVN_INVALID_REVNUM, "0", all_props,
+                    info->url, info->target_rev, "0", all_props,
                     FALSE, &ctx->done_propfinds, info->dir->pool);
       if (!prop_ctx)
         {
@@ -959,6 +977,7 @@ start_report(void *userData, const char *name, const char **attrs)
 
       info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
+      info->dir->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
 
       info->dir->base_name = "";
@@ -999,6 +1018,7 @@ start_report(void *userData, const char *name, const char **attrs)
 
       info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
+      info->dir->target_rev = ctx->target_rev;
       info->fetch_props = FALSE;
 
       info->dir->base_name = apr_pstrdup(info->dir->pool, dirname);
@@ -1028,6 +1048,7 @@ start_report(void *userData, const char *name, const char **attrs)
       /* Mark that we don't have a base. */
       ctx->state->info->base_rev = SVN_INVALID_REVNUM;
       dir_info->base_rev = ctx->state->info->base_rev;
+      dir_info->target_rev = ctx->target_rev;
       dir_info->fetch_props = TRUE;
     }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
@@ -1055,6 +1076,7 @@ start_report(void *userData, const char *name, const char **attrs)
       info = ctx->state->info;
 
       info->base_rev = apr_atoi64(rev);
+      info->target_rev = ctx->target_rev;
       info->fetch_props = FALSE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
@@ -1078,6 +1100,7 @@ start_report(void *userData, const char *name, const char **attrs)
       info = ctx->state->info;
 
       info->base_rev = SVN_INVALID_REVNUM;
+      info->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
@@ -1203,8 +1226,8 @@ end_report(void *userData, const char *raw_name)
       info->dir->tag_closed = TRUE;
 
       /* go fetch info->file_name from DAV:checked-in */
-      checked_in_url = get_prop(info->dir->props, info->base_name,
-                                "DAV:", "checked-in");
+      checked_in_url = get_ver_prop(info->dir->props, info->base_name,
+                                    info->base_rev, "DAV:", "checked-in");
 
       if (!checked_in_url)
         {
@@ -1223,7 +1246,7 @@ end_report(void *userData, const char *raw_name)
 
           deliver_props(&info->dir->propfind, info->dir->props, ctx->sess,
                         ctx->sess->conns[ctx->sess->cur_conn],
-                        info->dir->url, SVN_INVALID_REVNUM,
+                        info->dir->url, info->dir->target_rev,
                         "0", all_props, FALSE, &ctx->done_propfinds,
                         info->dir->pool);
 
@@ -1324,11 +1347,12 @@ end_report(void *userData, const char *raw_name)
           dir->ns_list = ns;
         }
 
-      set_prop(dir->props, ctx->state->info->base_name,
-               ns->namespace, ns->url,
-               apr_pstrmemdup(dir->pool, ctx->state->info->prop_val,
-                              ctx->state->info->prop_val_len),
-               dir->pool);
+      set_ver_prop(dir->props, ctx->state->info->base_name,
+                   ctx->state->info->base_rev,
+                   ns->namespace, ns->url,
+                   apr_pstrmemdup(dir->pool, ctx->state->info->prop_val,
+                                  ctx->state->info->prop_val_len),
+                   dir->pool);
       pop_state(ctx);
     }
   else if ((ctx->state->state == IGNORE_PROP_NAME ||
@@ -1644,15 +1668,19 @@ static const svn_ra_reporter2_t ra_serf_reporter = {
 };
 
 svn_error_t *
-svn_ra_serf__do_update(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
-                       void **report_baton,
-                       svn_revnum_t revision_to_update_to,
-                       const char *update_target,
-                       svn_boolean_t recurse,
-                       const svn_delta_editor_t *update_editor,
-                       void *update_baton,
-                       apr_pool_t *pool)
+make_update_reporter(svn_ra_session_t *ra_session,
+                     const svn_ra_reporter2_t **reporter,
+                     void **report_baton,
+                     svn_revnum_t revision,
+                     const char *src_path,
+                     const char *dest_path,
+                     const char *update_target,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t text_deltas,
+                     const svn_delta_editor_t *update_editor,
+                     void *update_baton,
+                     apr_pool_t *pool)
 {
   report_context_t *report;
   ra_serf_session_t *session = ra_session->priv;
@@ -1662,9 +1690,14 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   report->pool = pool;
   report->sess = ra_session->priv;
   report->conn = report->sess->conns[0];
-  report->target = update_target;
-  report->target_rev = revision_to_update_to;
+  report->source = src_path;
+  report->destination = dest_path;
+  report->update_target = update_target;
+  report->target_rev = revision;
   report->recurse = recurse;
+  report->ignore_ancestry = ignore_ancestry;
+  report->text_deltas = text_deltas;
+
   report->update_editor = update_editor;
   report->update_baton = update_baton;
   report->done = FALSE;
@@ -1690,25 +1723,39 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   serf_bucket_aggregate_append(report->buckets, tmp);
 
   add_tag_buckets(report->buckets,
-                  "S:src-path", report->sess->repos_url.path,
+                  "S:src-path", report->source,
                   report->sess->bkt_alloc);
 
-  if (SVN_IS_VALID_REVNUM(revision_to_update_to))
+  if (SVN_IS_VALID_REVNUM(report->target_rev))
     {
       add_tag_buckets(report->buckets,
                       "S:target-revision",
-                      apr_ltoa(pool, revision_to_update_to),
+                      apr_ltoa(pool, report->target_rev),
                       report->sess->bkt_alloc);
     }
 
-  if (*update_target)
+  if (report->destination && *report->destination)
     {
       add_tag_buckets(report->buckets,
-                      "S:update-target", update_target,
+                      "S:dst-path", report->destination,
                       report->sess->bkt_alloc);
     }
 
-  if (!recurse)
+  if (report->update_target && *report->update_target)
+    {
+      add_tag_buckets(report->buckets,
+                      "S:update-target", report->update_target,
+                      report->sess->bkt_alloc);
+    }
+
+  if (report->ignore_ancestry)
+    {
+      add_tag_buckets(report->buckets,
+                      "S:ignore-ancestry", "yes",
+                      report->sess->bkt_alloc);
+    }
+
+  if (!report->recurse)
     {
       add_tag_buckets(report->buckets,
                       "S:recursive", "no",
@@ -1716,4 +1763,24 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__do_update(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_update_to,
+                       const char *update_target,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *update_editor,
+                       void *update_baton,
+                       apr_pool_t *pool)
+{
+  ra_serf_session_t *session = ra_session->priv;
+
+  return make_update_reporter(ra_session, reporter, report_baton,
+                              revision_to_update_to,
+                              session->repos_url.path, NULL, update_target,
+                              recurse, FALSE, TRUE,
+                              update_editor, update_baton, pool);
 }
