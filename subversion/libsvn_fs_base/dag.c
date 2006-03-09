@@ -293,7 +293,6 @@ get_dir_entries(apr_hash_t **entries_p,
                 apr_pool_t *pool)
 {
   apr_hash_t *entries = apr_hash_make(pool);
-  apr_hash_index_t *hi;
   svn_string_t entries_raw;
   skel_t *entries_skel;
 
