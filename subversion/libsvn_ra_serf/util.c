@@ -28,12 +28,12 @@
 
 
 serf_bucket_t *
-conn_setup(apr_socket_t *sock,
+svn_ra_serf__conn_setup(apr_socket_t *sock,
            void *baton,
            apr_pool_t *pool)
 {
   serf_bucket_t *bucket;
-  ra_serf_connection_t *conn = baton;
+  svn_ra_serf__connection_t *conn = baton;
 
   bucket = serf_bucket_socket_create(sock, conn->bkt_alloc);
   if (conn->using_ssl)
@@ -50,7 +50,7 @@ conn_setup(apr_socket_t *sock,
 }
 
 serf_bucket_t*
-accept_response(serf_request_t *request,
+svn_ra_serf__accept_response(serf_request_t *request,
                 serf_bucket_t *stream,
                 void *acceptor_baton,
                 apr_pool_t *pool)
@@ -65,12 +65,12 @@ accept_response(serf_request_t *request,
 }
 
 void
-conn_closed(serf_connection_t *conn,
+svn_ra_serf__conn_closed(serf_connection_t *conn,
             void *closed_baton,
             apr_status_t why,
             apr_pool_t *pool)
 {
-  ra_serf_connection_t *our_conn = closed_baton;
+  svn_ra_serf__connection_t *our_conn = closed_baton;
 
   if (why)
     {
@@ -84,9 +84,9 @@ conn_closed(serf_connection_t *conn,
 }
 
 apr_status_t
-cleanup_serf_session(void *data)
+svn_ra_serf__cleanup_serf_session(void *data)
 {
-  ra_serf_session_t *serf_sess = data;
+  svn_ra_serf__session_t *serf_sess = data;
   int i;
 
   for (i = 0; i < serf_sess->num_conns; i++)
@@ -101,11 +101,12 @@ cleanup_serf_session(void *data)
 }
 
 void
-setup_serf_req(serf_request_t *request,
-               serf_bucket_t **req_bkt, serf_bucket_t **ret_hdrs_bkt,
-               ra_serf_connection_t *conn,
-               const char *method, const char *url,
-               serf_bucket_t *body_bkt, const char *content_type)
+svn_ra_serf__setup_serf_req(serf_request_t *request,
+                            serf_bucket_t **req_bkt,
+                            serf_bucket_t **ret_hdrs_bkt,
+                            svn_ra_serf__connection_t *conn,
+                            const char *method, const char *url,
+                            serf_bucket_t *body_bkt, const char *content_type)
 {
   serf_bucket_t *hdrs_bkt;
 
@@ -142,9 +143,9 @@ setup_serf_req(serf_request_t *request,
 }
 
 svn_error_t *
-context_run_wait(svn_boolean_t *done,
-                 ra_serf_session_t *sess,
-                 apr_pool_t *pool)
+svn_ra_serf__context_run_wait(svn_boolean_t *done,
+                              svn_ra_serf__session_t *sess,
+                              apr_pool_t *pool)
 {
   apr_status_t status;
 
@@ -173,7 +174,7 @@ context_run_wait(svn_boolean_t *done,
 }
 
 apr_status_t
-is_conn_closing(serf_bucket_t *response)
+svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 {
   serf_bucket_t *hdrs;
   const char *val;
@@ -188,11 +189,11 @@ is_conn_closing(serf_bucket_t *response)
   return APR_EOF;
 }
 
-SERF_DECLARE(apr_status_t)
-handler_discard_body(serf_request_t *request,
-                     serf_bucket_t *response,
-                     void *baton,
-                     apr_pool_t *pool)
+apr_status_t
+svn_ra_serf__handler_discard_body(serf_request_t *request,
+                                  serf_bucket_t *response,
+                                  void *baton,
+                                  apr_pool_t *pool)
 {
   apr_status_t status;
 
@@ -215,8 +216,8 @@ handler_discard_body(serf_request_t *request,
 }
 
 apr_status_t
-handle_auth(ra_serf_session_t *session,
-            ra_serf_connection_t *conn,
+handle_auth(svn_ra_serf__session_t *session,
+            svn_ra_serf__connection_t *conn,
             serf_request_t *request,
             serf_bucket_t *response,
             apr_pool_t *pool)
@@ -331,17 +332,17 @@ handle_auth(ra_serf_session_t *session,
 }
 
 apr_status_t
-handle_xml_parser(serf_request_t *request,
-                  serf_bucket_t *response,
-                  void *baton,
-                  apr_pool_t *pool)
+svn_ra_serf__handle_xml_parser(serf_request_t *request,
+                               serf_bucket_t *response,
+                               void *baton,
+                               apr_pool_t *pool)
 {
   const char *data;
   apr_size_t len;
   serf_status_line sl;
   apr_status_t status;
   enum XML_Status xml_status;
-  ra_serf_xml_parser_t *ctx = baton;
+  svn_ra_serf__xml_parser_t *ctx = baton;
 
   serf_bucket_response_status(response, &sl);
 
@@ -368,7 +369,7 @@ handle_xml_parser(serf_request_t *request,
               *ctx->done_list = ctx->done_item;
             }
         }
-      return handler_discard_body(request, response, NULL, pool);
+      return svn_ra_serf__handler_discard_body(request, response, NULL, pool);
     }
 
   if (!ctx->xmlp)
@@ -430,7 +431,7 @@ handler_default(serf_request_t *request,
                 void *baton,
                 apr_pool_t *pool)
 {
-  ra_serf_handler_t *ctx = baton;
+  svn_ra_serf__handler_t *ctx = baton;
   serf_bucket_t *headers;
   serf_status_line sl;
   apr_status_t status;
@@ -448,7 +449,7 @@ handler_default(serf_request_t *request,
             }
         }
 
-      ra_serf_request_create(ctx);
+      svn_ra_serf__request_create(ctx);
 
       return APR_SUCCESS;
     }
@@ -477,8 +478,8 @@ handler_default(serf_request_t *request,
   if (sl.code == 401)
     {
       handle_auth(ctx->session, ctx->conn, request, response, pool);
-      ra_serf_request_create(ctx);
-      status = handler_discard_body(request, response, NULL, pool);
+      svn_ra_serf__request_create(ctx);
+      status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
     }
   else
     {
@@ -488,7 +489,7 @@ handler_default(serf_request_t *request,
     }
 
   if (APR_STATUS_IS_EOF(status)) {
-      status = is_conn_closing(response);
+      status = svn_ra_serf__is_conn_closing(response);
   }
 
   return status;
@@ -505,10 +506,10 @@ setup_default(serf_request_t *request,
               void **handler_baton,
               apr_pool_t *pool)
 {
-  ra_serf_handler_t *ctx = setup_baton;
+  svn_ra_serf__handler_t *ctx = setup_baton;
   serf_bucket_t *body_bkt, *headers_bkt;
 
-  *acceptor = accept_response;
+  *acceptor = svn_ra_serf__accept_response;
   *acceptor_baton = ctx->session;
 
   if (ctx->delegate)
@@ -536,8 +537,9 @@ setup_default(serf_request_t *request,
                                  pool);
         }
 
-      setup_serf_req(request, req_bkt, &headers_bkt, ctx->conn,
-                     ctx->method, ctx->path, ctx->body_buckets, ctx->body_type);
+      svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt, ctx->conn,
+                                  ctx->method, ctx->path,
+                                  ctx->body_buckets, ctx->body_type);
 
       if (ctx->header_delegate)
         {
@@ -552,7 +554,7 @@ setup_default(serf_request_t *request,
 }
 
 serf_request_t*
-ra_serf_request_create(ra_serf_handler_t *handler)
+svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
                                         setup_default, handler);

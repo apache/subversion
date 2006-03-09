@@ -60,7 +60,7 @@ typedef struct {
 
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
-} ra_serf_connection_t;
+} svn_ra_serf__connection_t;
 
 /*
  * The master serf RA session.
@@ -81,7 +81,7 @@ typedef struct {
   svn_boolean_t using_ssl;
 
   /* The current connection */
-  ra_serf_connection_t **conns;
+  svn_ra_serf__connection_t **conns;
   int num_conns;
   int cur_conn;
 
@@ -106,7 +106,7 @@ typedef struct {
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
-} ra_serf_session_t;
+} svn_ra_serf__session_t;
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -116,7 +116,7 @@ typedef struct {
   const char *namespace;
   /* Element name */
   const char *name;
-} dav_props_t;
+} svn_ra_serf__dav_props_t;
 
 /*
  * Structure which represents an XML namespace.
@@ -128,7 +128,7 @@ typedef struct ns_t {
   const char *url;
   /* The next namespace in our list. */
   struct ns_t *next;
-} ns_t;
+} svn_ra_serf__ns_t;
 
 /*
  * An incredibly simple list.
@@ -136,11 +136,11 @@ typedef struct ns_t {
 typedef struct ra_serf_list_t {
   void *data;
   struct ra_serf_list_t *next;
-} ra_serf_list_t;
+} svn_ra_serf__list_t;
 
 /** DAV property sets **/
 
-static const dav_props_t base_props[] =
+static const svn_ra_serf__dav_props_t base_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
   { "DAV:", "resourcetype" },
@@ -149,78 +149,78 @@ static const dav_props_t base_props[] =
   NULL
 };
 
-static const dav_props_t checked_in_props[] =
+static const svn_ra_serf__dav_props_t checked_in_props[] =
 {
   { "DAV:", "checked-in" },
   NULL
 };
 
-static const dav_props_t baseline_props[] =
+static const svn_ra_serf__dav_props_t baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
   { "DAV:", "version-name" },
   NULL
 };
 
-static const dav_props_t all_props[] =
+static const svn_ra_serf__dav_props_t all_props[] =
 {
   { "DAV:", "allprop" },
   NULL
 };
 
-static const dav_props_t vcc_props[] =
+static const svn_ra_serf__dav_props_t vcc_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
   NULL
 };
 
-static const dav_props_t check_path_props[] =
+static const svn_ra_serf__dav_props_t check_path_props[] =
 {
   { "DAV:", "resourcetype" },
   NULL
 };
 
-static const dav_props_t uuid_props[] =
+static const svn_ra_serf__dav_props_t uuid_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
   NULL
 };
 
-static const dav_props_t repos_root_props[] =
+static const svn_ra_serf__dav_props_t repos_root_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
   NULL
 };
 
 /* WC props compatibility with ra_dav. */
-#define RA_SERF_WC_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
-#define RA_SERF_WC_ACTIVITY_URL RA_SERF_WC_NAMESPACE "activity-url"
-#define RA_SERF_WC_CHECKED_IN_URL RA_SERF_WC_NAMESPACE "version-url"
+#define SVN_RA_SERF__WC_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
+#define SVN_RA_SERF__WC_ACTIVITY_URL SVN_RA_SERF__WC_NAMESPACE "activity-url"
+#define SVN_RA_SERF__WC_CHECKED_IN_URL SVN_RA_SERF__WC_NAMESPACE "version-url"
 
 /** Serf utility functions **/
 
 serf_bucket_t *
-conn_setup(apr_socket_t *sock,
-           void *baton,
-           apr_pool_t *pool);
+svn_ra_serf__conn_setup(apr_socket_t *sock,
+                        void *baton,
+                        apr_pool_t *pool);
 
 serf_bucket_t*
-accept_response(serf_request_t *request,
-                serf_bucket_t *stream,
-                void *acceptor_baton,
-                apr_pool_t *pool);
+svn_ra_serf__accept_response(serf_request_t *request,
+                             serf_bucket_t *stream,
+                             void *acceptor_baton,
+                             apr_pool_t *pool);
 
 void
-conn_closed(serf_connection_t *conn,
-            void *closed_baton,
-            apr_status_t why,
-            apr_pool_t *pool);
+svn_ra_serf__conn_closed(serf_connection_t *conn,
+                         void *closed_baton,
+                         apr_status_t why,
+                         apr_pool_t *pool);
 
 apr_status_t
-is_conn_closing(serf_bucket_t *response);
+svn_ra_serf__is_conn_closing(serf_bucket_t *response);
 
 apr_status_t
-cleanup_serf_session(void *data);
+svn_ra_serf__cleanup_serf_session(void *data);
 
 /*
  * Create a REQUEST with an associated REQ_BKT in the SESSION.
@@ -235,35 +235,38 @@ cleanup_serf_session(void *data);
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  */
 void
-setup_serf_req(serf_request_t *request,
-               serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
-               ra_serf_connection_t *conn,
-               const char *method, const char *url,
-               serf_bucket_t *body_bkt, const char *content_type);
+svn_ra_serf__setup_serf_req(serf_request_t *request,
+                            serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
+                            svn_ra_serf__connection_t *conn,
+                            const char *method, const char *url,
+                            serf_bucket_t *body_bkt, const char *content_type);
 
 /*
  * This function will run the serf context in SESS until *DONE is TRUE.
  */
 svn_error_t *
-context_run_wait(svn_boolean_t *done,
-                 ra_serf_session_t *sess,
-                 apr_pool_t *pool);
+svn_ra_serf__context_run_wait(svn_boolean_t *done,
+                              svn_ra_serf__session_t *sess,
+                              apr_pool_t *pool);
 
 /* Callback for when a request body is needed. */
-typedef serf_bucket_t* (*request_body_delegate_t)(void *baton,
-                                                  serf_bucket_alloc_t *alloc,
-                                                  apr_pool_t *pool);
+typedef serf_bucket_t*
+(*svn_ra_serf__request_body_delegate_t)(void *baton,
+                                        serf_bucket_alloc_t *alloc,
+                                        apr_pool_t *pool);
 
 /* Callback for when a request headers are needed. */
-typedef apr_status_t (*request_header_delegate_t)(serf_bucket_t *headers,
-                                                  void *baton,
-                                                  apr_pool_t *pool);
+typedef apr_status_t
+(*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
+                                          void *baton,
+                                          apr_pool_t *pool);
 
 /* Callback for when a response has an error. */
-typedef apr_status_t (*response_error_t)(serf_request_t *request,
-                                         serf_bucket_t *response,
-                                         int status_code,
-                                         void *baton);
+typedef apr_status_t
+(*svn_ra_serf__response_error_t)(serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 int status_code,
+                                 void *baton);
 
 /*
  * Structure that can be passed to our default handler to guide the
@@ -279,44 +282,45 @@ typedef struct {
   serf_response_handler_t response_handler;
   void *response_baton;
 
-  response_error_t response_error;
+  svn_ra_serf__response_error_t response_error;
   void *response_error_baton;
 
   serf_request_setup_t delegate;
   void *delegate_baton;
 
-  request_header_delegate_t header_delegate;
+  svn_ra_serf__request_header_delegate_t header_delegate;
   void *header_delegate_baton;
 
-  request_body_delegate_t body_delegate;
+  svn_ra_serf__request_body_delegate_t body_delegate;
   void *body_delegate_baton;
 
-  ra_serf_connection_t *conn;
-  ra_serf_session_t *session;
-} ra_serf_handler_t;
+  svn_ra_serf__connection_t *conn;
+  svn_ra_serf__session_t *session;
+} svn_ra_serf__handler_t;
 
 /* 
  * Default handler that does dispatching.
  */
 apr_status_t
-handler_default(serf_request_t *request,
-                serf_bucket_t *response,
-                void *baton,
-                apr_pool_t *pool);
+svn_ra_serf__handler_default(serf_request_t *request,
+                             serf_bucket_t *response,
+                             void *baton,
+                             apr_pool_t *pool);
 
 /*
  * Handler that discards the entire request body.
  */
 apr_status_t
-handler_discard_body(serf_request_t *request,
-                     serf_bucket_t *response,
-                     void *baton,
-                     apr_pool_t *pool);
+svn_ra_serf__handler_discard_body(serf_request_t *request,
+                                  serf_bucket_t *response,
+                                  void *baton,
+                                  apr_pool_t *pool);
 
 /*
  * Helper function to queue a request in the handler's connection.
  */
-serf_request_t* ra_serf_request_create(ra_serf_handler_t *handler);
+serf_request_t*
+svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 
 /*
  * Helper structure associated with handle_xml_parser handler that will
@@ -333,11 +337,11 @@ typedef struct {
 
   int *status_code;
   svn_boolean_t *done;
-  ra_serf_list_t **done_list;
+  svn_ra_serf__list_t **done_list;
 
-  ra_serf_list_t *done_item;
+  svn_ra_serf__list_t *done_item;
 
-} ra_serf_xml_parser_t;
+} svn_ra_serf__xml_parser_t;
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
@@ -349,18 +353,18 @@ typedef struct {
  * Temporary allocations are made in POOL.
  */
 apr_status_t
-handle_xml_parser(serf_request_t *request,
-                  serf_bucket_t *response,
-                  void *handler_baton,
-                  apr_pool_t *pool);
+svn_ra_serf__handle_xml_parser(serf_request_t *request,
+                               serf_bucket_t *response,
+                               void *handler_baton,
+                               apr_pool_t *pool);
 
 /** XML helper functions. **/
 
 void
-add_tag_buckets(serf_bucket_t *agg_bucket,
-                const char *tag,
-                const char *value,
-                serf_bucket_alloc_t *bkt_alloc);
+svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket,
+                             const char *tag,
+                             const char *value,
+                             serf_bucket_alloc_t *bkt_alloc);
 
 /*
  * Look up the ATTRS array for namespace definitions and add each one
@@ -371,17 +375,17 @@ add_tag_buckets(serf_bucket_t *agg_bucket,
  * TODO: handle scoping of namespaces
  */
 void
-define_ns(ns_t **ns_list,
-          const char **attrs,
-          apr_pool_t *pool);
+svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
+                       const char **attrs,
+                       apr_pool_t *pool);
 
 /*
  * Look up NAME in the NS_LIST list for previously declared namespace
  * definitions and return a DAV_PROPS_T-tuple.
  */
-dav_props_t
-expand_ns(ns_t *ns_list,
-          const char *name);
+svn_ra_serf__dav_props_t
+svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
+                       const char *name);
 
 /*
  * look for ATTR_NAME in the attrs array and return its value.
@@ -389,31 +393,32 @@ expand_ns(ns_t *ns_list,
  * Returns NULL if no matching name is found.
  */
 const char *
-find_attr(const char **attrs,
+svn_ra_serf__find_attr(const char **attrs,
           const char *attr_name);
 
 void
-expand_string(const char **cur, apr_size_t *cur_len,
-              const char *new, apr_size_t new_len,
-              apr_pool_t *pool);
+svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
+                           const char *new, apr_size_t new_len,
+                           apr_pool_t *pool);
 
 /** PROPFIND-related functions **/
 
-typedef struct propfind_context_t propfind_context_t;
+typedef struct svn_ra_serf__propfind_context_t svn_ra_serf__propfind_context_t;
 
 svn_boolean_t
-propfind_is_done(propfind_context_t *ctx);
+svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
 
 int
-propfind_status_code(propfind_context_t *ctx);
+svn_ra_serf__propfind_status_code(svn_ra_serf__propfind_context_t *ctx);
 
 /* Our PROPFIND bucket */
-serf_bucket_t * serf_bucket_propfind_create(ra_serf_connection_t *conn,
-                                            const char *path,
-                                            const char *label,
-                                            const char *depth,
-                                            const dav_props_t *find_props,
-                                            serf_bucket_alloc_t *allocator);
+serf_bucket_t *
+svn_ra_serf__bucket_propfind_create(svn_ra_serf__connection_t *conn,
+                                    const char *path,
+                                    const char *label,
+                                    const char *depth,
+                                    const svn_ra_serf__dav_props_t *find_props,
+                                    serf_bucket_alloc_t *allocator);
 
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
@@ -425,124 +430,127 @@ serf_bucket_t * serf_bucket_propfind_create(ra_serf_connection_t *conn,
  * flag to be set.
  */
 svn_error_t *
-deliver_props(propfind_context_t **prop_ctx,
-              apr_hash_t *prop_vals,
-              ra_serf_session_t *sess,
-              ra_serf_connection_t *conn,
-              const char *url,
-              svn_revnum_t rev,
-              const char *depth,
-              const dav_props_t *lookup_props,
-              svn_boolean_t cache_props,
-              ra_serf_list_t **done_list,
-              apr_pool_t *pool);
+svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
+                           apr_hash_t *prop_vals,
+                           svn_ra_serf__session_t *sess,
+                           svn_ra_serf__connection_t *conn,
+                           const char *url,
+                           svn_revnum_t rev,
+                           const char *depth,
+                           const svn_ra_serf__dav_props_t *lookup_props,
+                           svn_boolean_t cache_props,
+                           svn_ra_serf__list_t **done_list,
+                           apr_pool_t *pool);
 
 /*
  * This helper function will block until the PROP_CTX indicates that is done
  * or another error is returned.
  */
 svn_error_t *
-wait_for_props(propfind_context_t *prop_ctx,
-               ra_serf_session_t *sess,
-               apr_pool_t *pool);
+svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
+                            svn_ra_serf__session_t *sess,
+                            apr_pool_t *pool);
 
 /*
  * This is a blocking version of deliver_props.
  */
 svn_error_t *
-retrieve_props(apr_hash_t *prop_vals,
-               ra_serf_session_t *sess,
-               ra_serf_connection_t *conn,
-               const char *url,
-               svn_revnum_t rev,
-               const char *depth,
-               const dav_props_t *props,
-               apr_pool_t *pool);
+svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
+                            svn_ra_serf__session_t *sess,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t rev,
+                            const char *depth,
+                            const svn_ra_serf__dav_props_t *props,
+                            apr_pool_t *pool);
 
 /** Property walker functions **/
 
-typedef void (*walker_visitor_t)(void *baton,
+typedef void
+(*svn_ra_serf__walker_visitor_t)(void *baton,
                                  const void *ns, apr_ssize_t ns_len,
                                  const void *name, apr_ssize_t name_len,
                                  void *val,
                                  apr_pool_t *pool);
 
 void
-walk_all_props(apr_hash_t *props,
-               const char *name,
-               svn_revnum_t rev,
-               walker_visitor_t walker,
-               void *baton,
-               apr_pool_t *pool);
+svn_ra_serf__walk_all_props(apr_hash_t *props,
+                            const char *name,
+                            svn_revnum_t rev,
+                            svn_ra_serf__walker_visitor_t walker,
+                            void *baton,
+                            apr_pool_t *pool);
 
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
 const char *
-get_ver_prop(apr_hash_t *props,
-             const char *path,
-             svn_revnum_t rev,
-             const char *ns,
-             const char *name);
+svn_ra_serf__get_ver_prop(apr_hash_t *props,
+                          const char *path, svn_revnum_t rev,
+                          const char *ns, const char *name);
 
 /* Same as get_prop, but for the unknown revision */
 const char *
-get_prop(apr_hash_t *props,
-         const char *path,
-         const char *ns,
-         const char *name);
+svn_ra_serf__get_prop(apr_hash_t *props,
+                      const char *path,
+                      const char *ns,
+                      const char *name);
 
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
  *
  * The POOL governs allocation.
  */
 void
-set_rev_prop(apr_hash_t *props,
-             const char *path, svn_revnum_t rev,
-             const char *ns, const char *name,
-             const char *val, apr_pool_t *pool);
+svn_ra_serf__set_rev_prop(apr_hash_t *props,
+                          const char *path, svn_revnum_t rev,
+                          const char *ns, const char *name,
+                          const char *val, apr_pool_t *pool);
 
 /* Same as set_rev_prop, but sets it for the unknown revision. */
 void
-set_prop(apr_hash_t *props, const char *path,
-         const char *ns, const char *name,
-         const char *val, apr_pool_t *pool);
+svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
+                      const char *ns, const char *name,
+                      const char *val, apr_pool_t *pool);
 
 /** MERGE-related functions **/
 
-typedef struct merge_context_t merge_context_t;
+typedef struct svn_ra_serf__merge_context_t svn_ra_serf__merge_context_t;
 
-svn_boolean_t* merge_get_done_ptr(merge_context_t *ctx);
+svn_boolean_t*
+svn_ra_serf__merge_get_done_ptr(svn_ra_serf__merge_context_t *ctx);
 
-svn_commit_info_t* merge_get_commit_info(merge_context_t *ctx);
+svn_commit_info_t*
+svn_ra_serf__merge_get_commit_info(svn_ra_serf__merge_context_t *ctx);
 
-int merge_get_status(merge_context_t *ctx);
+int
+svn_ra_serf__merge_get_status(svn_ra_serf__merge_context_t *ctx);
 
 /* Create an MERGE request */
 svn_error_t *
-merge_create_req(merge_context_t **merge_ctx,
-                 ra_serf_session_t *session,
-                 ra_serf_connection_t *conn,
-                 const char *path,
-                 const char *activity_url,
-                 apr_size_t activity_url_len,
-                 apr_pool_t *pool);
+svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
+                              svn_ra_serf__session_t *session,
+                              svn_ra_serf__connection_t *conn,
+                              const char *path,
+                              const char *activity_url,
+                              apr_size_t activity_url_len,
+                              apr_pool_t *pool);
 
 /** OPTIONS-related functions **/
 
-typedef struct options_context_t options_context_t;
+typedef struct svn_ra_serf__options_context_t svn_ra_serf__options_context_t;
 
 /* Is this OPTIONS-request done yet? */
-svn_boolean_t* get_options_done_ptr(options_context_t *ctx);
+svn_boolean_t*
+svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx);
 
 const char *
-options_get_activity_collection(options_context_t *ctx);
+svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx);
 
 /* Create an OPTIONS request */
 svn_error_t *
-create_options_req(options_context_t **opt_ctx,
-                   ra_serf_session_t *session,
-                   ra_serf_connection_t *conn,
-                   const char *path,
-                   apr_pool_t *pool);
+svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
+                                svn_ra_serf__session_t *session,
+                                svn_ra_serf__connection_t *conn,
+                                const char *path,
+                                apr_pool_t *pool);
 
 /** RA functions **/
 

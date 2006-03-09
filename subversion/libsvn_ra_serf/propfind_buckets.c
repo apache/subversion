@@ -29,11 +29,11 @@
 #include "ra_serf.h"
 
 typedef struct {
-    ra_serf_connection_t *conn;
+    svn_ra_serf__connection_t *conn;
     const char *path;
     const char *label;
     const char *depth;
-    const dav_props_t *find_props;
+    const svn_ra_serf__dav_props_t *find_props;
     serf_bucket_t *request;
 } prop_context_t;
 
@@ -42,12 +42,12 @@ const serf_bucket_type_t serf_bucket_type_propfind;
 #define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\">"
 #define PROPFIND_TRAILER "</propfind>"
 
-serf_bucket_t * serf_bucket_propfind_create(
-    ra_serf_connection_t *conn,
+serf_bucket_t * svn_ra_serf__bucket_propfind_create(
+    svn_ra_serf__connection_t *conn,
     const char *path,
     const char *label,
     const char *depth,
-    const dav_props_t *find_props,
+    const svn_ra_serf__dav_props_t *find_props,
     serf_bucket_alloc_t *allocator)
 {
     prop_context_t *ctx;
@@ -67,7 +67,7 @@ static serf_bucket_t *create_propfind_body(serf_bucket_t *bucket)
   prop_context_t *ctx = bucket->data;
   serf_bucket_alloc_t *alloc = bucket->allocator;
   serf_bucket_t *body_bkt, *tmp;
-  const dav_props_t *prop;
+  const svn_ra_serf__dav_props_t *prop;
   svn_boolean_t requested_allprop = FALSE;
 
   body_bkt = serf_bucket_aggregate_create(alloc);

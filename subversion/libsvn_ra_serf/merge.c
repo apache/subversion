@@ -95,18 +95,18 @@ typedef struct merge_state_list_t {
   apr_pool_t *pool;
 
   /* Temporary namespace list allocated from ->pool */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* The previous state we were in. */
   struct merge_state_list_t *prev;
 } merge_state_list_t;
 
 /* Structure associated with a MERGE request. */
-struct merge_context_t
+struct svn_ra_serf__merge_context_t
 {
   apr_pool_t *pool;
 
-  ra_serf_session_t *session;
+  svn_ra_serf__session_t *session;
 
   const char *activity_url;
   apr_size_t activity_url_len;
@@ -118,7 +118,7 @@ struct merge_context_t
 
   svn_boolean_t done;
 
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   svn_commit_info_t *commit_info;
 
@@ -137,7 +137,7 @@ struct merge_context_t
 };
 
 
-static void push_state(merge_context_t *ctx, merge_state_e state)
+static void push_state(svn_ra_serf__merge_context_t *ctx, merge_state_e state)
 {
   merge_state_list_t *new_state;
 
@@ -183,7 +183,7 @@ static void push_state(merge_context_t *ctx, merge_state_e state)
   ctx->state = new_state;
 }
 
-static void pop_state(merge_context_t *ctx)
+static void pop_state(svn_ra_serf__merge_context_t *ctx)
 {
   merge_state_list_t *free_state;
   free_state = ctx->state;
@@ -197,10 +197,10 @@ static void pop_state(merge_context_t *ctx)
 static void XMLCALL
 start_merge(void *userData, const char *name, const char **attrs)
 {
-  merge_context_t *ctx = userData;
-  dav_props_t prop_name;
+  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__dav_props_t prop_name;
   apr_pool_t *pool;
-  ns_t **ns_list;
+  svn_ra_serf__ns_t **ns_list;
 
   if (!ctx->state)
     {
@@ -214,10 +214,10 @@ start_merge(void *userData, const char *name, const char **attrs)
     }
 
   /* check for new namespaces */
-  define_ns(ns_list, attrs, pool);
+  svn_ra_serf__define_ns(ns_list, attrs, pool);
 
   /* look up name space if present */
-  prop_name = expand_ns(*ns_list, name);
+  prop_name = svn_ra_serf__expand_ns(*ns_list, name);
 
   if (!ctx->state && strcmp(prop_name.name, "merge-response") == 0)
     {
@@ -310,8 +310,8 @@ start_merge(void *userData, const char *name, const char **attrs)
 static void XMLCALL
 end_merge(void *userData, const char *raw_name)
 {
-  merge_context_t *ctx = userData;
-  dav_props_t prop_name;
+  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__dav_props_t prop_name;
 
   if (!ctx->state)
     {
@@ -319,7 +319,7 @@ end_merge(void *userData, const char *raw_name)
       return;
     }
 
-  prop_name = expand_ns(ctx->state->ns_list, raw_name);
+  prop_name = svn_ra_serf__expand_ns(ctx->state->ns_list, raw_name);
 
   if (ctx->state->state == RESPONSE &&
       strcmp(prop_name.name, "response") == 0)
@@ -372,7 +372,7 @@ end_merge(void *userData, const char *raw_name)
           ctx->session->wc_callbacks->push_wc_prop(
                                        ctx->session->wc_callback_baton,
                                        href,
-                                       RA_SERF_WC_CHECKED_IN_URL,
+                                       SVN_RA_SERF__WC_CHECKED_IN_URL,
                                        &checked_in_str,
                                        ctx->state->info->pool);
 
@@ -426,12 +426,12 @@ end_merge(void *userData, const char *raw_name)
 static void XMLCALL
 cdata_merge(void *userData, const char *data, int len)
 {
-  merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = userData;
   if (ctx->state && ctx->state->state == PROP_VAL)
     {
-      expand_string(&ctx->state->info->prop_val,
-                    &ctx->state->info->prop_val_len,
-                    data, len, ctx->state->pool);
+      svn_ra_serf__expand_string(&ctx->state->info->prop_val,
+                                 &ctx->state->info->prop_val_len,
+                                 data, len, ctx->state->pool);
 
     }
 }
@@ -445,7 +445,7 @@ create_merge_body(void *baton,
                   serf_bucket_alloc_t *alloc,
                   apr_pool_t *pool)
 {
-  merge_context_t *ctx = baton;
+  svn_ra_serf__merge_context_t *ctx = baton;
   serf_bucket_t *body_bkt, *tmp_bkt;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
@@ -469,17 +469,17 @@ create_merge_body(void *baton,
 }
 
 svn_error_t *
-merge_create_req(merge_context_t **ret_ctx,
-                 ra_serf_session_t *session,
-                 ra_serf_connection_t *conn,
-                 const char *path,
-                 const char *activity_url,
-                 apr_size_t activity_url_len,
-                 apr_pool_t *pool)
+svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
+                              svn_ra_serf__session_t *session,
+                              svn_ra_serf__connection_t *conn,
+                              const char *path,
+                              const char *activity_url,
+                              apr_size_t activity_url_len,
+                              apr_pool_t *pool)
 {
-  merge_context_t *merge_ctx;
-  ra_serf_handler_t *handler;
-  ra_serf_xml_parser_t *parser_ctx;
+  svn_ra_serf__merge_context_t *merge_ctx;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 
   merge_ctx = apr_pcalloc(pool, sizeof(*merge_ctx));
 
@@ -512,27 +512,30 @@ merge_create_req(merge_context_t **ret_ctx,
   parser_ctx->done = &merge_ctx->done;
   parser_ctx->status_code = &merge_ctx->status;
 
-  handler->response_handler = handle_xml_parser;
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  ra_serf_request_create(handler);
+  svn_ra_serf__request_create(handler);
 
   *ret_ctx = merge_ctx;
 
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t* merge_get_done_ptr(merge_context_t *ctx)
+svn_boolean_t*
+svn_ra_serf__merge_get_done_ptr(svn_ra_serf__merge_context_t *ctx)
 {
   return &ctx->done;
 }
 
-svn_commit_info_t* merge_get_commit_info(merge_context_t *ctx)
+svn_commit_info_t*
+svn_ra_serf__merge_get_commit_info(svn_ra_serf__merge_context_t *ctx)
 {
   return ctx->commit_info;
 }
 
-int merge_get_status(merge_context_t *ctx)
+int
+svn_ra_serf__merge_get_status(svn_ra_serf__merge_context_t *ctx)
 {
   return ctx->status;
 }
