@@ -567,6 +567,20 @@ svn_ra_serf__get_locations(svn_ra_session_t *session,
                            apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__do_diff(svn_ra_session_t *session,
+                     const svn_ra_reporter2_t **reporter,
+                     void **report_baton,
+                     svn_revnum_t revision,
+                     const char *diff_target,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t text_deltas,
+                     const char *versus_url,
+                     const svn_delta_editor_t *diff_editor,
+                     void *diff_baton,
+                     apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const svn_ra_reporter2_t **reporter,
                        void **report_baton,
@@ -596,3 +610,12 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                apr_hash_t *lock_tokens,
                                svn_boolean_t keep_locks,
                                apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__get_file(svn_ra_session_t *session,
+                      const char *path,
+                      svn_revnum_t revision,
+                      svn_stream_t *stream,
+                      svn_revnum_t *fetched_rev,
+                      apr_hash_t **props,
+                      apr_pool_t *pool);
