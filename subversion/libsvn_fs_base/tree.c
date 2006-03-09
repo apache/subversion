@@ -4041,6 +4041,19 @@ examine_copy_inheritance(const char **copy_id,
       if ((*copy)->kind != copy_kind_soft_copy)
         return SVN_NO_ERROR;
     }
+  else if (parent_path->copy_inherit == copy_id_inherit_fixed)
+    {
+      /* Ok, this came from a move, so we get our copy via the move_id we
+       * stashed in copy_data. */
+      const char *move_id = parent_path->copy_data;
+
+      SVN_ERR(svn_fs_bdb__get_copy(copy, fs, move_id, trail, pool));
+      if ((*copy)->kind != copy_kind_soft_move)
+        {
+          *copy_id = move_id;
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Otherwise, our answer is dependent upon our parent. */
   return examine_copy_inheritance(copy_id, copy, fs,
@@ -4185,7 +4198,49 @@ txn_body_history_prev(void *baton, trail_t *trail)
       SVN_ERR(svn_fs_base__dag_get_node(&dst_node, fs,
                                         copy->dst_noderev_id, 
                                         trail, trail->pool));
-      copy_dst = svn_fs_base__dag_get_created_path(dst_node);
+      if (copy->kind != copy_kind_move)
+        copy_dst = svn_fs_base__dag_get_created_path(dst_node);
+      else
+        {
+          /* If this was a move, the dest node IS the same as the
+           * source node, so just grabbing its created path will
+           * give us the wrong path.  Instead, we need to go through
+           * the changes for the revision the move occurred in, find
+           * the appropriate change_t object, and use its path. */
+
+          const svn_fs_id_t *id = svn_fs_base__dag_get_id(dst_node);
+          apr_array_header_t *changes;
+          change_t *change = NULL;
+          int idx;
+
+          /* Using svn_fs_bdb__changes_fetch wouldn't buy us anything,
+           * since we need to iterate over them all looking for one that
+           * matches on the node id anyway... */
+          SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes,
+                                                fs,
+                                                copy->src_txn_id,
+                                                trail,
+                                                trail->pool));
+
+          for (idx = 0; idx < changes->nelts; ++idx)
+            {
+              change = APR_ARRAY_IDX(changes, idx, change_t *);
+
+              if (svn_fs_base__id_compare(id, change->noderev_id) == 0)
+                break;
+
+              change = NULL;
+            }
+
+          /* As far as I know this should not happen, but hey, we're reading
+           * data off of disk, so anything is theoretically possible. */
+          if (! change)
+            return svn_error_create
+                     (SVN_ERR_FS_CORRUPT, NULL,
+                      _("Couldn't find this move's associated change"));
+
+          copy_dst = change->path;
+        }
 
       /* If our current path was the very destination of the copy,
          then our new current path will be the copy source.  If our
@@ -4205,12 +4260,29 @@ txn_body_history_prev(void *baton, trail_t *trail)
           /* If we get here, then our current path is the destination
              of, or the child of the destination of, a copy.  Fill
              in the return values and get outta here.  */
-          SVN_ERR(svn_fs_base__txn_get_revision
-                  (&src_rev, fs, copy->src_txn_id, trail, trail->pool));
-          SVN_ERR(svn_fs_base__txn_get_revision
-                  (&dst_rev, fs,
-                   svn_fs_base__id_txn_id(copy->dst_noderev_id), 
-                   trail, trail->pool));
+          if (copy->kind != copy_kind_move)
+            {
+              SVN_ERR(svn_fs_base__txn_get_revision
+                      (&src_rev, fs, copy->src_txn_id, trail, trail->pool));
+              SVN_ERR(svn_fs_base__txn_get_revision
+                      (&dst_rev, fs,
+                       svn_fs_base__id_txn_id(copy->dst_noderev_id), 
+                       trail, trail->pool));
+            }
+          else
+            {
+              /* Similar to the issue with finding the copy destination,
+               * in the case of a move the destination node is the same as
+               * the source node, so you can't just grab its rev for the
+               * dest rev.  Instead, its rev is used for the source rev,
+               * and the dest rev is pulled out of the copy. */
+
+              SVN_ERR(svn_fs_base__dag_get_revision(&src_rev, dst_node, trail,
+                                                    trail->pool));
+              SVN_ERR(svn_fs_base__txn_get_revision
+                      (&dst_rev, fs, copy->src_txn_id, trail, trail->pool));
+            }
+
           src_path = svn_path_join(copy->src_path, remainder,
                                    trail->pool);
           if (copy->kind == copy_kind_soft_copy)
