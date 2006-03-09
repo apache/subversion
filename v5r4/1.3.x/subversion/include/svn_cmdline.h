@@ -29,6 +29,7 @@
 #define APR_WANT_STDIO
 #endif
 #include <apr_want.h>
+#include <apr_getopt.h>
 
 #include "svn_utf.h"
 
@@ -135,6 +136,20 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool);
 int svn_cmdline_handle_exit_error (svn_error_t *error,
                                    apr_pool_t *pool,
                                    const char *prefix);
+
+/** Wrapper for apr_getopt_init(), which see.
+ * 
+ * On OS400 V5R4, prior to calling apr_getopt_init(), converts each of the
+ * @a argc strings in @a argv[] in place from EBCDIC to UTF-8, allocating
+ * each new UTF-8 string in @a pool.
+ *
+ * This is a private API for Subversion's own use.
+ */
+svn_error_t *
+svn_cmdline__getopt_init (apr_getopt_t **os,
+                          apr_pool_t *pool,
+                          int argc,
+                          const char *argv[]);
 
 #ifdef __cplusplus
 }

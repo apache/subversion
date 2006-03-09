@@ -230,7 +230,10 @@ main(int argc, const char *argv[])
   sb.wc_url = NULL;
   sb.pool = pool;
 
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init (&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error (err, pool, "svnversion: ");
+
   os->interleave = 1;
   while (1)
     {

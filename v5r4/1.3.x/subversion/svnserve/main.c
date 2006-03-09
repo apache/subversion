@@ -230,7 +230,7 @@ check_lib_versions(void)
 }
 
 
-int main(int argc, const char *const *argv)
+int main(int argc, const char *argv[])
 {
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
@@ -287,7 +287,9 @@ int main(int argc, const char *const *argv)
       return EXIT_FAILURE;
     }
 
-  apr_getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
   params.root = "/";
   params.tunnel = FALSE;

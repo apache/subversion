@@ -45,6 +45,10 @@
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
 #define SVN_UTF_UTOCON_XLATE_HANDLE "svn-utf-utocon-xlate-handle"
 
+#ifdef AS400_UTF8
+#define SVN_UTF_ETOU_XLATE_HANDLE "svn-utf-etou-xlate-handle"
+#endif
+
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
 
@@ -320,4 +324,31 @@ svn_cmdline_handle_exit_error (svn_error_t *err,
   if (pool)
     svn_pool_destroy (pool);
   return EXIT_FAILURE;
+}
+
+svn_error_t *
+svn_cmdline__getopt_init (apr_getopt_t **os,
+                          apr_pool_t *pool,
+                          int argc,
+                          const char *argv[])
+{
+  apr_status_t apr_err;
+#ifdef AS400_UTF8
+  /* Convert command line args from EBCDIC to UTF-8. */
+  int i;
+  for (i = 0; i < argc; ++i)
+    {
+      char *arg_utf8;
+      SVN_ERR (svn_utf_cstring_to_utf8_ex (&arg_utf8, argv[i],
+                                           (const char *)0,
+                                           SVN_UTF_ETOU_XLATE_HANDLE,
+                                           pool));
+      argv[i] = arg_utf8;
+    }
+#endif
+  apr_err = apr_getopt_init (os, pool, argc, argv);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Error initializing command line arguments"));
+  return SVN_NO_ERROR;
 }
