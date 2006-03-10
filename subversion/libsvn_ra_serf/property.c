@@ -86,7 +86,7 @@ struct svn_ra_serf__propfind_context_t {
   svn_ra_serf__list_t done_item;
 };
 
-const char *
+const void *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
              const char *path,
              svn_revnum_t rev,
@@ -94,7 +94,7 @@ svn_ra_serf__get_ver_prop(apr_hash_t *props,
              const char *name)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
-  const char *val = NULL;
+  void *val = NULL;
 
   ver_props = apr_hash_get(props, &rev, sizeof(rev));
   if (ver_props)
@@ -114,7 +114,7 @@ svn_ra_serf__get_ver_prop(apr_hash_t *props,
   return val;
 }
 
-const char *
+const void *
 svn_ra_serf__get_prop(apr_hash_t *props,
          const char *path,
          const char *ns,
@@ -127,7 +127,7 @@ void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
              const char *path, svn_revnum_t rev,
              const char *ns, const char *name,
-             const char *val, apr_pool_t *pool)
+             const void *val, apr_pool_t *pool)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
   apr_size_t path_len, ns_len, name_len;
@@ -170,7 +170,7 @@ void
 svn_ra_serf__set_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns, const char *name,
-                      const char *val, apr_pool_t *pool)
+                      const void *val, apr_pool_t *pool)
 {
   return svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
                                    val, pool);
