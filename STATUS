@@ -110,12 +110,3 @@ Approved changes:
       Depends on r18144 et al. - unmergeable until those revs are merged.
     Votes:
       +1: brane, lundblad, malcolm, dlr
-
-  * r18691, r18694
-    Branch: 1.3.x-r18691
-    Don't allow unlocking a path with the wrong lock token.
-    Justification:
-      The whole point of having lock tokens...
-    Votes:
-      +1: lundblad, malcolm, rooneg
-
