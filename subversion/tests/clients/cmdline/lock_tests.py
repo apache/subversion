@@ -1473,6 +1473,42 @@ def ls_url_encoded(sbox):
                                      expected_output, [],
                                      "list", "-v", dirname)  
 
+#----------------------------------------------------------------------
+# Make sure unlocking a path with the wrong lock token fails.
+def unlock_wrong_token(sbox):
+  "veriy unlocking with wrong lock token"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_url = svntest.main.current_repo_url + "/iota"
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     file_path)
+
+  # Steal the lock as the same author, but using an URL to keep the old token
+  # in the WC.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     "--force", file_url)
+
+  # Then, unlocking the WC path should fail.
+  # ### The error message returned is actually this, but let's worry about that
+  # ### another day...
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*((No lock on path)|(400 Bad Request))",
+                                     'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     file_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1509,6 +1545,7 @@ test_list = [ None,
               unlock_already_unlocked_files,
               info_moved_path,
               ls_url_encoded,
+              unlock_wrong_token,
             ]
 
 if __name__ == '__main__':
