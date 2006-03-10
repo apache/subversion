@@ -470,7 +470,7 @@ typedef void
 (*svn_ra_serf__walker_visitor_t)(void *baton,
                                  const void *ns, apr_ssize_t ns_len,
                                  const void *name, apr_ssize_t name_len,
-                                 void *val,
+                                 const void *val,
                                  apr_pool_t *pool);
 
 void
@@ -482,13 +482,13 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
                             apr_pool_t *pool);
 
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
-const char *
+const void *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name);
 
 /* Same as get_prop, but for the unknown revision */
-const char *
+const void *
 svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns,
@@ -502,13 +502,13 @@ void
 svn_ra_serf__set_rev_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
-                          const char *val, apr_pool_t *pool);
+                          const void *val, apr_pool_t *pool);
 
 /* Same as set_rev_prop, but sets it for the unknown revision. */
 void
 svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const char *ns, const char *name,
-                      const char *val, apr_pool_t *pool);
+                      const void *val, apr_pool_t *pool);
 
 /** MERGE-related functions **/
 

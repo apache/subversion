@@ -439,7 +439,7 @@ static void
 set_baton_props(prop_set_t setprop, void *baton,
                 const void *ns, apr_ssize_t ns_len,
                 const void *name, apr_ssize_t name_len,
-                void *val,
+                const void *val,
                 apr_pool_t *pool)
 {
   const char *prop_name;
@@ -472,7 +472,7 @@ static void
 set_file_props(void *baton,
                const void *ns, apr_ssize_t ns_len,
                const void *name, apr_ssize_t name_len,
-               void *val,
+               const void *val,
                apr_pool_t *pool)
 {
   report_info_t *info = baton;
@@ -485,7 +485,7 @@ static void
 set_dir_props(void *baton,
               const void *ns, apr_ssize_t ns_len,
               const void *name, apr_ssize_t name_len,
-              void *val,
+              const void *val,
               apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
