@@ -32,7 +32,7 @@ Candidate changes:
     Branch: 1.3.x-r17280
     Votes:
       +1: djames
-      +0: blair
+      +0: blair, malcolm
 
   * r17333 and associated test case (copied from trunk)
     Fix issue #2306: modification of "svn:needs-lock" should adjust
