@@ -164,6 +164,9 @@ TODO (LIKELY INCOMPLETE)
     * Teach the copy ID inheritance code how to deal with moves.  Not
       sure how easy/tricky this will be.
 
+      * It is likely that this is already done, see the changes to
+        get_copy_inheritance.
+
     * Make sure that we don't carry around delayed move ID information
       on entries where not necessary.
 
@@ -173,9 +176,18 @@ TODO (LIKELY INCOMPLETE)
       from svn_fs_copied_from()?") will be able to have quicker access
       to that answer, and fall back to the old query where necessary.
 
+      * The move change type is added, holding off on adding a copy type
+        for now because it doesn't seem to be necessary, we never call
+        svn_fs_copied_from in a situation where the copyfrom path isn't
+        used.
+
     * Teach the node history algorithm about moves.  I anticipate this
       to be pretty straightforward, more or less mimicking the way
       that copies and soft-copies are handled.
+
+      * Part of this is done.  Tracing back through moves works, but
+        nothing I've done has had anything to do with soft moves, so
+        it's likely that there's more work to be done here.
 
     * Make sure that code that reads copy types doesn't assume that
       !soft-copy == copy (because there are now two more copy types).
