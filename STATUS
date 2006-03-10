@@ -64,6 +64,7 @@ Candidate changes:
       See http://projects.edgewall.com/trac/ticket/2611
     Votes:
       +1: djames
+      +0: malcolm (concept only)
 
 Approved changes:
 
@@ -75,7 +76,8 @@ Approved changes:
     Votes:
       +1: lundblad, kfogel, rooneg
 
-Status of 1.3.1:
+
+Status of 1.3.2:
 ================
 
 Candidate changes:
