@@ -31,6 +31,7 @@
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
+#include "svn_base64.h"
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
@@ -89,7 +90,9 @@ typedef struct {
 
   const char *path;
 
-  apr_hash_t *props;
+  /* Changed and removed properties. */
+  apr_hash_t *changed_props;
+  apr_hash_t *removed_props;
 
   int status;
 
@@ -126,7 +129,7 @@ typedef struct {
   svn_ra_serf__session_t *session;
   svn_ra_serf__connection_t *conn;
 
-  const char *log_msg;
+  svn_string_t *log_msg;
 
   svn_commit_callback2_t callback;
   void *callback_baton;
@@ -176,6 +179,11 @@ typedef struct dir_context_t {
 
   /* The base revision of the dir. */
   svn_revnum_t base_revision;
+
+  /* Changed and removed properties */
+  apr_hash_t *changed_props;
+  apr_hash_t *removed_props;
+
 } dir_context_t;
 
 /* Represents a file to be committed. */
@@ -210,6 +218,10 @@ typedef struct {
 
   /* Connection to do the PUT with */
   svn_ra_serf__connection_t *conn;
+
+  /* Changed and removed properties. */
+  apr_hash_t *changed_props;
+  apr_hash_t *removed_props;
 
   /* URL to PUT the file at. */
   const char *put_url;
@@ -434,17 +446,29 @@ checkout_dir(dir_context_t *dir)
 static void proppatch_walker(void *baton,
                              const void *ns, apr_ssize_t ns_len,
                              const void *name, apr_ssize_t name_len,
-                             void *val,
+                             const void *val,
                              apr_pool_t *pool)
 {
   serf_bucket_t *body_bkt = baton;
   serf_bucket_t *tmp_bkt;
   serf_bucket_alloc_t *alloc;
+  const svn_string_t *prop_value;
+  svn_boolean_t binary_prop;
+ 
+  prop_value = val;
+  if (svn_xml_is_xml_safe(prop_value->data, prop_value->len))
+    {
+      binary_prop = FALSE;
+    }
+  else
+    {
+      binary_prop = TRUE;
+    }
 
   alloc = body_bkt->allocator;
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:prop><",
-                                          sizeof("<D:prop><") - 1,
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<",
+                                          sizeof("<") - 1,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
@@ -459,12 +483,33 @@ static void proppatch_walker(void *baton,
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(ns, ns_len, alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
+  if (binary_prop == TRUE)
+    {
+      tmp_bkt =
+          SERF_BUCKET_SIMPLE_STRING_LEN(" V:encoding:=\"base64\"",
+                                        sizeof(" V:encoding:=\"base64\"") - 1,
+                                        alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+    }
+
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
                                           sizeof("\">") - 1,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING((char*)val, alloc);
+  if (binary_prop == TRUE)
+    {
+      prop_value = svn_base64_encode_string(prop_value, pool);
+    }
+  else
+    {
+      svn_stringbuf_t *prop_buf = svn_stringbuf_create("", pool);
+      svn_xml_escape_cdata_string(&prop_buf, prop_value, pool);
+      prop_value = svn_string_create_from_buf(prop_buf, pool);
+    }
+
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(prop_value->data, prop_value->len,
+                                          alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</",
@@ -475,15 +520,15 @@ static void proppatch_walker(void *baton,
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(name, name_len, alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("></D:prop>",
-                                          sizeof("></D:prop>") - 1,
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(">",
+                                          sizeof(">") - 1,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 }
 
-#define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:propertyupdate xmlns:D=\"DAV:\"><D:set>"
-  
-#define PROPPATCH_TRAILER "</D:set></D:propertyupdate>"
+#define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\">"
+
+#define PROPPATCH_TRAILER "</D:propertyupdate>"
 
 static apr_status_t
 setup_proppatch(serf_request_t *request,
@@ -508,8 +553,59 @@ setup_proppatch(serf_request_t *request,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  svn_ra_serf__walk_all_props(ctx->props, ctx->path, SVN_INVALID_REVNUM,
-                 proppatch_walker, body_bkt, pool);
+  if (apr_hash_count(ctx->changed_props) > 0)
+    {
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:set>",
+                                              sizeof("<D:set>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:prop>",
+                                              sizeof("<D:prop>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+      svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
+                                  SVN_INVALID_REVNUM,
+                                  proppatch_walker, body_bkt, pool);
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:prop>",
+                                              sizeof("</D:prop>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:set>",
+                                              sizeof("</D:set>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+    }
+
+  if (apr_hash_count(ctx->removed_props) > 0)
+    {
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:remove>",
+                                              sizeof("<D:remove>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:prop>",
+                                              sizeof("<D:prop>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+      svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
+                                  SVN_INVALID_REVNUM,
+                                  proppatch_walker, body_bkt, pool);
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:prop>",
+                                              sizeof("</D:prop>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:remove>",
+                                              sizeof("</D:remove>") - 1,
+                                              alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+    }
 
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(PROPPATCH_TRAILER,
                                           sizeof(PROPPATCH_TRAILER) - 1,
@@ -820,6 +916,8 @@ open_root(void *edit_baton,
   dir->base_revision = base_revision;
   dir->name = "";
   dir->checked_in_url = ctx->checked_in_url;
+  dir->changed_props = apr_hash_make(dir->pool);
+  dir->removed_props = apr_hash_make(dir->pool);
 
   /* Checkout our root dir */
   checkout_dir(dir);
@@ -836,9 +934,10 @@ open_root(void *edit_baton,
   proppatch_ctx->handler = handle_proppatch;
 
   proppatch_ctx->path = ctx->baseline->resource_url;
-  proppatch_ctx->props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->changed_props = dir->changed_props;
+  proppatch_ctx->removed_props = dir->removed_props;
 
-  svn_ra_serf__set_prop(proppatch_ctx->props, proppatch_ctx->path,
+  svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
                         SVN_DAV_PROP_NS_SVN, "log",
                         dir->commit->log_msg, proppatch_ctx->pool);
 
@@ -925,6 +1024,8 @@ open_directory(const char *path,
   dir->checked_in_url =
       svn_path_url_add_component(parent->commit->checked_in_url,
                                  path, dir->pool);
+  dir->changed_props = apr_hash_make(dir->pool);
+  dir->removed_props = apr_hash_make(dir->pool);
 
   *child_baton = dir;
 
@@ -937,20 +1038,77 @@ change_dir_prop(void *dir_baton,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
-  dir_context_t *ctx = dir_baton;
+  dir_context_t *dir = dir_baton;
+  const char *ns;
 
-  abort();
+  /* Ensure we have a checked out dir. */
+  SVN_ERR(checkout_dir(dir));
+
+  name = apr_pstrdup(dir->pool, name);
+  value = svn_string_dup(value, dir->pool);
+
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      ns = SVN_DAV_PROP_NS_SVN;
+      name += sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      ns = SVN_DAV_PROP_NS_CUSTOM;
+    }
+
+  if (value)
+    {
+      svn_ra_serf__set_prop(dir->changed_props, dir->checkout->resource_url,
+                            ns, name, value, dir->pool);
+    }
+  else
+    {
+      value = svn_string_create("", dir->pool);
+
+      svn_ra_serf__set_prop(dir->removed_props, dir->checkout->resource_url,
+                            ns, name, value, dir->pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
-  dir_context_t *ctx = dir_baton;
+  dir_context_t *dir = dir_baton;
+  proppatch_context_t *proppatch_ctx;
 
   /* Huh?  We're going to be called before the texts are sent.  Ugh.
    * Therefore, just wave politely at our caller.
    */
+
+  /* PROPPATCH our prop change and pass it along.  */
+  if (apr_hash_count(dir->changed_props) ||
+      apr_hash_count(dir->removed_props))
+    {
+      proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
+      proppatch_ctx->pool = pool;
+     
+      proppatch_ctx->session = dir->commit->session;
+      proppatch_ctx->conn = dir->commit->conn;
+      
+      proppatch_ctx->acceptor = svn_ra_serf__accept_response;
+      proppatch_ctx->acceptor_baton = dir->commit->session;
+      proppatch_ctx->handler = handle_proppatch;
+      
+      proppatch_ctx->path = dir->checkout->resource_url;
+      proppatch_ctx->changed_props = dir->changed_props;
+      proppatch_ctx->removed_props = dir->removed_props;
+      
+      serf_connection_request_create(proppatch_ctx->conn->conn,
+                                     setup_proppatch, proppatch_ctx);
+     
+      /* If we don't wait for the response, our pool will be gone! */ 
+      SVN_ERR(svn_ra_serf__context_run_wait(&proppatch_ctx->done,
+                                            dir->commit->session, dir->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1072,6 +1230,8 @@ open_file(const char *path,
   new_file->acceptor = svn_ra_serf__accept_response;
   new_file->acceptor_baton = ctx->commit->session;
   new_file->handler = handle_put;
+  new_file->changed_props = apr_hash_make(new_file->pool);
+  new_file->removed_props = apr_hash_make(new_file->pool);
 
   /* CHECKOUT the file into our activity. */
   checkout_ctx = apr_pcalloc(new_file->pool, sizeof(*checkout_ctx));
@@ -1155,9 +1315,36 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  file_context_t *ctx = file_baton;
+  file_context_t *file = file_baton;
+  const char *ns;
 
-  abort();
+  name = apr_pstrdup(file->pool, name);
+  value = svn_string_dup(value, file->pool);
+
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      ns = SVN_DAV_PROP_NS_SVN;
+      name += sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      ns = SVN_DAV_PROP_NS_CUSTOM;
+    }
+
+  if (value)
+    {
+      svn_ra_serf__set_prop(file->changed_props, file->put_url,
+                            ns, name, value, file->pool);
+    }
+  else
+    {
+      value = svn_string_create("", file->pool);
+
+      svn_ra_serf__set_prop(file->removed_props, file->put_url,
+                            ns, name, value, file->pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -1186,7 +1373,34 @@ close_file(void *file_baton,
         }
     }
 
-  /* TODO: If we had any prop changes, push them via PROPPATCH. */
+  /* If we had any prop changes, push them via PROPPATCH. */
+  if (apr_hash_count(ctx->changed_props) ||
+      apr_hash_count(ctx->removed_props))
+    {
+      proppatch_context_t *proppatch_ctx;
+
+      proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
+      proppatch_ctx->pool = ctx->pool;
+     
+      proppatch_ctx->session = ctx->commit->session;
+      proppatch_ctx->conn = ctx->commit->conn;
+      
+      proppatch_ctx->acceptor = svn_ra_serf__accept_response;
+      proppatch_ctx->acceptor_baton = ctx->commit->session;
+      proppatch_ctx->handler = handle_proppatch;
+      
+      proppatch_ctx->path = ctx->put_url;
+      proppatch_ctx->changed_props = ctx->changed_props;
+      proppatch_ctx->removed_props = ctx->removed_props;
+      
+      serf_connection_request_create(proppatch_ctx->conn->conn,
+                                     setup_proppatch, proppatch_ctx);
+     
+      /* If we don't wait for the response, our pool will be gone! */ 
+      SVN_ERR(svn_ra_serf__context_run_wait(&proppatch_ctx->done,
+                                            ctx->commit->session,
+                                            ctx->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1286,7 +1500,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 
   ctx->session = session;
   ctx->conn = session->conns[0];
-  ctx->log_msg = log_msg;
+  ctx->log_msg = svn_string_create(log_msg, pool);
 
   ctx->callback = callback;
   ctx->callback_baton = callback_baton;
