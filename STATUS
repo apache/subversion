@@ -45,6 +45,16 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r18504, r18509
+    Add svnauthz-validate tool.
+    Justification:
+      Useful tool, low imact.
+    Notes:
+      Take diff to build.conf from r18509 then copy all of tools/server-side
+      from r18509, it's all that's in that directory.
+    Votes:
+      +1: rooneg
+
   * r18721
     Fix race condition during application pool initialization.
     Justification:
