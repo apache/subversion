@@ -1441,6 +1441,10 @@ svn_error_t *svn_client_diff(const apr_array_header_t *diff_options,
  * changed between @a start_revision and @a end_revision.  @a path can
  * be either a working-copy path or URL.
  *
+ * If @a peg_revision is @c svn_opt_revision_unspecified, behave
+ * identically to svn_client_diff3(), using @a path for both of that
+ * function's @a path1 and @a path2 argments.
+ *
  * All other options are handled identically to svn_client_diff3().
  *
  * @since New in 1.3.
@@ -1535,6 +1539,10 @@ svn_client_diff_summarize(const char *path1,
  * filesystem object @a path in peg revision @a peg_revision, as it
  * changed between @a start_revision and @a end_revision. @a path can
  * be either a working-copy path or URL.
+ *
+ * If @a peg_revision is @c svn_opt_revision_unspecified, behave
+ * identically to svn_client_diff_summarize(), using @a path for both
+ * of that function's @a path1 and @a path2 argments.
  *
  * The function may report false positives if @a ignore_ancestry is false,
  * as described in the documentation for svn_client_diff_summarize().
