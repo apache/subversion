@@ -1433,13 +1433,12 @@ struct diff_paths
 };
 
 
-/** Check if paths are urls and if the revisions are local. Pass FALSE to
-    PEG to run the check for a diff with two sources. Pass TRUE to PEG
-    to run the check for a pegged diff. Fills the PATHS structure. */
+/** Check if paths are urls and if the revisions are local, and, for
+    pegged revisions, ensure that at least one revision is non-local.
+    Fills the PATHS structure. */
 static svn_error_t *
 check_paths(const struct diff_parameters *params,
-            struct diff_paths *paths,
-            svn_boolean_t peg)
+            struct diff_paths *paths)
 {
   svn_boolean_t is_local_rev1, is_local_rev2;
 
@@ -1458,7 +1457,7 @@ check_paths(const struct diff_parameters *params,
     ((params->revision2->kind == svn_opt_revision_base)
      || (params->revision2->kind == svn_opt_revision_working));
 
-  if (peg)
+  if (params->peg_revision->kind != svn_opt_revision_unspecified)
     {
       if (is_local_rev1 && is_local_rev2)
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
@@ -2191,13 +2190,12 @@ do_diff(const struct diff_parameters *diff_param,
         const svn_wc_diff_callbacks2_t *callbacks,
         struct diff_cmd_baton *callback_baton,
         svn_client_ctx_t *ctx,
-        svn_boolean_t pegged,
         apr_pool_t *pool)
 {
   struct diff_paths diff_paths;
 
-  /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR(check_paths(diff_param, &diff_paths, pegged));
+  /* Check if paths/revisions are urls/local. */
+  SVN_ERR(check_paths(diff_param, &diff_paths));
 
   if (diff_paths.is_repos1)
     {
@@ -2298,13 +2296,12 @@ do_diff_summarize(const struct diff_parameters *diff_param,
                   svn_client_diff_summarize_func_t summarize_func,
                   void *summarize_baton,
                   svn_client_ctx_t *ctx,
-                  svn_boolean_t pegged,
                   apr_pool_t *pool)
 {
   struct diff_paths diff_paths;
 
-  /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR(check_paths(diff_param, &diff_paths, pegged));
+  /* Check if paths/revisions are urls/local. */
+  SVN_ERR(check_paths(diff_param, &diff_paths));
 
   if (diff_paths.is_repos1 && diff_paths.is_repos2)
     {
@@ -2424,8 +2421,7 @@ svn_client_diff3(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
 
-  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, FALSE,
-                 pool);
+  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
 
 svn_error_t *
@@ -2524,8 +2520,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
 
-  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, TRUE,
-                 pool);
+  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
 
 svn_error_t *
@@ -2600,7 +2595,7 @@ svn_client_diff_summarize(const char *path1,
   diff_params.no_diff_deleted = FALSE;
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
-                           ctx, FALSE, pool);
+                           ctx, pool);
 }
 
 svn_error_t *
@@ -2629,7 +2624,7 @@ svn_client_diff_summarize_peg(const char *path,
   diff_params.no_diff_deleted = FALSE;
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
-                           ctx, TRUE, pool);
+                           ctx, pool);
 }
 
 svn_error_t *
