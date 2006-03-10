@@ -118,11 +118,3 @@ Approved changes:
       Depends on r18144 et al. - unmergeable until those revs are merged.
     Votes:
       +1: brane, lundblad, malcolm, dlr
-
-  * r18665, r18668
-    Branch: 1.3.x-ls_url_encoded
-    Fix URL encoding bug in ls.
-    Justification:
-      Causes ls not to show locks always.
-    Votes:
-      +1: lundblad, rooneg, malcolm

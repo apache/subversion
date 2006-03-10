@@ -2,7 +2,7 @@
  * ls.c:  list local and remote directory entries.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -97,6 +97,9 @@ svn_client_ls3 (apr_hash_t **dirents,
 
   /* Getting relative path respective to repository root. */
   rel_path = svn_path_is_child (repos_root, url, pool);
+  /* rel_path is NULL if we list the repo root. */
+  if (rel_path)
+    rel_path = svn_path_uri_decode (rel_path, pool);
 
   /* Decide if the URL is a file or directory. */
   SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));
