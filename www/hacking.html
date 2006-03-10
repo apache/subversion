@@ -674,7 +674,11 @@ conventions:</p>
       svn_wc__ensure_directory).  All declarations private to a single file
       (such as the static function get_entry_url inside
       libsvn_wc/update_editor.c) do not require any additional namespace
-      decorations</p>
+      decorations.  Symbols that need to be used outside a library, but
+      still are not public are put in a public header, but use the
+      double underscore notation.  Such symbols may be used by
+      Subversion core code only, and we try to be restrictive
+      regarding the introduction of such entities.</p>
       
       <p>To recap:</p>
       <pre>
@@ -689,6 +693,11 @@ conventions:</p>
          /* For use within one file: subversion/libsvn_wc/update_editor.c */ 
          get_entry_url()
          struct handler_baton {
+         /* For internal use in svn core code only:
+            subversion/include/svn_types.h */
+         #define SVN__STREAM_CHUNK_SIZE
+         /* subversion/include/svn_error.h */
+         void svn_error__locate(const char *file, long line);
       </pre>
 </li>
 
