@@ -1916,6 +1916,29 @@ fs_delete_node (svn_fs_root_t *root,
 }
 
 
+/* Set *SAME_P to TRUE iff FS1 and FS2 have the same UUID.
+   Use POOL for temporary allocation only.
+   Note: this code is duplicated between libsvn_fs_fs and libsvn_fs_base. */
+static svn_error_t *
+fs_same_p (svn_boolean_t *same_p,
+           svn_fs_t *fs1,
+           svn_fs_t *fs2,
+           apr_pool_t *pool)
+{
+  const char *uuid1;
+  const char *uuid2;
+
+  /* Random thought: if fetching UUIDs to compare filesystems is too
+     expensive, one solution would be to cache the UUID in each fs
+     object (copying the UUID into fs->pool, of course). */
+
+  SVN_ERR (fs1->vtable->get_uuid (fs1, &uuid1, pool));
+  SVN_ERR (fs2->vtable->get_uuid (fs2, &uuid2, pool));
+
+  *same_p = ! strcmp (uuid1, uuid2);
+  return SVN_NO_ERROR;
+}
+
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
    TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
    the copies table.  Perform temporary allocations in POOL. */
@@ -1930,8 +1953,16 @@ copy_helper (svn_fs_root_t *from_root,
   dag_node_t *from_node;
   parent_path_t *to_parent_path;
   const char *txn_id = to_root->txn;
+  svn_boolean_t same_p;
 
-  assert (from_root->fs == to_root->fs);
+  /* Use an error check, not an assert, because even the caller cannot
+     guarantee that a filesystem's UUID has not changed "on the fly". */
+  SVN_ERR (fs_same_p (&same_p, from_root->fs, to_root->fs, pool));
+  if (! same_p)
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Cannot copy between two different filesystems ('%s' and '%s')."),
+       from_root->fs->path, to_root->fs->path);
 
   if (from_root->is_txn_root)
     return svn_error_create
