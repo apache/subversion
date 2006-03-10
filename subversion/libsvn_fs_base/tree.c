@@ -381,36 +381,36 @@ svn_fs_base__revision_root(svn_fs_root_t **root_p,
 
 /* Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
    for PATH in ROOT. */
-#define NOT_FOUND(root, path) (                          \
-  root->is_txn_root ?                                    \
+#define NOT_FOUND(r, p) (                                \
+  r->is_txn_root ?                                       \
     svn_error_createf                                    \
       (SVN_ERR_FS_NOT_FOUND, 0,                          \
        _("File not found: transaction '%s', path '%s'"), \
-       root->txn, path)                                  \
+       r->txn, p)                                        \
   :                                                      \
     svn_error_createf                                    \
       (SVN_ERR_FS_NOT_FOUND, 0,                          \
        _("File not found: revision %ld, path '%s'"),     \
-       root->rev, path)                                  \
+       r->rev, p)                                        \
   )
 
 
 /* Build a detailed `file already exists' message for PATH in ROOT.  */
-#define ALREADY_EXISTS(root, path) (                                           \
-  root->is_txn_root ?                                                          \
+#define ALREADY_EXISTS(r, p) (                                                 \
+  r->is_txn_root ?                                                             \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
-       root->fs->path, root->txn, path)                                        \
+       r->fs->path, r->txn, p)                                                 \
   :                                                                            \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
-       root->fs->path, root->rev, path)                                        \
+       r->fs->path, r->rev, p)                                                 \
   )
 
 
-#define NOT_TXN(root)                              \
+#define NOT_TXN(r)                                 \
   svn_error_create                                 \
     (SVN_ERR_FS_NOT_TXN_ROOT, NULL,                \
      _("Root object must be a transaction root"))
