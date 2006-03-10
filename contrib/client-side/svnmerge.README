@@ -21,4 +21,4 @@ but not limited to:
 
   * "svnmerge avail" has grown two new options:
     -B to display a list of the blocked revisions.
-    -A to display both the the blocked and the available revisions.
+    -A to display both the blocked and the available revisions.
