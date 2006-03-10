@@ -233,6 +233,7 @@ handle_auth(svn_ra_serf__session_t *session,
     {
       serf_bucket_t *hdrs;
       char *cur, *last, *auth_hdr, *realm_name, *realmstring;
+      apr_port_t port;
 
       hdrs = serf_bucket_response_get_headers(response);
       auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
@@ -253,6 +254,17 @@ handle_auth(svn_ra_serf__session_t *session,
               if (strcmp(attr, "realm") == 0)
                 {
                   realm_name = apr_strtok(NULL, "=", &last);
+                  if (realm_name[0] == '\"') 
+                    {
+                      apr_size_t realm_len;
+
+                      realm_len = strlen(realm_name);
+                      if (realm_name[realm_len - 1] == '\"')
+                        {
+                          realm_name[realm_len - 1] = '\0';
+                          realm_name++;
+                        }
+                    }
                 }
               else
                 {
@@ -272,9 +284,19 @@ handle_auth(svn_ra_serf__session_t *session,
           abort();
         }
 
-      session->realm = apr_psprintf(session->pool, "<%s://%s> %s",
+      if (session->repos_url.port_str)
+        {
+          port = session->repos_url.port;
+        }
+      else
+        {
+          port = apr_uri_port_of_scheme(session->repos_url.scheme);
+        }
+
+      session->realm = apr_psprintf(session->pool, "<%s://%s:%d> %s",
                                     session->repos_url.scheme,
-                                    session->repos_url.hostinfo,
+                                    session->repos_url.hostname,
+                                    port,
                                     realm_name);
 
       error = svn_auth_first_credentials(&creds,
