@@ -613,6 +613,98 @@ svn_io_temp_dir(const char **dir,
 
 /*** Creating, copying and appending files. ***/
 
+#ifdef AS400
+/* CCSID insensitive replacement for apr_file_copy() on OS400.
+ * 
+ * (See comments for file_open() for more info on CCSIDs.)
+ * 
+ * On OS400 apr_file_copy() attempts to convert the contents of the source
+ * file from its CCSID to the CCSID of the destination file.  This may
+ * corrupt the destination file's contents if the files' CCSIDs differ from
+ * each other and/or the system CCSID.
+ * 
+ * This new function prevents this by forcing a binary copy.  It is
+ * stripped down copy of the private function apr_file_transfer_contents in
+ * srclib/apr/file_io/unix/copy.c of version 2.0.54 of the Apache HTTP
+ * Server (http://httpd.apache.org/) excepting that APR_LARGEFILE is not
+ * used, from_path is always opened with APR_BINARY, and
+ * APR_FILE_SOURCE_PERMS is not supported. 
+ */ 
+static apr_status_t
+os400_file_copy(const char *from_path,
+                const char *to_path,
+                apr_fileperms_t perms,
+                apr_pool_t *pool)
+{
+  apr_file_t *s, *d;
+  apr_status_t status;
+
+  /* Open source file. */
+  status = apr_file_open(&s, from_path, APR_READ | APR_BINARY,
+                         APR_OS_DEFAULT, pool);
+  if (status)
+    return status;
+
+  /* Open dest file.
+   * 
+   * apr_file_copy() does not require the destination file to exist and will
+   * overwrite it if it does.  Since this is a replacement for
+   * apr_file_copy() we enforce similar behavior.
+   */
+  status = apr_file_open(&d, to_path,
+                         APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
+                         perms,
+                         pool);
+  if (status)
+    {
+      apr_file_close(s);  /* toss any error */
+      return status;
+    }
+
+  /* Copy bytes till the cows come home. */
+  while (1)
+    {
+      char buf[BUFSIZ];
+      apr_size_t bytes_this_time = sizeof(buf);
+      apr_status_t read_err;
+      apr_status_t write_err;
+
+      /* Read 'em. */
+      read_err = apr_file_read(s, buf, &bytes_this_time);
+      if (read_err && !APR_STATUS_IS_EOF(read_err))
+        {
+          apr_file_close(s);  /* toss any error */
+          apr_file_close(d);  /* toss any error */
+          return read_err;
+        }
+
+      /* Write 'em. */
+      write_err = apr_file_write_full(d, buf, bytes_this_time, NULL);
+      if (write_err)
+        {
+          apr_file_close(s);  /* toss any error */
+          apr_file_close(d);  /* toss any error */
+          return write_err;
+        }
+
+      if (read_err && APR_STATUS_IS_EOF(read_err))
+        {
+          status = apr_file_close(s);
+          if (status)
+            {
+              apr_file_close(d);  /* toss any error */
+              return status;
+            }
+
+          /* return the results of this close: an error, or success */
+          return apr_file_close(d);
+        }
+    }
+  /* NOTREACHED */
+}
+#endif /* AS400 */
+
+
 svn_error_t *
 svn_io_copy_file(const char *src,
                  const char *dst,
@@ -632,7 +724,12 @@ svn_io_copy_file(const char *src,
                                    svn_io_file_del_none, pool));
   SVN_ERR(svn_path_cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
+#ifndef AS400
   apr_err = apr_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
+#else
+  apr_err = os400_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
+#endif
+
   if (apr_err)
     {
       apr_file_remove(dst_tmp_apr, pool);

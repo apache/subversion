@@ -213,9 +213,10 @@ svn_error_t *svn_io_temp_dir(const char **dir,
                              apr_pool_t *pool);
 
 
-/** Copy @a src to @a dst atomically.  Overwrite @a dst if it exists, else
- * create it.  Both @a src and @a dst are utf8-encoded filenames.  If
- * @a copy_perms is true, set @a dst's permissions to match those of @a src.
+/** Copy @a src to @a dst atomically, in a "byte-for-byte" manner.
+ * Overwrite @a dst if it exists, else create it.  Both @a src and @a dst
+ * are utf8-encoded filenames.  If @a copy_perms is true, set @a dst's
+ * permissions to match those of @a src.
  */
 svn_error_t *svn_io_copy_file(const char *src,
                               const char *dst,
