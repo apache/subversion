@@ -34,22 +34,6 @@ Candidate changes:
       +1: djames
       +0: blair, malcolm
 
-  * r17333 and associated test case (copied from trunk)
-    Fix issue #2306: modification of "svn:needs-lock" should adjust
-    the native file system's read-only attribute within a WC.
-    Branch: 1.3.x-r17333
-    Justification:
-      Backport of a change to trunk which resolves buggy behavior on
-      Windows, behavior which is inconsistent with Linux.
-    Notes:
-      dlr does not have a Windows development environment, and thus
-      cannot adequately test this change.  Additional testing is
-      especially important given the heavy amount of modification
-      which was necessary when backporting the change from trunk.
-    Votes:
-      +0: dlr
-      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
-
   * r18114, r18681
     In mailer.py:
     Fix bug: named substitutions gathered from defaults.for_repos were being
@@ -60,17 +44,6 @@ Candidate changes:
       to put the repository name into the *_subject_prefix options.
     Votes:
       +1: maxb
-
-  * r18144, r18164, r18170, r18171, r18184, r18434
-    and r18037, r18127 (only tools/dev/stress.pl)
-    Add support for BDB-4.4 and automatic recovery of wedged databases.
-    Justification:
-      See above about automatic recovery of wedged databases.
-    Notes:
-      We found two bugs after this entry was written. Suggest we suspend
-      voting until brane fixes them on trunk.
-    Votes:
-      +1: brane
 
   * r18451
     Avoid asserting in repos to repos copies where the destination is a
@@ -99,6 +72,42 @@ Candidate changes:
       Leads to server crashes.
     Votes:
       +1: lundblad
+
+Approved changes:
+
+(none)
+
+Status of 1.3.1:
+================
+
+Candidate changes:
+
+  * r17333 and associated test case (copied from trunk)
+    Fix issue #2306: modification of "svn:needs-lock" should adjust
+    the native file system's read-only attribute within a WC.
+    Branch: 1.3.x-r17333
+    Justification:
+      Backport of a change to trunk which resolves buggy behavior on
+      Windows, behavior which is inconsistent with Linux.
+    Notes:
+      dlr does not have a Windows development environment, and thus
+      cannot adequately test this change.  Additional testing is
+      especially important given the heavy amount of modification
+      which was necessary when backporting the change from trunk.
+    Votes:
+      +0: dlr
+      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
+
+  * r18144, r18164, r18170, r18171, r18184, r18434
+    and r18037, r18127 (only tools/dev/stress.pl)
+    Add support for BDB-4.4 and automatic recovery of wedged databases.
+    Justification:
+      See above about automatic recovery of wedged databases.
+    Notes:
+      We found two bugs after this entry was written. Suggest we suspend
+      voting until brane fixes them on trunk.
+    Votes:
+      +1: brane
 
 Approved changes:
 
