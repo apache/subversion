@@ -42,19 +42,10 @@
 /* Structure associated with a MKACTIVITY request. */
 typedef struct {
 
-  svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
-
-  const char *activity_url;
-  apr_size_t activity_url_len;
-
   int status;
 
   svn_boolean_t done;
 
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
 } mkactivity_context_t;
 
 /* Structure associated with a CHECKOUT request. */
@@ -259,39 +250,11 @@ handle_status_only(serf_request_t *request,
 
       rv = serf_bucket_response_status(response, &sl);
 
-      if (rv)
-        {
-          return rv;
-        }
-
       *status_code = sl.code;
       *done = TRUE;
     }
 
   return status;
-}
-
-static apr_status_t
-setup_mkactivity(serf_request_t *request,
-                 void *setup_baton,
-                 serf_bucket_t **req_bkt,
-                 serf_response_acceptor_t *acceptor,
-                 void **acceptor_baton,
-                 serf_response_handler_t *handler,
-                 void **handler_baton,
-                 apr_pool_t *pool)
-{
-  mkactivity_context_t *ctx = setup_baton;
-
-  svn_ra_serf__setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "MKACTIVITY", ctx->activity_url, NULL, NULL);
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
 }
 
 static apr_status_t
@@ -810,6 +773,7 @@ open_root(void *edit_baton,
 {
   commit_context_t *ctx = edit_baton;
   svn_ra_serf__options_context_t *opt_ctx;
+  svn_ra_serf__handler_t *handler;
   mkactivity_context_t *mkact_ctx;
   checkout_context_t *checkout_ctx;
   proppatch_context_t *proppatch_ctx;
@@ -842,18 +806,19 @@ open_root(void *edit_baton,
   ctx->activity_url_len = strlen(ctx->activity_url);
 
   /* Create our activity URL now on the server. */
+
+  handler = apr_pcalloc(ctx->pool, sizeof(*handler));
+  handler->method = "MKACTIVITY";
+  handler->path = ctx->activity_url;
+  handler->conn = ctx->session->conns[0];
+  handler->session = ctx->session;
+
   mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
-  mkact_ctx->session = ctx->session;
-  mkact_ctx->conn = ctx->conn;
 
-  mkact_ctx->acceptor = svn_ra_serf__accept_response;
-  mkact_ctx->acceptor_baton = ctx->session;
-  mkact_ctx->handler = handle_mkactivity;
-  mkact_ctx->activity_url = ctx->activity_url;
-  mkact_ctx->activity_url_len = ctx->activity_url_len;
+  handler->response_handler = handle_mkactivity;
+  handler->response_baton = mkact_ctx;
 
-  serf_connection_request_create(mkact_ctx->conn->conn,
-                                 setup_mkactivity, mkact_ctx);
+  svn_ra_serf__request_create(handler);
 
   SVN_ERR(svn_ra_serf__context_run_wait(&mkact_ctx->done, ctx->session,
                                         ctx->pool));
@@ -934,8 +899,8 @@ open_root(void *edit_baton,
   proppatch_ctx->handler = handle_proppatch;
 
   proppatch_ctx->path = ctx->baseline->resource_url;
-  proppatch_ctx->changed_props = dir->changed_props;
-  proppatch_ctx->removed_props = dir->removed_props;
+  proppatch_ctx->changed_props = apr_hash_make(dir_pool);
+  proppatch_ctx->removed_props = apr_hash_make(dir_pool);
 
   svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
                         SVN_DAV_PROP_NS_SVN, "log",
