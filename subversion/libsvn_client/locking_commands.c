@@ -128,16 +128,15 @@ store_locks_callback(void *baton,
  * and *COMMON_PARENT is set to the common parent URL for all the
  * targets (as opposed to the common local path).
  *
- * If all the targets are local paths within the same wc, i.e.,
- * they share a common parent at some level, set *PARENT_ENTRY_P
- * and *PARENT_ADM_ACCESS_P to the entry and adm_access of that
- * common parent.  *PARENT_ADM_ACCESS_P will be associated with
- * adm_access objects for all the other paths, which are locked in the
- * working copy while we lock them in the repository.
+ * If all the targets are local paths within the same wc, i.e., they
+ * share a common parent at some level, set and *PARENT_ADM_ACCESS_P
+ * to and adm_access of that common parent.  *PARENT_ADM_ACCESS_P will
+ * be associated with adm_access objects for all the other paths,
+ * which are locked in the working copy while we lock them in the
+ * repository.
  *
  * If all the targets are URLs in the same repository, i.e. sharing a
- * common parent URL prefix, then set *PARENT_ENTRY_P and
- * *PARENT_ADM_ACCESS_P to null.
+ * common parent URL prefix, then set *PARENT_ADM_ACCESS_P to null.
  *
  * If there is no common parent, either because the targets are a
  * mixture of URLs and local paths, or because they simply do not
@@ -155,7 +154,7 @@ store_locks_callback(void *baton,
  * If TARGETS is an array of urls, REL_FS_PATHS_P is set to NULL.
  * Otherwise each key in REL_FS_PATHS_P is an repository path (relative to
  * COMMON_PARENT) mapped to the target path for TARGET (relative to
- * the PARENT_ENTRY_P). working copy targets that they "belong" to.
+ * the common parent WC path). working copy targets that they "belong" to.
  *
  * If *COMMON_PARENT is a URL, then the values are a pointer to
  * SVN_INVALID_REVNUM (allocated in pool) if DO_LOCK, else "".
@@ -164,7 +163,6 @@ store_locks_callback(void *baton,
  */
 static svn_error_t *
 organize_lock_targets(const char **common_parent,
-                      const svn_wc_entry_t **parent_entry_p,
                       svn_wc_adm_access_t **parent_adm_access_p,
                       apr_hash_t **rel_targets_p,
                       apr_hash_t **rel_fs_paths_p,
@@ -205,7 +203,6 @@ organize_lock_targets(const char **common_parent,
       invalid_revnum = apr_palloc(pool, sizeof(*invalid_revnum));
       *invalid_revnum = SVN_INVALID_REVNUM;
       *parent_adm_access_p = NULL;
-      *parent_entry_p = NULL;
 
       for (i = 0; i < rel_targets->nelts; i++)
         {
@@ -241,18 +238,6 @@ organize_lock_targets(const char **common_parent,
                                      *common_parent, 
                                      TRUE, max_depth, ctx->cancel_func, 
                                      ctx->cancel_baton, pool));  
-
-      SVN_ERR(svn_wc_entry(parent_entry_p, *common_parent, 
-                           *parent_adm_access_p, FALSE, pool));
-
-      if (! *parent_entry_p)
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"), 
-                                 svn_path_local_style(*common_parent, pool));
-      if (! (*parent_entry_p)->url)
-        return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                 _("'%s' has no URL"),
-                                 svn_path_local_style(*common_parent, pool));
 
       /* Get the url for each target and verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)
@@ -408,12 +393,9 @@ svn_client_lock(const apr_array_header_t *targets,
 {
   svn_wc_adm_access_t *adm_access;
   const char *common_parent;
-  const svn_wc_entry_t *entry;
-  const char *url;
   svn_ra_session_t *ra_session;
   apr_hash_t *path_revs, *urls_to_paths;
   struct lock_baton cb;
-  svn_boolean_t is_url;
 
   if (apr_is_empty_array(targets))
     return SVN_NO_ERROR;
@@ -427,20 +409,14 @@ svn_client_lock(const apr_array_header_t *targets,
            _("Lock comment has illegal characters"));      
     }
 
-  SVN_ERR(organize_lock_targets(&common_parent, &entry, &adm_access,
+  SVN_ERR(organize_lock_targets(&common_parent, &adm_access,
                                 &path_revs, &urls_to_paths, targets, TRUE, 
                                 steal_lock, ctx, pool));
 
-  is_url = svn_path_is_url(common_parent);
-
-  if (is_url)
-    url = common_parent;
-  else
-    url = entry->url;
-
   /* Open an RA session to the common parent of TARGETS. */
   SVN_ERR(svn_client__open_ra_session_internal
-          (&ra_session, url, is_url ? NULL : common_parent,
+          (&ra_session, common_parent,
+           adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
            adm_access, NULL, FALSE, FALSE, ctx, pool));
 
   cb.pool = pool;
@@ -467,37 +443,28 @@ svn_client_unlock(const apr_array_header_t *targets,
 {
   svn_wc_adm_access_t *adm_access;
   const char *common_parent;
-  const svn_wc_entry_t *entry;
-  const char *url;
   svn_ra_session_t *ra_session;
   apr_hash_t *path_tokens, *urls_to_paths;
   struct lock_baton cb;
-  svn_boolean_t is_url;
 
   if (apr_is_empty_array(targets))
     return SVN_NO_ERROR;
 
-  SVN_ERR(organize_lock_targets(&common_parent, &entry, &adm_access,
+  SVN_ERR(organize_lock_targets(&common_parent, &adm_access,
                                 &path_tokens, &urls_to_paths, targets, 
                                 FALSE, break_lock, ctx, pool));
 
-  is_url = svn_path_is_url(common_parent);
-
-  if (is_url)
-    url = common_parent;
-  else
-    url = entry->url;
-
   /* Open an RA session. */
   SVN_ERR(svn_client__open_ra_session_internal
-          (&ra_session, url,
-           svn_path_is_url(common_parent) ? NULL : common_parent,
+          (&ra_session, common_parent,
+           adm_access ? svn_wc_adm_access_path(adm_access) : NULL,
            adm_access, NULL, FALSE, FALSE, ctx, pool));
 
-  /* If break_lock is not set, lock tokens are required.  Ensure that
-     we provide lock tokens, so the repository will only check that
-     the user owns the locks. */
-  if (is_url && !break_lock)
+  /* If break_lock is not set, lock tokens are required by the server.
+     If the targets were all URLs, ensure that we provide lock tokens,
+     so the repository will only check that the user owns the
+     locks. */
+  if (! adm_access && !break_lock)
     SVN_ERR(fetch_tokens(ra_session, path_tokens, pool));
 
   cb.pool = pool;

@@ -52,6 +52,7 @@
 #  - Add "svnmerge avail -R": show logs in reverse order
 
 import sys, os, getopt, re, types, popen2, tempfile
+from bisect import bisect
 
 NAME = "svnmerge"
 if not hasattr(sys, "version_info") or sys.version_info < (2, 0):
@@ -139,6 +140,9 @@ default_opts = {
     "block_prop": NAME + "-blocked",
     "commit_verbose": True,
 }
+logs = {}
+mergeprops = {}
+blockprops = {}
 
 def console_width():
     """Get the width of the console screen (if any)."""
@@ -257,6 +261,98 @@ def check_dir_clean(dir):
     for L in launchsvn("status -u %s" % dir):
         if len(L) > 7 and L[7] == '*':
             error('"%s" is not up to date; please "svn update" first' % dir)
+
+class RevisionLog:
+    """
+    A log of the revisions which affected a given URL between two
+    revisions.
+    """
+
+    def __init__(self, url, begin, end, find_propchanges=False):
+        """
+        Create a new RevisionLog object, which stores, in self.revs, a list
+        of the revisions which affected the specified URL between begin and
+        end. If find_propchanges is True, self.propchange_revs will contain a
+        list of the URLs which changed properties directly on the specified
+        URL. URL must be the URL for a directory in the repository.
+        """
+
+        # Look for revisions
+        revision_re = re.compile(r"^r(\d+)")
+
+        # Look for changes which contain merge tracking information
+        rlpath = url_to_rlpath(url)
+        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
+
+        # Setup the log options (--quiet, so we don't show log messages)
+        log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
+        if find_propchanges:
+            # The --verbose flag lets us grab merge tracking information
+            # by looking at propchanges
+            log_opts = "--verbose " + log_opts
+    
+        # Read the log to look for revision numbers and merge-tracking info
+        self.revs = []
+        self.propchange_revs = []
+        for line in launchsvn("log %s" % log_opts):
+            m = revision_re.match(line)
+            if m:
+                rev = int(m.groups()[0])
+                self.revs.append(rev)
+            elif srcdir_change_re.match(line):
+                self.propchange_revs.append(rev)
+
+class VersionedProperty:
+    """A read-only, cached view of a versioned property"""
+
+    def __init__(self, url, name):
+        """View the history of a versioned property at URL with name"""
+        self.url = url
+        self.name = name
+        self.revs = [0]
+        self.values = [None]
+
+    def load(self, log):
+        """
+        Load the history of property changes from the specified
+        RevisionLog object.
+        """
+
+        old_value = None
+        for rev in log.propchange_revs:
+           new_value = self.raw_get(rev)
+           if new_value != old_value:
+               self.revs.append(rev)
+               self.values.append(new_value)
+               new_value = old_value
+
+        if log.revs:
+            self.revs.append(log.revs[-1])
+            self.values.append(None)
+
+    def raw_get(self, rev=None):
+        """
+        Get the property at revision 'rev'. If rev is not specified, get
+        the property at 'head'.
+        """
+        return get_revlist_prop(self.url, self.name, rev)
+
+    def get(self, rev=None):
+        """
+        Get the property at revision 'rev'. If rev is not specified, get
+        the property at 'head'.
+        """
+        if rev is not None:
+            i = bisect(self.revs, rev) - 1
+            if self.values[i] is not None:
+                return self.values[i]
+        return self.raw_get(rev)
+
+    def keys(self):
+        """
+        Get a list of the revisions in which this property changed.
+        """
+        return self.revs[1:-1]
 
 class RevisionSet:
     """
@@ -423,21 +519,26 @@ def _run_propset(dir, prop, value):
     finally:
         os.remove(fname)
 
+def set_props(dir, name, props):
+    props = format_merge_props(props)
+    if props:
+        _run_propset(dir, name, props)
+    else:
+        svn_command('propdel "%s" "%s"' % (name, dir)) 
+
 def set_merge_props(dir, props):
-    _run_propset(dir, opts["prop"], format_merge_props(props))
+    set_props(dir, opts["prop"], props)
+
+def set_block_props(dir, props):
+    set_props(dir, opts["block_prop"], props)
 
 def set_blocked_revs(dir, head_path, revs):
     props = get_block_props(dir)
     if revs:
         props[head_path] = str(revs)
-    else:
-        if props.has_key(head_path):
-            del props[head_path]
-    props = format_merge_props(props)
-    if props:
-        _run_propset(dir, opts["block_prop"], props)
-    else:
-        svn_command('propdel "%s" "%s"' % (opts["block_prop"], dir))
+    elif props.has_key(head_path):
+        del props[head_path]
+    set_block_props(dir, props)
 
 def is_url(url):
     """Check if url is a valid url."""
@@ -633,56 +734,12 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         if long(begin) > long(end):
             return RevisionSet(""), RevisionSet(""), RevisionSet("")
 
-    # Find all the revisions where the source of the merge revisions
-    # was modified.  Generate two lists of revisions, the first with
-    # all the revisions, and the second with a list of revisions where
-    # the source directory itself that is the source of the merges was
-    # modified, as these may be reflected merges.
-
-    # If we were asked to look for reflected revisions, then add the
-    # --verbose flag to the 'svn log' command to get a list of files
-    # and directories that were added, modified or deleted.  Even with
-    # the --verbose flag, the --quiet flag prevents the commit log
-    # message from being printed.
-    log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
-    if find_reflected:
-        log_opts = "--verbose " + log_opts
-    lines = launchsvn("log %s" % log_opts)
-
-    current_rev = None
-    rlpath = url_to_rlpath(url)
-
-    # This holds a list of all the revisions that changed something in
-    # the head branch.
-    revs = []
-
-    # This holds a list of all the revisions that changed a property
-    # on the head branch directory itself.  These revisions may
-    # contain changes on the integrated revision property list which
-    # are checked below.
-    prop_changed_revs = []
-
-    find_revision_re = re.compile(r"^r(\d+)")
-    source_dir_modified_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
-
-    source_dir_modified = False
-    for line in lines:
-        find_revision_match = find_revision_re.match(line)
-        if find_revision_match:
-            rev = find_revision_match.groups()[0]
-            current_rev = int(rev)
-            revs.append(rev)
-            source_dir_modified = False
-            continue
-
-        if not current_rev:
-            continue
-
-        if not source_dir_modified and source_dir_modified_re.match(line):
-            source_dir_modified = True
-            prop_changed_revs.append(current_rev)
-
-    revs = RevisionSet(",".join(revs))
+    logs[url] = RevisionLog(url, begin, end, find_reflected)
+    mergeprops[url] = VersionedProperty(url, opts["prop"])
+    mergeprops[url].load(logs[url])
+    blockprops[url] = VersionedProperty(url, opts["block_prop"])
+    blockprops[url].load(logs[url])
+    revs = RevisionSet(",".join(map(str,logs[url].revs)))
 
     if end == "HEAD":
         # If end is not provided, we do not know which is the latest revision
@@ -694,27 +751,17 @@ def analyze_revs(target_dir, url, begin=1, end=None,
     reflected_revs = []
 
     if find_reflected:
+        mergeinfo = mergeprops[url]
+
         report("checking for reflected changes in %d revision(s)"
-               % len(prop_changed_revs))
+               % len(mergeinfo.keys()))
 
-        previous_rev = None
-        previous_props = None
-
-        for rev in prop_changed_revs:
-            if rev-1 == previous_rev:
-                old_props = previous_props
-            else:
-                old_props = get_revlist_prop(url, opts["prop"], rev-1)
-
-            new_props = get_revlist_prop(url, opts["prop"], rev)
-            previous_props = new_props
-            previous_rev = rev
-
-            old_revisions = old_props.get(target_dir)
-            new_revisions = new_props.get(target_dir)
-
-            if new_revisions != old_revisions:
+        old_revs = None
+        for rev in mergeinfo.keys():
+            new_revs = mergeinfo.get(rev).get(target_dir)
+            if new_revs != old_revs:
                 reflected_revs.append("%s" % rev)
+            old_revs = new_revs
 
     reflected_revs = RevisionSet(",".join(reflected_revs))
 
@@ -889,7 +936,17 @@ def action_merge(branch_dir, branch_props):
     # is NOT inclusive so we have to subtract one from start.
     # We try to keep the number of merge operations as low as possible,
     # because it is faster and reduces the number of conflicts.
+    old_merge_props = branch_props
     for start,end in minimal_merge_intervals(revs, phantom_revs):
+
+        # Set merge props appropriately if bidirectional support is enabled
+        if opts["bidirectional"]:
+          new_merge_props = mergeprops[opts["head_url"]].get(start-1)
+          if new_merge_props != old_merge_props:
+              set_merge_props(branch_dir, new_merge_props)
+              old_merge_props = new_merge_props
+
+        # Do the merge
         svn_command('merge -r %d:%d %s %s' % \
                     (start-1, end, opts["head_url"], branch_dir))
 
@@ -1397,6 +1454,9 @@ def main(args):
 
     # Initialize default options
     opts = default_opts.copy()
+    logs.clear()
+    mergeprops.clear()
+    blockprops.clear()
 
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"

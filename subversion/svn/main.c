@@ -467,7 +467,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the sources have identical basenames that match a file within '.':\n"
      "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt,
+     svn_cl__merge_cmd_opt, 'x', svn_cl__ignore_ancestry_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
@@ -934,14 +934,14 @@ main(int argc, const char *argv[])
                 -c -N -> -r N:N-1 */
           if (changeno > 0)
             {
-              opt_state.start_revision.value.number = changeno-1;
+              opt_state.start_revision.value.number = changeno - 1;
               opt_state.end_revision.value.number = changeno;
             }
           else
             {
               changeno = -changeno;
               opt_state.start_revision.value.number = changeno;
-              opt_state.end_revision.value.number = changeno-1;
+              opt_state.end_revision.value.number = changeno - 1;
             }
           opt_state.start_revision.kind = svn_opt_revision_number;
           opt_state.end_revision.kind = svn_opt_revision_number;

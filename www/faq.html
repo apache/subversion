@@ -134,6 +134,8 @@ on Windows?</a></li>
 <li><a href="#bdb-fsfs-convert">How do I convert my repository from using BDB
 to FSFS or from FSFS to BDB?</a></li>
 <li><a href="#binary-files">How does Subversion handle binary files?</a></li>
+<li><a href="#terse-diff">How can I make <tt>svn diff</tt> show me
+    just the names of the changed files, not their contents?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1532,8 +1534,9 @@ information on the revision level of a working copy given a path (see
 You can incorporate it into your build or release process to get the
 information you need into the source itself.  For example, in a build
 environment based on <tt>GNU&nbsp;make</tt>, add <a
-href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112564"
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112564"
 >something like this</a> to your <tt>Makefile</tt>:
+</p>
 
 <pre>
 ##
@@ -1545,6 +1548,7 @@ SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
 CFLAGS := $(SVNDEF) ... continue with your other flags ...
 </pre>
 
+<p>
 (Note that this will not work on non-GNU versions of <tt>make</tt>.
 Don't use it if your build process needs to be portable.)</p>
 
@@ -2117,6 +2121,27 @@ that works equally well on binary and text files; this is completely
 unrelated to the diffing method used by the 'svn&nbsp;diff'
 command.</p>
 
+</div>
+
+<div class="h3" id="terse-diff" title="terse-diff">
+<h3>How can I make <tt>svn diff</tt> show me just the names of the
+changed files, not their contents?</h3>
+<p>
+<tt>svn diff</tt> doesn't have an option to do this, but 
+</p>
+<ul>
+<li>
+  If you only are interested in the diffs between, say, revision 10
+  and the revision just before it, <pre>svn log -vq -r10</pre> does
+  exactly what you want;
+</li>
+<li>
+  otherwise, if you're using Unix, this works for any range of revisions:
+  <pre>
+    svn log -vq -r123:456 | egrep '^ {3}[ADMR] ' | cut -c6- | sort | uniq </pre> </li>
+</ul>
+Version 1.4 of the <tt>svn diff</tt> command will have a "--summarize"
+option.
 </div>
 
 <![CDATA[=========================================================]]>
@@ -3258,10 +3283,11 @@ trunk source build:</p>
 upgrade 'libtool'.  (I've also heard that the Debian packagers had to
 tweak 'libtool' and that this may cause some problems for Subversion
 builds.  But that's hearsay&nbsp;&mdash;&nbsp;I didn't have time to
-verify the details before writing this FAQ entry.  However, see
-<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112617"
->http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=112617</a>
-and the <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&by=thread&from=435265"
+verify the details before writing this FAQ entry.  However, see <a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112617"
+>http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112617</a>
+and the <a
+href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=435265"
 >thread</a> it spawned for a detailed discussion.)</p>
 
 <p>In any case, after encountering this problem on a Debian GNU/Linux

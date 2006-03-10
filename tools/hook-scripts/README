@@ -40,4 +40,8 @@ Your Mileage May Vary.
       Checks whether the contents of PO files committed to the repository
       are encoded in UTF-8.
 
+   8. log-police.py
+      Ensures that log messages end with exactly one newline.  Can
+      also be run as a standalone script to fix up old revisions.
+
 $Id$

@@ -27,6 +27,9 @@
 #    behaviour of Windows or OSX, but it might be good enough.
 #  - Hooks get invoked with an empty environment so this script explicitly
 #    sets a locale; make sure it is a sensible value.
+#  - If used with Apache the 'clash' diagnostic must be ASCII irrespective
+#    of the locale, see the 'Force' comment near the end of the script for
+#    one way to achieve this.
 
 import sys, locale
 sys.path.append('/usr/local/subversion/lib/svn-python')
@@ -85,12 +88,12 @@ for path in new_paths:
       clashes[canonical_path][join_path(dir, name_pair[1])] = True
 
 if (clashes):
-  utfeight='utf-8'
+  # native = 'ascii' # Force ASCII output for Apache
   for canonical_path in clashes.iterkeys():
-    sys.stderr.write(u'Clash:'.encode(utfeight))
+    sys.stderr.write(u'Clash:'.encode(native))
     for path in clashes[canonical_path].iterkeys():
-      sys.stderr.write(u' \''.encode(utfeight) +
-                       str(path).decode('utf-8').encode(utfeight, 'replace') +
-                       u'\''.encode(utfeight))
-    sys.stderr.write(u'\n'.encode(utfeight))
+      sys.stderr.write(u' \''.encode(native) +
+                       str(path).decode('utf-8').encode(native, 'replace') +
+                       u'\''.encode(native))
+    sys.stderr.write(u'\n'.encode(native))
   sys.exit(1)

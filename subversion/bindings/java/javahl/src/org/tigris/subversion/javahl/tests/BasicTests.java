@@ -977,7 +977,16 @@ public class BasicTests extends SVNTests
         pw.close();
         client.remove(new String[] {file.getAbsolutePath()}, null, true);
         assertFalse("failed to remove unversioned file foo", file.exists());
-        client.remove(new String[] {file.getAbsolutePath()}, null, true);
+
+        try
+        {
+            // delete non-existant file foo
+            client.remove(new String[] {file.getAbsolutePath()}, null, true);
+            fail("missing exception");
+        }
+        catch(ClientException expected)
+        {
+        }
 
         // delete file iota in the repository
         addExpectedCommitItem(null, thisTest.getUrl(), "iota", NodeKind.none,

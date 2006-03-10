@@ -695,6 +695,7 @@ struct merge_cmd_baton {
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
   const char *diff3_cmd;
+  const apr_array_header_t *merge_options;
 
   apr_pool_t *pool;
 };
@@ -783,7 +784,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
-     way svn_wc_merge() can do the merge. */
+     way svn_wc_merge2() can do the merge. */
   {
     const svn_wc_entry_t *entry;
     svn_node_kind_t kind;
@@ -806,7 +807,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   }
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge().  Thank goodness that all the
+     svn_wc_merge2().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -846,10 +847,11 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
       if (merge_required)
         {
-          SVN_ERR(svn_wc_merge(older, yours, mine, adm_access,
-                               left_label, right_label, target_label,
-                               merge_b->dry_run, &merge_outcome, 
-                               merge_b->diff3_cmd, subpool));
+          SVN_ERR(svn_wc_merge2(older, yours, mine, adm_access,
+                                left_label, right_label, target_label,
+                                merge_b->dry_run, &merge_outcome, 
+                                merge_b->diff3_cmd, merge_b->merge_options,
+                                subpool));
         }
 
       /* Philip asks "Why?"  Why does the notification depend on whether the
@@ -1423,36 +1425,22 @@ struct diff_parameters
 /** Helper structure: filled by check_paths() */
 struct diff_paths
 {
-  /* revision1 is a local revision? */
-  svn_boolean_t is_local_rev1;
+  /* path1 can only be found in the repository? */
+  svn_boolean_t is_repos1;
 
-  /* revision2 is a local revision? */
-  svn_boolean_t is_local_rev2;
-
-  /* path1 is a repos url? */
-  svn_boolean_t is_repos_path1;
-
-  /* path2 is a repos url?  Not used for pegged diffs. */
-  svn_boolean_t is_repos_path2;
+  /* path2 can only be found in the repository? */
+  svn_boolean_t is_repos2;
 };
 
 
-/** Check if paths are urls and if the revisions are local. Pass FALSE to
-    PEG to run the check for a diff with two sources. Pass TRUE to PEG
-    to run the check for a pegged diff. Fills the PATHS structure. */
+/** Check if paths are urls and if the revisions are local, and, for
+    pegged revisions, ensure that at least one revision is non-local.
+    Fills the PATHS structure. */
 static svn_error_t *
 check_paths(const struct diff_parameters *params,
-            struct diff_paths* paths,
-            svn_boolean_t peg)
+            struct diff_paths *paths)
 {
-  /* Figure out if the sources are URLs or working copy paths. */
-  paths->is_repos_path1 = svn_path_is_url(params->path1);
-
-  if (peg)
-    paths->is_repos_path2 = FALSE;
-  else
-    paths->is_repos_path2 = svn_path_is_url(params->path2);
-
+  svn_boolean_t is_local_rev1, is_local_rev2;
 
   /* Verify our revision arguments in light of the paths. */
   if ((params->revision1->kind == svn_opt_revision_unspecified)
@@ -1462,19 +1450,22 @@ check_paths(const struct diff_parameters *params,
 
   /* Revisions can be said to be local or remote.  BASE and WORKING,
      for example, are local.  */
-  paths->is_local_rev1 =
+  is_local_rev1 =
     ((params->revision1->kind == svn_opt_revision_base)
      || (params->revision1->kind == svn_opt_revision_working));
-  paths->is_local_rev2 =
+  is_local_rev2 =
     ((params->revision2->kind == svn_opt_revision_base)
      || (params->revision2->kind == svn_opt_revision_working));
 
-  if (peg)
+  if (params->peg_revision->kind != svn_opt_revision_unspecified)
     {
-      if (paths->is_local_rev1 && paths->is_local_rev2)
+      if (is_local_rev1 && is_local_rev2)
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                 _("At least one revision must be non-local "
                                   "for a pegged diff"));
+
+      paths->is_repos1 = ! is_local_rev1;
+      paths->is_repos2 = ! is_local_rev2;
     }
   else
     {
@@ -1482,10 +1473,8 @@ check_paths(const struct diff_parameters *params,
          URLs.  We don't do that here, though.  We simply record that it
          needs to be done, which is information that helps us choose our
          diff helper function.  */
-      if ((! paths->is_repos_path1) && (! paths->is_local_rev1))
-        paths->is_repos_path1 = TRUE;
-      if ((! paths->is_repos_path2) && (! paths->is_local_rev2))
-        paths->is_repos_path2 = TRUE;
+      paths->is_repos1 = ! is_local_rev1 || svn_path_is_url(params->path1);
+      paths->is_repos2 = ! is_local_rev2 || svn_path_is_url(params->path2);
     }
 
   return SVN_NO_ERROR;
@@ -2195,7 +2184,7 @@ diff_repos_wc(const apr_array_header_t *options,
 }
 
 
-/* This is basically just the guts of svn_client_diff3(). */
+/* This is basically just the guts of svn_client_diff[_peg]3(). */
 static svn_error_t *
 do_diff(const struct diff_parameters *diff_param,
         const svn_wc_diff_callbacks2_t *callbacks,
@@ -2205,12 +2194,12 @@ do_diff(const struct diff_parameters *diff_param,
 {
   struct diff_paths diff_paths;
 
-  /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR(check_paths(diff_param, &diff_paths, FALSE));
+  /* Check if paths/revisions are urls/local. */
+  SVN_ERR(check_paths(diff_param, &diff_paths));
 
-  if (diff_paths.is_repos_path1) /* path1 is (effectively) a URL */
+  if (diff_paths.is_repos1)
     {
-      if (diff_paths.is_repos_path2) /* path2 is (effectively) a URL */
+      if (diff_paths.is_repos2)
         {
           SVN_ERR(diff_repos_repos(diff_param, callbacks, callback_baton,
                                    ctx, pool));
@@ -2228,7 +2217,7 @@ do_diff(const struct diff_parameters *diff_param,
     }
   else /* path1 is a working copy path */
     {
-      if (diff_paths.is_repos_path2) /* path2 is (effectively) a URL */
+      if (diff_paths.is_repos2)
         {
           SVN_ERR(diff_repos_wc(diff_param->options,
                                 diff_param->path2, diff_param->revision2,
@@ -2243,63 +2232,6 @@ do_diff(const struct diff_parameters *diff_param,
           SVN_ERR(diff_wc_wc(diff_param->options,
                              diff_param->path1, diff_param->revision1,
                              diff_param->path2, diff_param->revision2,
-                             diff_param->recurse,
-                             diff_param->ignore_ancestry,
-                             callbacks, callback_baton, ctx, pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* This is basically just the guts of svn_client_diff_peg3(). */
-static svn_error_t *
-do_diff_peg(const struct diff_parameters *diff_param,
-            const svn_wc_diff_callbacks2_t *callbacks,
-            struct diff_cmd_baton *callback_baton,
-            svn_client_ctx_t *ctx,
-            apr_pool_t *pool)
-{
-  struct diff_paths diff_paths;
-
-  /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR(check_paths(diff_param, &diff_paths, TRUE));
-
-  if (! diff_paths.is_local_rev1) /* path1 is (effectively) a URL */
-    {
-      if (! diff_paths.is_local_rev2) /* path2 is (effectively) a URL */
-        {
-          SVN_ERR(diff_repos_repos(diff_param, callbacks,
-                                   callback_baton, ctx, pool));
-        }
-      else /* path2 is a working copy path */
-        {
-          SVN_ERR(diff_repos_wc(diff_param->options,
-                                diff_param->path1, diff_param->revision1,
-                                diff_param->peg_revision,
-                                diff_param->path1, diff_param->revision2,
-                                FALSE, diff_param->recurse,
-                                diff_param->ignore_ancestry,
-                                callbacks, callback_baton, ctx, pool));
-        }
-    }
-  else /* path1 is a working copy path */
-    {
-      if (! diff_paths.is_local_rev2) /* path2 is (effectively) a URL */
-        {
-          SVN_ERR(diff_repos_wc(diff_param->options,
-                                diff_param->path1, diff_param->revision2,
-                                diff_param->peg_revision,
-                                diff_param->path1, diff_param->revision1,
-                                TRUE, diff_param->recurse,
-                                diff_param->ignore_ancestry,
-                                callbacks, callback_baton, ctx, pool));
-        }
-      else
-        {
-          SVN_ERR(diff_wc_wc(diff_param->options,
-                             diff_param->path1, diff_param->revision1,
-                             diff_param->path1, diff_param->revision2,
                              diff_param->recurse,
                              diff_param->ignore_ancestry,
                              callbacks, callback_baton, ctx, pool));
@@ -2358,17 +2290,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   return SVN_NO_ERROR;
 }
 
-/* Return an error for unsupported summarizing diff operation, i.e.
- * a diff that doesn't compare repository to repository. */
-static svn_error_t *
-unsupported_diff_summarize(void)
-{
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                          _("Summarizing diff can only compare repository "
-                            "to repository"));
-}
-
-/* This is basically just the guts of svn_client_diff_summarize(). */
+/* This is basically just the guts of svn_client_diff_summarize[_peg](). */
 static svn_error_t *
 do_diff_summarize(const struct diff_parameters *diff_param,
                   svn_client_diff_summarize_func_t summarize_func,
@@ -2378,40 +2300,18 @@ do_diff_summarize(const struct diff_parameters *diff_param,
 {
   struct diff_paths diff_paths;
 
-  /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR(check_paths(diff_param, &diff_paths, FALSE));
+  /* Check if paths/revisions are urls/local. */
+  SVN_ERR(check_paths(diff_param, &diff_paths));
 
-  if (diff_paths.is_repos_path1 && diff_paths.is_repos_path2)
+  if (diff_paths.is_repos1 && diff_paths.is_repos2)
     {
       SVN_ERR(diff_summarize_repos_repos(diff_param, summarize_func,
                                          summarize_baton, ctx, pool));
     }
   else
-    return unsupported_diff_summarize();
-
-  return SVN_NO_ERROR;
-}
-
-/* This is basically just the guts of svn_client_diff_summarize_peg(). */
-static svn_error_t *
-do_diff_summarize_peg(const struct diff_parameters* diff_param,
-                      svn_client_diff_summarize_func_t summarize_func,
-                      void *summarize_baton,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool)
-{
-  struct diff_paths diff_paths;
-
-  /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR(check_paths(diff_param, &diff_paths, TRUE));
-
-  if (! diff_paths.is_local_rev1 && ! diff_paths.is_local_rev2)
-    {
-      SVN_ERR(diff_summarize_repos_repos(diff_param, summarize_func,
-                                         summarize_baton, ctx, pool));
-    }
-  else
-    return unsupported_diff_summarize();
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            _("Summarizing diff can only compare repository "
+                              "to repository"));
 
   return SVN_NO_ERROR;
 }
@@ -2620,7 +2520,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
 
-  return do_diff_peg(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
+  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
 
 svn_error_t *
@@ -2723,22 +2623,23 @@ svn_client_diff_summarize_peg(const char *path,
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = FALSE;
 
-  return do_diff_summarize_peg(&diff_params, summarize_func, summarize_baton,
-                               ctx, pool);
+  return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
+                           ctx, pool);
 }
 
 svn_error_t *
-svn_client_merge(const char *source1,
-                 const svn_opt_revision_t *revision1,
-                 const char *source2,
-                 const svn_opt_revision_t *revision2,
-                 const char *target_wcpath,
-                 svn_boolean_t recurse,
-                 svn_boolean_t ignore_ancestry,
-                 svn_boolean_t force,
-                 svn_boolean_t dry_run,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+svn_client_merge2(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force,
+                  svn_boolean_t dry_run,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
@@ -2792,6 +2693,7 @@ svn_client_merge(const char *source1,
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
   merge_cmd_baton.url = URL2;
   merge_cmd_baton.revision = revision2;
@@ -2851,19 +2753,37 @@ svn_client_merge(const char *source1,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_merge(const char *source1,
+                 const svn_opt_revision_t *revision1,
+                 const char *source2,
+                 const svn_opt_revision_t *revision2,
+                 const char *target_wcpath,
+                 svn_boolean_t recurse,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t force,
+                 svn_boolean_t dry_run,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_merge2(source1, revision1, source2, revision2,
+                           target_wcpath, recurse, ignore_ancestry, force,
+                           dry_run, NULL, ctx, pool);
+}
 
 svn_error_t *
-svn_client_merge_peg(const char *source,
-                     const svn_opt_revision_t *revision1,
-                     const svn_opt_revision_t *revision2,
-                     const svn_opt_revision_t *peg_revision,
-                     const char *target_wcpath,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_ancestry,
-                     svn_boolean_t force,
-                     svn_boolean_t dry_run,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_merge_peg2(const char *source,
+                      const svn_opt_revision_t *revision1,
+                      const svn_opt_revision_t *revision2,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
@@ -2901,6 +2821,7 @@ svn_client_merge_peg(const char *source,
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
   merge_cmd_baton.url = URL;
   merge_cmd_baton.revision = revision2;
@@ -2958,4 +2879,22 @@ svn_client_merge_peg(const char *source,
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_merge_peg(const char *source,
+                     const svn_opt_revision_t *revision1,
+                     const svn_opt_revision_t *revision2,
+                     const svn_opt_revision_t *peg_revision,
+                     const char *target_wcpath,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t force,
+                     svn_boolean_t dry_run,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client_merge_peg2(source, revision1, revision2, peg_revision,
+                               target_wcpath, recurse, ignore_ancestry, force,
+                               dry_run, NULL, ctx, pool);
 }

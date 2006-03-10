@@ -116,7 +116,7 @@ svn_cl__proplist(apr_getopt_t *os,
               else
                 name_local = item->node_name->data;
 
-              SVN_ERR(svn_cmdline_printf(subpool, "Properties on '%s':\n",
+              SVN_ERR(svn_cmdline_printf(subpool, _("Properties on '%s':\n"),
                                          name_local));
               SVN_ERR(svn_cl__print_prop_hash
                       (item->prop_hash, (! opt_state->verbose), subpool));

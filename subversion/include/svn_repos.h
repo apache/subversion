@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -173,7 +173,7 @@ typedef struct svn_repos_t svn_repos_t;
  *
  * If a repository was found, the path to the root of the repository
  * is returned, else @c NULL. The pointer to the returned path may be
- * equal to @a path argument.
+ * equal to @a path.
  */
 const char *svn_repos_find_root_path(const char *path,
                                      apr_pool_t *pool);
@@ -192,9 +192,8 @@ svn_error_t *svn_repos_open(svn_repos_t **repos_p,
                             apr_pool_t *pool);
 
 /** Create a new Subversion repository at @a path, building the necessary
- * directory structure, creating the Berkeley DB filesystem environment, 
- * and so on.  Return the (open) repository object in @a *repos_p,
- * allocated in @a pool.
+ * directory structure, creating the filesystem, and so on.
+ * Return the repository object in @a *repos_p, allocated in @a pool.
  *
  * @a config is a client configuration hash of @c svn_config_t * items
  * keyed on config category names, and may be NULL.
@@ -239,7 +238,7 @@ svn_error_t * svn_repos_hotcopy(const char *src_path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
  *
- * Acquires an @a exclusive lock on the repository, recovers the
+ * Acquires an exclusive lock on the repository, recovers the
  * database, and releases the lock.  If an exclusive lock can't be
  * acquired, returns error.
  *
@@ -252,7 +251,7 @@ svn_error_t *svn_repos_recover(const char *path, apr_pool_t *pool);
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
  *
- * Acquires an @a exclusive lock on the repository, recovers the
+ * Acquires an exclusive lock on the repository, recovers the
  * database, and releases the lock.  If an exclusive lock can't be
  * acquired, returns error.
  *
@@ -288,7 +287,7 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
 /** Return the top-level repository path allocated in @a pool. */
 const char *svn_repos_path(svn_repos_t *repos, apr_pool_t *pool);
 
-/** Return the path to @a repos's Berkeley DB environment, allocated in
+/** Return the path to @a repos's filesystem directory, allocated in
  * @a pool.
  */
 const char *svn_repos_db_env(svn_repos_t *repos, apr_pool_t *pool);
@@ -357,26 +356,24 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
 
 
 /**
- * Construct and return a @a report_baton that will be paired with some
- * @c svn_ra_reporter_t table.  The table and baton are used to build a
- * transaction in the system;  when the report is finished,
- * svn_repos_dir_delta() is called on the transaction, driving
- * @a editor/@a edit_baton. 
+ * Construct and return a @a report_baton that will be passed to the
+ * other functions in this section to describe the state of a pre-existing
+ * tree (typically, a working copy).  When the report is finished,
+ * @a editor/@a edit_baton will be driven in such a way as to transform the
+ * existing tree to @a revnum and, if @a tgt_path is non-NULL, switch the
+ * reported hierarchy to @a tgt_path.
  *
- * Specifically, the report will create a transaction
- * relative to @a fs_base in the filesystem.  @a target is a single path 
- * component, used to limit the scope of the report to a single entry of 
- * @a fs_base, or "" if all of @a fs_base itself is the main subject of
- * the report.
+ * @a fs_base is the absolute path of the node in the filesystem at which
+ * the comparison should be rooted.  @a target is a single path component,
+ * used to limit the scope of the report to a single entry of @a fs_base,
+ * or "" if all of @a fs_base itself is the main subject of the report.
  *
  * @a tgt_path and @a revnum is the fs path/revision pair that is the
- * "target" of @c dir_delta.  In other words, a tree delta will be
- * returned that transforms the transaction into @a tgt_path/@a revnum.
- * @a tgt_path may (indeed, should) be @c NULL when the source and target
- * paths of the report are the same.  That is, @a tgt_path should *only*
- * be specified when specifying that the resultant editor drive be one
- * that transforms the reported hierarchy into a pristine tree of
- * @a tgt_path at revision @a revnum.  Else, a @c NULL value for @a tgt_path 
+ * "target" of the delta.  @a tgt_path should be provided only when
+ * the source and target paths of the report differ.  That is, @a tgt_path
+ * should *only* be specified when specifying that the resultant editor
+ * drive be one that transforms the reported hierarchy into a pristine tree
+ * of @a tgt_path at revision @a revnum.  A @c NULL value for @a tgt_path
  * will indicate that the editor should be driven in such a way as to
  * transform the reported hierarchy to revision @a revnum, preserving the
  * reported hierarchy.
@@ -389,9 +386,6 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  *
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
- *
- * Locks that are reported by the caller and that are not valid in the
- * repository will be deleted during the following edit.
  *
  * The @a authz_read_func and @a authz_read_baton are passed along to
  * svn_repos_dir_delta(); see that function for how they are used.
@@ -420,18 +414,23 @@ svn_repos_begin_report(void **report_baton,
                        apr_pool_t *pool);
 
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report(), this
- * routine will build @a revision:@a path into the current transaction.
- * This routine is called multiple times to create a transaction that
- * is a "mirror" of a working copy.
+ * Given a @a report_baton constructed by svn_repos_begin_report(),
+ * record the presence of @a path at @a revision in the current tree.
+ *
+ * @a path is relative to the anchor/target used in the creation of the
+ * @a report_baton.
+ *
+ * @a revision may be SVN_INVALID_REVNUM if (for example) @a path represents
+ * a locally-added path with no revision number.
  *
  * The first call of this in a given report usually passes an empty
- * @a path; that allows the reporter to set up the correct root revision
- * (useful when creating a txn, for example).
+ * @a path; this is used to set up the correct root revision for the editor
+ * drive.
  *
- * If @a start_empty is set and @a path is a directory, then remove
- * all children and props of the freshly-linked directory.  This is
- * for 'low confidence' client reporting.
+ * If @a start_empty is true and @a path is a directory, then require the
+ * caller to explicitly provide all the children of @path - do not assume
+ * that the tree also contains all the children of @a path at @a revision.
+ * This is for 'low confidence' client reporting.
  * 
  * If the caller has a lock token for @a path, then @a lock_token should
  * be set to that token.  Else, @a lock_token should be NULL.
@@ -460,14 +459,17 @@ svn_error_t *svn_repos_set_path(void *report_baton,
 
 /**
  * Given a @a report_baton constructed by svn_repos_begin_report(), 
- * this routine will build @a revision:@a link_path into the current 
- * transaction at @a path.  Note that while @a path is relative to the 
- * anchor/target used in the creation of the @a report_baton, @a link_path 
- * is an absolute filesystem path!
+ * record the presence of @path in the current tree, containing the contents
+ * of @a link_path at @a revision.
  *
- * If @a start_empty is set and @a path is a directory, then remove
- * all children and props of the freshly-linked directory.  This is
- * for 'low confidence' client reporting.
+ * Note that while @a path is relative to the anchor/target used in the
+ * creation of the @a report_baton, @a link_path is an absolute filesystem
+ * path!
+ *
+ * If @a start_empty is true and @a path is a directory, then require the
+ * caller to explicitly provide all the children of @path - do not assume
+ * that the tree also contains all the children of @a link_path at
+ * @a revision.  This is for 'low confidence' client reporting.
  *
  * If the caller has a lock token for @a link_path, then @a lock_token
  * should be set to that token.  Else, @a lock_token should be NULL.
@@ -497,7 +499,7 @@ svn_error_t *svn_repos_link_path(void *report_baton,
                                  apr_pool_t *pool);
 
 /** Given a @a report_baton constructed by svn_repos_begin_report(), 
- * this routine will remove @a path from the current fs transaction. 
+ * record the non-existence of @a path in the current tree.
  *
  * (This allows the reporter's driver to describe missing pieces of a
  * working copy, so that 'svn up' can recreate them.)
@@ -508,23 +510,28 @@ svn_error_t *svn_repos_delete_path(void *report_baton,
                                    const char *path,
                                    apr_pool_t *pool);
 
-/** Make the filesystem compare the transaction to a revision and have
- * it drive an update editor (using svn_repos_delta_dirs()), then
- * abort the transaction.  If an error occurs during the driving of
- * the editor, we do NOT abort the edit; that responsibility belongs
- * to the caller, if it happens at all.  The fs transaction will be
- * aborted even if the editor drive fails, so the caller does not need
- * to clean up.  No other reporting functions, including
- * svn_repos_abort_report, should be called after calling this function.
+/** Given a @a report_baton constructed by svn_repos_begin_report(),
+ * finish the report and drive the editor as specified when the report
+ * baton was constructed.
+ *
+ * If an error occurs during the driving of the editor, do NOT abort the
+ * edit; that responsibility belongs to the caller of this function, if
+ * it happens at all.
+ *
+ * After the call to this function, @a report_baton is no longer valid;
+ * it should not be passed to any other reporting functions, including
+ * svn_repos_abort_report().
  */
 svn_error_t *svn_repos_finish_report(void *report_baton,
                                      apr_pool_t *pool);
 
 
-/** The report-driver is bailing, so abort the fs transaction.  This
- * function can be called anytime before svn_repos_finish_report() is
- * called.  No other reporting functions should be called after calling
- * this function.
+/** Given a @a report_baton constructed by svn_repos_begin_report(),
+ * abort the report.  This function can be called anytime before
+ * svn_repos_finish_report() is called.
+ *
+ * After the call to this function, @a report_baton is no longer valid;
+ * it should not be passed to any other reporting functions.
  */
 svn_error_t *svn_repos_abort_report(void *report_baton,
                                     apr_pool_t *pool);

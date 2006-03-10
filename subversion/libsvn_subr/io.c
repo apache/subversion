@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -613,6 +613,98 @@ svn_io_temp_dir(const char **dir,
 
 /*** Creating, copying and appending files. ***/
 
+#ifdef AS400
+/* CCSID insensitive replacement for apr_file_copy() on OS400.
+ * 
+ * (See comments for file_open() for more info on CCSIDs.)
+ * 
+ * On OS400 apr_file_copy() attempts to convert the contents of the source
+ * file from its CCSID to the CCSID of the destination file.  This may
+ * corrupt the destination file's contents if the files' CCSIDs differ from
+ * each other and/or the system CCSID.
+ * 
+ * This new function prevents this by forcing a binary copy.  It is
+ * stripped down copy of the private function apr_file_transfer_contents in
+ * srclib/apr/file_io/unix/copy.c of version 2.0.54 of the Apache HTTP
+ * Server (http://httpd.apache.org/) excepting that APR_LARGEFILE is not
+ * used, from_path is always opened with APR_BINARY, and
+ * APR_FILE_SOURCE_PERMS is not supported. 
+ */ 
+static apr_status_t
+os400_file_copy(const char *from_path,
+                const char *to_path,
+                apr_fileperms_t perms,
+                apr_pool_t *pool)
+{
+  apr_file_t *s, *d;
+  apr_status_t status;
+
+  /* Open source file. */
+  status = apr_file_open(&s, from_path, APR_READ | APR_BINARY,
+                         APR_OS_DEFAULT, pool);
+  if (status)
+    return status;
+
+  /* Open dest file.
+   * 
+   * apr_file_copy() does not require the destination file to exist and will
+   * overwrite it if it does.  Since this is a replacement for
+   * apr_file_copy() we enforce similar behavior.
+   */
+  status = apr_file_open(&d, to_path,
+                         APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
+                         perms,
+                         pool);
+  if (status)
+    {
+      apr_file_close(s);  /* toss any error */
+      return status;
+    }
+
+  /* Copy bytes till the cows come home. */
+  while (1)
+    {
+      char buf[BUFSIZ];
+      apr_size_t bytes_this_time = sizeof(buf);
+      apr_status_t read_err;
+      apr_status_t write_err;
+
+      /* Read 'em. */
+      read_err = apr_file_read(s, buf, &bytes_this_time);
+      if (read_err && !APR_STATUS_IS_EOF(read_err))
+        {
+          apr_file_close(s);  /* toss any error */
+          apr_file_close(d);  /* toss any error */
+          return read_err;
+        }
+
+      /* Write 'em. */
+      write_err = apr_file_write_full(d, buf, bytes_this_time, NULL);
+      if (write_err)
+        {
+          apr_file_close(s);  /* toss any error */
+          apr_file_close(d);  /* toss any error */
+          return write_err;
+        }
+
+      if (read_err && APR_STATUS_IS_EOF(read_err))
+        {
+          status = apr_file_close(s);
+          if (status)
+            {
+              apr_file_close(d);  /* toss any error */
+              return status;
+            }
+
+          /* return the results of this close: an error, or success */
+          return apr_file_close(d);
+        }
+    }
+  /* NOTREACHED */
+}
+#endif /* AS400 */
+
+
 svn_error_t *
 svn_io_copy_file(const char *src,
                  const char *dst,
@@ -632,7 +724,12 @@ svn_io_copy_file(const char *src,
                                    svn_io_file_del_none, pool));
   SVN_ERR(svn_path_cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
+#ifndef AS400
   apr_err = apr_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
+#else
+  apr_err = os400_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
+#endif
+
   if (apr_err)
     {
       apr_file_remove(dst_tmp_apr, pool);
@@ -988,7 +1085,7 @@ svn_io_file_checksum(unsigned char digest[],
   struct apr_md5_ctx_t context;
   apr_file_t *f = NULL;
   svn_error_t *err;
-  char buf[BUFSIZ];  /* What's a good size for a read chunk? */
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
 
   /* ### The apr_md5 functions return apr_status_t, but they only
@@ -999,12 +1096,12 @@ svn_io_file_checksum(unsigned char digest[],
 
   SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
   
-  len = sizeof(buf);
+  len = SVN__STREAM_CHUNK_SIZE;
   err = svn_io_file_read(f, buf, &len, pool);
   while (! err)
     { 
       apr_md5_update(&context, buf, len);
-      len = sizeof(buf);
+      len = SVN__STREAM_CHUNK_SIZE;
       err = svn_io_file_read(f, buf, &len, pool);
     };
   
@@ -1563,18 +1660,18 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
   apr_size_t len;
   svn_error_t *err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
-  char buf[BUFSIZ];
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
 
   /* XXX: We should check the incoming data for being of type binary. */
 
   /* apr_file_read will not return data and eof in the same call. So this loop
    * is safe from missing read data.  */
-  len = sizeof(buf);
+  len = SVN__STREAM_CHUNK_SIZE;
   err = svn_io_file_read(file, buf, &len, pool);
   while (! err)
     {
       svn_stringbuf_appendbytes(res, buf, len);
-      len = sizeof(buf);
+      len = SVN__STREAM_CHUNK_SIZE;
       err = svn_io_file_read(file, buf, &len, pool);
     }
 
@@ -2152,22 +2249,27 @@ svn_io_run_diff(const char *dir,
 
 
 svn_error_t *
-svn_io_run_diff3(const char *dir,
-                 const char *mine,
-                 const char *older,
-                 const char *yours,
-                 const char *mine_label,
-                 const char *older_label,
-                 const char *yours_label,
-                 apr_file_t *merged,
-                 int *exitcode,
-                 const char *diff3_cmd,
-                 apr_pool_t *pool)
+svn_io_run_diff3_2(const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   int *exitcode,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool)
 {
-  const char *args[14];
+  const char **args = apr_palloc(pool,
+                                 sizeof(char*) * (13
+                                                  + (user_args
+                                                     ? user_args->nelts
+                                                     : 1)));
   const char *diff3_utf8;
 #ifndef NDEBUG
-  int nargs = 13;
+  int nargs = 12;
 #endif
   int i = 0;
 
@@ -2183,9 +2285,24 @@ svn_io_run_diff3(const char *dir,
   
   /* Set up diff3 command line. */
   args[i++] = diff3_utf8;
-  args[i++] = "-E";             /* We tried "-A" here, but that caused
-                                   overlapping identical changes to
-                                   conflict.  See issue #682. */
+  if (user_args)
+    {
+      int j;
+      for (j = 0; j < user_args->nelts; ++j)
+        args[i++] = APR_ARRAY_IDX(user_args, j, const char *);
+#ifndef NDEBUG
+      nargs += user_args->nelts;
+#endif
+    }
+  else
+    {
+      args[i++] = "-E";             /* We tried "-A" here, but that caused
+                                       overlapping identical changes to
+                                       conflict.  See issue #682. */
+#ifndef NDEBUG
+      ++nargs;
+#endif
+    }
   args[i++] = "-m";
   args[i++] = "-L";
   args[i++] = mine_label;
@@ -2258,6 +2375,23 @@ svn_io_run_diff3(const char *dir,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_io_run_diff3(const char *dir,
+                 const char *mine,
+                 const char *older,
+                 const char *yours,
+                 const char *mine_label,
+                 const char *older_label,
+                 const char *yours_label,
+                 apr_file_t *merged,
+                 int *exitcode,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool)
+{
+  return svn_io_run_diff3_2(dir, mine, older, yours,
+                            mine_label, older_label, yours_label,
+                            merged, exitcode, diff3_cmd, NULL, pool);
+}
 
 svn_error_t *
 svn_io_detect_mimetype(const char **mimetype,
@@ -3047,7 +3181,8 @@ contents_identical_p(svn_boolean_t *identical_p,
   svn_error_t *err1;
   svn_error_t *err2;
   apr_size_t bytes_read1, bytes_read2;
-  char buf1[BUFSIZ], buf2[BUFSIZ];
+  char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
@@ -3060,12 +3195,12 @@ contents_identical_p(svn_boolean_t *identical_p,
   do
     {
       err1 = svn_io_file_read_full(file1_h, buf1, 
-                                   sizeof(buf1), &bytes_read1, pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
       if (err1 && !APR_STATUS_IS_EOF(err1->apr_err))
         return err1;
 
       err2 = svn_io_file_read_full(file2_h, buf2, 
-                                   sizeof(buf2), &bytes_read2, pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
       if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
         {
           svn_error_clear(err1);

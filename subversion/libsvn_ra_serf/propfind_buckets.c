@@ -29,11 +29,11 @@
 #include "ra_serf.h"
 
 typedef struct {
-    const char *host;
+    svn_ra_serf__connection_t *conn;
     const char *path;
     const char *label;
     const char *depth;
-    const dav_props_t *find_props;
+    const svn_ra_serf__dav_props_t *find_props;
     serf_bucket_t *request;
 } prop_context_t;
 
@@ -42,18 +42,18 @@ const serf_bucket_type_t serf_bucket_type_propfind;
 #define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\">"
 #define PROPFIND_TRAILER "</propfind>"
 
-serf_bucket_t * serf_bucket_propfind_create(
-    const char *host,
+serf_bucket_t * svn_ra_serf__bucket_propfind_create(
+    svn_ra_serf__connection_t *conn,
     const char *path,
     const char *label,
     const char *depth,
-    const dav_props_t *find_props,
+    const svn_ra_serf__dav_props_t *find_props,
     serf_bucket_alloc_t *allocator)
 {
     prop_context_t *ctx;
 
     ctx = serf_bucket_mem_alloc(allocator, sizeof(*ctx));
-    ctx->host = host;
+    ctx->conn = conn;
     ctx->path = path;
     ctx->label = label;
     ctx->depth = depth;
@@ -67,7 +67,7 @@ static serf_bucket_t *create_propfind_body(serf_bucket_t *bucket)
   prop_context_t *ctx = bucket->data;
   serf_bucket_alloc_t *alloc = bucket->allocator;
   serf_bucket_t *body_bkt, *tmp;
-  const dav_props_t *prop;
+  const svn_ra_serf__dav_props_t *prop;
   svn_boolean_t requested_allprop = FALSE;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
@@ -145,15 +145,20 @@ static void become_request(serf_bucket_t *bucket)
 
   hdrs_bkt = serf_bucket_request_get_headers(bucket);
 
-  serf_bucket_headers_setn(hdrs_bkt, "Host", ctx->host);
+  serf_bucket_headers_setn(hdrs_bkt, "Host", ctx->conn->hostinfo);
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", "svn/ra_serf");
   serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip");
   serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
   serf_bucket_headers_setn(hdrs_bkt, "Depth", ctx->depth);
   if (ctx->label)
-  {
-    serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);
-  }
+    {
+      serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);
+    }
+  if (ctx->conn->auth_header && ctx->conn->auth_value)
+    {
+      serf_bucket_headers_setn(hdrs_bkt,
+                               ctx->conn->auth_header, ctx->conn->auth_value);
+    }
 
   serf_bucket_mem_free(bucket->allocator, ctx);
 }

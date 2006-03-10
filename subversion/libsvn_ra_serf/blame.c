@@ -104,19 +104,13 @@ typedef struct {
   /* pool passed to get_file_revs */
   apr_pool_t *pool;
 
-  ra_serf_session_t *session;
-  ra_serf_connection_t *conn;
-
   /* parameters set by our caller */
   const char *path;
   svn_revnum_t start;
   svn_revnum_t end;
 
-  /* XML Parser */
-  XML_Parser xmlp;
-
   /* Current namespace list */
-  ns_t *ns_list;
+  svn_ra_serf__ns_t *ns_list;
 
   /* Current state we're in */
   blame_state_list_t *state;
@@ -131,12 +125,6 @@ typedef struct {
   /* blame handler and baton */
   svn_ra_file_rev_handler_t file_rev;
   void *file_rev_baton;
-
-  serf_bucket_t *buckets;
-
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-
 } blame_context_t;
 
 
@@ -224,11 +212,11 @@ static void XMLCALL
 start_blame(void *userData, const char *raw_name, const char **attrs)
 {
   blame_context_t *blame_ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__dav_props_t name;
 
-  define_ns(&blame_ctx->ns_list, attrs, blame_ctx->pool);
+  svn_ra_serf__define_ns(&blame_ctx->ns_list, attrs, blame_ctx->pool);
 
-  name = expand_ns(blame_ctx->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(blame_ctx->ns_list, raw_name);
 
   if (!blame_ctx->state && strcmp(name.name, "file-revs-report") == 0)
     {
@@ -244,8 +232,9 @@ start_blame(void *userData, const char *raw_name, const char **attrs)
 
       info = blame_ctx->state->info;
 
-      info->path = apr_pstrdup(info->pool, find_attr(attrs, "name"));
-      info->rev = SVN_STR_TO_REV(find_attr(attrs, "rev"));
+      info->path = apr_pstrdup(info->pool,
+                               svn_ra_serf__find_attr(attrs, "name"));
+      info->rev = SVN_STR_TO_REV(svn_ra_serf__find_attr(attrs, "rev"));
     }
   else if (blame_ctx->state &&
            blame_ctx->state->state == FILE_REV)
@@ -287,11 +276,12 @@ start_blame(void *userData, const char *raw_name, const char **attrs)
         case REV_PROP:
         case SET_PROP:
         case REMOVE_PROP:
-          info->prop_name = apr_pstrdup(info->pool, find_attr(attrs, "name"));
+          info->prop_name = apr_pstrdup(info->pool,
+                                        svn_ra_serf__find_attr(attrs, "name"));
           info->prop_attr = NULL;
           info->prop_attr_len = 0;
 
-          enc =  find_attr(attrs, "encoding");
+          enc = svn_ra_serf__find_attr(attrs, "encoding");
           if (enc && strcmp(enc, "base64") == 0)
             {
               info->prop_base64 = TRUE;
@@ -309,7 +299,7 @@ static void XMLCALL
 end_blame(void *userData, const char *raw_name)
 {
   blame_context_t *blame_ctx = userData;
-  dav_props_t name;
+  svn_ra_serf__dav_props_t name;
   blame_state_list_t *cur_state;
   blame_info_t *info;
 
@@ -321,7 +311,7 @@ end_blame(void *userData, const char *raw_name)
   cur_state = blame_ctx->state;
   info = cur_state->info;
 
-  name = expand_ns(blame_ctx->ns_list, raw_name);
+  name = svn_ra_serf__expand_ns(blame_ctx->ns_list, raw_name);
 
   if (cur_state->state == FILE_REVS_REPORT &&
       strcmp(name.name, "file-revs-report") == 0)
@@ -384,9 +374,9 @@ cdata_blame(void *userData, const char *data, int len)
   switch (blame_ctx->state->state)
     {
       case REV_PROP:
-        expand_string(&blame_ctx->state->info->prop_attr,
-                      &blame_ctx->state->info->prop_attr_len,
-                      data, len, blame_ctx->state->info->pool);
+        svn_ra_serf__expand_string(&blame_ctx->state->info->prop_attr,
+                                   &blame_ctx->state->info->prop_attr_len,
+                                   data, len, blame_ctx->state->info->pool);
         break;
       case TXDELTA:
         if (blame_ctx->state->info->stream)
@@ -407,75 +397,31 @@ cdata_blame(void *userData, const char *data, int len)
     }
 }
 
-
-static apr_status_t
-setup_blame(serf_request_t *request,
-            void *setup_baton,
-            serf_bucket_t **req_bkt,
-            serf_response_acceptor_t *acceptor,
-            void **acceptor_baton,
-            serf_response_handler_t *handler,
-            void **handler_baton,
-            apr_pool_t *pool)
-{
-  blame_context_t *ctx = setup_baton;
-
-  setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "REPORT", ctx->path, ctx->buckets, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->session;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_blame(serf_bucket_t *response,
-           void *handler_baton,
-           apr_pool_t *pool)
-{
-  blame_context_t *ctx = handler_baton;
-
-  /* FIXME If we lost our connection, redeliver it. */
-  if (!response)
-    {
-      abort();
-    }
-
-  return handle_xml_parser(response, ctx->xmlp, &ctx->done, pool);
-}
-
 svn_error_t *
 svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
-                           svn_ra_file_rev_handler_t handler,
-                           void *handler_baton,
+                           svn_ra_file_rev_handler_t rev_handler,
+                           void *rev_handler_baton,
                            apr_pool_t *pool)
 {
   blame_context_t *blame_ctx;
-  ra_serf_session_t *session = ra_session->priv;
-  serf_request_t *request;
-  serf_bucket_t *buckets, *req_bkt, *tmp;
+  svn_ra_serf__session_t *session = ra_session->priv;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
+  serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
-  blame_ctx->file_rev = handler;
-  blame_ctx->file_rev_baton = handler_baton;
+  blame_ctx->file_rev = rev_handler;
+  blame_ctx->file_rev_baton = rev_handler_baton;
   blame_ctx->start = start;
   blame_ctx->end = end;
   blame_ctx->done = FALSE;
   blame_ctx->error = SVN_NO_ERROR;
-
-  blame_ctx->xmlp = XML_ParserCreate(NULL);
-  XML_SetUserData(blame_ctx->xmlp, blame_ctx);
-  XML_SetElementHandler(blame_ctx->xmlp, start_blame, end_blame);
-  XML_SetCharacterDataHandler(blame_ctx->xmlp, cdata_blame);
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
@@ -514,13 +460,14 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0],
-                         session->repos_url.path,
-                         SVN_INVALID_REVNUM, "0", base_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      session->repos_url.path,
+                                      SVN_INVALID_REVNUM, "0", base_props,
+                                      pool));
 
   /* Send the request to the baseline URL */
-  vcc_url = get_prop(props, session->repos_url.path, "DAV:",
-                       "version-controlled-configuration");
+  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+                                  "DAV:", "version-controlled-configuration");
 
   if (!vcc_url)
     {
@@ -528,29 +475,32 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     }
 
   /* Send the request to the baseline URL */
-  relative_url = get_prop(props, session->repos_url.path,
-                            SVN_DAV_PROP_NS_DAV, "baseline-relative-path");
+  relative_url = svn_ra_serf__get_prop(props, session->repos_url.path,
+                                       SVN_DAV_PROP_NS_DAV,
+                                       "baseline-relative-path");
 
   if (!relative_url)
     {
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0], vcc_url,
-                         SVN_INVALID_REVNUM, "0",
-                         checked_in_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      vcc_url, SVN_INVALID_REVNUM, "0",
+                                      checked_in_props, pool));
 
-  baseline_url = get_prop(props, vcc_url, "DAV:", "checked-in");
+  baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
 
   if (!baseline_url)
     {
       abort();
     }
 
-  SVN_ERR(retrieve_props(props, session, session->conns[0], baseline_url,
-                         SVN_INVALID_REVNUM, "0", baseline_props, pool));
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      baseline_url, SVN_INVALID_REVNUM,
+                                      "0", baseline_props, pool));
 
-  basecoll_url = get_prop(props, baseline_url, "DAV:", "baseline-collection");
+  basecoll_url = svn_ra_serf__get_prop(props, baseline_url,
+                                       "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {
@@ -559,17 +509,29 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
-  blame_ctx->session = session;
-  blame_ctx->buckets = buckets;
-  blame_ctx->path = req_url;
-  blame_ctx->conn = session->conns[0];
-  blame_ctx->acceptor = accept_response;
-  blame_ctx->handler = handle_blame;
+  handler = apr_pcalloc(pool, sizeof(*handler));
 
-  serf_connection_request_create(blame_ctx->conn->conn, setup_blame,
-                                 blame_ctx);
+  handler->method = "REPORT";
+  handler->path = req_url;
+  handler->body_buckets = buckets;
+  handler->body_type = "text/xml";
+  handler->conn = session->conns[0];
+  handler->session = session;
 
-  SVN_ERR(context_run_wait(&blame_ctx->done, session, pool));
+  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+  parser_ctx->user_data = blame_ctx;
+  parser_ctx->start = start_blame;
+  parser_ctx->end = end_blame;
+  parser_ctx->cdata = cdata_blame;
+  parser_ctx->done = &blame_ctx->done;
+
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
+  handler->response_baton = parser_ctx;
+
+  svn_ra_serf__request_create(handler);
+
+  SVN_ERR(svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool));
 
   return blame_ctx->error;
 }

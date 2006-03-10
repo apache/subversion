@@ -2,7 +2,7 @@
  * merge-cmd.c -- Merging changes into a working copy.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -47,6 +47,7 @@ svn_cl__merge(apr_getopt_t *os,
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
+  apr_array_header_t *options;
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
@@ -151,33 +152,40 @@ svn_cl__merge(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
+  if (opt_state->extensions)
+    options = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
+  else
+    options = NULL;
+
   if (using_alternate_syntax)
     {
-      err = svn_client_merge_peg(sourcepath1,
-                                 &(opt_state->start_revision),
-                                 &(opt_state->end_revision),
-                                 &peg_revision,
-                                 targetpath,
-                                 opt_state->nonrecursive ? FALSE : TRUE,
-                                 opt_state->ignore_ancestry,
-                                 opt_state->force,
-                                 opt_state->dry_run,
-                                 ctx,
-                                 pool);
+      err = svn_client_merge_peg2(sourcepath1,
+                                  &(opt_state->start_revision),
+                                  &(opt_state->end_revision),
+                                  &peg_revision,
+                                  targetpath,
+                                  opt_state->nonrecursive ? FALSE : TRUE,
+                                  opt_state->ignore_ancestry,
+                                  opt_state->force,
+                                  opt_state->dry_run,
+                                  options,
+                                  ctx,
+                                  pool);
     }
   else
     {
-      err = svn_client_merge(sourcepath1,
-                             &(opt_state->start_revision),
-                             sourcepath2,
-                             &(opt_state->end_revision),
-                             targetpath,
-                             opt_state->nonrecursive ? FALSE : TRUE,
-                             opt_state->ignore_ancestry,
-                             opt_state->force,
-                             opt_state->dry_run,
-                             ctx,
-                             pool);
+      err = svn_client_merge2(sourcepath1,
+                              &(opt_state->start_revision),
+                              sourcepath2,
+                              &(opt_state->end_revision),
+                              targetpath,
+                              opt_state->nonrecursive ? FALSE : TRUE,
+                              opt_state->ignore_ancestry,
+                              opt_state->force,
+                              opt_state->dry_run,
+                              options,
+                              ctx,
+                              pool);
     }
   if (err)
     return svn_cl__may_need_force(err);

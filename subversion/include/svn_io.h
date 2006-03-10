@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -213,9 +213,10 @@ svn_error_t *svn_io_temp_dir(const char **dir,
                              apr_pool_t *pool);
 
 
-/** Copy @a src to @a dst atomically.  Overwrite @a dst if it exists, else
- * create it.  Both @a src and @a dst are utf8-encoded filenames.  If
- * @a copy_perms is true, set @a dst's permissions to match those of @a src.
+/** Copy @a src to @a dst atomically, in a "byte-for-byte" manner.
+ * Overwrite @a dst if it exists, else create it.  Both @a src and @a dst
+ * are utf8-encoded filenames.  If @a copy_perms is true, set @a dst's
+ * permissions to match those of @a src.
  */
 svn_error_t *svn_io_copy_file(const char *src,
                               const char *dst,
@@ -898,9 +899,12 @@ svn_error_t *svn_io_run_diff(const char *dir,
 /** Invoke @c the configured diff3 program, in utf8-encoded @a dir
  * like this:
  *
- *          diff3 -Em @a mine @a older @a yours > @a merged
+ *          diff3 -E -m @a mine @a older @a yours > @a merged
  *
  * (See the diff3 documentation for details.)
+ *
+ * If @a user_args is non-NULL, replace "-E" with the <tt>const char*</tt>
+ * elements that @a user_args contains.
  *
  * @a mine, @a older, and @a yours are utf8-encoded paths, relative to @a dir, 
  * to three files that already exist.  @a merged is an open file handle, and
@@ -921,7 +925,26 @@ svn_error_t *svn_io_run_diff(const char *dir,
  *
  * @a diff3_cmd must be non-null.
  *
- * Do all allocation in @a pool. 
+ * Do all allocation in @a pool.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_io_run_diff3_2(const char *dir,
+                                const char *mine,
+                                const char *older,
+                                const char *yours,
+                                const char *mine_label,
+                                const char *older_label,
+                                const char *yours_label,
+                                apr_file_t *merged,
+                                int *exitcode,
+                                const char *diff3_cmd,
+                                const apr_array_header_t *user_args,
+                                apr_pool_t *pool);
+
+/** Similar to @a svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *svn_io_run_diff3(const char *dir,
                               const char *mine,

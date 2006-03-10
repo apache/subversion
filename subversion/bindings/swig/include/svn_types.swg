@@ -441,6 +441,12 @@
    Callback: svn_info_receiver_t
 */
 
+%typemap(perl5, in) (svn_info_receiver_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_pl_info_receiver;
+  $2 = (void *)$input;
+}
+
 %typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
 {
   $1 = svn_swig_rb_info_receiver;

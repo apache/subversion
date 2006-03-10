@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2914,7 +2914,11 @@ typedef enum svn_wc_merge_outcome_t
  * @a merge_target will not be modified.
  *
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
- * any merging; otherwise, use the built-in merge code.
+ * any merging; otherwise, use the built-in merge code.  If @a
+ * merge_options is non-null, either pass its elements to @a diff3_cmd or
+ * parse it and use as options to the internal merge code (@see
+ * svn_diff_file_options_parse()).  @a merge_options must contain
+ * <tt>const char *</tt> elements.
  *
  * The outcome of the merge is returned in @a *merge_outcome. If there is
  * a conflict and @a dry_run is @c FALSE, then
@@ -2941,6 +2945,26 @@ typedef enum svn_wc_merge_outcome_t
  *  @a merge_target's entry is marked as "conflicted", and begins
  *  tracking the two backup files.  If @a dry_run is @c TRUE no files are
  *  changed.  The outcome of the merge is returned in @a *merge_outcome.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_wc_merge2(const char *left,
+                           const char *right,
+                           const char *merge_target,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *left_label,
+                           const char *right_label,
+                           const char *target_label,
+                           svn_boolean_t dry_run,
+                           enum svn_wc_merge_outcome_t *merge_outcome,
+                           const char *diff3_cmd,
+                           const apr_array_header_t *merge_options,
+                           apr_pool_t *pool);
+
+
+/** Similar to svn_wc_merge2(), but with @a merge_options set to NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *svn_wc_merge(const char *left,
                           const char *right,
