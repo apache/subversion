@@ -1564,7 +1564,7 @@ run_log(svn_wc_adm_access_t *adm_access,
   svn_error_t *err, *err2;
   svn_xml_parser_t *parser;
   struct log_runner *loggy = apr_pcalloc(pool, sizeof(*loggy));
-  char buf[BUFSIZ];
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t buf_len;
   apr_file_t *f = NULL;
   const char *logfile_path;
@@ -1617,7 +1617,7 @@ run_log(svn_wc_adm_access_t *adm_access,
         }
       
       do {
-        buf_len = sizeof(buf);
+        buf_len = SVN__STREAM_CHUNK_SIZE;
         
         err = svn_io_file_read(f, buf, &buf_len, iterpool);
         if (err && !APR_STATUS_IS_EOF(err->apr_err))

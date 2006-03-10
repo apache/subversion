@@ -988,7 +988,7 @@ svn_io_file_checksum(unsigned char digest[],
   struct apr_md5_ctx_t context;
   apr_file_t *f = NULL;
   svn_error_t *err;
-  char buf[BUFSIZ];  /* What's a good size for a read chunk? */
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
 
   /* ### The apr_md5 functions return apr_status_t, but they only
@@ -999,12 +999,12 @@ svn_io_file_checksum(unsigned char digest[],
 
   SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
   
-  len = sizeof(buf);
+  len = SVN__STREAM_CHUNK_SIZE;
   err = svn_io_file_read(f, buf, &len, pool);
   while (! err)
     { 
       apr_md5_update(&context, buf, len);
-      len = sizeof(buf);
+      len = SVN__STREAM_CHUNK_SIZE;
       err = svn_io_file_read(f, buf, &len, pool);
     };
   
@@ -1563,18 +1563,18 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
   apr_size_t len;
   svn_error_t *err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
-  char buf[BUFSIZ];
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
 
   /* XXX: We should check the incoming data for being of type binary. */
 
   /* apr_file_read will not return data and eof in the same call. So this loop
    * is safe from missing read data.  */
-  len = sizeof(buf);
+  len = SVN__STREAM_CHUNK_SIZE;
   err = svn_io_file_read(file, buf, &len, pool);
   while (! err)
     {
       svn_stringbuf_appendbytes(res, buf, len);
-      len = sizeof(buf);
+      len = SVN__STREAM_CHUNK_SIZE;
       err = svn_io_file_read(file, buf, &len, pool);
     }
 
@@ -3084,7 +3084,8 @@ contents_identical_p(svn_boolean_t *identical_p,
   svn_error_t *err1;
   svn_error_t *err2;
   apr_size_t bytes_read1, bytes_read2;
-  char buf1[BUFSIZ], buf2[BUFSIZ];
+  char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
@@ -3097,12 +3098,12 @@ contents_identical_p(svn_boolean_t *identical_p,
   do
     {
       err1 = svn_io_file_read_full(file1_h, buf1, 
-                                   sizeof(buf1), &bytes_read1, pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
       if (err1 && !APR_STATUS_IS_EOF(err1->apr_err))
         return err1;
 
       err2 = svn_io_file_read_full(file2_h, buf2, 
-                                   sizeof(buf2), &bytes_read2, pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
       if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
         {
           svn_error_clear(err1);

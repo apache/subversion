@@ -696,7 +696,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   svn_boolean_t is_final;
   apr_file_t *infile = NULL;
   svn_xml_parser_t *svn_parser;
-  char buf[BUFSIZ];
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t bytes_read;
   struct entries_accumulator accum;
   apr_hash_t *entries = apr_hash_make(svn_wc_adm_access_pool(adm_access));
@@ -724,7 +724,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
   /* Parse. */
   do {
-    err = svn_io_file_read_full(infile, buf, sizeof(buf), &bytes_read, pool);
+    err = svn_io_file_read_full(infile, buf, SVN__STREAM_CHUNK_SIZE,
+                                &bytes_read, pool);
     if (err && !APR_STATUS_IS_EOF(err->apr_err))
       return err;
 
