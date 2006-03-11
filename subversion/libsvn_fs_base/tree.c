@@ -927,6 +927,7 @@ make_path_mutable(svn_fs_root_t *root,
         {
           const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id(clone);
           SVN_ERR (svn_fs_bdb__create_copy(fs, copy_id, copy_data,
+                                           SVN_INVALID_REVNUM,
                                            svn_fs_base__id_txn_id (node_id),
                                            new_node_id, NULL,
                                            copy_kind_soft_copy, trail, pool));
@@ -3046,6 +3047,7 @@ txn_body_move(void *baton,
               (from_parent_path->parent->node,
                from_parent_path->entry,
                svn_fs_base__canonicalize_abspath(from_path, trail->pool),
+               from_root->rev,
                svn_fs_base__dag_get_id(from_parent_path->node),
                to_parent_path->parent->node,
                to_parent_path->entry,
@@ -4230,15 +4232,11 @@ txn_body_history_prev(void *baton, trail_t *trail)
               /* Similar to the issue with finding the copy destination,
                * in the case of a move the destination node is the same as
                * the source node, so you can't just grab its rev for the
-               * dest rev.  Instead, its rev is used for the source rev,
-               * and the dest rev is pulled out of the copy. */
+               * dest rev.  So instead, we pull the source rev out of the
+               * copy and the dest rev is pulled out of the copy's txn id. */
 
-              /* XXX Note, this is incorrect if a node is moved more than
-               *     once we pick up the initial source rev, not the actual
-               *     one.  Sigh. */
+              src_rev = copy->src_rev;
 
-              SVN_ERR(svn_fs_base__dag_get_revision(&src_rev, dst_node, trail,
-                                                    trail->pool));
               SVN_ERR(svn_fs_base__txn_get_revision
                       (&dst_rev, fs, copy->src_txn_id, trail, trail->pool));
             }

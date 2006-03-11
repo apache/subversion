@@ -291,12 +291,14 @@ is_valid_copy_skel(skel_t *skel)
              && skel->children->next->is_atom
              && skel->children->next->next->is_atom
              && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
-  else if (len == 5)
+  else if (len == 6)
     return (svn_fs_base__matches_atom(skel->children, "move")
             && skel->children->next->is_atom
             && skel->children->next->next->is_atom
             && skel->children->next->next->next->is_atom
-            && skel->children->next->next->next->next->is_atom ? TRUE : FALSE);
+            && skel->children->next->next->next->next->is_atom
+            && skel->children->next->next->next->next->next->is_atom
+            ? TRUE : FALSE);
   else
     return FALSE;
 }
@@ -720,17 +722,22 @@ svn_fs_base__parse_copy_skel(copy_t **copy_p,
     = svn_fs_base__id_parse(skel->children->next->next->next->data,
                             skel->children->next->next->next->len, pool);
 
-  /* DST-PATH */
+  /* DST-PATH and SRC-REV */
   if (copy->kind == copy_kind_move)
-    copy->dst_path
-      = apr_pstrmemdup(pool,
-                       skel->children->next->next->next->next->data,
-                       skel->children->next->next->next->next->len);
+    {
+      copy->dst_path
+        = apr_pstrmemdup(pool,
+                         skel->children->next->next->next->next->data,
+                         skel->children->next->next->next->next->len);
+      copy->src_rev
+        = SVN_STR_TO_REV(skel->children->next->next->next->next->next->data);
+    }
   else
     {
       /* XXX for now this can be NULL because only moves are sending it,
        *     eventually we may want to make copies use it as well. */
       copy->dst_path = NULL;
+      copy->src_rev = SVN_INVALID_REVNUM;
     }
 
   /* Return the structure. */
@@ -1273,6 +1280,14 @@ svn_fs_base__unparse_copy_skel(skel_t **skel_p,
 
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list(pool);
+
+  /* SRC-REV */
+  if (SVN_IS_VALID_REVNUM(copy->src_rev))
+    svn_fs_base__prepend(svn_fs_base__str_atom(apr_psprintf(pool,
+                                                            "%ld",
+                                                            copy->src_rev),
+                                               pool),
+                         skel);
 
   /* DST-PATH */
   if (copy->dst_path)

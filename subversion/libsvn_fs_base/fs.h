@@ -264,7 +264,11 @@ typedef struct
   /* Path of copy source. */
   const char *src_path;
 
-  /* Transaction id of copy source. */
+  svn_revnum_t src_rev;
+
+  /* Transaction id of copy source.
+   *
+   * XXX in moves this is the dest txn id, should be renamed. */
   const char *src_txn_id;
 
   /* Node-revision of copy destination. */

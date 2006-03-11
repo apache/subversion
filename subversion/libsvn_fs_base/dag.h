@@ -466,6 +466,7 @@ svn_error_t *
 svn_fs_base__dag_move(dag_node_t *src_parent_node,
                       const char *src_entry,
                       const char *src_path,
+                      svn_revnum_t src_rev,
                       const svn_fs_id_t *node_id,
                       dag_node_t *tgt_parent_node,
                       const char *tgt_entry,
