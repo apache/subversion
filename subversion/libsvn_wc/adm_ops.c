@@ -1337,7 +1337,7 @@ svn_wc_add(const char *path,
 
 
 /* Revert ENTRY for NAME in directory represented by ADM_ACCESS. Sets
-   *REVERTED if file actually have reverted.
+   *REVERTED to TRUE if something actually is reverted.
 
    Use SVN_WC_ENTRY_THIS_DIR as NAME for reverting ADM_ACCESS directory
    itself.
@@ -1384,6 +1384,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__loggy_remove
                   (&log_accum, adm_access,
                    svn_path_is_child(adm_path, rprop, pool), pool));
+          *reverted = TRUE;
         }
     }
 
@@ -1426,6 +1427,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       flags |= SVN_WC__ENTRY_MODIFY_COPIED;
       tmp_entry.copied = FALSE;
+      *reverted = TRUE;
     }
 
   /* Deal with the contents. */
@@ -1494,6 +1496,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
                   (&log_accum, adm_access, name, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                    pool));
+
+          *reverted = TRUE;
         }
     }
 
@@ -1537,6 +1541,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
       tmp_entry.schedule = svn_wc_schedule_normal;
+      *reverted = TRUE;
     }
 
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, name,
@@ -1547,12 +1552,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
       SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-      *reverted = TRUE;
-    }
-  else
-    {
-      *reverted = FALSE;
     }
 
   return SVN_NO_ERROR;

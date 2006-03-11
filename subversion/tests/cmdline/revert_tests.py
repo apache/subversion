@@ -523,6 +523,67 @@ def revert_after_second_replace(sbox):
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
   
+
+#----------------------------------------------------------------------
+# Tests for issue #2517.
+#
+# Manual conflict resolution leads to spurious revert report.
+
+def revert_after_manual_conflict_resolution__text(sbox):
+  "revert after manual text-conflict resolution"
+
+  # Make two working copies
+  sbox.build()
+  wc_dir_1 = sbox.wc_dir
+  wc_dir_2 = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir_1, wc_dir_2)
+
+  # Cause a (text) conflict
+  iota_path_1 = os.path.join(wc_dir_1, 'iota')
+  iota_path_2 = os.path.join(wc_dir_2, 'iota')
+  svntest.main.file_write(iota_path_1, 'Modified iota text')
+  svntest.main.file_write(iota_path_2, 'Conflicting iota text')
+  svntest.main.run_svn(None, 'commit', '-m', 'r2', wc_dir_1)
+  svntest.main.run_svn(None, 'update', wc_dir_2)
+
+  # Resolve the conflict "manually"
+  svntest.main.file_write(iota_path_2, 'Modified iota text')
+  os.remove(iota_path_2 + '.mine')
+  os.remove(iota_path_2 + '.r1')
+  os.remove(iota_path_2 + '.r2')
+
+  # Verify no output from status, diff, or revert
+  svntest.actions.run_and_verify_svn(None, [], [], "status", wc_dir_2)
+  svntest.actions.run_and_verify_svn(None, [], [], "diff", wc_dir_2)
+  svntest.actions.run_and_verify_svn(None, [], [], "revert", "-R", wc_dir_2)
+
+def revert_after_manual_conflict_resolution__prop(sbox):
+  "revert after manual property-conflict resolution"
+
+  # Make two working copies
+  sbox.build()
+  wc_dir_1 = sbox.wc_dir
+  wc_dir_2 = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir_1, wc_dir_2)
+
+  # Cause a (property) conflict
+  iota_path_1 = os.path.join(wc_dir_1, 'iota')
+  iota_path_2 = os.path.join(wc_dir_2, 'iota')
+  svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_1)
+  svntest.main.run_svn(None, 'propset', 'foo', '2', iota_path_2)
+  svntest.main.run_svn(None, 'commit', '-m', 'r2', wc_dir_1)
+  svntest.main.run_svn(None, 'update', wc_dir_2)
+
+  # Resolve the conflict "manually"
+  svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_2)
+  os.remove(iota_path_2 + '.prej')
+
+  # Verify no output from status, diff, or revert
+  svntest.actions.run_and_verify_svn(None, [], [], "status", wc_dir_2)
+  svntest.actions.run_and_verify_svn(None, [], [], "diff", wc_dir_2)
+  svntest.actions.run_and_verify_svn(None, [], [], "revert", "-R", wc_dir_2)
+
+
 ########################################################################
 # Run the tests
 
@@ -537,6 +598,8 @@ test_list = [ None,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
               revert_after_second_replace,
+              revert_after_manual_conflict_resolution__text,
+              revert_after_manual_conflict_resolution__prop,
              ]
 
 if __name__ == '__main__':
