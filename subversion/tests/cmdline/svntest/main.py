@@ -395,6 +395,14 @@ def file_append(path, new_text):
   fp.write(new_text)
   fp.close()
 
+# For making local mods to files
+def file_write(path, new_text):
+  "Replace contents of file at PATH with NEW_TEXT"
+
+  fp = open(path, 'w')  # open in (w)rite mode
+  fp.write(new_text)
+  fp.close()
+
 # For creating blank new repositories
 def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
