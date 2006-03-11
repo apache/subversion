@@ -1,3 +1,52 @@
+Version 1.3.1
+(xx March 2006, from /branches/1.3.x)
+http://svn.collab.net/repos/svn/tags/1.3.1
+
+ User-visible-changes:
+  - Client:
+    * fixed: segfault moving unversioned files (issue #2436)
+    * fixed: verbose list broken over ra_dav (issue #2442)
+    * fixed: 'svn ci -m path_name' not requiring '--force-log' (r17956)
+    * fixed: crash on mixed https URL scheme case (r18042)
+    * fixed: crash in status with ignored directories (r18291)
+    * fixed: strip peg rev from default checkout directory (r18416)
+    * fixed: diff crash with non-recursive checkout (r17231, 18539, -41)
+    * fixed: 'svn ls' URL encoding bug with locks (r18665)
+    * fixed: unlock circumvents lock token check (r18691, -94)
+    * fixed: repos-to-repos copy crash (r18451)
+    * fixed: 'svnmerge' utility improvements (r18811)
+    * translation updates for German, Swedish and Norwegian
+
+  - Server:
+    * fixed: set svn:date at the end of commit in fsfs (r18078)
+    * fixed: don't wait for hook script background jobs (r18146)
+    * fixed: mod_dav_svn should log the whole error chain (r18211)
+    * fixed: uncomment section headers in repos config files (r18247, -50)
+    * fixed: log scalability issues with many paths (r18395, -404)
+    * fixed: better path input validation in mod_dav_svn (r18660)
+    * fixed: assert in copy in fsfs and bdb (issue #2398)
+
+  - Both:
+    * fixed: copyright years updated to include 2006 (r18021, -127)
+
+Developer-visible-changes:
+* fixed: missing #include (r18065)
+* fixed: allow building with Neon 0.25.5 (r18215)
+* fixed: error leaks (18196, -249)
+* fixed: RMP package bad interaction with NFS servers (issue #1456)
+* javahl bindings:
+      - fixed: compile error on Visual Studio 2005 (r18054, -55)
+* python bindings:
+      - fixed: libsvn_swig_py link problem on Solaris 10 (r17910)
+      - fixed: pool lifetime bug (r17992)
+      - fixed: memory leak (r18230)
+* ruby bindings:
+      - fixed: pool management issue (r17795 -811)
+      - fixed: protect baton from garbage collection (r17627)
+      - fixed: conversion bug (r17726)
+      - fixed: compile errors with SWIG 1.3.24 (r18456, -58)
+
+
 Version 1.3.0
 (30 December 2005, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.0
