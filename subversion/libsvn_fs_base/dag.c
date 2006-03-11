@@ -246,7 +246,7 @@ txn_body_dag_init_fs(void *baton,
       (SVN_ERR_FS_CORRUPT, 0,
        _("Corrupt DB: initial copy id not '0' in filesystem '%s'"), fs->path);
   SVN_ERR(svn_fs_bdb__create_copy(fs, copy_id, NULL, NULL, root_id,
-                                  copy_kind_copy, trail, trail->pool));
+                                  NULL, copy_kind_copy, trail, trail->pool));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
@@ -1383,7 +1383,7 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
       SVN_ERR(svn_fs_bdb__create_copy
               (fs, copy_id,
                svn_fs_base__canonicalize_abspath(from_path, pool),
-               from_txn_id, id, copy_kind_copy, trail, pool));
+               from_txn_id, id, NULL, copy_kind_copy, trail, pool));
 
       /* Finally, add the COPY_ID to the transaction's list of copies
          so that, if this transaction is aborted, the `copies' table
@@ -1410,6 +1410,7 @@ svn_fs_base__dag_move(dag_node_t *src_parent_node,
                       const svn_fs_id_t *node_id,
                       dag_node_t *tgt_parent_node,
                       const char *tgt_entry,
+                      const char *tgt_path,
                       const char *txn_id,
                       trail_t *trail,
                       apr_pool_t *pool)
@@ -1421,7 +1422,7 @@ svn_fs_base__dag_move(dag_node_t *src_parent_node,
      node from it. */
   SVN_ERR(svn_fs_bdb__reserve_copy_id(&move_id, fs, trail, pool));
   SVN_ERR(svn_fs_bdb__create_copy(fs, move_id, src_path, txn_id, node_id,
-                                  copy_kind_move, trail, pool));
+                                  tgt_path, copy_kind_move, trail, pool));
   SVN_ERR(svn_fs_base__add_txn_copy(fs, txn_id, move_id, trail, pool));
   SVN_ERR(set_entry(src_parent_node, src_entry, NULL, NULL, 
                     txn_id, trail, pool));

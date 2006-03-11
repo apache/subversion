@@ -469,6 +469,7 @@ svn_fs_base__dag_move(dag_node_t *src_parent_node,
                       const svn_fs_id_t *node_id,
                       dag_node_t *tgt_parent_node,
                       const char *tgt_entry,
+                      const char *tgt_path,
                       const char *txn_id,
                       trail_t *trail,
                       apr_pool_t *pool);

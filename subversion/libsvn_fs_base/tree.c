@@ -928,7 +928,7 @@ make_path_mutable(svn_fs_root_t *root,
           const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id(clone);
           SVN_ERR (svn_fs_bdb__create_copy(fs, copy_id, copy_data,
                                            svn_fs_base__id_txn_id (node_id),
-                                           new_node_id,
+                                           new_node_id, NULL,
                                            copy_kind_soft_copy, trail, pool));
           SVN_ERR (svn_fs_base__add_txn_copy(fs, txn_id, copy_id, 
                                              trail, pool));
@@ -3049,6 +3049,7 @@ txn_body_move(void *baton,
                svn_fs_base__dag_get_id(from_parent_path->node),
                to_parent_path->parent->node,
                to_parent_path->entry,
+               svn_fs_base__canonicalize_abspath(to_path, trail->pool),
                txn_id, trail, trail->pool));
 
       /* Make a record of this modification in the changes table. */
@@ -4191,42 +4192,10 @@ txn_body_history_prev(void *baton, trail_t *trail)
         {
           /* If this was a move, the dest node IS the same as the
            * source node, so just grabbing its created path will
-           * give us the wrong path.  Instead, we need to go through
-           * the changes for the revision the move occurred in, find
-           * the appropriate change_t object, and use its path. */
+           * give us the wrong path.  Instead, we need to use the
+           * dest path stored in its copy entry. */
 
-          const svn_fs_id_t *id = svn_fs_base__dag_get_id(dst_node);
-          apr_array_header_t *changes;
-          change_t *change = NULL;
-          int idx;
-
-          /* Using svn_fs_bdb__changes_fetch wouldn't buy us anything,
-           * since we need to iterate over them all looking for one that
-           * matches on the node id anyway... */
-          SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes,
-                                                fs,
-                                                copy->src_txn_id,
-                                                trail,
-                                                trail->pool));
-
-          for (idx = 0; idx < changes->nelts; ++idx)
-            {
-              change = APR_ARRAY_IDX(changes, idx, change_t *);
-
-              if (svn_fs_base__id_compare(id, change->noderev_id) == 0)
-                break;
-
-              change = NULL;
-            }
-
-          /* As far as I know this should not happen, but hey, we're reading
-           * data off of disk, so anything is theoretically possible. */
-          if (! change)
-            return svn_error_create
-                     (SVN_ERR_FS_CORRUPT, NULL,
-                      _("Couldn't find this move's associated change"));
-
-          copy_dst = change->path;
+          copy_dst = copy->dst_path;
         }
 
       /* If our current path was the very destination of the copy,
@@ -4263,6 +4232,10 @@ txn_body_history_prev(void *baton, trail_t *trail)
                * the source node, so you can't just grab its rev for the
                * dest rev.  Instead, its rev is used for the source rev,
                * and the dest rev is pulled out of the copy. */
+
+              /* XXX Note, this is incorrect if a node is moved more than
+               *     once we pick up the initial source rev, not the actual
+               *     one.  Sigh. */
 
               SVN_ERR(svn_fs_base__dag_get_revision(&src_rev, dst_node, trail,
                                                     trail->pool));

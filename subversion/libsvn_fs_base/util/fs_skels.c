@@ -282,14 +282,23 @@ is_valid_node_revision_skel(skel_t *skel)
 static svn_boolean_t
 is_valid_copy_skel(skel_t *skel)
 {
-  return (((svn_fs_base__list_length(skel) == 4)
-           && (svn_fs_base__matches_atom(skel->children, "copy")
-               || svn_fs_base__matches_atom(skel->children, "move")
-               || svn_fs_base__matches_atom(skel->children, "soft-copy")
-               || svn_fs_base__matches_atom(skel->children, "soft-move"))
-           && skel->children->next->is_atom
-           && skel->children->next->next->is_atom
-           && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
+  int len = svn_fs_base__list_length(skel);
+
+  if (len == 4)
+    return (((svn_fs_base__matches_atom(skel->children, "copy")
+              || svn_fs_base__matches_atom(skel->children, "soft-copy")
+              || svn_fs_base__matches_atom(skel->children, "soft-move"))
+             && skel->children->next->is_atom
+             && skel->children->next->next->is_atom
+             && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
+  else if (len == 5)
+    return (svn_fs_base__matches_atom(skel->children, "move")
+            && skel->children->next->is_atom
+            && skel->children->next->next->is_atom
+            && skel->children->next->next->next->is_atom
+            && skel->children->next->next->next->next->is_atom ? TRUE : FALSE);
+  else
+    return FALSE;
 }
 
 
@@ -710,6 +719,19 @@ svn_fs_base__parse_copy_skel(copy_t **copy_p,
   copy->dst_noderev_id
     = svn_fs_base__id_parse(skel->children->next->next->next->data,
                             skel->children->next->next->next->len, pool);
+
+  /* DST-PATH */
+  if (copy->kind == copy_kind_move)
+    copy->dst_path
+      = apr_pstrmemdup(pool,
+                       skel->children->next->next->next->next->data,
+                       skel->children->next->next->next->next->len);
+  else
+    {
+      /* XXX for now this can be NULL because only moves are sending it,
+       *     eventually we may want to make copies use it as well. */
+      copy->dst_path = NULL;
+    }
 
   /* Return the structure. */
   *copy_p = copy;
@@ -1251,6 +1273,10 @@ svn_fs_base__unparse_copy_skel(skel_t **skel_p,
 
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list(pool);
+
+  /* DST-PATH */
+  if (copy->dst_path)
+    svn_fs_base__prepend(svn_fs_base__str_atom(copy->dst_path, pool), skel);
 
   /* DST-NODE-ID */
   tmp_str = svn_fs_base__id_unparse(copy->dst_noderev_id, pool);

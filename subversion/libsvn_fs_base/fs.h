@@ -270,6 +270,8 @@ typedef struct
   /* Node-revision of copy destination. */
   const svn_fs_id_t *dst_noderev_id;
 
+  const char *dst_path;
+
 } copy_t;
 
 

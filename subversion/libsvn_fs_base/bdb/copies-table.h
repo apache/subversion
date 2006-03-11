@@ -45,10 +45,11 @@ svn_error_t *svn_fs_bdb__reserve_copy_id(const char **copy_id_p,
 /* Create a new copy with id COPY_ID in FS as part of TRAIL.
    SRC_PATH/SRC_TXN_ID are the path/transaction ID (respectively) of
    the copy source, and DST_NODEREV_ID is the node revision id of the
-   copy destination.  KIND describes the type of copy operation.
+   copy destination.  DST_PATH is the target path for the copy. KIND
+   describes the type of copy operation.
 
    SRC_PATH is expected to be a canonicalized filesystem path (see
-   svn_fs__canonicalize_abspath).
+   svn_fs__canonicalize_abspath), as is DST_PATH.
 
    COPY_ID should generally come from a call to
    svn_fs_bdb__reserve_copy_id().  */
@@ -57,6 +58,7 @@ svn_error_t *svn_fs_bdb__create_copy(svn_fs_t *fs,
                                      const char *src_path,
                                      const char *src_txn_id,
                                      const svn_fs_id_t *dst_noderev_id,
+                                     const char *dst_path,
                                      copy_kind_t kind,
                                      trail_t *trail,
                                      apr_pool_t *pool);

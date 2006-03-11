@@ -136,6 +136,7 @@ svn_fs_bdb__create_copy(svn_fs_t *fs,
                         const char *src_path,
                         const char *src_txn_id,
                         const svn_fs_id_t *dst_noderev_id,
+                        const char *dst_path,
                         copy_kind_t kind,
                         trail_t *trail,
                         apr_pool_t *pool)
@@ -145,6 +146,7 @@ svn_fs_bdb__create_copy(svn_fs_t *fs,
   copy.src_path = src_path;
   copy.src_txn_id = src_txn_id;
   copy.dst_noderev_id = dst_noderev_id;
+  copy.dst_path = dst_path;
   return put_copy(fs, &copy, copy_id, trail, pool);
 }
 
