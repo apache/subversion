@@ -53,7 +53,7 @@ Candidate changes:
       Take diff to build.conf from r18509 then copy all of tools/server-side
       from r18509, it's all that's in that directory.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
   * r18721
     Fix race condition during application pool initialization.
