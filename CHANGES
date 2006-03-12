@@ -33,7 +33,7 @@ Developer-visible-changes:
 * fixed: missing #include (r18065)
 * fixed: allow building with Neon 0.25.5 (r18215)
 * fixed: error leaks (18196, -249)
-* fixed: RMP package bad interaction with NFS servers (issue #1456)
+* fixed: RPM package bad interaction with NFS servers (issue #1456)
 * javahl bindings:
       - fixed: compile error on Visual Studio 2005 (r18054, -55)
 * python bindings:
