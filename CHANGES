@@ -7,11 +7,11 @@ http://svn.collab.net/repos/svn/tags/1.3.1
     * fixed: segfault moving unversioned files (issue #2436)
     * fixed: verbose list broken over ra_dav (issue #2442)
     * fixed: 'svn ci -m path_name' not requiring '--force-log' (r17956)
-    * fixed: crash on mixed https URL scheme case (r18042)
+    * fixed: crash on mixed-case https URL scheme (r18042)
     * fixed: crash in status with ignored directories (r18291)
     * fixed: strip peg rev from default checkout directory (r18416)
     * fixed: diff crash with non-recursive checkout (r17231, 18539, -41)
-    * fixed: 'svn ls' URL encoding bug with locks (r18665)
+    * fixed: 'svn ls' URL encoding bug with locks (r18665, -68)
     * fixed: unlock circumvents lock token check (r18691, -94)
     * fixed: repos-to-repos copy crash (r18451)
     * fixed: 'svnmerge' utility improvements (r18811)
@@ -41,9 +41,9 @@ Developer-visible-changes:
       - fixed: pool lifetime bug (r17992)
       - fixed: memory leak (r18230)
 * ruby bindings:
-      - fixed: pool management issue (r17795 -811)
+      - fixed: pool management issue (r17795, -811)
       - fixed: protect baton from garbage collection (r17627)
-      - fixed: conversion bug (r17726)
+      - fixed: conversion bug (r17726, -925)
       - fixed: compile errors with SWIG 1.3.24 (r18456, -58)
 
 
