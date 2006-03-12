@@ -25,6 +25,7 @@ http://svn.collab.net/repos/svn/tags/1.3.1
     * fixed: log scalability issues with many paths (r18395, -404)
     * fixed: better path input validation in mod_dav_svn (r18660)
     * fixed: assert in copy in fsfs and bdb (issue #2398)
+    * fixed: RPM package bad interaction with NFS servers (issue #1456)
 
   - Both:
     * fixed: copyright years updated to include 2006 (r18021, -127)
@@ -33,7 +34,6 @@ Developer-visible-changes:
 * fixed: missing #include (r18065)
 * fixed: allow building with Neon 0.25.5 (r18215)
 * fixed: error leaks (18196, -249)
-* fixed: RPM package bad interaction with NFS servers (issue #1456)
 * javahl bindings:
       - fixed: compile error on Visual Studio 2005 (r18054, -55)
 * python bindings:
