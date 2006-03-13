@@ -589,6 +589,17 @@ svn_ra_serf__do_diff(svn_ra_session_t *session,
                      apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__do_status(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       const char *status_target,
+                       svn_revnum_t revision,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *status_editor,
+                       void *status_baton,
+                       apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const svn_ra_reporter2_t **reporter,
                        void **report_baton,

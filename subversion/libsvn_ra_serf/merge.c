@@ -351,7 +351,7 @@ end_merge(void *userData, const char *raw_name)
                                                            "post-commit-err",
                                                            APR_HASH_KEY_STRING);
         }
-      else
+      else if (ctx->session->wc_callbacks->push_wc_prop)
         {
           const char *href, *checked_in;
           svn_string_t checked_in_str;
