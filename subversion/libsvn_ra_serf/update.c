@@ -1968,6 +1968,26 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
 }
 
 svn_error_t *
+svn_ra_serf__do_status(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       const char *status_target,
+                       svn_revnum_t revision,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *status_editor,
+                       void *status_baton,
+                       apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+
+  return make_update_reporter(ra_session, reporter, report_baton,
+                              revision,
+                              session->repos_url.path, status_target, NULL,
+                              recurse, FALSE, FALSE,
+                              status_editor, status_baton, pool);
+}
+
+svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
                       svn_revnum_t revision,

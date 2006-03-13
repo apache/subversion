@@ -306,20 +306,6 @@ svn_ra_serf__do_switch(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__do_status(svn_ra_session_t *session,
-                       const svn_ra_reporter2_t **reporter,
-                       void **report_baton,
-                       const char *status_target,
-                       svn_revnum_t revision,
-                       svn_boolean_t recurse,
-                       const svn_delta_editor_t *status_editor,
-                       void *status_baton,
-                       apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
 svn_ra_serf__check_path(svn_ra_session_t *ra_session,
                         const char *rel_path,
                         svn_revnum_t revision,
@@ -492,7 +478,9 @@ svn_ra_serf__get_lock(svn_ra_session_t *session,
                       const char *path,
                       apr_pool_t *pool)
 {
-  abort();
+  /* TODO Shh.  We're telling a white lie for now. */
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                          _("Server does not support locking features"));
 }
 
 static svn_error_t *
@@ -501,7 +489,9 @@ svn_ra_serf__get_locks(svn_ra_session_t *session,
                        const char *path,
                        apr_pool_t *pool)
 {
-  abort();
+  /* TODO Shh.  We're telling a white lie for now. */
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                          _("Server does not support locking features"));
 }
 
 static svn_error_t *
