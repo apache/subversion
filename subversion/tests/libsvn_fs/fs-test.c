@@ -4562,6 +4562,57 @@ move_history_test(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_closest_copy_test(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root, *croot;
+  svn_revnum_t after_rev;
+  const char *cpath;
+  apr_pool_t *spool = svn_pool_create(pool);
+
+  *msg = "calculating closest history-affecting moves";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-move-closest-copy",
+                              opts->fs_type, pool));
+
+  /* In first txn, create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
+
+  /* Move A to Z, and commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_move(rev_root, "A", txn_root, "Z", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
+
+  /* Anything under Z should have a closest copy pair of ("/Z", 2), so
+     we'll pick some spots to test. */
+  SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z", spool));
+  SVN_ERR(test_closest_copy_pair(croot, cpath, 2, "/Z"));
+  SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z/D/G", spool));
+  SVN_ERR(test_closest_copy_pair(croot, cpath, 2, "/Z"));
+  SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z/mu", spool));
+  SVN_ERR(test_closest_copy_pair(croot, cpath, 2, "/Z"));
+  SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z/B/E/beta", spool));
+  SVN_ERR(test_closest_copy_pair(croot, cpath, 2, "/Z"));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4601,5 +4652,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(closest_copy_test),
     SVN_TEST_PASS(move_test),
     SVN_TEST_PASS(move_history_test),
+    SVN_TEST_PASS(move_closest_copy_test),
     SVN_TEST_NULL
   };

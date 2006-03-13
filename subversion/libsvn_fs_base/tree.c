@@ -4404,12 +4404,23 @@ txn_body_closest_copy(void *baton, trail_t *trail)
   if (! copy)
     SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, copy_id, trail, trail->pool));
 
-  /* Figure out the destination path and revision of the copy operation. */
-  SVN_ERR(svn_fs_base__dag_get_node(&copy_dst_node, fs, copy->dst_noderev_id,
-                                    trail, trail->pool));
-  copy_dst_path = svn_fs_base__dag_get_created_path(copy_dst_node);
-  SVN_ERR(svn_fs_base__dag_get_revision(&copy_dst_rev, copy_dst_node, 
+  if (copy->kind != copy_kind_move)
+    {
+      /* Figure out the destination path and revision of the copy operation. */
+      SVN_ERR(svn_fs_base__dag_get_node(&copy_dst_node, fs,
+                                        copy->dst_noderev_id,
                                         trail, trail->pool));
+      copy_dst_path = svn_fs_base__dag_get_created_path(copy_dst_node);
+      SVN_ERR(svn_fs_base__dag_get_revision(&copy_dst_rev, copy_dst_node, 
+                                            trail, trail->pool));
+    }
+  else
+    {
+      copy_dst_path = copy->dst_path;
+      SVN_ERR(svn_fs_base__txn_get_revision(&copy_dst_rev, fs,
+                                            copy->src_txn_id, trail,
+                                            trail->pool));
+    }
 
   /* Turn that revision into a revision root. */
   SVN_ERR(svn_fs_base__dag_revision_root(&copy_dst_root_node, fs, 
