@@ -40,6 +40,7 @@ Developer-visible-changes:
       - fixed: libsvn_swig_py link problem on Solaris 10 (r17910)
       - fixed: pool lifetime bug (r17992)
       - fixed: memory leak (r18230)
+      - fixed: race condition during application pool initialization (r18721)
 * ruby bindings:
       - fixed: pool management issue (r17795, -811)
       - fixed: protect baton from garbage collection (r17627)
