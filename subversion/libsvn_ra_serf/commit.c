@@ -1499,8 +1499,32 @@ abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   commit_context_t *ctx = edit_baton;
+  svn_ra_serf__handler_t *handler;
+  simple_request_context_t *delete_ctx;
 
-  abort();
+  /* DELETE our activity */
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->method = "DELETE";
+  handler->path = ctx->activity_url;
+  handler->conn = ctx->session->conns[0];
+  handler->session = ctx->session;
+
+  delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+
+  handler->response_handler = handle_delete;
+  handler->response_baton = delete_ctx;
+
+  svn_ra_serf__request_create(handler);
+
+  SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
+                                        pool));
+
+  if (delete_ctx->status != 204)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

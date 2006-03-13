@@ -187,6 +187,9 @@ typedef struct report_fetch_t {
   /* Our pool. */
   apr_pool_t *pool;
 
+  /* Non-NULL if we received an error during processing. */
+  svn_error_t *err;
+
   /* The session we should use to fetch the file. */
   svn_ra_serf__session_t *sess;
 
@@ -638,10 +641,10 @@ headers_fetch(serf_bucket_t *headers,
 }
 
 static apr_status_t
-error_fetch(serf_request_t *request,
-            serf_bucket_t *response,
-            int status_code,
-            void *baton)
+cancel_fetch(serf_request_t *request,
+             serf_bucket_t *response,
+             int status_code,
+             void *baton)
 {
   report_fetch_t *fetch_ctx = baton;
 
@@ -674,6 +677,24 @@ error_fetch(serf_request_t *request,
 }
 
 static apr_status_t
+error_fetch(serf_request_t *request,
+            report_fetch_t *fetch_ctx,
+            svn_error_t *err)
+{
+  fetch_ctx->err = err;
+
+  fetch_ctx->done = TRUE;
+
+  fetch_ctx->done_item.data = fetch_ctx;
+  fetch_ctx->done_item.next = *fetch_ctx->done_list;
+  *fetch_ctx->done_list = &fetch_ctx->done_item;
+
+  serf_request_set_handler(request, svn_ra_serf__handler_discard_body, NULL);
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t
 handle_fetch(serf_request_t *request,
              serf_bucket_t *response,
              void *handler_baton,
@@ -684,13 +705,13 @@ handle_fetch(serf_request_t *request,
   serf_status_line sl;
   apr_status_t status;
   report_fetch_t *fetch_ctx = handler_baton;
+  svn_error_t *err;
 
   if (fetch_ctx->read_headers == FALSE)
     {
       serf_bucket_t *hdrs;
       const char *val;
       report_info_t *info;
-      svn_error_t *err;
 
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
@@ -698,7 +719,11 @@ handle_fetch(serf_request_t *request,
 
       if (!info->dir->dir_baton)
         {
-          open_dir(info->dir);
+          err = open_dir(info->dir);
+          if (err)
+            {
+              return error_fetch(request, fetch_ctx, err);
+            }
         }
 
       apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
@@ -730,11 +755,21 @@ handle_fetch(serf_request_t *request,
                                           &info->file_baton);
         }
 
-      info->dir->update_editor->apply_textdelta(info->file_baton,
+      if (err)
+        {
+          return error_fetch(request, fetch_ctx, err);
+        }
+
+      err = info->dir->update_editor->apply_textdelta(info->file_baton,
                                                 NULL,
                                                 info->editor_pool,
                                                 &info->textdelta,
                                                 &info->textdelta_baton);
+
+      if (err)
+        {
+          return error_fetch(request, fetch_ctx, err);
+        }
 
       if (val && strcasecmp(val, "application/vnd.svn-svndiff") == 0)
         {
@@ -794,7 +829,11 @@ handle_fetch(serf_request_t *request,
       
       if (fetch_ctx->delta_stream)
         {
-          svn_stream_write(fetch_ctx->delta_stream, data, &len);
+          err = svn_stream_write(fetch_ctx->delta_stream, data, &len);
+          if (err)
+            {
+              return error_fetch(request, fetch_ctx, err);
+            }
         }
       /* otherwise, manually construct the text delta window. */
       else if (len)
@@ -812,15 +851,23 @@ handle_fetch(serf_request_t *request,
           delta_window.new_data = &window_data;
 
           /* write to the file located in the info. */
-          fetch_ctx->info->textdelta(&delta_window,
-                                     fetch_ctx->info->textdelta_baton);
+          err = fetch_ctx->info->textdelta(&delta_window,
+                                           fetch_ctx->info->textdelta_baton);
+          if (err)
+            {
+              return error_fetch(request, fetch_ctx, err);
+            }
         }
 
       if (APR_STATUS_IS_EOF(status))
         {
           report_info_t *info = fetch_ctx->info;
 
-          info->textdelta(NULL, info->textdelta_baton);
+          err = info->textdelta(NULL, info->textdelta_baton);
+          if (err)
+            {
+              return error_fetch(request, fetch_ctx, err);
+            }
 
           /* set all of the properties we received */
           svn_ra_serf__walk_all_props(info->dir->props,
@@ -834,8 +881,13 @@ handle_fetch(serf_request_t *request,
                          set_file_props,
                          info, info->editor_pool);
 
-          info->dir->update_editor->close_file(info->file_baton, NULL,
-                                               info->editor_pool);
+          err = info->dir->update_editor->close_file(info->file_baton, NULL,
+                                                     info->editor_pool);
+
+          if (err)
+            {
+              return error_fetch(request, fetch_ctx, err);
+            }
 
           fetch_ctx->done = TRUE;
 
@@ -997,7 +1049,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   handler->response_handler = handle_fetch;
   handler->response_baton = fetch_ctx;
 
-  handler->response_error = error_fetch;
+  handler->response_error = cancel_fetch;
   handler->response_error_baton = fetch_ctx;
 
   svn_ra_serf__request_create(handler);
@@ -1754,6 +1806,12 @@ finish_report(void *report_baton,
           report_fetch_t *done_fetch = done_list->data;
           report_dir_t *cur_dir;
 
+          if (done_fetch->err)
+            {
+              /* Uh-oh! */
+              return done_fetch->err;
+            }
+
           /* decrease our parent's directory refcount. */
           cur_dir = done_fetch->info->dir;
           cur_dir->ref_count--;
@@ -2069,7 +2127,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   handler->response_handler = handle_stream;
   handler->response_baton = stream_ctx;
 
-  handler->response_error = error_fetch;
+  handler->response_error = cancel_fetch;
   handler->response_error_baton = stream_ctx;
 
   svn_ra_serf__request_create(handler);
