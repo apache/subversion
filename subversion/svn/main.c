@@ -291,18 +291,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "diff", svn_cl__diff, {"di"}, N_
-    ("Display the differences between two paths.\n"
+    ("Display the differences between two revisions or paths.\n"
      "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
      "       2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
      "               [PATH...]\n"
      "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
      "\n"
      "  1. Display the changes made to TARGETs as they are seen in REV between\n"
-     "     two revisions.  TARGETs may be working copy paths or URLs.\n"
-     "\n"
-     "     N defaults to BASE if any TARGET is a working copy path, otherwise it\n"
-     "     must be specified.  M defaults to the current working version if any\n"
-     "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
+     "     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
+     "     If TARGETs are working copy paths, N defaults to BASE and M to the\n"
+     "     working copy; if URLs, N must be specified and M defaults to HEAD.\n"
      "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
      "     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
      "\n"
