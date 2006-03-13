@@ -219,9 +219,11 @@ svn_cl__diff(apr_getopt_t *os,
           ? svn_opt_revision_working : svn_opt_revision_head;
 
       /* Determine if we need to do pegged diffs. */
-      if (opt_state->start_revision.kind != svn_opt_revision_base
-          && opt_state->start_revision.kind != svn_opt_revision_working)
-          pegged_diff = TRUE;
+      if ((opt_state->start_revision.kind != svn_opt_revision_base
+           && opt_state->start_revision.kind != svn_opt_revision_working)
+          || (opt_state->end_revision.kind != svn_opt_revision_base
+              && opt_state->end_revision.kind != svn_opt_revision_working))
+        pegged_diff = TRUE;
 
     }
 

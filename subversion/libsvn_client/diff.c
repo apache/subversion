@@ -2132,8 +2132,16 @@ diff_repos_wc(const apr_array_header_t *options,
                                           revision1, &end,
                                           ctx, pool));
 
-      callback_baton->orig_path_1 = url1;
-      callback_baton->orig_path_2 = svn_path_join(anchor_url, target, pool);
+      if (!reverse)
+        {
+          callback_baton->orig_path_1 = url1;
+          callback_baton->orig_path_2 = svn_path_join(anchor_url, target, pool);
+        }
+      else
+        {
+          callback_baton->orig_path_1 = svn_path_join(anchor_url, target, pool);
+          callback_baton->orig_path_2 = url1;
+        }
     }
   
   /* Establish RA session to path2's anchor */
