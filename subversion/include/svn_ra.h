@@ -737,6 +737,9 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note The reporter provided by this function does NOT supply copy-
+ * from information to the diff editor callbacks.
+ *
  * @since New in 1.2.
  */
 svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
@@ -785,6 +788,9 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note The reporter provided by this function does NOT supply copy-
+ * from information to the diff editor callbacks.
+ *
  * @since New in 1.2.
  */
 svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
@@ -829,6 +835,9 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * using @a session from within the editing operations of @a status_editor.
  *
  * Use @a pool for memory allocation.
+ *
+ * @note The reporter provided by this function does NOT supply copy-
+ * from information to the diff editor callbacks.
  *
  * @since New in 1.2.
  */
