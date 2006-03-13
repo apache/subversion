@@ -171,6 +171,9 @@ typedef struct dir_context_t {
   /* The base revision of the dir. */
   svn_revnum_t base_revision;
 
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_revision;
+
   /* Changed and removed properties */
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
@@ -962,9 +965,62 @@ add_directory(const char *path,
               apr_pool_t *dir_pool,
               void **child_baton)
 {
-  dir_context_t *ctx = parent_baton;
+  dir_context_t *parent = parent_baton;
+  dir_context_t *dir;
+  svn_ra_serf__handler_t *handler;
+  mkactivity_context_t *mkcol_ctx;
 
-  abort();
+  /* Ensure our parent is checked out. */
+  SVN_ERR(checkout_dir(parent));
+
+  dir = apr_pcalloc(dir_pool, sizeof(*dir));
+
+  dir->pool = dir_pool;
+
+  dir->parent_dir = parent;
+  dir->commit = parent->commit;
+
+  dir->base_revision = SVN_INVALID_REVNUM;
+  dir->copyfrom_revision = copyfrom_revision;
+  dir->copyfrom_path = copyfrom_path;
+  dir->name = path;
+  dir->checked_in_url =
+      svn_path_url_add_component(parent->commit->checked_in_url,
+                                 path, dir->pool);
+  dir->changed_props = apr_hash_make(dir->pool);
+  dir->removed_props = apr_hash_make(dir->pool);
+
+  if (copyfrom_path)
+    {
+      abort();
+    }
+
+  handler = apr_pcalloc(dir->pool, sizeof(*handler));
+  handler->method = "MKCOL";
+  handler->path = svn_path_url_add_component(parent->checkout->resource_url,
+                                             svn_path_basename(path, dir->pool),
+                                             dir->pool);
+  handler->conn = dir->commit->session->conns[0];
+  handler->session = dir->commit->session;
+
+  mkcol_ctx = apr_pcalloc(dir->pool, sizeof(*mkcol_ctx));
+
+  handler->response_handler = handle_mkactivity;
+  handler->response_baton = mkcol_ctx;
+
+  svn_ra_serf__request_create(handler);
+
+  SVN_ERR(svn_ra_serf__context_run_wait(&mkcol_ctx->done, dir->commit->session,
+                                        dir->pool));
+
+  if (mkcol_ctx->status != 201)
+    {
+      abort();
+    }
+
+  *child_baton = dir;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -1116,6 +1172,8 @@ add_file(const char *path,
   new_file->name = path;
 
   new_file->base_revision = SVN_INVALID_REVNUM;
+  new_file->changed_props = apr_hash_make(new_file->pool);
+  new_file->removed_props = apr_hash_make(new_file->pool);
 
   /* Set up so that we can perform the PUT later. */
   new_file->acceptor = svn_ra_serf__accept_response;
@@ -1157,7 +1215,8 @@ add_file(const char *path,
 
   new_file->put_url =
       svn_path_url_add_component(dir->checkout->resource_url,
-                                 path, new_file->pool);
+                                 svn_path_basename(path, new_file->pool),
+                                 new_file->pool);
 
   *file_baton = new_file;
 
