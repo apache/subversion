@@ -1346,8 +1346,7 @@ svn_client_blame(const char *path_or_url,
  *
  * @a path1 and @a path2 must both represent the same node kind -- that 
  * is, if @a path1 is a directory, @a path2 must also be, and if @a path1 
- * is a file, @a path2 must also be.  (Currently, @a path1 and @a path2 
- * must be the exact same path)
+ * is a file, @a path2 must also be.
  *
  * If @a recurse is true (and the @a paths are directories) this will be a
  * recursive operation.
