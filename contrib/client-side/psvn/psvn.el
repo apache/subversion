@@ -507,6 +507,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-mode-line-process-edit-flag "")
 (defvar svn-status-edit-svn-command nil)
 (defvar svn-status-update-previous-process-output nil)
+(defvar svn-pre-run-asynch-recent-keys nil)
 (defvar svn-status-temp-dir
   (expand-file-name
    (or
@@ -853,6 +854,9 @@ If ARG then pass the -u argument to `svn status'."
         (svn-status dir)
       (error "%s is not a directory" dir))))
 
+(defun svn-had-user-input-since-asynch-run ()
+  (not (equal (recent-keys) svn-pre-run-asynch-recent-keys)))
+
 (defun svn-process-environment ()
   "Construct the environment for the svn process.
 It is a combination of `svn-status-svn-environment-var-list' and
@@ -922,6 +926,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
+                  (setq svn-pre-run-asynch-recent-keys (recent-keys))
                   (let ((process-environment (svn-process-environment))
                         (process-connection-type nil))
                     ;; Communicate with the subprocess via pipes rather
@@ -978,7 +983,9 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                     (setq svn-status-update-previous-process-output nil))
                   (when svn-status-display-new-status-buffer
                     (set-window-configuration svn-status-initial-window-configuration)
-                    (switch-to-buffer svn-status-buffer-name)))
+                    (if (svn-had-user-input-since-asynch-run)
+                        (message "svn status finished")
+                      (switch-to-buffer svn-status-buffer-name))))
                  ((eq svn-process-cmd 'log)
                   (svn-status-show-process-output 'log t)
                   (pop-to-buffer svn-status-last-output-buffer-name)
@@ -3683,10 +3690,9 @@ If ARG then show diff between some other version of the selected files."
                     ["Edit log message" svn-log-edit-log-entry t]))
 
 (defvar svn-log-view-font-lock-keywords
-  '(("^r.+" . font-lock-keyword-face)
+  '(("^r[0-9]+ .+" . font-lock-keyword-face)
   "Keywords in svn-log-view-mode."))
 (put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
-
 
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.
