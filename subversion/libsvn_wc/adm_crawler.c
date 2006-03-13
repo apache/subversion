@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -714,7 +714,8 @@ svn_wc_transmit_text_deltas(const char *path,
   apr_file_t *localfile = NULL;
   apr_file_t *basefile = NULL;
   const char *base_digest_hex = NULL;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  unsigned char *local_digest;
+  svn_stream_t *local_stream;
   
   /* Make an untranslated copy of the working file in the
      administrative tmp area because a) we want this to work even if
@@ -821,34 +822,31 @@ svn_wc_transmit_text_deltas(const char *path,
                              APR_READ, APR_OS_DEFAULT, pool),
             _("Error opening local file"));
 
+  local_stream = svn_stream_from_aprfile2(localfile, FALSE, pool);
+  local_stream = svn_stream_checksummed(local_stream, &local_digest, NULL,
+                                        pool);
+
   /* Create a text-delta stream object that pulls data out of the two
      files. */
   svn_txdelta(&txdelta_stream,
               svn_stream_from_aprfile(basefile, pool),
-              svn_stream_from_aprfile(localfile, pool),
+              local_stream,
               pool);
   
   /* Pull windows from the delta stream and feed to the consumer. */
   SVN_ERR(svn_txdelta_send_txstream(txdelta_stream, handler, 
                                     wh_baton, pool));
     
-  /* Close the two files */
-  SVN_ERR(svn_io_file_close(localfile, pool));
+  /* Close local stream and file. */
+  SVN_ERR(svn_stream_close(local_stream));
   
+  /* Close base file, if it was opened. */
   if (basefile)
     SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
 
-  /* ### This is a pity.  tmp_base was created with svn_io_copy_file()
-     above, which uses apr_file_copy(), which probably called
-     apr_file_transfer_contents(), which ran over every byte of the
-     file and therefore could have computed a checksum effortlessly.
-     But we're not about to change the interface of apr_file_copy(),
-     so we'll have to run over the bytes again... */
-  SVN_ERR(svn_io_file_checksum(digest, tmp_base, pool));
-
   /* Close the file baton, and get outta here. */
   return editor->close_file
-    (file_baton, svn_md5_digest_to_cstring(digest, pool), pool);
+    (file_baton, svn_md5_digest_to_cstring(local_digest, pool), pool);
 }
 
 
