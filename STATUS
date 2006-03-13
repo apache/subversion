@@ -68,14 +68,7 @@ Candidate changes:
 
 Approved changes:
 
-  * r18721
-    Fix race condition during application pool initialization.
-    Justification:
-      Race conditions can cause difficult-to-reproduce crashes.
-      See http://projects.edgewall.com/trac/ticket/2611
-    Votes:
-      +1: djames
-      +0: malcolm
+  (none)
 
 
 Status of 1.3.2:
