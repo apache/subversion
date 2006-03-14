@@ -92,14 +92,11 @@ Candidate changes:
       +0: dlr
       -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
 
-  * r18144, r18164, r18170, r18171, r18184, r18434
+  * r18144, r18164, r18170, r18171, r18184, r18434, r18882
     and r18037, r18127 (only tools/dev/stress.pl)
     Add support for BDB-4.4 and automatic recovery of wedged databases.
     Justification:
       See above about automatic recovery of wedged databases.
-    Notes:
-      We found two bugs after this entry was written. Suggest we suspend
-      voting until brane fixes them on trunk.
     Votes:
       +1: brane
 
