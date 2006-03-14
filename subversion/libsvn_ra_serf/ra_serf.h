@@ -89,9 +89,12 @@ typedef struct {
   apr_uri_t repos_url;
   const char *repos_url_str;
 
-  /* The actual discovered root */
+  /* The actual discovered root; may be NULL until we know it. */
   apr_uri_t repos_root;
   const char *repos_root_str;
+
+  /* Our Version-Controlled-Configuration; may be NULL until we know it. */
+  const char *vcc_url;
 
   /* Cached properties */
   apr_hash_t *cached_props;
@@ -551,6 +554,22 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 svn_ra_serf__connection_t *conn,
                                 const char *path,
                                 apr_pool_t *pool);
+
+/* Try to discover our current root @a vcc_url and the resultant @a rel_path
+ * based on @a orig_path for the @a session on @a conn.
+ *
+ * @a rel_path may be NULL if the caller is not interested in the relative
+ * path.
+ *
+ * All temporary allocations will be made in @a pool.
+ */
+svn_error_t *
+svn_ra_serf__discover_root(const char **vcc_url,
+                           const char **rel_path,
+                           svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           const char *orig_path,
+                           apr_pool_t *pool);
 
 /** RA functions **/
 
