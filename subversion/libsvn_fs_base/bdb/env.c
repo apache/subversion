@@ -214,6 +214,7 @@ convert_bdb_error(bdb_env_t *bdb, int db_err)
       bdb_baton.env = bdb->env;
       bdb_baton.bdb = bdb;
       bdb_baton.error_info = get_error_info(bdb);
+      bdb_baton.valid = TRUE;
       SVN_BDB_ERR(&bdb_baton, db_err);
     }
   return SVN_NO_ERROR;
@@ -510,11 +511,35 @@ bdb_close(bdb_env_t *bdb)
 }
 
 
+/* Pool cleanup that invalidates the environment baton.
+   This pool cleanup is registered in the environment descriptor's pool.
+   The cleanup can be run in one of two cases:
+    - Explicitly during svn_fs_bdb__close, in the context of the baton
+      owner's thread, and with the global cache mutex locked.
+      This will happen either after an explicit call to svn_fs_bdb__close,
+      or during cleanup of the baton's pool.  In both cases, the baton
+      is considered dead afterwards.
+    - Implicitly during apr_terminate, when the cache is destroyed; this
+      is guaranteed to happen in a single-threaded context.
+*/
+static apr_status_t
+invalidate_env_baton(void *data)
+{
+  bdb_env_baton_t *bdb_baton = data;
+  bdb_baton->valid = FALSE;
+  return APR_SUCCESS;
+}
+
 svn_error_t *
 svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 {
   svn_error_t *err = SVN_NO_ERROR;
   bdb_env_t *bdb = bdb_baton->bdb;
+
+  /* Don't do anything if the BDB baton has been invalidated; if it
+     has been, then the environment is already closed. */
+  if (!bdb_baton->valid)
+    return SVN_NO_ERROR;
 
   assert(bdb_baton->env == bdb_baton->bdb->env);
 
@@ -532,6 +557,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
     }
 
   acquire_cache_mutex();
+  apr_pool_cleanup_run(bdb->pool, bdb_baton, invalidate_env_baton);
 
   if (--bdb->refcount != 0)
     {
@@ -586,7 +612,7 @@ cleanup_env_baton(void *data)
 {
   bdb_env_baton_t *bdb_baton = data;
 
-  if (bdb_baton->bdb)
+  if (bdb_baton->valid && bdb_baton->bdb)
     svn_error_clear(svn_fs_bdb__close(bdb_baton));
 
   return APR_SUCCESS;
@@ -674,18 +700,21 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
       ++bdb->refcount;
     }
 
-  release_cache_mutex();
-
   if (!err)
     {
       *bdb_batonp = apr_palloc(pool, sizeof **bdb_batonp);
       (*bdb_batonp)->env = bdb->env;
       (*bdb_batonp)->bdb = bdb;
       (*bdb_batonp)->error_info = get_error_info(bdb);
+      (*bdb_batonp)->valid = TRUE;
       ++(*bdb_batonp)->error_info->refcount;
       apr_pool_cleanup_register(pool, *bdb_batonp, cleanup_env_baton,
                                 apr_pool_cleanup_null);
+      apr_pool_cleanup_register(bdb->pool, *bdb_batonp, invalidate_env_baton,
+                                apr_pool_cleanup_null);
     }
+
+  release_cache_mutex();
   return err;
 }
 
@@ -693,6 +722,11 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
 svn_boolean_t
 svn_fs_bdb__get_panic(bdb_env_baton_t *bdb_baton)
 {
+  /* An invalid baton is equivalent to a panicked environment; in both
+     cases, database cleanups should be skipped. */
+  if (!bdb_baton->valid)
+    return TRUE;
+
   assert(bdb_baton->env == bdb_baton->bdb->env);
   return !!svn__atomic_read(&bdb_baton->bdb->panic);
 }
@@ -700,6 +734,9 @@ svn_fs_bdb__get_panic(bdb_env_baton_t *bdb_baton)
 void
 svn_fs_bdb__set_panic(bdb_env_baton_t *bdb_baton)
 {
+  if (!bdb_baton->valid)
+    return;
+
   assert(bdb_baton->env == bdb_baton->bdb->env);
   svn__atomic_set(&bdb_baton->bdb->panic, TRUE);
 }
