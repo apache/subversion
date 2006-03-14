@@ -630,6 +630,18 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_switch_to,
+                       const char *switch_target,
+                       svn_boolean_t recurse,
+                       const char *switch_url,
+                       const svn_delta_editor_t *switch_editor,
+                       void *switch_baton,
+                       apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__get_file_revs(svn_ra_session_t *session,
                            const char *path,
                            svn_revnum_t start,
