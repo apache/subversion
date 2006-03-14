@@ -245,18 +245,6 @@ Possible values are: commit, revert."
   :type 'boolean
   :group 'psvn)
 
-(defcustom svn-status-do-prompt-for-save t
-  "*Ask before committing, if files from the working copy should be saved.
-Using 'before-log-edit: ask before log editing start
-      'before-commit: ask before a commit
-      t: Ask before log editing start and before a commit
-      nil: Never ask"
-  :type '(choice (const 'before-log-edit)
-                 (const 'before-commit)
-                 (const t)
-                 (const nil))
-  :group 'psvn)
-
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -2892,8 +2880,7 @@ this is because marking a directory with \\[svn-status-set-user-mark]
 normally marks all of its files as well.
 If no files have been marked, commit recursively the file at point."
   (interactive)
-  (when (member svn-status-do-prompt-for-save '(before-log-edit t))
-    (svn-status-save-some-buffers))
+  (svn-status-save-some-buffers)
   (let* ((selected-files (svn-status-marked-files))
          (marked-files-p (svn-status-some-files-marked-p)))
     (setq svn-status-files-to-commit selected-files
@@ -3567,8 +3554,7 @@ Commands:
 
 (defun svn-log-edit-done ()
   (interactive)
-  (when (member svn-status-do-prompt-for-save '(before-commit t))
-    (svn-status-save-some-buffers))
+  (svn-status-save-some-buffers)
   (save-excursion
     (set-buffer (get-buffer "*svn-log-edit*"))
     (when svn-log-edit-insert-files-to-commit
