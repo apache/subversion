@@ -1263,7 +1263,6 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
-  /* ### Update property flags when we have such flags. */
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION 
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE 
