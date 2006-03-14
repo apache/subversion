@@ -824,7 +824,7 @@ handle_fetch(serf_request_t *request,
 
           /* Increment data and len by the difference. */
           data += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
-          len += fetch_ctx->read_size - fetch_ctx->aborted_read_size;
+          len = fetch_ctx->read_size - fetch_ctx->aborted_read_size;
         }
       
       if (fetch_ctx->delta_stream)
@@ -2077,20 +2077,40 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
    */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *rel_path;
+      const char *rel_path, *present_path = "";
 
-      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn,
-                                          fetch_url, SVN_INVALID_REVNUM, "0",
-                                          base_props, pool));
-      
-      vcc_url =
-          svn_ra_serf__get_ver_prop(fetch_props, fetch_url, SVN_INVALID_REVNUM,
-                                    "DAV:", "version-controlled-configuration");
+      do {
+          SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn,
+                                              fetch_url, SVN_INVALID_REVNUM,
+                                              "0", base_props, pool));
+          vcc_url =
+              svn_ra_serf__get_ver_prop(fetch_props, fetch_url,
+                                        SVN_INVALID_REVNUM,
+                                        "DAV:",
+                                        "version-controlled-configuration");
 
-      rel_path = svn_ra_serf__get_ver_prop(fetch_props, fetch_url,
-                                           SVN_INVALID_REVNUM,
-                                           SVN_DAV_PROP_NS_DAV,
-                                           "baseline-relative-path");
+          rel_path = svn_ra_serf__get_ver_prop(fetch_props, fetch_url,
+                                               SVN_INVALID_REVNUM,
+                                               SVN_DAV_PROP_NS_DAV,
+                                               "baseline-relative-path");
+
+          if (vcc_url)
+            {
+              break;
+            }
+
+          /* This happens when the file is missing in HEAD. */
+
+          /* Okay, strip off. */
+          present_path = svn_path_join(svn_path_basename(fetch_url, pool),
+                                       present_path, pool);
+          fetch_url = svn_path_dirname(fetch_url, pool);
+      } while (!svn_path_is_empty(fetch_url));
+
+      if (present_path[0] != '\0')
+        {
+          rel_path = svn_path_url_add_component(rel_path, present_path, pool);
+        }
 
       SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
                                           revision, "0", baseline_props, pool));
