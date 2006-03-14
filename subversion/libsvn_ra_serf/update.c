@@ -1369,7 +1369,11 @@ end_report(void *userData, const char *raw_name)
           svn_ra_serf__get_ver_prop(info->dir->props, info->base_name,
                                     info->base_rev, "DAV:", "checked-in");
 
-      if (!checked_in_url)
+      /* If we were expecting to have the properties and we aren't able to
+       * get it, bail.
+       */
+      if (!checked_in_url &&
+          (!SVN_IS_VALID_REVNUM(info->dir->base_rev) || info->dir->fetch_props))
         {
           abort();
         }
@@ -1685,7 +1689,85 @@ link_path(void *report_baton,
           apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  abort();
+  serf_bucket_t *tmp;
+  const char *path_copy, *link_copy, *vcc_url;
+  apr_uri_t uri;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
+                                      sizeof("<S:entry rev=\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(apr_ltoa(report->pool, revision),
+                                  report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  if (lock_token)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
+                                          sizeof(" lock-token=\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING(lock_token,
+                                      report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  if (start_empty)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" start-empty=\"true\"",
+                                          sizeof(" start-empty=\"true\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" linkpath=\"",
+                                      sizeof(" linkpath=\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  /* We need to pass in the baseline relative path.
+   *
+   * TODO Confirm that it's on the same server?
+   */
+  apr_uri_parse(pool, url, &uri);
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link_copy,
+                                     report->sess, report->sess->conns[0],
+                                     uri.path, pool));
+
+  link_copy = apr_pstrdup(report->pool, link_copy);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(link_copy, report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", sizeof(">")-1,
+                                      report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  path_copy = apr_pstrdup(report->pool, path);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(path_copy, report->sess->bkt_alloc);
+  serf_bucket_aggregate_append(report->buckets, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
+                                      sizeof("</S:entry>")-1,
+                                      report->sess->bkt_alloc);
+
+  serf_bucket_aggregate_append(report->buckets, tmp);
+  return APR_SUCCESS;
 }
 
 static svn_error_t *
@@ -1950,9 +2032,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
     {
       add_tag_buckets(report->buckets,
                       "S:dst-path", 
-                      svn_path_url_add_component(report->source,
-                                                 report->destination,
-                                                 pool),
+                      report->destination,
                       report->sess->bkt_alloc);
     }
 
@@ -2035,12 +2115,38 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  const char *full_target;
+
+  full_target = svn_path_url_add_component(session->repos_url.path,
+                                           status_target, pool);
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
-                              session->repos_url.path, status_target, NULL,
+                              session->repos_url.path, full_target, NULL,
                               recurse, FALSE, FALSE,
                               status_editor, status_baton, pool);
+}
+
+svn_error_t *
+svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_switch_to,
+                       const char *switch_target,
+                       svn_boolean_t recurse,
+                       const char *switch_url,
+                       const svn_delta_editor_t *switch_editor,
+                       void *switch_baton,
+                       apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+
+  return make_update_reporter(ra_session, reporter, report_baton,
+                              revision_to_switch_to,
+                              session->repos_url.path,
+                              switch_url, switch_target,
+                              recurse, TRUE, TRUE,
+                              switch_editor, switch_baton, pool);
 }
 
 svn_error_t *
