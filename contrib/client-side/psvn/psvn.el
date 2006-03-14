@@ -729,7 +729,9 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
-  (define-key svn-global-keymap (kbd "c") 'svn-status-commit))
+  (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
+  (define-key svn-global-keymap (kbd "b") 'svn-status-switch-to-status-buffer)
+  (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
 
 (defvar svn-status-diff-mode-map ()
   "Keymap used in `svn-status-diff-mode' for additional commands that are not defined in diff-mode.")
@@ -2902,6 +2904,16 @@ If no files have been marked, commit recursively the file at point."
       (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
         (insert-file-contents svn-log-edit-file-name)))
     (svn-log-edit-mode)))
+
+(defun svn-status-switch-to-status-buffer ()
+  "Switch to the `svn-status-buffer-name' buffer."
+  (interactive)
+  (switch-to-buffer svn-status-buffer-name))
+
+(defun svn-status-pop-to-status-buffer ()
+  "Pop to the `svn-status-buffer-name' buffer."
+  (interactive)
+  (pop-to-buffer svn-status-buffer-name))
 
 (defun svn-status-export ()
   "Run `svn export' for the current working copy.
