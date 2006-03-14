@@ -88,6 +88,7 @@ Commit access for specific areas:
           nori   KOBAYASHI Noritada                          (Ruby tools,
                  <nori1@dolphin.c.u-tokyo.ac.jp>              po: ja)
             mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh)
+       adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
 
   Translation of message files:
 
