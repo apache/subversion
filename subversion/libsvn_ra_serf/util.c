@@ -24,6 +24,8 @@
 #include <serf.h>
 #include <serf_bucket_types.h>
 
+#include "svn_path.h"
+
 #include "ra_serf.h"
 
 
@@ -580,4 +582,78 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
                                         setup_default, handler);
+}
+
+svn_error_t *
+svn_ra_serf__discover_root(const char **vcc_url,
+                           const char **rel_path,
+                           svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           const char *orig_path,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *props;
+  const char *path, *present_path = "";
+
+  /* If we're only interested in our VCC, just return it. */
+  if (session->vcc_url && !rel_path)
+    {
+      *vcc_url = session->vcc_url;
+      return SVN_NO_ERROR;
+    }
+
+  props = apr_hash_make(pool);
+  path = orig_path;
+  *vcc_url = NULL;
+
+  do
+    {
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
+                                          path, SVN_INVALID_REVNUM,
+                                          "0", base_props, pool));
+      *vcc_url =
+          svn_ra_serf__get_ver_prop(props, path,
+                                    SVN_INVALID_REVNUM,
+                                    "DAV:",
+                                    "version-controlled-configuration");
+
+      if (rel_path)
+        {
+          *rel_path = svn_ra_serf__get_ver_prop(props, path,
+                                                SVN_INVALID_REVNUM,
+                                                SVN_DAV_PROP_NS_DAV,
+                                                "baseline-relative-path");
+        }
+
+      if (*vcc_url)
+        {
+          break;
+        }
+
+      /* This happens when the file is missing in HEAD. */
+
+      /* Okay, strip off. */
+      present_path = svn_path_join(svn_path_basename(path, pool),
+                                   present_path, pool);
+      path = svn_path_dirname(path, pool);
+    }
+  while (!svn_path_is_empty(path));
+
+  if (!*vcc_url)
+    {
+      abort();
+    }
+
+  /* Store our VCC in our cache. */
+  if (!session->vcc_url)
+    {
+      session->vcc_url = apr_pstrdup(session->pool, *vcc_url);
+    }
+
+  if (present_path[0] != '\0' && rel_path)
+    {
+      *rel_path = svn_path_url_add_component(*rel_path, present_path, pool);
+    }
+
+  return SVN_NO_ERROR;
 }

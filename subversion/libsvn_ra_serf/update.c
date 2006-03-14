@@ -1711,13 +1711,8 @@ finish_report(void *report_baton,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, sess, sess->conns[0],
-                                      sess->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0",
-                                      vcc_props, pool));
-
-  vcc_url = svn_ra_serf__get_prop(props, sess->repos_url.path,
-                                  "DAV:", "version-controlled-configuration");
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, sess, sess->conns[0],
+                                      sess->repos_url.path, pool));
 
   if (!vcc_url)
     {
@@ -1954,7 +1949,10 @@ make_update_reporter(svn_ra_session_t *ra_session,
   if (report->destination && *report->destination)
     {
       add_tag_buckets(report->buckets,
-                      "S:dst-path", report->destination,
+                      "S:dst-path", 
+                      svn_path_url_add_component(report->source,
+                                                 report->destination,
+                                                 pool),
                       report->sess->bkt_alloc);
     }
 
@@ -2079,7 +2077,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
     {
       const char *rel_path, *present_path = "";
 
-      do {
+      do
+        {
           SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn,
                                               fetch_url, SVN_INVALID_REVNUM,
                                               "0", base_props, pool));
@@ -2105,7 +2104,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           present_path = svn_path_join(svn_path_basename(fetch_url, pool),
                                        present_path, pool);
           fetch_url = svn_path_dirname(fetch_url, pool);
-      } while (!svn_path_is_empty(fetch_url));
+        }
+      while (!svn_path_is_empty(fetch_url));
 
       if (present_path[0] != '\0')
         {
