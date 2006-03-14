@@ -512,7 +512,16 @@ do_open(svn_wc_adm_access_t **adm_access,
 
           /* See if someone wants to cancel this operation. */
           if (cancel_func)
-            SVN_ERR(cancel_func(cancel_baton));
+            {
+              err =  cancel_func(cancel_baton);
+              if (err)
+                {
+                  /* This closes all the children in temporary hash as well */
+                  svn_error_clear(svn_wc_adm_close(lock));
+                  svn_pool_destroy(subpool);
+                  return err;
+                }
+            }
 
           apr_hash_this(hi, NULL, NULL, &val);
           entry = val;
