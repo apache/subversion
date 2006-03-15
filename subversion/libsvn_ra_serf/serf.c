@@ -252,42 +252,6 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
-                     const char *path,
-                     svn_revnum_t revision,
-                     apr_uint32_t dirent_fields,
-                     apr_hash_t **dirents,
-                     svn_revnum_t *fetched_rev,
-                     apr_hash_t **props,
-                     apr_pool_t *pool)
-{
-  svn_ra_serf__session_t *session = ra_session->priv;
-  svn_stringbuf_t *buf;
-
-  if (dirents)
-    {
-      abort();
-    }
-
-
-  buf = svn_stringbuf_create(session->repos_url.path, pool);
-  svn_path_add_component(buf, path);
-
-  *props = apr_hash_make(pool);
-
-  SVN_ERR(svn_ra_serf__retrieve_props(*props, session, session->conns[0],
-                                      buf->data, revision, "0", all_props,
-                                      pool));
-
-  if (fetched_rev)
-    {
-      *fetched_rev = revision;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
                  apr_hash_t **ret_props,
                  const char **ret_path,
@@ -459,6 +423,47 @@ dirent_walker(void *baton,
     }
 }
 
+struct path_dirent_visitor_t {
+  apr_hash_t *full_paths;
+  apr_hash_t *base_paths;
+  const char *orig_path;
+};
+
+void
+path_dirent_walker(void *baton,
+                   const void *path, apr_ssize_t path_len,
+                   const void *ns, apr_ssize_t ns_len,
+                   const void *name, apr_ssize_t name_len,
+                   const void *val,
+                   apr_pool_t *pool)
+{
+  struct path_dirent_visitor_t *dirents = baton;
+  svn_dirent_t *entry;
+
+  /* Skip our original path. */
+  if (strcmp(path, dirents->orig_path) == 0)
+    {
+      return;
+    }
+
+  entry = apr_hash_get(dirents->full_paths, path, path_len);
+
+  if (!entry)
+    {
+      const char *basename;
+
+      entry = apr_pcalloc(pool, sizeof(*entry));
+
+      apr_hash_set(dirents->full_paths, path, path_len, entry);
+
+      basename = svn_path_uri_decode(svn_path_basename(path, pool), pool);
+
+      apr_hash_set(dirents->base_paths, basename, APR_HASH_KEY_STRING, entry);
+    }
+
+  dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
+}
+
 static svn_error_t *
 svn_ra_serf__stat(svn_ra_session_t *ra_session,
                   const char *rel_path,
@@ -482,6 +487,100 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
                               pool);
 
   *dirent = entry;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
+                     const char *rel_path,
+                     svn_revnum_t revision,
+                     apr_uint32_t dirent_fields,
+                     apr_hash_t **dirents,
+                     svn_revnum_t *fetched_rev,
+                     apr_hash_t **ret_props,
+                     apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  const char *path;
+
+  path = session->repos_url.path;
+
+  /* If we have a relative path, append it. */
+  if (rel_path)
+    {
+      path = svn_path_url_add_component(path, rel_path, pool);
+    }
+
+  props = apr_hash_make(pool);
+
+  if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
+    {
+      const char *vcc_url, *relative_url, *baseline_url, *basecoll_url;
+
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+                                         session, session->conns[0],
+                                         path, pool));
+
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, revision,
+                                          "0", baseline_props, pool));
+      
+      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
+                                               "DAV:", "baseline-collection");
+      
+      if (!basecoll_url)
+        {
+          abort();
+        }
+
+      if (fetched_rev)
+       {
+         *fetched_rev = revision;
+       }
+
+      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
+      revision = SVN_INVALID_REVNUM;
+    }
+
+  /* If we're asked for children, fetch them now. */
+  if (dirents)
+    {
+      svn_ra_serf__propfind_context_t *prop_ctx;
+      struct path_dirent_visitor_t dirent_walk;
+
+      prop_ctx = NULL;
+      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
+                                 path, revision, "1", all_props, TRUE,
+                                 NULL, session->pool);
+      
+      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
+
+      /* We're going to create two hashes to help the walker along.
+       * We're going to return the 2nd one back to the caller as it
+       * will have the basenames it expects.
+       */
+      dirent_walk.full_paths = apr_hash_make(pool);
+      dirent_walk.base_paths = apr_hash_make(pool);
+      dirent_walk.orig_path = svn_path_canonicalize(path, pool);
+
+      svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
+                                  &dirent_walk, pool);
+
+      *dirents = dirent_walk.base_paths;
+    }
+
+  /* If we're asked for the directory properties, fetch them too. */
+  if (ret_props)
+    {
+      props = apr_hash_make(pool);
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          path, revision, "0", all_props,
+                                          pool));
+      /* TODO Convert them into a format that the caller expects. */
+      *ret_props = props;
+    }
 
   return SVN_NO_ERROR;
 }

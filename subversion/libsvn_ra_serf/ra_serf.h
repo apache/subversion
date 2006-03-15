@@ -484,6 +484,20 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
+typedef void
+(*svn_ra_serf__path_rev_walker_t)(void *baton,
+                                  const void *path, apr_ssize_t path_len,
+                                  const void *ns, apr_ssize_t ns_len,
+                                  const void *name, apr_ssize_t name_len,
+                                  const void *val,
+                                  apr_pool_t *pool);
+void
+svn_ra_serf__walk_all_paths(apr_hash_t *props,
+                            svn_revnum_t rev,
+                            svn_ra_serf__path_rev_walker_t walker,
+                            void *baton,
+                            apr_pool_t *pool);
+
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
 const void *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
