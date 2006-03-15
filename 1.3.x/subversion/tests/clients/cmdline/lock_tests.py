@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005 CollabNet.  All rights reserved.
+# Copyright (c) 2005-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1429,6 +1429,86 @@ def info_moved_path(sbox):
     print "Info didn't output an URL."
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+def ls_url_encoded(sbox):
+  "ls locked path needing URL encoding"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  dirname = os.path.join(wc_dir, "space dir")
+  fname = os.path.join(dirname, "f")
+
+  # Create a dir with a space in its name and a file therein.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "mkdir", dirname)
+  svntest.main.file_append(fname, "someone was here".encode('utf-8'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", fname)
+  expected_output = svntest.wc.State(wc_dir, {
+    'space dir' : Item(verb='Adding'),
+    'space dir/f' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    "space dir" : Item(status='  ', wc_rev=2),
+    "space dir/f" : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Lock the file.
+  svntest.actions.run_and_verify_svn("Lock space dir/f", None, [],
+                                     "lock", fname,
+                                     "--username", svntest.main.wc_author,
+                                     "--password", svntest.main.wc_passwd)
+
+  # Make sure ls shows it being locked.
+  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f"
+  svntest.actions.run_and_verify_svn("List space dir",
+                                     expected_output, [],
+                                     "list", "-v", dirname)  
+
+#----------------------------------------------------------------------
+# Make sure unlocking a path with the wrong lock token fails.
+def unlock_wrong_token(sbox):
+  "veriy unlocking with wrong lock token"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_url = svntest.main.current_repo_url + "/iota"
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     file_path)
+
+  # Steal the lock as the same author, but using an URL to keep the old token
+  # in the WC.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     "--force", file_url)
+
+  # Then, unlocking the WC path should fail.
+  # ### The error message returned is actually this, but let's worry about that
+  # ### another day...
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*((No lock on path)|(400 Bad Request))",
+                                     'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     file_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1464,6 +1544,8 @@ test_list = [ None,
               repos_lock_with_info,
               unlock_already_unlocked_files,
               info_moved_path,
+              ls_url_encoded,
+              unlock_wrong_token,
             ]
 
 if __name__ == '__main__':

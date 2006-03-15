@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_time.h"
+#include "svn_pools.h"
 
 #include "client.h"
 
@@ -282,7 +283,7 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
                      apr_pool_t *pool)
 {
   apr_array_header_t *paths = apr_array_make (pool, 2, sizeof (const char *));
-  const char *top_url, *src_rel, *dst_rel, *message;
+  const char *top_url, *src_rel, *dst_rel, *message, *repos_root;
   svn_revnum_t youngest;
   svn_ra_session_t *ra_session;
   svn_node_kind_t src_kind, dst_kind;
@@ -293,6 +294,7 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
   svn_boolean_t resurrection = FALSE;
   struct path_driver_cb_baton cb_baton;
   svn_error_t *err;
+  apr_pool_t *subpool;
 
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
@@ -310,30 +312,18 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
       top_url = svn_path_dirname (top_url, pool);
     }
 
-  /* Get the portions of the SRC and DST URLs that are relative to
-     TOP_URL, and URI-decode those sections. */
-  src_rel = svn_path_is_child (top_url, src_url, pool);
-  if (src_rel)
-    src_rel = svn_path_uri_decode (src_rel, pool);
-  else
-    src_rel = "";
-
-  dst_rel = svn_path_is_child (top_url, dst_url, pool);
-  if (dst_rel)
-    dst_rel = svn_path_uri_decode (dst_rel, pool);
-  else
-    dst_rel = "";
-
-  /* We can't move something into itself, period. */
-  if (svn_path_is_empty (src_rel) && is_move)
-    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              _("Cannot move URL '%s' into itself"), src_url);
+  subpool = svn_pool_create (pool);
 
   /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files. */
+     directory, nor a place to put temp files.
+
+     Note that we open this in a subpool because we may need to move
+     it to another URL, and 1.3.x lacks ra_reparent so the only way
+     to do that is to close it and open it again.
+   */
   err = svn_client__open_ra_session_internal (&ra_session, top_url,
                                               NULL, NULL, NULL, FALSE, TRUE, 
-                                              ctx, pool);
+                                              ctx, subpool);
 
   /* If the two URLs appear not to be in the same repository, then
      top_url will be empty and the call to svn_ra_open2()
@@ -365,6 +355,40 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
       else
         return err;
     }
+
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root, subpool));
+
+  if (strcmp (dst_url, repos_root) != 0
+      && svn_path_is_child (dst_url, src_url, pool) != NULL)
+    {
+      resurrection = TRUE;
+      top_url = svn_path_dirname (top_url, pool);
+
+      svn_pool_clear (subpool);
+
+      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, top_url,
+                                                     NULL, NULL, NULL, FALSE,
+                                                     TRUE, ctx, subpool));
+    }
+
+  /* Get the portions of the SRC and DST URLs that are relative to
+     TOP_URL, and URI-decode those sections. */
+  src_rel = svn_path_is_child (top_url, src_url, pool);
+  if (src_rel)
+    src_rel = svn_path_uri_decode (src_rel, pool);
+  else
+    src_rel = "";
+
+  dst_rel = svn_path_is_child (top_url, dst_url, pool);
+  if (dst_rel)
+    dst_rel = svn_path_uri_decode (dst_rel, pool);
+  else
+    dst_rel = "";
+
+  /* We can't move something into itself, period. */
+  if (svn_path_is_empty (src_rel) && is_move)
+    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                              _("Cannot move URL '%s' into itself"), src_url);
 
   /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */

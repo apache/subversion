@@ -18,20 +18,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #
-# Author: Archie Cobbs   archie at awarix dot com
-# Rewritten in Python by: Giovanni Bajo  rasky at develer dot com
+# Author: Archie Cobbs <archie at awarix dot com>
+# Rewritten in Python by: Giovanni Bajo <rasky at develer dot com>
 #
 # Acknowledgments:
 #   John Belmonte <john at neggie dot net> - metadata and usability
 #     improvements
 #   Blair Zajac <blair at orcaware dot com> - random improvements
+#   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional merging
+#     support
 #
 # $HeadURL$
 # $LastChangedDate$
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# Differences from official svnmerge:
+# Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
 # - "svnmerge avail" now only shows commits in head, not also commits in other
@@ -41,7 +43,7 @@
 #   the complementary "svnmerge unblock".
 # - "svnmerge avail" has grown two new options:
 #   -B to display a list of the blocked revisions
-#   -A to display both the the blocked and the available revisions.
+#   -A to display both the blocked and the available revisions.
 # - Improved generated commit message to make it machine parsable even when
 #   merging commits which are themselves merges.
 # - Add --force option to skip working copy check
@@ -49,9 +51,9 @@
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
 
-import sys, os, getopt, re, types, popen2
+import sys, os, getopt, re, types, popen2, tempfile
 
-NAME="svnmerge"
+NAME = "svnmerge"
 if not hasattr(sys, "version_info") or sys.version_info < (2, 0):
     print "%s requires Python 2.0 or newer" % NAME
     sys.exit(1)
@@ -124,11 +126,11 @@ def kwextract(s):
     except IndexError:
         return "<unknown>"
 
-SRCREV=kwextract('$Rev$')
-SRCDATE=kwextract('$Date$')
+__revision__ = kwextract('$Rev$')
+__date__ = kwextract('$Date$')
 
 # Additional options, not (yet?) mapped to command line flags
-opts = {
+default_opts = {
     "svn": "svn",
     "prop": NAME + "-integrated",
     "block_prop": NAME + "-blocked",
@@ -150,11 +152,19 @@ def console_width():
         res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
         if res:
             import struct
-            (bufx, bufy, curx, cury, wattr,
-             left, top, right, bottom, maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
+            (bufx, bufy,
+             curx, cury, wattr,
+             left, top, right, bottom,
+             maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
             return right - left + 1
     except ImportError:
         pass
+
+    # Parse the output of stty -a
+    out = os.popen("stty -a").read()
+    m = re.search(r"columns (\d+);", out)
+    if m:
+        return int(m.group(1))
 
     # sensible default
     return 80
@@ -226,21 +236,26 @@ def check_dir_clean(dir):
         report('skipping status check because of --force')
         return
     report('checking status of "%s"' % dir)
-    for L in launchsvn("status -q %s" % dir):
-        if L:
-            error('"%s" has local modifications; it must be clean' % dir)
+
+    # Checking with -q does not show unversioned files or external
+    # directories.  Though it displays a debug message for external
+    # directories, after a blank line.  So, practically, the first line
+    # matters: if it's non-empty there is a modification.
+    out = launchsvn("status -q %s" % dir)
+    if out and out[0].strip():
+        error('"%s" has local modifications; it must be clean' % dir)
     for L in launchsvn("status -u %s" % dir):
-        if L[7] == '*':
+        if len(L) > 7 and L[7] == '*':
             error('"%s" is not up to date; please "svn update" first' % dir)
 
-class RevisionList:
+class RevisionSet:
     """
     A set of revisions, held in dictionary form for easy manipulation. If we
     were to rewrite this script for Python 2.3+, we would subclass this from
     set (or UserSet).
     """
     def __init__(self, parm):
-        """Constructs a RevisionList from a string in property form, or from
+        """Constructs a RevisionSet from a string in property form, or from
         a dictionary whose keys are the revisions. Raises ValueError if the
         input string is invalid."""
         if isinstance(parm, types.DictType):
@@ -258,12 +273,16 @@ class RevisionList:
                 else:
                     self._revs[int(R)] = 1
 
-    def normalized(self):
-        """Returns a normalized version of the revision list, which is an
-        ordered list of couples (start,end), with the minimum number of
-        intervals."""
+    def sorted(self):
         revnums = self._revs.keys()
         revnums.sort()
+        return revnums
+
+    def normalized(self):
+        """Returns a normalized version of the revision set, which is an
+        ordered list of couples (start,end), with the minimum number of
+        intervals."""
+        revnums = self.sorted()
         revnums.reverse()
         ret = []
         while revnums:
@@ -274,7 +293,7 @@ class RevisionList:
         return ret
 
     def __str__(self):
-        """Convert the revision list to a string, using its normalized form."""
+        """Convert the revision set to a string, using its normalized form."""
         L = []
         for s,e in self.normalized():
             if s == e:
@@ -286,54 +305,68 @@ class RevisionList:
     def __contains__(self, rev):
         return self._revs.has_key(rev)
 
-    def __sub__(self, RL):
+    def __sub__(self, rs):
         """Compute subtraction as in sets."""
         revs = {}
         for r in self._revs.keys():
-            if r not in RL:
+            if r not in rs:
                 revs[r] = 1
-        return RevisionList(revs)
+        return RevisionSet(revs)
 
-    def __and__(self, RL):
+    def __and__(self, rs):
         """Compute intersections as in sets."""
         revs = {}
         for r in self._revs.keys():
-            if r in RL:
+            if r in rs:
                 revs[r] = 1
-        return RevisionList(revs)
+        return RevisionSet(revs)
 
     def __nonzero__(self):
-        return bool(self._revs)
+        return len(self._revs) != 0
+
+    def __len__(self):
+        """Return the number of revisions in the set."""
+        return len(self._revs)
 
     def __iter__(self):
-        revnums = self._revs.keys()
-        revnums.sort()
-        return iter(revnums)
+        return iter(self.sorted())
 
-    def __or__(self, RL):
+    def __or__(self, rs):
         """Compute set union."""
         revs = self._revs.copy()
-        revs.update(RL._revs)
-        return RevisionList(revs)
+        revs.update(rs._revs)
+        return RevisionSet(revs)
 
-def get_revlist_prop(dir, propname):
-    """Extract the values of a property which store per-head revision lists,
-    as a dictionary: key is a relative path to a head (in the repository), and
-    value is the integrated revisions for that head."""
+def dict_from_revlist_prop(propvalue):
+    """Given a property value as a string containing per-head revision
+    lists, return a dictionary whose key is a relative path to a head
+    (in the repository), and whose value is the revisions for that
+    head."""
     prop = {}
 
-    # Note that propget does not return error if the property does not exist:
-    # it simply does not output anything. So we do not need to check for
-    # LaunchError here.
-    out = launchsvn('propget "%s" "%s"' % (propname, dir),
-                    split_lines=False)
-
-    # multiple heads are separated by any whitespace
-    for L in out.split():
-        # We use rsplit to play safe and allow colons in paths
+    # Multiple heads are separated by any whitespace.
+    for L in propvalue.split():
+        # We use rsplit to play safe and allow colons in paths.
         head, revs = rsplit(L.strip(), ":", 1)
         prop[head] = revs
     return prop
+
+def get_revlist_prop(url_or_dir, propname, rev=None):
+    """Given a repository URL or working copy path and a property
+    name, extract the values of the property which store per-head
+    revision lists and return a dictionary whose key is a relative
+    path to a head (in the repository), and whose value is the
+    revisions for that head."""
+
+    # Note that propget does not return an error if the property does
+    # not exist, it simply does not output anything. So we do not need
+    # to check for LaunchError here.
+    args = '--strict "%s" "%s"' % (propname, url_or_dir)
+    if rev:
+        args = '-r %s %s' % (rev, args)
+    out = launchsvn('propget %s' % args, split_lines=False)
+
+    return dict_from_revlist_prop(out)
 
 def get_merge_props(dir):
     """Extract the merged revisions."""
@@ -346,21 +379,42 @@ def get_block_props(dir):
 def get_blocked_revs(dir, head_path):
     p = get_block_props(dir)
     if p.has_key(head_path):
-        return RevisionList(p[head_path])
-    return RevisionList("")
+        return RevisionSet(p[head_path])
+    return RevisionSet("")
 
 def format_merge_props(props, sep=" "):
+    """Formats the hash PROPS as a string suitable for use as a
+    Subversion property value."""
     assert sep in ["\t", "\n", " "]   # must be a whitespace
     props = props.items()
     props.sort()
     L = []
-    for h,r in props:
+    for h, r in props:
         L.append(h + ":" + r)
     return sep.join(L)
 
+def _run_propset(dir, prop, value):
+    """Set the property 'prop' of directory 'dir' to value 'value'. We go
+    through a temporary file to not run into command line length limits."""
+    try:
+        fd, fname = tempfile.mkstemp()
+        f = os.fdopen(fd, "wb")
+    except AttributeError:
+        # Fallback for Python <= 2.3 which does not have mkstemp (mktemp
+        # suffers from race conditions. Not that we care...)
+        fname = tempfile.mktemp()
+        f = open(fname, "wb")
+
+    try:
+        f.write(value)
+        f.close()
+        report("property data written to temp file: %s" % value)
+        svn_command('propset "%s" -F "%s" "%s"' % (prop, fname, dir))
+    finally:
+        os.remove(fname)
+
 def set_merge_props(dir, props):
-    props = format_merge_props(props)
-    svn_command('propset "%s" "%s" "%s"' % (opts["prop"], props, dir))
+    _run_propset(dir, opts["prop"], format_merge_props(props))
 
 def set_blocked_revs(dir, head_path, revs):
     props = get_block_props(dir)
@@ -371,7 +425,7 @@ def set_blocked_revs(dir, head_path, revs):
             del props[head_path]
     props = format_merge_props(props)
     if props:
-        svn_command('propset "%s" "%s" "%s"' % (opts["block_prop"], props, dir))
+        _run_propset(dir, opts["block_prop"], props)
     else:
         svn_command('propdel "%s" "%s"' % (opts["block_prop"], dir))
 
@@ -381,7 +435,8 @@ def is_url(url):
 
 def is_wc(dir):
     """Check if a directory is a working copy."""
-    return os.path.isdir(dir) and os.path.isdir(os.path.join(dir, ".svn"))
+    return os.path.isdir(os.path.join(dir, ".svn")) or \
+           os.path.isdir(os.path.join(dir, "_svn"))
 
 _cache_svninfo = {}
 def get_svninfo(path):
@@ -389,7 +444,7 @@ def get_svninfo(path):
     This function uses an internal cache to let clients query information
     many times."""
     global _cache_svninfo
-    if path in _cache_svninfo:
+    if _cache_svninfo.has_key(path):
         return _cache_svninfo[path]
     info = {}
     for L in launchsvn('info "%s"' % path):
@@ -431,26 +486,28 @@ def get_repo_root(dir):
             url = temp
         assert 0, "svn repos root not found"
 
-def url_to_rlpath(dir):
+def url_to_rlpath(url):
     """Convert a repos URL into a repo-local path."""
-    root = get_repo_root(dir)
+    root = get_repo_root(url)
     assert root[-1] != "/"
-    assert dir[:len(root)] == root, "dir=%r, root=%r" % (dir, root)
-    return dir[len(root):]
+    assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
+    return url[len(root):]
 
 def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
     rlpath = url_to_rlpath(target_to_url(dir))
-    out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir, split_lines=False)
+    out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
+                    split_lines=False)
     out = out.replace("\n", " ")
-    m = re.search(r'(<path .*action="A".*>%s</path>)' % rlpath, out)
-    if not m:
+    try:
+        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)' % rlpath, out)
+        head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
+        rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
+        return head,rev
+    except AttributeError:
         return None,None
-    head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
-    rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
-    return head,rev
 
 def get_latestrev(url):
     """Get the latest revision of the repository of which URL is part."""
@@ -480,7 +537,7 @@ def construct_merged_log_message(url, revnums):
     other merges."""
     logs = ['']
     longest_sep = ''
-    for r in revnums:
+    for r in revnums.sorted():
         message = get_commit_log(opts["head_url"], r)
         logs.append(message)
         for match in LOG_SEPARATOR_RE.findall(message):
@@ -499,23 +556,24 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    dir = target_to_url(branch_dir)
-    dir = url_to_rlpath(dir)
+    dir = url_to_rlpath(target_to_url(branch_dir))
 
-    # To make bi-directional merges easier, find the target's
+    # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
     # possible integration sources.
     if props.has_key(dir):
         del props[dir]
 
     if len(props) > 1:
-        error('multiple heads found. Explicit head argument (-S/--head) required.')
+        error('multiple heads found. '
+              'Explicit head argument (-S/--head) required.')
 
     return props.keys()[0]
 
 def check_old_prop_version(branch_dir, props):
     """Check if props (of branch_dir) are svnmerge properties in old format,
     and emit an error if so."""
+
     # Previous svnmerge versions allowed trailing /'s in the repository
     # local path.  Newer versions of svnmerge will trim trailing /'s
     # appearing in the command line, so if there are any properties with
@@ -538,41 +596,125 @@ def check_old_prop_version(branch_dir, props):
             (opts["prop"], format_merge_props(fixed), branch_dir)
         sys.exit(1)
 
-def analyze_revs(url, begin=1, end=None):
-    """For the given url, analyze the revisions in the interval begin-end
-    (which defaults to 1-HEAD), to find out which revisions are changes in
-    the URL and which are changes elsewhere (so-called 'phantom' revisions).
-    Return a tuple of two RevisionsList: (real_revs, phantom_revs).
+def analyze_revs(target_dir, url, begin=1, end=None):
+    """For the source of the merges in the head url being merged into
+    target_dir, analyze the revisions in the interval begin-end (which
+    defaults to 1-HEAD), to find out which revisions are changes in
+    the url, which are changes elsewhere (so-called 'phantom'
+    revisions), and optionally which are reflected changes (to avoid
+    conflicts that can occur when doing bidirectional merging between
+    branches).  Return a tuple of three RevisionSet's:
+        (real_revs, phantom_revs, reflected_revs).
 
-    NOTE: To maximize speed, if "end" is not provided, the function is not
-    able to find phantom revisions following the last real revision in the URL.
+    NOTE: To maximize speed, if "end" is not provided, the function is
+    not able to find phantom revisions following the last real
+    revision in the URL.
     """
+
     begin = str(begin)
     if end is None:
         end = "HEAD"
     else:
         end = str(end)
+        if long(begin) > long(end):
+            return RevisionSet(""), RevisionSet(""), RevisionSet("")
 
-    out = launchsvn('log --quiet -r%s:%s "%s"' % (begin, end, url),
-                    split_lines=False)
-    revs = re.compile(r"^r(\d+)", re.M).findall(out)
-    revs = RevisionList(",".join(revs))
+    # Find all the revisions where the source of the merge revisions
+    # was modified.  Generate two lists of revisions, the first with
+    # all the revisions, and the second with a list of revisions where
+    # the source directory itself that is the source of the merges was
+    # modified, as these may be reflected merges.
+
+    # If bidirectional merge support is enabled, then add the
+    # --verbose flag to the 'svn log' command to get a list of files
+    # and directories that were added, modified or deleted.  Even with
+    # the --verbose flag, the --quiet flag prevents the commit log
+    # message from being printed.
+    log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
+    if opts.has_key("bidirectional") and opts["bidirectional"]:
+        log_opts = "--verbose " + log_opts
+    lines = launchsvn("log %s" % log_opts)
+
+    current_rev = None
+    rlpath = url_to_rlpath(url)
+
+    # This holds a list of all the revisions that changed something in
+    # the head branch.
+    revs = []
+
+    # This holds a list of all the revisions that changed a property
+    # on the head branch directory itself.  These revisions may
+    # contain changes on the integrated revision property list which
+    # are checked below.
+    prop_changed_revs = []
+
+    find_revision_re = re.compile(r"^r(\d+)")
+    source_dir_modified_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
+
+    source_dir_modified = False
+    for line in lines:
+        find_revision_match = find_revision_re.match(line)
+        if find_revision_match:
+            rev = find_revision_match.groups()[0]
+            current_rev = int(rev)
+            revs.append(rev)
+            source_dir_modified = False
+            continue
+
+        if not current_rev:
+            continue
+
+        if not source_dir_modified and source_dir_modified_re.match(line):
+            source_dir_modified = True
+            prop_changed_revs.append(current_rev)
+
+    revs = RevisionSet(",".join(revs))
 
     if end == "HEAD":
         # If end is not provided, we do not know which is the latest revision
-        # in the repository. So return the phantom revision list only up to
+        # in the repository. So return the phantom revision set only up to
         # the latest known revision.
         end = str(list(revs)[-1])
 
-    phantom_revs = RevisionList("%s-%s" % (begin, end)) - revs
-    return revs, phantom_revs
+    phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
+    reflected_revs = []
+
+    if opts.has_key("bidirectional") and opts["bidirectional"]:
+        report("checking for reflected changes in %d revision(s)"
+               % len(prop_changed_revs))
+
+        previous_rev = None
+        previous_props = None
+
+        for rev in prop_changed_revs:
+            if rev-1 == previous_rev:
+                old_props = previous_props
+            else:
+                old_props = get_revlist_prop(url, opts["prop"], rev-1)
+
+            new_props = get_revlist_prop(url, opts["prop"], rev)
+            previous_props = new_props
+            previous_rev = rev
+
+            old_revisions = old_props.get(target_dir)
+            new_revisions = new_props.get(target_dir)
+
+            if new_revisions != old_revisions:
+                reflected_revs.append("%s" % rev)
+
+    reflected_revs = RevisionSet(",".join(reflected_revs))
+
+    return revs, phantom_revs, reflected_revs
 
 def analyze_head_revs(branch_dir, head_url):
     """For the given branch and head, extract the real and phantom
     head revisions."""
+    branch_url = target_to_url(branch_dir)
+    target_dir = url_to_rlpath(branch_url)
+
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    head_rev = get_latestrev(target_to_url(branch_dir))
+    end_rev = get_latestrev(branch_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
@@ -581,11 +723,20 @@ def analyze_head_revs(branch_dir, head_url):
     if r and r[0][0] == 1:
         base = r[0][1]
 
-    return analyze_revs(head_url, base, head_rev)
+    # See if the user filtered the revision set. If so, we are not
+    # interested in something outside that range.
+    if opts["revision"]:
+        revs = RevisionSet(opts["revision"]).sorted()
+        if base < revs[0]:
+            base = revs[0]
+        if end_rev > revs[-1]:
+            end_rev = revs[-1]
+
+    return analyze_revs(target_dir, head_url, base, end_rev)
 
 def minimal_merge_intervals(revs, phantom_revs):
     """Produce the smallest number of intervals suitable for merging. revs
-    is the RevisionList which we want to merge, and phantom_revs are phantom
+    is the RevisionSet which we want to merge, and phantom_revs are phantom
     revisions which can be used to concatenate intervals, thus minimizing the
     number of operations."""
     revnums = revs.normalized()
@@ -613,9 +764,9 @@ def action_init(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    # Get initial revision list if not explicitly specified
+    # Get the initial revision set if not explicitly specified.
     revs = opts["revision"] or "1-" + get_latestrev(opts["head_url"])
-    revs = RevisionList(revs)
+    revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
            (branch_dir, revs, opts["head_url"]))
@@ -637,14 +788,17 @@ def action_init(branch_dir, branch_props):
 
 def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
-    head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
+    head_revs, phantom_revs, reflected_revs = \
+               analyze_head_revs(branch_dir, opts["head_url"])
     report('skipping phantom revisions: %s' % phantom_revs)
+    if reflected_revs:
+        report('skipping reflected revisions: %s' % reflected_revs)
 
     blocked_revs = get_blocked_revs(branch_dir, opts["head_path"])
-    avail_revs = head_revs - opts["merged_revs"] - blocked_revs
+    avail_revs = head_revs - opts["merged_revs"] - blocked_revs - reflected_revs
 
-    # Compose the list of revisions to show
-    revs = RevisionList("")
+    # Compose the set of revisions to show
+    revs = RevisionSet("")
     if "avail" in opts["avail_showwhat"]:
         revs |= avail_revs
     if "blocked" in opts["avail_showwhat"]:
@@ -652,12 +806,13 @@ def action_avail(branch_dir, branch_props):
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
-        revs = revs & RevisionList(opts["revision"])
+        revs = revs & RevisionSet(opts["revision"])
 
     # Show them, either numerically, in log format, or as diffs
     if opts["avail_display"] == "revisions":
-        report("available revisions to be merged are:")
-        print revs
+        if revs:
+            report("available revisions to be merged are:")
+            print revs
     elif opts["avail_display"] == "logs":
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
@@ -668,7 +823,8 @@ def action_avail(branch_dir, branch_props):
             if start == end:
                 print "%s: changes in revision %d follow" % (NAME, start)
             else:
-                print "%s: changes in revisions %d-%d follow" % (NAME, start, end)
+                print "%s: changes in revisions %d-%d follow" % (NAME,
+                                                                 start, end)
             print
 
             # Note: the starting revision number to 'svn diff' is
@@ -683,10 +839,11 @@ def action_merge(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
+    head_revs, phantom_revs, reflected_revs = \
+               analyze_head_revs(branch_dir, opts["head_url"])
 
     if opts["revision"]:
-        revs = RevisionList(opts["revision"])
+        revs = RevisionSet(opts["revision"])
     else:
         revs = head_revs
 
@@ -694,16 +851,19 @@ def action_merge(branch_dir, branch_props):
     merged_revs = opts["merged_revs"]
 
     # Show what we're doing
-    if opts["verbose"]:  # just to avoid useless calculations if we don't need reports
+    if opts["verbose"]:  # just to avoid useless calculations
         if merged_revs & revs:
-            report('"%s" already contains revisions %s' % (branch_dir, merged_revs & revs))
+            report('"%s" already contains revisions %s' % (branch_dir,
+                                                           merged_revs & revs))
         if phantom_revs:
             report('memorizing phantom revision(s): %s' % phantom_revs)
+        if reflected_revs:
+            report('memorizing reflected revision(s): %s' % reflected_revs)
         if blocked_revs & revs:
             report('skipping blocked revisions(s): %s' % (blocked_revs & revs))
 
-    # Compute final merge list
-    revs = revs - merged_revs - blocked_revs
+    # Compute final merge set.
+    revs = revs - merged_revs - blocked_revs - reflected_revs - phantom_revs
     if not revs:
         report('no revisions to merge, exiting')
         return
@@ -720,7 +880,8 @@ def action_merge(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit_file"]:
         f = open(opts["commit_file"], "w")
-        print >>f, 'Merged revisions %s via %s from ' % (revs, NAME)
+        print >>f, 'Merged revisions %s via %s from ' % \
+                    (revs | phantom_revs, NAME)
         print >>f, '%s' % opts["head_url"]
         if opts["commit_verbose"]:
             print >>f
@@ -729,8 +890,8 @@ def action_merge(branch_dir, branch_props):
         f.close()
         report('wrote commit message to "%s"' % opts["commit_file"])
 
-    # Update list of merged revisions
-    merged_revs = merged_revs | revs | phantom_revs
+    # Update the set of merged revisions.
+    merged_revs = merged_revs | revs | reflected_revs | phantom_revs
     branch_props[opts["head_path"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
 
@@ -739,12 +900,13 @@ def action_block(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
-    head_revs, phantom_revs = analyze_head_revs(branch_dir, opts["head_url"])
+    head_revs, phantom_revs, reflected_revs = \
+               analyze_head_revs(branch_dir, opts["head_url"])
     revs_to_block = head_revs - opts["merged_revs"]
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
-        revs_to_block = RevisionList(opts["revision"]) & revs_to_block
+        revs_to_block = RevisionSet(opts["revision"]) & revs_to_block
 
     if not revs_to_block:
         error('no available revisions to block')
@@ -776,7 +938,7 @@ def action_unblock(branch_dir, branch_props):
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
-        revs_to_unblock = revs_to_unblock & RevisionList(opts["revision"])
+        revs_to_unblock = revs_to_unblock & RevisionSet(opts["revision"])
 
     if not revs_to_unblock:
         error('no available revisions to unblock')
@@ -803,7 +965,8 @@ def action_unblock(branch_dir, branch_props):
 
 class OptBase:
     def __init__(self, *args, **kwargs):
-        self.help = kwargs.pop("help")
+        self.help = kwargs["help"]
+        del kwargs["help"]
         self.lflags = []
         self.sflags = []
         for a in args:
@@ -811,8 +974,9 @@ class OptBase:
             elif a.startswith("-"):  self.sflags.append(a)
             else:
                 raise TypeError, "invalid flag name: %s" % a
-        if "dest" in kwargs:
-            self.dest = kwargs.pop("dest")
+        if kwargs.has_key("dest"):
+            self.dest = kwargs["dest"]
+            del kwargs["dest"]
         else:
             if not self.lflags:
                 raise TypeError, "cannot deduce dest name without long options"
@@ -828,8 +992,10 @@ class OptBase:
 
 class Option(OptBase):
     def __init__(self, *args, **kwargs):
-        self.default = kwargs.pop("default", 0)
-        self.value = kwargs.pop("value", None)
+        self.default = kwargs.setdefault("default", 0)
+        del kwargs["default"]
+        self.value = kwargs.setdefault("value", None)
+        del kwargs["value"]
         OptBase.__init__(self, *args, **kwargs)
     def apply(self, state, value):
         assert value == ""
@@ -840,8 +1006,10 @@ class Option(OptBase):
 
 class OptionArg(OptBase):
     def __init__(self, *args, **kwargs):
-        self.default = kwargs.pop("default")
-        self.metavar = kwargs.pop("metavar", None)
+        self.default = kwargs["default"]
+        del kwargs["default"]
+        self.metavar = kwargs.setdefault("metavar", None)
+        del kwargs["metavar"]
         OptBase.__init__(self, *args, **kwargs)
 
         if self.metavar is None:
@@ -874,15 +1042,16 @@ class CommandOpts:
         self.progname = NAME
         self.version = version.replace("%prog", self.progname)
         self.cwidth = console_width() - 2
-        self.ctable = command_table
-        self.gopts = global_opts
-        self.copts = common_opts
+        self.ctable = command_table.copy()
+        self.gopts = global_opts[:]
+        self.copts = common_opts[:]
         self._add_builtins()
-        for k in self.ctable:
+        for k in self.ctable.keys():
             cmd = self.Cmd(k, *self.ctable[k])
             opts = []
             for o in cmd.opts:
-                if isinstance(o, types.StringTypes):
+                if isinstance(o, types.StringType) or \
+                   isinstance(o, types.UnicodeType):
                     o = self._find_common(o)
                 opts.append(o)
             cmd.opts = opts
@@ -940,36 +1109,64 @@ class CommandOpts:
                 return o
         assert 0, fl
 
-    def _fancy_getopt(self, args, opts, state=None):
+    def _compute_flags(self, opts, check_conflicts=True):
         back = {}
         sfl = ""
         lfl = []
-        if state is None:
-            state= {}
         for o in opts:
             sapp = lapp = ""
-            if o.dest not in state:
-                state[o.dest] = o.default
             if isinstance(o, OptionArg):
                 sapp, lapp = ":", "="
             for s in o.sflags:
-                if back.has_key(s):
+                if check_conflicts and back.has_key(s):
                     raise RuntimeError, "option conflict: %s" % s
                 back[s] = o
                 sfl += s[1:] + sapp
             for l in o.lflags:
-                if back.has_key(l):
+                if check_conflicts and back.has_key(l):
                     raise RuntimeError, "option conflict: %s" % l
                 back[l] = o
                 lfl.append(l[2:] + lapp)
+        return sfl, lfl, back
 
-        lopts,args = getopt.getopt(args, sfl, lfl)
+    def _extract_command(self, args):
+        """
+        Try to extract the command name from the argument list. This is
+        non-trivial because we want to allow command-specific options even
+        before the command itself.
+        """
+        opts = self.gopts[:]
+        for cmd in self.ctable.values():
+            opts.extend(cmd.opts)
+        sfl, lfl, _ = self._compute_flags(opts, check_conflicts=False)
+
+        lopts,largs = getopt.getopt(args, sfl, lfl)
+        if not largs:
+            return None
+        return self._command(largs[0])
+
+    def _fancy_getopt(self, args, opts, state=None):
+        if state is None:
+            state= {}
+        for o in opts:
+            if not state.has_key(o.dest):
+                state[o.dest] = o.default
+
+        sfl, lfl, back = self._compute_flags(opts)
+        try:
+            lopts,args = getopt.gnu_getopt(args, sfl, lfl)
+        except AttributeError:
+            # Before Python 2.3, there was no gnu_getopt support.
+            # So we can't parse intermixed positional arguments
+            # and options.
+            lopts,args = getopt.getopt(args, sfl, lfl)
+
         for o,v in lopts:
             back[o].apply(state, v)
         return state, args
 
     def _command(self, cmd):
-        if cmd not in self.ctable:
+        if not self.ctable.has_key(cmd):
             self.error("unknown command: '%s'" % cmd)
         return self.ctable[cmd]
 
@@ -980,29 +1177,31 @@ class CommandOpts:
 
         cmd = None
         try:
-            opts, args = self._fancy_getopt(args, self.gopts)
-            if args:
-                cmd = self._command(args.pop(0))
-                opts, args = self._fancy_getopt(args, self.gopts + cmd.opts, opts)
+            cmd = self._extract_command(args)
+            opts = self.gopts[:]
+            if cmd:
+                opts.extend(cmd.opts)
+                args.remove(cmd.name)
+            state, args = self._fancy_getopt(args, opts)
         except getopt.GetoptError, e:
             self.error(e, cmd)
 
         # Handle builtins
-        if self.version is not None and opts["version"]:
+        if self.version is not None and state["version"]:
             self.print_version()
             sys.exit(0)
-        if opts["help"]: # --help
-            if cmd is None:
-                cmd = self.ctable["help"]
-            else:
+        if state["help"]: # special case for --help
+            if cmd:
                 self.print_command_help(cmd)
                 sys.exit(0)
-        if cmd is None:
-            self.error("command argument required")
+            cmd = self.ctable["help"]
+        else:
+            if cmd is None:
+                self.error("command argument required")
         if str(cmd) == "help":
             cmd(*args)
             sys.exit(0)
-        return cmd, args, opts
+        return cmd, args, state
 
     def error(self, s, cmd=None):
         print >>sys.stderr, "%s: %s" % (self.progname, s)
@@ -1016,7 +1215,8 @@ class CommandOpts:
     def print_usage_line(self):
         print "usage: %s <subcommand> [options...] [args...]\n" % self.progname
     def print_command_list(self):
-        print 'Available commands (use "%s help COMMAND" for more details):\n' % self.progname
+        print 'Available commands (use "%s help COMMAND" for more details):\n' \
+              % self.progname
         cmds = self.ctable.keys()
         cmds.sort()
         indent = max(map(len, cmds))
@@ -1028,7 +1228,7 @@ class CommandOpts:
         cmd = self.ctable[str(cmd)]
         print 'usage: %s %s\n' % (self.progname, cmd.usage)
         self._print_wrapped(cmd.help)
-        def print_opts(opts):
+        def print_opts(opts, self=self):
             if not opts: return
             flags = [o.repr_flags() for o in opts]
             indent = max(map(len, flags))
@@ -1049,28 +1249,37 @@ class CommandOpts:
 ###############################################################################
 
 global_opts = [
-    Option("-v", "--verbose",
-           help="verbose mode: output more information about progress"),
-    Option("-s", "--show-changes",
-           help="show subversion commands that make changes"),
-    Option("-n", "--dry-run",
-           help="don't actually change anything, just pretend; implies --show-changes"),
     Option("-F", "--force",
            help="force operation even if the working copy is not clean, or "
                 "there are pending updates"),
+    Option("-n", "--dry-run",
+           help="don't actually change anything, just pretend; "
+                "implies --show-changes"),
+    Option("-s", "--show-changes",
+           help="show subversion commands that make changes"),
+    Option("-v", "--verbose",
+           help="verbose mode: output more information about progress"),
 ]
 
 common_opts = [
-    OptionArg("-r", "--revision", metavar="REVLIST", default="",
-              help="specify a revision list, consisting of revision numbers "
-                   'and ranges separated by commas, e.g., "534,537-539,540"'),
-    OptionArg("-f", "--commit-file", metavar="FILE", default="svnmerge-commit-message.txt",
+    Option("-b", "--bidirectional",
+           value=True,
+           default=False,
+           help="remove reflected revisions from merge candidates"),
+    OptionArg("-f", "--commit-file", metavar="FILE",
+              default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
                    "is written to"),
-    OptionArg("-S", "--head", "--source", default=None,
+    OptionArg("-r", "--revision",
+              metavar="REVLIST",
+              default="",
+              help="specify a revision list, consisting of revision numbers "
+                   'and ranges separated by commas, e.g., "534,537-539,540"'),
+    OptionArg("-S", "--head", "--source",
+              default=None,
               help="specify the head for this branch. It can be either a path "
-                   "or an URL. Needed only to disambiguate in case of multiple "
-                   "merge tracking (merging from multiple heads)"),
+                   "or an URL. Needed only to disambiguate in case of "
+                   "multiple merge tracking (merging from multiple heads)"),
 ]
 
 command_table = {
@@ -1088,38 +1297,64 @@ command_table = {
     case, %s assumes that no revision has been integrated yet since
     the branch point (unless you teach it with --revision).""" % NAME,
     [
-        "-r", "-f", # import common opts
+        "-f", "-r", # import common opts
     ]),
 
     "avail": (action_avail,
     "avail [OPTION...] [PATH]",
     """Show unmerged revisions available for PATH as a revision list.
     If --revision is given, the revisions shown will be limited to those
-    also specified in the option.""",
+    also specified in the option.
+
+    When svnmerge is used to bidirectionally merge changes between a
+    branch and its head, it is necessary to not merge the same changes
+    forth and back: e.g., if you committed a merge of a certain
+    revision of the branch into the head, you do not want that commit
+    to appear as available to merged into the branch (as the code
+    originated in the branch itself!).  svnmerge can not show these
+    so-called "reflected" revisions if you specify the --bidirectional
+    or -b command line option.""",
     [
-        Option("-l", "--log",
-               dest="avail_display", value="logs", default="revisions",
-               help="show corresponding log history instead of revision list"),
-        Option("-d", "--diff",
-               dest="avail_display", value="diffs",
-               help="show corresponding diff instead of revision list"),
-        Option("-B", "--blocked",
-               dest="avail_showwhat", value=["blocked"], default=["avail"],
-               help='show the blocked revision list (see "%s block")' % NAME),
         Option("-A", "--all",
-               dest="avail_showwhat", value=["blocked", "avail"],
+               dest="avail_showwhat",
+               value=["blocked", "avail"],
+               default=["avail"],
                help="show both available and blocked revisions (aka ignore "
                     "blocked revisions)"),
-        "-r", "-S", # import common opts
+        "-b",
+        Option("-B", "--blocked",
+               dest="avail_showwhat",
+               value=["blocked"],
+               help='show the blocked revision list (see "%s block")' % NAME),
+        Option("-d", "--diff",
+               dest="avail_display",
+               value="diffs",
+               default="revisions",
+               help="show corresponding diff instead of revision list"),
+        Option("-l", "--log",
+               dest="avail_display",
+               value="logs",
+               help="show corresponding log history instead of revision list"),
+        "-r",
+        "-S",
     ]),
 
     "merge": (action_merge,
     "merge [OPTION...] [PATH]",
     """Merge in revisions into PATH from its head. If --revision is omitted,
     all the available revisions will be merged. In any case, already merged-in
-    revisions will NOT be merged again.""",
+    revisions will NOT be merged again.
+
+    When svnmerge is used to bidirectionally merge changes between a
+    branch and its head, it is necessary to not merge the same changes
+    forth and back: e.g., if you committed a merge of a certain
+    revision of the branch into the head, you do not want that commit
+    to appear as available to merged into the branch (as the code
+    originated in the branch itself!).  svnmerge can skip these
+    so-called "reflected" revisions if you specify the --bidirectional
+    or -b command line option.""",
     [
-        "-r", "-S", "-f", # import common opts
+        "-b", "-f", "-r", "-S", # import common opts
     ]),
 
     "block": (action_block,
@@ -1128,7 +1363,7 @@ command_table = {
     list. This is useful to hide revisions which will not be integrated.
     If --revision is omitted, it defaults to all the available revisions.""",
     [
-        "-r", "-S", "-f", # import common opts
+        "-f", "-r", "-S", # import common opts
     ]),
 
     "unblock": (action_unblock,
@@ -1136,7 +1371,7 @@ command_table = {
     """Revert the effect of "%s block". If --revision is omitted, all the
     blocked revisions are unblocked""" % NAME,
     [
-        "-r", "-S", "-f", # import common opts
+        "-f", "-r", "-S", # import common opts
     ]),
 }
 
@@ -1144,10 +1379,14 @@ command_table = {
 def main(args):
     global opts
 
+    # Initialize default options
+    opts = default_opts.copy()
+
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"
                                      "Copyright (C) 2004,2005 Awarix Inc.\n"
-                                     "Copyright (C) 2005, Giovanni Bajo" % (SRCREV, SRCDATE))
+                                     "Copyright (C) 2005, Giovanni Bajo"
+                                     % (__revision__, __date__))
 
     cmd, args, state = optsparser.parse(args)
     opts.update(state)
@@ -1206,7 +1445,8 @@ def main(args):
 
     # Sanity check head_url
     assert is_url(opts["head_url"])
-    # SVN does not support non-normalized URL (and we should not have created them)
+    # SVN does not support non-normalized URL (and we should not
+    # have created them)
     assert opts["head_url"].find("/..") < 0
 
     report('head is "%s"' % opts["head_url"])
@@ -1214,10 +1454,11 @@ def main(args):
     # Get previously merged revisions (except when command is init)
     if str(cmd) != "init":
         if not branch_props.has_key(opts["head_path"]):
-            error('no integration info available for repository path "%s"' % opts["head_path"])
+            error('no integration info available for repository path "%s"'
+                  % opts["head_path"])
 
         revs = branch_props[opts["head_path"]]
-        opts["merged_revs"] = RevisionList(revs)
+        opts["merged_revs"] = RevisionSet(revs)
 
     # Perform the action
     cmd(branch_dir, branch_props)
