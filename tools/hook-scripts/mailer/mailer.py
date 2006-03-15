@@ -961,7 +961,7 @@ class TextCommitRenderer:
         w('\nModified: %s\n' % diff.path)
 
       if diff.diff_url:
-        w('Url: %s\n' % diff.diff_url)
+        w('URL: %s\n' % diff.diff_url)
 
       if not diff.diff:
         continue
