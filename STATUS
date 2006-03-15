@@ -100,6 +100,14 @@ Candidate changes:
     Votes:
       +1: brane
 
+  * r18893
+    Explicitly close WC locks when an operation is cancelled to avoid
+    leaving stray WC locks behind.
+    Justification:
+      Bug fix for oft-complained-about usability annoyance.
+    Votes:
+      +1: dlr
+
 Approved changes:
 
   * r18254
