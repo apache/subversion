@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-03-15 21:20+0100\n"
-"PO-Revision-Date: 2006-03-09 01:38+0100\n"
+"PO-Revision-Date: 2006-03-15 22:21+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2950,9 +2950,8 @@ msgid "Failed writing updated file"
 msgstr "Feil under skriving av oppdatert fil"
 
 #: libsvn_ra_serf/getloc.c:291
-#, fuzzy
 msgid "File doesn't exist on HEAD"
-msgstr "Stien «%s» finnes ikke i HEAD-revisjonen"
+msgstr "Filen finnes ikke i HEAD-revisjonen"
 
 #: libsvn_ra_serf/serf.c:51
 msgid "Access repository via WebDAV protocol through serf."
@@ -5842,7 +5841,6 @@ msgstr ""
 "     umiddelbar innsending.\n"
 
 #: svn/main.c:294
-#, fuzzy
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5872,20 +5870,20 @@ msgid ""
 "\n"
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
-"Vis forskjellene mellom to stier.\n"
+"Vis forskjellene mellom to revisjoner eller stier.\n"
 "bruk: 1. diff [-c M | -r N[:M]] [MÅL[@REV]...]\n"
 "      2. diff [-c M | -r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL"
 "[@NYREV]] \\\n"
 "              [STI...]\n"
 "      3. diff GML-URL[@GMLREV] NY-URL[@NYREV]\n"
 "\n"
-"  1. Vis endringene gjort til MÅL slik de fremstår i REV mellom to\n"
-"     revisjoner. MÅL kan være arbeidskopier eller URL-er.\n"
-"\n"
-"     N sin standardverdi er BASE hvis et vilkårlig MÅL er en sti til en\n"
-"     arbeidskopi, men må angis ellers. M sin standardverdi er den gjeldende\n"
-"     arbeidsversjonen hvis et vilkårlig MÅL er en sti til en arbeidskopi,\n"
-"     eller HEAD hvis ikke. «-c M»-valget tilsvarer «-r N:M» der N = M-1.\n"
+"  1. Vis endringene gjort i MÅL slik de fremstår i REV mellom to\n"
+"     revisjoner. MÅL kan alle være arbeidskopier eller alle kan være\n"
+"     URLer. Hvis MÅLene er arbeidskopistier, er N sin standardverdi BASE\n"
+"     og M arbeidskopien. Hvis de er URLer, må N spesifiseres og M bruker\n"
+"     standardverdien M.\n"
+"     «-c M»-valget tilsvarer «-r N:M» der N = M-1.\n"
+"     Bruk av «-c -M» gjør det motsatte: «-r M:N» der N = M-1.\n"
 "\n"
 "  2. Vis endringene mellom GML-MÅL slik det var i GMLREV og NYTT-MÅL slik "
 "det\n"
@@ -8213,7 +8211,7 @@ msgstr "skriv tjenerprosess-ID til filargument"
 
 #: svnserve/main.c:165
 msgid "run as a windows service (SCM only)"
-msgstr ""
+msgstr "kjør som en Windows-tjeneste (kun SCM)"
 
 #: svnserve/main.c:177
 #, c-format
@@ -8240,16 +8238,17 @@ msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "Valget --tunnel-user er bare gyldig i tunnelmodus.\n"
 
 #: svnserve/main.c:521
-#, fuzzy
 msgid "svnserve: "
-msgstr "Brukernavn: "
+msgstr "svnserve: "
 
+# ### FIXME: What is the Norwegian term for SCM?
 #: svnserve/main.c:532
 #, c-format
 msgid ""
 "svnserve: The --service flag is only valid if the process is started by the "
 "Service Control Manager.\n"
-msgstr ""
+msgstr "svnserve: «--service»-flagget er bare gyldig hvis prosessen er startet av "
+"Service Control Manager.\n"
 
 #: svnserve/main.c:568
 #, c-format
@@ -8289,24 +8288,25 @@ msgstr "Kan ikke opprette tråd"
 #: svnserve/winservice.c:341
 #, c-format
 msgid "Failed to create winservice_start_event"
-msgstr ""
+msgstr "Klarte ikke å opprette winservice_start_event"
 
 #: svnserve/winservice.c:352
 #, c-format
 msgid "The service failed to start"
-msgstr ""
+msgstr "Tjenesten klarte ikke å starte"
 
 #: svnserve/winservice.c:400
 #, c-format
 msgid "Failed to connect to Service Control Manager"
-msgstr ""
+msgstr "Klarte ikke å koble til Service Control Manager"
 
 #: svnserve/winservice.c:411
 #, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service."
-msgstr ""
+msgstr "Tjenesten klarte ikke å starte; en intern feil oppsto under oppstart "
+"av tjenesten."
 
 #: svnsync/main.c:65
 msgid ""
