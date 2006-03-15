@@ -171,12 +171,9 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                         session->repos_url.path,
-                         SVN_INVALID_REVNUM, "0", base_props, pool));
-
-  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
-                                  "DAV:", "version-controlled-configuration");
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
   if (!vcc_url)
     {
@@ -185,8 +182,8 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                         vcc_url, SVN_INVALID_REVNUM, "0",
-                         checked_in_props, pool));
+                                      vcc_url, SVN_INVALID_REVNUM, "0",
+                                      checked_in_props, pool));
 
   baseline_url = svn_ra_serf__get_prop(props, vcc_url,
                                        "DAV:", "checked-in");
@@ -291,16 +288,19 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__check_path(svn_ra_session_t *ra_session,
-                        const char *rel_path,
-                        svn_revnum_t revision,
-                        svn_node_kind_t *kind,
-                        apr_pool_t *pool)
+fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
+                 apr_hash_t **ret_props,
+                 const char **ret_path,
+                 svn_revnum_t *ret_revision,
+                 svn_ra_serf__session_t *session,
+                 const char *rel_path,
+                 svn_revnum_t revision,
+                 const svn_ra_serf__dav_props_t *desired_props,
+                 apr_pool_t *pool)
 {
-  svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__propfind_context_t *prop_ctx;
   apr_hash_t *props;
-  const char *path, *res_type;
+  const char *path;
 
   path = session->repos_url.path;
 
@@ -315,7 +315,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   prop_ctx = NULL;
 
   svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                             path, revision, "0", check_path_props, TRUE,
+                             path, revision, "0", desired_props, TRUE,
                              NULL, session->pool);
       
   SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
@@ -353,11 +353,36 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
       revision = SVN_INVALID_REVNUM;
       svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
                                  path, revision, "0",
-                                 check_path_props, TRUE,
+                                 desired_props, TRUE,
                                  NULL, session->pool);
       
       SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
     }
+
+  *ret_path = path;
+  *ret_prop_ctx = prop_ctx;
+  *ret_props = props;
+  *ret_revision = revision;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_serf__check_path(svn_ra_session_t *ra_session,
+                        const char *rel_path,
+                        svn_revnum_t revision,
+                        svn_node_kind_t *kind,
+                        apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  svn_ra_serf__propfind_context_t *prop_ctx;
+  const char *path, *res_type;
+  svn_revnum_t fetched_rev;
+
+  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                           session, rel_path,
+                           revision, check_path_props, pool));
 
   if (svn_ra_serf__propfind_status_code(prop_ctx) == 404)
     {
@@ -365,7 +390,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
     }
   else
     {
-      res_type = svn_ra_serf__get_ver_prop(props, path, revision,
+      res_type = svn_ra_serf__get_ver_prop(props, path, fetched_rev,
                                            "DAV:", "resourcetype");
       if (!res_type)
         {
@@ -385,14 +410,80 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+void
+dirent_walker(void *baton,
+              const void *ns, apr_ssize_t ns_len,
+              const void *name, apr_ssize_t name_len,
+              const void *val,
+              apr_pool_t *pool)
+{
+  svn_dirent_t *entry = baton;
+
+  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    {
+      entry->has_props = TRUE;
+    }
+  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    {
+      entry->has_props = TRUE;
+    }
+  else if (strcmp(ns, "DAV:") == 0)
+    {
+      if (strcmp(name, "version-name") == 0)
+        {
+          entry->created_rev = SVN_STR_TO_REV(val);
+        }
+      else if (strcmp(name, "creator-displayname") == 0)
+        {
+          entry->last_author = val;
+        }
+      else if (strcmp(name, "creationdate") == 0)
+        {
+          svn_time_from_cstring(&entry->time, val, pool);
+        }
+      else if (strcmp(name, "getcontentlength") == 0)
+        {
+          entry->size = apr_atoi64(val);
+        }
+      else if (strcmp(name, "resourcetype") == 0)
+        {
+          if (strcmp(val, "collection") == 0)
+            {
+              entry->kind = svn_node_dir;
+            }
+          else
+            {
+              entry->kind = svn_node_file;
+            }
+        }
+    }
+}
+
 static svn_error_t *
-svn_ra_serf__stat(svn_ra_session_t *session,
-                  const char *path,
+svn_ra_serf__stat(svn_ra_session_t *ra_session,
+                  const char *rel_path,
                   svn_revnum_t revision,
                   svn_dirent_t **dirent,
                   apr_pool_t *pool)
 {
-  abort();
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  svn_ra_serf__propfind_context_t *prop_ctx;
+  const char *path;
+  svn_revnum_t fetched_rev;
+  svn_dirent_t *entry;
+
+  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                           session, rel_path, revision, all_props, pool));
+
+  entry = apr_pcalloc(pool, sizeof(*entry));
+
+  svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker, entry,
+                              pool);
+
+  *dirent = entry;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
