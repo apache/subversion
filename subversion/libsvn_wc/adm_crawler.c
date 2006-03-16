@@ -716,7 +716,11 @@ svn_wc_transmit_text_deltas(const char *path,
   const char *base_digest_hex = NULL;
   unsigned char *local_digest;
   svn_stream_t *local_stream;
+  apr_time_t wf_time;
   
+  /* Get timestamp of working file, to check for modifications during
+     commit. */
+  SVN_ERR(svn_io_file_affected_time(&wf_time, path, pool));
   /* Make an untranslated copy of the working file in the
      administrative tmp area because a) we want this to work even if
      someone changes the working file while we're generating the
@@ -735,6 +739,10 @@ svn_wc_transmit_text_deltas(const char *path,
     SVN_ERR(svn_io_copy_file(tmpf, tmp_base, FALSE, pool));
   else
     SVN_ERR(svn_io_file_rename(tmpf, tmp_base, pool));
+
+  /* Set timestamp to tmp_base. It will be used in log_do_commited() for
+     fast check modifications of working file during commit. */
+  SVN_ERR(svn_io_set_file_affected_time(wf_time, tmp_base, pool));
 
   /* If we're not sending fulltext, we'll be sending diffs against the
      text-base. */
