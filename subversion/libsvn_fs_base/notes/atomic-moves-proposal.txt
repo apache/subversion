@@ -173,5 +173,5 @@ TODO (LIKELY INCOMPLETE)
         there's some more work to be done with regards to things like
         svn_fs_copied_from.
 
-    * Make sure that code that reads copy types doesn't assume that
-      !soft-copy == copy (because there are now two more copy types).
+    * Make sure the paths changed code exposes enough information about
+      a renamed path to be useful.
