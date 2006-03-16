@@ -286,8 +286,7 @@ is_valid_copy_skel(skel_t *skel)
 
   if (len == 4)
     return (((svn_fs_base__matches_atom(skel->children, "copy")
-              || svn_fs_base__matches_atom(skel->children, "soft-copy")
-              || svn_fs_base__matches_atom(skel->children, "soft-move"))
+              || svn_fs_base__matches_atom(skel->children, "soft-copy"))
              && skel->children->next->is_atom
              && skel->children->next->next->is_atom
              && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
@@ -700,8 +699,6 @@ svn_fs_base__parse_copy_skel(copy_t **copy_p,
   /* KIND */
   if (svn_fs_base__matches_atom(skel->children, "soft-copy"))
     copy->kind = copy_kind_soft_copy;
-  else if (svn_fs_base__matches_atom (skel->children, "soft-move"))
-    copy->kind = copy_kind_soft_move;
   else if (svn_fs_base__matches_atom (skel->children, "move"))
     copy->kind = copy_kind_move;
   else
@@ -1318,8 +1315,6 @@ svn_fs_base__unparse_copy_skel(skel_t **skel_p,
     svn_fs_base__prepend(svn_fs_base__str_atom("move", pool), skel);
   else if (copy->kind == copy_kind_soft_copy)
     svn_fs_base__prepend(svn_fs_base__str_atom("soft-copy", pool), skel);
-  else if (copy->kind == copy_kind_soft_move)
-    svn_fs_base__prepend(svn_fs_base__str_atom("soft-move", pool), skel);
   else
     return skel_err("copy");
 

@@ -147,7 +147,8 @@ QUESTIONS/ANSWERS
        is copied, or itself moved?  Do we need a soft-move concept
        like the soft-copy one?
 
-    A: Yes.
+    A: No.  See http://svn.haxx.se/dev/archive-2006-03/0712.shtml for
+       the details of why.
 
     --
 
@@ -183,11 +184,11 @@ TODO (LIKELY INCOMPLETE)
 
     * Teach the node history algorithm about moves.  I anticipate this
       to be pretty straightforward, more or less mimicking the way
-      that copies and soft-copies are handled.
+      that copies are handled.
 
       * Part of this is done.  Tracing back through moves works, but
-        nothing I've done has had anything to do with soft moves, so
-        it's likely that there's more work to be done here.
+        there's some more work to be done with regards to things like
+        svn_fs_copied_from.
 
     * Make sure that code that reads copy types doesn't assume that
       !soft-copy == copy (because there are now two more copy types).

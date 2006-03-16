@@ -249,8 +249,18 @@ typedef enum
 {
   copy_kind_copy = 1,  /* real copy */
   copy_kind_soft_copy, /* soft copy */
-  copy_kind_move,      /* real move */
-  copy_kind_soft_move  /* soft move */
+  copy_kind_move       /* move */
+
+  /* So you may be wondering, why is there a soft copy but no soft move?
+   *
+   * Well, the answer lies in the reason we have soft copies in the first
+   * place.  It really comes down to a way to avoid primary key conflicts
+   * when you have multiple nodes that have the same copy id, in some cases
+   * it's possible via copies to end up with more than one node that wants
+   * to use the same copy id.  The addition of soft copies lets us avoid
+   * that problem.  We don't need soft moves because a move doesn't result
+   * in the same sort of situation, after a move by definition you've still
+   * only got one node in a position to try and use that copy id. */
 
 } copy_kind_t;
 

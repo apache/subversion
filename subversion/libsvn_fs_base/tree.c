@@ -4038,11 +4038,12 @@ examine_copy_inheritance(const char **copy_id,
       const char *move_id = parent_path->copy_data;
 
       SVN_ERR(svn_fs_bdb__get_copy(copy, fs, move_id, trail, pool));
-      if ((*copy)->kind != copy_kind_soft_move)
-        {
-          *copy_id = move_id;
-          return SVN_NO_ERROR;
-        }
+
+      /* XXX should we sanity check this to confirm that we got a move? */
+
+      *copy_id = move_id;
+
+      return SVN_NO_ERROR;
     }
 
   /* Otherwise, our answer is dependent upon our parent. */
