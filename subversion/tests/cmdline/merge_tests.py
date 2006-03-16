@@ -3162,6 +3162,109 @@ def merge_file_replace(sbox):
                                         None,
                                         None, None, None, None,
                                         wc_dir)
+# Test for issue 2522
+# Same as merge_file_replace, but without update before merge.
+def merge_file_replace_to_unupdated_wc(sbox):
+  "unusable WC after add/rm/add/merge"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # File scheduled for deletion
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Deleting'),
+    })
+
+  expected_status.remove('A/D/G/rho')
+  
+  # Commit rev 2
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Update working copy
+  expected_disk   = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G/rho' )
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status.tweak(wc_rev='2')
+  
+  svntest.actions.run_and_verify_update(wc_dir, 
+                                        expected_output,
+                                        expected_disk, 
+                                        expected_status)
+
+  # create new rho file
+  fp = open(rho_path, 'w')
+  fp.write("new rho\n")
+  fp.close()
+
+  # Add the new file
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', rho_path)
+ 
+  # Commit revsion 3 
+  expected_status.add({
+    'A/D/G/rho' : Item(status='A ', wc_rev='0')
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Adding'),
+    })
+
+  expected_disk.add({'A/D/G/rho' : Item(contents='new rho\n')} )
+  expected_status.tweak(wc_rev='2')
+  expected_status.tweak('A/D/G/rho', status='  ', wc_rev='3')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+
+  # merge changes from r3:1  
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(status='A ')
+    })
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  expected_skip = wc.State(wc_dir, { })
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
+  svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+  
+  # At this point WC is broken, because file rho has invalid revision
+  # Try to update
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status.tweak(wc_rev='3')
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_update(wc_dir, 
+                                        expected_output,
+                                        expected_disk, 
+                                        expected_status)
+                                        
+  # Now commit merged wc
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Replacing'),
+    })
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None, wc_rev='4')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
 ########################################################################
 # Run the tests
@@ -3198,6 +3301,7 @@ test_list = [ None,
               cherry_pick_text_conflict,
               merge_file_replace,
               merge_dir_replace,
+              XFail(merge_file_replace_to_unupdated_wc),
              ]
 
 if __name__ == '__main__':
