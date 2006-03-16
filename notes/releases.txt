@@ -103,8 +103,10 @@
    also include the apr-iconv directory from right next to apr-util in
    the Apache zip file.  See INSTALL, section I.1, for details.
 
-7. Merge CHANGES into the release branch. Do it the same way as described in
-   section 4 in this document when merging fixes to the release branch.
+7. Merge CHANGES into the release branch. Do it the same way as
+   described in section 4 in this document when merging fixes to the
+   release branch.  Make sure the date at the top of CHANGES matches
+   the planned release date of the tarball.
 
 8. Build the tarballs and zip file
 
