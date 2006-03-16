@@ -474,7 +474,7 @@ typedef enum copy_id_inherit_t
   copy_id_inherit_self,
   copy_id_inherit_parent,
   copy_id_inherit_new,
-  copy_id_inherit_fixed,
+  copy_id_inherit_fixed
 
 } copy_id_inherit_t;
 
