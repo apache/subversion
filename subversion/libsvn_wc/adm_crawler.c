@@ -714,7 +714,7 @@ svn_wc_transmit_text_deltas(const char *path,
   apr_file_t *localfile = NULL;
   apr_file_t *basefile = NULL;
   const char *base_digest_hex = NULL;
-  unsigned char *local_digest;
+  const unsigned char *local_digest;
   svn_stream_t *local_stream;
   
   /* Make an untranslated copy of the working file in the
@@ -823,8 +823,6 @@ svn_wc_transmit_text_deltas(const char *path,
             _("Error opening local file"));
 
   local_stream = svn_stream_from_aprfile2(localfile, FALSE, pool);
-  local_stream = svn_stream_checksummed(local_stream, &local_digest, NULL,
-                                        pool);
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */
@@ -843,6 +841,8 @@ svn_wc_transmit_text_deltas(const char *path,
   /* Close base file, if it was opened. */
   if (basefile)
     SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
+
+  local_digest = svn_txdelta_md5_digest(txdelta_stream);
 
   /* Close the file baton, and get outta here. */
   return editor->close_file
