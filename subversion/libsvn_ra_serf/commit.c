@@ -140,6 +140,9 @@ typedef struct {
  
   /* The root baseline collection */ 
   const char *baseline_url;
+
+  /* Deleted files - so we can detect delete+add (replace) ops. */
+  apr_hash_t *deleted_entries;
 } commit_context_t;
 
 /* Represents a directory. */
@@ -941,7 +944,8 @@ delete_entry(const char *path,
   delete_ctx->handler = handle_delete;
   delete_ctx->path =
       svn_path_url_add_component(dir->checkout->resource_url,
-                                 path, delete_ctx->pool);
+                                 svn_path_basename(path, delete_ctx->pool),
+                                 delete_ctx->pool);
 
   serf_connection_request_create(delete_ctx->conn->conn,
                                  setup_delete, delete_ctx);
@@ -953,6 +957,10 @@ delete_entry(const char *path,
     {
       abort();
     }
+
+  apr_hash_set(dir->commit->deleted_entries,
+               apr_pstrdup(dir->commit->pool, path), APR_HASH_KEY_STRING,
+               (void*)1);
 
   return SVN_NO_ERROR;
 }
@@ -1153,7 +1161,6 @@ add_file(const char *path,
          void **file_baton)
 {
   dir_context_t *dir = parent_baton;
-  simple_request_context_t *head_ctx;
   file_context_t *new_file;
 
   /* Ensure our directory has been checked out */
@@ -1168,7 +1175,6 @@ add_file(const char *path,
 
   new_file->commit = dir->commit;
   
-  /* TODO: Remove directory names? */
   new_file->name = path;
 
   new_file->base_revision = SVN_INVALID_REVNUM;
@@ -1180,29 +1186,35 @@ add_file(const char *path,
   new_file->acceptor_baton = dir->commit->session;
   new_file->handler = handle_put;
 
-  /* Ensure that the file doesn't exist by doing a HEAD on the resource. */
-  head_ctx = apr_pcalloc(new_file->pool, sizeof(*head_ctx));
-
-  head_ctx->pool = new_file->pool;
-  head_ctx->session = new_file->commit->session;
-  head_ctx->conn = new_file->commit->conn;
-
-  head_ctx->acceptor = accept_head;
-  head_ctx->acceptor_baton = new_file->commit->session;
-  head_ctx->handler = handle_head;
-  head_ctx->path = 
-      svn_path_url_add_component(new_file->commit->session->repos_url.path,
-                                 path, new_file->pool);
-
-  serf_connection_request_create(head_ctx->conn->conn,
-                                 setup_head, head_ctx);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&head_ctx->done, dir->commit->session,
-                                        new_file->pool));
-
-  if (head_ctx->status != 404)
-    { 
-      abort();
+  /* Ensure that the file doesn't exist by doing a HEAD on the resource -
+   * only if we haven't deleted it in this commit already.
+   */
+  if (!apr_hash_get(dir->commit->deleted_entries,
+                    new_file->name, APR_HASH_KEY_STRING))
+    {
+      simple_request_context_t *head_ctx;
+      
+      head_ctx = apr_pcalloc(new_file->pool, sizeof(*head_ctx));
+      
+      head_ctx->pool = new_file->pool;
+      head_ctx->session = new_file->commit->session;
+      head_ctx->conn = new_file->commit->conn;
+      
+      head_ctx->acceptor = accept_head;
+      head_ctx->acceptor_baton = new_file->commit->session;
+      head_ctx->handler = handle_head;
+      head_ctx->path = 
+          svn_path_url_add_component(new_file->commit->session->repos_url.path,
+                                     path, new_file->pool);
+      serf_connection_request_create(head_ctx->conn->conn,
+                                     setup_head, head_ctx);
+      SVN_ERR(svn_ra_serf__context_run_wait(&head_ctx->done,
+                                            dir->commit->session,
+                                            new_file->pool));
+      if (head_ctx->status != 404)
+        { 
+          abort();
+        }
     }
 
   if (copy_path)
@@ -1555,6 +1567,8 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 
   ctx->lock_tokens = lock_tokens;
   ctx->keep_locks = keep_locks;
+
+  ctx->deleted_entries = apr_hash_make(ctx->pool);
 
   editor = svn_delta_default_editor(pool);
   editor->open_root = open_root;
