@@ -1111,37 +1111,28 @@ log_do_committed(struct log_runner *loggy,
                                  _("Error checking existence of '%s'"), name);
       if (kind == svn_node_file)
         {
-          svn_boolean_t modified = FALSE;
-          apr_time_t wf_time, tmpf_time;
-
-          /* Get the timestamp from working and temporary base file. */
-          if ((err = svn_io_file_affected_time(&wf_time, wf, pool)))
-            return svn_error_createf
-              (pick_error_code(loggy), err,
-               _("Error getting 'affected time' for '%s'"),
-               svn_path_local_style(wf, pool));
-          
-          if ((err = svn_io_file_affected_time(&tmpf_time, tmpf, pool)))
-            return svn_error_createf
-              (pick_error_code(loggy), err,
-               _("Error getting 'affected time' for '%s'"),
-               svn_path_local_style(tmpf, pool));
+          svn_boolean_t modified;
+          const char *chosen;
 
           /* Verify that the working file is the same as the tmpf file. */
-          if (wf_time != tmpf_time)
-            {
-              if ((err = svn_wc__versioned_file_modcheck(&modified, wf,
-                                                         loggy->adm_access,
-                                                         tmpf, TRUE, pool)))
-                return svn_error_createf(pick_error_code(loggy), err,
-                                         _("Error comparing '%s' and '%s'"),
-                                         svn_path_local_style(wf, pool),
-                                         svn_path_local_style(tmpf, pool));
-            }
+          if ((err = svn_wc__versioned_file_modcheck(&modified, wf,
+                                                     loggy->adm_access,
+                                                     tmpf, TRUE, pool)))
+            return svn_error_createf(pick_error_code(loggy), err,
+                                     _("Error comparing '%s' and '%s'"),
+                                     svn_path_local_style(wf, pool),
+                                     svn_path_local_style(tmpf, pool));
 
           /* If they are the same, use the working file's timestamp,
              else use the tmpf file's timestamp. */
-          text_time = modified ? tmpf_time : wf_time;
+          chosen = modified ? tmpf : wf;
+
+          /* Get the timestamp from our chosen file. */
+          if ((err = svn_io_file_affected_time(&text_time, chosen, pool)))
+            return svn_error_createf
+              (pick_error_code(loggy), err,
+               _("Error getting 'affected time' for '%s'"),
+               svn_path_local_style(chosen, pool));
         }
     }
               

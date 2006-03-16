@@ -2932,8 +2932,7 @@ svn_wc_add_repos_file2(const char *dst_path,
   /* Set the new revision number and URL in the entry and clean up some other
      fields. */
   SVN_ERR(tweak_entry(log_accum, adm_access, base_name,
-                      dst_entry ? dst_entry->revision : ent->revision,
-                      new_URL, pool));
+                      ent->revision, new_URL, pool));
 
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));
