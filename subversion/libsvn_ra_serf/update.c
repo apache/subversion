@@ -2150,6 +2150,31 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
 }
 
 svn_error_t *
+set_hash_props(void *baton,
+               const char *name,
+               const svn_string_t *value,
+               apr_pool_t *pool)
+{
+  apr_hash_t *props = baton;
+
+  apr_hash_set(props, name, APR_HASH_KEY_STRING, value);
+
+  return SVN_NO_ERROR;
+}
+
+static void
+set_flat_props(void *baton,
+               const void *ns, apr_ssize_t ns_len,
+               const void *name, apr_ssize_t name_len,
+               const void *val,
+               apr_pool_t *pool)
+{
+  set_baton_props(set_hash_props, baton, ns, ns_len, name, name_len, val,
+                  pool);
+}
+
+
+svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
                       svn_revnum_t revision,
@@ -2161,10 +2186,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
-  report_fetch_t *stream_ctx;
-  const char *fetch_url, *vcc_url, *baseline_url;
+  const char *fetch_url;
   apr_hash_t *fetch_props;
-  svn_stringbuf_t *buf;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
@@ -2181,42 +2204,10 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
    */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *rel_path, *present_path = "";
+      const char *vcc_url, *rel_path, *baseline_url;
 
-      do
-        {
-          SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn,
-                                              fetch_url, SVN_INVALID_REVNUM,
-                                              "0", base_props, pool));
-          vcc_url =
-              svn_ra_serf__get_ver_prop(fetch_props, fetch_url,
-                                        SVN_INVALID_REVNUM,
-                                        "DAV:",
-                                        "version-controlled-configuration");
-
-          rel_path = svn_ra_serf__get_ver_prop(fetch_props, fetch_url,
-                                               SVN_INVALID_REVNUM,
-                                               SVN_DAV_PROP_NS_DAV,
-                                               "baseline-relative-path");
-
-          if (vcc_url)
-            {
-              break;
-            }
-
-          /* This happens when the file is missing in HEAD. */
-
-          /* Okay, strip off. */
-          present_path = svn_path_join(svn_path_basename(fetch_url, pool),
-                                       present_path, pool);
-          fetch_url = svn_path_dirname(fetch_url, pool);
-        }
-      while (!svn_path_is_empty(fetch_url));
-
-      if (present_path[0] != '\0')
-        {
-          rel_path = svn_path_url_add_component(rel_path, present_path, pool);
-        }
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_path,
+                                         session, conn, fetch_url, pool));
 
       SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
                                           revision, "0", baseline_props, pool));
@@ -2225,40 +2216,48 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                                                "DAV:", "baseline-collection");
       
       fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
+      revision = SVN_INVALID_REVNUM;
     }
-
-  SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
-                                      revision, "0", all_props, pool));
 
   /* TODO Filter out all of our props into a usable format. */
   if (props)
     {
-      *props = fetch_props;
+      *props = apr_hash_make(pool);
+
+      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
+                                          revision, "0", all_props, pool));
+
+      svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
+                                  set_flat_props, *props, pool);
     }
 
-  /* Create the fetch context. */
-  stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
-  stream_ctx->pool = pool;
-  stream_ctx->target_stream = stream;
-  stream_ctx->sess = session;
-  stream_ctx->conn = conn;
+  if (stream)
+    {
+      report_fetch_t *stream_ctx;
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
+      /* Create the fetch context. */
+      stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
+      stream_ctx->pool = pool;
+      stream_ctx->target_stream = stream;
+      stream_ctx->sess = session;
+      stream_ctx->conn = conn;
+      
+      handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->method = "GET";
+      handler->path = fetch_url;
+      handler->conn = conn;
+      handler->session = session;
 
-  handler->method = "GET";
-  handler->path = fetch_url;
-  handler->conn = conn;
-  handler->session = session;
-
-  handler->response_handler = handle_stream;
-  handler->response_baton = stream_ctx;
-
-  handler->response_error = cancel_fetch;
-  handler->response_error_baton = stream_ctx;
-
-  svn_ra_serf__request_create(handler);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+      handler->response_handler = handle_stream;
+      handler->response_baton = stream_ctx;
+      
+      handler->response_error = cancel_fetch;
+      handler->response_error_baton = stream_ctx;
+      
+      svn_ra_serf__request_create(handler);
+      
+      SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+    }
 
   return SVN_NO_ERROR;
 }
