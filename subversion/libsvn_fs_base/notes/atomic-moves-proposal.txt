@@ -165,6 +165,15 @@ TODO (LIKELY INCOMPLETE)
     * Make sure that we don't carry around delayed move ID information
       on entries where not necessary.
 
+      * The question here is about cases like this:
+
+        move /some/subdir /some/new-subdir
+        copy /some /other
+
+        When we do the move we add a delayed move ID tag on the new
+        entry.  What should happen to it later when we do the copy?
+        The answer is currently unclear.
+
     * Teach the node history algorithm about moves.  I anticipate this
       to be pretty straightforward, more or less mimicking the way
       that copies are handled.
@@ -175,3 +184,10 @@ TODO (LIKELY INCOMPLETE)
 
     * Make sure the paths changed code exposes enough information about
       a renamed path to be useful.
+
+      * Currently we have the destination path (the key in the hash
+        that's returned), but not the source path.  Note that we don't
+        have the source path for a copy either, people get it with
+        svn_fs_copied_from, so either we need to provide a similar
+        function for moves or we need to just inline the information
+        in svn_fs_path_change_t.
