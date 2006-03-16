@@ -2,7 +2,7 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,6 +25,7 @@
 #include <apr_network_io.h>
 #include <apr_signal.h>
 #include <apr_thread_proc.h>
+#include <apr_portable.h>
 
 #include <locale.h>
 
@@ -41,6 +42,7 @@
 #include "svn_version.h"
 
 #include "svn_private_config.h"
+#include "winservice.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>   /* For getpid() */
@@ -62,7 +64,8 @@ enum run_mode {
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
-  run_mode_listen_once
+  run_mode_listen_once,
+  run_mode_service
 };
 
 #if APR_HAS_FORK
@@ -86,6 +89,37 @@ enum run_mode {
 
 #endif
 
+
+#ifdef WIN32
+static apr_os_sock_t winservice_svnserve_accept_socket = INVALID_SOCKET;
+
+/* The SCM calls this function (on an arbitrary thread, not the main()
+   thread!) when it wants to stop the service.
+
+   For now, our strategy is to close the listener socket, in order to
+   unblock main() and cause it to exit its accept loop.  We cannot use
+   apr_socket_close, because that function deletes the apr_socket_t
+   structure, as well as closing the socket handle.  If we called
+   apr_socket_close here, then main() will also call apr_socket_close,
+   resulting in a double-free.  This way, we just close the kernel
+   socket handle, which causes the accept() function call to fail,
+   which causes main() to clean up the socket.  So, memory gets freed
+   only once.
+
+   This isn't pretty, but it's better than a lot of other options.
+   Currently, there is no "right" way to shut down svnserve.
+
+   We store the OS handle rather than a pointer to the apr_socket_t
+   structure in order to eliminate any possibility of illegal memory
+   access. */
+void winservice_notify_stop(void)
+{
+  if (winservice_svnserve_accept_socket != INVALID_SOCKET)
+    closesocket(winservice_svnserve_accept_socket);
+}
+#endif /* _WIN32 */
+
+
 /* Option codes and descriptions for svnserve.
  *
  * The entire list must be terminated with an entry of nulls.
@@ -99,6 +133,7 @@ enum run_mode {
 #define SVNSERVE_OPT_TUNNEL_USER 259
 #define SVNSERVE_OPT_VERSION     260
 #define SVNSERVE_OPT_PID_FILE    261
+#define SVNSERVE_OPT_SERVICE     262
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -125,6 +160,10 @@ static const apr_getopt_option_t svnserve__options[] =
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
      N_("write server process ID to file arg")},
+#ifdef WIN32
+    {"service",          SVNSERVE_OPT_SERVICE, 0,
+     N_("run as a windows service (SCM only)")},
+#endif
     {0,                  0,   0, 0}
   };
 
@@ -171,7 +210,7 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
   return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);
 }
-  
+
 
 #if APR_HAS_FORK
 static void sigchld_handler(int signo)
@@ -389,6 +428,13 @@ int main(int argc, const char *argv[])
           handling_mode = connection_mode_thread;
           break;
 
+#ifdef WIN32
+        case SVNSERVE_OPT_SERVICE:
+          run_mode = run_mode_service;
+          mode_opt_count++;
+          break;
+#endif
+
         case SVNSERVE_OPT_PID_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
           pid_filename = svn_path_internal_style(pid_filename, pool);
@@ -445,7 +491,58 @@ int main(int argc, const char *argv[])
       svn_error_clear(serve(conn, &params, pool));
       exit(0);
     }
- 
+
+#ifdef WIN32
+  /* If svnserve needs to run as a Win32 service, then we need to
+     coordinate with the Service Control Manager (SCM) before
+     continuing.  This function call registers the svnserve.exe
+     process with the SCM, waits for the "start" command from the SCM
+     (which will come very quickly), and confirms that those steps
+     succeeded.
+
+     After this call succeeds, the service is free to run.  At some
+     point in the future, the SCM will send a message to the service,
+     requesting that it stop.  This is translated into a call to
+     winservice_notify_stop().  The service is then responsible for
+     cleanly terminating.
+
+     We need to do this before actually starting the service logic
+     (opening files, sockets, etc.) because the SCM wants you to
+     connect *first*, then do your service-specific logic.  If the
+     service process takes too long to connect to the SCM, then the
+     SCM will decide that the service is busted, and will give up on
+     it.
+     */
+  if (run_mode == run_mode_service)
+    {
+      err = winservice_start();
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, _("svnserve: "));
+
+          /* This is the most common error.  It means the user started
+             svnserve from a shell, and specified the --service
+             argument.  svnserve cannot be started, as a service, in
+             this way.  The --service argument is valid only valid if
+             svnserve is started by the SCM. */
+          if (err->apr_err ==
+              APR_FROM_OS_ERROR(ERROR_FAILED_SERVICE_CONTROLLER_CONNECT))
+            {
+              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                  _("svnserve: The --service flag is only valid if the"
+                    " process is started by the Service Control Manager.\n")));
+            }
+
+          svn_error_clear(err);
+          exit(1);
+        }
+
+      /* The service is now in the "starting" state.  Before the SCM will
+         consider the service "started", this thread must call the
+         winservice_running() function. */
+    }
+#endif /* WIN32 */
+
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
      APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets. */  
@@ -527,8 +624,23 @@ int main(int argc, const char *argv[])
   if (pid_filename)
     SVN_INT_ERR(write_pid_file(pid_filename, pool));
 
+#ifdef WIN32
+  status = apr_os_sock_get(&winservice_svnserve_accept_socket, sock);
+  if (status)
+    winservice_svnserve_accept_socket = INVALID_SOCKET;
+
+  /* At this point, the service is "running".  Notify the SCM. */
+  if (run_mode == run_mode_service)
+    winservice_running();
+#endif
+
   while (1)
     {
+#ifdef WIN32
+      if (winservice_is_stopping())
+        return ERROR_SUCCESS;
+#endif
+
       /* Non-standard pool handling.  The main thread never blocks to join
          the connection threads so it cannot clean up after each one.  So
          separate pools, that can be cleared at thread exit, are used */

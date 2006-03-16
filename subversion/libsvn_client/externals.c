@@ -2,7 +2,7 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -156,6 +156,123 @@ relegate_external(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Try to update an external PATH to URL at REVISION.
+   Use POOL for temporary allocations, and use the client context CTX. */
+static svn_error_t *
+switch_external(const char *path,
+                const char *url,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t *timestamp_sleep,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* First notify that we're about to handle an external. */
+  if (ctx->notify_func2)
+    ctx->notify_func2(ctx->notify_baton2,
+                      svn_wc_create_notify(path, svn_wc_notify_update_external,
+                                           pool), pool);
+  
+  /* If path is a directory, try to update/switch to the correct URL
+     and revison. */
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  if (kind == svn_node_dir)
+    {
+      svn_wc_adm_access_t *adm_access;
+      const svn_wc_entry_t *entry;
+
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, 0,
+                               ctx->cancel_func, ctx->cancel_baton, subpool));
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, 
+                           FALSE, subpool));
+      SVN_ERR(svn_wc_adm_close(adm_access));
+
+      if (entry && entry->url)
+        {
+          /* If we have what appears to be a version controlled
+             subdir, and its top-level URL matches that of our
+             externals definition, perform an update. */
+          if (strcmp(entry->url, url) == 0)
+            {
+              SVN_ERR(svn_client__update_internal(NULL, path, revision,
+                                                  TRUE, FALSE, timestamp_sleep,
+                                                  ctx, pool));
+              return SVN_NO_ERROR;
+            }
+          else if (entry->repos)
+            {
+              /* URLs don't match.  Try to relocate (if necessary) and then
+                 switch. */
+              if (! svn_path_is_ancestor(entry->repos, url))
+                {
+                  const char *repos_root;
+                  svn_ra_session_t *ra_session;
+
+                  /* Get the repos root of the new URL. */
+                  SVN_ERR(svn_client__open_ra_session_internal
+                          (&ra_session, url, NULL, NULL, NULL, FALSE, TRUE,
+                           ctx, subpool));
+                  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root,
+                                                subpool));
+
+                  err = svn_client_relocate(path, entry->repos, repos_root,
+                                            TRUE, ctx, subpool);
+                  /* If the relocation failed because the new URL points
+                     to another repository, then we need to relegate and
+                     check out a new WC. */
+                  if (err
+                      && (err->apr_err == SVN_ERR_WC_INVALID_RELOCATION
+                          || (err->apr_err
+                              == SVN_ERR_CLIENT_INVALID_RELOCATION)))
+                    {
+                      svn_error_clear(err);
+                      goto relegate;
+                    }
+                  else if (err)
+                    return err;
+                }
+
+              SVN_ERR(svn_client__switch_internal(NULL, path, url, revision,
+                                                  TRUE, timestamp_sleep, ctx,
+                                                  subpool));
+
+              return SVN_NO_ERROR;
+            }
+        }
+    }
+
+ relegate:
+      
+  /* Fall back on removing the WC and checking out a new one. */
+
+  /* Ensure that we don't have any RA sessions or WC locks from failed
+     operations above. */
+  svn_pool_destroy(subpool);
+
+  if (kind == svn_node_dir)
+    /* Buh-bye, old and busted ... */
+    SVN_ERR(relegate_external(path,
+                              ctx->cancel_func,
+                              ctx->cancel_baton,
+                              pool));
+  else
+    {
+      /* The target dir might have multiple components.  Guarantee
+         the path leading down to the last component. */
+      const char *parent = svn_path_dirname(path, pool);
+      SVN_ERR(svn_io_make_dir_recursively(parent, pool));
+    }
+
+  /* ... Hello, new hotness. */
+  SVN_ERR(svn_client__checkout_internal(NULL, url, path, revision, revision,
+                                        TRUE, FALSE, timestamp_sleep,
+                                        ctx, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements the 'svn_hash_diff_func_t' interface.
    BATON is of type 'struct handle_external_item_change_baton *'.  */
@@ -287,105 +404,16 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       /* ### If there were multiple path components leading down to
          that wc, we could try to remove them too. */
     }
-  else if (! compare_external_items(new_item, old_item))
+  else if (! compare_external_items(new_item, old_item)
+           || ib->update_unchanged)
     {
-      /* ### Better yet, compare_external_items should report the
-         nature of the difference.  That way, when it's just a change
-         in the "-r REV" portion, for example, we could do an update
-         here instead of a relegation followed by full checkout. */
-
-      SVN_ERR(relegate_external(path,
-                                ib->ctx->cancel_func,
-                                ib->ctx->cancel_baton,
-                                ib->pool));
-      
-      /* First notify that we're about to handle an external. */
-      if (ib->ctx->notify_func2)
-        (*ib->ctx->notify_func2)
-          (ib->ctx->notify_baton2,
-           svn_wc_create_notify(path, svn_wc_notify_update_external,
-                                ib->pool), ib->pool);
-
-      SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
-                                            &(new_item->revision),
-                                            &(new_item->revision),
-                                            TRUE, FALSE,
-                                            ib->timestamp_sleep,
-                                            ib->ctx, ib->pool));
-    }
-  else if (ib->update_unchanged)
-    {
-      /* Exact same item is present in both hashes, and caller wants
-         to update such unchanged items. */
-      svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *ext_entry;
-      svn_node_kind_t kind;
-
-      /* First notify that we're about to handle an external. */
-      if (ib->ctx->notify_func2)
-        (*ib->ctx->notify_func2)
-          (ib->ctx->notify_baton2,
-           svn_wc_create_notify(path, svn_wc_notify_update_external,
-                                ib->pool), ib->pool
-           );
-
-      /* Next, verify that the external working copy matches
-         (URL-wise) what is supposed to be on disk. */
-      SVN_ERR(svn_io_check_path(path, &kind, ib->pool));
-      if (kind == svn_node_dir)
-        {
-          SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1,
-                                   ib->ctx->cancel_func,
-                                   ib->ctx->cancel_baton, ib->pool));
-          SVN_ERR(svn_wc_entry(&ext_entry, path, adm_access, 
-                               FALSE, ib->pool));
-          SVN_ERR(svn_wc_adm_close(adm_access));
-
-          /* If we have what appears to be a version controlled
-             subdir, and its top-level URL matches that of our
-             externals definition, perform an update. */
-          if (ext_entry && (strcmp(ext_entry->url, new_item->url) == 0))
-            {
-              SVN_ERR(svn_client__update_internal(NULL, path,
-                                                  &(new_item->revision),
-                                                  TRUE, FALSE,
-                                                  ib->timestamp_sleep,
-                                                  ib->ctx, ib->pool));
-            }
-          /* If, however, the URLs don't match, we need to relegate
-             the one subdir, and then checkout a new one. */
-          else
-            {
-              /* Buh-bye, old and busted ... */
-              SVN_ERR(relegate_external(path,
-                                        ib->ctx->cancel_func,
-                                        ib->ctx->cancel_baton,
-                                        ib->pool));
-              /* ... Hello, new hotness. */
-              SVN_ERR(svn_client__checkout_internal(NULL, new_item->url,
-                                                    path,
-                                                    &(new_item->revision),
-                                                    &(new_item->revision),
-                                                    TRUE, FALSE,
-                                                    ib->timestamp_sleep,
-                                                    ib->ctx, ib->pool));
-            }
-        }
-      else /* Not a directory at all -- just try the checkout. */
-        {
-          /* The target dir might have multiple components.  Guarantee
-             the path leading down to the last component. */
-          svn_path_split(path, &parent, NULL, ib->pool);
-          SVN_ERR(svn_io_make_dir_recursively(parent, ib->pool));
-
-          /* Checking out... */
-          SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
-                                                &(new_item->revision),
-                                                &(new_item->revision),
-                                                TRUE, FALSE,
-                                                ib->timestamp_sleep,
-                                                ib->ctx, ib->pool));
-        }
+      /* Either the URL changed, or the exact same item is present in
+         both hashes, and caller wants to update such unchanged items.
+         In the latter case, the call below will try to make sure that
+         the external really is a WC pointing to the correct
+         URL/revision. */
+      SVN_ERR(switch_external(path, new_item->url, &(new_item->revision),
+                              ib->timestamp_sleep, ib->ctx, ib->pool));
     }
 
   /* Clear IB->pool -- we only use it for scratchwork (and this will

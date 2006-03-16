@@ -2359,6 +2359,44 @@ def diff_repos_working_added_dir(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+# A base->repos diff of a moved file used to output an all-lines-deleted diff
+def diff_base_repos_moved(sbox):
+  "base->repos diff of moved file"
+
+  sbox.build()
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    oldfile = 'iota'
+    newfile = 'kappa'
+
+    # Move, modify and commit a file
+    svntest.main.run_svn(None, 'mv', oldfile, newfile)
+    open(newfile, 'w').write("new content\n")
+    svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '')
+
+    # Check that a base->repos diff shows deleted and added lines.
+    # It's not clear whether we expect a file-change diff or
+    # a file-delete plus file-add.  The former is currently produced if we
+    # explicitly request a diff of the file itself, and the latter if we
+    # request a tree diff which just happens to contain the file.
+    out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                                  'diff', '-rBASE:1', newfile)
+    if check_diff_output(out, newfile, 'M'):
+      raise svntest.Failure
+
+    # Diff should recognise that the item's name has changed, and mention both
+    # the current and the old name in parentheses, in the right order.
+    if (out[2][:3] != '---' or out[2].find('kappa)') == -1 or
+        out[3][:3] != '+++' or out[3].find('iota)') == -1):
+      raise svntest.Failure
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -2399,6 +2437,7 @@ test_list = [ None,
               diff_repos_wc_add_with_props,
               diff_nonrecursive_checkout_deleted_dir,
               diff_repos_working_added_dir,
+              diff_base_repos_moved,
               ]
 
 if __name__ == '__main__':

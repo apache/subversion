@@ -291,18 +291,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "diff", svn_cl__diff, {"di"}, N_
-    ("Display the differences between two paths.\n"
+    ("Display the differences between two revisions or paths.\n"
      "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
-     "       2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
+     "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
      "               [PATH...]\n"
      "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
      "\n"
      "  1. Display the changes made to TARGETs as they are seen in REV between\n"
-     "     two revisions.  TARGETs may be working copy paths or URLs.\n"
-     "\n"
-     "     N defaults to BASE if any TARGET is a working copy path, otherwise it\n"
-     "     must be specified.  M defaults to the current working version if any\n"
-     "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
+     "     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
+     "     If TARGETs are working copy paths, N defaults to BASE and M to the\n"
+     "     working copy; if URLs, N must be specified and M defaults to HEAD.\n"
      "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
      "     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
      "\n"
@@ -311,9 +309,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     OLD-TGT and NEW-TGT and restrict the output to differences for those\n"
      "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV]. \n"
      "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n"
-     "     to N, -r N:M makes OLDREV default to N and NEWREV default to M,\n"
-     "     -c M makes OLDREV default to M-1 and NEWREV default to M.\n"
-     "     -c -M makes OLDREV default to M and NEWREV default to M-1.\n"
+     "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
      "\n"
      "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
      "\n"
@@ -809,7 +805,8 @@ main(int argc, const char *argv[])
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
   svn_config_t *cfg;
-  
+  svn_boolean_t used_change_arg = FALSE;
+
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
@@ -916,6 +913,13 @@ main(int argc, const char *argv[])
                    "can't specify -c twice, or both -c and -r"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
+          if (opt_state.old_target)
+            {
+              err = svn_error_create
+                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                 _("Can't specify -c with --old"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
           changeno = strtol(opt_arg, &end, 10);
           if (end == opt_arg || *end != '\0')
             {
@@ -945,6 +949,7 @@ main(int argc, const char *argv[])
             }
           opt_state.start_revision.kind = svn_opt_revision_number;
           opt_state.end_revision.kind = svn_opt_revision_number;
+          used_change_arg = TRUE;
         }
         break;
       case 'r':
@@ -1100,6 +1105,13 @@ main(int argc, const char *argv[])
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
       case svn_cl__old_cmd_opt:
+        if (used_change_arg)
+          {
+            err = svn_error_create
+              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+               _("Can't specify -c with --old"));
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          }
         opt_state.old_target = apr_pstrdup(pool, opt_arg);
         break;
       case svn_cl__new_cmd_opt:

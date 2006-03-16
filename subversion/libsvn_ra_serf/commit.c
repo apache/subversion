@@ -42,19 +42,10 @@
 /* Structure associated with a MKACTIVITY request. */
 typedef struct {
 
-  svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
-
-  const char *activity_url;
-  apr_size_t activity_url_len;
-
   int status;
 
   svn_boolean_t done;
 
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
 } mkactivity_context_t;
 
 /* Structure associated with a CHECKOUT request. */
@@ -180,6 +171,9 @@ typedef struct dir_context_t {
   /* The base revision of the dir. */
   svn_revnum_t base_revision;
 
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_revision;
+
   /* Changed and removed properties */
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
@@ -259,39 +253,11 @@ handle_status_only(serf_request_t *request,
 
       rv = serf_bucket_response_status(response, &sl);
 
-      if (rv)
-        {
-          return rv;
-        }
-
       *status_code = sl.code;
       *done = TRUE;
     }
 
   return status;
-}
-
-static apr_status_t
-setup_mkactivity(serf_request_t *request,
-                 void *setup_baton,
-                 serf_bucket_t **req_bkt,
-                 serf_response_acceptor_t *acceptor,
-                 void **acceptor_baton,
-                 serf_response_handler_t *handler,
-                 void **handler_baton,
-                 apr_pool_t *pool)
-{
-  mkactivity_context_t *ctx = setup_baton;
-
-  svn_ra_serf__setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "MKACTIVITY", ctx->activity_url, NULL, NULL);
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
 }
 
 static apr_status_t
@@ -810,6 +776,7 @@ open_root(void *edit_baton,
 {
   commit_context_t *ctx = edit_baton;
   svn_ra_serf__options_context_t *opt_ctx;
+  svn_ra_serf__handler_t *handler;
   mkactivity_context_t *mkact_ctx;
   checkout_context_t *checkout_ctx;
   proppatch_context_t *proppatch_ctx;
@@ -842,18 +809,19 @@ open_root(void *edit_baton,
   ctx->activity_url_len = strlen(ctx->activity_url);
 
   /* Create our activity URL now on the server. */
+
+  handler = apr_pcalloc(ctx->pool, sizeof(*handler));
+  handler->method = "MKACTIVITY";
+  handler->path = ctx->activity_url;
+  handler->conn = ctx->session->conns[0];
+  handler->session = ctx->session;
+
   mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
-  mkact_ctx->session = ctx->session;
-  mkact_ctx->conn = ctx->conn;
 
-  mkact_ctx->acceptor = svn_ra_serf__accept_response;
-  mkact_ctx->acceptor_baton = ctx->session;
-  mkact_ctx->handler = handle_mkactivity;
-  mkact_ctx->activity_url = ctx->activity_url;
-  mkact_ctx->activity_url_len = ctx->activity_url_len;
+  handler->response_handler = handle_mkactivity;
+  handler->response_baton = mkact_ctx;
 
-  serf_connection_request_create(mkact_ctx->conn->conn,
-                                 setup_mkactivity, mkact_ctx);
+  svn_ra_serf__request_create(handler);
 
   SVN_ERR(svn_ra_serf__context_run_wait(&mkact_ctx->done, ctx->session,
                                         ctx->pool));
@@ -934,8 +902,8 @@ open_root(void *edit_baton,
   proppatch_ctx->handler = handle_proppatch;
 
   proppatch_ctx->path = ctx->baseline->resource_url;
-  proppatch_ctx->changed_props = dir->changed_props;
-  proppatch_ctx->removed_props = dir->removed_props;
+  proppatch_ctx->changed_props = apr_hash_make(dir_pool);
+  proppatch_ctx->removed_props = apr_hash_make(dir_pool);
 
   svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
                         SVN_DAV_PROP_NS_SVN, "log",
@@ -997,9 +965,62 @@ add_directory(const char *path,
               apr_pool_t *dir_pool,
               void **child_baton)
 {
-  dir_context_t *ctx = parent_baton;
+  dir_context_t *parent = parent_baton;
+  dir_context_t *dir;
+  svn_ra_serf__handler_t *handler;
+  mkactivity_context_t *mkcol_ctx;
 
-  abort();
+  /* Ensure our parent is checked out. */
+  SVN_ERR(checkout_dir(parent));
+
+  dir = apr_pcalloc(dir_pool, sizeof(*dir));
+
+  dir->pool = dir_pool;
+
+  dir->parent_dir = parent;
+  dir->commit = parent->commit;
+
+  dir->base_revision = SVN_INVALID_REVNUM;
+  dir->copyfrom_revision = copyfrom_revision;
+  dir->copyfrom_path = copyfrom_path;
+  dir->name = path;
+  dir->checked_in_url =
+      svn_path_url_add_component(parent->commit->checked_in_url,
+                                 path, dir->pool);
+  dir->changed_props = apr_hash_make(dir->pool);
+  dir->removed_props = apr_hash_make(dir->pool);
+
+  if (copyfrom_path)
+    {
+      abort();
+    }
+
+  handler = apr_pcalloc(dir->pool, sizeof(*handler));
+  handler->method = "MKCOL";
+  handler->path = svn_path_url_add_component(parent->checkout->resource_url,
+                                             svn_path_basename(path, dir->pool),
+                                             dir->pool);
+  handler->conn = dir->commit->session->conns[0];
+  handler->session = dir->commit->session;
+
+  mkcol_ctx = apr_pcalloc(dir->pool, sizeof(*mkcol_ctx));
+
+  handler->response_handler = handle_mkactivity;
+  handler->response_baton = mkcol_ctx;
+
+  svn_ra_serf__request_create(handler);
+
+  SVN_ERR(svn_ra_serf__context_run_wait(&mkcol_ctx->done, dir->commit->session,
+                                        dir->pool));
+
+  if (mkcol_ctx->status != 201)
+    {
+      abort();
+    }
+
+  *child_baton = dir;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -1151,6 +1172,8 @@ add_file(const char *path,
   new_file->name = path;
 
   new_file->base_revision = SVN_INVALID_REVNUM;
+  new_file->changed_props = apr_hash_make(new_file->pool);
+  new_file->removed_props = apr_hash_make(new_file->pool);
 
   /* Set up so that we can perform the PUT later. */
   new_file->acceptor = svn_ra_serf__accept_response;
@@ -1192,7 +1215,8 @@ add_file(const char *path,
 
   new_file->put_url =
       svn_path_url_add_component(dir->checkout->resource_url,
-                                 path, new_file->pool);
+                                 svn_path_basename(path, new_file->pool),
+                                 new_file->pool);
 
   *file_baton = new_file;
 
@@ -1475,8 +1499,32 @@ abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   commit_context_t *ctx = edit_baton;
+  svn_ra_serf__handler_t *handler;
+  simple_request_context_t *delete_ctx;
 
-  abort();
+  /* DELETE our activity */
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->method = "DELETE";
+  handler->path = ctx->activity_url;
+  handler->conn = ctx->session->conns[0];
+  handler->session = ctx->session;
+
+  delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+
+  handler->response_handler = handle_delete;
+  handler->response_baton = delete_ctx;
+
+  svn_ra_serf__request_create(handler);
+
+  SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
+                                        pool));
+
+  if (delete_ctx->status != 204)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

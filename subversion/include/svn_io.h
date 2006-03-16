@@ -560,8 +560,23 @@ svn_stream_t *svn_stream_empty(apr_pool_t *pool);
  */
 svn_stream_t *svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool);
 
-/** Create a stream that operates on an APR file.
- * For convenience, if @a file is NULL then return svn_stream_empty(pool).
+/** Create a stream from an APR file.  For convenience, if @a file is
+ * @c NULL, an empty stream created by svn_stream_empty() is returned.
+ *
+ * This function should normally be called with @a disown set to false,
+ * in which case closing the stream will also close the underlying file.
+ *
+ * If @a disown is true, the stream will disown the underlying file,
+ * meaning that svn_stream_close() will not close the file.
+ *
+ * @since New in 1.4.
+ */
+svn_stream_t * svn_stream_from_aprfile2(apr_file_t *file,
+                                        svn_boolean_t disown,
+                                        apr_pool_t *pool);
+
+/** Similar to svn_stream_from_aprfile2(), except that the file will
+ * always be disowned.
  *
  * @note The stream returned is not considered to "own" the underlying
  *       file, meaning that svn_stream_close() on the stream will not
@@ -570,19 +585,6 @@ svn_stream_t *svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool);
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_stream_t *svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool);
-
-
-/** Function to create a stream from an APR file.  For convenience, if @a
- * file is @c NULL an empty stream created by svn_stream_empty() is returned.
- *
- * @note The stream is considered to own the underlying file, meaning that
- *       svn_stream_close() will close the file.
- *
- * @since New in 1.4.
- */
-svn_stream_t * svn_stream_from_aprfile2(apr_file_t *file,
-                                        svn_boolean_t disown,
-                                        apr_pool_t *pool);
 
 /** Set @a *out to a generic stream connected to stdout, allocated in 
  * @a pool.  The stream and its underlying APR handle will be closed

@@ -89,9 +89,12 @@ typedef struct {
   apr_uri_t repos_url;
   const char *repos_url_str;
 
-  /* The actual discovered root */
+  /* The actual discovered root; may be NULL until we know it. */
   apr_uri_t repos_root;
   const char *repos_root_str;
+
+  /* Our Version-Controlled-Configuration; may be NULL until we know it. */
+  const char *vcc_url;
 
   /* Cached properties */
   apr_hash_t *cached_props;
@@ -481,6 +484,20 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
+typedef void
+(*svn_ra_serf__path_rev_walker_t)(void *baton,
+                                  const void *path, apr_ssize_t path_len,
+                                  const void *ns, apr_ssize_t ns_len,
+                                  const void *name, apr_ssize_t name_len,
+                                  const void *val,
+                                  apr_pool_t *pool);
+void
+svn_ra_serf__walk_all_paths(apr_hash_t *props,
+                            svn_revnum_t rev,
+                            svn_ra_serf__path_rev_walker_t walker,
+                            void *baton,
+                            apr_pool_t *pool);
+
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
 const void *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
@@ -552,6 +569,22 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
+/* Try to discover our current root @a vcc_url and the resultant @a rel_path
+ * based on @a orig_path for the @a session on @a conn.
+ *
+ * @a rel_path may be NULL if the caller is not interested in the relative
+ * path.
+ *
+ * All temporary allocations will be made in @a pool.
+ */
+svn_error_t *
+svn_ra_serf__discover_root(const char **vcc_url,
+                           const char **rel_path,
+                           svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           const char *orig_path,
+                           apr_pool_t *pool);
+
 /** RA functions **/
 
 svn_error_t *
@@ -589,6 +622,17 @@ svn_ra_serf__do_diff(svn_ra_session_t *session,
                      apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__do_status(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       const char *status_target,
+                       svn_revnum_t revision,
+                       svn_boolean_t recurse,
+                       const svn_delta_editor_t *status_editor,
+                       void *status_baton,
+                       apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const svn_ra_reporter2_t **reporter,
                        void **report_baton,
@@ -597,6 +641,18 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        svn_boolean_t recurse,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
+                       apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
+                       const svn_ra_reporter2_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t revision_to_switch_to,
+                       const char *switch_target,
+                       svn_boolean_t recurse,
+                       const char *switch_url,
+                       const svn_delta_editor_t *switch_editor,
+                       void *switch_baton,
                        apr_pool_t *pool);
 
 svn_error_t *

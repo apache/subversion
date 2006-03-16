@@ -245,18 +245,6 @@ Possible values are: commit, revert."
   :type 'boolean
   :group 'psvn)
 
-(defcustom svn-status-do-prompt-for-save t
-  "*Ask before committing, if files from the working copy should be saved.
-Using 'before-log-edit: ask before log editing start
-      'before-commit: ask before a commit
-      t: Ask before log editing start and before a commit
-      nil: Never ask"
-  :type '(choice (const 'before-log-edit)
-                 (const 'before-commit)
-                 (const t)
-                 (const nil))
-  :group 'psvn)
-
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -507,6 +495,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-mode-line-process-edit-flag "")
 (defvar svn-status-edit-svn-command nil)
 (defvar svn-status-update-previous-process-output nil)
+(defvar svn-pre-run-asynch-recent-keys nil)
 (defvar svn-status-temp-dir
   (expand-file-name
    (or
@@ -740,7 +729,9 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
-  (define-key svn-global-keymap (kbd "c") 'svn-status-commit))
+  (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
+  (define-key svn-global-keymap (kbd "b") 'svn-status-switch-to-status-buffer)
+  (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
 
 (defvar svn-status-diff-mode-map ()
   "Keymap used in `svn-status-diff-mode' for additional commands that are not defined in diff-mode.")
@@ -853,6 +844,9 @@ If ARG then pass the -u argument to `svn status'."
         (svn-status dir)
       (error "%s is not a directory" dir))))
 
+(defun svn-had-user-input-since-asynch-run ()
+  (not (equal (recent-keys) svn-pre-run-asynch-recent-keys)))
+
 (defun svn-process-environment ()
   "Construct the environment for the svn process.
 It is a combination of `svn-status-svn-environment-var-list' and
@@ -922,6 +916,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
+                  (setq svn-pre-run-asynch-recent-keys (recent-keys))
                   (let ((process-environment (svn-process-environment))
                         (process-connection-type nil))
                     ;; Communicate with the subprocess via pipes rather
@@ -978,7 +973,9 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                     (setq svn-status-update-previous-process-output nil))
                   (when svn-status-display-new-status-buffer
                     (set-window-configuration svn-status-initial-window-configuration)
-                    (switch-to-buffer svn-status-buffer-name)))
+                    (if (svn-had-user-input-since-asynch-run)
+                        (message "svn status finished")
+                      (switch-to-buffer svn-status-buffer-name))))
                  ((eq svn-process-cmd 'log)
                   (svn-status-show-process-output 'log t)
                   (pop-to-buffer svn-status-last-output-buffer-name)
@@ -2885,8 +2882,7 @@ this is because marking a directory with \\[svn-status-set-user-mark]
 normally marks all of its files as well.
 If no files have been marked, commit recursively the file at point."
   (interactive)
-  (when (member svn-status-do-prompt-for-save '(before-log-edit t))
-    (svn-status-save-some-buffers))
+  (svn-status-save-some-buffers)
   (let* ((selected-files (svn-status-marked-files))
          (marked-files-p (svn-status-some-files-marked-p)))
     (setq svn-status-files-to-commit selected-files
@@ -2908,6 +2904,16 @@ If no files have been marked, commit recursively the file at point."
       (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
         (insert-file-contents svn-log-edit-file-name)))
     (svn-log-edit-mode)))
+
+(defun svn-status-switch-to-status-buffer ()
+  "Switch to the `svn-status-buffer-name' buffer."
+  (interactive)
+  (switch-to-buffer svn-status-buffer-name))
+
+(defun svn-status-pop-to-status-buffer ()
+  "Pop to the `svn-status-buffer-name' buffer."
+  (interactive)
+  (pop-to-buffer svn-status-buffer-name))
 
 (defun svn-status-export ()
   "Run `svn export' for the current working copy.
@@ -3560,8 +3566,7 @@ Commands:
 
 (defun svn-log-edit-done ()
   (interactive)
-  (when (member svn-status-do-prompt-for-save '(before-commit t))
-    (svn-status-save-some-buffers))
+  (svn-status-save-some-buffers)
   (save-excursion
     (set-buffer (get-buffer "*svn-log-edit*"))
     (when svn-log-edit-insert-files-to-commit
@@ -3683,10 +3688,9 @@ If ARG then show diff between some other version of the selected files."
                     ["Edit log message" svn-log-edit-log-entry t]))
 
 (defvar svn-log-view-font-lock-keywords
-  '(("^r.+" . font-lock-keyword-face)
+  '(("^r[0-9]+ .+" . font-lock-keyword-face)
   "Keywords in svn-log-view-mode."))
 (put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
-
 
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.

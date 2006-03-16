@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -315,7 +315,7 @@ svn_error_t * svn_client__wc_delete(const char *path,
 
 /* ---------------------------------------------------------------- */
 
-/*** Checkout and update ***/
+/*** Checkout, update and switch ***/
 
 /* Update a working copy PATH to REVISION, and (if not NULL) set
    RESULT_REV to the update revision.  RECURSE if so commanded;
@@ -353,6 +353,23 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
+
+/* Switch a working copy PATH to URL at REVISION, and (if not NULL)
+   set RESULT_REV to the switch revision.  RECURSE if so commanded.
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
+   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
+   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
+   to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required. */
+svn_error_t *
+svn_client__switch_internal(svn_revnum_t *result_rev,
+                            const char *path,
+                            const char *url,
+                            const svn_opt_revision_t *revision,
+                            svn_boolean_t recurse,
+                            svn_boolean_t *timestamp_sleep,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

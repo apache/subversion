@@ -20,6 +20,8 @@
 
 #include <serf.h>
 
+#include "svn_path.h"
+
 #include "ra_serf.h"
 
 
@@ -54,7 +56,8 @@ struct svn_ra_serf__propfind_context_t {
 
   /* hash table that will be updated with the properties
    *
-   * This can be shared between multiple svn_ra_serf__propfind_context_t structures
+   * This can be shared between multiple svn_ra_serf__propfind_context_t
+   * structures
    */
   apr_hash_t *ret_props;
 
@@ -64,9 +67,15 @@ struct svn_ra_serf__propfind_context_t {
   /* TODO use the state object as in the report */
   /* Are we parsing a property right now? */
   svn_boolean_t in_prop;
+  svn_boolean_t in_response;
 
   /* Should we be harvesting the CDATA elements */
   svn_boolean_t collect_cdata;
+
+  /* If we're dealing with a Depth: 1 response,
+   * we may be dealing with multiple paths.
+   */
+  const char *current_path;
 
   /* Current ns, attribute name, and value of the property we're parsing */
   const char *ns;
@@ -191,18 +200,32 @@ start_propfind(void *userData, const char *name, const char **attrs)
   /* look up name space if present */
   prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
 
-  if (ctx->in_prop && !ctx->attr_name)
+  if (!ctx->in_response && strcmp(prop_name.name, "response") == 0)
+    {
+      ctx->in_response = TRUE;
+    }
+  else if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
+    {
+      if (strcmp(ctx->depth, "1") == 0)
+        {
+          ctx->collect_cdata = TRUE;
+        }
+      else
+        {
+          ctx->current_path = ctx->path;
+        }
+    }
+  else if (ctx->in_response && strcmp(prop_name.name, "prop") == 0)
+    {
+      ctx->in_response = FALSE;
+      ctx->in_prop = TRUE;
+    }
+  else if (ctx->in_prop && !ctx->attr_name)
     {
       ctx->ns = prop_name.namespace;
       ctx->attr_name = apr_pstrdup(ctx->pool, prop_name.name);
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = TRUE;
-    }
-
-  /* check for 'prop' */
-  if (!ctx->in_prop && strcmp(prop_name.name, "prop") == 0)
-    {
-      ctx->in_prop = TRUE;
     }
 }
 
@@ -213,7 +236,21 @@ static void XMLCALL
 end_propfind(void *userData, const char *name)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
-  if (ctx->collect_cdata)
+  svn_ra_serf__dav_props_t prop_name;
+
+  /* look up name space if present */
+  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
+
+  if (ctx->in_response && strcmp(prop_name.name, "response") == 0)
+    {
+      ctx->in_response = FALSE;
+    }
+  if (ctx->in_prop && strcmp(prop_name.name, "prop") == 0)
+    {
+      ctx->in_prop = FALSE;
+      ctx->in_response = TRUE;
+    }
+  else if (ctx->collect_cdata)
     {
       /* if we didn't see a CDATA element, we want the tag name. */
       if (!ctx->attr_val)
@@ -232,20 +269,40 @@ end_propfind(void *userData, const char *name)
 
           ctx->attr_val = apr_pstrdup(ctx->pool, name);
         }
-
-      /* set the return props and update our cache too. */
-      svn_ra_serf__set_ver_prop(ctx->ret_props,
-                                ctx->path, ctx->rev,
-                                ctx->ns, ctx->attr_name, ctx->attr_val,
-                                ctx->pool);
-      if (ctx->cache_props)
+   
+      
+      if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
         {
-          svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
-                                    ctx->path, ctx->rev,
-                                    ctx->ns, ctx->attr_name,
-                                    apr_pstrdup(ctx->sess->pool,
-                                                ctx->attr_val),
-                                    ctx->sess->pool);
+          apr_pool_t *pool;
+          const char *canon_path;
+
+          if (!ctx->cache_props)
+            {
+              pool = ctx->pool;
+            }
+          else
+            {
+              pool = ctx->sess->pool;
+            }
+
+          ctx->current_path = svn_path_canonicalize(ctx->attr_val, pool);
+        }
+      else
+        {
+          /* set the return props and update our cache too. */
+          svn_ra_serf__set_ver_prop(ctx->ret_props,
+                                    ctx->current_path, ctx->rev,
+                                    ctx->ns, ctx->attr_name, ctx->attr_val,
+                                    ctx->pool);
+          if (ctx->cache_props)
+            {
+              svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
+                                        ctx->current_path, ctx->rev,
+                                        ctx->ns, ctx->attr_name,
+                                        apr_pstrdup(ctx->sess->pool,
+                                                    ctx->attr_val),
+                                        ctx->sess->pool);
+            }
         }
 
       /* we're done with it. */
@@ -534,3 +591,53 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
     }
 }
 
+void
+svn_ra_serf__walk_all_paths(apr_hash_t *props,
+                            svn_revnum_t rev,
+                            svn_ra_serf__path_rev_walker_t walker,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  apr_hash_index_t *path_hi;
+  apr_hash_t *ver_props;
+
+  ver_props = apr_hash_get(props, &rev, sizeof(rev));
+
+  if (!ver_props)
+    {
+      return;
+    }
+
+  for (path_hi = apr_hash_first(pool, ver_props); path_hi;
+       path_hi = apr_hash_next(path_hi))
+    {
+      void *path_props;
+      const void *path_name;
+      apr_ssize_t path_len;
+      apr_hash_index_t *ns_hi;
+
+      apr_hash_this(path_hi, &path_name, &path_len, &path_props);
+      for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
+           ns_hi = apr_hash_next(ns_hi))
+        {
+          void *ns_val;
+          const void *ns_name;
+          apr_ssize_t ns_len;
+          apr_hash_index_t *name_hi;
+          apr_hash_this(ns_hi, &ns_name, &ns_len, &ns_val);
+          for (name_hi = apr_hash_first(pool, ns_val); name_hi;
+               name_hi = apr_hash_next(name_hi))
+            {
+              void *prop_val;
+              const void *prop_name;
+              apr_ssize_t prop_len;
+              apr_hash_index_t *prop_hi;
+
+              apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
+              /* use a subpool? */
+              walker(baton, path_name, path_len, ns_name, ns_len,
+                     prop_name, prop_len, prop_val, pool);
+            }
+        }
+    }
+}

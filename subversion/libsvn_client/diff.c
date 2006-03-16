@@ -1481,7 +1481,7 @@ check_paths(const struct diff_parameters *params,
 }
 
 /** Helper structure filled by diff_prepare_repos_repos */
-struct diff_repos_repos
+struct diff_repos_repos_t
 {
   /* URL created from path1 */
   const char *url1;
@@ -1521,7 +1521,7 @@ struct diff_repos_repos
  * structure. */
 static svn_error_t *
 diff_prepare_repos_repos(const struct diff_parameters *params,
-                         struct diff_repos_repos *drr,
+                         struct diff_repos_repos_t *drr,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
@@ -2010,7 +2010,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
-  struct diff_repos_repos drr;
+  struct diff_repos_repos_t drr;
 
   /* Prepare info for the repos repos diff. */
   SVN_ERR(diff_prepare_repos_repos(diff_param, &drr, ctx, pool));
@@ -2132,8 +2132,16 @@ diff_repos_wc(const apr_array_header_t *options,
                                           revision1, &end,
                                           ctx, pool));
 
-      callback_baton->orig_path_1 = url1;
-      callback_baton->orig_path_2 = svn_path_join(anchor_url, target, pool);
+      if (!reverse)
+        {
+          callback_baton->orig_path_1 = url1;
+          callback_baton->orig_path_2 = svn_path_join(anchor_url, target, pool);
+        }
+      else
+        {
+          callback_baton->orig_path_1 = svn_path_join(anchor_url, target, pool);
+          callback_baton->orig_path_2 = url1;
+        }
     }
   
   /* Establish RA session to path2's anchor */
@@ -2257,7 +2265,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
-  struct diff_repos_repos drr;
+  struct diff_repos_repos_t drr;
 
   /* Prepare info for the repos repos diff. */
   SVN_ERR(diff_prepare_repos_repos(diff_param, &drr, ctx, pool));
@@ -2321,7 +2329,7 @@ do_diff_summarize(const struct diff_parameters *diff_param,
 /*** Public Interfaces. ***/
 
 /* Display context diffs between two PATH/REVISION pairs.  Each of
-   these input will be one of the following:
+   these inputs will be one of the following:
 
    - a repository URL at a given revision.
    - a working copy path, ignoring local mods.
@@ -2351,15 +2359,6 @@ do_diff_summarize(const struct diff_parameters *diff_param,
                   ||            |                         |
       ------------++------------+------------+------------+
       * These cases require server communication.
-
-   Svn_client_diff3() is the single entry point for all of the diff
-   operations, and will be in charge of examining the inputs and
-   making decisions about how to accurately report contextual diffs.
-
-   NOTE:  In the near future, svn_client_diff3() will likely only
-   continue to report textual differences in files.  Property diffs
-   are important, too, and will need to be supported in some fashion
-   so that this code can be re-used for svn_client_merge(). 
 */
 svn_error_t *
 svn_client_diff3(const apr_array_header_t *options,

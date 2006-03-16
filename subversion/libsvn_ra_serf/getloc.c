@@ -71,6 +71,8 @@ typedef struct {
   /* Return error code */
   svn_error_t *error;
 
+  int status_code;
+
   svn_boolean_t done;
 } loc_context_t;
 
@@ -239,49 +241,17 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0", base_props,
-                                      pool));
-
-  /* Send the request to the baseline URL */
-  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
-                                  "DAV:", "version-controlled-configuration");
-
-  if (!vcc_url)
-    {
-      abort();
-    }
-
-  /* Send the request to the baseline URL */
-  relative_url = svn_ra_serf__get_prop(props, session->repos_url.path,
-                                       SVN_DAV_PROP_NS_DAV,
-                                       "baseline-relative-path");
-
-  if (!relative_url)
-    {
-      abort();
-    }
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
   SVN_ERR(svn_ra_serf__retrieve_props(props,
                                       session, session->conns[0],
-                                      vcc_url, SVN_INVALID_REVNUM, "0",
-                                      checked_in_props, pool));
-
-  baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
-
-  if (!baseline_url)
-    {
-      abort();
-    }
-
-  SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                      session, session->conns[0],
-                                      baseline_url, SVN_INVALID_REVNUM, "0",
+                                      vcc_url, peg_revision, "0",
                                       baseline_props, pool));
 
-  basecoll_url = svn_ra_serf__get_prop(props, baseline_url,
-                                       "DAV:", "baseline-collection");
+  basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_revision,
+                                           "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {
@@ -304,6 +274,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   parser_ctx->user_data = loc_ctx;
   parser_ctx->start = start_getloc;
   parser_ctx->end = end_getloc;
+  parser_ctx->status_code = &loc_ctx->status_code;
   parser_ctx->done = &loc_ctx->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
@@ -312,6 +283,13 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
 
   SVN_ERR(svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool));
+
+  if (loc_ctx->status_code == 404)
+    {
+      /* TODO Teach the parser to handle our custom error message. */
+      return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
+                              _("File doesn't exist on HEAD"));
+    }
 
   return loc_ctx->error;
 }

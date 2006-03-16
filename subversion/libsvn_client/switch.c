@@ -2,7 +2,7 @@
  * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -51,13 +51,14 @@
 
 
 svn_error_t *
-svn_client_switch(svn_revnum_t *result_rev,
-                  const char *path,
-                  const char *switch_url,
-                  const svn_opt_revision_t *revision,
-                  svn_boolean_t recurse,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+svn_client__switch_internal(svn_revnum_t *result_rev,
+                            const char *path,
+                            const char *switch_url,
+                            const svn_opt_revision_t *revision,
+                            svn_boolean_t recurse,
+                            svn_boolean_t *timestamp_sleep,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
 {
   const svn_ra_reporter2_t *reporter;
   void *report_baton;
@@ -68,8 +69,9 @@ svn_client_switch(svn_revnum_t *result_rev,
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access, *dir_access;
   const char *diff3_cmd;
-  svn_boolean_t timestamp_sleep = FALSE;  
   svn_boolean_t use_commit_times;
+  svn_boolean_t sleep_here;
+  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
@@ -153,17 +155,25 @@ svn_client_switch(svn_revnum_t *result_rev,
                                 NULL, /* no traversal info */
                                 pool);
     
+  if (err)
+    {
+      /* Don't rely on the error handling to handle the sleep later, do
+         it now */
+      svn_sleep_for_timestamps();
+      return err;
+    }
+  *use_sleep = TRUE;
+
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
-     the primary operation.  We ignore the timestamp_sleep value since
-     there is an unconditional sleep later on. */
-  if (! err)
-    err = svn_client__handle_externals(traversal_info, FALSE,
-                                       &timestamp_sleep, ctx, pool);
+     the primary operation. */
+  err = svn_client__handle_externals(traversal_info, FALSE,
+                                     use_sleep, ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
-  svn_sleep_for_timestamps();
+  if (sleep_here)
+    svn_sleep_for_timestamps();
 
   /* Return errors we might have sustained. */
   if (err)
@@ -189,4 +199,17 @@ svn_client_switch(svn_revnum_t *result_rev,
     *result_rev = revnum;
   
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_switch(svn_revnum_t *result_rev,
+                  const char *path,
+                  const char *switch_url,
+                  const svn_opt_revision_t *revision,
+                  svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client__switch_internal(result_rev, path, switch_url, revision,
+                                     recurse, NULL, ctx, pool);
 }
