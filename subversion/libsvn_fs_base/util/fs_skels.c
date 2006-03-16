@@ -1388,9 +1388,6 @@ svn_fs_base__unparse_change_skel(skel_t **skel_p,
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list(pool);
 
-  /* XXX Store the copy id for moves.  Holding off on that until we've
-   * actually got code that needs to use it. */
-
   /* PROP-MOD */
   if (change->prop_mod)
     svn_fs_base__prepend(svn_fs_base__str_atom("1", pool), skel);
