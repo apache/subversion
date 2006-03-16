@@ -3164,8 +3164,8 @@ def merge_file_replace(sbox):
                                         wc_dir)
 # Test for issue 2522
 # Same as merge_file_replace, but without update before merge.
-def merge_file_replace_to_mixed_rev_wc(sbox):
-  "merge a replacement of a file to mixed rev wc"
+def merge_file_replace_to_unupdated_wc(sbox):
+  "unusable WC after add/rm/add/merge"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3301,7 +3301,7 @@ test_list = [ None,
               cherry_pick_text_conflict,
               merge_file_replace,
               merge_dir_replace,
-              XFail(merge_file_replace_to_mixed_rev_wc),
+              XFail(merge_file_replace_to_unupdated_wc),
              ]
 
 if __name__ == '__main__':
