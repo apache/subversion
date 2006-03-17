@@ -166,9 +166,16 @@ struct dir_baton {
      working copy. */
   const char *path;
 
- /* Identifies those directory elements that get compared while running the
-    crawler. These elements should not be compared again when recursively
-    looking for local only diffs. */
+  /* Identifies those directory elements that get compared while running
+     the crawler.  These elements should not be compared again when
+     recursively looking for local modifications.
+
+     This hash maps the full path of the entry to an unimportant value
+     (presence in the hash is the important factor here, not the value
+     itself).
+
+     If the directory's properties have been compared, an item with hash
+     key of "" (an empty string) will be present in the hash. */
   apr_hash_t *compared;
 
   /* The baton for the parent directory, or null if this is the root of the
@@ -624,8 +631,9 @@ directory_elements_diff(struct dir_baton *dir_baton)
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
                               dir_baton->path, dir_baton->pool));
 
-  /* Check for property mods on this directory. */
-  if (!in_anchor_not_target)
+  /* Check for local property mods on this directory, if we haven't
+     already reported them. */
+  if (!in_anchor_not_target && !apr_hash_get(dir_baton->compared, "", 0))
     {
       svn_boolean_t modified;
 
@@ -1083,19 +1091,9 @@ close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *b = dir_baton;
+  struct dir_baton *pb = b->dir_baton;
 
-  /* Skip added directories, they can only contain added elements all of
-     which have already been diff'd. */
-  if (!b->added)
-    SVN_ERR(directory_elements_diff(dir_baton));
-
-  /* Mark this directory as compared in the parent directory's baton. */
-  if (b->dir_baton)
-    {
-      apr_hash_set(b->dir_baton->compared, b->path, APR_HASH_KEY_STRING,
-                   "");
-    }
-
+  /* Report the property changes on the directory itself, if necessary. */
   if (b->propchanges->nelts > 0)
     {
       /* The working copy properties at the base of the wc->repos comparison:
@@ -1133,7 +1131,23 @@ close_directory(void *dir_baton,
                b->propchanges,
                originalprops,
                b->edit_baton->callback_baton));
+
+      /* Mark the properties of this directory as having already been
+         compared so that we know not to show any local modifications
+         later on. */
+      apr_hash_set(b->compared, "", 0, "");
     }
+
+  /* Report local modifications for this directory.  Skip added
+     directories since they can only contain added elements, all of
+     which have already been diff'd. */
+  if (!b->added)
+    SVN_ERR(directory_elements_diff(dir_baton));
+
+  /* Mark this directory as compared in the parent directory's baton,
+     unless this is the root of the comparison. */
+  if (pb)
+    apr_hash_set(pb->compared, b->path, APR_HASH_KEY_STRING, "");
 
   return SVN_NO_ERROR;
 }
