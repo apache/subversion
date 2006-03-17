@@ -777,7 +777,7 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+  template = ["<?xml version=\"1.0\"?>\n",
               "<status>\n",
               "<target\n",
               "   path=\"%s\">\n" % (file_path),
