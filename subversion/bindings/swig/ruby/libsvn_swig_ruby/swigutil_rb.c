@@ -389,7 +389,7 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
 
   pool_wrapper_p = &pool_wrapper;
   SWIG_ConvertPtr(*rb_pool, (void **)pool_wrapper_p,
-                  SWIG_TypeQuery("apr_pool_wrapper_t *"), 1);
+                  SWIG_TypeQuery("apr_pool_wrapper_t *"), 0);
   *pool = pool_wrapper->pool;
 }
 
