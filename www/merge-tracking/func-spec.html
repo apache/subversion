@@ -13,28 +13,59 @@
 </head>
 
 <body>
-<div class="h2">
-<h2>Merge Tracking Functional Specification</h2>
+<div class="h1">
+<h1>Merge Tracking Functional Specification</h1>
 
 <p><a href="index.html">Merge tracking</a> functional
 specification.</p>
 
-<p style="color: red">TODO:
-Incorporate <a
-href="http://svn.collab.net/repos/svn/trunk/notes/repeated-merging"
->repeated-merging</a>, and <a href="summit.html">CollabNet Summit
-findings</a>.  Describe how
-each <a href="requirements.html">requirement</a> will actually
-function for Subversion.  Remove redundancies.</p>
+<p style="color: red">TODO: Incorporate <a
+href="summit.html">CollabNet Summit findings</a>.  Describe how each
+<a href="requirements.html">requirement</a> will actually function for
+Subversion.  Remove redundancies.</p>
 
-<div id="repeated-merge">
-<h3>Repeated Merge</h3>
+<div class="h2" id="repeated-merge">
+<h2>Repeated Merge</h2>
 
 <p>There are two general schemes for solving the <a
 href="requirements.html#repeated-merge">repeated merge</a>
 problem.</p>
 
-<div id="aslb-merge">
+<div class="h3" id="mrca-merge">
+<h3>The Most Recent Common Ancestor approach (MRCA)</h3>
+
+<p>In this scheme, you record an optional set of merge sources in each
+node-revision.  When asked to do a merge with only one source (that
+is, just "svn merge URL", with no second argument), you compute the
+most recent ancestor and do a three-way merge between the common
+ancestor, the given URL, and the WC.</p>
+
+<p>To compute the most recent ancestor, you chain off the immediate
+predecessors of each node-revision.  The immediate predecessors are
+the direct predecessor (the most recent node-revision within the node)
+and the merge sources.  An interleaved breadth-first search should
+find the most recent common ancestor.</p>
+
+</div>  <!-- mrca-merge -->
+
+<div class="h3" id="as-merge">
+<h3>The Ancestry Set approach (AS)</h3>
+
+<p>In this scheme, you record the full ancestry set for each
+node-revision -- that is, the set of all changes which are accounted
+for in that node-revision.  (How you store this ancestry set is
+unimportant; the point is, you need a reasonably efficient way of
+determining it when asked.)  If you are asked to "svn merge URL", you
+apply the changes present in URL's ancestry but absent in WC's
+ancestry.  Note that this is not a single three-way merge; you may
+have to apply a large number of disjoint changes to the WC.</p>
+
+<p>For a longer description of this approach, see the "Merging and
+Ancestry" section of the original <a
+href="http://svn.collab.net/repos/svn/trunk/doc/design/model.xml">design
+doc</a>.</p>
+
+<div class="h4" id="aslb-merge">
 <h4>Ancestry-Sensitive Line-Based Merge</h4>
 
 <p>Make 'hunks' of contextually-merged text sensitive to ancestry.</p>
@@ -116,6 +147,35 @@ already be accounted for.</p>
 
 </div>  <!-- aslb-merge -->
 
+</div>  <!-- as-merge -->
+
+<div class="h3">
+<h3>Comparisons, Arguments, and Questions</h3>
+
+<p>AS allows you to merge changes from a branch out of order, without
+doing any bookkeeping.  MRCA requires you to merge changes from a
+branch in order.</p>
+
+<p>At first look, MRCA may be simpler to implement, since it results
+in a single three-way merge.  However, it likely does not handle all
+edge cases.  For instance, it may break down faster if the merging
+topology is not hierarchical.</p>
+
+<p>MRCA may be easier for users to understand, even though AS is
+probably simpler to a mathematician.</p>
+
+<p>Consistency with other modern version controls systems is
+desirable.</p>
+
+<p>If a user asks to merge a directory, should we apply MRCA or AS to
+each subdirectory and file to determine what ancestor(s) to use?  Or
+should we apply MRCA or AS just once, to the directory itself?  The
+latter approach seems simpler and more efficient, but will break down
+quickly if the user wants to merge subdirectories of a branch in
+advance of merging in the whole thing.</p>
+
+</div>  <!-- h3 -->
+
 </div>  <!-- repeated-merge -->
 
 
@@ -145,6 +205,6 @@ already be accounted for.</p>
 
 </div>  <!-- related-documents -->
 
-</div>  <!-- h2 -->
+</div>  <!-- h1 -->
 </body>
 </html>
