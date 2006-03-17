@@ -756,6 +756,7 @@ SubversionException = _core.SubversionException
 %}
 
 %header %{
+static void apr_pool_wrapper_destroy(apr_pool_wrapper_t *self);
 static void apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self);
 static void apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self);
 %}
@@ -788,29 +789,34 @@ struct apr_pool_wrapper_t
   }
 
   ~apr_pool_wrapper_t() {
-    if (!self->destroyed) {
-      apr_pool_wrapper_destroy_children(self);
-      apr_pool_wrapper_remove_from_parent(self);
-      apr_pool_destroy(self->pool);
-    }
+    apr_pool_wrapper_destroy(self);
     free(self);
   }
 };
 
+%ignore apr_pool_wrapper_destroy;
 %ignore apr_pool_wrapper_destroy_children;
 %ignore apr_pool_wrapper_remove_from_parent;
 %inline %{
 static void
-apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self)
+apr_pool_wrapper_destroy(apr_pool_wrapper_t *self)
 {
   if (!self->destroyed) {
-    apr_pool_wrapper_t **child;
-
     self->destroyed = TRUE;
-    while (child = apr_array_pop(self->children)) {
-      if (*child) {
-        apr_pool_wrapper_destroy_children(*child);
-      }
+    apr_pool_wrapper_destroy_children(self);
+    apr_pool_wrapper_remove_from_parent(self);
+    apr_pool_destroy(self->pool);
+  }
+}
+
+static void
+apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self)
+{
+  apr_pool_wrapper_t **child;
+
+  while (child = apr_array_pop(self->children)) {
+    if (*child) {
+      apr_pool_wrapper_destroy(*child);
     }
   }
 }
@@ -827,6 +833,7 @@ apr_pool_wrapper_remove_from_parent(apr_pool_wrapper_t *self)
       child = APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *);
       if (child == self) {
         APR_ARRAY_IDX(self->parent->children, i, apr_pool_wrapper_t *) = NULL;
+        self->parent = NULL;
         break;
       }
     }
