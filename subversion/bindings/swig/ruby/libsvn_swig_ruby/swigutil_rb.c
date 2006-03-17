@@ -91,6 +91,7 @@ typedef struct hash_to_apr_hash_data_t
   apr_pool_t *pool;
 } hash_to_apr_hash_data_t;
 
+static void r2c_swig_type2(VALUE value, const char *type_name, void **result);
 
 static VALUE
 rb_ary_aref1(VALUE ary, VALUE arg)
@@ -388,8 +389,7 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
   }
 
   pool_wrapper_p = &pool_wrapper;
-  SWIG_ConvertPtr(*rb_pool, (void **)pool_wrapper_p,
-                  SWIG_TypeQuery("apr_pool_wrapper_t *"), 0);
+  r2c_swig_type2(*rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
   *pool = pool_wrapper->pool;
 }
 
@@ -625,10 +625,16 @@ svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 {
   void **result = NULL;
   result = apr_palloc(pool, sizeof(void *));
-  SWIG_ConvertPtr(value, result, SWIG_TypeQuery((char *)ctx), 1);
+  SWIG_ConvertPtr(value, result, SWIG_TypeQuery((char *)ctx), 0);
   return *result;
 }
 #define r2c_swig_type svn_swig_rb_to_swig_type
+
+static void
+r2c_swig_type2(VALUE value, const char *type_name, void **result)
+{
+  SWIG_ConvertPtr(value, result, SWIG_TypeQuery(type_name), 0);
+}
 
 static void *
 r2c_long(VALUE value, void *ctx, apr_pool_t *pool)
@@ -2147,8 +2153,7 @@ svn_swig_rb_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
       void *result_cred = NULL;
       svn_auth_cred_simple_t *tmp_cred = NULL;
       
-      SWIG_ConvertPtr(result, &result_cred,
-                      SWIG_TypeQuery("svn_auth_cred_simple_t *"), 1);
+      r2c_swig_type2(result, "svn_auth_cred_simple_t *", &result_cred);
       tmp_cred = (svn_auth_cred_simple_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->username = tmp_cred->username ? \
@@ -2191,8 +2196,7 @@ svn_swig_rb_auth_username_prompt_func(svn_auth_cred_username_t **cred,
       void *result_cred = NULL;
       svn_auth_cred_username_t *tmp_cred = NULL;
       
-      SWIG_ConvertPtr(result, &result_cred,
-                      SWIG_TypeQuery("svn_auth_cred_username_t *"), 1);
+      r2c_swig_type2(result, "svn_auth_cred_username_t *", &result_cred);
       tmp_cred = (svn_auth_cred_username_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->username = tmp_cred->username ? \
@@ -2238,8 +2242,8 @@ svn_swig_rb_auth_ssl_server_trust_prompt_func(
       void *result_cred;
       svn_auth_cred_ssl_server_trust_t *tmp_cred = NULL;
       
-      SWIG_ConvertPtr(result, &result_cred,
-                      SWIG_TypeQuery("svn_auth_cred_ssl_server_trust_t *"), 1);
+      r2c_swig_type2(result, "svn_auth_cred_ssl_server_trust_t *",
+                     &result_cred);
       tmp_cred = (svn_auth_cred_ssl_server_trust_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       *new_cred = *tmp_cred;
@@ -2279,8 +2283,8 @@ svn_swig_rb_auth_ssl_client_cert_prompt_func(
       void *result_cred = NULL;
       svn_auth_cred_ssl_client_cert_t *tmp_cred = NULL;
       
-      SWIG_ConvertPtr(result, &result_cred,
-                      SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_t *"), 1);
+      r2c_swig_type2(result, "svn_auth_cred_ssl_client_cert_t *",
+                     &result_cred);
       tmp_cred = (svn_auth_cred_ssl_client_cert_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->cert_file = tmp_cred->cert_file ? \
@@ -2322,8 +2326,8 @@ svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
       void *result_cred = NULL;
       svn_auth_cred_ssl_client_cert_pw_t *tmp_cred = NULL;
       
-      SWIG_ConvertPtr(result, &result_cred,
-                      SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_pw_t *"), 1);
+      r2c_swig_type2(result, "svn_auth_cred_ssl_client_cert_pw_t *",
+                     &result_cred);
       tmp_cred = (svn_auth_cred_ssl_client_cert_pw_t *)result_cred;
       new_cred = apr_pcalloc(pool, sizeof(*new_cred));
       new_cred->password = tmp_cred->password ? \
@@ -2388,7 +2392,7 @@ svn_swig_rb_make_stream(VALUE io)
   if (RTEST(rb_funcall(rb_svn_core_stream(), rb_id_eqq(), 1, io))) {
     svn_stream_t **stream_p;
     stream_p = &stream;
-    SWIG_ConvertPtr(io, (void **)stream_p, SWIG_TypeQuery("svn_stream_t *"), 1);
+    r2c_swig_type2(io, "svn_stream_t *", (void **)stream_p);
   } else {
     VALUE rb_pool = rb_pool_new(Qnil);
     apr_pool_wrapper_t *pool_wrapper;
@@ -2396,8 +2400,7 @@ svn_swig_rb_make_stream(VALUE io)
     
     rb_set_pool(io, rb_pool);
     pool_wrapper_p = &pool_wrapper;
-    SWIG_ConvertPtr(rb_pool, (void **)pool_wrapper_p,
-                    SWIG_TypeQuery("apr_pool_wrapper_t *"), 1);
+    r2c_swig_type2(rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
     stream = svn_stream_create((void *)io, pool_wrapper->pool);
     svn_stream_set_read(stream, read_handler_rbio);
     svn_stream_set_write(stream, write_handler_rbio);
@@ -2838,13 +2841,10 @@ svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
                                                  void *handler_baton)
 {
   rb_ivar_set(obj, rb_id_handler(),
-              SWIG_NewPointerObj((void *)handler,
-                                 SWIG_TypeQuery("svn_txdelta_window_handler_t"),
-                                 0));
+              c2r_swig_type((void *)handler,
+                            (void *)"svn_txdelta_window_handler_t"));
   rb_ivar_set(obj, rb_id_handler_baton(),
-              SWIG_NewPointerObj((void *)handler_baton,
-                                 SWIG_TypeQuery("void *"),
-                                 0));
+              c2r_swig_type(handler_baton, (void *)"void *"));
   return obj;
 }
 
@@ -2854,14 +2854,14 @@ svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
                                           apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t handler;
+  svn_txdelta_window_handler_t *handler_p;
   void *handler_baton;
 
-  handler = r2c_swig_type(window_handler,
-                          (void *)"svn_txdelta_window_handler_t",
-                          pool);
-  handler_baton = r2c_swig_type(rb_funcall(window_handler, rb_id_baton(), 0),
-                                (void *)"void *",
-                                pool);
+  handler_p = &handler;
+  r2c_swig_type2(window_handler, "svn_txdelta_window_handler_t",
+                 (void **)handler_p);
+  r2c_swig_type2(rb_funcall(window_handler, rb_id_baton(), 0),
+                 "void *", &handler_baton);
 
   return handler(window, handler_baton);
 }
@@ -2876,12 +2876,10 @@ svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
   void *handler_baton;
 
   handler_p = &handler;
-  SWIG_ConvertPtr(rb_ivar_get(obj, rb_id_handler()),
-                  (void **)handler_p,
-                  SWIG_TypeQuery("svn_txdelta_window_handler_t"),
-                  1);
-  SWIG_ConvertPtr(rb_ivar_get(obj, rb_id_handler_baton()),
-                  (void **)&handler_baton, SWIG_TypeQuery("void *"), 1);
+  r2c_svn_type2(rb_ivar_get(obj, rb_id_handler()),
+                "svn_txdelta_window_handler_t", (void **)handler_p);
+  r2c_svn_type2(rb_ivar_get(obj, rb_id_handler_baton()),
+                "void *", &handler_baton);
 
   return handler(window, handler_baton);
 }
