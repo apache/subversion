@@ -20,6 +20,8 @@
 import shutil, string, sys, re, os
 
 # Our testing module
+if sys.platform == 'AS/400':
+  import ebcdic
 import svntest
 
 
@@ -98,11 +100,11 @@ def export_working_copy_with_mods(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
+                      + 'appended mu text'.encode('utf-8'))
   expected_disk.tweak('A/D/G/rho',
                       contents=expected_disk.desc['A/D/G/rho'].contents
-                      + 'new appended text for rho')
-  expected_disk.add({'kappa' : Item("This is the file 'kappa'.")})
+                      + 'new appended text for rho'.encode('utf-8'))
+  expected_disk.add({'kappa' : Item("This is the file 'kappa'.".encode('utf-8'))})
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E', 'A/D/gamma')
 
   export_target = sbox.add_wc_path('export')
@@ -152,7 +154,7 @@ def export_keyword_translation(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents + 
-                      '$LastChangedRevision: 2 $')
+                      '$LastChangedRevision: 2 $'.encode('utf-8'))
 
   export_target = sbox.add_wc_path('export')
 
@@ -183,7 +185,7 @@ def export_eol_translation(sbox):
                        '-m', 'Added eol-style prop to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
-  new_contents = expected_disk.desc['A/mu'].contents.replace("\n", "\r")
+  new_contents = expected_disk.desc['A/mu'].contents.replace("\n".encode('utf-8'), "\r".encode('utf-8'))
   expected_disk.tweak('A/mu', contents=new_contents)
 
   export_target = sbox.add_wc_path('export')
@@ -215,7 +217,7 @@ def export_working_copy_with_keyword_translation(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents + 
-                      '$LastChangedRevision: 1M $')
+                      '$LastChangedRevision: 1M $'.encode('utf-8'))
 
   export_target = sbox.add_wc_path('export')
 
@@ -236,7 +238,7 @@ def export_working_copy_with_property_mods(sbox):
                        'CR', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
-  new_contents = expected_disk.desc['A/mu'].contents.replace("\n", "\r")
+  new_contents = expected_disk.desc['A/mu'].contents.replace("\n".encode('utf-8'), "\r".encode('utf-8'))
   expected_disk.tweak('A/mu', contents=new_contents)
 
   export_target = sbox.add_wc_path('export')
@@ -295,7 +297,7 @@ def export_native_eol_option(sbox):
                        '-m', 'Added eol-style prop to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
-  new_contents = expected_disk.desc['A/mu'].contents.replace("\n", "\r")
+  new_contents = expected_disk.desc['A/mu'].contents.replace("\n".encode('utf-8'), "\r".encode('utf-8'))
   expected_disk.tweak('A/mu', contents=new_contents)
 
   export_target = sbox.add_wc_path('export')

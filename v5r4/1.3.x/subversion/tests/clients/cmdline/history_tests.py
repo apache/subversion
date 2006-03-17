@@ -98,10 +98,10 @@ def cat_traces_renames(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G/pi', 'A/D/G/rho')
   expected_disk.add({
-    'A/D/G/rho' : Item("This is the file 'pi'.\n"),
+    'A/D/G/rho' : Item("This is the file 'pi'.\n".encode('utf-8')),
     })
   expected_disk.add({
-    'A/D/G/bloo' : Item("This is the file 'rho'.\n"),
+    'A/D/G/bloo' : Item("This is the file 'rho'.\n".encode('utf-8')),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,

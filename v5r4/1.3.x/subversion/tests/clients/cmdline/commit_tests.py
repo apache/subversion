@@ -836,13 +836,13 @@ def hudson_part_2_1(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/G/chi' : Item("This is the file 'chi'.\n"),
+    'A/D/G/chi' : Item("This is the file 'chi'.\n".encode('utf-8')),
     })
   expected_disk.add({
-    'A/D/G/omega' : Item("This is the file 'omega'.\n"),
+    'A/D/G/omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
     })
   expected_disk.add({
-    'A/D/G/psi' : Item("This is the file 'psi'.\n"),
+    'A/D/G/psi' : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -946,9 +946,9 @@ def merge_mixed_revisions(sbox):
     'A/D/H/psi' : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.wc.State('', {
-    'omega' : Item("This is the file 'omega'.\n"),
-    'chi' : Item("This is the file 'chi'.\nmoo"),
-    'psi' : Item("This is the file 'psi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
+    'chi' : Item("This is the file 'chi'.\nmoo".encode('utf-8')),
+    'psi' : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
   expected_output = svntest.wc.State(wc_dir, { })
   svntest.actions.run_and_verify_update (H_path,
@@ -1808,6 +1808,7 @@ def from_wc_top_with_bad_editor(sbox):
                                      'pset', 'fish', 'food', wc_dir)
   was_cwd = os.getcwd()
   try:
+    failed = 0
     os.chdir(wc_dir)
     out, err = svntest.actions.run_and_verify_svn(
       "Commit succeeded when should have failed.",
@@ -1815,8 +1816,18 @@ def from_wc_top_with_bad_editor(sbox):
       'ci', '--editor-cmd', 'no_such-editor')
 
     err = string.join(map(string.strip, err), ' ')
-    if not (re.match(".*no_such-editor.*", err)
-            and re.match(".*Commit failed.*", err)):
+    
+    if not sys.platform == 'AS/400':
+      if not (re.match(".*no_such-editor.*", err)
+              and re.match(".*Commit failed.*", err)):
+        failed = 1
+    else:
+      # iSeries port doesn't support --editor-cmd so 
+      # failure message should always be consistent.
+      if not err == ("SVN: invalid option: --editor-cmd Type 'svn help' for usage."):
+        failed = 1
+
+    if failed:
       print "Commit failed, but not in the way expected."
       raise svntest.Failure
 
@@ -1848,7 +1859,9 @@ def mods_in_schedule_delete(sbox):
                                         None, None, None, None, None, wc_dir)
 
   # Unversioned file still exists
-  fp = open(foo_path)
+  fp = open(foo_path, 'rb')
+  if sys.platform == 'AS/400':
+    foo_contents = foo_contents.decode('cp037').encode('utf-8')
   if fp.read() != foo_contents:
     raise svntest.Failure
   fp.close()

@@ -17,11 +17,13 @@
 ######################################################################
 
 # General modules
-import os, re
+import os, re, sys
 
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+    import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -57,7 +59,10 @@ def general_symlink(sbox):
 
   # Run a diff and verify that we get the correct output
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff', wc_dir)
-  
+
+#  if sys.platform == 'AS/400':
+#    stdout_lines = ebcdic.os400_list_from_utf8(stdout_lines)
+
   regex = '^\+link linktarget'
   for line in stdout_lines:
     if re.match(regex, line):

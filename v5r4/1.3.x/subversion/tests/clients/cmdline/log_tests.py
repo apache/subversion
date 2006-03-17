@@ -96,8 +96,8 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 2 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg.encode('utf-8'))
   log_file.close ()
   svntest.main.file_append (iota_path, "2")
   svntest.main.run_svn (None, 'ci', '-F', msg_file)
@@ -115,8 +115,8 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 4 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg.encode('utf-8'))
   log_file.close ()
   svntest.main.file_append (iota_path, "4")
   svntest.main.file_append (epsilon_path, "4")
@@ -134,8 +134,8 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 6 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg.encode('utf-8'))
   log_file.close ()
   svntest.main.run_svn (None, 'ps', 'blue', 'azul', B_path)  
   svntest.main.file_append (psi_path, "6")
@@ -152,8 +152,8 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 8 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg.encode('utf-8'))
   log_file.close ()
   svntest.main.file_append (iota_path, "8")
   svntest.main.file_append (rho_path, "8")
@@ -512,8 +512,8 @@ def log_through_copyfrom_history(sbox):
   but with multiple lines
   to test the code"""
 
-  log_file=open (msg_file, 'w')
-  log_file.write (msg2)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg2.encode('utf-8'))
   log_file.close ()
   svntest.main.file_append (mu_path, "2")
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
@@ -523,8 +523,8 @@ def log_through_copyfrom_history(sbox):
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 3")
   svntest.actions.run_and_verify_svn (None, None, [], 'rm', mu2_path)
-  log_file=open (msg_file, 'w')
-  log_file.write (msg4)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg4.encode('utf-8'))
   log_file.close ()
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-F', msg_file)
@@ -532,8 +532,8 @@ def log_through_copyfrom_history(sbox):
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 5")
 
-  log_file=open (msg_file, 'w')
-  log_file.write (msg6)
+  log_file=open (msg_file, 'wb')
+  log_file.write (msg6.encode('utf-8'))
   log_file.close ()
   svntest.actions.run_and_verify_svn (None, None, [],
                                       'cp', '-r', '5', mu_URL, mu2_URL,
@@ -599,7 +599,7 @@ Content-length: 128
 K 7
 svn:log
 V 100
-This msg contains a Ctrl-T (\x14) and a Ctrl-I (\t).
+This msg contains a Ctrl-T (""".encode('utf-8') + "\x14" + """) and a Ctrl-I (\t).
 The former might be escaped, but the latter never.
 
 K 10
@@ -611,7 +611,7 @@ svn:date
 V 27
 2005-01-24T10:09:22.012524Z
 PROPS-END
-"""
+""".encode('utf-8')
 
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)

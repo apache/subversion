@@ -76,9 +76,9 @@ def get_routine_disk_state(wc_dir):
   # A/B/* no longer exist, but have been replaced by copies of A/D/G/*
   disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   disk.add({
-    'A/B/pi' : Item("This is the file 'pi'.\n"),
-    'A/B/rho' : Item("This is the file 'rho'.\n"),
-    'A/B/tau' : Item("This is the file 'tau'.\n"),
+    'A/B/pi' : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'A/B/rho' : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'A/B/tau' : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
 
   return disk
@@ -289,15 +289,15 @@ def full_update(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n".encode('utf-8')),
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -398,12 +398,11 @@ def update_switched_things(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
-
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -456,11 +455,11 @@ def rev_update_switched_things(sbox):
 
   # Create expected disk tree
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
     
   # Create expected status tree for the update.
@@ -568,9 +567,9 @@ def relocate_deleted_missing_copied(sbox):
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D/H2'       : Item(),
-    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
-    'A/D/H2/omega' : Item("This is the file 'omega'.\n"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n".encode('utf-8')),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
@@ -899,10 +898,10 @@ def commit_mods_below_switch(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/C/E'       : Item(),
-    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
-    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n".encode('utf-8')),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n".encode('utf-8')),
     'A/C/F'       : Item(),
-    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/C', switched='S')

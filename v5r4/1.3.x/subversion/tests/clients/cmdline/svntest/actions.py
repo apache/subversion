@@ -20,6 +20,8 @@ import os.path, shutil, string, re, sys
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
+if sys.platform == 'AS/400':
+  import ebcdic
 
 class SVNUnexpectedOutput(Failure):
   """Exception raised if an invocation of svn results in unexpected
@@ -82,6 +84,7 @@ def guarantee_greek_repository(path):
     # import the greek tree, using l:foo/p:bar
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
+
     output, errput = main.run_svn(None, 'import',
                                   '--username', main.wc_author,
                                   '--password', main.wc_passwd,
@@ -700,6 +703,34 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(actual)
 
 
+def display_lines_as400(out_list):
+  """Try to determine if OUT_LIST is ebcdic or utf-8 encoded.
+  If the latter, convert the lines to ebcdic so they display correctly
+  when printed to the log.  Also print a tag indicating the lines were
+  originally in utf-8.  If OUT_LIST is already in ebcdic just print."""
+  is_ebcdic = False
+  for line in out_list:
+    try:
+      line.decode('utf-8')
+    except:
+      # If any line can't be decoded we assume it's ebcdic
+      is_ebcdic = True
+      break
+  
+  # Let the log reader know what how this output was encoded...
+  if is_ebcdic == False:
+    print '[UTF-8 OUTPUT]:'
+  else:
+    print '[EBCDIC OUTPUT]:' 
+
+  for line in out_list:
+    #...But print it in ebcdic so they can read it.
+    if is_ebcdic:
+      print line,
+    else:
+      print line.decode('utf-8').encode('cp037')   
+
+
 def display_lines(message, label, expected, actual, expected_is_regexp=None):
   """Print MESSAGE, unless it is None, then print EXPECTED (labeled
   with LABEL) followed by ACTUAL (also labeled with LABEL).
@@ -707,16 +738,31 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None):
   if message is not None:
     print message
   if expected is not None:
+    print 'len(EXPECTED) = ' + str(len(expected))
+  if actual is not None:
+    print 'len(ACTUAL) = ' + str(len(actual)) 
+
+  if expected is not None:
     if expected_is_regexp:
       print 'EXPECTED', label + ' (regexp):'
     else:
-      print 'EXPECTED', label + ':'
-    map(sys.stdout.write, expected)
+      if sys.platform != 'AS/400':
+        print 'EXPECTED', label + ':'
+      else:
+        print 'EXPECTED', label + ':',
+    if sys.platform != 'AS/400':
+      map(sys.stdout.write, expected)
+    else:
+      display_lines_as400(expected)   
     if expected_is_regexp:
       map(sys.stdout.write, '\n')
   if actual is not None:
-    print 'ACTUAL', label + ':'
-    map(sys.stdout.write, actual)
+    if sys.platform != 'AS/400':
+      print 'ACTUAL', label + ':'
+      map(sys.stdout.write, actual)
+    else: 
+      print 'ACTUAL', label + ':',
+      display_lines_as400(actual)
 
 def compare_and_display_lines(message, label, expected, actual):
   'Compare two sets of output lines, and print them if they differ.'
@@ -756,6 +802,7 @@ def make_repo_and_wc(sbox):
   suite.)  Returns on success, raises on failure."""
 
   # Store the path of the current repository.
+
   main.set_repos_paths(sbox.repo_dir)
 
   # Create (or copy afresh) a new repos with a greek tree in it.
@@ -783,7 +830,8 @@ def duplicate_dir(wc_name, wc_copy_name):
 
   main.safe_rmtree(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
-  
+  if sys.platform == 'AS/400':
+    ebcdic.os400_tagtree(wc_copy_name, 1208)
 
 
 def get_virginal_state(wc_dir, rev):
@@ -806,7 +854,7 @@ def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
-  main.file_append(path, "stop looking!")
+  main.file_append(path, "stop looking!".encode('utf-8'))
 
 def enable_revprop_changes(repos_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a

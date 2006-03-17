@@ -31,7 +31,16 @@
 #include "svn_test.h"
 #include "svn_io.h"
 #include "svn_path.h"
+
+#if AS400_UTF8
+#include "svn_utf.h"
+#endif
+
 #include "svn_private_config.h"
+
+#if AS400_UTF8
+#define SVN_UTF_ETOU_XLATE_HANDLE "svn-utf-etou-xlate-handle"
+#endif
 
 
 /* Some Subversion test programs may want to parse options in the
@@ -199,7 +208,7 @@ do_test_num (const char *progname,
 
 /* Standard svn test program */
 int
-main (int argc, char *argv[])
+main (int argc, char *argv_native[])
 {
   char *prog_name;
   int test_num;
@@ -210,6 +219,12 @@ main (int argc, char *argv[])
   char **arg;
   /* How many tests are there? */
   int array_size = get_array_size();
+
+#if AS400_UTF8
+  /* Even when compiled with UTF support in V5R4, argv is still
+   * encoded in ebcdic, so we'll need to convert it to utf-8. */
+  char **argv;
+#endif
   
   svn_test_opts_t opts = { NULL };
 
@@ -224,6 +239,21 @@ main (int argc, char *argv[])
 
   /* set up the global pool */
   pool = svn_pool_create (NULL);
+
+#if AS400_UTF8
+  /* Convert argv to utf-8 for call to apr_getopt_init(). */
+  argv = apr_palloc (pool, sizeof(char *) * argc);
+  for (i = 0; i < argc; i++)
+    {
+      svn_error_t *err;
+      /* Use 0 for default job ccsid. */
+      err = svn_utf_cstring_to_utf8_ex (&argv[i], argv_native[i],
+                                        (const char *)0,
+                                        SVN_UTF_ETOU_XLATE_HANDLE, pool);
+      if(err)
+        return EXIT_FAILURE;  
+    }
+#endif
 
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr (argv[0], '/');

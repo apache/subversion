@@ -39,6 +39,10 @@
 #include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
+#if AS400_UTF8
+#define SVN_UTF_ETOU_XLATE_HANDLE "svn-utf-etou-xlate-handle"
+#endif
+
 /*-------------------------------------------------------------------*/
 
 /** Helper routines. **/
@@ -59,7 +63,15 @@ current_directory_url (const char **url,
   if (! getcwd (curdir, sizeof(curdir)))
     return svn_error_create (SVN_ERR_BASE, NULL, "getcwd() failed");
 
+#if !AS400_UTF8
   SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_ls_curdir, curdir, pool));
+#else
+  /* Even with the UTF support in V5R4 a few functions on OS400 don't
+   * populate utf-8 string reference arguments, including _getcwd(). */
+  SVN_ERR (svn_utf_cstring_to_utf8_ex (&utf8_ls_curdir, curdir,
+                                       (const char *)0,
+                                       SVN_UTF_ETOU_XLATE_HANDLE, pool));
+#endif                                      
   utf8_is_curdir = svn_path_internal_style (utf8_ls_curdir, pool);
 
   unencoded_url = apr_psprintf (pool, "file://%s%s%s%s",

@@ -33,6 +33,7 @@
 #include <apr_general.h>
 #include <apr_file_io.h>
 #include <svn_wc.h>
+#include "svn_io.h"
 #include "svn_subst.h"
 
 #include "../svn_test.h"
@@ -169,11 +170,20 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
   apr_file_t *f;
   apr_size_t i, j;
 
+#if !AS400_UTF8
   apr_err = apr_file_open (&f, fname,
                            (APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY),
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_create (apr_err, NULL, fname);
+#else
+  /* On OS400 we want this file correctly tagged with a CCSID of 1208 so
+   * we use svn_io_file_open() which assures this. */
+  SVN_ERR (svn_io_file_open (&f, fname,
+                             APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY,
+                             APR_OS_DEFAULT, pool));
+#endif                  
+
   
   for (i = 0; i < (sizeof (lines) / sizeof (*lines)); i++)
     {
@@ -185,7 +195,16 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
          fprintf() doing a newline conversion? */ 
       for (j = 0; this_eol_str[j]; j++)
         {
+#if !AS400
           apr_err = apr_file_putc (this_eol_str[j], f);
+#else
+          /* OS400's implmentation of apr_file_putc is broken and returns
+           * 1 even when apr_file_putc is successful.  Until this is fixed,
+           * the work around is to call apr_file_write for one byte. */
+          apr_size_t one_byte = 1;
+          apr_err = apr_file_write(f, (const void *)(&this_eol_str[j]),
+                                   &one_byte);       
+#endif
           if (apr_err)
             return svn_error_create (apr_err, NULL, fname);
         }
