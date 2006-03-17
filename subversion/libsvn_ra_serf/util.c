@@ -66,6 +66,23 @@ svn_ra_serf__accept_response(serf_request_t *request,
   return serf_bucket_response_create(c, bkt_alloc);
 }
 
+static serf_bucket_t*
+accept_head(serf_request_t *request,
+            serf_bucket_t *stream,
+            void *acceptor_baton,
+            apr_pool_t *pool)
+{
+  serf_bucket_t *response;
+
+  response = svn_ra_serf__accept_response(request, stream, acceptor_baton,
+                                          pool);
+
+  /* We know we shouldn't get a response body. */
+  serf_bucket_response_set_head(response);
+
+  return response;
+}
+
 void
 svn_ra_serf__conn_closed(serf_connection_t *conn,
             void *closed_baton,
@@ -481,7 +498,10 @@ handler_default(serf_request_t *request,
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
-      return status;
+      if (!APR_STATUS_IS_EOF(status) || strcmp(ctx->method, "HEAD") != 0)
+        {
+          return status;
+        }
     }
 
   status = serf_bucket_response_status(response, &sl);
@@ -507,7 +527,6 @@ handler_default(serf_request_t *request,
     }
   else
     {
-      headers = serf_bucket_response_get_headers(response);
       status = ctx->response_handler(request, response, ctx->response_baton,
                                      pool);
     }
@@ -553,6 +572,11 @@ setup_default(serf_request_t *request,
     }
   else
     {
+      if (strcmp(ctx->method, "HEAD") == 0)
+        {
+          *acceptor = accept_head;
+        }
+ 
       if (ctx->body_delegate)
         {
           ctx->body_buckets =

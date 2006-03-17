@@ -39,22 +39,16 @@
 #include "ra_serf.h"
 
 
-/* Structure associated with a MKACTIVITY request. */
+/* Structure associated with a request where we only want the status code. */
 typedef struct {
-
   int status;
-
   svn_boolean_t done;
-
-} mkactivity_context_t;
+} simple_request_context_t;
 
 /* Structure associated with a CHECKOUT request. */
 typedef struct {
 
   apr_pool_t *pool;
-
-  svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
 
   const char *activity_url;
   apr_size_t activity_url_len;
@@ -63,21 +57,13 @@ typedef struct {
 
   const char *resource_url;
 
-  int status;
+  simple_request_context_t progress;
 
-  svn_boolean_t done;
-
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
 } checkout_context_t;
 
 /* Structure associated with a PROPPATCH request. */
 typedef struct {
   apr_pool_t *pool;
-
-  svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
 
   const char *path;
 
@@ -85,32 +71,8 @@ typedef struct {
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
 
-  int status;
-
-  svn_boolean_t done;
-
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
+  simple_request_context_t progress;
 } proppatch_context_t;
-
-/* Structure associated with a DELETE/HEAD/etc request. */
-typedef struct {
-  apr_pool_t *pool;
-
-  svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
-
-  const char *path;
-
-  int status;
-
-  svn_boolean_t done;
-
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
-} simple_request_context_t;
 
 /* Baton passed back with the commit editor. */
 typedef struct {
@@ -213,9 +175,6 @@ typedef struct {
   /* Our resulting checksum as reported by the WC. */
   const char *result_checksum;
 
-  /* Connection to do the PUT with */
-  svn_ra_serf__connection_t *conn;
-
   /* Changed and removed properties. */
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
@@ -223,16 +182,6 @@ typedef struct {
   /* URL to PUT the file at. */
   const char *put_url;
 
-  /* Is our PUT completed? */
-  svn_boolean_t put_done;
-
-  /* What was the status code of our PUT? */
-  int put_status;
-
-  /* For the PUT... */
-  serf_response_acceptor_t acceptor;
-  void *acceptor_baton;
-  serf_response_handler_t handler;
 } file_context_t;
 
 
@@ -241,8 +190,7 @@ typedef struct {
 static apr_status_t
 handle_status_only(serf_request_t *request,
                    serf_bucket_t *response,
-                   int *status_code,
-                   svn_boolean_t *done,
+                   void *baton,
                    apr_pool_t *pool)
 {
   apr_status_t status;
@@ -251,48 +199,30 @@ handle_status_only(serf_request_t *request,
 
   if (APR_STATUS_IS_EOF(status))
     {
+      simple_request_context_t *ctx = baton;
       serf_status_line sl;
       apr_status_t rv;
 
       rv = serf_bucket_response_status(response, &sl);
 
-      *status_code = sl.code;
-      *done = TRUE;
+      ctx->status = sl.code;
+      ctx->done = TRUE;
     }
 
   return status;
-}
-
-static apr_status_t
-handle_mkactivity(serf_request_t *request,
-                  serf_bucket_t *response,
-                  void *handler_baton,
-                  apr_pool_t *pool)
-{
-  mkactivity_context_t *ctx = handler_baton;
-
-  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
 }
 
 #define CHECKOUT_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:checkout xmlns:D=\"DAV:\"><D:activity-set><D:href>"
   
 #define CHECKOUT_TRAILER "</D:href></D:activity-set></D:checkout>"
 
-static apr_status_t
-setup_checkout(serf_request_t *request,
-               void *setup_baton,
-               serf_bucket_t **req_bkt,
-               serf_response_acceptor_t *acceptor,
-               void **acceptor_baton,
-               serf_response_handler_t *handler,
-               void **handler_baton,
-               apr_pool_t *pool)
+serf_bucket_t *
+create_checkout_body(void *baton,
+                     serf_bucket_alloc_t *alloc,
+                     apr_pool_t *pool)
 {
-  checkout_context_t *ctx = setup_baton;
+  checkout_context_t *ctx = baton;
   serf_bucket_t *body_bkt, *tmp_bkt;
-  serf_bucket_alloc_t *alloc;
-
-  alloc = serf_request_get_alloc(request);
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -311,15 +241,7 @@ setup_checkout(serf_request_t *request,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  svn_ra_serf__setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "CHECKOUT", ctx->checkout_url, body_bkt, "text/xml");
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
+  return body_bkt;
 }
 
 static apr_status_t
@@ -331,11 +253,10 @@ handle_checkout(serf_request_t *request,
   checkout_context_t *ctx = handler_baton;
   apr_status_t status;
 
-  status = handle_status_only(request, response, &ctx->status, &ctx->done,
-                              pool);
+  status = handle_status_only(request, response, &ctx->progress, pool);
 
   /* Get the resulting location. */
-  if (ctx->done)
+  if (ctx->progress.done)
     {
       serf_bucket_t *hdrs;
       apr_uri_t uri;
@@ -359,6 +280,7 @@ static svn_error_t *
 checkout_dir(dir_context_t *dir)
 {
   checkout_context_t *checkout_ctx;
+  svn_ra_serf__handler_t *handler;
 
   if (dir->checkout)
     {
@@ -371,15 +293,13 @@ checkout_dir(dir_context_t *dir)
     }
 
   /* Checkout our directory into the activity URL now. */
+  handler = apr_pcalloc(dir->pool, sizeof(*handler));
+  handler->session = dir->commit->session;
+  handler->conn = dir->commit->conn;
+
   checkout_ctx = apr_pcalloc(dir->pool, sizeof(*checkout_ctx));
-
   checkout_ctx->pool = dir->pool;
-  checkout_ctx->session = dir->commit->session;
-  checkout_ctx->conn = dir->commit->conn;
 
-  checkout_ctx->acceptor = svn_ra_serf__accept_response;
-  checkout_ctx->acceptor_baton = dir->commit->session;
-  checkout_ctx->handler = handle_checkout;
   checkout_ctx->activity_url = dir->commit->activity_url;
   checkout_ctx->activity_url_len = dir->commit->activity_url_len;
 
@@ -397,14 +317,71 @@ checkout_dir(dir_context_t *dir)
       dir->checkout = checkout_ctx;
     }
 
-  serf_connection_request_create(checkout_ctx->conn->conn,
-                                 setup_checkout, checkout_ctx);
+  handler->body_delegate = create_checkout_body;
+  handler->body_delegate_baton = checkout_ctx;
+  handler->body_type = "text/xml";
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&checkout_ctx->done,
+  handler->response_handler = handle_checkout;
+  handler->response_baton = checkout_ctx;
+
+  handler->method = "CHECKOUT";
+  handler->path = checkout_ctx->checkout_url;
+
+  svn_ra_serf__request_create(handler);
+
+  SVN_ERR(svn_ra_serf__context_run_wait(&checkout_ctx->progress.done,
                                         dir->commit->session,
                                         dir->pool));
 
-  if (checkout_ctx->status != 201)
+  if (checkout_ctx->progress.status != 201)
+    {
+      abort();
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+checkout_file(file_context_t *file)
+{
+  svn_ra_serf__handler_t *handler;
+
+  /* Checkout our file into the activity URL now. */
+  handler = apr_pcalloc(file->pool, sizeof(*handler));
+  handler->session = file->commit->session;
+  handler->conn = file->commit->conn;
+
+  file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
+  file->checkout->pool = file->pool;
+
+  file->checkout->activity_url = file->commit->activity_url;
+  file->checkout->activity_url_len = file->commit->activity_url_len;
+
+  /* Append our file name to the baseline to get the resulting checkout. */
+  file->checkout->checkout_url =
+      svn_path_url_add_component(file->commit->checked_in_url,
+                                 file->name, file->pool);
+
+  handler->body_delegate = create_checkout_body;
+  handler->body_delegate_baton = file->checkout;
+  handler->body_type = "text/xml";
+
+  handler->response_handler = handle_checkout;
+  handler->response_baton = file->checkout;
+
+  handler->method = "CHECKOUT";
+  handler->path = file->checkout->checkout_url;
+
+  svn_ra_serf__request_create(handler);
+
+  /* There's no need to wait here as we only need this when we start the
+   * PROPPATCH or PUT of the file.
+   */
+  SVN_ERR(svn_ra_serf__context_run_wait(&file->checkout->progress.done,
+                                        file->commit->session,
+                                        file->pool));
+
+  if (file->checkout->progress.status != 201)
     {
       abort();
     }
@@ -499,21 +476,13 @@ static void proppatch_walker(void *baton,
 
 #define PROPPATCH_TRAILER "</D:propertyupdate>"
 
-static apr_status_t
-setup_proppatch(serf_request_t *request,
-                void *setup_baton,
-                serf_bucket_t **req_bkt,
-                serf_response_acceptor_t *acceptor,
-                void **acceptor_baton,
-                serf_response_handler_t *handler,
-                void **handler_baton,
-                apr_pool_t *pool)
+serf_bucket_t *
+create_proppatch_body(void *baton,
+                      serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool)
 {
-  proppatch_context_t *ctx = setup_baton;
+  proppatch_context_t *ctx = baton;
   serf_bucket_t *body_bkt, *tmp_bkt;
-  serf_bucket_alloc_t *alloc;
-
-  alloc = serf_request_get_alloc(request);
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -581,43 +550,45 @@ setup_proppatch(serf_request_t *request,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  svn_ra_serf__setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "PROPPATCH", ctx->path, body_bkt, "text/xml");
-
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
+  return body_bkt;
 }
 
-static apr_status_t
-handle_proppatch(serf_request_t *request,
-                 serf_bucket_t *response,
-                 void *handler_baton,
-                 apr_pool_t *pool)
+static svn_error_t*
+proppatch_resource(proppatch_context_t *proppatch,
+                   commit_context_t *commit,
+                   apr_pool_t *pool)
 {
-  proppatch_context_t *ctx = handler_baton;
-  apr_status_t status;
+  svn_ra_serf__handler_t *handler;
 
-  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->method = "PROPPATCH";
+  handler->path = proppatch->path;
+  handler->conn = commit->conn;
+  handler->session = commit->session;
+      
+  handler->body_delegate = create_proppatch_body;
+  handler->body_delegate_baton = proppatch;
+      
+  handler->response_handler = handle_status_only;
+  handler->response_baton = &proppatch->progress;
+      
+  svn_ra_serf__request_create(handler);
+      
+  /* If we don't wait for the response, our pool will be gone! */ 
+  SVN_ERR(svn_ra_serf__context_run_wait(&proppatch->progress.done,
+                                        commit->session, pool));
+
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
-setup_put(serf_request_t *request,
-          void *setup_baton,
-          serf_bucket_t **req_bkt,
-          serf_response_acceptor_t *acceptor,
-          void **acceptor_baton,
-          serf_response_handler_t *handler,
-          void **handler_baton,
-          apr_pool_t *pool)
+static serf_bucket_t *
+create_put_body(void *baton,
+                serf_bucket_alloc_t *alloc,
+                apr_pool_t *pool)
 {
-  file_context_t *ctx = setup_baton;
-  serf_bucket_alloc_t *alloc;
+  file_context_t *ctx = baton;
   serf_bucket_t *body_bkt, *hdrs_bkt;
   apr_off_t offset;
-
-  alloc = serf_request_get_alloc(request);
 
   /* We need to flush the file, make it unbuffered (so that it can be
    * zero-copied via mmap), and reset the position before attempting to
@@ -628,127 +599,29 @@ setup_put(serf_request_t *request,
   offset = 0;
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 
-  body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
+  return serf_bucket_file_create(ctx->svndiff, alloc);
+}
 
-  svn_ra_serf__setup_serf_req(request, req_bkt, &hdrs_bkt, ctx->conn,
-                 "PUT", ctx->put_url, body_bkt,
-                 "application/vnd.svn-svndiff");
+static apr_status_t
+setup_put_headers(serf_bucket_t *headers,
+                  void *baton,
+                  apr_pool_t *pool)
+{
+  file_context_t *ctx = baton;
 
   if (ctx->base_checksum)
   {
-    serf_bucket_headers_set(hdrs_bkt, SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
+    serf_bucket_headers_set(headers, SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
                             ctx->base_checksum);
   }
 
   if (ctx->result_checksum)
   {
-    serf_bucket_headers_set(hdrs_bkt, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER,
+    serf_bucket_headers_set(headers, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER,
                             ctx->result_checksum);
   }
 
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
   return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_put(serf_request_t *request,
-           serf_bucket_t *response,
-           void *handler_baton,
-           apr_pool_t *pool)
-{
-  file_context_t *ctx = handler_baton;
-
-  return handle_status_only(request, response,
-                            &ctx->put_status, &ctx->put_done, pool);
-}
-
-static apr_status_t
-setup_delete(serf_request_t *request,
-             void *setup_baton,
-             serf_bucket_t **req_bkt,
-             serf_response_acceptor_t *acceptor,
-             void **acceptor_baton,
-             serf_response_handler_t *handler,
-             void **handler_baton,
-             apr_pool_t *pool)
-{
-  simple_request_context_t *ctx = setup_baton;
-
-  svn_ra_serf__setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "DELETE", ctx->path, NULL, NULL);
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-static apr_status_t
-handle_delete(serf_request_t *request,
-              serf_bucket_t *response,
-              void *handler_baton,
-              apr_pool_t *pool)
-{
-  simple_request_context_t *ctx = handler_baton;
-
-  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
-}
-
-static apr_status_t
-setup_head(serf_request_t *request,
-           void *setup_baton,
-           serf_bucket_t **req_bkt,
-           serf_response_acceptor_t *acceptor,
-           void **acceptor_baton,
-           serf_response_handler_t *handler,
-           void **handler_baton,
-           apr_pool_t *pool)
-{
-  simple_request_context_t *ctx = setup_baton;
-
-  svn_ra_serf__setup_serf_req(request, req_bkt, NULL, ctx->conn,
-                 "HEAD", ctx->path, NULL, NULL);
-
-  *acceptor = ctx->acceptor;
-  *acceptor_baton = ctx->acceptor_baton;
-  *handler = ctx->handler;
-  *handler_baton = ctx;
-
-  return APR_SUCCESS;
-}
-
-serf_bucket_t*
-accept_head(serf_request_t *request,
-            serf_bucket_t *stream,
-            void *acceptor_baton,
-            apr_pool_t *pool)
-{
-  serf_bucket_t *response;
-    
-  response = svn_ra_serf__accept_response(request, stream, acceptor_baton,
-                                          pool);
-
-  /* We know we shouldn't get a response body. */
-  serf_bucket_response_set_head(response);
-
-  return response;
-}
-
-static apr_status_t
-handle_head(serf_request_t *request,
-            serf_bucket_t *response,
-            void *handler_baton,
-            apr_pool_t *pool)
-{
-  simple_request_context_t *ctx = handler_baton;
-
-  return handle_status_only(request, response, &ctx->status, &ctx->done, pool);
 }
 
 /* Helper function to write the svndiff stream to temporary file. */
@@ -780,8 +653,7 @@ open_root(void *edit_baton,
   commit_context_t *ctx = edit_baton;
   svn_ra_serf__options_context_t *opt_ctx;
   svn_ra_serf__handler_t *handler;
-  mkactivity_context_t *mkact_ctx;
-  checkout_context_t *checkout_ctx;
+  simple_request_context_t *mkact_ctx;
   proppatch_context_t *proppatch_ctx;
   dir_context_t *dir;
   const char *activity_str;
@@ -812,7 +684,6 @@ open_root(void *edit_baton,
   ctx->activity_url_len = strlen(ctx->activity_url);
 
   /* Create our activity URL now on the server. */
-
   handler = apr_pcalloc(ctx->pool, sizeof(*handler));
   handler->method = "MKACTIVITY";
   handler->path = ctx->activity_url;
@@ -821,7 +692,7 @@ open_root(void *edit_baton,
 
   mkact_ctx = apr_pcalloc(ctx->pool, sizeof(*mkact_ctx));
 
-  handler->response_handler = handle_mkactivity;
+  handler->response_handler = handle_status_only;
   handler->response_baton = mkact_ctx;
 
   svn_ra_serf__request_create(handler);
@@ -891,29 +762,20 @@ open_root(void *edit_baton,
   dir->removed_props = apr_hash_make(dir->pool);
 
   /* Checkout our root dir */
-  checkout_dir(dir);
+  SVN_ERR(checkout_dir(dir));
 
   /* PROPPATCH our log message and pass it along.  */
-  proppatch_ctx = apr_pcalloc(dir_pool, sizeof(*proppatch_ctx));
-
+  proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
   proppatch_ctx->pool = dir_pool;
-  proppatch_ctx->session = dir->commit->session;
-  proppatch_ctx->conn = dir->commit->conn;
-
-  proppatch_ctx->acceptor = svn_ra_serf__accept_response;
-  proppatch_ctx->acceptor_baton = dir->commit->session;
-  proppatch_ctx->handler = handle_proppatch;
-
   proppatch_ctx->path = ctx->baseline->resource_url;
-  proppatch_ctx->changed_props = apr_hash_make(dir_pool);
-  proppatch_ctx->removed_props = apr_hash_make(dir_pool);
+  proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
 
   svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
                         SVN_DAV_PROP_NS_SVN, "log",
                         dir->commit->log_msg, proppatch_ctx->pool);
 
-  serf_connection_request_create(proppatch_ctx->conn->conn,
-                                 setup_proppatch, proppatch_ctx);
+  SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, ctx->pool));
 
   *root_baton = dir;
 
@@ -928,27 +790,27 @@ delete_entry(const char *path,
 {
   dir_context_t *dir = parent_baton;
   simple_request_context_t *delete_ctx;
+  svn_ra_serf__handler_t *handler;
 
   /* Ensure our directory has been checked out */
-  checkout_dir(dir);
+  SVN_ERR(checkout_dir(dir));
 
   /* DELETE our activity */
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->session = dir->commit->session;
+  handler->conn = dir->commit->conn;
 
-  delete_ctx->pool = pool;
-  delete_ctx->session = dir->commit->session;
-  delete_ctx->conn = dir->commit->conn;
+  handler->response_handler = handle_status_only;
+  handler->response_baton = delete_ctx;
 
-  delete_ctx->acceptor = svn_ra_serf__accept_response;
-  delete_ctx->acceptor_baton = dir->commit->session;
-  delete_ctx->handler = handle_delete;
-  delete_ctx->path =
+  handler->method = "DELETE";
+  handler->path =
       svn_path_url_add_component(dir->checkout->resource_url,
-                                 svn_path_basename(path, delete_ctx->pool),
-                                 delete_ctx->pool);
+                                 svn_path_basename(path, pool),
+                                 pool);
 
-  serf_connection_request_create(delete_ctx->conn->conn,
-                                 setup_delete, delete_ctx);
+  svn_ra_serf__request_create(handler);
 
   SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done,
                                         dir->commit->session, pool));
@@ -976,7 +838,7 @@ add_directory(const char *path,
   dir_context_t *parent = parent_baton;
   dir_context_t *dir;
   svn_ra_serf__handler_t *handler;
-  mkactivity_context_t *mkcol_ctx;
+  simple_request_context_t *mkcol_ctx;
 
   /* Ensure our parent is checked out. */
   SVN_ERR(checkout_dir(parent));
@@ -1008,12 +870,12 @@ add_directory(const char *path,
   handler->path = svn_path_url_add_component(parent->checkout->resource_url,
                                              svn_path_basename(path, dir->pool),
                                              dir->pool);
-  handler->conn = dir->commit->session->conns[0];
+  handler->conn = dir->commit->conn;
   handler->session = dir->commit->session;
 
   mkcol_ctx = apr_pcalloc(dir->pool, sizeof(*mkcol_ctx));
 
-  handler->response_handler = handle_mkactivity;
+  handler->response_handler = handle_status_only;
   handler->response_baton = mkcol_ctx;
 
   svn_ra_serf__request_create(handler);
@@ -1107,7 +969,6 @@ close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
   dir_context_t *dir = dir_baton;
-  proppatch_context_t *proppatch_ctx;
 
   /* Huh?  We're going to be called before the texts are sent.  Ugh.
    * Therefore, just wave politely at our caller.
@@ -1117,26 +978,15 @@ close_directory(void *dir_baton,
   if (apr_hash_count(dir->changed_props) ||
       apr_hash_count(dir->removed_props))
     {
+      proppatch_context_t *proppatch_ctx;
+
       proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
-      proppatch_ctx->pool = pool;
-     
-      proppatch_ctx->session = dir->commit->session;
-      proppatch_ctx->conn = dir->commit->conn;
-      
-      proppatch_ctx->acceptor = svn_ra_serf__accept_response;
-      proppatch_ctx->acceptor_baton = dir->commit->session;
-      proppatch_ctx->handler = handle_proppatch;
-      
       proppatch_ctx->path = dir->checkout->resource_url;
+      proppatch_ctx->pool = pool;
       proppatch_ctx->changed_props = dir->changed_props;
       proppatch_ctx->removed_props = dir->removed_props;
       
-      serf_connection_request_create(proppatch_ctx->conn->conn,
-                                     setup_proppatch, proppatch_ctx);
-     
-      /* If we don't wait for the response, our pool will be gone! */ 
-      SVN_ERR(svn_ra_serf__context_run_wait(&proppatch_ctx->done,
-                                            dir->commit->session, dir->pool));
+      SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, dir->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1181,11 +1031,6 @@ add_file(const char *path,
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
-  /* Set up so that we can perform the PUT later. */
-  new_file->acceptor = svn_ra_serf__accept_response;
-  new_file->acceptor_baton = dir->commit->session;
-  new_file->handler = handle_put;
-
   /* Ensure that the file doesn't exist by doing a HEAD on the resource -
    * only if we haven't deleted it in this commit already.
    */
@@ -1193,24 +1038,29 @@ add_file(const char *path,
                     new_file->name, APR_HASH_KEY_STRING))
     {
       simple_request_context_t *head_ctx;
-      
-      head_ctx = apr_pcalloc(new_file->pool, sizeof(*head_ctx));
-      
-      head_ctx->pool = new_file->pool;
-      head_ctx->session = new_file->commit->session;
-      head_ctx->conn = new_file->commit->conn;
-      
-      head_ctx->acceptor = accept_head;
-      head_ctx->acceptor_baton = new_file->commit->session;
-      head_ctx->handler = handle_head;
-      head_ctx->path = 
+      svn_ra_serf__handler_t *handler;
+
+      handler = apr_pcalloc(new_file->pool, sizeof(*handler));
+
+      handler->session = new_file->commit->session;
+      handler->conn = new_file->commit->conn;
+     
+      handler->method = "HEAD"; 
+      handler->path =
           svn_path_url_add_component(new_file->commit->session->repos_url.path,
                                      path, new_file->pool);
-      serf_connection_request_create(head_ctx->conn->conn,
-                                     setup_head, head_ctx);
+
+      head_ctx = apr_pcalloc(new_file->pool, sizeof(*head_ctx));
+
+      handler->response_handler = handle_status_only;
+      handler->response_baton = head_ctx;
+
+      svn_ra_serf__request_create(handler);
+      
       SVN_ERR(svn_ra_serf__context_run_wait(&head_ctx->done,
-                                            dir->commit->session,
+                                            new_file->commit->session,
                                             new_file->pool));
+
       if (head_ctx->status != 404)
         { 
           abort();
@@ -1222,8 +1072,6 @@ add_file(const char *path,
       /* Issue a COPY */
       abort();
     }
-
-  new_file->conn = new_file->commit->conn;
 
   new_file->put_url =
       svn_path_url_add_component(dir->checkout->resource_url,
@@ -1244,7 +1092,6 @@ open_file(const char *path,
 {
   dir_context_t *ctx = parent_baton;
   file_context_t *new_file;
-  checkout_context_t *checkout_ctx;
   apr_hash_t *props;
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
@@ -1261,49 +1108,13 @@ open_file(const char *path,
 
   new_file->base_revision = base_revision;
 
-  /* Set up so that we can perform the PUT later. */
-  new_file->conn = new_file->commit->conn;
-  new_file->acceptor = svn_ra_serf__accept_response;
-  new_file->acceptor_baton = ctx->commit->session;
-  new_file->handler = handle_put;
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
   /* CHECKOUT the file into our activity. */
-  checkout_ctx = apr_pcalloc(new_file->pool, sizeof(*checkout_ctx));
+  SVN_ERR(checkout_file(new_file));
 
-  checkout_ctx->pool = new_file->pool;
-  checkout_ctx->session = new_file->commit->session;
-  checkout_ctx->conn = new_file->commit->conn;
-
-  checkout_ctx->acceptor = svn_ra_serf__accept_response;
-  checkout_ctx->acceptor_baton = new_file->commit->session;
-  checkout_ctx->handler = handle_checkout;
-  checkout_ctx->activity_url = new_file->commit->activity_url;
-  checkout_ctx->activity_url_len = new_file->commit->activity_url_len;
-
-  /* Append our file name to the baseline to get the resulting checkout. */
-  checkout_ctx->checkout_url =
-      svn_path_url_add_component(new_file->commit->checked_in_url,
-                                 path, new_file->pool);
-
-  serf_connection_request_create(checkout_ctx->conn->conn,
-                                 setup_checkout, checkout_ctx);
-
-  /* There's no need to wait here as we only need this when we start the
-   * PROPPATCH or PUT of the file.
-   */
-  SVN_ERR(svn_ra_serf__context_run_wait(&checkout_ctx->done,
-                                        new_file->commit->session,
-                                        new_file->pool));
-
-  if (checkout_ctx->status != 201)
-    {
-      abort();
-    }
-
-  new_file->checkout = checkout_ctx;
-  new_file->put_url = checkout_ctx->resource_url;
+  new_file->put_url = new_file->checkout->resource_url;
 
   *file_baton = new_file;
 
@@ -1395,15 +1206,34 @@ close_file(void *file_baton,
   /* If we had a stream of changes, push them to the server... */
   if (ctx->stream)
     {
-      serf_connection_request_create(ctx->conn->conn,
-                                     setup_put, ctx);
+      svn_ra_serf__handler_t *handler;
+      simple_request_context_t *put_ctx;
 
-      SVN_ERR(svn_ra_serf__context_run_wait(&ctx->put_done,
-                                            ctx->commit->session,
-                                            ctx->pool));
+      handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->method = "PUT";
+      handler->path = ctx->put_url;
+      handler->conn = ctx->commit->conn;
+      handler->session = ctx->commit->session;
+      
+      put_ctx = apr_pcalloc(pool, sizeof(*put_ctx));
+      
+      handler->response_handler = handle_status_only;
+      handler->response_baton = put_ctx;
 
-      if ((ctx->checkout && ctx->put_status != 204) &&
-          (!ctx->checkout && ctx->put_status != 201))
+      handler->body_delegate = create_put_body;
+      handler->body_delegate_baton = ctx;
+      handler->body_type = "application/vnd.svn-svndiff";
+
+      handler->header_delegate = setup_put_headers;
+      handler->header_delegate_baton = ctx;
+       
+      svn_ra_serf__request_create(handler);
+      
+      SVN_ERR(svn_ra_serf__context_run_wait(&put_ctx->done,
+                                            ctx->commit->session, pool));
+
+      if ((ctx->checkout && put_ctx->done != 204) &&
+          (!ctx->checkout && put_ctx->done != 201))
         {
           abort();
         }
@@ -1413,29 +1243,15 @@ close_file(void *file_baton,
   if (apr_hash_count(ctx->changed_props) ||
       apr_hash_count(ctx->removed_props))
     {
-      proppatch_context_t *proppatch_ctx;
+      proppatch_context_t *proppatch;
 
-      proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
-      proppatch_ctx->pool = ctx->pool;
+      proppatch = apr_pcalloc(ctx->pool, sizeof(*proppatch));
+      proppatch->pool = ctx->pool;
+      proppatch->path = ctx->put_url;
+      proppatch->changed_props = ctx->changed_props;
+      proppatch->removed_props = ctx->removed_props;
      
-      proppatch_ctx->session = ctx->commit->session;
-      proppatch_ctx->conn = ctx->commit->conn;
-      
-      proppatch_ctx->acceptor = svn_ra_serf__accept_response;
-      proppatch_ctx->acceptor_baton = ctx->commit->session;
-      proppatch_ctx->handler = handle_proppatch;
-      
-      proppatch_ctx->path = ctx->put_url;
-      proppatch_ctx->changed_props = ctx->changed_props;
-      proppatch_ctx->removed_props = ctx->removed_props;
-      
-      serf_connection_request_create(proppatch_ctx->conn->conn,
-                                     setup_proppatch, proppatch_ctx);
-     
-      /* If we don't wait for the response, our pool will be gone! */ 
-      SVN_ERR(svn_ra_serf__context_run_wait(&proppatch_ctx->done,
-                                            ctx->commit->session,
-                                            ctx->pool));
+      SVN_ERR(proppatch_resource(proppatch, ctx->commit, ctx->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1458,6 +1274,7 @@ close_edit(void *edit_baton,
   commit_context_t *ctx = edit_baton;
   svn_ra_serf__merge_context_t *merge_ctx;
   simple_request_context_t *delete_ctx;
+  svn_ra_serf__handler_t *handler;
   svn_boolean_t *merge_done;
   apr_status_t status;
 
@@ -1481,22 +1298,22 @@ close_edit(void *edit_baton,
   ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
                 ctx->callback_baton, pool);
 
-  /* DELETE our activity */
+  /* DELETE our completed activity */
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->method = "DELETE";
+  handler->path = ctx->activity_url;
+  handler->conn = ctx->conn;
+  handler->session = ctx->session;
+
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
 
-  delete_ctx->pool = pool;
-  delete_ctx->session = ctx->session;
-  delete_ctx->conn = ctx->conn;
+  handler->response_handler = handle_status_only;
+  handler->response_baton = delete_ctx;
 
-  delete_ctx->acceptor = svn_ra_serf__accept_response;
-  delete_ctx->acceptor_baton = ctx->session;
-  delete_ctx->handler = handle_delete;
-  delete_ctx->path = ctx->activity_url;
+  svn_ra_serf__request_create(handler);
 
-  serf_connection_request_create(delete_ctx->conn->conn,
-                                 setup_delete, delete_ctx);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session, pool));
+  SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
+                                        pool));
 
   if (delete_ctx->status != 204)
     {
@@ -1514,7 +1331,7 @@ abort_edit(void *edit_baton,
   svn_ra_serf__handler_t *handler;
   simple_request_context_t *delete_ctx;
 
-  /* DELETE our activity */
+  /* DELETE our aborted activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->method = "DELETE";
   handler->path = ctx->activity_url;
@@ -1523,7 +1340,7 @@ abort_edit(void *edit_baton,
 
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
 
-  handler->response_handler = handle_delete;
+  handler->response_handler = handle_status_only;
   handler->response_baton = delete_ctx;
 
   svn_ra_serf__request_create(handler);
