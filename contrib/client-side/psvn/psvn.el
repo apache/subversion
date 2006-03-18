@@ -3681,15 +3681,36 @@ If ARG then show diff between some other version of the selected files."
   (define-key svn-log-view-mode-map (kbd "e") 'svn-log-edit-log-entry)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
 
+(defvar svn-log-view-popup-menu-map ()
+  "Keymap used to show popup menu in `svn-log-view-mode' buffers.")
+(put 'svn-log-view-popup-menu-map 'risky-local-variable t) ;for Emacs 20.7
+(when (not svn-log-view-popup-menu-map)
+  (setq svn-log-view-popup-menu-map (make-sparse-keymap))
+  (suppress-keymap svn-log-view-popup-menu-map)
+  (define-key svn-log-view-popup-menu-map [down-mouse-3] 'svn-log-view-popup-menu))
+
 (easy-menu-define svn-log-view-mode-menu svn-log-view-mode-map
 "'svn-log-view-mode' menu"
                   '("SVN-LogView"
                     ["Show Changeset" svn-log-view-diff t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
+(defun svn-log-view-popup-menu (event)
+  (interactive "e")
+  (mouse-set-point event)
+  (let* ((rev (svn-log-revision-at-point)))
+    (when rev
+      (svn-status-face-set-temporary-during-popup
+       'svn-status-marked-popup-face (line-beginning-position) (line-end-position)
+       svn-log-view-mode-menu))))
+
 (defvar svn-log-view-font-lock-keywords
-  '(("^r[0-9]+ .+" . font-lock-keyword-face)
-  "Keywords in svn-log-view-mode."))
+  '(("^r[0-9]+ .+" (0 `(face
+                        font-lock-keyword-face
+                        mouse-face
+                        highlight
+                        keymap ,svn-log-view-popup-menu-map))))
+  "Keywords in svn-log-view-mode.")
 (put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
 
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
