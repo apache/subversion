@@ -69,11 +69,6 @@ SVNClient::~SVNClient()
     delete m_prompter;
 }
 
-jlong SVNClient::getCppAddr()
-{
-    return reinterpret_cast<jlong>(this);
-}
-
 SVNClient * SVNClient::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;

@@ -26,13 +26,18 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include <jni.h>
+
 class SVNBase
 {
 public:
     SVNBase();
     virtual ~SVNBase();
 
+    /**
+     * Return @c this as a @c jlong.
+     */
+    jlong getCppAddr();
 };
 // !defined(AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_)
 #endif
-
