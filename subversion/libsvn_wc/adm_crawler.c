@@ -764,7 +764,6 @@ svn_wc_transmit_text_deltas2(const char *path,
                                  _("'%s' is not under version control"),
                                  svn_path_local_style(path, pool));
 
-      /* For backwards compatibility, no checksum means assume a match. */
       entry_digest_hex = ent->checksum;
       SVN_ERR(svn_wc__open_text_base(&basefile, path, APR_READ, pool));
     }
@@ -827,10 +826,11 @@ svn_wc_transmit_text_deltas2(const char *path,
   else if (err2)
     return err2;
   
+  /* Make sure the old text base still matches its checksum.
+     Otherwise we could have sent corrupt data and never know it.
+     For backwards compatibility, no checksum means assume a match. */
   if (entry_digest_hex)
     {
-      /* Make sure the old text base still matches its checksum.
-         Otherwise we could have sent corrupt data and never know it. */ 
       base_digest_hex = svn_md5_digest_to_cstring_display(base_digest, pool);
       if (strcmp(entry_digest_hex, base_digest_hex) != 0)
         {
