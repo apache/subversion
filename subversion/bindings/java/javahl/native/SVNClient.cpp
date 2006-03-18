@@ -79,28 +79,8 @@ SVNClient * SVNClient::getCppObject(jobject jthis)
 
 void SVNClient::dispose(jobject jthis)
 {
-    delete this;
     static jfieldID fid = 0;
-    JNIEnv *env = JNIUtil::getEnv();
-    if(fid == 0)
-    {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNClient");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return;
-        }
-        fid = env->GetFieldID(clazz, "cppAddr", "J");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return;
-        }
-    }
-
-    env->SetLongField(jthis, fid, 0);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return;
-    }
+    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
 }
 
 void SVNClient::finalize()
