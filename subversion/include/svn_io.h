@@ -620,7 +620,7 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  * can be @c NULL, in which case the respective checksum isn't calculated.
  *
  * If @a read_all is true, make sure that all data available on @a
- * stream is read when the stream is closed.
+ * stream is read (and checksummed) when the stream is closed.
  *
  * Read and write operations can be mixed without interfering.
  *
