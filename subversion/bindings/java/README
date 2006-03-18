@@ -40,7 +40,7 @@ II.    BUILDING
 III.   INTERFACES
 
        The interface code exists to present an API which is familiar
-       Subversion Java programmers regardless of the binding
+       to Subversion Java programmers regardless of the binding
        implementation method.  You can find it under the org/
        sub-directory.  The API is likely to be adjusted to more
        closely align with the JavaHL implementation.  If that doesn't

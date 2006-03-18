@@ -109,7 +109,7 @@ The python test framework exercises the command-line client as a
 "black box".
 
 To write python tests, please look at the README file inside the
-svn/ subdirectory.
+cmdline/ subdirectory.
 
 
 When to write new tests

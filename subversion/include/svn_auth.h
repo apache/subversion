@@ -107,8 +107,8 @@ typedef struct svn_auth_provider_t
 
   /** Get a different set of credentials.
    *
-   * Set @a *credentials to another set of valid credentials, (using
-   * @a iter_baton as the context from previous call to first_credentials
+   * Set @a *credentials to another set of valid credentials (using @a
+   * iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
    * @a *credentials to NULL.  If the provider only has one set of
    * credentials, this function pointer should simply be NULL. @a
@@ -337,7 +337,7 @@ typedef struct svn_auth_cred_ssl_server_trust_t
  * If @a realm is non-null, maybe use it in the prompt string.
  *
  * If @a username is non-null, then the user might be prompted only
- * for a password, but @a *creds would still be filled with both
+ * for a password, but @a *cred would still be filled with both
  * username and password.  For example, a typical usage would be to
  * pass @a username on the first call, but then leave it null for
  * subsequent calls, on the theory that if credentials failed, it's
@@ -477,8 +477,8 @@ void svn_auth_open(svn_auth_baton_t **auth_baton,
  *
  * Store @a name / @a value pair as a run-time parameter in @a
  * auth_baton, making the data accessible to all providers.  @a name
- * and @a value will be NOT be duplicated into the auth_baton's
- * pool. To delete a run-time parameter, pass NULL for @a value.
+ * and @a value will NOT be duplicated into the auth_baton's pool.
+ * To delete a run-time parameter, pass NULL for @a value.
  */
 void svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
                             const char *name,
@@ -707,8 +707,8 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
  * @a pool.
  *
  * If a default username is available, @a *provider will honor it,
- * and return it when svn_auth_first_credentials() is called.  (see
- * @c SVN_AUTH_PARAM_DEFAULT_USERNAME). 
+ * and return it when svn_auth_first_credentials() is called.  (See
+ * @c SVN_AUTH_PARAM_DEFAULT_USERNAME.)
  *
  * @since New in 1.4.
  */

@@ -134,11 +134,11 @@ echo LoadModule authz_svn_module   modules/mod_authz_svn.so
 echo And further down the file add:
 echo ^<Location /svn-test-work/repositories^>
 echo  DAV svn
-echo  SVNParentPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/svn/svn-test-work/repositories
+echo  SVNParentPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/cmdline/svn-test-work/repositories
 echo ^</Location^>
 echo ^<Location /svn-test-work/local_tmp/repos^>
 echo  DAV svn
-echo  SVNPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/svn/svn-test-work/local_tmp/repos
+echo  SVNPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/cmdline/svn-test-work/local_tmp/repos
 echo ^</Location^>
 echo Then restart Apache.
 

@@ -191,7 +191,7 @@ class SVNTreeNode:
     print "    Attributes:", self.atts
     ### FIXME: I'd like to be able to tell the difference between
     ### self.children is None (file) and self.children == [] (empty
-    ### diretory), but it seems that most places that construct
+    ### directory), but it seems that most places that construct
     ### SVNTreeNode objects don't even try to do that.  --xbc
     ###
     ### See issue #1611 about this problem.  -kfogel

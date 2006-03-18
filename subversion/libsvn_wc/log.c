@@ -2175,7 +2175,7 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      const char *base_name,
                      apr_pool_t *pool)
 {
-  /* No need to check whether dst_path exists: ENOENT is ignored
+  /* No need to check whether BASE_NAME exists: ENOENT is ignored
      by the log-runner */
   svn_xml_make_open_tag(log_accum, pool,
                         svn_xml_self_closing,
@@ -2307,7 +2307,7 @@ svn_wc_cleanup2(const char *path,
     }
   else
     {
-      /* In an attempt to maintain consitency between the decisions made in
+      /* In an attempt to maintain consistency between the decisions made in
          this function, and those made in the access baton lock-removal code,
          we use the same test as the lock-removal code. */
       SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup, adm_access, pool));
