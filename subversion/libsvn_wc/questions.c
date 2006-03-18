@@ -2,7 +2,7 @@
  * questions.c:  routines for asking questions about working copies
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -252,7 +252,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
-      unsigned char *digest;
+      const unsigned char *digest;
       /* "v_" means versioned_file, "b_" means base_file. */
       apr_file_t *v_file_h, *b_file_h;
       svn_stream_t *v_stream, *b_stream;
@@ -276,7 +276,8 @@ compare_and_verify(svn_boolean_t *modified_p,
                 svn_path_local_style(versioned_file, pool));
 
           if (entry->checksum)
-            b_stream = svn_stream_checksummed(b_stream, &digest, NULL, pool);
+            b_stream = svn_stream_checksummed(b_stream, &digest, NULL, TRUE,
+                                              pool);
         }
 
       if (compare_textbases && need_translation)
@@ -304,9 +305,7 @@ compare_and_verify(svn_boolean_t *modified_p,
             }
         }
 
-      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream,
-                                       verify_checksum && entry->checksum,
-                                       pool));
+      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream, pool));
       
       SVN_ERR(svn_stream_close(v_stream));
       SVN_ERR(svn_stream_close(b_stream));
