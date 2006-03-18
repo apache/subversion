@@ -42,12 +42,27 @@ public:
 protected:
     /**
      * Return the value of the @c cppAddr instance field from the @a
-     * jthis Java object, or @c 0 if an error occurs, or it otherwise
-     * can't be determined.  @a fid is expected to point to 0 if not
-     * already known, in which case it's looked up using @a className.
+     * jthis Java object, or @c 0 if an error occurs, or the address
+     * otherwise can't be determined.  @a fid is expected to point to
+     * 0 if not already known, in which case it's looked up using @a
+     * className.
      */
     static jlong findCppAddrForJObject(jobject jthis, jfieldID *fid,
                                        const char *className);
+
+    /**
+     * Deletes @c this, then attempts to null out the @c jthis.cppAddr
+     * instance field on the corresponding Java object.
+     */
+    void dispose(jobject jthis, jfieldID *fid, const char *className);
+
+private:
+    /**
+     * If the value pointed to by @a fid is zero, find the @c jfieldID
+     * for the @c cppAddr instance field of @c className.
+     */
+    static void findCppAddrFieldID(jfieldID *fid, const char *className,
+                                   JNIEnv *env);
 };
 // !defined(AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_)
 #endif
