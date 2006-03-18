@@ -619,6 +619,9 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  * Both @a read_digest and @a write_digest
  * can be @c NULL, in which case the respective checksum isn't calculated.
  *
+ * If @a read_all is true, make sure that all data available on @a
+ * stream is read when the stream is closed.
+ *
  * Read and write operations can be mixed without interfering.
  *
  * The @a stream passed into this function is closed when the created
@@ -626,10 +629,11 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  *
  * @since New in 1.4.
  */
-svn_stream_t * svn_stream_checksummed(svn_stream_t *stream,
-                                      unsigned char **read_digest,
-                                      unsigned char **write_digest,
-                                      apr_pool_t *pool);
+svn_stream_t *svn_stream_checksummed(svn_stream_t *stream,
+                                     const unsigned char **read_digest,
+                                     const unsigned char **write_digest,
+                                     svn_boolean_t read_all,
+                                     apr_pool_t *pool);
 
 /** Read from a generic stream. @see svn_stream_t. */
 svn_error_t *svn_stream_read(svn_stream_t *stream, char *buffer,
@@ -695,15 +699,12 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
 /** Set @a *same to TRUE if @a stream1 and @a stream2 have the same
  * contents, else set it to FALSE.  Use @a pool for temporary allocations.
  *
- * Read streams up to end, if @a read_all is TRUE.
- *
  * @since New in 1.4.
  */
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,
                          svn_stream_t *stream2,
-                         svn_boolean_t read_all,
                          apr_pool_t *pool);
 
 /** @} */
