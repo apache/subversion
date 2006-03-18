@@ -7,7 +7,7 @@
  *            file in the working copy).
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -310,7 +310,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_process_committed2(const char *path,
+svn_wc_process_committed3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
                           svn_revnum_t new_revnum,
@@ -318,6 +318,7 @@ svn_wc_process_committed2(const char *path,
                           const char *rev_author,
                           apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
+                          const unsigned char *digest,
                           apr_pool_t *pool)
 {
   const char *base_name;
@@ -350,43 +351,38 @@ svn_wc_process_committed2(const char *path,
       SVN_ERR(remove_revert_file(&logtags, adm_access, base_name,
                                  TRUE, pool));
 
-      /* There may be a new text base is sitting in the adm tmp area by
-         now, because the commit succeeded.  A file that is copied, but not
-         otherwise modified, doesn't have a new text base, so we use
-         the unmodified text base.
-
-         ### Does this mean that a file committed with only prop mods
-         ### will still get its text base checksum recomputed?  Yes it
-         ### does, sadly.  But it's not enough to just check for that
-         ### condition, because in the case of an added file, there
-         ### may not be a pre-existing checksum in the entry.
-         ### Probably the best solution is to compute (or copy) the
-         ### checksum at 'svn add' (or 'svn cp') time, instead of
-         ### waiting until commit time.
-      */
-      latest_base = svn_wc__text_base_path(path, TRUE, pool);
-      SVN_ERR(svn_io_check_path(latest_base, &kind, pool));
-      if (kind == svn_node_none)
+      if (digest)
+        hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      else
         {
-          latest_base = svn_wc__text_base_path(path, FALSE, pool);
+          /* There may be a new text base sitting in the adm tmp area
+             by now, because the commit succeeded.  A file that is
+             copied, but not otherwise modified, doesn't have a new
+             text base, so we use the unmodified text base.
+
+             ### Does this mean that a file committed with only prop mods
+             ### will still get its text base checksum recomputed?  Yes it
+             ### does, sadly.  But it's not enough to just check for that
+             ### condition, because in the case of an added file, there
+             ### may not be a pre-existing checksum in the entry.
+             ### Probably the best solution is to compute (or copy) the
+             ### checksum at 'svn add' (or 'svn cp') time, instead of
+             ### waiting until commit time.
+          */
+          latest_base = svn_wc__text_base_path(path, TRUE, pool);
           SVN_ERR(svn_io_check_path(latest_base, &kind, pool));
-        }
+          if (kind == svn_node_none)
+            {
+              latest_base = svn_wc__text_base_path(path, FALSE, pool);
+              SVN_ERR(svn_io_check_path(latest_base, &kind, pool));
+            }
 
-      if (kind == svn_node_file)
-        {
-          /* It would be more efficient to compute the checksum as part of
-             some other operation that has to process all the bytes anyway
-             (such as copying or translation).  But that would make a lot
-             of other code more complex, since the relevant copy and/or
-             translation operations happened elsewhere, a long time ago.
-             If we were to obtain the checksum then/there, we'd still have
-             to somehow preserve it until now/here, which would result in
-             unexpected and hard-to-maintain dependencies.  Ick.
-
-             So instead we just do the checksum from scratch.  Ick. */
-          unsigned char digest[APR_MD5_DIGESTSIZE];
-          SVN_ERR(svn_io_file_checksum(digest, latest_base, pool));
-          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          if (kind == svn_node_file)
+            {
+              unsigned char local_digest[APR_MD5_DIGESTSIZE];
+              SVN_ERR(svn_io_file_checksum(local_digest, latest_base, pool));
+              hex_digest = svn_md5_digest_to_cstring(local_digest, pool);
+            }
         }
 
       /* Oh, and recursing at this point isn't really sensible. */
@@ -518,6 +514,22 @@ svn_wc_process_committed2(const char *path,
    }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_process_committed2(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          apr_pool_t *pool)
+{
+  return svn_wc_process_committed3(path, adm_access, recurse, new_revnum,
+                                   rev_date, rev_author, wcprop_changes,
+                                   remove_lock, NULL, pool);
 }
 
 svn_error_t *

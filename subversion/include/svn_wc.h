@@ -2305,11 +2305,33 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
+ * If @a path is a file and @a digest is non-null, use @a digest as
+ * the checksum for the new text base.  Else, calculate the checksum
+ * if needed.
+ *
  * If @a recurse is true and @a path is a directory, then bump every
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_wc_process_committed3(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t recurse,
+                                       svn_revnum_t new_revnum,
+                                       const char *rev_date,
+                                       const char *rev_author,
+                                       apr_array_header_t *wcprop_changes,
+                                       svn_boolean_t remove_lock,
+                                       const unsigned char *digest,
+                                       apr_pool_t *pool);
+
+/** Similar to svn_wc_process_committed3(), but with @a digest set to
+ * null.
+ *
  * @since New in 1.2.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *svn_wc_process_committed2(const char *path,
                                        svn_wc_adm_access_t *adm_access,
@@ -2320,7 +2342,6 @@ svn_error_t *svn_wc_process_committed2(const char *path,
                                        apr_array_header_t *wcprop_changes,
                                        svn_boolean_t remove_lock,
                                        apr_pool_t *pool);
-
 
 /**
  * Similar to svn_wc_process_committed2(), but with @a remove_lock set to
@@ -3296,11 +3317,13 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  * @a adm_access as an access baton for @a path.
  * 
  * This process creates a copy of @a path with keywords and eol
- * untranslated.  If @a tempfile is non-null, set @a *tempfile to the 
- * path to this copy.  Do not clean up the copy; caller can do that.  
- * (The purpose of handing back the tmp copy is that it is usually about 
- * to become the new text base anyway, but the installation of the new
- * text base is outside the scope of this function.)
+ * untranslated.  If @a tempfile is non-null, set @a *tempfile to the
+ * path to this copy.  Do not clean up the copy; caller can do that.
+ * If @a digest is non-null, set @a *digest to the MD5 checksum of the
+ * temporary file.  (The purpose of handing back the tmp copy is that
+ * it is usually about to become the new text base anyway, but the
+ * installation of the new text base is outside the scope of this
+ * function.)
  *
  * If @a fulltext, send the untranslated copy of @a path through @a editor 
  * as full-text; else send it as svndiff against the current text base.
@@ -3312,6 +3335,21 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  *
  * @note This is intended for use with both infix and postfix
  * text-delta styled editor drivers.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_wc_transmit_text_deltas2(const char *path,
+                                          svn_wc_adm_access_t *adm_access,
+                                          svn_boolean_t fulltext,
+                                          const svn_delta_editor_t *editor,
+                                          void *file_baton,
+                                          const char **tempfile,
+                                          const unsigned char **digest,
+                                          apr_pool_t *pool);
+
+/** Similar to svn_wc_transmit_text_deltas2(), but with @a digest set to null.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 svn_error_t *svn_wc_transmit_text_deltas(const char *path,
                                          svn_wc_adm_access_t *adm_access,

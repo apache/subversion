@@ -2,7 +2,7 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1184,7 +1184,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
   apr_array_header_t *dirs_to_lock;
   apr_array_header_t *dirs_to_lock_recursive;
   svn_boolean_t lock_base_dir_recursive = FALSE;
-  apr_hash_t *committables, *lock_tokens, *tempfiles = NULL;
+  apr_hash_t *committables, *lock_tokens, *tempfiles = NULL, *digests;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
@@ -1499,7 +1499,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
   cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
                                   editor, edit_baton, 
                                   display_dir,
-                                  &tempfiles, ctx, pool);
+                                  &tempfiles, &digests, ctx, pool);
 
   /* Handle a successful commit. */
   if ((! cmt_err)
@@ -1582,7 +1582,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
           remove_lock = (! keep_locks && (item->state_flags
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
           assert(*commit_info_p);
-          if ((bump_err = svn_wc_process_committed2
+          if ((bump_err = svn_wc_process_committed3
                (item->path, adm_access,
                 loop_recurse,
                 (*commit_info_p)->revision,
@@ -1590,6 +1590,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                 (*commit_info_p)->author,
                 item->wcprop_changes,
                 remove_lock,
+                apr_hash_get(digests, item->path, APR_HASH_KEY_STRING),
                 subpool)))
             break;
 

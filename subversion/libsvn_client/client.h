@@ -608,7 +608,12 @@ svn_client__condense_commit_items(const char **base_url,
 
    If the caller wants to keep track of any outstanding temporary
    files left after the transmission of text and property mods,
-   *TEMPFILES is the place to look.  */
+   *TEMPFILES is the place to look.
+
+   MD5 checksums, if available,  for the new text bases of committed
+   files are stored in *DIGESTS, which maps const char* paths (from the
+   items' paths) to const unsigned char* digests.  DIGESTS may be
+   null.  */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       apr_array_header_t *commit_items,
@@ -617,6 +622,7 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
+                      apr_hash_t **digests,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 

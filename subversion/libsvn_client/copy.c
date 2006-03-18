@@ -684,7 +684,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   cmt_err = svn_client__do_commit(dst_url, commit_items, adm_access,
                                   editor, edit_baton, 
                                   0, /* ### any notify_path_offset needed? */
-                                  &tempfiles, ctx, pool);
+                                  &tempfiles, NULL, ctx, pool);
 
   commit_in_progress = FALSE;
 
