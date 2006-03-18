@@ -38,6 +38,16 @@ public:
      * Return @c this as a @c jlong.
      */
     jlong getCppAddr();
+
+protected:
+    /**
+     * Return the value of the @c cppAddr instance field from the @a
+     * jthis Java object, or @c 0 if an error occurs, or it otherwise
+     * can't be determined.  @a fid is expected to point to 0 if not
+     * already known, in which case it's looked up using @a className.
+     */
+    static jlong findCppAddrForJObject(jobject jthis, jfieldID *fid,
+                                       const char *className);
 };
 // !defined(AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_)
 #endif
