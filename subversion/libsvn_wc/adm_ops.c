@@ -396,7 +396,7 @@ svn_wc_process_committed3(const char *path,
 
 
   /* Append a log command to set (overwrite) the 'committed-rev',
-     'committed-date', 'last-author', and possibly `checksum'
+     'committed-date', 'last-author', and possibly 'checksum'
      attributes in the entry.
 
      Note: it's important that this log command come *before* the
@@ -434,7 +434,7 @@ svn_wc_process_committed3(const char *path,
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
-     timestamp.)  */
+     timestamp). */
   SVN_ERR(svn_wc__loggy_committed(&logtags, adm_access,
                                   base_name, new_revnum, pool));
 
@@ -461,7 +461,7 @@ svn_wc_process_committed3(const char *path,
 
   /* Run the log file we just created. */
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-            
+
   if (recurse)
     {
       apr_hash_t *entries;
@@ -554,7 +554,7 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  /* Try, remove the file. */
+  /* Try to remove the file. */
   err = svn_io_remove_file(file, pool);
 
   /* Ignore file not found error. */
@@ -568,8 +568,8 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 }
 
 
-/* Recursively mark a tree ADM_ACCESS for with a SCHEDULE and/or EXISTENCE
-   flag and/or COPIED flag, depending on the state of MODIFY_FLAGS. */
+/* Recursively mark a tree ADM_ACCESS with a SCHEDULE and/or COPIED
+   flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
 mark_tree(svn_wc_adm_access_t *adm_access, 
           apr_uint32_t modify_flags,
@@ -608,7 +608,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       /* Skip "this dir".  */
       if (! strcmp((const char *)key, SVN_WC_ENTRY_THIS_DIR))
         continue;
-          
+
       base_name = key;
       fullpath = svn_path_join(svn_wc_adm_access_path(adm_access), base_name,
                                subpool);
@@ -1309,7 +1309,7 @@ svn_wc_add(const char *path,
     - For files, svn_wc_remove_from_revision_control(), baby.
 
     - Added directories may contain nothing but added children, and
-      reverting the addition of a directory necessary means reverting
+      reverting the addition of a directory necessarily means reverting
       the addition of all the directory's children.  Again,
       svn_wc_remove_from_revision_control() should do the trick.
 
@@ -2224,7 +2224,7 @@ resolve_found_entry_callback(const char *path,
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
-     the second one (where we're looking at THIS_DIR.)  */
+     the second one (where we're looking at THIS_DIR). */
   if ((entry->kind == svn_node_dir) 
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;

@@ -701,7 +701,7 @@ public class SVNTests extends TestCase
          */
         String myPath;
         /**
-         * the kind of node (file, diretory or none, see NodeKind)
+         * the kind of node (file, directory or none, see NodeKind)
          */
         int myNodeKind;
         /**

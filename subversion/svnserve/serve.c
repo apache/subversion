@@ -1982,7 +1982,7 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
-  { "reparent", reparent },
+  { "reparent",        reparent },
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
   { "change-rev-prop", change_rev_prop },
@@ -2160,9 +2160,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
     }
 
   /* Make sure it's possible for the client to authenticate.  Note
-     that this doesn't take into account any the authz configuration
-     read above, because we can't know about access it grants until
-     paths are given by the client. */
+     that this doesn't take into account any authz configuration read
+     above, because we can't know about access it grants until paths
+     are given by the client. */
   if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
       && (get_access(b, AUTHENTICATED) == NO_ACCESS
           || (!b->tunnel_user && !b->pwdb)))

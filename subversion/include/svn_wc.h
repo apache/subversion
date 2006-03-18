@@ -2298,9 +2298,9 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * date and author of the new revision; one or both may be @c NULL.
  * @a adm_access must hold a write lock appropriate for @a path.
  *
- * If non-null, @a wcprops is an array of <tt>svn_prop_t *</tt> changes to 
- * wc properties; if an @c svn_prop_t->value is null, then that property is
- * deleted.
+ * If non-null, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
+ * changes to wc properties; if an @c svn_prop_t->value is null, then
+ * that property is deleted.
  *
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.

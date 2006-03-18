@@ -457,14 +457,14 @@ svn_client__get_diff_summarize_editor(const char *target,
 
    The day that 'svn switch' came into existence, our old commit
    crawler (svn_wc_crawl_local_mods) became obsolete.  It relied far
-   too heavily on the on-disk heirarchy of files and directories, and
+   too heavily on the on-disk hierarchy of files and directories, and
    simply had no way to support disjoint working copy trees or nest
    working copies.  The primary reason for this is that commit
    process, in order to guarantee atomicity, is a single drive of a
    commit editor which is based not on working copy paths, but on
    URLs.  With the completion of 'svn switch', it became all too
-   likely that the on-disk working copy heirarchy would no longer be
-   guaranteed to map to a similar in-repository heirarchy.
+   likely that the on-disk working copy hierarchy would no longer be
+   guaranteed to map to a similar in-repository hierarchy.
 
    Aside from this new brokenness of the old system, an unrelated
    feature request had cropped up -- the ability to know in advance of

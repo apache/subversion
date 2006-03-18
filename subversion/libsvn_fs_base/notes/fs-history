@@ -29,7 +29,7 @@ When working outside the filesystem API, people generally talk about
 their versioned resources in terms of the paths of those resources,
 and the global revisions (or revisions-to-be) in which those paths
 are located.  But inside the filesystem, paths are broken down and
-stored as a heirarchical linked-list of path components.  Each of
+stored as a hierarchical linked-list of path components.  Each of
 these path components has its own historical lineage (because
 Subversion versions directories, too!), and each revision of that
 lineage is referred to as a "node-revision".  It is these

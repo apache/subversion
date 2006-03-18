@@ -890,13 +890,13 @@ II.   INSTALLATION
 
       <Location /svn-test-work/repositories>
        DAV svn
-       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/svn/
+       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/cmdline/
                      svn-test-work/repositories
       </Location>
 
       <Location /svn-test-work/local_tmp/repos>
        DAV svn
-       SVNPath c:/SVN/src-trunk/Release/subversion/tests/svn/
+       SVNPath c:/SVN/src-trunk/Release/subversion/tests/cmdline/
                svn-test-work/local_tmp/repos
       </Location>
 
@@ -1146,7 +1146,7 @@ III.  BUILDING A SUBVERSION SERVER
       the Apache error logfile, /usr/local/apache2/logs/error_log.
 
       To run the regression test suite for networked Subversion, see
-      the instructions in subversion/tests/svn/README.
+      the instructions in subversion/tests/cmdline/README.
       For advice about tracing problems, see "Debugging the server" in
       www/hacking.html.
 

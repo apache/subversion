@@ -158,9 +158,9 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FORCE         0x80000000
 
 
-/* Modify an entry for NAME in access baton PATH by folding ("merging")
-   in changes, and sync those changes to disk.  New values for the
-   entry are pulled from their respective fields in ENTRY, and
+/* Modify an entry for NAME in access baton ADM_ACCESS by folding in
+   ("merging") changes, and sync those changes to disk.  New values
+   for the entry are pulled from their respective fields in ENTRY, and
    MODIFY_FLAGS is a bitmask to specify which of those field to pay
    attention to.  ADM_ACCESS must hold a write lock.
 
@@ -169,11 +169,11 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      'svn_node_dir', 'svn_node_file'.
 
    - NAME can be NULL to specify that the caller wishes to modify the
-     "this dir" entry in PATH.
+     "this dir" entry in ADM_ACCESS.
 
    If DO_SYNC is FALSE then the modification will be entirely local to the
    access baton, if DO_SYNC is TRUE the modification will be written to
-   the entries file.  Be careful when setting DO_SYNC to FALSE, if there
+   the entries file.  Be careful when setting DO_SYNC to FALSE: if there
    is no subsequent svn_wc__entries_write call the modifications will be
    lost when the access baton is closed.
 

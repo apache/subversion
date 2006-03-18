@@ -55,10 +55,8 @@
 
          * fixed: Java bindings compilation.
 
-      Differentiate between client-side and server-side changes by,
-      say, putting them in separate sections.  (We don't currently
-      have an example of this, but we intend to do it for future
-      CHANGES entries.)
+      Differentiate between client-side and server-side changes by putting
+      them in separate sections.
 
       Note: CHANGES is maintained on the trunk because future releases should
       have past releases CHANGES entries.  It will be merged onto the branch
@@ -87,7 +85,7 @@
    Apache.
 
    To make sure httpd.conf is properly set up for DAV access, see
-   subversion/tests/svn/README.
+   subversion/tests/cmdline/README.
 
    You should also have libtool-1.5.14 and autoconf-2.59 installed
    from source.   It is important that you do not use distribution
@@ -146,7 +144,7 @@
      f) make davcheck
 
         For this, start up Apache after having configured according to
-        the directions in subversion/tests/svn/README.
+        the directions in subversion/tests/cmdline/README.
 
         Make sure, that if you maintain a development installation of
         apache, that you check the config file and update it for the
@@ -161,7 +159,7 @@
         First, start up svnserve with these args:
 
          $ subversion/svnserve/svnserve -d -r \
-           `pwd`/subversion/tests/svn
+           `pwd`/subversion/tests/cmdline
 
         -d tells svnserve to run as a daemon
         -r tells svnserve to use the following directory as the
@@ -183,6 +181,7 @@
          perl, and python.  Then:
 
             make swig-py
+            make check-swig-py
             sudo make install-swig-py
 
             make swig-pl
@@ -196,7 +195,7 @@
 
         Ensure that ./configure detected a suitable jdk, and then
         possibly re-run with '--enable-javahl' and '--with-jdk=':
-              
+
             make javahl
             sudo make install-javahl
             make check-javahl

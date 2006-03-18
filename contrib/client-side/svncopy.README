@@ -221,7 +221,7 @@ Example 5 - branching properly
 
 Using the script allows branches to be created which are really independent.
 
-$perl svncopy.pl --branch http://svn/repos/trunk \
+$ perl svncopy.pl --branch http://svn/repos/trunk \
             http://svn/repos/branches/3.2_bugfix
 
 Result:
@@ -263,7 +263,7 @@ Example 6 - branching part of a tree
 If you don't want to branch the whole tree, you can just branch the directories
 which contain your project:
 
-$perl svncopy.pl --branch http://svn/repos/trunk/common \
+$ perl svncopy.pl --branch http://svn/repos/trunk/common \
             http://svn/repos/trunk/inc \
             http://svn/repos/trunk/proj_bar \
             http://svn/repos/branches/3.2_bugfix

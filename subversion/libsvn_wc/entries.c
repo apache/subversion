@@ -931,7 +931,7 @@ svn_wc_entries_read(apr_hash_t **entries,
 }
 
 
-/* Append a single entry THIS_ENTRY to the string OUTPUT, using the
+/* Append a single entry ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
 static void
@@ -1068,7 +1068,7 @@ write_entry(svn_stringbuf_t **output,
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHECKSUM, APR_HASH_KEY_STRING,
                  entry->checksum);
 
-  /* Last-commit Stuff */
+  /* Last-commit stuff */
   if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", entry->cmt_rev));
@@ -1761,7 +1761,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
   /* ENTRY is rather necessary, and ENTRY->kind is required to be valid! */
   assert(entry);
 
-  /* Load PATH's whole entries file. */
+  /* Load ADM_ACCESS's whole entries file. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
   SVN_ERR(svn_wc_entries_read(&entries_nohidden, adm_access, FALSE, pool));
 
