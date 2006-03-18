@@ -42,10 +42,7 @@ SVNAdmin::~SVNAdmin()
 {
 
 }
-jlong SVNAdmin::getCppAddr()
-{
-    return reinterpret_cast<jlong>(this);
-}
+
 SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
@@ -70,7 +67,6 @@ SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
         return NULL;
     }
     return reinterpret_cast<SVNAdmin*>(cppAddr);
-
 }
 
 void SVNAdmin::dispose(jobject jthis)

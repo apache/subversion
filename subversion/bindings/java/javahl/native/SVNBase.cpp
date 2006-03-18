@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,4 +33,9 @@ SVNBase::SVNBase()
 SVNBase::~SVNBase()
 {
 
+}
+
+jlong SVNBase::getCppAddr()
+{
+    return reinterpret_cast<jlong>(this);
 }
