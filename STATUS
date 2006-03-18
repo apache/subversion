@@ -4,7 +4,7 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.3.1:
+Status of 1.3.2:
 ================
 
 Candidate changes:
@@ -30,14 +30,11 @@ Candidate changes:
   * r17280, r18172, r18205, r18491
     Upgrade SWIG bindings to be compatible with SWIG 1.3.26-1.3.28
     Branch: 1.3.x-r17280
-    Concern: There is a Ruby test failure with SWIG 1.3.28. See
-      http://svn.haxx.se/dev/archive-2006-03/0579.shtml
     Note:
       Depends on r18924.
     Votes:
       +1: djames
       +0: blair, malcolm
-      -0: lundblad
 
   * r18853
     Document that the SWIG bindings are compatible with SWIG 1.3.28
@@ -74,16 +71,6 @@ Candidate changes:
       the Ruby bindings should support SWIG 1.3.28.
     Votes:
       +1: kou
-
-Approved changes:
-
-  (none)
-
-
-Status of 1.3.2:
-================
-
-Candidate changes:
 
   * r17333 and associated test case (copied from trunk)
     Fix issue #2306: modification of "svn:needs-lock" should adjust
