@@ -699,13 +699,14 @@ svn_wc_crawl_revisions(const char *path,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_boolean_t fulltext,
-                            const svn_delta_editor_t *editor,
-                            void *file_baton,
-                            const char **tempfile,
-                            apr_pool_t *pool)
+svn_wc_transmit_text_deltas2(const char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             const char **tempfile,
+                             const unsigned char **digest,
+                             apr_pool_t *pool)
 {
   const char *tmpf, *tmp_base;
   svn_txdelta_window_handler_t handler;
@@ -873,11 +874,26 @@ svn_wc_transmit_text_deltas(const char *path,
 
   local_digest = svn_txdelta_md5_digest(txdelta_stream);
 
+  if (digest)
+    *digest = local_digest;
+
   /* Close the file baton, and get outta here. */
   return editor->close_file
     (file_baton, svn_md5_digest_to_cstring(local_digest, pool), pool);
 }
 
+svn_error_t *
+svn_wc_transmit_text_deltas(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_boolean_t fulltext,
+                            const svn_delta_editor_t *editor,
+                            void *file_baton,
+                            const char **tempfile,
+                            apr_pool_t *pool)
+{
+  return svn_wc_transmit_text_deltas2(path, adm_access, fulltext, editor,
+                                      file_baton, tempfile, NULL, pool);
+}
 
 svn_error_t *
 svn_wc_transmit_prop_deltas(const char *path,

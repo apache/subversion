@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_props.h"
+#include "svn_md5.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
@@ -1211,6 +1212,7 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
+                      apr_hash_t **digests,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -1235,6 +1237,10 @@ svn_client__do_commit(const char *base_url,
      hash to store those paths in. */
   if (tempfiles)
     *tempfiles = apr_hash_make(pool);
+
+  /* Dito for the md5 digests. */
+  if (digests)
+    *digests = apr_hash_make(pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      URI-decoded relative paths (which come from the item URLs).  And
@@ -1272,6 +1278,7 @@ svn_client__do_commit(const char *base_url,
       void *val;
       void *file_baton;
       const char *tempfile, *dir_path;
+      const unsigned char *digest;
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
       
@@ -1315,13 +1322,20 @@ svn_client__do_commit(const char *base_url,
       dir_path = svn_path_dirname(item->path, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
                                   subpool));
-      SVN_ERR(svn_wc_transmit_text_deltas(item->path, item_access, fulltext,
-                                          editor, file_baton, 
-                                          &tempfile, subpool));
+      SVN_ERR(svn_wc_transmit_text_deltas2(item->path, item_access, fulltext,
+                                           editor, file_baton, 
+                                           &tempfile, &digest, subpool));
       if (tempfile && *tempfiles)
         {
           tempfile = apr_pstrdup(apr_hash_pool_get(*tempfiles), tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
+        }
+      if (digest && digests)
+        {
+          unsigned char *new_digest
+            = apr_palloc(apr_hash_pool_get(*digests), APR_MD5_DIGESTSIZE);
+          memcpy(new_digest, digest, APR_MD5_DIGESTSIZE);
+          apr_hash_set(*digests, item->path, APR_HASH_KEY_STRING, new_digest);
         }
     }
 
