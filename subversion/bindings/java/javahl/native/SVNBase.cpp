@@ -20,6 +20,7 @@
  */
 
 #include "SVNBase.h"
+#include "JNIUtil.h"
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -38,4 +39,26 @@ SVNBase::~SVNBase()
 jlong SVNBase::getCppAddr()
 {
     return reinterpret_cast<jlong>(this);
+}
+
+jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
+                                     const char *className)
+{
+    JNIEnv *env = JNIUtil::getEnv();
+    if (*fid == 0)
+    {
+        jclass clazz = env->FindClass(className);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return 0;
+        }
+
+        *fid = env->GetFieldID(clazz, "cppAddr", "J");
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return 0;
+        }
+    }
+    jlong cppAddr = env->GetLongField(jthis, *fid);
+    return (JNIUtil::isJavaExceptionThrown() ? 0 : cppAddr);
 }

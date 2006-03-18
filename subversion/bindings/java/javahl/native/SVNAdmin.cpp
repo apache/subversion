@@ -46,27 +46,9 @@ SVNAdmin::~SVNAdmin()
 SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
-    JNIEnv *env = JNIUtil::getEnv();
-    if(fid == 0)
-    {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        fid = env->GetFieldID(clazz, "cppAddr", "J");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-    }
-
-    jlong cppAddr = env->GetLongField(jthis, fid);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    return reinterpret_cast<SVNAdmin*>(cppAddr);
+    jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
+						   JAVA_PACKAGE"/SVNAdmin");
+    return (cppAddr == 0 ? NULL : reinterpret_cast<SVNAdmin *>(cppAddr));
 }
 
 void SVNAdmin::dispose(jobject jthis)
