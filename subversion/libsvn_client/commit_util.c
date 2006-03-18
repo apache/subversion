@@ -1238,7 +1238,7 @@ svn_client__do_commit(const char *base_url,
   if (tempfiles)
     *tempfiles = apr_hash_make(pool);
 
-  /* Dito for the md5 digests. */
+  /* Ditto for the md5 digests. */
   if (digests)
     *digests = apr_hash_make(pool);
 
@@ -1332,9 +1332,8 @@ svn_client__do_commit(const char *base_url,
         }
       if (digest && digests)
         {
-          unsigned char *new_digest
-            = apr_palloc(apr_hash_pool_get(*digests), APR_MD5_DIGESTSIZE);
-          memcpy(new_digest, digest, APR_MD5_DIGESTSIZE);
+          unsigned char *new_digest = apr_pmemdup(apr_hash_pool_get(*digests),
+                                                  digest, APR_MD5_DIGESTSIZE);
           apr_hash_set(*digests, item->path, APR_HASH_KEY_STRING, new_digest);
         }
     }
