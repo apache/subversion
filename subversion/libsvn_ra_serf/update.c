@@ -1265,6 +1265,26 @@ start_report(void *userData, const char *name, const char **attrs)
                                        ctx->state->info->dir->dir_baton,
                                        ctx->state->info->dir->pool);
     }
+  else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
+           strcmp(prop_name.name, "absent-directory") == 0)
+    {
+      const char *file_name;
+
+      file_name = svn_ra_serf__find_attr(attrs, "name");
+
+      if (!file_name)
+        {
+          abort();
+        }
+
+      if (!ctx->state->info->dir->dir_baton)
+        {
+          open_dir(ctx->state->info->dir);
+        }
+      ctx->update_editor->absent_directory(file_name,
+                                           ctx->state->info->dir->dir_baton,
+                                           ctx->state->info->dir->pool);
+    }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR))
     {
       if (strcmp(prop_name.name, "checked-in") == 0)
