@@ -282,6 +282,8 @@
 /* ----------------------------------------------------------------------- */
 
 %{
+#include <apr_md5.h>
+
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
