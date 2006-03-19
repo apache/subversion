@@ -2886,10 +2886,10 @@ svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
   void *handler_baton;
 
   handler_p = &handler;
-  r2c_svn_type2(rb_ivar_get(obj, rb_id_handler()),
-                "svn_txdelta_window_handler_t", (void **)handler_p);
-  r2c_svn_type2(rb_ivar_get(obj, rb_id_handler_baton()),
-                "void *", &handler_baton);
+  r2c_swig_type2(rb_ivar_get(obj, rb_id_handler()),
+                 "svn_txdelta_window_handler_t", (void **)handler_p);
+  r2c_swig_type2(rb_ivar_get(obj, rb_id_handler_baton()),
+                 "void *", &handler_baton);
 
   return handler(window, handler_baton);
 }
