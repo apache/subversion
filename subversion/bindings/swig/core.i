@@ -814,7 +814,7 @@ apr_pool_wrapper_destroy_children(apr_pool_wrapper_t *self)
 {
   apr_pool_wrapper_t **child;
 
-  while (child = apr_array_pop(self->children)) {
+  while ((child = apr_array_pop(self->children))) {
     if (*child) {
       apr_pool_wrapper_destroy(*child);
     }

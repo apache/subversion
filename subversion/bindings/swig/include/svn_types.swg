@@ -513,8 +513,8 @@
 
 %typemap(ruby, argout, fragment="output_helper") unsigned char digest[ANY]
 {
-  $result = output_helper($result,
-                          rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
+  char *digest_string = (char *)svn_md5_digest_to_cstring($1, _global_pool);
+  $result = output_helper($result, rb_str_new2(digest_string));
 }
 
 /* svn_md5_* functions takes const ones as input */
