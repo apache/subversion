@@ -625,7 +625,7 @@ svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 {
   void **result = NULL;
   result = apr_palloc(pool, sizeof(void *));
-  SWIG_ConvertPtr(value, result, SWIG_TypeQuery((char *)ctx), 0);
+  r2c_swig_type2(value, (const char *)ctx, result);
   return *result;
 }
 #define r2c_swig_type svn_swig_rb_to_swig_type
@@ -633,7 +633,17 @@ svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 static void
 r2c_swig_type2(VALUE value, const char *type_name, void **result)
 {
-  SWIG_ConvertPtr(value, result, SWIG_TypeQuery(type_name), 0);
+  int res;
+  res = SWIG_ConvertPtr(value, result, SWIG_TypeQuery(type_name),
+                        SWIG_POINTER_EXCEPTION);
+#ifdef SWIG_IsOK
+  if (!SWIG_IsOK(res)) {
+    VALUE message = rb_funcall(value, rb_intern("inspect"), 0);
+    rb_str_cat2(message, "must be ");
+    rb_str_cat2(message, type_name);
+    SWIG_Error(SWIG_ArgError(res), StringValuePtr(message));
+  }
+#endif
 }
 
 static void *
