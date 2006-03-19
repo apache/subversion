@@ -1242,7 +1242,7 @@ typedef struct svn_wc_entry_t
   /** last up-to-date time for properties (0 means no information available) */
   apr_time_t prop_time;
 
-  /** base64-encoded checksum for the untranslated text base file,
+  /** Hex MD5 checksum for the untranslated text base file,
    * can be @c NULL for backwards compatibility.
    */
   const char *checksum;
