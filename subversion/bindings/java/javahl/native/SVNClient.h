@@ -140,7 +140,6 @@ public:
                   bool noDiffDelete, bool force);
 
     const char * getLastPath();
-    void finalize();
     void dispose(jobject jthis);
     static SVNClient * getCppObject(jobject jthis);
     SVNClient();

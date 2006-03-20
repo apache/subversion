@@ -39,6 +39,14 @@ public:
      */
     jlong getCppAddr();
 
+    /**
+     * This method should never be called, as @c dispose() should be
+     * called explicitly.  When @c dispose() fails to be called, this
+     * method assures that this C++ peer object has been enqueued for
+     * deletion.
+     */
+    void finalize();
+
 protected:
     /**
      * Return the value of the @c cppAddr instance field from the @a

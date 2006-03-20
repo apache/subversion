@@ -57,6 +57,16 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
     }
 }
 
+void SVNBase::finalize()
+{
+    // This object should've already been disposed of!
+    if (JNIUtil::getLogLevel() >= JNIUtil::errorLog)
+    {
+        JNIUtil::logMessage("An SVNBase object escaped disposal");
+    }
+    JNIUtil::enqueueForDeletion(this);
+}
+
 void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
 {
     delete this;
