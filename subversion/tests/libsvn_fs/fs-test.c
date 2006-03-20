@@ -4625,7 +4625,6 @@ move_plus_copy_test(const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t after_rev;
-  svn_fs_history_t *history;
 
   *msg = "play with changed paths and moves";
 
