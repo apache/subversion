@@ -83,11 +83,6 @@ void SVNClient::dispose(jobject jthis)
     SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
 }
 
-void SVNClient::finalize()
-{
-    JNIUtil::putFinalizedClient(this);
-}
-
 jstring SVNClient::getAdminDirectoryName()
 {
     Pool requestPool;

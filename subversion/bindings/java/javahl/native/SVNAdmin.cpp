@@ -57,11 +57,6 @@ void SVNAdmin::dispose(jobject jthis)
     SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNAdmin");
 }
 
-void SVNAdmin::finalize()
-{
-    JNIUtil::putFinalizedClient(this);
-}
-
 void SVNAdmin::create(const char *path, bool disableFsyncCommits,
                       bool keepLogs, const char *configPath,
                       const char *fstype)

@@ -309,7 +309,7 @@ JNIMutex *JNIUtil::getGlobalPoolMutex()
  */
 void JNIUtil::throwError(const char *message)
 {
-    if(getLogLevel() >= errorLog)
+    if (getLogLevel() >= errorLog)
     {
         JNICriticalSection cs(*g_logMutex);
         g_logStream << "Error thrown <" << message << ">" << std::endl;
@@ -405,28 +405,21 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     }
     env->Throw(static_cast<jthrowable>(error));
 }
-/**
- * put the object on the finalized object list
- * it will be deleted by another thread during the next request
- * @param cl    the C++ peer of the finalized object
- */
-void JNIUtil::putFinalizedClient(SVNBase *cl)
+
+void JNIUtil::putFinalizedClient(SVNBase *object)
 {
-    // log this, because the object should have disposed
-    if(getLogLevel() >= errorLog)
-    {
-        JNICriticalSection cs(*g_logMutex);
-        g_logStream << "a client object was not disposed" << std::endl;
-    }
-    JNICriticalSection cs(*g_finalizedObjectsMutex);
-    if(isExceptionThrown())
-    {
-        return;
-    }
-
-    g_finalizedObjects.push_back(cl);
-
+    enqueueForDeletion(object);
 }
+
+void JNIUtil::enqueueForDeletion(SVNBase *object)
+{
+    JNICriticalSection cs(*g_finalizedObjectsMutex);
+    if (!isExceptionThrown())
+    {
+        g_finalizedObjects.push_back(object);
+    }
+}
+
 /**
  * Handle an apr error (those are not expected) by throwing an error
  * @param error the apr error number

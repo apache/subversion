@@ -59,7 +59,6 @@ public:
                     const char *configPath, const char *fstype);
     SVNAdmin();
     virtual ~SVNAdmin();
-    void finalize();
     void dispose(jobject jthis);
     static SVNAdmin * getCppObject(jobject jthis);
 
