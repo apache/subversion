@@ -1616,7 +1616,7 @@ set_path(void *report_baton,
 {
   report_context_t *report = report_baton;
   serf_bucket_t *tmp;
-  const char *path_copy;
+  svn_stringbuf_t *path_buf;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
@@ -1659,9 +1659,11 @@ set_path(void *report_baton,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  path_copy = apr_pstrdup(report->pool, path);
+  path_buf = NULL;
+  svn_xml_escape_cdata_cstring(&path_buf, path, report->pool);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(path_copy, report->sess->bkt_alloc);
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(path_buf->data, path_buf->len,
+                                      report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
