@@ -695,7 +695,7 @@ setup_copy_headers(serf_bucket_t *headers,
 
   /* The Dest URI must be absolute.  Bummer. */
   uri = file->commit->session->repos_url;
-  uri.path = file->put_url;
+  uri.path = (char*)file->put_url;
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
@@ -1377,7 +1377,9 @@ close_file(void *file_baton,
       if ((ctx->checkout && put_ctx->status != 204) ||
           (!ctx->checkout && put_ctx->status != 201))
         {
-          abort();
+          /* TODO Parse server-provided error code / message. */
+          return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                   _("Error PUTing '%s'"), ctx->put_url);
         }
     }
 
