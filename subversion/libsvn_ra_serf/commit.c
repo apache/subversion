@@ -256,7 +256,7 @@ handle_checkout(serf_request_t *request,
   status = handle_status_only(request, response, &ctx->progress, pool);
 
   /* Get the resulting location. */
-  if (ctx->progress.done)
+  if (ctx->progress.done && ctx->progress.status == 201)
     {
       serf_bucket_t *hdrs;
       apr_uri_t uri;
@@ -335,7 +335,10 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      abort();
+      /* TODO Parse server-provided error code / message. */
+      return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+               _("Your file or directory '%s' is probably out-of-date"),
+               svn_path_local_style(dir->name, dir->pool));
     }
 
   return SVN_NO_ERROR;
@@ -383,8 +386,61 @@ checkout_file(file_context_t *file)
 
   if (file->checkout->progress.status != 201)
     {
-      abort();
+      /* TODO Parse server-provided error code / message. */
+      return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+               _("Your file or directory '%s' is probably out-of-date"),
+               svn_path_local_style(file->name, file->pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_version_url(dir_context_t *dir)
+{
+  svn_ra_serf__session_t *session = dir->commit->session;
+  const char *root_checkout;
+
+  if (dir->commit->session->wc_callbacks->get_wc_prop)
+    {
+      const svn_string_t *current_version;
+
+      SVN_ERR(session->wc_callbacks->get_wc_prop(session->wc_callback_baton,
+                                                 dir->name,
+                                                 SVN_RA_SERF__WC_CHECKED_IN_URL,
+                                                 &current_version, dir->pool));
+
+      if (current_version)
+        {
+          dir->checked_in_url = current_version->data;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  if (dir->commit->checked_in_url)
+    {
+      root_checkout = dir->commit->checked_in_url;
+    }
+  else
+    {
+      apr_hash_t *props;
+
+      props = apr_hash_make(dir->pool);
+
+      SVN_ERR(svn_ra_serf__retrieve_props(props,
+                                          session,
+                                          dir->commit->conn,
+                                          session->repos_url.path,
+                                          dir->base_revision, "0",
+                                          checked_in_props, dir->pool));
+
+      root_checkout =
+          svn_ra_serf__get_ver_prop(props, session->repos_url.path,
+                                    dir->base_revision, "DAV:", "checked-in");
+    }
+
+  dir->checked_in_url = svn_path_url_add_component(root_checkout,
+                                                   dir->name, dir->pool);
 
   return SVN_NO_ERROR;
 }
@@ -722,21 +778,6 @@ open_root(void *edit_baton,
       abort();
     }
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                      ctx->session, ctx->session->conns[0],
-                                      ctx->session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0",
-                                      checked_in_props, ctx->pool));
-
-  ctx->checked_in_url = svn_ra_serf__get_prop(props,
-                                              ctx->session->repos_url.path,
-                                              "DAV:", "checked-in");
-
-  if (!ctx->checked_in_url)
-    {
-      abort();
-    }
-
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
   SVN_ERR(svn_ra_serf__retrieve_props(props,
                                       ctx->session, ctx->session->conns[0],
@@ -757,9 +798,11 @@ open_root(void *edit_baton,
   dir->commit = ctx;
   dir->base_revision = base_revision;
   dir->name = "";
-  dir->checked_in_url = ctx->checked_in_url;
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
+
+  SVN_ERR(get_version_url(dir));
+  ctx->checked_in_url = dir->checked_in_url;
 
   /* Checkout our root dir */
   SVN_ERR(checkout_dir(dir));
@@ -912,11 +955,10 @@ open_directory(const char *path,
 
   dir->base_revision = base_revision;
   dir->name = path;
-  dir->checked_in_url =
-      svn_path_url_add_component(parent->commit->checked_in_url,
-                                 path, dir->pool);
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
+
+  SVN_ERR(get_version_url(dir));
 
   *child_baton = dir;
 
