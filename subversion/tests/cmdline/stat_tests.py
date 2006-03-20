@@ -653,7 +653,7 @@ use-commit-times = yes
 
 def status_on_unversioned_dotdot(sbox):
   "status on '..' where '..' is not versioned"
-  # See issue #1617.
+  # See issue #1617 (and #2030).
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -667,7 +667,7 @@ def status_on_unversioned_dotdot(sbox):
   try:
     out, err = svntest.main.run_svn(1, 'st', '..')
     for line in err:
-      if line.find('svn: \'..\' is not a working copy') != -1:
+      if line.find('svn: warning: \'..\' is not a working copy') != -1:
         break
     else:
       raise svntest.Failure
@@ -832,6 +832,16 @@ def status_ignored_dir(sbox):
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
 
+#----------------------------------------------------------------------
+
+def status_unversioned_dir(sbox):
+  "status on unversioned dir (issue 2030)"
+  sbox.build()
+  dir = sbox.repo_dir
+  expected_err = ["svn: warning: '" + dir + "' is not a working copy\n",
+                  "svn: warning: '" + dir + "' is not a working copy\n"]
+  svntest.actions.run_and_verify_svn(None, [], expected_err, "status", dir, dir)
+
 #----------------------------------------------------------------------  
 
 
@@ -859,6 +869,7 @@ test_list = [ None,
               missing_dir_in_anchor,
               status_in_xml,
               status_ignored_dir,
+              status_unversioned_dir,
              ]
 
 if __name__ == '__main__':
