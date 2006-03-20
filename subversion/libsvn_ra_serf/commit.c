@@ -706,6 +706,19 @@ setup_copy_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
+static apr_status_t
+setup_delete_headers(serf_bucket_t *headers,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  svn_revnum_t *revision = baton;
+
+  serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
+                          apr_ltoa(pool, *revision));
+
+  return APR_SUCCESS;
+}
+
 /* Helper function to write the svndiff stream to temporary file. */
 static svn_error_t *
 svndiff_stream_write(void *file_baton,
@@ -864,7 +877,7 @@ delete_entry(const char *path,
   /* Ensure our directory has been checked out */
   SVN_ERR(checkout_dir(dir));
 
-  /* DELETE our activity */
+  /* DELETE our entry */
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->session = dir->commit->session;
@@ -872,6 +885,9 @@ delete_entry(const char *path,
 
   handler->response_handler = handle_status_only;
   handler->response_baton = delete_ctx;
+
+  handler->header_delegate = setup_delete_headers;
+  handler->header_delegate_baton = &revision;
 
   handler->method = "DELETE";
   handler->path =
@@ -886,7 +902,10 @@ delete_entry(const char *path,
 
   if (delete_ctx->status != 204)
     {
-      abort();
+      /* TODO Parse server-provided error code / message. */
+      return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+               _("Your file or directory '%s' is probably out-of-date"),
+               svn_path_local_style(path, pool));
     }
 
   apr_hash_set(dir->commit->deleted_entries,
