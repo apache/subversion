@@ -1063,7 +1063,8 @@ add_file(const char *path,
 
       if (head_ctx->status != 404)
         { 
-          abort();
+          return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
+                                   _("File '%s' already exists"), path);
         }
     }
 
