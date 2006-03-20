@@ -736,10 +736,9 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
  */
 void JNIUtil::throwNullPointerException(const char *message)
 {
-    if(getLogLevel() >= errorLog)
+    if (getLogLevel() >= errorLog)
     {
-        JNICriticalSection cs(*g_logMutex);
-        g_logStream << "NullPointerException thrown" << std::endl;
+        logMessage("NullPointerException thrown");
     }
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/lang/NullPointerException");
