@@ -50,8 +50,12 @@ typedef struct svn_sort__item_t {
 
 
 /** Compare two @c svn_sort__item_t's, returning an integer greater than,
- * equal to, or less than 0, according as @a a is greater than, equal to,
- * or less than @a b.
+ * equal to, or less than 0, according to whether the key of @a a is
+ * greater than, equal to, or less than the key of @a b as determined
+ * by comparing them with svn_path_compare_paths().
+ *
+ * The key strings must be null-terminated, even though klen does not
+ * include the terminator.
  * 
  * This is useful for converting a hash into a sorted
  * @c apr_array_header_t.  For example, to convert hash @a hsh to a sorted
@@ -59,9 +63,6 @@ typedef struct svn_sort__item_t {
  * 
  *<pre>   apr_array_header_t *hdr;
  *   hdr = svn_sort__hash (hsh, @c svn_sort_compare_items_as_paths, pool);</pre>
- *
- * The key strings must be null-terminated, even though klen does not
- * include the terminator.
  */
 int svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
                                     const svn_sort__item_t *b);
