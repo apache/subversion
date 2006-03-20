@@ -163,6 +163,10 @@ typedef struct {
   /* The base revision of the file. */
   svn_revnum_t base_revision;
 
+  /* Copy path and revision */
+  const char *copy_path;
+  svn_revnum_t copy_revision;
+
   /* stream */
   svn_stream_t *stream;
 
@@ -680,6 +684,28 @@ setup_put_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
+static apr_status_t
+setup_copy_headers(serf_bucket_t *headers,
+                   void *baton,
+                   apr_pool_t *pool)
+{
+  file_context_t *file = baton;
+  apr_uri_t uri;
+  const char *absolute_uri;
+
+  /* The Dest URI must be absolute.  Bummer. */
+  uri = file->commit->session->repos_url;
+  uri.path = file->put_url;
+  absolute_uri = apr_uri_unparse(pool, &uri, 0);
+
+  serf_bucket_headers_set(headers, "Destination", absolute_uri);
+
+  serf_bucket_headers_set(headers, "Depth", "0");
+  serf_bucket_headers_set(headers, "Overwrite", "T");
+
+  return APR_SUCCESS;
+}
+
 /* Helper function to write the svndiff stream to temporary file. */
 static svn_error_t *
 svndiff_stream_write(void *file_baton,
@@ -1070,6 +1096,9 @@ add_file(const char *path,
   new_file->name = path;
 
   new_file->base_revision = SVN_INVALID_REVNUM;
+  new_file->copy_path = copy_path;
+  new_file->copy_revision = copy_revision;
+
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
@@ -1108,12 +1137,6 @@ add_file(const char *path,
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"), path);
         }
-    }
-
-  if (copy_path)
-    {
-      /* Issue a COPY */
-      abort();
     }
 
   new_file->put_url =
@@ -1246,6 +1269,63 @@ close_file(void *file_baton,
 
   ctx->result_checksum = text_checksum;
 
+  if (ctx->copy_path)
+    {
+      svn_ra_serf__handler_t *handler;
+      simple_request_context_t *copy_ctx;
+      apr_uri_t uri;
+      apr_hash_t *props;
+      const char *vcc_url, *rel_copy_path, *basecoll_url, *req_url;
+
+      props = apr_hash_make(pool);
+
+      apr_uri_parse(pool, ctx->copy_path, &uri);
+
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
+                                         ctx->commit->session,
+                                         ctx->commit->conn,
+                                         uri.path, pool));
+      SVN_ERR(svn_ra_serf__retrieve_props(props,
+                                          ctx->commit->session,
+                                          ctx->commit->conn,
+                                          vcc_url, ctx->copy_revision, "0",
+                                          baseline_props, pool));
+      basecoll_url = svn_ra_serf__get_ver_prop(props,
+                                               vcc_url, ctx->copy_revision,
+                                               "DAV:", "baseline-collection");
+      
+      if (!basecoll_url)
+        {
+          abort();
+        }
+      
+      req_url = svn_path_url_add_component(basecoll_url, rel_copy_path, pool);
+
+      handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->method = "COPY";
+      handler->path = req_url;
+      handler->conn = ctx->commit->conn;
+      handler->session = ctx->commit->session;
+      
+      copy_ctx = apr_pcalloc(pool, sizeof(*copy_ctx));
+      
+      handler->response_handler = handle_status_only;
+      handler->response_baton = copy_ctx;
+
+      handler->header_delegate = setup_copy_headers;
+      handler->header_delegate_baton = ctx;
+       
+      svn_ra_serf__request_create(handler);
+      
+      SVN_ERR(svn_ra_serf__context_run_wait(&copy_ctx->done,
+                                            ctx->commit->session, pool));
+
+      if (copy_ctx->status != 201)
+        {
+          abort();
+        }
+    }
+
   /* If we had a stream of changes, push them to the server... */
   if (ctx->stream)
     {
@@ -1275,8 +1355,8 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&put_ctx->done,
                                             ctx->commit->session, pool));
 
-      if ((ctx->checkout && put_ctx->done != 204) &&
-          (!ctx->checkout && put_ctx->done != 201))
+      if ((ctx->checkout && put_ctx->status != 204) ||
+          (!ctx->checkout && put_ctx->status != 201))
         {
           abort();
         }
