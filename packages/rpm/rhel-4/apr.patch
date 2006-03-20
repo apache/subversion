@@ -35,7 +35,7 @@ Index: subversion/libsvn_subr/io.c
 ===================================================================
 --- subversion/libsvn_subr/io.c	(revision 17608)
 +++ subversion/libsvn_subr/io.c	(working copy)
-@@ -23,7 +23,13 @@
+@@ -23,6 +23,12 @@
  
  #ifndef WIN32
  #include <unistd.h>
@@ -44,12 +44,11 @@ Index: subversion/libsvn_subr/io.c
 +#include <sys/types.h>
 +#include <sys/stat.h>
 +#include <errno.h>
- #endif
 +#endif
+ #endif
  
  #ifndef APR_STATUS_IS_EPERM
- #ifdef EPERM
-@@ -487,10 +493,108 @@
+@@ -594,18 +600,118 @@
  }
  
  
@@ -74,9 +73,10 @@ Index: subversion/libsvn_subr/io.c
 +}
 +#endif
 +
++
  svn_error_t *
- svn_io_temp_dir (const char **dir,
-                  apr_pool_t *pool)
+ svn_io_temp_dir(const char **dir,
+                 apr_pool_t *pool)
  {
 +#if 1  /* TODO: Remove this code when APR 0.9.6 is released. */
 +  apr_status_t apr_err;
@@ -98,7 +98,7 @@ Index: subversion/libsvn_subr/io.c
 +       "/tmp"
 +       "/var/tmp"
 +       "/usr/tmp"
-+       `pwd` 
++       `pwd`
 +
 +     NOTE: This algorithm is basically the same one used by Python
 +     2.2's tempfile.py module. */
@@ -112,7 +112,7 @@ Index: subversion/libsvn_subr/io.c
 +        {
 +          apr_size_t len = strlen(value);
 +          if (len && (len < APR_PATH_MAX) && test_tempdir(value, pool))
-+	    {
++           {
 +              temp_dir = value;
 +              goto end;
 +            }
@@ -126,13 +126,13 @@ Index: subversion/libsvn_subr/io.c
 +      goto end;
 +    }
 +#endif /* WIN32 */
-+			    
++
 +  /* Next, try a set of hard-coded paths. */
 +  for (i = 0; i < (sizeof(try_dirs) / sizeof(const char *)); i++)
 +    {
 +      if (test_tempdir(try_dirs[i], pool))
 +        {
-+	  temp_dir = try_dirs[i];
++         temp_dir = try_dirs[i];
 +          goto end;
 +        }
 +    }
@@ -143,7 +143,7 @@ Index: subversion/libsvn_subr/io.c
 +      if (test_tempdir(cwd, pool))
 +        {
 +          temp_dir = cwd;
-+	  goto end;
++         goto end;
 +        }
 +    }
 +
@@ -155,20 +155,21 @@ Index: subversion/libsvn_subr/io.c
 +  return SVN_NO_ERROR;
 +
 +#else
-   apr_status_t apr_err = apr_temp_dir_get (dir, pool);
+   apr_status_t apr_err = apr_temp_dir_get(dir, pool);
  
    if (apr_err)
-@@ -498,7 +602,8 @@
+-    return svn_error_wrap_apr(apr_err, _("Can't find a temporary directory"));
++    return svn_err r_wrap_apr(apr_err, _("Can't find a temporary directory"));
  
-   *dir = svn_path_canonicalize (*dir, pool);
+   *dir = svn_path_canonicalize(*dir, pool);
  
--  return svn_path_cstring_to_utf8 (dir, *dir, pool);
+-  return svn_path_cstring_to_utf8(dir, *dir, pool);
 +  return SVN_NO_ERROR;
 +#endif
  }
  
  
-@@ -2527,6 +2632,7 @@
+@@ -2787,6 +2893,7 @@
      }
  #endif
  
@@ -176,9 +177,9 @@ Index: subversion/libsvn_subr/io.c
    if (sgid)
      {
        apr_finfo_t finfo;
-@@ -2541,7 +2647,21 @@
+@@ -2801,6 +2908,20 @@
         * don't support the sgid bit, and that's okay. */
-       apr_file_perms_set (path_apr, finfo.protection | APR_GSETID);
+       apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
      }
 +#elif !defined (WIN32)
 +  /* APR_GSETID appears in APR 0.9.5, so we need some fallback code
@@ -186,7 +187,7 @@ Index: subversion/libsvn_subr/io.c
 +  if (sgid)
 +  {
 +    struct stat st;
- 
++
 +    if (stat (path_apr, &st) != 0)
 +      return svn_error_wrap_apr (APR_FROM_OS_ERROR (errno),
 +                                 _("Can't stat new directory '%s'"),
@@ -194,7 +195,6 @@ Index: subversion/libsvn_subr/io.c
 +    chmod (path_apr, (st.st_mode & ~S_IFMT) | S_ISGID);
 +  }
 +#endif
-+
+ 
    return SVN_NO_ERROR;
  }
- 
