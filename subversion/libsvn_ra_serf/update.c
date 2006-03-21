@@ -2001,18 +2001,37 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report_context_t *report;
   svn_ra_serf__session_t *session = ra_session->priv;
   serf_bucket_t *tmp;
+  svn_stringbuf_t *path_buf;
 
   report = apr_pcalloc(pool, sizeof(*report));
   report->pool = pool;
   report->sess = ra_session->priv;
   report->conn = report->sess->conns[0];
-  report->source = src_path;
-  report->destination = dest_path;
-  report->update_target = update_target;
   report->target_rev = revision;
   report->recurse = recurse;
   report->ignore_ancestry = ignore_ancestry;
   report->text_deltas = text_deltas;
+
+  if (src_path)
+    {
+      path_buf = NULL;
+      svn_xml_escape_cdata_cstring(&path_buf, src_path, report->pool);
+      report->source = path_buf->data;
+    }
+
+  if (dest_path)
+    {
+      path_buf = NULL;
+      svn_xml_escape_cdata_cstring(&path_buf, dest_path, report->pool);
+      report->destination = path_buf->data;
+    }
+
+  if (update_target)
+    {
+      path_buf = NULL;
+      svn_xml_escape_cdata_cstring(&path_buf, update_target, report->pool);
+      report->update_target = path_buf->data;
+    }
 
   report->update_editor = update_editor;
   report->update_baton = update_baton;
