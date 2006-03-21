@@ -136,8 +136,8 @@ typedef struct dir_context_t {
   /* The base revision of the dir. */
   svn_revnum_t base_revision;
 
-  const char *copyfrom_path;
-  svn_revnum_t copyfrom_revision;
+  const char *copy_path;
+  svn_revnum_t copy_revision;
 
   /* Changed and removed properties */
   apr_hash_t *changed_props;
@@ -685,9 +685,9 @@ setup_put_headers(serf_bucket_t *headers,
 }
 
 static apr_status_t
-setup_copy_headers(serf_bucket_t *headers,
-                   void *baton,
-                   apr_pool_t *pool)
+setup_copy_file_headers(serf_bucket_t *headers,
+                        void *baton,
+                        apr_pool_t *pool)
 {
   file_context_t *file = baton;
   apr_uri_t uri;
@@ -701,6 +701,32 @@ setup_copy_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
 
   serf_bucket_headers_set(headers, "Depth", "0");
+  serf_bucket_headers_set(headers, "Overwrite", "T");
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t
+setup_copy_dir_headers(serf_bucket_t *headers,
+                       void *baton,
+                       apr_pool_t *pool)
+{
+  dir_context_t *dir = baton;
+  apr_uri_t uri;
+  const char *absolute_uri;
+
+  /* The Dest URI must be absolute.  Bummer. */
+  uri = dir->commit->session->repos_url;
+  uri.path =
+      (char*)svn_path_url_add_component(dir->parent_dir->checkout->resource_url,
+                                        svn_path_basename(dir->name, pool),
+                                        pool);
+
+  absolute_uri = apr_uri_unparse(pool, &uri, 0);
+
+  serf_bucket_headers_set(headers, "Destination", absolute_uri);
+
+  serf_bucket_headers_set(headers, "Depth", "infinity");
   serf_bucket_headers_set(headers, "Overwrite", "T");
 
   return APR_SUCCESS;
@@ -926,7 +952,7 @@ add_directory(const char *path,
   dir_context_t *parent = parent_baton;
   dir_context_t *dir;
   svn_ra_serf__handler_t *handler;
-  simple_request_context_t *mkcol_ctx;
+  simple_request_context_t *add_dir_ctx;
 
   /* Ensure our parent is checked out. */
   SVN_ERR(checkout_dir(parent));
@@ -939,8 +965,8 @@ add_directory(const char *path,
   dir->commit = parent->commit;
 
   dir->base_revision = SVN_INVALID_REVNUM;
-  dir->copyfrom_revision = copyfrom_revision;
-  dir->copyfrom_path = copyfrom_path;
+  dir->copy_revision = copyfrom_revision;
+  dir->copy_path = copyfrom_path;
   dir->name = path;
   dir->checked_in_url =
       svn_path_url_add_component(parent->commit->checked_in_url,
@@ -948,30 +974,66 @@ add_directory(const char *path,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  if (copyfrom_path)
-    {
-      abort();
-    }
-
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
-  handler->method = "MKCOL";
-  handler->path = svn_path_url_add_component(parent->checkout->resource_url,
-                                             svn_path_basename(path, dir->pool),
-                                             dir->pool);
   handler->conn = dir->commit->conn;
   handler->session = dir->commit->session;
 
-  mkcol_ctx = apr_pcalloc(dir->pool, sizeof(*mkcol_ctx));
-
+  add_dir_ctx = apr_pcalloc(dir->pool, sizeof(*add_dir_ctx));
+      
   handler->response_handler = handle_status_only;
-  handler->response_baton = mkcol_ctx;
+  handler->response_baton = add_dir_ctx;
+  if (!dir->copy_path)
+    {
+      handler->method = "MKCOL";
+      handler->path = svn_path_url_add_component(parent->checkout->resource_url,
+                                                 svn_path_basename(path,
+                                                                   dir->pool),
+                                                 dir->pool);
+    }
+  else
+    {
+      apr_uri_t uri;
+      apr_hash_t *props;
+      const char *vcc_url, *rel_copy_path, *basecoll_url, *req_url;
+
+      props = apr_hash_make(dir->pool);
+
+      apr_uri_parse(dir->pool, dir->copy_path, &uri);
+
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_copy_path,
+                                         dir->commit->session,
+                                         dir->commit->conn,
+                                         uri.path, dir->pool));
+      SVN_ERR(svn_ra_serf__retrieve_props(props,
+                                          dir->commit->session,
+                                          dir->commit->conn,
+                                          vcc_url, dir->copy_revision, "0",
+                                          baseline_props, dir->pool));
+      basecoll_url = svn_ra_serf__get_ver_prop(props,
+                                               vcc_url, dir->copy_revision,
+                                               "DAV:", "baseline-collection");
+      
+      if (!basecoll_url)
+        {
+          abort();
+        }
+      
+      req_url = svn_path_url_add_component(basecoll_url, rel_copy_path,
+                                           dir->pool);
+
+      handler->method = "COPY";
+      handler->path = req_url;
+      
+      handler->header_delegate = setup_copy_dir_headers;
+      handler->header_delegate_baton = dir;
+    }
 
   svn_ra_serf__request_create(handler);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&mkcol_ctx->done, dir->commit->session,
-                                        dir->pool));
-
-  if (mkcol_ctx->status != 201)
+      
+  SVN_ERR(svn_ra_serf__context_run_wait(&add_dir_ctx->done,
+                                        dir->commit->session, dir->pool));
+      
+  if (add_dir_ctx->status != 201)
     {
       abort();
     }
@@ -1331,7 +1393,7 @@ close_file(void *file_baton,
       handler->response_handler = handle_status_only;
       handler->response_baton = copy_ctx;
 
-      handler->header_delegate = setup_copy_headers;
+      handler->header_delegate = setup_copy_file_headers;
       handler->header_delegate_baton = ctx;
        
       svn_ra_serf__request_create(handler);
