@@ -142,7 +142,6 @@ default_opts = {
 }
 logs = {}
 mergeprops = {}
-blockprops = {}
 
 def console_width():
     """Get the width of the console screen (if any)."""
@@ -273,8 +272,8 @@ class RevisionLog:
         Create a new RevisionLog object, which stores, in self.revs, a list
         of the revisions which affected the specified URL between begin and
         end. If find_propchanges is True, self.propchange_revs will contain a
-        list of the URLs which changed properties directly on the specified
-        URL. URL must be the URL for a directory in the repository.
+        list of the revisions which changed properties directly on the
+        specified URL. URL must be the URL for a directory in the repository.
         """
 
         # Look for revisions
@@ -303,12 +302,50 @@ class RevisionLog:
                 self.propchange_revs.append(rev)
 
 class VersionedProperty:
-    """A read-only, cached view of a versioned property"""
+    """
+    A read-only, cached view of a versioned property.
+
+    self.revs contains a list of the revisions in which the property changes.
+    self.values stores the new values at each corresponding revision. If the
+    value of the property is unknown, it is set to None.
+
+    Initially, we set self.revs to [0] and self.values to [None]. This
+    indicates that, as of revision zero, we know nothing about the value of
+    the property.
+
+    Later, if you run self.load(log), we cache the value of this property over
+    the entire range of the log by noting each revision in which the property
+    was changed. At the end of the range of the log, we invalidate our cache
+    by adding the value "None" to our cache for any revisions which fall out
+    of the range of our log.
+
+    Once self.revs and self.values are filled, we can find the value of the
+    property at any arbitrary revision using a binary search on self.revs.
+    Once we find the last revision during which the property was changed,
+    we can lookup the associated value in self.values. (If the associated
+    value is None, the associated value was not cached and we have to do
+    a full propget.)
+
+    An example: We know that the 'svnmerge' property was added in r10, and
+    changed in r21. We gathered log info up until r40.
+
+    revs = [0, 10, 21, 40]
+    values = [None, "val1", "val2", None]
+
+    What these values say:
+    - From r0 to r9, we know nothing about the property.
+    - In r10, the property was set to "val1". This property stayed the same
+      until r21, when it was changed to "val2".
+    - We don't know what happened after r40.
+    """
 
     def __init__(self, url, name):
         """View the history of a versioned property at URL with name"""
         self.url = url
         self.name = name
+
+        # We know nothing about the value of the property. Setup revs
+        # and values to indicate as such.
         self.revs = [0]
         self.values = [None]
 
@@ -318,6 +355,7 @@ class VersionedProperty:
         RevisionLog object.
         """
 
+        # Cache the value of the property over the range of the log.
         old_value = None
         for rev in log.propchange_revs:
            new_value = self.raw_get(rev)
@@ -326,6 +364,8 @@ class VersionedProperty:
                self.values.append(new_value)
                new_value = old_value
 
+        # Indicate that we know nothing about the value of the property
+        # after the range of the log.
         if log.revs:
             self.revs.append(log.revs[-1])
             self.values.append(None)
@@ -342,10 +382,17 @@ class VersionedProperty:
         Get the property at revision 'rev'. If rev is not specified, get
         the property at 'head'.
         """
+
         if rev is not None:
+
+            # Find the index using a binary search
             i = bisect(self.revs, rev) - 1
+
+            # Return the value of the property, if it was cached
             if self.values[i] is not None:
                 return self.values[i]
+
+        # Get the current value of the property
         return self.raw_get(rev)
 
     def keys(self):
@@ -737,8 +784,6 @@ def analyze_revs(target_dir, url, begin=1, end=None,
     logs[url] = RevisionLog(url, begin, end, find_reflected)
     mergeprops[url] = VersionedProperty(url, opts["prop"])
     mergeprops[url].load(logs[url])
-    blockprops[url] = VersionedProperty(url, opts["block_prop"])
-    blockprops[url].load(logs[url])
     revs = RevisionSet(",".join(map(str,logs[url].revs)))
 
     if end == "HEAD":
@@ -1456,7 +1501,6 @@ def main(args):
     opts = default_opts.copy()
     logs.clear()
     mergeprops.clear()
-    blockprops.clear()
 
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"
