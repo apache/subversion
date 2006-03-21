@@ -40,6 +40,12 @@ public:
     jlong getCppAddr();
 
     /**
+     * Deletes this C++ peer object, and clears the memory address of
+     * the corresponding Java object @a jthis which points to it.
+     */
+    virtual void dispose(jobject jthis) = 0;
+
+    /**
      * This method should never be called, as @c dispose() should be
      * called explicitly.  When @c dispose() fails to be called, this
      * method assures that this C++ peer object has been enqueued for
