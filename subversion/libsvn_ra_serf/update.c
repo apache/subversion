@@ -538,11 +538,11 @@ open_dir(report_dir_t *dir)
         }
       else
         {
-          dir->update_editor->add_directory(dir->name,
-                                            dir->parent_dir->dir_baton,
-                                            NULL, SVN_INVALID_REVNUM,
-                                            dir->dir_baton_pool,
-                                            &dir->dir_baton);
+          SVN_ERR(dir->update_editor->add_directory(dir->name,
+                                                    dir->parent_dir->dir_baton,
+                                                    NULL, SVN_INVALID_REVNUM,
+                                                    dir->dir_baton_pool,
+                                                    &dir->dir_baton));
         }
     }
 
@@ -1958,7 +1958,7 @@ finish_report(void *report_baton,
    * all of our children. */
   if (closed_root == FALSE)
     {
-      close_all_dirs(report->root_dir);
+      SVN_ERR(close_all_dirs(report->root_dir));
     }
 
   /* FIXME subpool */
