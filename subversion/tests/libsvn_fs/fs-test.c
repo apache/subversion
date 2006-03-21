@@ -4715,6 +4715,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(move_test),
     SVN_TEST_PASS(move_history_test),
     SVN_TEST_PASS(move_closest_copy_test),
-    SVN_TEST_XFAIL(move_plus_copy_test),
+    SVN_TEST_PASS(move_plus_copy_test),
     SVN_TEST_NULL
   };

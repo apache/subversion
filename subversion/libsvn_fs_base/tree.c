@@ -901,7 +901,15 @@ make_path_mutable(svn_fs_root_t *root,
           break;
 
         case copy_id_inherit_fixed:
-          copy_id = copy_data;
+          /* XXX Ok, so we used to just use the copy_data as the new copy id,
+           *     but it turns out there are cases (see move_plus_copy_test
+           *     in fs-test.c for an example) where we need to use a soft
+           *     copy instead to avoid primary key conflicts later, so for
+           *     now we're taking the easy way out and just always inserting
+           *     a new soft copy.  This is NOT the final word on the subject,
+           *     but it lets us move on with things while a better solution
+           *     is conceived. */
+          SVN_ERR(svn_fs_bdb__reserve_copy_id(&copy_id, fs, trail, pool));
           break;
 
         case copy_id_inherit_unknown:
@@ -923,7 +931,7 @@ make_path_mutable(svn_fs_root_t *root,
          `copies' table entry for it, as well as a notation in the
          transaction that should this transaction be terminated, our
          new copy needs to be removed. */
-      if (inherit == copy_id_inherit_new)
+      if (inherit == copy_id_inherit_new || inherit == copy_id_inherit_fixed)
         {
           const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id(clone);
           SVN_ERR (svn_fs_bdb__create_copy(fs, copy_id, copy_data,
