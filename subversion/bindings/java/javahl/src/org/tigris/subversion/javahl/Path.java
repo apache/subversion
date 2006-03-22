@@ -20,6 +20,8 @@ package org.tigris.subversion.javahl;
 
 /**
  * Subversion path validation and manipulation.
+ *
+ * @since 1.4.0
  */
 public class Path
 {

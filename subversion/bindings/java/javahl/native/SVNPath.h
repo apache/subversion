@@ -27,6 +27,9 @@
 #endif // _MSC_VER > 1000
 #include <jni.h>
 
+/**
+ * @since 1.4.0
+ */
 class SVNPath
 {
 public:
