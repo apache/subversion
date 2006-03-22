@@ -1401,7 +1401,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&copy_ctx->done,
                                             ctx->commit->session, pool));
 
-      if (copy_ctx->status != 201)
+      if (copy_ctx->status != 201 && copy_ctx->status != 204)
         {
           abort();
         }
