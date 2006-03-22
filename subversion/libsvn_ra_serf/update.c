@@ -1836,8 +1836,8 @@ link_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" linkpath=\"",
-                                      sizeof(" linkpath=\"")-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" linkpath=\"\/",
+                                      sizeof(" linkpath=\"\/")-1,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
