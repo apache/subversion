@@ -1322,6 +1322,7 @@ start_report(void *userData, const char *name, const char **attrs)
            strcmp(prop_name.name, "delete-entry") == 0)
     {
       const char *file_name;
+      svn_stringbuf_t *name_buf;
 
       file_name = svn_ra_serf__find_attr(attrs, "name");
 
@@ -1334,10 +1335,15 @@ start_report(void *userData, const char *name, const char **attrs)
         {
           open_dir(ctx->state->info->dir);
         }
-      ctx->update_editor->delete_entry(file_name,
+
+      name_buf = svn_stringbuf_dup(ctx->state->info->dir->name_buf,
+                                   ctx->state->info->dir->dir_baton_pool);
+      svn_path_add_component(name_buf, file_name);
+
+      ctx->update_editor->delete_entry(name_buf->data,
                                        SVN_INVALID_REVNUM,
                                        ctx->state->info->dir->dir_baton,
-                                       ctx->state->info->dir->pool);
+                                       ctx->state->info->dir->dir_baton_pool);
     }
   else if ((ctx->state->state == OPEN_DIR || ctx->state->state == ADD_DIR) &&
            strcmp(prop_name.name, "absent-directory") == 0)
