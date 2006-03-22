@@ -99,8 +99,11 @@ typedef struct report_dir_t
   /* Namespace list allocated out of this ->pool. */
   svn_ra_serf__ns_t *ns_list;
 
-  /* hashtable that stores all of the properties (shared with a dir) */
+  /* hashtable for all of the properties (shared within a dir) */
   apr_hash_t *props;
+
+  /* hashtable for all to-be-removed properties (shared within a dir) */
+  apr_hash_t *removed_props;
 
   /* The propfind request for our current directory */
   svn_ra_serf__propfind_context_t *propfind;
@@ -361,6 +364,8 @@ static void push_state(report_context_t *ctx, report_state_e state)
 
       /* Create the root property tree. */
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
+      new_state->info->dir->removed_props =
+          apr_hash_make(new_state->info->pool);
 
       /* Point to the update_editor */
       new_state->info->dir->update_editor = ctx->update_editor;
@@ -382,6 +387,8 @@ static void push_state(report_context_t *ctx, report_state_e state)
       new_state->info->dir->parent_dir->ref_count++;
 
       new_state->info->dir->props = apr_hash_make(new_state->info->pool);
+      new_state->info->dir->removed_props =
+          apr_hash_make(new_state->info->pool);
 
       /* Point our ns_list at our parents to try to reuse it. */
       new_state->info->dir->ns_list =
@@ -451,15 +458,16 @@ static void
 set_baton_props(prop_set_t setprop, void *baton,
                 const void *ns, apr_ssize_t ns_len,
                 const void *name, apr_ssize_t name_len,
-                const void *val,
+                svn_string_t *val,
                 apr_pool_t *pool)
 {
   const char *prop_name;
-  svn_string_t *prop_val;
 
   if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
     prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
   else if (strcmp(name, "version-name") == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
@@ -477,7 +485,7 @@ set_baton_props(prop_set_t setprop, void *baton,
       return;
     }
 
-  setprop(baton, prop_name, svn_string_create(val, pool), pool);
+  setprop(baton, prop_name, val, pool);
 }
 
 static void
@@ -490,7 +498,8 @@ set_file_props(void *baton,
   report_info_t *info = baton;
   set_baton_props(info->dir->update_editor->change_file_prop,
                   info->file_baton,
-                  ns, ns_len, name, name_len, val, pool);
+                  ns, ns_len, name, name_len, svn_string_create(val, pool),
+                  pool);
 }
 
 static void
@@ -503,7 +512,35 @@ set_dir_props(void *baton,
   report_dir_t *dir = baton;
   set_baton_props(dir->update_editor->change_dir_prop,
                   dir->dir_baton,
-                  ns, ns_len, name, name_len, val, pool);
+                  ns, ns_len, name, name_len, svn_string_create(val, pool),
+                  pool);
+}
+
+static void
+remove_file_props(void *baton,
+                  const void *ns, apr_ssize_t ns_len,
+                  const void *name, apr_ssize_t name_len,
+                  const void *val,
+                  apr_pool_t *pool)
+{
+  report_info_t *info = baton;
+  set_baton_props(info->dir->update_editor->change_file_prop,
+                  info->file_baton,
+                  ns, ns_len, name, name_len, NULL, pool);
+}
+
+static void
+remove_dir_props(void *baton,
+                 const void *ns, apr_ssize_t ns_len,
+                 const void *name, apr_ssize_t name_len,
+                 const void *val,
+                 apr_pool_t *pool)
+{
+  report_dir_t *dir = baton;
+  set_baton_props(dir->update_editor->change_dir_prop,
+                  dir->dir_baton,
+                  ns, ns_len, name, name_len, NULL,
+                  pool);
 }
 
 static svn_error_t*
@@ -570,6 +607,10 @@ close_dir(report_dir_t *dir)
 
   svn_ra_serf__walk_all_props(dir->props, dir->base_name, dir->base_rev,
                               set_dir_props, dir, dir->dir_baton_pool);
+
+  svn_ra_serf__walk_all_props(dir->removed_props, dir->base_name,
+                              dir->base_rev, remove_dir_props, dir,
+                              dir->dir_baton_pool);
 
   if (dir->fetch_props)
     {
@@ -889,6 +930,11 @@ handle_fetch(serf_request_t *request,
                          info->base_rev,
                          set_file_props,
                          info, info->editor_pool);
+          svn_ra_serf__walk_all_props(info->dir->removed_props,
+                         info->base_name,
+                         info->base_rev,
+                         remove_file_props,
+                         info, info->editor_pool);
           svn_ra_serf__walk_all_props(info->dir->props,
                          info->url,
                          info->target_rev,
@@ -1031,6 +1077,9 @@ handle_propchange_only(report_info_t *info)
   svn_ra_serf__walk_all_props(info->dir->props,
                               info->base_name, info->base_rev,
                               set_file_props, info, info->editor_pool);
+  svn_ra_serf__walk_all_props(info->dir->removed_props,
+                              info->base_name, info->base_rev,
+                              remove_file_props, info, info->editor_pool);
   svn_ra_serf__walk_all_props(info->dir->props, info->url, info->target_rev,
                               set_file_props, info, info->editor_pool);
 
@@ -1127,6 +1176,17 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
       list_item->data = info;
       list_item->next = ctx->file_propchanges_only;
       ctx->file_propchanges_only = list_item;
+    }
+  else
+    {
+      svn_error_t *err;
+
+      /* No propfind or GET request.  Just handle the prop changes now. */
+      err = handle_propchange_only(info);
+      if (err)
+        {
+          abort();
+        }
     }
 }
 
@@ -1375,7 +1435,8 @@ start_report(void *userData, const char *name, const char **attrs)
           ctx->state->info->prop_val = NULL;
           push_state(ctx, IGNORE_PROP_NAME);
         }
-      else if (strcmp(prop_name.name, "set-prop") == 0)
+      else if (strcmp(prop_name.name, "set-prop") == 0 || 
+               strcmp(prop_name.name, "remove-prop") == 0)
         {
           const char *full_prop_name;
           svn_ra_serf__dav_props_t new_prop_name;
@@ -1427,6 +1488,26 @@ start_report(void *userData, const char *name, const char **attrs)
       else if (strcmp(prop_name.name, "fetch-file") == 0)
         {
           ctx->state->info->fetch_file = TRUE;
+        }
+      else if (strcmp(prop_name.name, "set-prop") == 0 ||
+               strcmp(prop_name.name, "remove-prop") == 0)
+        {
+          const char *full_prop_name;
+          svn_ra_serf__dav_props_t new_prop_name;
+
+          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          new_prop_name = svn_ra_serf__expand_ns(ctx->state->ns_list,
+                                                 full_prop_name);
+
+          ctx->state->info->prop_ns = new_prop_name.namespace;
+          ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
+                                                    new_prop_name.name);
+          ctx->state->info->prop_val = NULL;
+          push_state(ctx, PROP);
+        }
+      else
+        {
+          abort();
         }
     }
   else if (ctx->state->state == IGNORE_PROP_NAME)
@@ -1624,6 +1705,7 @@ end_report(void *userData, const char *raw_name)
       svn_ra_serf__ns_t *ns, *ns_name_match;
       int found = 0;
       report_dir_t *dir;
+      apr_hash_t *props;
 
       dir = ctx->state->info->dir;
 
@@ -1662,12 +1744,24 @@ end_report(void *userData, const char *raw_name)
           dir->ns_list = ns;
         }
 
-      svn_ra_serf__set_ver_prop(dir->props, ctx->state->info->base_name,
-                   ctx->state->info->base_rev,
-                   ns->namespace, ns->url,
-                   apr_pstrmemdup(dir->pool, ctx->state->info->prop_val,
-                                  ctx->state->info->prop_val_len),
-                   dir->pool);
+      if (strcmp(name.name, "remove-prop") != 0)
+        {
+          props = dir->props;
+        }
+      else
+        {
+          props = dir->removed_props;
+          ctx->state->info->prop_val = "";
+          ctx->state->info->prop_val_len = 1;
+        }
+
+      svn_ra_serf__set_ver_prop(props, ctx->state->info->base_name,
+                                ctx->state->info->base_rev,
+                                ns->namespace, ns->url,
+                                apr_pstrmemdup(dir->pool,
+                                               ctx->state->info->prop_val,
+                                               ctx->state->info->prop_val_len),
+                                dir->pool);
       pop_state(ctx);
     }
   else if ((ctx->state->state == IGNORE_PROP_NAME ||
@@ -1836,8 +1930,8 @@ link_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" linkpath=\"\/",
-                                      sizeof(" linkpath=\"\/")-1,
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" linkpath=\"/",
+                                      sizeof(" linkpath=\"/")-1,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
@@ -2335,8 +2429,8 @@ set_flat_props(void *baton,
                const void *val,
                apr_pool_t *pool)
 {
-  set_baton_props(set_hash_props, baton, ns, ns_len, name, name_len, val,
-                  pool);
+  set_baton_props(set_hash_props, baton, ns, ns_len, name, name_len,
+                  svn_string_create(val, pool), pool);
 }
 
 
