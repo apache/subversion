@@ -4625,6 +4625,7 @@ move_plus_copy_test(const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t after_rev;
+  svn_fs_history_t *history;
 
   *msg = "play with changed paths and moves";
 
@@ -4672,6 +4673,18 @@ move_plus_copy_test(const char **msg,
                                       "I also have new contents!", pool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
 
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_node_history(&history, rev_root, "Z/d/gamma", pool));
+
+  SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+  SVN_ERR(check_path_and_rev(history, "/Z/d/gamma", 5, pool));
+
+  SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+  SVN_ERR(check_path_and_rev(history, "/Z/D/gamma", 2, pool));
+
+  SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
+  SVN_ERR(check_path_and_rev(history, "/A/D/gamma", 1, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -4715,6 +4728,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(move_test),
     SVN_TEST_PASS(move_history_test),
     SVN_TEST_PASS(move_closest_copy_test),
-    SVN_TEST_PASS(move_plus_copy_test),
+    SVN_TEST_XFAIL(move_plus_copy_test),
     SVN_TEST_NULL
   };
