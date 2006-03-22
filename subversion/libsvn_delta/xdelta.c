@@ -2,7 +2,7 @@
  * xdelta.c:  xdelta generator.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -131,17 +131,18 @@ init_matches_table(const char *data,
     }
 }
 
-/* Try to find a match for the target data B in MATCHES, and then extend the
-   match as long as data in A and B at the match position continues to match.
-   We set the position in a we ended up in (in case we extended it backwards)
-   in APOSP, the length of the match in ALENP, and the amount to advance B in
-   BADVANCEP.  PENDING_INSERT is a pointer to a stringbuf pointer that is the
-   last insert operation that has not been committed yet to the delta stream,
-   if any.  This is used when extending the matches backwards, possibly
-   alleviating the need for the insert entirely. 
-   Return TRUE if the lookup found a match, regardless of length.
-   Return FALSE otherwise.  */
-
+/* Try to find a match for the target data B in MATCHES, and then
+   extend the match as long as data in A and B at the match position
+   continues to match.  We set the position in a we ended up in (in
+   case we extended it backwards) in APOSP, the length of the match in
+   ALENP, and the amount to advance B in BADVANCEP.
+   *PENDING_INSERT_LENP is the length of the last insert operation that
+   has not been committed yet to the delta stream, or 0 if there is no
+   pending insert.  This is used when extending the match backwards,
+   in which case *PENDING_INSERT_LENP is adjusted, possibly
+   alleviating the need for the insert entirely.  Return TRUE if the
+   lookup found a match, regardless of length.  Return FALSE
+   otherwise.  */
 static svn_boolean_t
 find_match(apr_hash_t *matches,
            const struct adler32 *rolling,
@@ -153,7 +154,7 @@ find_match(apr_hash_t *matches,
            apr_size_t *aposp,
            apr_size_t *alenp,
            apr_size_t *badvancep,
-           svn_stringbuf_t **pending_insert)
+           apr_size_t *pending_insert_lenp)
 {
   apr_uint32_t sum = adler32_sum(rolling);
   apr_size_t alen, badvance, apos;
@@ -186,21 +187,15 @@ find_match(apr_hash_t *matches,
     }
 
   /* See if we can extend backwards into a previous insert hunk.  */
-  if (*pending_insert)
+  while (apos > 0
+         && bpos > 0
+         && a[apos - 1] == b[bpos - 1]
+         && *pending_insert_lenp > 0)
     {
-      while (apos > 0
-             && bpos > 0
-             && a[apos - 1] == b[bpos - 1]
-             && (*pending_insert)->len != 0)
-        {
-          svn_stringbuf_chop(*pending_insert, 1);
-          --apos;
-          --bpos;
-          ++alen;
-        }
-      /* If we completely consumed the entire insert, delete it.  */
-      if ((*pending_insert)->len == 0)
-        *pending_insert = NULL;
+      --(*pending_insert_lenp);
+      --apos;
+      --bpos;
+      ++alen;
     }
 
   *aposp = apos;
@@ -248,8 +243,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
 {
   apr_hash_t *matches = apr_hash_make(pool);
   struct adler32 rolling;
-  apr_size_t sz, lo, hi;
-  svn_stringbuf_t *pending_insert = NULL;
+  apr_size_t sz, lo, hi, pending_insert_start = 0, pending_insert_len = 0;
 
   /* Initialize the matches table.  */
   init_matches_table(a, asize, MATCH_BLOCKSIZE, matches, pool);
@@ -274,33 +268,24 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
       svn_boolean_t match;
 
       match = find_match(matches, &rolling, a, asize, b, bsize, lo, &apos, 
-                         &alen, &badvance, &pending_insert);
+                         &alen, &badvance, &pending_insert_len);
 
       /* If we didn't find a real match, insert the byte at the target
          position into the pending insert.  */
       if (! match)
-        {
-
-          if (pending_insert != NULL)
-            svn_stringbuf_appendbytes(pending_insert, b + lo, 1);
-          else
-            pending_insert = svn_stringbuf_ncreate(b + lo, 1, pool);
-        }
+        ++pending_insert_len;
       else
         {
-          /* The only legal way to end up here is to find a match.  If we
-             didn't find a match, we are going to generate a copy instruction
-             when we should have generated an insert, so something about the
-             condition above, or what the match routine did, is wrong.  */
-          assert(match);
-
-          if (pending_insert)
+          if (pending_insert_len > 0)
             {
               svn_txdelta__insert_op(build_baton, svn_txdelta_new,
-                                     0, pending_insert->len,
-                                     pending_insert->data, pool);
-              pending_insert = NULL;
+                                     0, pending_insert_len,
+                                     b + pending_insert_start, pool);
+              pending_insert_len = 0;
             }
+          /* Reset the pending insert start to immediately after the
+             match. */
+          pending_insert_start = lo + badvance;
           svn_txdelta__insert_op(build_baton, svn_txdelta_source,
                                  apos, alen, NULL, pool);
         }
@@ -316,12 +301,11 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
     }
 
   /* If we still have an insert pending at the end, throw it in.  */
-  if (pending_insert)
+  if (pending_insert_len > 0)
     {
       svn_txdelta__insert_op(build_baton, svn_txdelta_new,
-                             0, pending_insert->len,
-                             pending_insert->data, pool);
-      pending_insert = NULL;
+                             0, pending_insert_len,
+                             b + pending_insert_start, pool);
     }
 }
 
