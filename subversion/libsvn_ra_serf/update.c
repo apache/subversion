@@ -570,8 +570,13 @@ close_dir(report_dir_t *dir)
 
   svn_ra_serf__walk_all_props(dir->props, dir->base_name, dir->base_rev,
                               set_dir_props, dir, dir->dir_baton_pool);
-  svn_ra_serf__walk_all_props(dir->props, dir->url, dir->target_rev,
-                              set_dir_props, dir, dir->dir_baton_pool);
+
+  if (dir->fetch_props)
+    {
+      svn_ra_serf__walk_all_props(dir->props, dir->url, dir->target_rev,
+                                  set_dir_props, dir, dir->dir_baton_pool);
+    }
+
   SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
                                               dir->dir_baton_pool));
 
