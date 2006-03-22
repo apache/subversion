@@ -159,8 +159,14 @@ typedef struct report_info_t
   /* our delta base, if present (NULL if we're adding the file) */
   const svn_string_t *delta_base;
 
+  /* The propfind request for our current file (if present) */
+  svn_ra_serf__propfind_context_t *propfind;
+
   /* Has the server told us to fetch the file props? */
   svn_boolean_t fetch_props;
+
+  /* Has the server told us to go fetch - only valid if we had it already */
+  svn_boolean_t fetch_file;
 
   /* pool passed to update->add_file, etc. */
   apr_pool_t *editor_pool;
@@ -308,6 +314,9 @@ typedef struct {
 
   /* completed PROPFIND requests (contains propfind_context_t) */
   svn_ra_serf__list_t *done_propfinds;
+
+  /* list of files that will only have prop changes (contains report_info_t) */
+  svn_ra_serf__list_t *file_propchanges_only;
 
   /* free list of info structures */
   report_info_t *free_info;
@@ -990,13 +999,53 @@ handle_stream(serf_request_t *request,
   /* not reached */
 }
 
+static svn_error_t *
+handle_propchange_only(report_info_t *info)
+{
+  /* Ensure our parent is open. */
+  SVN_ERR(open_dir(info->dir));
+
+  apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
+
+  /* Expand our full name now if we haven't done so yet. */
+  if (!info->name)
+    {
+      info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
+                                         info->dir->dir_baton_pool);
+      svn_path_add_component(info->name_buf, info->base_name);
+      info->name = info->name_buf->data;
+    }
+
+  SVN_ERR(info->dir->update_editor->open_file(info->name,
+                                              info->dir->dir_baton,
+                                              info->base_rev,
+                                              info->editor_pool,
+                                              &info->file_baton));
+
+  /* set all of the properties we received */
+  svn_ra_serf__walk_all_props(info->dir->props,
+                              info->base_name, info->base_rev,
+                              set_file_props, info, info->editor_pool);
+  svn_ra_serf__walk_all_props(info->dir->props, info->url, info->target_rev,
+                              set_file_props, info, info->editor_pool);
+
+  SVN_ERR(info->dir->update_editor->close_file(info->file_baton, NULL,
+                                               info->editor_pool));
+
+  /* We're done with our pools. */
+  apr_pool_destroy(info->editor_pool);
+  apr_pool_destroy(info->pool);
+
+  info->dir->ref_count--;
+
+  return SVN_NO_ERROR;
+}
+
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
   const char *checked_in_url, *checksum;
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
-  report_fetch_t *fetch_ctx;
-  svn_ra_serf__propfind_context_t *prop_ctx = NULL;
   apr_hash_t *props;
 
   /* What connection should we go on? */
@@ -1015,12 +1064,14 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   info->url = checked_in_url;
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
+  info->propfind = NULL;
   if (info->fetch_props)
     {
-      svn_ra_serf__deliver_props(&prop_ctx, info->dir->props, ctx->sess, conn,
+      svn_ra_serf__deliver_props(&info->propfind, info->dir->props,
+                                 ctx->sess, conn,
                                  info->url, info->target_rev, "0", all_props,
                                  FALSE, &ctx->done_propfinds, info->dir->pool);
-      if (!prop_ctx)
+      if (!info->propfind)
         {
           abort();
         }
@@ -1028,33 +1079,50 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
       ctx->active_propfinds++;
     }
 
-  /* Create the fetch context. */
-  fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
-  fetch_ctx->pool = info->pool;
-  fetch_ctx->info = info;
-  fetch_ctx->done_list = &ctx->done_fetches;
-  fetch_ctx->sess = ctx->sess;
-  fetch_ctx->conn = conn;
+  /* If we've been asked to fetch the file or its an add, do so.
+   * Otherwise, handle the case where only the properties changed.
+   */
+  if (info->fetch_file)
+    {
+      report_fetch_t *fetch_ctx;
 
-  handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
+      fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
+      fetch_ctx->pool = info->pool;
+      fetch_ctx->info = info;
+      fetch_ctx->done_list = &ctx->done_fetches;
+      fetch_ctx->sess = ctx->sess;
+      fetch_ctx->conn = conn;
+      
+      handler = apr_pcalloc(info->pool, sizeof(*handler));
+      
+      handler->method = "GET";
+      handler->path = fetch_ctx->info->url;
 
-  handler->method = "GET";
-  handler->path = fetch_ctx->info->url;
-  handler->conn = conn;
-  handler->session = ctx->sess;
+      handler->conn = conn;
+      handler->session = ctx->sess;
+      
+      handler->header_delegate = headers_fetch;
+      handler->header_delegate_baton = fetch_ctx;
 
-  handler->header_delegate = headers_fetch;
-  handler->header_delegate_baton = fetch_ctx;
+      handler->response_handler = handle_fetch;
+      handler->response_baton = fetch_ctx;
 
-  handler->response_handler = handle_fetch;
-  handler->response_baton = fetch_ctx;
+      handler->response_error = cancel_fetch;
+      handler->response_error_baton = fetch_ctx;
 
-  handler->response_error = cancel_fetch;
-  handler->response_error_baton = fetch_ctx;
+      svn_ra_serf__request_create(handler);
 
-  svn_ra_serf__request_create(handler);
+      ctx->active_fetches++;
+    }
+  else if (info->propfind)
+    {
+      svn_ra_serf__list_t *list_item;
 
-  ctx->active_fetches++;
+      list_item = apr_pcalloc(info->dir->pool, sizeof(*list_item));
+      list_item->data = info;
+      list_item->next = ctx->file_propchanges_only;
+      ctx->file_propchanges_only = list_item;
+    }
 }
 
 static void XMLCALL
@@ -1240,6 +1308,7 @@ start_report(void *userData, const char *name, const char **attrs)
       info->base_rev = SVN_INVALID_REVNUM;
       info->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
+      info->fetch_file = TRUE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
@@ -1343,6 +1412,10 @@ start_report(void *userData, const char *name, const char **attrs)
       else if (strcmp(prop_name.name, "fetch-props") == 0)
         {
           ctx->state->info->fetch_props = TRUE;
+        }
+      else if (strcmp(prop_name.name, "fetch-file") == 0)
+        {
+          ctx->state->info->fetch_file = TRUE;
         }
     }
   else if (ctx->state->state == IGNORE_PROP_NAME)
@@ -1893,6 +1966,47 @@ finish_report(void *report_baton,
       while (done_list)
         {
           report->active_propfinds--;
+
+          /* If we have some files that we won't be fetching the content
+           * for, ensure that we update the file with any altered props.
+           */
+          if (report->file_propchanges_only)
+            {
+              svn_ra_serf__list_t *cur, *prev;
+
+              prev = NULL;
+              cur = report->file_propchanges_only;
+
+              while (cur)
+                {
+                  report_info_t *item = cur->data;
+
+                  if (item->propfind == done_list->data)
+                    {
+                      break;
+                    }
+
+                  prev = cur;
+                  cur = cur->next;
+                }
+
+              /* If we found a match, set the new props and remove this
+               * propchange from our list.
+               */
+              if (cur)
+                {
+                  SVN_ERR(handle_propchange_only(cur->data));
+
+                  if (!prev)
+                    {
+                      report->file_propchanges_only = cur->next;
+                    }
+                  else
+                    {
+                      prev->next = cur->next;
+                    }
+                }
+            }
 
           done_list = done_list->next;
         }
