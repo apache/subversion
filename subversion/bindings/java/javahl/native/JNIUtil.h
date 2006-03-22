@@ -67,11 +67,13 @@ public:
      * deleted (by another thread) during the next operation.
      *
      * @param object The C++ peer of the finalized (Java) object.
+     * @since 1.4.0
      */
     static void enqueueForDeletion(SVNBase *object);
 
     /**
-     * @deprecated Use @c enqueueForDeletion() instead.
+     * @deprecated Use the more appropriately named
+     * enqueueForDeletion() instead.
      */
     static void putFinalizedClient(SVNBase *cl);
 
