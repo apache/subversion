@@ -67,15 +67,6 @@ enum svn_xml_open_tag_style {
 svn_boolean_t svn_xml_is_xml_safe(const char *data, 
                                   apr_size_t len);
 
-/** Determine whether the UTF-8 string @a name is both a valid XML "Name",
- * and one that uses only ASCII characters.
- *
- * The XML Name production is defined at http://www.w3.org/TR/REC-xml/#dt-name
- *
- * @since New in 1.4.
- */
-svn_boolean_t svn_xml_is_xml_name_valid(const char *name);
-
 /** Create or append in @a *outstr an xml-escaped version of @a string,
  * suitable for output as character data.
  *
