@@ -398,8 +398,12 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
      all that it has an APR_BINARY flag, APR doesn't do newline
      translation in files.  The only portable way I know to get
      translated text files is to use the standard stdio library. */
-
+#ifndef AS400
   SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));
+#else
+  /* OS400 fopen() doesn't support mode "t". */
+  SVN_ERR (svn_config__open_file (&fd, file, "r", pool));  
+#endif
   if (fd == NULL)
     {
       if (errno != ENOENT)
