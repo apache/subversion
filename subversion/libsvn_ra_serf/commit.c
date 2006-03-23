@@ -1313,7 +1313,6 @@ change_file_prop(void *file_baton,
   const char *ns;
 
   name = apr_pstrdup(file->pool, name);
-  value = svn_string_dup(value, file->pool);
 
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
     {
@@ -1327,6 +1326,7 @@ change_file_prop(void *file_baton,
 
   if (value)
     {
+      value = svn_string_dup(value, file->pool);
       svn_ra_serf__set_prop(file->changed_props, file->put_url,
                             ns, name, value, file->pool);
     }
