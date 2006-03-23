@@ -641,3 +641,62 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
         }
     }
 }
+
+svn_error_t *
+svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
+                             const void *ns, apr_ssize_t ns_len,
+                             const void *name, apr_ssize_t name_len,
+                             svn_string_t *val,
+                             apr_pool_t *pool)
+{
+  const char *prop_name;
+
+  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prop_name = name;
+  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+  else if (strcmp(name, "version-name") == 0)
+    prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
+  else if (strcmp(name, "creationdate") == 0)
+    prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
+  else if (strcmp(name, "creator-displayname") == 0)
+    prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
+  else if (strcmp(name, "repository-uuid") == 0)
+    prop_name = SVN_PROP_ENTRY_UUID;
+  else if (strcmp(name, "checked-in") == 0)
+    prop_name = SVN_RA_SERF__WC_CHECKED_IN_URL;
+  else
+    {
+      /* do nothing for now? */
+      return;
+    }
+
+  SVN_ERR(setprop(baton, prop_name, val, pool));
+}
+
+svn_error_t *
+set_hash_props(void *baton,
+               const char *name,
+               const svn_string_t *value,
+               apr_pool_t *pool)
+{
+  apr_hash_t *props = baton;
+
+  apr_hash_set(props, name, APR_HASH_KEY_STRING, value);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__set_flat_props(void *baton,
+                            const void *ns, apr_ssize_t ns_len,
+                            const void *name, apr_ssize_t name_len,
+                            const void *val,
+                            apr_pool_t *pool)
+{
+  svn_ra_serf__set_baton_props(set_hash_props, baton,
+                               ns, ns_len, name, name_len,
+                               svn_string_create(val, pool), pool);
+}

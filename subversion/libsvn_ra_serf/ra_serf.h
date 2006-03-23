@@ -498,6 +498,26 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
+/* Higher-level variants on the walker. */
+typedef svn_error_t * (*svn_ra_serf__prop_set_t)(void *baton,
+                                                 const char *name,
+                                                 const svn_string_t *value,
+                                                 apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
+                             const void *ns, apr_ssize_t ns_len,
+                             const void *name, apr_ssize_t name_len,
+                             svn_string_t *val,
+                             apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__set_flat_props(void *baton,
+                            const void *ns, apr_ssize_t ns_len,
+                            const void *name, apr_ssize_t name_len,
+                            const void *val,
+                            apr_pool_t *pool);
+
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
 const void *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
