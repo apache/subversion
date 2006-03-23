@@ -528,19 +528,30 @@ svn_io_copy_link (const char *src,
 }
 
 
-#if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
+#ifdef AS400_UTF8
+/* TODO: Remove this code when IBM fixes apr_temp_dir_get. */
 #include "apr_env.h"
 
 /* Try to open a temporary file in the temporary dir, write to it,
    and then close it. */
-static int test_tempdir(const char *temp_dir, apr_pool_t *p)
+static int test_tempdir (const char *temp_dir, apr_pool_t *p)
 {
     apr_file_t *dummy_file;
-    char *path = apr_pstrcat(p, temp_dir, "/apr-tmp.XXXXXX", NULL);
+    char *path = apr_pstrcat (p, temp_dir, "/apr-tmp.XXXXXX", NULL);
+#if AS400
+    apr_size_t one_byte = 1;
+#endif
 
-    if (apr_file_mktemp(&dummy_file, path, 0, p) == APR_SUCCESS) {
-        if (apr_file_putc('!', dummy_file) == APR_SUCCESS) {
-            if (apr_file_close(dummy_file) == APR_SUCCESS) {
+    if (apr_file_mktemp (&dummy_file, path, 0, p) == APR_SUCCESS) {
+#if 0 /* TODO: Remove this code when IBM fixes apr_file_putc(). */
+        if (apr_file_putc ('!', dummy_file) == APR_SUCCESS) {
+#else
+        /* OS400's implmentation of apr_file_putc is broken and returns 1
+         * even when apr_file_putc is successful.  Until this is fixed, the
+         * work around is to call apr_file_write for one byte. */
+        if (apr_file_write (dummy_file, "!", &one_byte) == APR_SUCCESS) {       
+#endif
+            if (apr_file_close (dummy_file) == APR_SUCCESS) {
                 return 1;
             }
         }
