@@ -110,8 +110,8 @@ public class BasicTests extends SVNTests
 
         // File names cannot contain control characters.
         path = "invalid-\u0001-path";
-        assertFalse("Validation check of invalid '" + path + "' (which "+
-                    "contains control characters) should fail",
+        assertFalse("Validation check of invalid path '" + path +
+                    "' (which contains control characters) should fail",
                     Path.isValid(path));
     }
 
