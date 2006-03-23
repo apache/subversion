@@ -579,6 +579,19 @@ svn_io_temp_dir (const char **dir,
      2.2's tempfile.py module. */
 
   /* Try the environment first. */
+#ifndef AS400
+  /* apr_env_get() is broken a little or broken a lot in V5R4: 
+   * 
+   *   Without PTF SI23215 apr_env_get() only works with EBCDIC encoded
+   *   envvar args.
+   * 
+   *   With PTF SI23215 applied the function works on the first call, but
+   *   subsequent calls set argument **value to gibberish while returning
+   *   status APR_SUCCESS.
+   * 
+   * Not good either way.  IBM is working on a fix, but until it's
+   * available and required we'll just not call apr_env_get(). 
+   */
   for (i = 0; i < (sizeof(try_envs) / sizeof(const char *)); i++)
     {
       char *value;
@@ -593,6 +606,7 @@ svn_io_temp_dir (const char **dir,
             }
         }
     }
+#endif
 #ifdef WIN32
   /* Next, on Win32, try the C:\TEMP directory. */
   if (test_tempdir("C:\\TEMP", pool))

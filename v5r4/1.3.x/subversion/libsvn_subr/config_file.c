@@ -319,8 +319,22 @@ svn_config__user_config_path (const char *config_dir,
     char *homedir;
     const char *homedir_utf8;
 
+#ifndef AS400
+  /* apr_env_get() is broken a little or broken a lot in V5R4: 
+   * 
+   *   Without PTF SI23215 apr_env_get() only works with EBCDIC encoded
+   *   envvar args.
+   * 
+   *   With PTF SI23215 applied the function works on the first call, but
+   *   subsequent calls set argument **value to gibberish while returning
+   *   status APR_SUCCESS.
+   * 
+   * Not good either way.  IBM is working on a fix, but until it's
+   * available and required we'll just not call apr_env_get(). 
+   */
     apr_err = apr_env_get (&homedir, "HOME", pool);
     if ( apr_err || ! homedir )
+#endif
       {
         apr_uid_t uid;
         apr_gid_t gid;
