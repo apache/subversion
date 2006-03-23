@@ -575,11 +575,14 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   if (ret_props)
     {
       props = apr_hash_make(pool);
+      *ret_props = apr_hash_make(pool);
+
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           path, revision, "0", all_props,
                                           pool));
-      /* TODO Convert them into a format that the caller expects. */
-      *ret_props = props;
+      svn_ra_serf__walk_all_props(props, path, revision,
+                                  svn_ra_serf__set_flat_props,
+                                  *ret_props, pool);
     }
 
   return SVN_NO_ERROR;

@@ -449,45 +449,6 @@ static void pop_state(report_context_t *ctx)
   ctx->free_state->info = NULL;
 }
 
-typedef svn_error_t * (*prop_set_t)(void *baton,
-                                    const char *name,
-                                    const svn_string_t *value,
-                                    apr_pool_t *pool);
-
-static void
-set_baton_props(prop_set_t setprop, void *baton,
-                const void *ns, apr_ssize_t ns_len,
-                const void *name, apr_ssize_t name_len,
-                svn_string_t *val,
-                apr_pool_t *pool)
-{
-  const char *prop_name;
-
-  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = name;
-  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
-  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
-  else if (strcmp(name, "version-name") == 0)
-    prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
-  else if (strcmp(name, "creationdate") == 0)
-    prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
-  else if (strcmp(name, "creator-displayname") == 0)
-    prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
-  else if (strcmp(name, "repository-uuid") == 0)
-    prop_name = SVN_PROP_ENTRY_UUID;
-  else if (strcmp(name, "checked-in") == 0)
-    prop_name = SVN_RA_SERF__WC_CHECKED_IN_URL;
-  else
-    {
-      /* do nothing for now? */
-      return;
-    }
-
-  setprop(baton, prop_name, val, pool);
-}
-
 static void
 set_file_props(void *baton,
                const void *ns, apr_ssize_t ns_len,
@@ -496,10 +457,10 @@ set_file_props(void *baton,
                apr_pool_t *pool)
 {
   report_info_t *info = baton;
-  set_baton_props(info->dir->update_editor->change_file_prop,
-                  info->file_baton,
-                  ns, ns_len, name, name_len, svn_string_create(val, pool),
-                  pool);
+  svn_ra_serf__set_baton_props(info->dir->update_editor->change_file_prop,
+                               info->file_baton,
+                               ns, ns_len, name, name_len,
+                               svn_string_create(val, pool), pool);
 }
 
 static void
@@ -510,10 +471,10 @@ set_dir_props(void *baton,
               apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
-  set_baton_props(dir->update_editor->change_dir_prop,
-                  dir->dir_baton,
-                  ns, ns_len, name, name_len, svn_string_create(val, pool),
-                  pool);
+  svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
+                               dir->dir_baton,
+                               ns, ns_len, name, name_len,
+                               svn_string_create(val, pool), pool);
 }
 
 static void
@@ -524,9 +485,9 @@ remove_file_props(void *baton,
                   apr_pool_t *pool)
 {
   report_info_t *info = baton;
-  set_baton_props(info->dir->update_editor->change_file_prop,
-                  info->file_baton,
-                  ns, ns_len, name, name_len, NULL, pool);
+  svn_ra_serf__set_baton_props(info->dir->update_editor->change_file_prop,
+                               info->file_baton,
+                               ns, ns_len, name, name_len, NULL, pool);
 }
 
 static void
@@ -537,10 +498,9 @@ remove_dir_props(void *baton,
                  apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
-  set_baton_props(dir->update_editor->change_dir_prop,
-                  dir->dir_baton,
-                  ns, ns_len, name, name_len, NULL,
-                  pool);
+  svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
+                               dir->dir_baton,
+                               ns, ns_len, name, name_len, NULL, pool);
 }
 
 static svn_error_t*
@@ -2410,31 +2370,6 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
 }
 
 svn_error_t *
-set_hash_props(void *baton,
-               const char *name,
-               const svn_string_t *value,
-               apr_pool_t *pool)
-{
-  apr_hash_t *props = baton;
-
-  apr_hash_set(props, name, APR_HASH_KEY_STRING, value);
-
-  return SVN_NO_ERROR;
-}
-
-static void
-set_flat_props(void *baton,
-               const void *ns, apr_ssize_t ns_len,
-               const void *name, apr_ssize_t name_len,
-               const void *val,
-               apr_pool_t *pool)
-{
-  set_baton_props(set_hash_props, baton, ns, ns_len, name, name_len,
-                  svn_string_create(val, pool), pool);
-}
-
-
-svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
                       svn_revnum_t revision,
@@ -2488,7 +2423,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                                           revision, "0", all_props, pool));
 
       svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
-                                  set_flat_props, *props, pool);
+                                  svn_ra_serf__set_flat_props, *props, pool);
     }
 
   if (stream)
