@@ -4663,7 +4663,7 @@ move_plus_copy_test(const char **msg,
   SVN_ERR(svn_fs_copy(rev_root, "Z", txn_root, "Q", pool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
 
-  /* Revision 5:  modify Q/d/gamma and Z/d/gamma in the same txn. */
+  /* Revision 5: Modify Q/d/gamma and Z/d/gamma in the same txn. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
@@ -4680,7 +4680,7 @@ move_plus_copy_test(const char **msg,
   SVN_ERR(check_path_and_rev(history, "/Z/d/gamma", 5, pool));
 
   SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
-  SVN_ERR(check_path_and_rev(history, "/Z/D/gamma", 2, pool));
+  SVN_ERR(check_path_and_rev(history, "/Z/d/gamma", 3, pool));
 
   SVN_ERR(svn_fs_history_prev(&history, history, TRUE, pool));
   SVN_ERR(check_path_and_rev(history, "/A/D/gamma", 1, pool));
@@ -4728,6 +4728,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(move_test),
     SVN_TEST_PASS(move_history_test),
     SVN_TEST_PASS(move_closest_copy_test),
-    SVN_TEST_XFAIL(move_plus_copy_test),
+    SVN_TEST_PASS(move_plus_copy_test),
     SVN_TEST_NULL
   };

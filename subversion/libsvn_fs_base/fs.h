@@ -249,7 +249,8 @@ typedef enum
 {
   copy_kind_copy = 1,  /* real copy */
   copy_kind_soft_copy, /* soft copy */
-  copy_kind_move       /* move */
+  copy_kind_move,      /* move */
+  copy_kind_alias      /* An alias for another copy record */
 
   /* So you may be wondering, why is there a soft copy but no soft move?
    *

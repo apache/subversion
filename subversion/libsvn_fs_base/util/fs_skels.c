@@ -284,7 +284,10 @@ is_valid_copy_skel(skel_t *skel)
 {
   int len = svn_fs_base__list_length(skel);
 
-  if (len == 4)
+  if (len == 2)
+    return ((svn_fs_base__matches_atom(skel->children, "alias")
+             && skel->children->next->is_atom) ? TRUE : FALSE);
+  else if (len == 4)
     return (((svn_fs_base__matches_atom(skel->children, "copy")
               || svn_fs_base__matches_atom(skel->children, "soft-copy"))
              && skel->children->next->is_atom
@@ -699,8 +702,23 @@ svn_fs_base__parse_copy_skel(copy_t **copy_p,
   /* KIND */
   if (svn_fs_base__matches_atom(skel->children, "soft-copy"))
     copy->kind = copy_kind_soft_copy;
-  else if (svn_fs_base__matches_atom (skel->children, "move"))
+  else if (svn_fs_base__matches_atom(skel->children, "move"))
     copy->kind = copy_kind_move;
+  else if (svn_fs_base__matches_atom(skel->children, "alias"))
+    {
+      /* Alias records are special, just stash the copy they point to in
+       * the src_path, they don't actually have any other data. */
+
+      copy->kind = copy_kind_alias;
+
+      copy->src_path = apr_pstrmemdup(pool,
+                                      skel->children->next->data,
+                                      skel->children->next->len);
+
+      *copy_p = copy;
+
+      return SVN_NO_ERROR;
+    }
   else
     copy->kind = copy_kind_copy;
 
@@ -1277,6 +1295,19 @@ svn_fs_base__unparse_copy_skel(skel_t **skel_p,
 
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list(pool);
+
+  if (copy->kind == copy_kind_alias)
+    {
+      svn_fs_base__prepend(svn_fs_base__str_atom(copy->src_path, pool), skel);
+      svn_fs_base__prepend(svn_fs_base__str_atom("alias", pool), skel);
+
+      if (! is_valid_copy_skel(skel))
+        return skel_err("copy");
+
+      *skel_p = skel;
+
+      return SVN_NO_ERROR;
+    }
 
   /* SRC-REV */
   if (SVN_IS_VALID_REVNUM(copy->src_rev))

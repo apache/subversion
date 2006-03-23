@@ -205,6 +205,12 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
 
   /* Convert skel to native type. */
   SVN_ERR(svn_fs_base__parse_copy_skel(&copy, skel, pool));
+
+  /* If it's an alias follow the pointer we stashed in the src_path to the
+   * actual copy we're looking for. */
+  if (copy->kind == copy_kind_alias)
+    SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, copy->src_path, trail, pool));
+
   *copy_p = copy;
   return SVN_NO_ERROR;
 }

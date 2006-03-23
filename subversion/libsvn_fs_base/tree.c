@@ -901,13 +901,14 @@ make_path_mutable(svn_fs_root_t *root,
           break;
 
         case copy_id_inherit_fixed:
-          /* XXX Ok, so we used to just use the copy_data as the new copy id,
-           *     but it turns out there are cases (see move_plus_copy_test
-           *     in fs-test.c for an example) where we need to use a soft
-           *     copy instead to avoid primary key conflicts later, so for
-           *     now we're taking the easy way out and just always inserting
-           *     a new soft copy.  This is NOT the final word on the subject,
-           *     but it lets us move on with things while a better solution
+          /* XXX Ok, so we used to just use the copy_data as the new
+           *     copy id, but it turns out there are cases (see
+           *     move_plus_copy_test in fs-test.c for an example)
+           *     where we need to use an alias instead to avoid
+           *     primary key conflicts later, so for now we're taking
+           *     the easy way out and just always inserting an alias.
+           *     This is NOT the final word on the subject, but it
+           *     lets us move on with things while a better solution
            *     is conceived. */
           SVN_ERR(svn_fs_bdb__reserve_copy_id(&copy_id, fs, trail, pool));
           break;
@@ -931,7 +932,7 @@ make_path_mutable(svn_fs_root_t *root,
          `copies' table entry for it, as well as a notation in the
          transaction that should this transaction be terminated, our
          new copy needs to be removed. */
-      if (inherit == copy_id_inherit_new || inherit == copy_id_inherit_fixed)
+      if (inherit == copy_id_inherit_new)
         {
           const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id(clone);
           SVN_ERR (svn_fs_bdb__create_copy(fs, copy_id, copy_data,
@@ -939,6 +940,20 @@ make_path_mutable(svn_fs_root_t *root,
                                            svn_fs_base__id_txn_id (node_id),
                                            new_node_id, NULL,
                                            copy_kind_soft_copy, trail, pool));
+          SVN_ERR (svn_fs_base__add_txn_copy(fs, txn_id, copy_id, 
+                                             trail, pool));
+        }
+      else if (inherit == copy_id_inherit_fixed)
+        {
+          /* Insert an alias to the previous copy, so we can get back to it
+           * without reusing its id and risking a primary key conflict...
+           *
+           * We reuse the src_path field as a pointer to the actual copy we
+           * care about.  I am totally going to hell for this one... */
+          SVN_ERR (svn_fs_bdb__create_copy(fs, copy_id, copy_data,
+                                           SVN_INVALID_REVNUM, NULL, NULL,
+                                           NULL, copy_kind_alias, trail, pool));
+
           SVN_ERR (svn_fs_base__add_txn_copy(fs, txn_id, copy_id, 
                                              trail, pool));
         }
