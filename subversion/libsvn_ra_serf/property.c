@@ -21,6 +21,7 @@
 #include <serf.h>
 
 #include "svn_path.h"
+#include "svn_base64.h"
 
 #include "ra_serf.h"
 
@@ -82,6 +83,7 @@ struct svn_ra_serf__propfind_context_t {
   const char *attr_name;
   const char *attr_val;
   apr_size_t attr_val_len;
+  const char *attr_encoding;
 
   /* Returned status code. */
   int status_code;
@@ -95,12 +97,12 @@ struct svn_ra_serf__propfind_context_t {
   svn_ra_serf__list_t done_item;
 };
 
-const void *
-svn_ra_serf__get_ver_prop(apr_hash_t *props,
-             const char *path,
-             svn_revnum_t rev,
-             const char *ns,
-             const char *name)
+const svn_string_t *
+svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
+                                 const char *path,
+                                 svn_revnum_t rev,
+                                 const char *ns,
+                                 const char *name)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
   void *val = NULL;
@@ -108,14 +110,14 @@ svn_ra_serf__get_ver_prop(apr_hash_t *props,
   ver_props = apr_hash_get(props, &rev, sizeof(rev));
   if (ver_props)
     {
-      path_props = apr_hash_get(ver_props, path, strlen(path));
+      path_props = apr_hash_get(ver_props, path, APR_HASH_KEY_STRING);
 
       if (path_props)
         {
-          ns_props = apr_hash_get(path_props, ns, strlen(ns));
+          ns_props = apr_hash_get(path_props, ns, APR_HASH_KEY_STRING);
           if (ns_props)
             {
-              val = apr_hash_get(ns_props, name, strlen(name));
+              val = apr_hash_get(ns_props, name, APR_HASH_KEY_STRING);
             }
         }
     }
@@ -123,27 +125,41 @@ svn_ra_serf__get_ver_prop(apr_hash_t *props,
   return val;
 }
 
-const void *
+const char *
+svn_ra_serf__get_ver_prop(apr_hash_t *props,
+                          const char *path,
+                          svn_revnum_t rev,
+                          const char *ns,
+                          const char *name)
+{
+  const svn_string_t *val;
+
+  val = svn_ra_serf__get_ver_prop_string(props, path, rev, ns, name);
+
+  if (val)
+    {
+      return val->data;
+    }
+
+  return NULL;
+}
+
+const char *
 svn_ra_serf__get_prop(apr_hash_t *props,
-         const char *path,
-         const char *ns,
-         const char *name)
+                      const char *path,
+                      const char *ns,
+                      const char *name)
 {
   return svn_ra_serf__get_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name);
 }
 
 void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
-             const char *path, svn_revnum_t rev,
-             const char *ns, const char *name,
-             const void *val, apr_pool_t *pool)
+                          const char *path, svn_revnum_t rev,
+                          const char *ns, const char *name,
+                          const svn_string_t *val, apr_pool_t *pool)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
-  apr_size_t path_len, ns_len, name_len;
-
-  path_len = strlen(path);
-  ns_len = strlen(ns);
-  name_len = strlen(name);
 
   ver_props = apr_hash_get(props, &rev, sizeof(rev));
   if (!ver_props)
@@ -153,33 +169,35 @@ svn_ra_serf__set_ver_prop(apr_hash_t *props,
                    ver_props);
     }
 
-  path_props = apr_hash_get(ver_props, path, path_len);
+  path_props = apr_hash_get(ver_props, path, APR_HASH_KEY_STRING);
 
   if (!path_props)
     {
       path_props = apr_hash_make(pool);
-      apr_hash_set(ver_props, path, path_len, path_props);
+      path = apr_pstrdup(pool, path);
+      apr_hash_set(ver_props, path, APR_HASH_KEY_STRING, path_props);
 
       /* todo: we know that we'll fail the next check, but fall through
        * for now for simplicity's sake.
        */
     }
 
-  ns_props = apr_hash_get(path_props, ns, ns_len);
+  ns_props = apr_hash_get(path_props, ns, APR_HASH_KEY_STRING);
   if (!ns_props)
     {
       ns_props = apr_hash_make(pool);
-      apr_hash_set(path_props, ns, ns_len, ns_props);
+      ns = apr_pstrdup(pool, ns);
+      apr_hash_set(path_props, ns, APR_HASH_KEY_STRING, ns_props);
     }
 
-  apr_hash_set(ns_props, name, name_len, val);
+  apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, val);
 }
 
 void
 svn_ra_serf__set_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns, const char *name,
-                      const void *val, apr_pool_t *pool)
+                      const svn_string_t *val, apr_pool_t *pool)
 {
   return svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
                                    val, pool);
@@ -224,6 +242,7 @@ start_propfind(void *userData, const char *name, const char **attrs)
     {
       ctx->ns = prop_name.namespace;
       ctx->attr_name = apr_pstrdup(ctx->pool, prop_name.name);
+      ctx->attr_encoding = svn_ra_serf__find_attr(attrs, "V:encoding");
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = TRUE;
     }
@@ -268,6 +287,7 @@ end_propfind(void *userData, const char *name)
             }
 
           ctx->attr_val = apr_pstrdup(ctx->pool, name);
+          ctx->attr_val_len = strlen(ctx->attr_val);
         }
    
       
@@ -289,18 +309,48 @@ end_propfind(void *userData, const char *name)
         }
       else
         {
+          if (ctx->attr_encoding)
+            {
+              if (strcmp(ctx->attr_encoding, "base64") == 0)
+                {
+                  svn_string_t encoded;
+                  const svn_string_t *decoded;
+
+                  encoded.data = ctx->attr_val;
+                  encoded.len = ctx->attr_val_len;
+
+                  decoded = svn_base64_decode_string(&encoded, ctx->pool);
+                  ctx->attr_val = decoded->data;
+                  ctx->attr_val_len = decoded->len;
+                }
+              else
+                {
+                  abort();
+                }
+            }
+
           /* set the return props and update our cache too. */
           svn_ra_serf__set_ver_prop(ctx->ret_props,
                                     ctx->current_path, ctx->rev,
-                                    ctx->ns, ctx->attr_name, ctx->attr_val,
+                                    ctx->ns, ctx->attr_name,
+                                    svn_string_ncreate(ctx->attr_val,
+                                                       ctx->attr_val_len,
+                                                       ctx->pool),
                                     ctx->pool);
           if (ctx->cache_props)
             {
+              const char *name, *val;
+              svn_string_t *val_str;
+
+              name = apr_pstrdup(ctx->sess->pool, ctx->attr_name);
+              val = apr_pmemdup(ctx->sess->pool, ctx->attr_val,
+                                ctx->attr_val_len);
+              val_str = svn_string_ncreate(val, ctx->attr_val_len,
+                                           ctx->sess->pool);
+
               svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
-                                        ctx->current_path, ctx->rev,
-                                        ctx->ns, ctx->attr_name,
-                                        apr_pstrdup(ctx->sess->pool,
-                                                    ctx->attr_val),
+                                        ctx->current_path, ctx->rev, ctx->ns,
+                                        name, val_str,
                                         ctx->sess->pool);
             }
         }
@@ -309,6 +359,7 @@ end_propfind(void *userData, const char *name)
       ctx->collect_cdata = FALSE;
       ctx->attr_name = NULL;
       ctx->attr_val = NULL;
+      ctx->attr_encoding = NULL;
     }
   /* FIXME: destroy namespaces as we end a handler */
 }
@@ -393,10 +444,10 @@ check_cache(apr_hash_t *ret_props,
   prop = find_props;
   while (prop && prop->namespace)
     {
-      const char *val;
+      const svn_string_t *val;
 
-      val = svn_ra_serf__get_ver_prop(sess->cached_props, path, rev,
-                                      prop->namespace, prop->name);
+      val = svn_ra_serf__get_ver_prop_string(sess->cached_props, path, rev,
+                                             prop->namespace, prop->name);
       if (val)
         {
           svn_ra_serf__set_ver_prop(ret_props, path, rev,
@@ -644,9 +695,9 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
 
 svn_error_t *
 svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
-                             const void *ns, apr_ssize_t ns_len,
-                             const void *name, apr_ssize_t name_len,
-                             svn_string_t *val,
+                             const char *ns, apr_ssize_t ns_len,
+                             const char *name, apr_ssize_t name_len,
+                             const svn_string_t *val,
                              apr_pool_t *pool)
 {
   const char *prop_name;
@@ -675,7 +726,7 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
       return;
     }
 
-  SVN_ERR(setprop(baton, prop_name, val, pool));
+  return setprop(baton, prop_name, val, pool);
 }
 
 svn_error_t *
@@ -693,12 +744,11 @@ set_hash_props(void *baton,
 
 svn_error_t *
 svn_ra_serf__set_flat_props(void *baton,
-                            const void *ns, apr_ssize_t ns_len,
-                            const void *name, apr_ssize_t name_len,
-                            const void *val,
+                            const char *ns, apr_ssize_t ns_len,
+                            const char *name, apr_ssize_t name_len,
+                            const svn_string_t *val,
                             apr_pool_t *pool)
 {
-  svn_ra_serf__set_baton_props(set_hash_props, baton,
-                               ns, ns_len, name, name_len,
-                               svn_string_create(val, pool), pool);
+  return svn_ra_serf__set_baton_props(set_hash_props, baton,
+                                      ns, ns_len, name, name_len, val, pool);
 }
