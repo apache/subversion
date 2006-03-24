@@ -460,7 +460,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         out = self.svnmerge("avail --diff -r5")
         self.assertEqual(out.strip(), "")
 
-    def testCommitFile(self):
+    def test_log_msg_suggest(self):
         self.svnmerge("init -vf commit-log.txt", match="wrote commit message")
         self.assert_(os.path.exists("commit-log.txt"))
         os.remove("commit-log.txt")
