@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_base64.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -186,6 +187,7 @@ typedef struct report_info_t
   const char *prop_name;
   const char *prop_val;
   apr_size_t prop_val_len;
+  const char *prop_encoding;
 } report_info_t;
 
 /*
@@ -449,52 +451,54 @@ static void pop_state(report_context_t *ctx)
   ctx->free_state->info = NULL;
 }
 
-static void
+static svn_error_t *
 set_file_props(void *baton,
-               const void *ns, apr_ssize_t ns_len,
-               const void *name, apr_ssize_t name_len,
-               const void *val,
+               const char *ns, apr_ssize_t ns_len,
+               const char *name, apr_ssize_t name_len,
+               const svn_string_t *val,
                apr_pool_t *pool)
 {
   report_info_t *info = baton;
-  svn_ra_serf__set_baton_props(info->dir->update_editor->change_file_prop,
-                               info->file_baton,
-                               ns, ns_len, name, name_len,
-                               svn_string_create(val, pool), pool);
+  const svn_delta_editor_t *editor = info->dir->update_editor;
+
+  return svn_ra_serf__set_baton_props(editor->change_file_prop,
+                                      info->file_baton,
+                                      ns, ns_len, name, name_len, val, pool);
 }
 
-static void
+static svn_error_t *
 set_dir_props(void *baton,
-              const void *ns, apr_ssize_t ns_len,
-              const void *name, apr_ssize_t name_len,
-              const void *val,
+              const char *ns, apr_ssize_t ns_len,
+              const char *name, apr_ssize_t name_len,
+              const svn_string_t *val,
               apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
-  svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
-                               dir->dir_baton,
-                               ns, ns_len, name, name_len,
-                               svn_string_create(val, pool), pool);
+  return svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
+                                      dir->dir_baton,
+                                      ns, ns_len, name, name_len, val, pool);
 }
 
-static void
+static svn_error_t *
 remove_file_props(void *baton,
-                  const void *ns, apr_ssize_t ns_len,
-                  const void *name, apr_ssize_t name_len,
-                  const void *val,
+                  const char *ns, apr_ssize_t ns_len,
+                  const char *name, apr_ssize_t name_len,
+                  const svn_string_t *val,
                   apr_pool_t *pool)
 {
   report_info_t *info = baton;
-  svn_ra_serf__set_baton_props(info->dir->update_editor->change_file_prop,
-                               info->file_baton,
-                               ns, ns_len, name, name_len, NULL, pool);
+  const svn_delta_editor_t *editor = info->dir->update_editor;
+
+  return svn_ra_serf__set_baton_props(editor->change_file_prop,
+                                      info->file_baton,
+                                      ns, ns_len, name, name_len, NULL, pool);
 }
 
-static void
+static svn_error_t *
 remove_dir_props(void *baton,
-                 const void *ns, apr_ssize_t ns_len,
-                 const void *name, apr_ssize_t name_len,
-                 const void *val,
+                 const char *ns, apr_ssize_t ns_len,
+                 const char *name, apr_ssize_t name_len,
+                 const svn_string_t *val,
                  apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
@@ -1392,6 +1396,7 @@ start_report(void *userData, const char *name, const char **attrs)
           ctx->state->info->prop_ns = prop_name.namespace;
           ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
                                                     prop_name.name);
+          ctx->state->info->prop_encoding = NULL;
           ctx->state->info->prop_val = NULL;
           push_state(ctx, IGNORE_PROP_NAME);
         }
@@ -1408,6 +1413,8 @@ start_report(void *userData, const char *name, const char **attrs)
           ctx->state->info->prop_ns = new_prop_name.namespace;
           ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
                                                     new_prop_name.name);
+          ctx->state->info->prop_encoding = svn_ra_serf__find_attr(attrs,
+                                                                   "encoding");
           ctx->state->info->prop_val = NULL;
           push_state(ctx, PROP);
         }
@@ -1433,6 +1440,7 @@ start_report(void *userData, const char *name, const char **attrs)
           ctx->state->info->prop_ns = prop_name.namespace;
           ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
                                                     prop_name.name);
+          ctx->state->info->prop_encoding = NULL;
           ctx->state->info->prop_val = NULL;
           push_state(ctx, IGNORE_PROP_NAME);
         }
@@ -1462,6 +1470,8 @@ start_report(void *userData, const char *name, const char **attrs)
           ctx->state->info->prop_ns = new_prop_name.namespace;
           ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
                                                     new_prop_name.name);
+          ctx->state->info->prop_encoding = svn_ra_serf__find_attr(attrs,
+                                                                   "encoding");
           ctx->state->info->prop_val = NULL;
           push_state(ctx, PROP);
         }
@@ -1666,6 +1676,8 @@ end_report(void *userData, const char *raw_name)
       int found = 0;
       report_dir_t *dir;
       apr_hash_t *props;
+      const char *set_val;
+      svn_string_t *set_val_str;
 
       dir = ctx->state->info->dir;
 
@@ -1715,12 +1727,38 @@ end_report(void *userData, const char *raw_name)
           ctx->state->info->prop_val_len = 1;
         }
 
+      if (ctx->state->info->prop_encoding)
+        {
+          if (strcmp(ctx->state->info->prop_encoding, "base64") == 0)
+            {
+              svn_string_t encoded;
+              const svn_string_t *decoded;
+
+              encoded.data = ctx->state->info->prop_val;
+              encoded.len = ctx->state->info->prop_val_len;
+
+              decoded = svn_base64_decode_string(&encoded, ctx->state->pool);
+
+              ctx->state->info->prop_val = decoded->data;
+              ctx->state->info->prop_val_len = decoded->len;
+            }
+          else
+            {
+              abort();
+            }
+
+        }
+
+      set_val = apr_pmemdup(dir->pool,
+                            ctx->state->info->prop_val,
+                            ctx->state->info->prop_val_len);
+      set_val_str = svn_string_ncreate(set_val,
+                                       ctx->state->info->prop_val_len,
+                                       dir->pool);
+
       svn_ra_serf__set_ver_prop(props, ctx->state->info->base_name,
                                 ctx->state->info->base_rev,
-                                ns->namespace, ns->url,
-                                apr_pstrmemdup(dir->pool,
-                                               ctx->state->info->prop_val,
-                                               ctx->state->info->prop_val_len),
+                                ns->namespace, ns->url, set_val_str,
                                 dir->pool);
       pop_state(ctx);
     }

@@ -374,11 +374,11 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-void
+static svn_error_t *
 dirent_walker(void *baton,
-              const void *ns, apr_ssize_t ns_len,
-              const void *name, apr_ssize_t name_len,
-              const void *val,
+              const char *ns, apr_ssize_t ns_len,
+              const char *name, apr_ssize_t name_len,
+              const svn_string_t *val,
               apr_pool_t *pool)
 {
   svn_dirent_t *entry = baton;
@@ -395,23 +395,23 @@ dirent_walker(void *baton,
     {
       if (strcmp(name, "version-name") == 0)
         {
-          entry->created_rev = SVN_STR_TO_REV(val);
+          entry->created_rev = SVN_STR_TO_REV(val->data);
         }
       else if (strcmp(name, "creator-displayname") == 0)
         {
-          entry->last_author = val;
+          entry->last_author = val->data;
         }
       else if (strcmp(name, "creationdate") == 0)
         {
-          svn_time_from_cstring(&entry->time, val, pool);
+          svn_time_from_cstring(&entry->time, val->data, pool);
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
-          entry->size = apr_atoi64(val);
+          entry->size = apr_atoi64(val->data);
         }
       else if (strcmp(name, "resourcetype") == 0)
         {
-          if (strcmp(val, "collection") == 0)
+          if (strcmp(val->data, "collection") == 0)
             {
               entry->kind = svn_node_dir;
             }
@@ -421,6 +421,8 @@ dirent_walker(void *baton,
             }
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
 struct path_dirent_visitor_t {
@@ -429,12 +431,12 @@ struct path_dirent_visitor_t {
   const char *orig_path;
 };
 
-void
+static svn_error_t *
 path_dirent_walker(void *baton,
-                   const void *path, apr_ssize_t path_len,
-                   const void *ns, apr_ssize_t ns_len,
-                   const void *name, apr_ssize_t name_len,
-                   const void *val,
+                   const char *path, apr_ssize_t path_len,
+                   const char *ns, apr_ssize_t ns_len,
+                   const char *name, apr_ssize_t name_len,
+                   const svn_string_t *val,
                    apr_pool_t *pool)
 {
   struct path_dirent_visitor_t *dirents = baton;
@@ -461,7 +463,7 @@ path_dirent_walker(void *baton,
       apr_hash_set(dirents->base_paths, basename, APR_HASH_KEY_STRING, entry);
     }
 
-  dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
+  return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
 }
 
 static svn_error_t *

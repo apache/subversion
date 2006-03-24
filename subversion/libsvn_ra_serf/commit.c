@@ -449,20 +449,19 @@ get_version_url(dir_context_t *dir)
   return SVN_NO_ERROR;
 }
 
-static void proppatch_walker(void *baton,
-                             const void *ns, apr_ssize_t ns_len,
-                             const void *name, apr_ssize_t name_len,
-                             const void *val,
-                             apr_pool_t *pool)
+static svn_error_t *
+proppatch_walker(void *baton,
+                 const char *ns, apr_ssize_t ns_len,
+                 const char *name, apr_ssize_t name_len,
+                 const svn_string_t *val,
+                 apr_pool_t *pool)
 {
   serf_bucket_t *body_bkt = baton;
   serf_bucket_t *tmp_bkt;
   serf_bucket_alloc_t *alloc;
-  const svn_string_t *prop_value;
   svn_boolean_t binary_prop;
  
-  prop_value = val;
-  if (svn_xml_is_xml_safe(prop_value->data, prop_value->len))
+  if (svn_xml_is_xml_safe(val->data, val->len))
     {
       binary_prop = FALSE;
     }
@@ -492,8 +491,8 @@ static void proppatch_walker(void *baton,
   if (binary_prop == TRUE)
     {
       tmp_bkt =
-          SERF_BUCKET_SIMPLE_STRING_LEN(" V:encoding:=\"base64\"",
-                                        sizeof(" V:encoding:=\"base64\"") - 1,
+          SERF_BUCKET_SIMPLE_STRING_LEN("\" V:encoding=\"base64",
+                                        sizeof("\" V:encoding=\"base64") - 1,
                                         alloc);
       serf_bucket_aggregate_append(body_bkt, tmp_bkt);
     }
@@ -505,17 +504,16 @@ static void proppatch_walker(void *baton,
 
   if (binary_prop == TRUE)
     {
-      prop_value = svn_base64_encode_string(prop_value, pool);
+      val = svn_base64_encode_string(val, pool);
     }
   else
     {
       svn_stringbuf_t *prop_buf = svn_stringbuf_create("", pool);
-      svn_xml_escape_cdata_string(&prop_buf, prop_value, pool);
-      prop_value = svn_string_create_from_buf(prop_buf, pool);
+      svn_xml_escape_cdata_string(&prop_buf, val, pool);
+      val = svn_string_create_from_buf(prop_buf, pool);
     }
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(prop_value->data, prop_value->len,
-                                          alloc);
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(val->data, val->len, alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</",
@@ -530,6 +528,8 @@ static void proppatch_walker(void *baton,
                                           sizeof(">") - 1,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  return SVN_NO_ERROR;
 }
 
 #define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\">"
