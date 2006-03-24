@@ -190,7 +190,3 @@ TODO (LIKELY INCOMPLETE)
 
     * Figure out what parts of the source tree that are depending on 
       nodes changing when something is moved.
-
-      * libsvn_repos/reporter.c isn't noticing that the source side of
-        a move is gone, so diffs that include a move currently show up
-        as just an add.
