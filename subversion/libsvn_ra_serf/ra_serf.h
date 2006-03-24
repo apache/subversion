@@ -707,3 +707,10 @@ svn_ra_serf__get_file(svn_ra_session_t *session,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
                       apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
+                             svn_revnum_t rev,
+                             const char *name,
+                             const svn_string_t *value,
+                             apr_pool_t *pool);

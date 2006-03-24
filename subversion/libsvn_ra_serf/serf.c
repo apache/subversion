@@ -223,22 +223,37 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
-                             svn_revnum_t rev,
-                             const char *name,
-                             const svn_string_t *value,
-                             apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__rev_proplist(svn_ra_session_t *session,
+svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                           svn_revnum_t rev,
-                          apr_hash_t **props,
+                          apr_hash_t **ret_props,
                           apr_pool_t *pool)
 {
-  abort();
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  svn_ra_serf__propfind_context_t *prop_ctx;
+  const char *vcc_url, *path;
+  svn_revnum_t fetched_rev;
+
+  props = apr_hash_make(pool);
+  *ret_props = apr_hash_make(pool);
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      vcc_url, rev, "0",
+                                      checked_in_props, pool));
+
+  path = svn_ra_serf__get_ver_prop(props, vcc_url, rev, "DAV:", "href");
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      path, rev, "0", all_props, pool));
+
+  svn_ra_serf__walk_all_props(props, path, rev, svn_ra_serf__set_flat_props,
+                              *ret_props, pool);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -248,7 +263,13 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       svn_string_t **value,
                       apr_pool_t *pool)
 {
-  abort();
+  apr_hash_t *props;
+
+  SVN_ERR(svn_ra_serf__rev_proplist(session, rev, &props, pool));
+
+  *value = apr_hash_get(props, name, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

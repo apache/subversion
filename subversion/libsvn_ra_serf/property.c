@@ -224,14 +224,9 @@ start_propfind(void *userData, const char *name, const char **attrs)
     }
   else if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
     {
-      if (strcmp(ctx->depth, "1") == 0)
-        {
-          ctx->collect_cdata = TRUE;
-        }
-      else
-        {
-          ctx->current_path = ctx->path;
-        }
+      ctx->ns = prop_name.namespace;
+      ctx->attr_name = apr_pstrdup(ctx->pool, prop_name.name);
+      ctx->collect_cdata = TRUE;
     }
   else if (ctx->in_response && strcmp(prop_name.name, "prop") == 0)
     {
@@ -290,69 +285,63 @@ end_propfind(void *userData, const char *name)
           ctx->attr_val_len = strlen(ctx->attr_val);
         }
    
-      
       if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
         {
           apr_pool_t *pool;
           const char *canon_path;
 
-          if (!ctx->cache_props)
+          if (strcmp(ctx->depth, "1") == 0)
             {
-              pool = ctx->pool;
+              ctx->current_path = svn_path_canonicalize(ctx->attr_val, pool);
             }
           else
             {
-              pool = ctx->sess->pool;
+              ctx->current_path = ctx->path;
             }
-
-          ctx->current_path = svn_path_canonicalize(ctx->attr_val, pool);
         }
-      else
+      else if (ctx->attr_encoding)
         {
-          if (ctx->attr_encoding)
+          if (strcmp(ctx->attr_encoding, "base64") == 0)
             {
-              if (strcmp(ctx->attr_encoding, "base64") == 0)
-                {
-                  svn_string_t encoded;
-                  const svn_string_t *decoded;
+              svn_string_t encoded;
+              const svn_string_t *decoded;
 
-                  encoded.data = ctx->attr_val;
-                  encoded.len = ctx->attr_val_len;
+              encoded.data = ctx->attr_val;
+              encoded.len = ctx->attr_val_len;
 
-                  decoded = svn_base64_decode_string(&encoded, ctx->pool);
-                  ctx->attr_val = decoded->data;
-                  ctx->attr_val_len = decoded->len;
-                }
-              else
-                {
-                  abort();
-                }
+              decoded = svn_base64_decode_string(&encoded, ctx->pool);
+              ctx->attr_val = decoded->data;
+              ctx->attr_val_len = decoded->len;
             }
-
-          /* set the return props and update our cache too. */
-          svn_ra_serf__set_ver_prop(ctx->ret_props,
-                                    ctx->current_path, ctx->rev,
-                                    ctx->ns, ctx->attr_name,
-                                    svn_string_ncreate(ctx->attr_val,
-                                                       ctx->attr_val_len,
-                                                       ctx->pool),
-                                    ctx->pool);
-          if (ctx->cache_props)
+          else
             {
-              const char *name, *val;
-              svn_string_t *val_str;
-
-              name = apr_pstrdup(ctx->sess->pool, ctx->attr_name);
-              val = apr_pmemdup(ctx->sess->pool, ctx->attr_val,
-                                ctx->attr_val_len);
-              val_str = svn_string_ncreate(val, ctx->attr_val_len,
-                                           ctx->sess->pool);
-
-              svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
-                                        ctx->current_path, ctx->rev, ctx->ns,
-                                        name, val_str,
-                                        ctx->sess->pool);
+              abort();
             }
+        }
+
+      /* set the return props and update our cache too. */
+      svn_ra_serf__set_ver_prop(ctx->ret_props,
+                                ctx->current_path, ctx->rev,
+                                ctx->ns, ctx->attr_name,
+                                svn_string_ncreate(ctx->attr_val,
+                                                   ctx->attr_val_len,
+                                                   ctx->pool),
+                                ctx->pool);
+      if (ctx->cache_props)
+        {
+          const char *name, *val;
+          svn_string_t *val_str;
+
+          name = apr_pstrdup(ctx->sess->pool, ctx->attr_name);
+          val = apr_pmemdup(ctx->sess->pool, ctx->attr_val,
+                            ctx->attr_val_len);
+          val_str = svn_string_ncreate(val, ctx->attr_val_len,
+                                       ctx->sess->pool);
+
+          svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
+                                    ctx->current_path, ctx->rev, ctx->ns,
+                                    name, val_str,
+                                    ctx->sess->pool);
         }
 
       /* we're done with it. */
