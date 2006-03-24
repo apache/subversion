@@ -1615,3 +1615,72 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
+                             svn_revnum_t rev,
+                             const char *name,
+                             const svn_string_t *value,
+                             apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  proppatch_context_t *proppatch_ctx;
+  commit_context_t *commit;
+  const char *vcc_url, *checked_in_href, *ns;
+  apr_hash_t *props;
+
+  commit = apr_pcalloc(pool, sizeof(*commit));
+
+  commit->pool = pool;
+
+  commit->session = session;
+  commit->conn = session->conns[0];
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     commit->session,
+                                     commit->conn,
+                                     commit->session->repos_url.path, pool));
+
+  props = apr_hash_make(pool);
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, commit->session, commit->conn,
+                                      vcc_url, rev, "0",
+                                      checked_in_props, pool));
+
+  checked_in_href = svn_ra_serf__get_ver_prop(props, vcc_url, rev,
+                                              "DAV:", "href");
+
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      ns = SVN_DAV_PROP_NS_SVN;
+      name += sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      ns = SVN_DAV_PROP_NS_CUSTOM;
+    }
+
+  /* PROPPATCH our log message and pass it along.  */
+  proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
+  proppatch_ctx->pool = pool;
+  proppatch_ctx->path = checked_in_href;
+  proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+
+  if (value)
+    {
+      svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
+                            ns, name, value, proppatch_ctx->pool);
+    }
+  else
+    {
+      value = svn_string_create("", proppatch_ctx->pool);
+
+      svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
+                            ns, name, value, proppatch_ctx->pool);
+    }
+
+  SVN_ERR(proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool));
+
+  return SVN_NO_ERROR;
+}
