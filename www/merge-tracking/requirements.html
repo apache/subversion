@@ -80,8 +80,22 @@ users@ list and in other forums.</p>
 </div>  <!-- summary -->
 
 
-<div class="h3" id="details">
-<h3>Details</h3>
+<div class="h3" id="merging">
+<h3>Merging</h3>
+
+<div class="h4" id="repeated-merge">
+<h4>Repeated Merge</h4>
+
+<p>Track which changesets have been applied where, so users can
+repeatedly merge branch A to branch B without having to remember the
+last range of revisions ported.  This would also track changeset <a
+href="#cherry-picking">cherry picking</a> done by users, so we don't
+accidentally re-merge changesets that are already applied.  This is
+the problem that <a href="http://svk.elixus.org/">svk</a> and <a
+href="http://www.gnu.org/software/gnu-arch/">arch</a> claim to have
+already solved, what they're calling <em>star-merge</em>.</p>
+
+</div>  <!-- repeated-merge -->
 
 <div class="h4" id="cherry-picking">
 <h4>Cherry Picking</h4>
@@ -103,8 +117,77 @@ without confusing the merge tracking algorithm.</p>
 </div>  <!-- cherry picking -->
 
 
-<div class="h4" id="auditing">
-<h4>Auditing</h4>
+<div class="h4" id="rename-tracking">
+<h4>Track Renames in Merge</h4>
+
+<p><code>svn merge</code> needs to handle renames better.  This
+requires <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
+rename support</a>.</p>
+
+<p>Edit foo.c on branch A.  Rename foo.c to bar.c on branch B.</p>
+
+<ol>
+  <li>Try merging the branch A edit into a working copy of branchB:
+  <code>svn merge</code> will skip the file, because it can't find
+  it.</li>
+
+  <li>Conversely, try merging branch B rename to branch A: <code>svn
+  merge</code> will delete the 'newer' version of foo.c and add bar.c,
+  which has the older text.</li>
+</ol>
+
+<p>Problem #2 stems from the fact that we don't have <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
+renames</a>, just copies (with history) and deletes.  That's not
+fixable without a FS schema change, and (probably) a libsvn_wc
+rewrite.</p>
+
+<p>It's not clear what it would take to solve problem #1.  See <a
+href="http://www.contactor.se/~dast/svn/archive-2004-07/0084.shtml">the
+discussion</a> about our rename woes, and the relationship to merge
+tracking.</p>
+
+</div>  <!-- rename-tracking -->
+
+<div class="h4" id="merge-previews">
+<h4>Merge Previews</h4>
+
+<p>Merge previews are dry runs that show conflicts and "non-trivial,
+non-conflicting" (NTNC) changes in advance.  These previews should be
+exportable and parseable.  (From the <a href="summit.html#merge-previews" 
+>distributable resolution item</a> in the summit summary).</p>
+
+</div>  <!-- merge-previews -->
+
+<div class="h4" id="automated-merge">
+<h4>SCM Automated Merge</h4>
+
+<p>The ability to automate merges (e.g. from a stable branch to a
+development branch), including interfaces for resolving conflicts and
+handling other errors, is important.  <a
+href="../user-classifications.html#merge-meister">Merge Meisters</a>
+who do multi-thousand file merges stress this.</p>
+
+</div>  <!-- automated-merge -->
+
+<div class="h4" id="distributable-resolution">
+<h4>Distributability of Merge Resolution</h4>
+
+<p>The mechanism for resolving conflicts in a merge should be
+distributable across N developers.  Meeting this requirement might
+mean a departure for Subversion, since it implies that merge results
+are not just stored in one working copy, but are somehow available on
+the server side.  (From the <a href="summit.html#distributable-resolution"
+>distributable resolution item</a> in the summit summary).</p>
+
+</div>  <!-- distributable-resolution -->
+
+</div>  <!-- merging -->
+
+
+<div class="h3" id="auditing">
+<h3>Auditing</h3>
 
 <p>Merge tracking must be audit-friendly, supporting some basic forms
 of reporting which allow for discovery of following types of
@@ -146,53 +229,8 @@ information:</p>
 </div>  <!-- auditing -->
 
 
-<div class="h4" id="repeated-merge">
-<h4>Repeated Merge</h4>
-
-<p>Track which changesets have been applied where, so users can
-repeatedly merge branch A to branch B without having to remember the
-last range of revisions ported.  This would also track changeset <a
-href="#cherry-picking">cherry picking</a> done by users, so we don't
-accidentally re-merge changesets that are already applied.  This is
-the problem that <a href="http://svk.elixus.org/">svk</a> and <a
-href="http://www.gnu.org/software/gnu-arch/">arch</a> claim to have
-already solved, what they're calling <em>star-merge</em>.</p>
-
-</div>  <!-- repeated-merge -->
-
-
-<div class="h4" id="rename-tracking">
-<h4>Track Renames in Merge</h4>
-
-<p><code>svn merge</code> needs to handle renames better.  This
-requires <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
-rename support</a>.</p>
-
-<p>Edit foo.c on branch A.  Rename foo.c to bar.c on branch B.</p>
-
-<ol>
-  <li>Try merging the branch A edit into a working copy of branchB:
-  <code>svn merge</code> will skip the file, because it can't find
-  it.</li>
-
-  <li>Conversely, try merging branch B rename to branch A: <code>svn
-  merge</code> will delete the 'newer' version of foo.c and add bar.c,
-  which has the older text.</li>
-</ol>
-
-<p>Problem #2 stems from the fact that we don't have <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
-renames</a>, just copies (with history) and deletes.  That's not
-fixable without a FS schema change, and (probably) a libsvn_wc
-rewrite.</p>
-
-<p>It's not clear what it would take to solve problem #1.  See <a
-href="http://www.contactor.se/~dast/svn/archive-2004-07/0084.shtml">the
-discussion</a> about our rename woes, and the relationship to merge
-tracking.</p>
-
-</div>  <!-- rename-tracking -->
+<div class="h3" id="misc">
+<h3>Miscellaneous</h3>
 
 <div class="h4" id="dump-load">
 <h4>Allow for Dump/Load</h4>
@@ -278,40 +316,7 @@ when a single change is ported from a branch's ancestor line.</p>
 
 </div>  <!-- common-case-ease -->
 
-<div class="h4" id="automated-merge">
-<h4>SCM Automated Merge</h4>
-
-<p>The ability to automate merges (e.g. from a stable branch to a
-development branch), including interfaces for resolving conflicts and
-handling other errors, is important.  <a
-href="../user-classifications.html#merge-meister">Merge Meisters</a>
-who do multi-thousand file merges stress this.</p>
-
-</div>  <!-- automated-merge -->
-
-<div class="h4" id="distributable-resolution">
-<h4>Distributability of Merge Resolution</h4>
-
-<p>The mechanism for resolving conflicts in a merge should be
-distributable across N developers.  Meeting this requirement might
-mean a departure for Subversion, since it implies that merge results
-are not just stored in one working copy, but are somehow available on
-the server side.  (From the <a href="summit.html#distributable-resolution"
->distributable resolution item</a> in the summit summary).</p>
-
-</div>  <!-- distributable-resolution -->
-
-<div class="h4" id="merge-previews">
-<h4>Merge Previews</h4>
-
-<p>Merge previews are dry runs that show conflicts and "non-trivial,
-non-conflicting" (NTNC) changes in advance.  These previews should be
-exportable and parseable.  (From the <a href="summit.html#merge-previews" 
->distributable resolution item</a> in the summit summary).</p>
-
-</div>  <!-- merge-previews -->
-
-</div>  <!-- details -->
+</div>  <!-- misc -->
 
 </div>  <!-- requirements -->
 </div>  <!-- h2 -->
