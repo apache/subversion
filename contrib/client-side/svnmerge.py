@@ -411,20 +411,24 @@ class RevisionSet:
         """Constructs a RevisionSet from a string in property form, or from
         a dictionary whose keys are the revisions. Raises ValueError if the
         input string is invalid."""
-        if isinstance(parm, types.DictType):
-            self._revs = parm.copy()
-            return
 
         self._revs = {}
-        parm = parm.strip()
-        if parm:
-            for R in parm.split(","):
-                if "-" in R:
-                    s,e = R.split("-")
-                    for rev in range(int(s), int(e)+1):
-                        self._revs[rev] = 1
-                else:
-                    self._revs[int(R)] = 1
+
+        if isinstance(parm, types.DictType):
+            self._revs = parm.copy()
+        elif isinstance(parm, types.ListType):
+            for R in parm:
+                self._revs[int(R)] = 1
+        else:
+            parm = parm.strip()
+            if parm:
+                for R in parm.split(","):
+                    if "-" in R:
+                        s,e = R.split("-")
+                        for rev in range(int(s), int(e)+1):
+                            self._revs[rev] = 1
+                    else:
+                        self._revs[int(R)] = 1
 
     def sorted(self):
         revnums = self._revs.keys()
@@ -784,7 +788,7 @@ def analyze_revs(target_dir, url, begin=1, end=None,
     logs[url] = RevisionLog(url, begin, end, find_reflected)
     mergeprops[url] = VersionedProperty(url, opts["prop"])
     mergeprops[url].load(logs[url])
-    revs = RevisionSet(",".join(map(str,logs[url].revs)))
+    revs = RevisionSet(logs[url].revs)
 
     if end == "HEAD":
         # If end is not provided, we do not know which is the latest revision
@@ -808,7 +812,7 @@ def analyze_revs(target_dir, url, begin=1, end=None,
                 reflected_revs.append("%s" % rev)
             old_revs = new_revs
 
-    reflected_revs = RevisionSet(",".join(reflected_revs))
+    reflected_revs = RevisionSet(reflected_revs)
 
     return revs, phantom_revs, reflected_revs
 
