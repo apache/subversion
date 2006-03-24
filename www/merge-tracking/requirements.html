@@ -36,6 +36,52 @@ surprising, but they represent the best writeup we have of certain
 requirements that were formerly only hinted at tangentially on the
 users@ list and in other forums.</p>
 
+<div class="h3" id="summary">
+<h3>Summary</h3>
+
+<ul>
+  <li>
+    Merging
+    <ul>
+      <li><a href="#repeated-merge">Repeated Merge</a></li>
+      <li><a href="#cherry-picking">Cherry Picking</a></li>
+      <li><a href="rename-tracking">Handles Renames</a></li>
+      <li>Record Manual Merge</li>
+      <li>Revert Merge (automated or manual)</li>
+      <li>Block/Unblock Change Set from Merge</li>
+      <li><a href="#merge-previews">Preview</a></li>
+      <li><a href="#automated-merge">SCM Automation</a></li>
+      <li><a href="#distributable-resolution">Distribution of Conflict
+      Resolution</a></li>
+    </ul>
+  </li>
+
+  <li>
+    <a href="#auditing">Auditing</a>
+    <ul>
+      <li><em>Merged From</em> info for Change Set and/or Path</li>
+      <li><em>Merged To</em> info for Change Set and/or Path</li>
+      <li>Find Paths containing Specific Incarnation of Versioned Resource</li>
+      <li>Commutative Author Reporting From Merged Change Set and/or
+      Path (e.g. for <code>log</code> and <code>blame</code>)</li>
+      <!-- ### Need to explicitly call out renames? -->
+    </ul>
+  </li>
+
+  <li>
+    Other
+    <ul>
+      <li><a href="#dump-load">Consistent UI</a></li>
+      <li><a href="#dump-load">Allow Dump/Load</a></li>
+    </ul>
+  </li>
+</ul>
+
+</div>  <!-- summary -->
+
+
+<div class="h3" id="details">
+<h3>Details</h3>
 
 <div class="h4" id="cherry-picking">
 <h4>Cherry Picking</h4>
@@ -76,8 +122,8 @@ information:</p>
   with different authors.</li>
 
   <li>If you merge rN into a branch B, and rN was committed by author
-  A, then <code>svn log -rN</code>should show both the original author
-  A, <em>and</em> the author who merged the change.</li>
+  A, then <code>svn log -rN</code> should show both the original
+  author A, <em>and</em> the author who merged the change.</li>
 
   <li>It should be possible to query any path (file, directory, or
   symlink) to find out what changes (revisions) have been merged under
@@ -265,9 +311,11 @@ exportable and parseable.  (From the <a href="summit.html#merge-previews"
 
 </div>  <!-- merge-previews -->
 
-</div>  <!-- requirements -->
+</div>  <!-- details -->
 
+</div>  <!-- requirements -->
 </div>  <!-- h2 -->
+
 
 <div class="h2" id="related-documents">
 <h2>Related Documents and Discussion</h2>
