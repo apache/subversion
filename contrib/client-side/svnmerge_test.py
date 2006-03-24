@@ -288,6 +288,33 @@ def get_test_path():
 
 class TestCase_TestRepo(TestCase_SvnMerge):
     def setUp(self):
+        """Creates a working copy with the following structure:
+
+          test-branch/
+           test1
+           test2
+           test3
+
+        ...from a repository with the following structure:
+
+          /
+           trunk/
+            test1
+            test2
+            test3
+            test4
+            test5
+           branches/
+            testYYY-branch/
+             test1
+             test2
+             test3
+            test-branch/
+             test1
+             test2
+             test3
+           tags/
+        """
         self.cwd = os.getcwd()
 
         test_path = get_test_path()
@@ -360,6 +387,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Always remove the template directory when the tests have
         # completed.
         atexit.register(lambda: rmtree(template_path))
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        rmtree(self.test_path)
 
     def command_dict(self):
         return dict(TEMPLATE_PATH=self.template_path,
@@ -482,10 +513,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("..")
         os.chdir("trunk")
         self.svnmerge("init", error=True, match="no copyfrom")
-
-    def tearDown(self):
-        os.chdir(self.cwd)
-        rmtree(self.test_path)
 
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
