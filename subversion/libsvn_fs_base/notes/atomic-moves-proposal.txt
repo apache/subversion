@@ -188,20 +188,9 @@ TODO (LIKELY INCOMPLETE)
         since it introduces some extra work traversing history later
         on due to the extra level of indirection.
 
-    * Teach the node history algorithm about moves.  I anticipate this
-      to be pretty straightforward, more or less mimicking the way
-      that copies are handled.
+    * Figure out what parts of the source tree that are depending on 
+      nodes changing when something is moved.
 
-      * Part of this is done.  Tracing back through moves works, but
-        there's some more work to be done with regards to things like
-        svn_fs_copied_from.
-
-    * Make sure the paths changed code exposes enough information about
-      a renamed path to be useful.
-
-      * Currently we have the destination path (the key in the hash
-        that's returned), but not the source path.  Note that we don't
-        have the source path for a copy either, people get it with
-        svn_fs_copied_from, so either we need to provide a similar
-        function for moves or we need to just inline the information
-        in svn_fs_path_change_t.
+      * libsvn_repos/reporter.c isn't noticing that the source side of
+        a move is gone, so diffs that include a move currently show up
+        as just an add.
