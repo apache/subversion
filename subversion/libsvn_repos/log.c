@@ -126,6 +126,13 @@ detect_changed(apr_hash_t **changed,
           action = 'D';
           break;
 
+        case svn_fs_path_change_move:
+          /* XXX Think about backwards compatibility issues here.
+           *
+           *     What happens if the client doesn't understand 'V'? */
+          action = 'V';
+          break;
+
         case svn_fs_path_change_modify:
         default:
           action = 'M';
@@ -135,7 +142,7 @@ detect_changed(apr_hash_t **changed,
       item = apr_pcalloc(pool, sizeof(*item));
       item->action = action;
       item->copyfrom_rev = SVN_INVALID_REVNUM;
-      if ((action == 'A') || (action == 'R'))
+      if ((action == 'A') || (action == 'R') || (action == 'V'))
         {
           const char *copyfrom_path;
           svn_revnum_t copyfrom_rev;
