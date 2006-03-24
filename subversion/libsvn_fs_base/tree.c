@@ -3151,13 +3151,42 @@ txn_body_copied_from(void *baton, trail_t *trail)
   const svn_fs_id_t *node_id, *pred_id;
   dag_node_t *node;
   svn_fs_t *fs = args->root->fs;
+  parent_path_t *parent_path;
 
   /* Clear the return variables. */
   args->result_path = NULL;
   args->result_rev = SVN_INVALID_REVNUM;
 
   /* Fetch the NODE in question. */
-  SVN_ERR(get_dag(&node, args->root, args->path, trail, trail->pool));
+  SVN_ERR(open_path(&parent_path, args->root, args->path, 0, args->root->txn,
+                    trail, trail->pool));
+
+  /* If we're not the root, there's the chance that we've been moved, so go
+   * looking for the move id. */
+  if (parent_path->parent)
+    {
+      const char *move_id;
+
+      SVN_ERR(svn_fs_base__dag_entry_move_id(&move_id,
+                                             parent_path->parent->node, 
+                                             parent_path->entry, trail,
+                                             trail->pool));
+
+      /* If there's a move id for this node in its parent, then that means
+       * we've been moved, so look up the corresponding copy and use that. */
+      if (move_id)
+        {
+          copy_t *copy;
+
+          SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, move_id, trail, trail->pool));
+
+          args->result_path = copy->src_path;
+          args->result_rev = copy->src_rev;
+        }
+    }
+
+  node = parent_path->node;
+
   node_id = svn_fs_base__dag_get_id(node);
 
   /* Check the node's predecessor-ID.  If it doesn't have one, it
