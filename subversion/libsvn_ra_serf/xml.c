@@ -188,8 +188,11 @@ void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", 1, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(value, bkt_alloc);
-  serf_bucket_aggregate_append(agg_bucket, tmp);
+  if (value)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING(value, bkt_alloc);
+      serf_bucket_aggregate_append(agg_bucket, tmp);
+    }
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</", 2, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
