@@ -4734,6 +4734,36 @@ move_copied_from_test(const char **msg,
     return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
                              rev);
 
+  /* Revision 3: Copy Z to Q. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_copy(rev_root, "Z", txn_root, "Q", pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+
+  /* Make sure Q didn't carry along the move id from Z... */
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "Q", pool));
+
+  if (! path || strcmp(path, "/Z") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 2)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
+
+  /* And make sure that Z still works like we'd expect. */
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "Z", pool));
+
+  if (! path || strcmp(path, "/A") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 1)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
+
   return SVN_NO_ERROR;
 }
 
