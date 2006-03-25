@@ -323,6 +323,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
+  svn_revnum_t *peg_rev;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
@@ -397,35 +398,21 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0", base_props,
-                                      pool));
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
-  /* Send the request to the baseline URL */
-  vcc_url = svn_ra_serf__get_prop(props, session->repos_url.path,
-                                  "DAV:", "version-controlled-configuration");
-
-  if (!vcc_url)
-    {
-      abort();
-    }
-
-  /* Send the request to the baseline URL */
-  relative_url = svn_ra_serf__get_prop(props, session->repos_url.path,
-                                       SVN_DAV_PROP_NS_DAV,
-                                       "baseline-relative-path");
-
-  if (!relative_url)
-    {
-      abort();
-    }
+  /* At this point, we may have a deleted file.  So, we'll match ra_dav's
+   * behavior and use the larger of start or end as our 'peg' rev.
+   */
+  peg_rev = (start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, SVN_INVALID_REVNUM, "0",
+                                      vcc_url, peg_rev, "0",
                                       checked_in_props, pool));
 
-  baseline_url = svn_ra_serf__get_prop(props, vcc_url, "DAV:", "checked-in");
+  baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
+                                           "DAV:", "href");
 
   if (!baseline_url)
     {
@@ -433,10 +420,11 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
     }
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      baseline_url, SVN_INVALID_REVNUM, "0",
+                                      baseline_url, peg_rev, "0",
                                       baseline_props, pool));
 
-  basecoll_url = svn_ra_serf__get_prop(props, baseline_url, "DAV:", "baseline-collection");
+  basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, peg_rev,
+                                           "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {
