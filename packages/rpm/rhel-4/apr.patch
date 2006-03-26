@@ -2,18 +2,17 @@ Index: configure.in
 ===================================================================
 --- configure.in	(revision 17608)
 +++ configure.in	(working copy)
-@@ -88,9 +88,9 @@
- dnl   - APR_LARGEFILE added
+@@ -52,8 +52,8 @@
  dnl   - APR_GSETID added
  dnl   - bug in apr_temp_dir_get() fixed
--APR_VER_REGEX=["0\.9\.[5-9]"]
-+APR_VER_REGEX=["0\.9\.[4-9]"]
- APR_VER_REGEX_TOO="1\."
--APU_VER_REGEX=["0\.9\.[5-9]"]
-+APU_VER_REGEX=["0\.9\.[4-9]"]
- APU_VER_REGEX_TOO="1\."
  
- SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)
+-APR_VER_REGEXES=["0\.9\.[5-9] 0.9.1[0-9] 1."]
+-APU_VER_REGEXES=["0\.9\.[5-9] 0.9.1[0-9] 1."]
++APR_VER_REGEXES=["0\.9\.[4-9] 0.9.1[0-9] 1."]
++APU_VER_REGEXES=["0\.9\.[4-9] 0.9.1[0-9] 1."]
+ 
+ SVN_LIB_APR($APR_VER_REGEXES)
+ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 Index: subversion/libsvn_fs_base/fs.c
 ===================================================================
 --- subversion/libsvn_fs_base/fs.c	(revision 17608)
