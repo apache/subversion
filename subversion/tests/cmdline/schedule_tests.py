@@ -669,9 +669,15 @@ def delete_non_existent(sbox):
   
   sbox.build()
   wc_dir = sbox.wc_dir
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput, 
-                                     'rm', '--force', 'non-existent')
+  
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
 
+  try:
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput, 
+                                       'rm', '--force', 'non-existent')
+  finally:
+    os.chdir(was_cwd)
 
 ########################################################################
 # Run the tests
