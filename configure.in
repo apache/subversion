@@ -51,13 +51,12 @@ dnl The specific reasons we require APR 0.9.5-final are:
 dnl   - APR_LARGEFILE added
 dnl   - APR_GSETID added
 dnl   - bug in apr_temp_dir_get() fixed
-APR_VER_REGEX=["0\.9\.[5-9]"]
-APR_VER_REGEX_TOO="1\."
-APU_VER_REGEX=["0\.9\.[5-9]"]
-APU_VER_REGEX_TOO="1\."
 
-SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)
-SVN_LIB_APRUTIL($APU_VER_REGEX, $APU_VER_REGEX_TOO)
+APR_VER_REGEXES=["0\.9\.[5-9] 0.9.1[0-9] 1."]
+APU_VER_REGEXES=["0\.9\.[5-9] 0.9.1[0-9] 1."]
+
+SVN_LIB_APR($APR_VER_REGEXES)
+SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
