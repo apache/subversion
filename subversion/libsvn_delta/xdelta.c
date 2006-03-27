@@ -40,7 +40,6 @@ struct adler32
   apr_uint32_t s1;
   apr_uint32_t s2;
   apr_uint32_t len;
-  apr_uint32_t mask;
 };
 
 /* Feed C into the adler32 checksum.  */
@@ -83,7 +82,6 @@ init_adler32(struct adler32 *ad, const char *data, apr_uint32_t datalen)
 {
   ad->s1 = 1;
   ad->s2 = 0;
-  ad->mask = ADLER32_MASK;
   ad->len = 0;
   while (datalen--)
     adler32_in(ad, *(data++));
