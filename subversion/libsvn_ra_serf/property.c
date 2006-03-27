@@ -287,12 +287,10 @@ end_propfind(void *userData, const char *name)
    
       if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
         {
-          apr_pool_t *pool;
-          const char *canon_path;
-
           if (strcmp(ctx->depth, "1") == 0)
             {
-              ctx->current_path = svn_path_canonicalize(ctx->attr_val, pool);
+              ctx->current_path = svn_path_canonicalize(ctx->attr_val,
+                                                        ctx->pool);
             }
           else
             {
