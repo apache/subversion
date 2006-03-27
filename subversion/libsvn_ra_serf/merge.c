@@ -265,6 +265,7 @@ start_merge(void *userData, const char *name, const char **attrs)
            strcmp(prop_name.name, "resourcetype") == 0)
     {
       push_state(ctx, RESOURCE_TYPE);
+      ctx->state->info->type = NONE;
     }
   else if (ctx->state->state == RESOURCE_TYPE &&
            strcmp(prop_name.name, "baseline") == 0)

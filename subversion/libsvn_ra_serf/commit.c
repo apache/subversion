@@ -43,6 +43,7 @@
 typedef struct {
   int status;
   svn_boolean_t done;
+  svn_ra_serf__server_error_t server_error;
 } simple_request_context_t;
 
 /* Structure associated with a CHECKOUT request. */
@@ -191,6 +192,17 @@ typedef struct {
 
 /* Setup routines and handlers for various requests we'll invoke. */
 
+static svn_error_t *
+return_response_err(simple_request_context_t *ctx)
+{
+  /* abort() if we're expecting an error and didn't get one! */
+  if (ctx->server_error.error == SVN_NO_ERROR)
+    {
+      abort();
+    }
+  return ctx->server_error.error;
+}
+
 static apr_status_t
 handle_status_only(serf_request_t *request,
                    serf_bucket_t *response,
@@ -198,12 +210,13 @@ handle_status_only(serf_request_t *request,
                    apr_pool_t *pool)
 {
   apr_status_t status;
+  simple_request_context_t *ctx = baton;
 
-  status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+  status = svn_ra_serf__handler_discard_body(request, response,
+                                             &ctx->server_error, pool);
 
   if (APR_STATUS_IS_EOF(status))
     {
-      simple_request_context_t *ctx = baton;
       serf_status_line sl;
       apr_status_t rv;
 
@@ -339,10 +352,18 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      /* TODO Parse server-provided error code / message. */
-      return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
-               _("Your file or directory '%s' is probably out-of-date"),
-               svn_path_local_style(dir->name, dir->pool));
+      if (checkout_ctx->progress.status == 404)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                                  return_response_err(&checkout_ctx->progress),
+                                  _("Path '%s' not present"),
+                                  svn_path_local_style(dir->name, dir->pool));
+        }
+
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                    return_response_err(&checkout_ctx->progress),
+                    _("Your file or directory '%s' is probably out-of-date"),
+                    svn_path_local_style(dir->name, dir->pool));
     }
 
   return SVN_NO_ERROR;
@@ -390,10 +411,18 @@ checkout_file(file_context_t *file)
 
   if (file->checkout->progress.status != 201)
     {
-      /* TODO Parse server-provided error code / message. */
-      return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
-               _("Your file or directory '%s' is probably out-of-date"),
-               svn_path_local_style(file->name, file->pool));
+      if (file->checkout->progress.status == 404)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                              return_response_err(&file->checkout->progress),
+                              _("Path '%s' not present"),
+                              svn_path_local_style(file->name, file->pool));
+        }
+
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                    return_response_err(&file->checkout->progress),
+                    _("Your file or directory '%s' is probably out-of-date"),
+                    svn_path_local_style(file->name, file->pool));
     }
 
   return SVN_NO_ERROR;
@@ -928,10 +957,7 @@ delete_entry(const char *path,
 
   if (delete_ctx->status != 204)
     {
-      /* TODO Parse server-provided error code / message. */
-      return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
-               _("Your file or directory '%s' is probably out-of-date"),
-               svn_path_local_style(path, pool));
+      return return_response_err(delete_ctx);
     }
 
   apr_hash_set(dir->commit->deleted_entries,
@@ -1403,7 +1429,7 @@ close_file(void *file_baton,
 
       if (copy_ctx->status != 201 && copy_ctx->status != 204)
         {
-          abort();
+          return return_response_err(copy_ctx);
         }
     }
 
@@ -1438,9 +1464,7 @@ close_file(void *file_baton,
 
       if (put_ctx->status != 204 && put_ctx->status != 201)
         {
-          /* TODO Parse server-provided error code / message. */
-          return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                   _("Error PUTing '%s'"), ctx->put_url);
+          return return_response_err(put_ctx);
         }
     }
 
@@ -1500,8 +1524,8 @@ close_edit(void *edit_baton,
     }
 
   /* Inform the WC that we did a commit.  */
-  ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
-                ctx->callback_baton, pool);
+  SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
+                        ctx->callback_baton, pool));
 
   /* DELETE our completed activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
