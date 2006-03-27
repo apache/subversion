@@ -521,6 +521,15 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
 
+    def testMergeRecordOnly(self):
+        """Check that flagging revisions as manually merged works."""
+        self.svnmerge("init")
+        self.svnmerge("avail -vv -r9", match=r"svn log.*-r9:9")
+        self.svnmerge("merge --record-only -F -vv -r9",
+                      nonmatch=r"svn merge -r 8:9")
+        out = self.svnmerge("avail -r9")
+        self.assertEqual(out.strip(), "")
+
     def testBidirectionalMerges(self):
         """Check that reflected revisions are recognized properly for bidirectional merges."""
 

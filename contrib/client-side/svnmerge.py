@@ -946,7 +946,8 @@ def action_avail(branch_dir, branch_props):
         assert 0, "unhandled avail display type: %s" % opts["avail_display"]
 
 def action_merge(branch_dir, branch_props):
-    """Do the actual merge."""
+    """Record merge meta data, and do the actual merge (if not
+    requested otherwise via --record-only)."""
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
@@ -979,7 +980,17 @@ def action_merge(branch_dir, branch_props):
     if not revs:
         report('no revisions to merge, exiting')
         return
-    report('merging in revision(s) %s from "%s"' % (revs, opts["head_url"]))
+
+    # When manually marking revisions as merged, we only update the
+    # integration meta data, and don't perform an actual merge.
+    record_only = opts["record_only"]
+
+    if record_only:
+        report('recording merge of revision(s) %s from "%s"' %
+               (revs, opts["head_url"]))
+    else:
+        report('merging in revision(s) %s from "%s"' %
+               (revs, opts["head_url"]))
 
     # Do the merge(s). Note: the starting revision number to 'svn merge'
     # is NOT inclusive so we have to subtract one from start.
@@ -995,15 +1006,20 @@ def action_merge(branch_dir, branch_props):
               set_merge_props(branch_dir, new_merge_props)
               old_merge_props = new_merge_props
 
-        # Do the merge
-        svn_command('merge -r %d:%d %s %s' % \
-                    (start-1, end, opts["head_url"], branch_dir))
+        if not record_only:
+            # Do the merge
+            svn_command("merge -r %d:%d %s %s" % \
+                        (start - 1, end, opts["head_url"], branch_dir))
 
     # Write out commit message if desired
     if opts["commit_file"]:
         f = open(opts["commit_file"], "w")
-        print >>f, 'Merged revisions %s via %s from ' % \
-                    (revs | phantom_revs, NAME)
+        if record_only:
+            print >>f, 'Recorded merge of revisions %s via %s from ' % \
+                  (revs | phantom_revs, NAME)
+        else:
+            print >>f, 'Merged revisions %s via %s from ' % \
+                  (revs | phantom_revs, NAME)
         print >>f, '%s' % opts["head_url"]
         if opts["commit_verbose"]:
             print >>f
@@ -1392,6 +1408,11 @@ common_opts = [
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
                    "is written to"),
+    Option("-M", "--record-only",
+           value=True,
+           default=False,
+           help="do not perform an actual merge of the changes, yet record "
+                "that a merge happened"),
     OptionArg("-r", "--revision",
               metavar="REVLIST",
               default="",
@@ -1474,16 +1495,27 @@ command_table = {
     to appear as available to merged into the branch (as the code
     originated in the branch itself!).  svnmerge can skip these
     so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.""",
+    or -b command line option.
+
+    When manually merging changes across branches, --record-only can
+    be used to instruct %s that a manual merge of a certain revision
+    already happened, so that it can record it and not offer that
+    revision for merge anymore.  Conversely, when there are revisions
+    which should not be merged, use '%s block'.""" % (NAME, NAME),
     [
-        "-b", "-f", "-r", "-S", # import common opts
+        "-b", "-f", "-r", "-S", "-M", # import common opts
     ]),
 
     "block": (action_block,
     "block [OPTION...] [PATH]",
     """Block revisions within PATH so that they disappear from the available
     list. This is useful to hide revisions which will not be integrated.
-    If --revision is omitted, it defaults to all the available revisions.""",
+    If --revision is omitted, it defaults to all the available revisions.
+
+    Do not use this option to hide revisions that were manually merged
+    into the branch.  Instead, use '%s merge --record-only', which
+    records that a merge happened (as opposed to a merge which should
+    not happen).""" % NAME,
     [
         "-f", "-r", "-S", # import common opts
     ]),
