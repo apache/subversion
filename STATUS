@@ -111,6 +111,13 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r19039
+    Support APR and APR-util versions >= 0.9.10.
+    Justification:
+      They're breaking that limit now:-)
+    Votes:
+      +0: lundblad (will test later)
+
 Approved changes:
 
   * r18254
