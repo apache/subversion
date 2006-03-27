@@ -312,6 +312,9 @@ svn_ra_serf__handler_default(serf_request_t *request,
 
 /*
  * Handler that discards the entire request body.
+ *
+ * If baton is a svn_ra_serf__server_error_t and an error is detected, it
+ * will be populated for later detection.
  */
 apr_status_t
 svn_ra_serf__handler_discard_body(serf_request_t *request,
@@ -344,7 +347,38 @@ typedef struct {
 
   svn_ra_serf__list_t *done_item;
 
+  svn_boolean_t ignore_errors;
 } svn_ra_serf__xml_parser_t;
+
+/*
+ * Parses a server-side error message into a local Subversion error.
+ */
+typedef struct {
+  /* Our local representation of the error. */
+  svn_error_t *error;
+
+  /* Have we checked to see if there's an XML error in this response? */
+  svn_boolean_t init;
+
+  /* Was there an XML error response? */
+  svn_boolean_t has_xml_response;
+
+  /* Are we done with the response? */
+  svn_boolean_t done;
+
+  /* Have we seen an error tag? */
+  svn_boolean_t in_error;
+
+  /* Should we be collecting the XML cdata for the error message? */
+  svn_boolean_t collect_message;
+
+  /* XML parser and namespace used to parse the remote response */
+  svn_ra_serf__xml_parser_t parser;
+  svn_ra_serf__ns_t *ns_list;
+
+  /* The length of the error message we received. */
+  apr_size_t message_len;
+} svn_ra_serf__server_error_t;
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is

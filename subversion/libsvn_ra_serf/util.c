@@ -208,6 +208,86 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
   return APR_EOF;
 }
 
+/*
+ * Expat callback invoked on a start element tag for an error response.
+ */
+static void XMLCALL
+start_error(void *userData, const char *name, const char **attrs)
+{
+  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__dav_props_t prop_name;
+
+  /* check for new namespaces */
+  svn_ra_serf__define_ns(&ctx->ns_list, attrs, ctx->error->pool);
+
+  /* look up name space if present */
+  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
+
+  if (!ctx->in_error && 
+      strcmp(prop_name.namespace, "DAV:") == 0 &&
+      strcmp(prop_name.name, "error") == 0)
+    {
+      ctx->in_error = TRUE;
+    }
+  else if (ctx->in_error && strcmp(prop_name.name, "human-readable") == 0)
+    {
+      const char *err_code;
+
+      err_code = svn_ra_serf__find_attr(attrs, "errcode");
+      if (err_code)
+        {
+          ctx->error->apr_err = apr_atoi64(err_code);
+        }
+      else
+        {
+          ctx->error->apr_err = APR_EGENERAL;
+        }
+      ctx->collect_message = TRUE;
+    }
+}
+
+/*
+ * Expat callback invoked on an end element tag for a PROPFIND response.
+ */
+static void XMLCALL
+end_error(void *userData, const char *name)
+{
+  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__dav_props_t prop_name;
+
+  /* look up name space if present */
+  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
+
+  if (ctx->in_error &&
+      strcmp(prop_name.namespace, "DAV:") == 0 &&
+      strcmp(prop_name.name, "error") == 0)
+    {
+      ctx->in_error = FALSE;
+    }
+  if (ctx->in_error && strcmp(prop_name.name, "human-readable") == 0)
+    {
+      ctx->collect_message = FALSE;
+    }
+}
+
+/*
+ * Expat callback invoked on CDATA elements in an error response.
+ *
+ * This callback can be called multiple times.
+ */
+static void XMLCALL
+cdata_error(void *userData, const char *data, int len)
+{
+  svn_ra_serf__server_error_t *ctx = userData;
+
+  /* Skip blank lines in the human-readable error responses. */
+  if (ctx->collect_message && (len != 1 || data[0] != '\n'))
+    {
+      svn_ra_serf__expand_string(&ctx->error->message, &ctx->message_len,
+                                 data, len, ctx->error->pool);
+    }
+}
+
 apr_status_t
 svn_ra_serf__handler_discard_body(serf_request_t *request,
                                   serf_bucket_t *response,
@@ -215,6 +295,52 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
                                   apr_pool_t *pool)
 {
   apr_status_t status;
+  svn_ra_serf__server_error_t *server_err = baton;
+
+  if (server_err)
+    {
+      if (!server_err->init)
+        {
+          serf_bucket_t *hdrs;
+          const char *val;
+          
+          server_err->init = TRUE;
+          hdrs = serf_bucket_response_get_headers(response);
+          val = serf_bucket_headers_get(hdrs, "Content-Type");
+          if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+            {
+              server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
+              server_err->has_xml_response = TRUE;
+              server_err->parser.user_data = server_err;
+              server_err->parser.start = start_error;
+              server_err->parser.end = end_error;
+              server_err->parser.cdata = cdata_error;
+              server_err->parser.done = &server_err->done;
+              server_err->parser.ignore_errors = TRUE;
+            }
+          else
+            {
+              server_err->error = SVN_NO_ERROR;
+            }
+        }
+
+      if (server_err->has_xml_response)
+        {
+          apr_status_t status;
+
+          status = svn_ra_serf__handle_xml_parser(request, response,
+                                                  &server_err->parser, pool);
+
+          if (server_err->done && server_err->error->apr_err == APR_SUCCESS) 
+            {
+              svn_error_clear(server_err->error);
+              server_err->error = SVN_NO_ERROR;
+            }
+
+          return status;
+        }
+      
+    }
 
   /* Just loop through and discard the body. */
   while (1)
@@ -393,7 +519,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
     }
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404)
+  if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
       /* If our caller won't know about the 404, abort() for now. */
       if (!ctx->status_code)
@@ -431,7 +557,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         }
 
       xml_status = XML_Parse(ctx->xmlp, data, len, 0);
-      if (xml_status == XML_STATUS_ERROR)
+      if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
         {
           abort();
         }
@@ -444,7 +570,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (APR_STATUS_IS_EOF(status))
         {
           xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
-          if (xml_status == XML_STATUS_ERROR)
+          if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
               abort();
             }
