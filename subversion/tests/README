@@ -181,24 +181,19 @@ this...
 What's here
 -----------
 
-   * svn_tests_main.c 
+   * svn_test_main.c
      [shared library "libsvn_tests_main"]
      A standardized main() function to drive tests.  Link this into
      your automated test-programs.
 
-   * svn_tests_editor.c
+   * svn_test_editor.c
      [shared library "libsvn_tests_editor"]
      An editor for testing drivers of svn_delta_edit_fns_t.  This
      editor's functions simply print information to stdout.
 
-   * xml/
-    A subdirectory containing various <delta-pkg> XML files.  If one
-    of these testing trees isn't what you need, create a new one and
-    put it with the others.
-
-   * svn/
+   * cmdline/
      A collection of python scripts to test the command-line client.
-   
+
 
 `make check`
 ------------
