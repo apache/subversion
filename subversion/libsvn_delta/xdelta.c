@@ -90,48 +90,115 @@ init_adler32(struct adler32 *ad, const char *data, apr_uint32_t datalen)
   return ad;
 }
 
-/* Match structure used in the xdelta matches hashtable.  This contains the
-   position and length of the initial match.  */
+/* Size of the blocks we compute checksums for. This was chosen out of
+   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
+#define MATCH_BLOCKSIZE 64
 
-struct match
+/* Information for a block of the delta source.  The length of the
+   block is the smaller of MATCH_BLOCKSIZE and the difference between
+   the size of the source data and the position of this block. */
+struct block
 {
-  apr_uint32_t pos;
-  apr_uint32_t len;
+  apr_uint32_t adlersum;
+  apr_size_t pos;
 };
 
-/* Initialize the matches table from DATA.  This goes through every
-   block of BLOCKSIZE bytes in the source and checksums it, inserting the
-   result into the MATCHES table.  */
+/* A hash table, using open addressing, of the blocks of the source. */
+struct blocks
+{
+  /* The largest valid index of slots. */
+  apr_size_t max;
+  /* The vector of blocks.  A pos value of (apr_size_t)-1 represents an unused
+     slot. */
+  struct block *slots;
+};
 
+
+/* Return a hash value calculated from the adler32 SUM, suitable for use with
+   our hash table. */
+static apr_size_t hash_func(apr_uint32_t sum)
+{
+  /* Since the adl32 checksum have a bad distribution for the 11th to 16th
+     bits when used for our small block size, we add some bits from the
+     other half of the checksum. */
+  return sum ^ (sum >> 12);
+}
+
+/* Insert a block with the checksum ADLERSUM at position POS in the source data
+   into the table BLOCKS.  Ignore duplicates. */
 static void
-init_matches_table(const char *data,
+add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
+{
+  apr_size_t h = hash_func(adlersum) & blocks->max;
+
+  /* This will terminate, since we know that we will not fill the table. */
+  while (blocks->slots[h].pos != (apr_size_t)-1)
+    {
+      /* No duplicates! */
+      if (blocks->slots[h].adlersum == adlersum)
+        return;
+      h = (h + 1) & blocks->max;
+    }
+  blocks->slots[h].adlersum = adlersum;
+  blocks->slots[h].pos = pos;
+}
+
+/* Find a block in BLOCKS with the checksum ADLERSUM, returning its position
+   in the source data.  If there is no such block, return (apr_size_t)-1. */
+static apr_size_t
+find_block(const struct blocks *blocks, apr_uint32_t adlersum)
+{
+  apr_size_t h = hash_func(adlersum) & blocks->max;
+
+  while (blocks->slots[h].adlersum != adlersum
+         && blocks->slots[h].pos != (apr_size_t)-1)
+    h = (h + 1) & blocks->max;
+
+  return blocks->slots[h].pos;
+}
+      
+/* Initialize the matches table from DATA of size DATALEN.  This goes
+   through every block of MATCH_BLOCKSIZE bytes in the source and
+   checksums it, inserting the result into the BLOCKS table.  */
+static void
+init_blocks_table(const char *data,
                    apr_size_t datalen,
-                   apr_size_t blocksize,
-                   apr_hash_t *matches,
+                  struct blocks *blocks,
                    apr_pool_t *pool)
 {
-  apr_size_t i = 0;
+  apr_size_t i;
   struct adler32 adler;
-  for (i = 0; i < datalen; i += blocksize)
+  apr_size_t nblocks;
+  apr_size_t nslots = 1;
+
+  /* Be pesimistic about the block count. */
+  nblocks = datalen / MATCH_BLOCKSIZE + 1;
+  /* Find nearest larger power of two. */
+  while (nslots <= nblocks)
+    nslots *= 2;
+  /* Double the number of slots to avoid a too high load. */
+  nslots *= 2;
+  blocks->max = nslots - 1;
+  blocks->slots = apr_palloc(pool, nslots * sizeof(*(blocks->slots)));
+  for (i = 0; i < nslots; ++i)
+    {
+      /* Avoid using an indeterminate value in the lookup. */
+      blocks->slots[i].adlersum = 0;
+      blocks->slots[i].pos = (apr_size_t)-1;
+    }
+
+  for (i = 0; i < datalen; i += MATCH_BLOCKSIZE)
     {
       /* If this is the last piece, it may be blocksize large */
       apr_uint32_t step =
-        ((i + blocksize) >= datalen) ? (datalen - i) : blocksize;
+        ((i + MATCH_BLOCKSIZE) >= datalen) ? (datalen - i) : MATCH_BLOCKSIZE;
       apr_uint32_t adlersum =
         adler32_sum(init_adler32(&adler, data + i, step));
-      if (apr_hash_get(matches, &adlersum, sizeof(adlersum)) == NULL)
-        {
-          struct match *newmatch = apr_palloc(pool, sizeof *newmatch);
-          apr_uint32_t *key = apr_palloc(pool, sizeof *key);
-          newmatch->pos = i;
-          newmatch->len = step;
-          *key = adlersum;
-          apr_hash_set(matches, key, sizeof(*key), newmatch);
-        }
+      add_block(blocks, adlersum, i);
     }
 }
 
-/* Try to find a match for the target data B in MATCHES, and then
+/* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in a we ended up in (in
    case we extended it backwards) in APOSP, the length of the match in
@@ -144,7 +211,7 @@ init_matches_table(const char *data,
    lookup found a match, regardless of length.  Return FALSE
    otherwise.  */
 static svn_boolean_t
-find_match(apr_hash_t *matches,
+find_match(const struct blocks *blocks,
            const struct adler32 *rolling,
            const char *a,
            apr_size_t asize,
@@ -158,17 +225,16 @@ find_match(apr_hash_t *matches,
 {
   apr_uint32_t sum = adler32_sum(rolling);
   apr_size_t alen, badvance, apos;
-  struct match *match;
   apr_size_t tpos, tlen;
 
+  tpos = find_block(blocks, sum);
+
   /* See if we have a match.  */
-  match = apr_hash_get(matches, &sum, sizeof(sum));
-  if (match == NULL)
+  if (tpos == (apr_size_t)-1)
     return FALSE;
 
-  /* See where our match started.  */
-  tpos = match->pos;
-  tlen = match->len;
+  tlen = ((tpos + MATCH_BLOCKSIZE) >= asize)
+    ? (asize - tpos) : MATCH_BLOCKSIZE;
 
   /* Make sure it's not a false match.  */
   if (memcmp(a + tpos, b + bpos, tlen) != 0)
@@ -204,10 +270,6 @@ find_match(apr_hash_t *matches,
   return TRUE;
 }
 
-/* Size of the blocks we compute checksums for. This was chosen out of
-   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
-#define MATCH_BLOCKSIZE 64
-
 
 /* Compute a delta from A to B using xdelta.
 
@@ -241,12 +303,9 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
               apr_uint32_t bsize,
               apr_pool_t *pool)
 {
-  apr_hash_t *matches = apr_hash_make(pool);
+  struct blocks blocks;
   struct adler32 rolling;
   apr_size_t sz, lo, hi, pending_insert_start = 0, pending_insert_len = 0;
-
-  /* Initialize the matches table.  */
-  init_matches_table(a, asize, MATCH_BLOCKSIZE, matches, pool);
 
   /* If the size of the target is smaller than the match blocksize, just
      insert the entire target.  */
@@ -256,6 +315,9 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
                              0, bsize, b, pool);
       return;
     }
+
+  /* Initialize the matches table.  */
+  init_blocks_table(a, asize, &blocks, pool);
 
   /* Initialize our rolling checksum.  */
   init_adler32(&rolling, b, MATCH_BLOCKSIZE);
@@ -267,7 +329,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
       apr_size_t next;
       svn_boolean_t match;
 
-      match = find_match(matches, &rolling, a, asize, b, bsize, lo, &apos, 
+      match = find_match(&blocks, &rolling, a, asize, b, bsize, lo, &apos, 
                          &alen, &badvance, &pending_insert_len);
 
       /* If we didn't find a real match, insert the byte at the target
