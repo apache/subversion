@@ -106,6 +106,9 @@ typedef struct {
 
   /* Deleted files - so we can detect delete+add (replace) ops. */
   apr_hash_t *deleted_entries;
+
+  /* Copied entries - so we do not checkout these resources. */
+  apr_hash_t *copied_entries;
 } commit_context_t;
 
 /* Represents a directory. */
@@ -307,6 +310,27 @@ checkout_dir(dir_context_t *dir)
   if (dir->parent_dir)
     {
       SVN_ERR(checkout_dir(dir->parent_dir));
+      
+      /* Is our parent a copy?  If so, we're already implicitly checked out. */
+      if (apr_hash_get(dir->commit->copied_entries,
+                       dir->parent_dir->name, APR_HASH_KEY_STRING))
+        {
+          /* Implicitly checkout this dir now. */
+          dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
+          dir->checkout->pool = dir->pool;
+          dir->checkout->activity_url = dir->commit->activity_url;
+          dir->checkout->activity_url_len = dir->commit->activity_url_len;
+          dir->checkout->resource_url =
+            svn_path_url_add_component(dir->parent_dir->checkout->resource_url,
+                                       svn_path_basename(dir->name, dir->pool),
+                                       dir->pool);
+          
+          apr_hash_set(dir->commit->copied_entries,
+                       apr_pstrdup(dir->commit->pool, dir->name),
+                       APR_HASH_KEY_STRING, (void*)1);
+
+          return SVN_NO_ERROR;
+        }
     }
 
   /* Checkout our directory into the activity URL now. */
@@ -758,6 +782,17 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, "Depth", "infinity");
   serf_bucket_headers_set(headers, "Overwrite", "T");
 
+  /* Implicitly checkout this dir now. */
+  dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
+  dir->checkout->pool = dir->pool;
+  dir->checkout->activity_url = dir->commit->activity_url;
+  dir->checkout->activity_url_len = dir->commit->activity_url_len;
+  dir->checkout->resource_url = apr_pstrdup(dir->checkout->pool, uri.path);
+
+  apr_hash_set(dir->commit->copied_entries,
+               apr_pstrdup(dir->commit->pool, path), APR_HASH_KEY_STRING,
+               (void*)1);
+      
   return APR_SUCCESS;
 }
 
@@ -1615,6 +1650,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->keep_locks = keep_locks;
 
   ctx->deleted_entries = apr_hash_make(ctx->pool);
+  ctx->copied_entries = apr_hash_make(ctx->pool);
 
   editor = svn_delta_default_editor(pool);
   editor->open_root = open_root;
