@@ -1436,8 +1436,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&put_ctx->done,
                                             ctx->commit->session, pool));
 
-      if ((ctx->checkout && put_ctx->status != 204) ||
-          (!ctx->checkout && put_ctx->status != 201))
+      if (put_ctx->status != 204 && put_ctx->status != 201)
         {
           /* TODO Parse server-provided error code / message. */
           return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
