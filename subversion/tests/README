@@ -80,6 +80,9 @@ XPASS (uneXpected PASS).
 The purpose of XFAIL tests is to confirm that a known bug still
 exists. When you see such a test uneXpectedly PASS, you've probably
 fixed the bug it tests for, even if that wasn't your intention. :-)
+XFAIL is not to be used as a way of testing a deliberately invalid
+operation that is expected to fail when Subversion is working
+correctly, nor as a place-holder for a test that is not yet written.
 
 Each test function conforms to the svn_test_driver_t prototype:
 
