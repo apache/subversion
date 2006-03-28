@@ -743,7 +743,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
                            apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *path, *present_path = "";
+  const char *path, *relative_path, *present_path = "";
 
   /* If we're only interested in our VCC, just return it. */
   if (session->vcc_url && !rel_path)
@@ -767,16 +767,12 @@ svn_ra_serf__discover_root(const char **vcc_url,
                                     "DAV:",
                                     "version-controlled-configuration");
 
-      if (rel_path)
-        {
-          *rel_path = svn_ra_serf__get_ver_prop(props, path,
-                                                SVN_INVALID_REVNUM,
-                                                SVN_DAV_PROP_NS_DAV,
-                                                "baseline-relative-path");
-        }
-
       if (*vcc_url)
         {
+          relative_path = svn_ra_serf__get_ver_prop(props, path,
+                                                    SVN_INVALID_REVNUM,
+                                                    SVN_DAV_PROP_NS_DAV,
+                                                    "baseline-relative-path");
           break;
         }
 
@@ -800,9 +796,34 @@ svn_ra_serf__discover_root(const char **vcc_url,
       session->vcc_url = apr_pstrdup(session->pool, *vcc_url);
     }
 
-  if (present_path[0] != '\0' && rel_path)
+  /* Update our cached repository root URL. */
+  if (!session->repos_root_str)
     {
-      *rel_path = svn_path_url_add_component(*rel_path, present_path, pool);
+      svn_stringbuf_t *url_buf;
+
+      url_buf = svn_stringbuf_create(path, pool);
+
+      svn_path_remove_components(url_buf,
+                                 svn_path_component_count(relative_path));
+
+      /* Now recreate the root_url. */
+      session->repos_root = session->repos_url;
+      session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
+      session->repos_root_str = apr_uri_unparse(session->pool,
+                                                &session->repos_root, 0);
+    }
+
+  if (rel_path)
+    {
+      if (present_path[0] != '\0')
+        {
+          *rel_path = svn_path_url_add_component(relative_path,
+                                                 present_path, pool);
+        }
+      else
+        {
+          *rel_path = relative_path;
+        }
     }
 
   return SVN_NO_ERROR;

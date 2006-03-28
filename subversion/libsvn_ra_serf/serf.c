@@ -620,38 +620,11 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 
   if (!session->repos_root_str)
     {
-      const char *vcc_url, *baseline_url, *root_path;
-      svn_stringbuf_t *url_buf;
+      const char *vcc_url;
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &baseline_url,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
                                          session, session->conns[0],
                                          session->repos_url.path, pool));
-
-      if (!baseline_url)
-        {
-          abort();
-        }
-
-      /* If we see baseline_url as "", we're the root.  Otherwise... */
-      if (*baseline_url == '\0')
-        {
-          root_path = session->repos_url.path;
-          session->repos_root = session->repos_url;
-          session->repos_root_str = session->repos_url_str;
-        }
-      else
-        {
-          url_buf = svn_stringbuf_create(session->repos_url.path, pool);
-          svn_path_remove_components(url_buf,
-                                     svn_path_component_count(baseline_url));
-          root_path = apr_pstrdup(session->pool, url_buf->data);
-
-          /* Now that we have the root_path, recreate the root_url. */
-          session->repos_root = session->repos_url;
-          session->repos_root.path = (char*)root_path;
-          session->repos_root_str = apr_uri_unparse(session->pool,
-                                                    &session->repos_root, 0);
-        }
     }
 
   *url = session->repos_root_str;
