@@ -139,8 +139,8 @@ __date__ = kwextract('$Date$')
 default_opts = {
     "svn": "svn",
     "prop": NAME + "-integrated",
-    "block_prop": NAME + "-blocked",
-    "commit_verbose": True,
+    "block-prop": NAME + "-blocked",
+    "commit-verbose": True,
 }
 logs = {}
 mergeprops = {}
@@ -533,7 +533,7 @@ def get_merge_props(dir):
 
 def get_block_props(dir):
     """Extract the blocked revisions."""
-    return get_revlist_prop(dir, opts["block_prop"])
+    return get_revlist_prop(dir, opts["block-prop"])
 
 def get_blocked_revs(dir, head_path):
     p = get_block_props(dir)
@@ -583,7 +583,7 @@ def set_merge_props(dir, props):
     set_props(dir, opts["prop"], props)
 
 def set_block_props(dir, props):
-    set_props(dir, opts["block_prop"], props)
+    set_props(dir, opts["block-prop"], props)
 
 def set_blocked_revs(dir, head_path, revs):
     props = get_block_props(dir)
@@ -1023,7 +1023,7 @@ def action_merge(branch_dir, branch_props):
             print >>f, 'Merged revisions %s via %s from ' % \
                   (revs | phantom_revs, NAME)
         print >>f, '%s' % opts["head-url"]
-        if opts["commit_verbose"]:
+        if opts["commit-verbose"]:
             print >>f
             print >>f, construct_merged_log_message(opts["head-url"], revs),
 
@@ -1060,7 +1060,7 @@ def action_block(branch_dir, branch_props):
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
         print >>f, 'Blocked revisions %s via %s' % (revs_to_block, NAME)
-        if opts["commit_verbose"]:
+        if opts["commit-verbose"]:
             print >>f
             print >>f, construct_merged_log_message(opts["head-url"],
                                                     revs_to_block),
@@ -1091,7 +1091,7 @@ def action_unblock(branch_dir, branch_props):
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
         print >>f, 'Unblocked revisions %s via %s' % (revs_to_unblock, NAME)
-        if opts["commit_verbose"]:
+        if opts["commit-verbose"]:
             print >>f
             print >>f, construct_merged_log_message(opts["head-url"],
                                                     revs_to_unblock),
