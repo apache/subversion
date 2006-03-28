@@ -1621,15 +1621,14 @@ end_report(void *userData, const char *raw_name)
            * to the root and then add it back in after we replace the
            * version number.
            */
-          if (strcmp(ctx->sess->repos_url.path,
-                     ctx->sess->repos_root.path) != 0)
+          if (strcmp(ctx->source, ctx->sess->repos_root.path) != 0)
             {
-              apr_size_t root_count, rel_count;
+              apr_size_t root_count, src_count;
 
-              root_count = svn_path_component_count(ctx->sess->repos_url.path);
-              rel_count = svn_path_component_count(ctx->sess->repos_root.path);
+              src_count = svn_path_component_count(ctx->source);
+              root_count = svn_path_component_count(ctx->sess->repos_root.path);
 
-              svn_path_remove_components(path, root_count - rel_count);
+              svn_path_remove_components(path, src_count - root_count);
 
               fix_root = TRUE;
             }
@@ -1649,7 +1648,7 @@ end_report(void *userData, const char *raw_name)
               root_len = strlen(ctx->sess->repos_root.path) + 1;
 
               svn_path_add_component(path,
-                                     &ctx->sess->repos_url.path[root_len]);
+                                     &ctx->source[root_len]);
             }
 
           svn_path_add_component(path, info->name);
@@ -2356,7 +2355,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
-                              versus_url, diff_target, NULL,
+                              session->repos_url.path, versus_url, diff_target,
                               recurse, ignore_ancestry, text_deltas,
                               diff_editor, diff_baton, pool);
 }

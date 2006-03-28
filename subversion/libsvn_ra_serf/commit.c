@@ -790,7 +790,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   dir->checkout->resource_url = apr_pstrdup(dir->checkout->pool, uri.path);
 
   apr_hash_set(dir->commit->copied_entries,
-               apr_pstrdup(dir->commit->pool, path), APR_HASH_KEY_STRING,
+               apr_pstrdup(dir->commit->pool, dir->name), APR_HASH_KEY_STRING,
                (void*)1);
       
   return APR_SUCCESS;
