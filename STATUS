@@ -119,6 +119,14 @@ Candidate changes:
       +1: dlr
       +0: lundblad (only r19039, will test later)
 
+  * r19041, r19060
+    Fix RPM to build after 19039, r19057 changed.
+    Justification:
+      Broken RPM build.
+    Notes: Depends on r19039, r19057, respectively.
+    Votes:
+      +1: david
+
 Approved changes:
 
   * r18254
