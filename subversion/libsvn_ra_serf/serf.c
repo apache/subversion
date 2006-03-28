@@ -299,17 +299,16 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
 
   prop_ctx = NULL;
 
-  svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                             path, revision, "0", desired_props, TRUE,
-                             NULL, session->pool);
-      
-  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
-
-  /* If we were given a specific revision and we now have a 404,
-   * try to discover whether the file existed at that point in time.
+  /* If we were given a specific revision, we have to fetch the VCC and
+   * do a PROPFIND off of that.
    */
-  if (SVN_IS_VALID_REVNUM(revision) &&
-      svn_ra_serf__propfind_status_code(prop_ctx) == 404)
+  if (!SVN_IS_VALID_REVNUM(revision))
+    {
+      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
+                                 path, revision, "0", desired_props, TRUE,
+                                 NULL, session->pool);
+    }
+  else
     {
       const char *vcc_url, *relative_url, *baseline_url, *basecoll_url;
 
@@ -340,9 +339,9 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
                                  path, revision, "0",
                                  desired_props, TRUE,
                                  NULL, session->pool);
-      
-      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
     }
+
+  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
 
   *ret_path = path;
   *ret_prop_ctx = prop_ctx;
