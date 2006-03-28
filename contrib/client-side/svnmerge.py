@@ -47,6 +47,8 @@
 # - Improved generated commit message to make it machine parsable even when
 #   merging commits which are themselves merges.
 # - Add --force option to skip working copy check
+# - Add --record-only option to "svnmerge merge" to avoid performing
+#   an actual merge, yet record that a merge happened.
 #
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
