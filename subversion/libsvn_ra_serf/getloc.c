@@ -108,7 +108,7 @@ static void pop_state(loc_context_t *loc_ctx)
   loc_ctx->free_state = free_state;
 }
 
-static void XMLCALL
+static svn_error_t *
 start_getloc(void *userData, const char *raw_name, const char **attrs)
 {
   loc_context_t *loc_ctx = userData;
@@ -145,9 +145,11 @@ start_getloc(void *userData, const char *raw_name, const char **attrs)
                        apr_pstrdup(loc_ctx->pool, path));
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
+static svn_error_t *
 end_getloc(void *userData, const char *raw_name)
 {
   loc_context_t *loc_ctx = userData;
@@ -156,7 +158,7 @@ end_getloc(void *userData, const char *raw_name)
 
   if (!loc_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   cur_state = loc_ctx->state;
@@ -173,6 +175,8 @@ end_getloc(void *userData, const char *raw_name)
     {
       pop_state(loc_ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

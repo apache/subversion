@@ -208,7 +208,7 @@ create_propval(blame_info_t *info)
   return s;
 }
 
-static void XMLCALL
+static svn_error_t *
 start_blame(void *userData, const char *raw_name, const char **attrs)
 {
   blame_context_t *blame_ctx = userData;
@@ -293,9 +293,11 @@ start_blame(void *userData, const char *raw_name, const char **attrs)
           break;
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
+static svn_error_t *
 end_blame(void *userData, const char *raw_name)
 {
   blame_context_t *blame_ctx = userData;
@@ -359,16 +361,18 @@ end_blame(void *userData, const char *raw_name)
 
       pop_state(blame_ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-cdata_blame(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_blame(void *userData, const char *data, apr_size_t len)
 {
   blame_context_t *blame_ctx = userData;
 
   if (!blame_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   switch (blame_ctx->state->state)
@@ -395,6 +399,8 @@ cdata_blame(void *userData, const char *data, int len)
       default:
         break;
     }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

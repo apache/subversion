@@ -1154,7 +1154,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
     }
 }
 
-static void XMLCALL
+static svn_error_t *
 start_report(void *userData, const char *name, const char **attrs)
 {
   report_context_t *ctx = userData;
@@ -1492,9 +1492,11 @@ start_report(void *userData, const char *name, const char **attrs)
       ctx->state->info->prop_val = NULL;
       push_state(ctx, PROP);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
+static svn_error_t *
 end_report(void *userData, const char *raw_name)
 {
   report_context_t *ctx = userData;
@@ -1766,10 +1768,12 @@ end_report(void *userData, const char *raw_name)
     {
       pop_state(ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-cdata_report(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_report(void *userData, const char *data, apr_size_t len)
 {
   report_context_t *ctx = userData;
   if (ctx->state && ctx->state->state == PROP)
@@ -1777,8 +1781,9 @@ cdata_report(void *userData, const char *data, int len)
       svn_ra_serf__expand_string(&ctx->state->info->prop_val,
                                  &ctx->state->info->prop_val_len,
                                  data, len, ctx->state->pool);
-
     }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

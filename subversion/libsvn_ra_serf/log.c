@@ -167,7 +167,7 @@ static void pop_state(log_context_t *log_ctx)
   /* ctx->free_state->info = NULL; */
 }
 
-static void XMLCALL
+static svn_error_t *
 start_log(void *userData, const char *raw_name, const char **attrs)
 {
   log_context_t *log_ctx = userData;
@@ -214,9 +214,11 @@ start_log(void *userData, const char *raw_name, const char **attrs)
           push_state(log_ctx, COMMENT);
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
+static svn_error_t *
 end_log(void *userData, const char *raw_name)
 {
   log_context_t *log_ctx = userData;
@@ -225,7 +227,7 @@ end_log(void *userData, const char *raw_name)
 
   if (!log_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   cur_state = log_ctx->state;
@@ -286,16 +288,18 @@ end_log(void *userData, const char *raw_name)
       cur_state->info->tmp = NULL;
       pop_state(log_ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-cdata_log(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_log(void *userData, const char *data, apr_size_t len)
 {
   log_context_t *log_ctx = userData;
 
   if (!log_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   switch (log_ctx->state->state)
@@ -311,6 +315,8 @@ cdata_log(void *userData, const char *data, int len)
       default:
         break;
     }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
