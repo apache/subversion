@@ -92,9 +92,6 @@ typedef struct {
   log_state_list_t *state;
   log_state_list_t *free_state;
 
-  /* Return error code; if we exceed count, this may be set */
-  svn_error_t *error;
-
   /* are we done? */
   svn_boolean_t done;
 
@@ -243,22 +240,15 @@ end_log(void *userData, const char *raw_name)
            strcmp(name.name, "log-item") == 0)
     {
       /* Give the info to the reporter */
-      log_ctx->error = log_ctx->receiver(log_ctx->receiver_baton,
-                                         cur_state->info->paths,
-                                         cur_state->info->version,
-                                         cur_state->info->creator,
-                                         cur_state->info->date,
-                                         cur_state->info->comment,
-                                         log_ctx->pool);
+      SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
+                                cur_state->info->paths,
+                                cur_state->info->version,
+                                cur_state->info->creator,
+                                cur_state->info->date,
+                                cur_state->info->comment,
+                                log_ctx->pool));
 
-      if (log_ctx->error)
-        {
-          log_ctx->state = NULL;
-        }
-      else
-        {
-          pop_state(log_ctx);
-        }
+       pop_state(log_ctx);
     }
   else if (cur_state->state == VERSION &&
            strcmp(name.name, "version-name") == 0)
@@ -337,7 +327,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
-  svn_revnum_t *peg_rev;
+  svn_revnum_t peg_rev;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
@@ -346,7 +336,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->receiver_baton = receiver_baton;
   log_ctx->limit = limit;
   log_ctx->changed_paths = discover_changed_paths;
-  log_ctx->error = SVN_NO_ERROR;
   log_ctx->done = FALSE;
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
@@ -471,5 +460,5 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_wait(&log_ctx->done, session, pool));
 
-  return log_ctx->error;
+  return SVN_NO_ERROR;
 }

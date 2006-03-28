@@ -258,11 +258,11 @@ start_blame(void *userData, const char *raw_name, const char **attrs)
         }
       else if (strcmp(name.name, "txdelta") == 0)
         {
-          blame_ctx->file_rev(blame_ctx->file_rev_baton,
-                              info->path, info->rev,
-                              info->rev_props,
-                              &info->txdelta, &info->txdelta_baton,
-                              info->prop_diffs, info->pool);
+          SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
+                                      info->path, info->rev,
+                                      info->rev_props,
+                                      &info->txdelta, &info->txdelta_baton,
+                                      info->prop_diffs, info->pool));
 
           info->stream = svn_base64_decode
               (svn_txdelta_parse_svndiff(info->txdelta, info->txdelta_baton,
@@ -326,11 +326,11 @@ end_blame(void *userData, const char *raw_name)
       /* no file changes. */
       if (!info->stream)
         {
-          blame_ctx->file_rev(blame_ctx->file_rev_baton,
-                              info->path, info->rev,
-                              info->rev_props,
-                              NULL, NULL,
-                              info->prop_diffs, info->pool);
+          SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
+                                      info->path, info->rev,
+                                      info->rev_props,
+                                      NULL, NULL,
+                                      info->prop_diffs, info->pool));
         }
       pop_state(blame_ctx);
     }
