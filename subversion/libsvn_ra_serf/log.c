@@ -188,7 +188,8 @@ start_log(void *userData, const char *raw_name, const char **attrs)
       log_ctx->count++;
       if (log_ctx->limit && log_ctx->count > log_ctx->limit)
         {
-          abort();
+          log_ctx->state = NULL;
+          return;
         }
 
       push_state(log_ctx, ITEM);
@@ -240,15 +241,22 @@ end_log(void *userData, const char *raw_name)
            strcmp(name.name, "log-item") == 0)
     {
       /* Give the info to the reporter */
-      log_ctx->receiver(log_ctx->receiver_baton,
-                        cur_state->info->paths,
-                        cur_state->info->version,
-                        cur_state->info->creator,
-                        cur_state->info->date,
-                        cur_state->info->comment,
-                        log_ctx->pool);
+      log_ctx->error = log_ctx->receiver(log_ctx->receiver_baton,
+                                         cur_state->info->paths,
+                                         cur_state->info->version,
+                                         cur_state->info->creator,
+                                         cur_state->info->date,
+                                         cur_state->info->comment,
+                                         log_ctx->pool);
 
-      pop_state(log_ctx);
+      if (log_ctx->error)
+        {
+          log_ctx->state = NULL;
+        }
+      else
+        {
+          pop_state(log_ctx);
+        }
     }
   else if (cur_state->state == VERSION &&
            strcmp(name.name, "version-name") == 0)
