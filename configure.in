@@ -52,8 +52,8 @@ dnl   - APR_LARGEFILE added
 dnl   - APR_GSETID added
 dnl   - bug in apr_temp_dir_get() fixed
 
-APR_VER_REGEXES=["0\.9\.[5-9] 0.9.1[0-9] 1."]
-APU_VER_REGEXES=["0\.9\.[5-9] 0.9.1[0-9] 1."]
+APR_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+APU_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
