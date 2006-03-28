@@ -340,9 +340,9 @@ typedef svn_error_t *
                                   const char *name);
 
 typedef svn_error_t *
-(*svn_ra_serf__xml_cdata_element_t)(void *baton,
-                                    const char *data,
-                                    apr_size_t len);
+(*svn_ra_serf__xml_cdata_chunk_handler_t)(void *baton,
+                                          const char *data,
+                                          apr_size_t len);
 
 /*
  * Helper structure associated with handle_xml_parser handler that will
@@ -353,7 +353,7 @@ typedef struct {
 
   svn_ra_serf__xml_start_element_t start;
   svn_ra_serf__xml_end_element_t end;
-  svn_ra_serf__xml_cdata_element_t cdata;
+  svn_ra_serf__xml_cdata_chunk_handler_t cdata;
 
   XML_Parser xmlp;
 
