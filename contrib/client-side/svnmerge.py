@@ -237,10 +237,10 @@ def launchsvn(s, show=False, pretend=False, **kwargs):
 
 def svn_command(s):
     """Do (or pretend to do) an SVN command."""
-    out = launchsvn(s, show=opts["show_changes"] or opts["dry_run"],
-                    pretend=opts["dry_run"],
+    out = launchsvn(s, show=opts["show-changes"] or opts["dry-run"],
+                    pretend=opts["dry-run"],
                     split_lines=False)
-    if not opts["dry_run"]:
+    if not opts["dry-run"]:
         print out
 
 def check_dir_clean(dir):
@@ -888,13 +888,13 @@ def action_init(branch_dir, branch_props):
     set_merge_props(branch_dir, branch_props)
 
     # Write out commit message if desired
-    if opts["commit_file"]:
-        f = open(opts["commit_file"], "w")
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
         print >>f, 'Initialized merge tracking via "%s" with revisions "%s" from ' \
             % (NAME, revs)
         print >>f, '%s' % opts["head_url"]
         f.close()
-        report('wrote commit message to "%s"' % opts["commit_file"])
+        report('wrote commit message to "%s"' % opts["commit-file"])
 
 def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
@@ -910,9 +910,9 @@ def action_avail(branch_dir, branch_props):
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
-    if "avail" in opts["avail_showwhat"]:
+    if "avail" in opts["avail-showwhat"]:
         revs |= avail_revs
-    if "blocked" in opts["avail_showwhat"]:
+    if "blocked" in opts["avail-showwhat"]:
         revs |= blocked_revs
 
     # Limit to revisions specified by -r (if any)
@@ -920,15 +920,15 @@ def action_avail(branch_dir, branch_props):
         revs = revs & RevisionSet(opts["revision"])
 
     # Show them, either numerically, in log format, or as diffs
-    if opts["avail_display"] == "revisions":
+    if opts["avail-display"] == "revisions":
         if revs:
             report("available revisions to be merged are:")
             print revs
-    elif opts["avail_display"] == "logs":
+    elif opts["avail-display"] == "logs":
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
                         (start, end, opts["head_url"]))
-    elif opts["avail_display"] == "diffs":
+    elif opts["avail-display"] == "diffs":
         for start,end in revs.normalized():
             print
             if start == end:
@@ -943,7 +943,7 @@ def action_avail(branch_dir, branch_props):
             svn_command('diff -r %d:%d %s' % \
                         (start-1, end, opts["head_url"]))
     else:
-        assert 0, "unhandled avail display type: %s" % opts["avail_display"]
+        assert 0, "unhandled avail display type: %s" % opts["avail-display"]
 
 def action_merge(branch_dir, branch_props):
     """Record merge meta data, and do the actual merge (if not
@@ -983,7 +983,7 @@ def action_merge(branch_dir, branch_props):
 
     # When manually marking revisions as merged, we only update the
     # integration meta data, and don't perform an actual merge.
-    record_only = opts["record_only"]
+    record_only = opts["record-only"]
 
     if record_only:
         report('recording merge of revision(s) %s from "%s"' %
@@ -1012,8 +1012,8 @@ def action_merge(branch_dir, branch_props):
                         (start - 1, end, opts["head_url"], branch_dir))
 
     # Write out commit message if desired
-    if opts["commit_file"]:
-        f = open(opts["commit_file"], "w")
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
         if record_only:
             print >>f, 'Recorded merge of revisions %s via %s from ' % \
                   (revs | phantom_revs, NAME)
@@ -1026,7 +1026,7 @@ def action_merge(branch_dir, branch_props):
             print >>f, construct_merged_log_message(opts["head_url"], revs),
 
         f.close()
-        report('wrote commit message to "%s"' % opts["commit_file"])
+        report('wrote commit message to "%s"' % opts["commit-file"])
 
     # Update the set of merged revisions.
     merged_revs = merged_revs | revs | reflected_revs | phantom_revs
@@ -1055,8 +1055,8 @@ def action_block(branch_dir, branch_props):
     set_blocked_revs(branch_dir, opts["head_path"], blocked_revs)
 
     # Write out commit message if desired
-    if opts["commit_file"]:
-        f = open(opts["commit_file"], "w")
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
         print >>f, 'Blocked revisions %s via %s' % (revs_to_block, NAME)
         if opts["commit_verbose"]:
             print >>f
@@ -1064,7 +1064,7 @@ def action_block(branch_dir, branch_props):
                                                     revs_to_block),
 
         f.close()
-        report('wrote commit message to "%s"' % opts["commit_file"])
+        report('wrote commit message to "%s"' % opts["commit-file"])
 
 def action_unblock(branch_dir, branch_props):
     """Unblock revisions."""
@@ -1086,15 +1086,15 @@ def action_unblock(branch_dir, branch_props):
     set_blocked_revs(branch_dir, opts["head_path"], blocked_revs)
 
     # Write out commit message if desired
-    if opts["commit_file"]:
-        f = open(opts["commit_file"], "w")
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
         print >>f, 'Unblocked revisions %s via %s' % (revs_to_unblock, NAME)
         if opts["commit_verbose"]:
             print >>f
             print >>f, construct_merged_log_message(opts["head_url"],
                                                     revs_to_unblock),
         f.close()
-        report('wrote commit message to "%s"' % opts["commit_file"])
+        report('wrote commit message to "%s"' % opts["commit-file"])
 
 
 ###############################################################################
@@ -1118,7 +1118,7 @@ class OptBase:
         else:
             if not self.lflags:
                 raise TypeError, "cannot deduce dest name without long options"
-            self.dest = self.lflags[0][2:].replace("-", "_")
+            self.dest = self.lflags[0][2:]
         if kwargs:
             raise TypeError, "invalid keyword arguments: %r" % kwargs.keys()
     def repr_flags(self):
@@ -1459,23 +1459,23 @@ command_table = {
     or -b command line option.""",
     [
         Option("-A", "--all",
-               dest="avail_showwhat",
+               dest="avail-showwhat",
                value=["blocked", "avail"],
                default=["avail"],
                help="show both available and blocked revisions (aka ignore "
                     "blocked revisions)"),
         "-b",
         Option("-B", "--blocked",
-               dest="avail_showwhat",
+               dest="avail-showwhat",
                value=["blocked"],
                help='show the blocked revision list (see "%s block")' % NAME),
         Option("-d", "--diff",
-               dest="avail_display",
+               dest="avail-display",
                value="diffs",
                default="revisions",
                help="show corresponding diff instead of revision list"),
         Option("-l", "--log",
-               dest="avail_display",
+               dest="avail-display",
                value="logs",
                help="show corresponding log history instead of revision list"),
         "-r",
