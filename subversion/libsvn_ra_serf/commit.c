@@ -1146,7 +1146,6 @@ change_dir_prop(void *dir_baton,
   SVN_ERR(checkout_dir(dir));
 
   name = apr_pstrdup(dir->pool, name);
-  value = svn_string_dup(value, dir->pool);
 
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
     {
@@ -1160,6 +1159,7 @@ change_dir_prop(void *dir_baton,
 
   if (value)
     {
+      value = svn_string_dup(value, dir->pool);
       svn_ra_serf__set_prop(dir->changed_props, dir->checkout->resource_url,
                             ns, name, value, dir->pool);
     }
