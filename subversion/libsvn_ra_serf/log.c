@@ -186,7 +186,7 @@ start_log(void *userData, const char *raw_name, const char **attrs)
       if (log_ctx->limit && log_ctx->count > log_ctx->limit)
         {
           log_ctx->state = NULL;
-          return;
+          return SVN_NO_ERROR;
         }
 
       push_state(log_ctx, ITEM);
@@ -355,32 +355,32 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  add_tag_buckets(buckets,
-                  "S:start-revision", apr_ltoa(pool, start),
-                  session->bkt_alloc);
-  add_tag_buckets(buckets,
-                  "S:end-revision", apr_ltoa(pool, end),
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:start-revision", apr_ltoa(pool, start),
+                               session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:end-revision", apr_ltoa(pool, end),
+                               session->bkt_alloc);
 
   if (limit)
     {
-      add_tag_buckets(buckets,
-                      "S:limit", apr_ltoa(pool, limit),
-                      session->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:limit", apr_ltoa(pool, limit),
+                                   session->bkt_alloc);
     }
 
   if (discover_changed_paths)
     {
-      add_tag_buckets(buckets,
-                      "S:discover-changed-paths", NULL,
-                      session->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:discover-changed-paths", NULL,
+                                   session->bkt_alloc);
     }
 
   if (strict_node_history)
     {
-      add_tag_buckets(buckets,
-                      "S:strict-node-history", NULL,
-                      session->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:strict-node-history", NULL,
+                                   session->bkt_alloc);
     }
 
   if (paths)
@@ -388,9 +388,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       int i;
       for (i = 0; i < paths->nelts; i++)
         {
-          add_tag_buckets(buckets,
-                          "S:path", ((const char**)paths->elts)[i],
-                          session->bkt_alloc);
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:path", ((const char**)paths->elts)[i],
+                                       session->bkt_alloc);
         }
     }
 

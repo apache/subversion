@@ -502,9 +502,9 @@ remove_dir_props(void *baton,
                  apr_pool_t *pool)
 {
   report_dir_t *dir = baton;
-  svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
-                               dir->dir_baton,
-                               ns, ns_len, name, name_len, NULL, pool);
+  return svn_ra_serf__set_baton_props(dir->update_editor->change_dir_prop,
+                                      dir->dir_baton,
+                                      ns, ns_len, name, name_len, NULL, pool);
 }
 
 static svn_error_t*
@@ -721,7 +721,6 @@ handle_fetch(serf_request_t *request,
 {
   const char *data;
   apr_size_t len;
-  serf_status_line sl;
   apr_status_t status;
   report_fetch_t *fetch_ctx = handler_baton;
   svn_error_t *err;
@@ -1082,10 +1081,9 @@ handle_propchange_only(report_info_t *info)
 
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
-  const char *checked_in_url, *checksum;
+  const char *checked_in_url;
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
-  apr_hash_t *props;
 
   /* What connection should we go on? */
   conn = ctx->sess->conns[ctx->sess->cur_conn];
@@ -1526,7 +1524,7 @@ end_report(void *userData, const char *raw_name)
   if (!ctx->state)
     {
       /* nothing to close yet. */
-      return;
+      return SVN_NO_ERROR;
     }
 
   name = svn_ra_serf__expand_ns(ctx->state->ns_list, raw_name);
@@ -1626,7 +1624,7 @@ end_report(void *userData, const char *raw_name)
       else
         {
           const char *c;
-          apr_size_t comp_count, rel_size;
+          apr_size_t comp_count;
           svn_stringbuf_t *path;
           svn_boolean_t fix_root = FALSE;
 
@@ -2213,7 +2211,9 @@ static svn_error_t *
 abort_report(void *report_baton,
              apr_pool_t *pool)
 {
+#if 0
   report_context_t *report = report_baton;
+#endif
   abort();
 }
 
@@ -2225,7 +2225,7 @@ static const svn_ra_reporter2_t ra_serf_reporter = {
   abort_report
 };
 
-svn_error_t *
+static svn_error_t *
 make_update_reporter(svn_ra_session_t *ra_session,
                      const svn_ra_reporter2_t **reporter,
                      void **report_baton,
@@ -2241,7 +2241,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   report_context_t *report;
-  svn_ra_serf__session_t *session = ra_session->priv;
   serf_bucket_t *tmp;
   svn_stringbuf_t *path_buf;
 
@@ -2299,45 +2298,45 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                       report->sess->bkt_alloc);
   serf_bucket_aggregate_append(report->buckets, tmp);
 
-  add_tag_buckets(report->buckets,
-                  "S:src-path", report->source,
-                  report->sess->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(report->buckets,
+                               "S:src-path", report->source,
+                               report->sess->bkt_alloc);
 
   if (SVN_IS_VALID_REVNUM(report->target_rev))
     {
-      add_tag_buckets(report->buckets,
-                      "S:target-revision",
-                      apr_ltoa(pool, report->target_rev),
-                      report->sess->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:target-revision",
+                                   apr_ltoa(pool, report->target_rev),
+                                   report->sess->bkt_alloc);
     }
 
   if (report->destination && *report->destination)
     {
-      add_tag_buckets(report->buckets,
-                      "S:dst-path", 
-                      report->destination,
-                      report->sess->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:dst-path", 
+                                   report->destination,
+                                   report->sess->bkt_alloc);
     }
 
   if (report->update_target && *report->update_target)
     {
-      add_tag_buckets(report->buckets,
-                      "S:update-target", report->update_target,
-                      report->sess->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:update-target", report->update_target,
+                                   report->sess->bkt_alloc);
     }
 
   if (report->ignore_ancestry)
     {
-      add_tag_buckets(report->buckets,
-                      "S:ignore-ancestry", "yes",
-                      report->sess->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:ignore-ancestry", "yes",
+                                   report->sess->bkt_alloc);
     }
 
   if (!report->recurse)
     {
-      add_tag_buckets(report->buckets,
-                      "S:recursive", "no",
-                      report->sess->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:recursive", "no",
+                                   report->sess->bkt_alloc);
     }
 
   return SVN_NO_ERROR;

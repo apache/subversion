@@ -49,7 +49,6 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
     {
       if (strncmp(*tmp_attrs, "xmlns", 5) == 0)
         {
-          const char *attr, *attr_val;
           svn_ra_serf__ns_t *new_ns, *cur_ns;
           int found = 0;
 
@@ -174,8 +173,9 @@ svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
     }
 }
 
-void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
-                            const char *value, serf_bucket_alloc_t *bkt_alloc)
+void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
+                                  const char *value,
+                                  serf_bucket_alloc_t *bkt_alloc)
 {
   serf_bucket_t *tmp;
 

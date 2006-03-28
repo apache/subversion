@@ -291,6 +291,8 @@ start_blame(void *userData, const char *raw_name, const char **attrs)
               info->prop_base64 = FALSE;
             }
           break;
+        default:
+          break;
         }
     }
 
@@ -307,7 +309,7 @@ end_blame(void *userData, const char *raw_name)
 
   if (!blame_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   cur_state = blame_ctx->state;
@@ -447,17 +449,17 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  add_tag_buckets(buckets,
-                  "S:start-revision", apr_ltoa(pool, start),
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:start-revision", apr_ltoa(pool, start),
+                               session->bkt_alloc);
 
-  add_tag_buckets(buckets,
-                  "S:end-revision", apr_ltoa(pool, end),
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:end-revision", apr_ltoa(pool, end),
+                               session->bkt_alloc);
 
-  add_tag_buckets(buckets,
-                  "S:path", path,
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:path", path,
+                               session->bkt_alloc);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:file-revs-report>",
                                       sizeof("</S:file-revs-report>")-1,
