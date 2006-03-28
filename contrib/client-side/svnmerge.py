@@ -1522,7 +1522,7 @@ command_table = {
 
     "unblock": (action_unblock,
     "unblock [OPTION...] [PATH]",
-    """Revert the effect of "%s block". If --revision is omitted, all the
+    """Revert the effect of '%s block'. If --revision is omitted, all the
     blocked revisions are unblocked""" % NAME,
     [
         "-f", "-r", "-S", # import common opts
