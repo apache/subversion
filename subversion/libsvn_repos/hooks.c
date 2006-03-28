@@ -454,7 +454,11 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
 {
   static const char* const check_extns[] = {
 #ifdef WIN32
-  /* For WIN32 we need to check with an added extension(s). */
+  /* For WIN32, we need to check with file name extension(s) added.
+
+     As Windows Scripting Host (.wsf) files can accomodate (at least)
+     JavaScript (.js) and VB Script (.vbs) code, extensions for the
+     corresponding file types need not be enumerated explicitly. */
     ".exe", ".cmd", ".bat", ".wsf", /* ### Any other extensions? */
 #else
     "",
