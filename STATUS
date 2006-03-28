@@ -107,9 +107,9 @@ Candidate changes:
     Explicitly close WC locks when an operation is cancelled to avoid
     leaving stray WC locks behind.
     Justification:
-      Bug fix for oft-complained-about usability annoyance.
+      Oft-complained-about usability annoyance, regression from 1.1
     Votes:
-      +1: dlr
+      +1: dlr, philip
 
   * r19039, r19057
     Support APR and APR-util versions >= 0.9.10.
