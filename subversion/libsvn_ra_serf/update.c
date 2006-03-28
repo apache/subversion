@@ -1031,11 +1031,32 @@ handle_propchange_only(report_info_t *info)
       info->name = info->name_buf->data;
     }
 
-  SVN_ERR(info->dir->update_editor->open_file(info->name,
-                                              info->dir->dir_baton,
-                                              info->base_rev,
-                                              info->editor_pool,
-                                              &info->file_baton));
+  if (SVN_IS_VALID_REVNUM(info->base_rev))
+    {
+      SVN_ERR(info->dir->update_editor->open_file(info->name,
+                                                  info->dir->dir_baton,
+                                                  info->base_rev,
+                                                  info->editor_pool,
+                                                  &info->file_baton));
+    }
+  else
+    {
+      SVN_ERR(info->dir->update_editor->add_file(info->name,
+                                                 info->dir->dir_baton,
+                                                 NULL,
+                                                 info->base_rev,
+                                                 info->editor_pool,
+                                                 &info->file_baton));
+    }
+
+  if (info->fetch_file)
+    {
+      SVN_ERR(info->dir->update_editor->apply_textdelta(info->file_baton,
+                                                    NULL,
+                                                    info->editor_pool,
+                                                    &info->textdelta,
+                                                    &info->textdelta_baton));
+    }
 
   /* set all of the properties we received */
   svn_ra_serf__walk_all_props(info->dir->props,
