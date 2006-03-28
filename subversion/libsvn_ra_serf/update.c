@@ -1100,7 +1100,7 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   /* If we've been asked to fetch the file or its an add, do so.
    * Otherwise, handle the case where only the properties changed.
    */
-  if (info->fetch_file)
+  if (info->fetch_file && ctx->text_deltas == TRUE)
     {
       report_fetch_t *fetch_ctx;
 
