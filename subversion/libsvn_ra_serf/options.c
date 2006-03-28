@@ -122,7 +122,7 @@ static void pop_state(svn_ra_serf__options_context_t *options_ctx)
   options_ctx->free_state = free_state;
 }
 
-static void XMLCALL
+static svn_error_t *
 start_options(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__options_context_t *options_ctx = userData;
@@ -152,9 +152,11 @@ start_options(void *userData, const char *raw_name, const char **attrs)
       options_ctx->collect_cdata = TRUE;
       push_state(options_ctx, HREF);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
+static svn_error_t *
 end_options(void *userData, const char *raw_name)
 {
   svn_ra_serf__options_context_t *options_ctx = userData;
@@ -163,7 +165,7 @@ end_options(void *userData, const char *raw_name)
 
   if (!options_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   cur_state = options_ctx->state;
@@ -187,10 +189,12 @@ end_options(void *userData, const char *raw_name)
       options_ctx->activity_collection = options_ctx->attr_val;
       pop_state(options_ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-cdata_options(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_options(void *userData, const char *data, apr_size_t len)
 {
   svn_ra_serf__options_context_t *ctx = userData;
   if (ctx->collect_cdata == TRUE)
@@ -198,6 +202,8 @@ cdata_options(void *userData, const char *data, int len)
       svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
                     data, len, ctx->pool);
     }
+
+  return SVN_NO_ERROR;
 }
 
 #define OPTIONS_BODY "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:options xmlns:D=\"DAV:\"><D:activity-collection-set/></D:options>"

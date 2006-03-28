@@ -206,7 +206,7 @@ svn_ra_serf__set_prop(apr_hash_t *props,
 /*
  * Expat callback invoked on a start element tag for a PROPFIND response.
  */
-static void XMLCALL
+static svn_error_t *
 start_propfind(void *userData, const char *name, const char **attrs)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
@@ -241,12 +241,14 @@ start_propfind(void *userData, const char *name, const char **attrs)
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = TRUE;
     }
+
+  return SVN_NO_ERROR;
 }
 
 /*
  * Expat callback invoked on an end element tag for a PROPFIND response.
  */
-static void XMLCALL
+static svn_error_t *
 end_propfind(void *userData, const char *name)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
@@ -349,6 +351,8 @@ end_propfind(void *userData, const char *name)
       ctx->attr_encoding = NULL;
     }
   /* FIXME: destroy namespaces as we end a handler */
+
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -356,8 +360,8 @@ end_propfind(void *userData, const char *name)
  *
  * This callback can be called multiple times.
  */
-static void XMLCALL
-cdata_propfind(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_propfind(void *userData, const char *data, apr_size_t len)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
@@ -366,6 +370,7 @@ cdata_propfind(void *userData, const char *data, int len)
                                  data, len, ctx->pool);
     }
 
+  return SVN_NO_ERROR;
 }
 
 static apr_status_t

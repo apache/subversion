@@ -211,7 +211,7 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 /*
  * Expat callback invoked on a start element tag for an error response.
  */
-static void XMLCALL
+static svn_error_t *
 start_error(void *userData, const char *name, const char **attrs)
 {
   svn_ra_serf__server_error_t *ctx = userData;
@@ -244,12 +244,14 @@ start_error(void *userData, const char *name, const char **attrs)
         }
       ctx->collect_message = TRUE;
     }
+
+  return SVN_NO_ERROR;
 }
 
 /*
  * Expat callback invoked on an end element tag for a PROPFIND response.
  */
-static void XMLCALL
+static svn_error_t *
 end_error(void *userData, const char *name)
 {
   svn_ra_serf__server_error_t *ctx = userData;
@@ -268,6 +270,8 @@ end_error(void *userData, const char *name)
     {
       ctx->collect_message = FALSE;
     }
+
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -275,8 +279,8 @@ end_error(void *userData, const char *name)
  *
  * This callback can be called multiple times.
  */
-static void XMLCALL
-cdata_error(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_error(void *userData, const char *data, apr_size_t len)
 {
   svn_ra_serf__server_error_t *ctx = userData;
 
@@ -286,6 +290,8 @@ cdata_error(void *userData, const char *data, int len)
       svn_ra_serf__expand_string(&ctx->error->message, &ctx->message_len,
                                  data, len, ctx->error->pool);
     }
+
+  return SVN_NO_ERROR;
 }
 
 apr_status_t
@@ -498,6 +504,30 @@ handle_auth(svn_ra_serf__session_t *session,
   return APR_SUCCESS;
 }
 
+static void XMLCALL
+start_xml(void *userData, const char *name, const char **attrs)
+{
+  svn_ra_serf__xml_parser_t *parser = userData;
+
+  parser->error = parser->start(parser->user_data, name, attrs);
+}
+
+static void XMLCALL
+end_xml(void *userData, const char *name)
+{
+  svn_ra_serf__xml_parser_t *parser = userData;
+
+  parser->error = parser->end(parser->user_data, name);
+}
+
+static void XMLCALL
+cdata_xml(void *userData, const char *data, int len)
+{
+  svn_ra_serf__xml_parser_t *parser = userData;
+
+  parser->error = parser->cdata(parser->user_data, data, len);
+}
+
 apr_status_t
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                serf_bucket_t *response,
@@ -542,9 +572,12 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (!ctx->xmlp)
     {
       ctx->xmlp = XML_ParserCreate(NULL);
-      XML_SetUserData(ctx->xmlp, ctx->user_data);
-      XML_SetElementHandler(ctx->xmlp, ctx->start, ctx->end);
-      XML_SetCharacterDataHandler(ctx->xmlp, ctx->cdata);
+      XML_SetUserData(ctx->xmlp, ctx);
+      XML_SetElementHandler(ctx->xmlp, start_xml, end_xml);
+      if (ctx->cdata)
+        {
+          XML_SetCharacterDataHandler(ctx->xmlp, cdata_xml);
+        }
     }
 
   while (1)
@@ -560,6 +593,12 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
         {
           abort();
+        }
+
+      if (ctx->error && ctx->ignore_errors == FALSE)
+        {
+          XML_ParserFree(ctx->xmlp);
+          return ctx->error->apr_err;
         }
 
       if (APR_STATUS_IS_EAGAIN(status))

@@ -194,7 +194,7 @@ static void pop_state(svn_ra_serf__merge_context_t *ctx)
   ctx->free_state->info = NULL;
 }
 
-static void XMLCALL
+static svn_error_t *
 start_merge(void *userData, const char *name, const char **attrs)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
@@ -306,9 +306,11 @@ start_merge(void *userData, const char *name, const char **attrs)
     {
       abort();
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
+static svn_error_t *
 end_merge(void *userData, const char *raw_name)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
@@ -422,10 +424,12 @@ end_merge(void *userData, const char *raw_name)
 
       pop_state(ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-cdata_merge(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_merge(void *userData, const char *data, apr_size_t len)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
   if (ctx->state && ctx->state->state == PROP_VAL)
@@ -433,8 +437,9 @@ cdata_merge(void *userData, const char *data, int len)
       svn_ra_serf__expand_string(&ctx->state->info->prop_val,
                                  &ctx->state->info->prop_val_len,
                                  data, len, ctx->state->pool);
-
     }
+
+  return SVN_NO_ERROR;
 }
 
 #define MERGE_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:merge xmlns:D=\"DAV:\"><D:source><D:href>"

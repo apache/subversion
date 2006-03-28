@@ -328,6 +328,22 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
 serf_request_t*
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 
+/* XML helper callbacks. */
+
+typedef svn_error_t *
+(*svn_ra_serf__xml_start_element_t)(void *baton,
+                                    const char *name,
+                                    const char **attrs);
+
+typedef svn_error_t *
+(*svn_ra_serf__xml_end_element_t)(void *baton,
+                                  const char *name);
+
+typedef svn_error_t *
+(*svn_ra_serf__xml_cdata_element_t)(void *baton,
+                                    const char *data,
+                                    apr_size_t len);
+
 /*
  * Helper structure associated with handle_xml_parser handler that will
  * specify how an XML response will be processed.
@@ -335,9 +351,9 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 typedef struct {
   void *user_data;
 
-  XML_StartElementHandler start;
-  XML_EndElementHandler end;
-  XML_CharacterDataHandler cdata;
+  svn_ra_serf__xml_start_element_t start;
+  svn_ra_serf__xml_end_element_t end;
+  svn_ra_serf__xml_cdata_element_t cdata;
 
   XML_Parser xmlp;
 
@@ -348,6 +364,7 @@ typedef struct {
   svn_ra_serf__list_t *done_item;
 
   svn_boolean_t ignore_errors;
+  svn_error_t *error;
 } svn_ra_serf__xml_parser_t;
 
 /*
