@@ -1353,7 +1353,7 @@ class CommandOpts:
     def print_usage_line(self):
         print "usage: %s <subcommand> [options...] [args...]\n" % self.progname
     def print_command_list(self):
-        print 'Available commands (use "%s help COMMAND" for more details):\n' \
+        print "Available commands (use '%s help COMMAND' for more details):\n" \
               % self.progname
         cmds = self.ctable.keys()
         cmds.sort()
@@ -1468,7 +1468,7 @@ command_table = {
         Option("-B", "--blocked",
                dest="avail-showwhat",
                value=["blocked"],
-               help='show the blocked revision list (see "%s block")' % NAME),
+               help="show the blocked revision list (see '%s block')" % NAME),
         Option("-d", "--diff",
                dest="avail-display",
                value="diffs",
