@@ -191,10 +191,9 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_request_t *request;
-  serf_bucket_t *buckets, *req_bkt, *tmp;
+  serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
-  const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  const char *vcc_url, *relative_url, *basecoll_url, *req_url;
   int i;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
@@ -222,20 +221,20 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  add_tag_buckets(buckets,
-                  "S:path", path,
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:path", path,
+                               session->bkt_alloc);
 
-  add_tag_buckets(buckets,
-                  "S:peg-revision", apr_ltoa(pool, peg_revision),
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:peg-revision", apr_ltoa(pool, peg_revision),
+                               session->bkt_alloc);
 
   for (i = 0; i < location_revisions->nelts; i++)
     {
       svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i, svn_revnum_t);
-      add_tag_buckets(buckets,
-                      "S:location-revision", apr_ltoa(pool, rev),
-                      session->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:location-revision", apr_ltoa(pool, rev),
+                                   session->bkt_alloc);
     }
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:get-locations>",

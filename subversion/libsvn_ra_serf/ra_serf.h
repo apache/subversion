@@ -149,50 +149,50 @@ static const svn_ra_serf__dav_props_t base_props[] =
   { "DAV:", "resourcetype" },
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
   { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t checked_in_props[] =
 {
   { "DAV:", "checked-in" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
   { "DAV:", "version-name" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t all_props[] =
 {
   { "DAV:", "allprop" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t vcc_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t check_path_props[] =
 {
   { "DAV:", "resourcetype" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t uuid_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t repos_root_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
-  NULL
+  { NULL }
 };
 
 /* WC props compatibility with ra_dav. */
@@ -517,6 +517,13 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
                             const char *depth,
                             const svn_ra_serf__dav_props_t *props,
                             apr_pool_t *pool);
+
+/* ### TODO: doco. */
+void
+svn_ra_serf__set_ver_prop(apr_hash_t *props,
+                          const char *path, svn_revnum_t rev,
+                          const char *ns, const char *name,
+                          const svn_string_t *val, apr_pool_t *pool);
 
 /** Property walker functions **/
 

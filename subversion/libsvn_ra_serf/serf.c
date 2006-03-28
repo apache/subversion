@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -60,7 +61,10 @@ static const char * const *
 ra_serf_get_schemes(apr_pool_t *pool)
 {
   static const char *serf_ssl[] = { "http", "https", NULL };
+#if 0
+  /* ### Temporary: to shut up a warning. */
   static const char *serf_no_ssl[] = { "http", NULL };
+#endif
 
   /* TODO: Runtime detection. */
   return serf_ssl;
@@ -165,7 +169,7 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
 {
-  apr_hash_t *props, *ns_props;
+  apr_hash_t *props;
   svn_ra_serf__session_t *session = ra_session->priv;
   const char *vcc_url, *baseline_url, *version_name;
 
@@ -230,9 +234,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  svn_ra_serf__propfind_context_t *prop_ctx;
   const char *vcc_url, *path;
-  svn_revnum_t fetched_rev;
 
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
@@ -310,7 +312,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
     }
   else
     {
-      const char *vcc_url, *relative_url, *baseline_url, *basecoll_url;
+      const char *vcc_url, *relative_url, *basecoll_url;
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],
@@ -423,7 +425,7 @@ dirent_walker(void *baton,
         }
       else if (strcmp(name, "creationdate") == 0)
         {
-          svn_time_from_cstring(&entry->time, val->data, pool);
+          SVN_ERR(svn_time_from_cstring(&entry->time, val->data, pool));
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
@@ -465,22 +467,22 @@ path_dirent_walker(void *baton,
   /* Skip our original path. */
   if (strcmp(path, dirents->orig_path) == 0)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   entry = apr_hash_get(dirents->full_paths, path, path_len);
 
   if (!entry)
     {
-      const char *basename;
+      const char *base_name;
 
       entry = apr_pcalloc(pool, sizeof(*entry));
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
-      basename = svn_path_uri_decode(svn_path_basename(path, pool), pool);
+      base_name = svn_path_uri_decode(svn_path_basename(path, pool), pool);
 
-      apr_hash_set(dirents->base_paths, basename, APR_HASH_KEY_STRING, entry);
+      apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
 
   return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
@@ -539,7 +541,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
-      const char *vcc_url, *relative_url, *baseline_url, *basecoll_url;
+      const char *vcc_url, *relative_url, *basecoll_url;
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],

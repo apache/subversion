@@ -319,7 +319,7 @@ end_merge(void *userData, const char *raw_name)
   if (!ctx->state)
     {
       /* nothing to close yet. */
-      return;
+      return SVN_NO_ERROR;
     }
 
   prop_name = svn_ra_serf__expand_ns(ctx->state->ns_list, raw_name);

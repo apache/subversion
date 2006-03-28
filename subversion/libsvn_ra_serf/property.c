@@ -329,10 +329,10 @@ end_propfind(void *userData, const char *name)
                                 ctx->pool);
       if (ctx->cache_props)
         {
-          const char *name, *val;
+          const char *pname, *val;
           svn_string_t *val_str;
 
-          name = apr_pstrdup(ctx->sess->pool, ctx->attr_name);
+          pname = apr_pstrdup(ctx->sess->pool, ctx->attr_name);
           val = apr_pmemdup(ctx->sess->pool, ctx->attr_val,
                             ctx->attr_val_len);
           val_str = svn_string_ncreate(val, ctx->attr_val_len,
@@ -340,7 +340,7 @@ end_propfind(void *userData, const char *name)
 
           svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
                                     ctx->current_path, ctx->rev, ctx->ns,
-                                    name, val_str,
+                                    pname, val_str,
                                     ctx->sess->pool);
         }
 
@@ -477,11 +477,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
                            svn_ra_serf__list_t **done_list,
                            apr_pool_t *pool)
 {
-  const svn_ra_serf__dav_props_t *prop;
-  serf_bucket_t *req_bkt;
-  serf_request_t *request;
   svn_ra_serf__propfind_context_t *new_prop_ctx;
-  apr_status_t status;
 
   if (!*prop_ctx)
     {
@@ -625,7 +621,6 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
           void *prop_val;
           const void *prop_name;
           apr_ssize_t prop_len;
-          apr_hash_index_t *prop_hi;
 
           apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
           /* use a subpool? */
@@ -674,7 +669,6 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
               void *prop_val;
               const void *prop_name;
               apr_ssize_t prop_len;
-              apr_hash_index_t *prop_hi;
 
               apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
               /* use a subpool? */
@@ -715,13 +709,13 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
   else
     {
       /* do nothing for now? */
-      return;
+      return SVN_NO_ERROR;
     }
 
   return setprop(baton, prop_name, val, pool);
 }
 
-svn_error_t *
+static svn_error_t *
 set_hash_props(void *baton,
                const char *name,
                const svn_string_t *value,

@@ -139,7 +139,7 @@ start_options(void *userData, const char *raw_name, const char **attrs)
   else if (!options_ctx->state)
     {
       /* Nothing to do. */
-      return;
+      return SVN_NO_ERROR;
     }
   else if (options_ctx->state->state == OPTIONS &&
            strcmp(name.name, "activity-collection-set") == 0)

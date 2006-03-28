@@ -236,7 +236,7 @@ handle_status_only(serf_request_t *request,
   
 #define CHECKOUT_TRAILER "</D:href></D:activity-set></D:checkout>"
 
-serf_bucket_t *
+static serf_bucket_t *
 create_checkout_body(void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
@@ -589,7 +589,7 @@ proppatch_walker(void *baton,
 
 #define PROPPATCH_TRAILER "</D:propertyupdate>"
 
-serf_bucket_t *
+static serf_bucket_t *
 create_proppatch_body(void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
@@ -700,7 +700,6 @@ create_put_body(void *baton,
                 apr_pool_t *pool)
 {
   file_context_t *ctx = baton;
-  serf_bucket_t *body_bkt, *hdrs_bkt;
   apr_off_t offset;
 
   /* We need to flush the file, make it unbuffered (so that it can be
@@ -842,8 +841,7 @@ open_root(void *edit_baton,
   proppatch_context_t *proppatch_ctx;
   dir_context_t *dir;
   const char *activity_str;
-  const char *vcc_url, *version_name;
-  svn_boolean_t *opt_done;
+  const char *vcc_url;
   apr_hash_t *props;
 
   /* Create a UUID for this commit. */
@@ -1207,7 +1205,9 @@ absent_directory(const char *path,
                  void *parent_baton,
                  apr_pool_t *pool)
 {
+#if 0
   dir_context_t *ctx = parent_baton;
+#endif
 
   abort();
 }
@@ -1300,7 +1300,6 @@ open_file(const char *path,
 {
   dir_context_t *ctx = parent_baton;
   file_context_t *new_file;
-  apr_hash_t *props;
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
 
@@ -1526,7 +1525,9 @@ absent_file(const char *path,
             void *parent_baton,
             apr_pool_t *pool)
 {
+#if 0
   dir_context_t *ctx = parent_baton;
+#endif
 
   abort();
 }
@@ -1540,7 +1541,6 @@ close_edit(void *edit_baton,
   simple_request_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
   svn_boolean_t *merge_done;
-  apr_status_t status;
 
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__merge_create_req(&merge_ctx, ctx->session,

@@ -20,6 +20,7 @@
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+#include <apr_base64.h>
 
 #include <serf.h>
 #include <serf_bucket_types.h>
@@ -332,8 +333,6 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
 
       if (server_err->has_xml_response)
         {
-          apr_status_t status;
-
           status = svn_ra_serf__handle_xml_parser(request, response,
                                                   &server_err->parser, pool);
 
@@ -353,7 +352,6 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
     {
       const char *data;
       apr_size_t len;
-      apr_status_t status;
 
       status = serf_bucket_read(response, SERF_READ_ALL_AVAIL, &data, &len);
 
@@ -366,7 +364,7 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
     }
 }
 
-apr_status_t
+static apr_status_t
 handle_auth(svn_ra_serf__session_t *session,
             svn_ra_serf__connection_t *conn,
             serf_request_t *request,
@@ -383,7 +381,7 @@ handle_auth(svn_ra_serf__session_t *session,
   if (!session->realm)
     {
       serf_bucket_t *hdrs;
-      char *cur, *last, *auth_hdr, *realm_name, *realmstring;
+      char *cur, *last, *auth_hdr, *realm_name;
       apr_port_t port;
 
       hdrs = serf_bucket_response_get_headers(response);
@@ -631,14 +629,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   /* not reached */
 }
 
-apr_status_t
+static apr_status_t
 handler_default(serf_request_t *request,
                 serf_bucket_t *response,
                 void *baton,
                 apr_pool_t *pool)
 {
   svn_ra_serf__handler_t *ctx = baton;
-  serf_bucket_t *headers;
   serf_status_line sl;
   apr_status_t status;
 
@@ -715,7 +712,7 @@ setup_default(serf_request_t *request,
               apr_pool_t *pool)
 {
   svn_ra_serf__handler_t *ctx = setup_baton;
-  serf_bucket_t *body_bkt, *headers_bkt;
+  serf_bucket_t *headers_bkt;
 
   *acceptor = svn_ra_serf__accept_response;
   *acceptor_baton = ctx->session;
