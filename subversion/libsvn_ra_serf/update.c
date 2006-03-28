@@ -2372,14 +2372,10 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  const char *full_target;
-
-  full_target = svn_path_url_add_component(session->repos_url.path,
-                                           status_target, pool);
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
-                              session->repos_url.path, full_target, NULL,
+                              session->repos_url.path, NULL, status_target,
                               recurse, FALSE, FALSE,
                               status_editor, status_baton, pool);
 }
