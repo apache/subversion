@@ -1058,7 +1058,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
     (goto-char (point-max))
     (insert str)
     (save-excursion
-      (goto-char (line-beginning-position))
+      (goto-char (svn-point-at-bol))
       (when (looking-at "Password for '\\(.+\\)': ")
         ;(svn-status-show-process-buffer)
         (let ((passwd (read-passwd
@@ -1484,7 +1484,7 @@ A and B must be line-info's."
                ["svn info" svn-status-info t]
                ["svn blame" svn-status-blame t]))
       (svn-status-face-set-temporary-during-popup
-       'svn-status-marked-popup-face (line-beginning-position) (line-end-position)
+       'svn-status-marked-popup-face (svn-point-at-bol) (svn-point-at-eol)
        svn-status-actual-popup-menu))))
 
 (defun svn-status-face-set-temporary-during-popup (face begin end menu &optional prefix)
@@ -3701,7 +3701,7 @@ If ARG then show diff between some other version of the selected files."
   (let* ((rev (svn-log-revision-at-point)))
     (when rev
       (svn-status-face-set-temporary-during-popup
-       'svn-status-marked-popup-face (line-beginning-position) (line-end-position)
+       'svn-status-marked-popup-face (svn-point-at-bol) (svn-point-at-eol)
        svn-log-view-mode-menu))))
 
 (defvar svn-log-view-font-lock-keywords
