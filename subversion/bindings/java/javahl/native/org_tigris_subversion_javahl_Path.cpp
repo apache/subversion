@@ -23,7 +23,7 @@
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
-#include "SVNPath.h"
+#include "Path.h"
 
 JNIEXPORT jboolean JNICALL Java_org_tigris_subversion_javahl_Path_isValid
   (JNIEnv* env, jclass jthis, jstring jpath)
@@ -34,5 +34,5 @@ JNIEXPORT jboolean JNICALL Java_org_tigris_subversion_javahl_Path_isValid
     {
         return JNI_FALSE;
     }
-    return SVNPath::isValid(path);
+    return Path::isValid(path);
 }
