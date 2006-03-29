@@ -116,9 +116,6 @@ typedef struct {
   blame_state_list_t *state;
   blame_state_list_t *free_state;
 
-  /* Return error code if needed */
-  svn_error_t *error;
-
   /* are we done? */
   svn_boolean_t done;
 
@@ -198,6 +195,11 @@ static const svn_string_t *
 create_propval(blame_info_t *info)
 {
   const svn_string_t *s;
+
+  if (!info->prop_attr)
+    {
+      return svn_string_create("", info->pool);
+    }
 
   /* Include the null term. */
   s = svn_string_ncreate(info->prop_attr, info->prop_attr_len + 1, info->pool);
@@ -380,6 +382,7 @@ cdata_blame(void *userData, const char *data, apr_size_t len)
   switch (blame_ctx->state->state)
     {
       case REV_PROP:
+      case SET_PROP:
         svn_ra_serf__expand_string(&blame_ctx->state->info->prop_attr,
                                    &blame_ctx->state->info->prop_attr_len,
                                    data, len, blame_ctx->state->info->pool);
@@ -429,7 +432,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->start = start;
   blame_ctx->end = end;
   blame_ctx->done = FALSE;
-  blame_ctx->error = SVN_NO_ERROR;
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
@@ -541,5 +543,5 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool));
 
-  return blame_ctx->error;
+  return SVN_NO_ERROR;
 }

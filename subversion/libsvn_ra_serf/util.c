@@ -169,6 +169,8 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 {
   apr_status_t status;
 
+  sess->pending_error = SVN_NO_ERROR;
+
   while (!*done)
     {
       int i;
@@ -180,6 +182,10 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
         }
       if (status)
         {
+          if (sess->pending_error)
+            { 
+              return sess->pending_error;
+            }
           return svn_error_wrap_apr(status, "Error running context");
         }
       /* Debugging purposes only! */
@@ -507,6 +513,9 @@ start_xml(void *userData, const char *name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
 
+  if (parser->error)
+    return;
+
   parser->error = parser->start(parser->user_data, name, attrs);
 }
 
@@ -515,6 +524,9 @@ end_xml(void *userData, const char *name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
 
+  if (parser->error)
+    return;
+
   parser->error = parser->end(parser->user_data, name);
 }
 
@@ -522,6 +534,9 @@ static void XMLCALL
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+
+  if (parser->error)
+    return;
 
   parser->error = parser->cdata(parser->user_data, data, len);
 }
@@ -596,7 +611,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (ctx->error && ctx->ignore_errors == FALSE)
         {
           XML_ParserFree(ctx->xmlp);
-          return ctx->error->apr_err;
+          status = ctx->error->apr_err;
+
+          svn_error_clear(ctx->error);
+
+          return status;
         }
 
       if (APR_STATUS_IS_EAGAIN(status))
@@ -686,6 +705,24 @@ handler_default(serf_request_t *request,
       handle_auth(ctx->session, ctx->conn, request, response, pool);
       svn_ra_serf__request_create(ctx);
       status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+    }
+  else if (sl.code >= 500)
+    {
+      svn_ra_serf__server_error_t server_err;
+
+      memset(&server_err, 0, sizeof(server_err));
+      status = svn_ra_serf__handler_discard_body(request, response,
+                                                 &server_err, pool);
+
+      if (server_err.error)
+        {
+          ctx->session->pending_error = server_err.error;
+          return server_err.error->apr_err;
+        }
+      else
+        {
+          return APR_EGENERAL;
+        }
     }
   else
     {

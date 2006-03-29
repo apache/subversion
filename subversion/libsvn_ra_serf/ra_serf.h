@@ -109,6 +109,9 @@ typedef struct {
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
+
+  /* Error that we've received but not yet returned upstream. */
+  svn_error_t *pending_error;
 } svn_ra_serf__session_t;
 
 /*
