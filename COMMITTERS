@@ -90,6 +90,7 @@ Commit access for specific areas:
             mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
+      wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
 
   Translation of message files:
 
