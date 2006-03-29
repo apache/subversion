@@ -33,4 +33,9 @@ Your Mileage May Vary.
       This is *much* more efficient than the check-case-insensitive.* scripts
       but it does require Subversion 1.3.0 or later.
 
+   8. enforcer
+      This is a pre-commit hook that allows you to more easily specify
+      a variety of rules that govern what may be committed to your
+      repository.
+
 $Id$
