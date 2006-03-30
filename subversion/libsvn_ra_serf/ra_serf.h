@@ -333,17 +333,34 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 
 /* XML helper callbacks. */
 
+typedef struct svn_ra_serf__xml_state_t {
+  int current_state;
+
+  void *private;
+
+  apr_pool_t *pool;
+
+  svn_ra_serf__ns_t *ns_list;
+
+  struct svn_ra_serf__xml_state_t *prev;
+} svn_ra_serf__xml_state_t;
+
+typedef struct svn_ra_serf__xml_parser_t svn_ra_serf__xml_parser_t;
+
 typedef svn_error_t *
-(*svn_ra_serf__xml_start_element_t)(void *baton,
-                                    const char *name,
+(*svn_ra_serf__xml_start_element_t)(svn_ra_serf__xml_parser_t *parser,
+                                    void *baton,
+                                    svn_ra_serf__dav_props_t name,
                                     const char **attrs);
 
 typedef svn_error_t *
-(*svn_ra_serf__xml_end_element_t)(void *baton,
-                                  const char *name);
+(*svn_ra_serf__xml_end_element_t)(svn_ra_serf__xml_parser_t *parser,
+                                  void *baton,
+                                  svn_ra_serf__dav_props_t name);
 
 typedef svn_error_t *
-(*svn_ra_serf__xml_cdata_chunk_handler_t)(void *baton,
+(*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
+                                          void *baton,
                                           const char *data,
                                           apr_size_t len);
 
@@ -351,7 +368,9 @@ typedef svn_error_t *
  * Helper structure associated with handle_xml_parser handler that will
  * specify how an XML response will be processed.
  */
-typedef struct {
+struct svn_ra_serf__xml_parser_t {
+  apr_pool_t *pool;
+
   void *user_data;
 
   svn_ra_serf__xml_start_element_t start;
@@ -359,6 +378,9 @@ typedef struct {
   svn_ra_serf__xml_cdata_chunk_handler_t cdata;
 
   XML_Parser xmlp;
+
+  svn_ra_serf__xml_state_t *state;
+  svn_ra_serf__xml_state_t *free_state;
 
   int *status_code;
   svn_boolean_t *done;
@@ -368,7 +390,7 @@ typedef struct {
 
   svn_boolean_t ignore_errors;
   svn_error_t *error;
-} svn_ra_serf__xml_parser_t;
+};
 
 /*
  * Parses a server-side error message into a local Subversion error.
@@ -394,7 +416,6 @@ typedef struct {
 
   /* XML parser and namespace used to parse the remote response */
   svn_ra_serf__xml_parser_t parser;
-  svn_ra_serf__ns_t *ns_list;
 
   /* The length of the error message we received. */
   apr_size_t message_len;
@@ -416,6 +437,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                apr_pool_t *pool);
 
 /** XML helper functions. **/
+
+void
+svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
+                            int state);
+
+void
+svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
 
 void
 svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket,

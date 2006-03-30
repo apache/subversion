@@ -219,24 +219,20 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
  * Expat callback invoked on a start element tag for an error response.
  */
 static svn_error_t *
-start_error(void *userData, const char *name, const char **attrs)
+start_error(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            svn_ra_serf__dav_props_t name,
+            const char **attrs)
 {
   svn_ra_serf__server_error_t *ctx = userData;
-  svn_ra_serf__dav_props_t prop_name;
-
-  /* check for new namespaces */
-  svn_ra_serf__define_ns(&ctx->ns_list, attrs, ctx->error->pool);
-
-  /* look up name space if present */
-  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
 
   if (!ctx->in_error && 
-      strcmp(prop_name.namespace, "DAV:") == 0 &&
-      strcmp(prop_name.name, "error") == 0)
+      strcmp(name.namespace, "DAV:") == 0 &&
+      strcmp(name.name, "error") == 0)
     {
       ctx->in_error = TRUE;
     }
-  else if (ctx->in_error && strcmp(prop_name.name, "human-readable") == 0)
+  else if (ctx->in_error && strcmp(name.name, "human-readable") == 0)
     {
       const char *err_code;
 
@@ -259,21 +255,19 @@ start_error(void *userData, const char *name, const char **attrs)
  * Expat callback invoked on an end element tag for a PROPFIND response.
  */
 static svn_error_t *
-end_error(void *userData, const char *name)
+end_error(svn_ra_serf__xml_parser_t *parser,
+          void *userData,
+          svn_ra_serf__dav_props_t name)
 {
   svn_ra_serf__server_error_t *ctx = userData;
-  svn_ra_serf__dav_props_t prop_name;
-
-  /* look up name space if present */
-  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
 
   if (ctx->in_error &&
-      strcmp(prop_name.namespace, "DAV:") == 0 &&
-      strcmp(prop_name.name, "error") == 0)
+      strcmp(name.namespace, "DAV:") == 0 &&
+      strcmp(name.name, "error") == 0)
     {
       ctx->in_error = FALSE;
     }
-  if (ctx->in_error && strcmp(prop_name.name, "human-readable") == 0)
+  if (ctx->in_error && strcmp(name.name, "human-readable") == 0)
     {
       ctx->collect_message = FALSE;
     }
@@ -287,7 +281,10 @@ end_error(void *userData, const char *name)
  * This callback can be called multiple times.
  */
 static svn_error_t *
-cdata_error(void *userData, const char *data, apr_size_t len)
+cdata_error(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            const char *data,
+            apr_size_t len)
 {
   svn_ra_serf__server_error_t *ctx = userData;
 
@@ -324,6 +321,7 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
             {
               server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
               server_err->has_xml_response = TRUE;
+              server_err->parser.pool = server_err->error->pool;
               server_err->parser.user_data = server_err;
               server_err->parser.start = start_error;
               server_err->parser.end = end_error;
@@ -509,25 +507,36 @@ handle_auth(svn_ra_serf__session_t *session,
 }
 
 static void XMLCALL
-start_xml(void *userData, const char *name, const char **attrs)
+start_xml(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+  svn_ra_serf__dav_props_t name;
 
   if (parser->error)
     return;
 
-  parser->error = parser->start(parser->user_data, name, attrs);
+  if (!parser->state)
+    svn_ra_serf__xml_push_state(parser, 0);
+
+  svn_ra_serf__define_ns(&parser->state->ns_list, attrs, parser->state->pool);
+
+  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+
+  parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
 
 static void XMLCALL
-end_xml(void *userData, const char *name)
+end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+  svn_ra_serf__dav_props_t name;
 
   if (parser->error)
     return;
 
-  parser->error = parser->end(parser->user_data, name);
+  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+
+  parser->error = parser->end(parser, parser->user_data, name);
 }
 
 static void XMLCALL
@@ -538,7 +547,10 @@ cdata_xml(void *userData, const char *data, int len)
   if (parser->error)
     return;
 
-  parser->error = parser->cdata(parser->user_data, data, len);
+  if (!parser->state)
+    svn_ra_serf__xml_push_state(parser, 0);
+
+  parser->error = parser->cdata(parser, parser->user_data, data, len);
 }
 
 apr_status_t

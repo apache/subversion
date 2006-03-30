@@ -63,12 +63,6 @@ struct svn_ra_serf__options_context_t {
   apr_size_t attr_val_len;
   svn_boolean_t collect_cdata;
 
-  /* XML Parser */
-  XML_Parser xmlp;
-
-  /* Current namespace list */
-  svn_ra_serf__ns_t *ns_list;
-
   /* Current state we're in */
   options_state_list_t *state;
   options_state_list_t *free_state;
@@ -123,14 +117,12 @@ static void pop_state(svn_ra_serf__options_context_t *options_ctx)
 }
 
 static svn_error_t *
-start_options(void *userData, const char *raw_name, const char **attrs)
+start_options(svn_ra_serf__xml_parser_t *parser,
+              void *userData,
+              svn_ra_serf__dav_props_t name,
+              const char **attrs)
 {
   svn_ra_serf__options_context_t *options_ctx = userData;
-  svn_ra_serf__dav_props_t name;
-
-  svn_ra_serf__define_ns(&options_ctx->ns_list, attrs, options_ctx->pool);
-
-  name = svn_ra_serf__expand_ns(options_ctx->ns_list, raw_name);
 
   if (!options_ctx->state && strcmp(name.name, "options-response") == 0)
     {
@@ -157,10 +149,11 @@ start_options(void *userData, const char *raw_name, const char **attrs)
 }
 
 static svn_error_t *
-end_options(void *userData, const char *raw_name)
+end_options(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            svn_ra_serf__dav_props_t name)
 {
   svn_ra_serf__options_context_t *options_ctx = userData;
-  svn_ra_serf__dav_props_t name;
   options_state_list_t *cur_state;
 
   if (!options_ctx->state)
@@ -169,8 +162,6 @@ end_options(void *userData, const char *raw_name)
     }
 
   cur_state = options_ctx->state;
-
-  name = svn_ra_serf__expand_ns(options_ctx->ns_list, raw_name);
 
   if (cur_state->state == OPTIONS &&
       strcmp(name.name, "options-response") == 0)
@@ -194,7 +185,10 @@ end_options(void *userData, const char *raw_name)
 }
 
 static svn_error_t *
-cdata_options(void *userData, const char *data, apr_size_t len)
+cdata_options(svn_ra_serf__xml_parser_t *parser,
+              void *userData,
+              const char *data,
+              apr_size_t len)
 {
   svn_ra_serf__options_context_t *ctx = userData;
   if (ctx->collect_cdata == TRUE)
@@ -260,6 +254,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
+  parser_ctx->pool = pool;
   parser_ctx->user_data = new_ctx;
   parser_ctx->start = start_options;
   parser_ctx->end = end_options;

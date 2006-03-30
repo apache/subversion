@@ -204,3 +204,49 @@ void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
   serf_bucket_aggregate_append(agg_bucket, tmp);
 }
 
+void
+svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
+                            int state)
+{
+  svn_ra_serf__xml_state_t *new_state;
+
+  if (!parser->free_state)
+    {
+      new_state = apr_palloc(parser->pool, sizeof(*new_state));
+      apr_pool_create(&new_state->pool, parser->pool);
+    }
+  else
+    {
+      new_state = parser->free_state;
+      parser->free_state = parser->free_state->prev;
+
+      apr_pool_clear(new_state->pool);
+    }
+
+  if (parser->state)
+    {
+      new_state->private = parser->state->private;
+      new_state->ns_list = parser->state->ns_list;
+    }
+  else
+    {
+      new_state->private = NULL;
+      new_state->ns_list = NULL;
+    }
+
+  new_state->current_state = state;
+
+  /* Add it to the state chain. */
+  new_state->prev = parser->state;
+  parser->state = new_state;
+}
+
+void svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser)
+{
+  svn_ra_serf__xml_state_t *cur_state;
+
+  cur_state = parser->state;
+  parser->state = cur_state->prev;
+  cur_state->prev = parser->free_state;
+  parser->free_state = cur_state;
+}
