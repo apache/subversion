@@ -95,12 +95,12 @@ Candidate changes:
       +1: dlr, philip
 
   * r19039, r19057
+    Branch: 1.3.x-r19039
     Support APR and APR-util versions >= 0.9.10.
     Justification:
       They're breaking that limit now.
     Votes:
-      +1: dlr
-      +0: lundblad (only r19039, will test later)
+      +1: dlr, lundblad
 
 Approved changes:
 
