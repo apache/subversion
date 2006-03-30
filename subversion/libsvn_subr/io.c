@@ -53,6 +53,7 @@
 #include "svn_private_config.h"
 
 #ifdef AS400
+#define SVN_UTF_ETOU_XLATE_HANDLE "svn-utf-etou-xlate-handle"
 #define SVN_UTF_UTOE_XLATE_HANDLE "svn-utf-utoe-xlate-handle"
 #endif
 
@@ -432,8 +433,21 @@ svn_io_create_unique_link(const char **unique_name_p,
   const char *unique_name_apr;
   const char *dest_apr;
   int rv;
+#ifdef AS400_UTF8
+  const char *dest_apr_ebcdic;
+#endif
 
   SVN_ERR(svn_path_cstring_from_utf8(&dest_apr, dest, pool));
+
+#ifdef AS400_UTF8
+  /* On OS400 with UTF support a native cstring is UTF-8, but
+   * symlink() *really* needs EBCDIC paths. */
+  SVN_ERR(svn_utf_cstring_from_utf8_ex(&dest_apr_ebcdic, dest_apr,
+                                       (const char*)0,
+                                       SVN_UTF_UTOE_XLATE_HANDLE,
+                                       pool));
+  dest_apr = dest_apr_ebcdic;
+#endif
 
   for (i = 1; i <= 99999; i++)
     {
@@ -531,6 +545,9 @@ svn_io_read_link(svn_string_t **dest,
   const char *path_apr;
   char buf[1025];
   int rv;
+#ifdef AS400_UTF8
+  const char *buf_utf8;
+#endif
   
 #ifndef AS400_UTF8  
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
@@ -553,9 +570,18 @@ svn_io_read_link(svn_string_t **dest,
   dest_apr.data = buf;
   dest_apr.len = rv;
 
+#ifndef AS400_UTF8
   /* ### Cast needed, one of these interfaces is wrong */
   SVN_ERR(svn_utf_string_to_utf8((const svn_string_t **)dest, &dest_apr,
                                  pool));
+#else
+  /* The buf filled by readline() is ebcdic encoded
+   * despite V5R4's UTF support. */
+  SVN_ERR(svn_utf_cstring_to_utf8_ex(&buf_utf8, dest_apr.data,
+                                     (const char *)0,
+                                     SVN_UTF_ETOU_XLATE_HANDLE, pool));
+  *dest = svn_string_create(buf_utf8, pool);
+#endif
   
   return SVN_NO_ERROR;
 #else
