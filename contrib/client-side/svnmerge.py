@@ -648,7 +648,7 @@ def get_repo_root(dir):
             except LaunchError:
                 return url
             url = temp
-        assert 0, "svn repos root not found"
+        assert False, "svn repos root not found"
 
 def url_to_rlpath(url):
     """Convert a repos URL into a repo-local path."""
@@ -945,7 +945,8 @@ def action_avail(branch_dir, branch_props):
             svn_command('diff -r %d:%d %s' % \
                         (start-1, end, opts["head-url"]))
     else:
-        assert 0, "unhandled avail display type: %s" % opts["avail-display"]
+        assert False, \
+               "unhandled 'avail' display type: %s" % opts["avail-display"]
 
 def action_merge(branch_dir, branch_props):
     """Record merge meta data, and do the actual merge (if not
@@ -1247,7 +1248,7 @@ class CommandOpts:
         for o in self.copts:
             if fl in o.lflags+o.sflags:
                 return o
-        assert 0, fl
+        assert False, fl
 
     def _compute_flags(self, opts, check_conflicts=True):
         back = {}
@@ -1563,7 +1564,7 @@ def main(args):
         elif len(args) > 1:
             optsparser.error("wrong number of parameters", cmd)
     else:
-        assert 0, "command not handled: %s" % cmd
+        assert False, "command not handled: %s" % cmd
 
     # Validate branch_dir
     if not is_wc(branch_dir):
