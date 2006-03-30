@@ -179,7 +179,7 @@ def console_width():
 
 def error(s):
     """Subroutine to output an error and bail."""
-    print "%s: %s" % (NAME, s)
+    print >> sys.stderr, "%s: %s" % (NAME, s)
     sys.exit(1)
 
 def report(s):
