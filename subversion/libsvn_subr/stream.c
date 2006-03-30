@@ -2,7 +2,7 @@
  * stream.c:   svn_stream operations
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -232,7 +232,6 @@ svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,
                          svn_stream_t *stream2,
-                         svn_boolean_t read_all,
                          apr_pool_t *pool)
 {
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
@@ -253,15 +252,6 @@ svn_stream_contents_same(svn_boolean_t *same,
           *same = FALSE;
           break;
         }
-    }
-
-  if (read_all)
-    {
-      while (bytes_read1 == SVN__STREAM_CHUNK_SIZE)
-        SVN_ERR(svn_stream_read(stream1, buf1, &bytes_read1));
-
-      while (bytes_read2 == SVN__STREAM_CHUNK_SIZE)
-        SVN_ERR(svn_stream_read(stream2, buf2, &bytes_read2));
     }
 
   return SVN_NO_ERROR;
@@ -703,17 +693,24 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
 struct md5_stream_baton
 {
   apr_md5_ctx_t read_ctx, write_ctx;
-  unsigned char **read_digest;
-  unsigned char **write_digest;
+  const unsigned char **read_digest;
+  const unsigned char **write_digest;
   unsigned char read_digest_buf[APR_MD5_DIGESTSIZE];
   unsigned char write_digest_buf[APR_MD5_DIGESTSIZE];
   svn_stream_t *proxy;
+
+  /* True if more data should be read when closing the stream. */
+  svn_boolean_t read_more;
+
+  /* Pool to allocate read buffer from. */
+  apr_pool_t *pool;
 };
 
 static svn_error_t *
 read_handler_md5(void *baton, char *buffer, apr_size_t *len)
 {
   struct md5_stream_baton *btn = baton;
+  apr_size_t saved_len = *len;
 
   SVN_ERR(svn_stream_read(btn->proxy, buffer, len));
 
@@ -724,6 +721,9 @@ read_handler_md5(void *baton, char *buffer, apr_size_t *len)
       if (apr_err)
         return svn_error_create(apr_err, NULL, NULL);
     }
+
+  if (saved_len != *len)
+    btn->read_more = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -750,6 +750,20 @@ static svn_error_t *
 close_handler_md5(void *baton)
 {
   struct md5_stream_baton *btn = baton;
+
+  /* If we're supposed to drain the stream, do so before finalizing the
+     checksum. */
+  if (btn->read_more)
+    {
+      char *buf = apr_palloc(btn->pool, SVN__STREAM_CHUNK_SIZE);
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+
+      do
+        {
+          SVN_ERR(read_handler_md5(baton, buf, &len));
+        }
+      while (btn->read_more);
+    }
 
   if (btn->read_digest)
     {
@@ -779,8 +793,9 @@ close_handler_md5(void *baton)
 
 svn_stream_t *
 svn_stream_checksummed(svn_stream_t *stream,
-                       unsigned char **read_digest,
-                       unsigned char **write_digest,
+                       const unsigned char **read_digest,
+                       const unsigned char **write_digest,
+                       svn_boolean_t read_all,
                        apr_pool_t *pool)
 {
   svn_stream_t *s;
@@ -795,6 +810,8 @@ svn_stream_checksummed(svn_stream_t *stream,
   baton->read_digest = read_digest;
   baton->write_digest = write_digest;
   baton->proxy = stream;
+  baton->read_more = read_all;
+  baton->pool = pool;
 
   s = svn_stream_create(baton, pool);
   svn_stream_set_read(s, read_handler_md5);

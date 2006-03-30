@@ -899,6 +899,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
       SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
                                                     ras->sess, ras->url->data,
                                                     pool));
+      SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
 
       uuid_propval = apr_hash_get(rsrc->propset,
                                   SVN_RA_DAV__PROP_REPOSITORY_UUID,

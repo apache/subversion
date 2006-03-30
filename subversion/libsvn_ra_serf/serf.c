@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -60,7 +61,10 @@ static const char * const *
 ra_serf_get_schemes(apr_pool_t *pool)
 {
   static const char *serf_ssl[] = { "http", "https", NULL };
+#if 0
+  /* ### Temporary: to shut up a warning. */
   static const char *serf_no_ssl[] = { "http", NULL };
+#endif
 
   /* TODO: Runtime detection. */
   return serf_ssl;
@@ -165,7 +169,7 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
 {
-  apr_hash_t *props, *ns_props;
+  apr_hash_t *props;
   svn_ra_serf__session_t *session = ra_session->priv;
   const char *vcc_url, *baseline_url, *version_name;
 
@@ -223,22 +227,35 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
-                             svn_revnum_t rev,
-                             const char *name,
-                             const svn_string_t *value,
-                             apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__rev_proplist(svn_ra_session_t *session,
+svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                           svn_revnum_t rev,
-                          apr_hash_t **props,
+                          apr_hash_t **ret_props,
                           apr_pool_t *pool)
 {
-  abort();
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  const char *vcc_url, *path;
+
+  props = apr_hash_make(pool);
+  *ret_props = apr_hash_make(pool);
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      vcc_url, rev, "0",
+                                      checked_in_props, pool));
+
+  path = svn_ra_serf__get_ver_prop(props, vcc_url, rev, "DAV:", "href");
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      path, rev, "0", all_props, pool));
+
+  svn_ra_serf__walk_all_props(props, path, rev, svn_ra_serf__set_flat_props,
+                              *ret_props, pool);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -248,7 +265,13 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       svn_string_t **value,
                       apr_pool_t *pool)
 {
-  abort();
+  apr_hash_t *props;
+
+  SVN_ERR(svn_ra_serf__rev_proplist(session, rev, &props, pool));
+
+  *value = apr_hash_get(props, name, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -278,19 +301,18 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
 
   prop_ctx = NULL;
 
-  svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                             path, revision, "0", desired_props, TRUE,
-                             NULL, session->pool);
-      
-  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
-
-  /* If we were given a specific revision and we now have a 404,
-   * try to discover whether the file existed at that point in time.
+  /* If we were given a specific revision, we have to fetch the VCC and
+   * do a PROPFIND off of that.
    */
-  if (SVN_IS_VALID_REVNUM(revision) &&
-      svn_ra_serf__propfind_status_code(prop_ctx) == 404)
+  if (!SVN_IS_VALID_REVNUM(revision))
     {
-      const char *vcc_url, *relative_url, *baseline_url, *basecoll_url;
+      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
+                                 path, revision, "0", desired_props, TRUE,
+                                 NULL, session->pool);
+    }
+  else
+    {
+      const char *vcc_url, *relative_url, *basecoll_url;
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],
@@ -319,9 +341,9 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
                                  path, revision, "0",
                                  desired_props, TRUE,
                                  NULL, session->pool);
-      
-      SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
     }
+
+  SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
 
   *ret_path = path;
   *ret_prop_ctx = prop_ctx;
@@ -374,11 +396,11 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-void
+static svn_error_t *
 dirent_walker(void *baton,
-              const void *ns, apr_ssize_t ns_len,
-              const void *name, apr_ssize_t name_len,
-              const void *val,
+              const char *ns, apr_ssize_t ns_len,
+              const char *name, apr_ssize_t name_len,
+              const svn_string_t *val,
               apr_pool_t *pool)
 {
   svn_dirent_t *entry = baton;
@@ -395,23 +417,23 @@ dirent_walker(void *baton,
     {
       if (strcmp(name, "version-name") == 0)
         {
-          entry->created_rev = SVN_STR_TO_REV(val);
+          entry->created_rev = SVN_STR_TO_REV(val->data);
         }
       else if (strcmp(name, "creator-displayname") == 0)
         {
-          entry->last_author = val;
+          entry->last_author = val->data;
         }
       else if (strcmp(name, "creationdate") == 0)
         {
-          svn_time_from_cstring(&entry->time, val, pool);
+          SVN_ERR(svn_time_from_cstring(&entry->time, val->data, pool));
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
-          entry->size = apr_atoi64(val);
+          entry->size = apr_atoi64(val->data);
         }
       else if (strcmp(name, "resourcetype") == 0)
         {
-          if (strcmp(val, "collection") == 0)
+          if (strcmp(val->data, "collection") == 0)
             {
               entry->kind = svn_node_dir;
             }
@@ -421,6 +443,8 @@ dirent_walker(void *baton,
             }
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
 struct path_dirent_visitor_t {
@@ -429,12 +453,12 @@ struct path_dirent_visitor_t {
   const char *orig_path;
 };
 
-void
+static svn_error_t *
 path_dirent_walker(void *baton,
-                   const void *path, apr_ssize_t path_len,
-                   const void *ns, apr_ssize_t ns_len,
-                   const void *name, apr_ssize_t name_len,
-                   const void *val,
+                   const char *path, apr_ssize_t path_len,
+                   const char *ns, apr_ssize_t ns_len,
+                   const char *name, apr_ssize_t name_len,
+                   const svn_string_t *val,
                    apr_pool_t *pool)
 {
   struct path_dirent_visitor_t *dirents = baton;
@@ -443,25 +467,25 @@ path_dirent_walker(void *baton,
   /* Skip our original path. */
   if (strcmp(path, dirents->orig_path) == 0)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   entry = apr_hash_get(dirents->full_paths, path, path_len);
 
   if (!entry)
     {
-      const char *basename;
+      const char *base_name;
 
       entry = apr_pcalloc(pool, sizeof(*entry));
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
-      basename = svn_path_uri_decode(svn_path_basename(path, pool), pool);
+      base_name = svn_path_uri_decode(svn_path_basename(path, pool), pool);
 
-      apr_hash_set(dirents->base_paths, basename, APR_HASH_KEY_STRING, entry);
+      apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
 
-  dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
+  return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
 }
 
 static svn_error_t *
@@ -517,7 +541,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
-      const char *vcc_url, *relative_url, *baseline_url, *basecoll_url;
+      const char *vcc_url, *relative_url, *basecoll_url;
 
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],
@@ -575,11 +599,14 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   if (ret_props)
     {
       props = apr_hash_make(pool);
+      *ret_props = apr_hash_make(pool);
+
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           path, revision, "0", all_props,
                                           pool));
-      /* TODO Convert them into a format that the caller expects. */
-      *ret_props = props;
+      svn_ra_serf__walk_all_props(props, path, revision,
+                                  svn_ra_serf__set_flat_props,
+                                  *ret_props, pool);
     }
 
   return SVN_NO_ERROR;
@@ -594,38 +621,11 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 
   if (!session->repos_root_str)
     {
-      const char *vcc_url, *baseline_url, *root_path;
-      svn_stringbuf_t *url_buf;
+      const char *vcc_url;
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &baseline_url,
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
                                          session, session->conns[0],
                                          session->repos_url.path, pool));
-
-      if (!baseline_url)
-        {
-          abort();
-        }
-
-      /* If we see baseline_url as "", we're the root.  Otherwise... */
-      if (*baseline_url == '\0')
-        {
-          root_path = session->repos_url.path;
-          session->repos_root = session->repos_url;
-          session->repos_root_str = session->repos_url_str;
-        }
-      else
-        {
-          url_buf = svn_stringbuf_create(session->repos_url.path, pool);
-          svn_path_remove_components(url_buf,
-                                     svn_path_component_count(baseline_url));
-          root_path = apr_pstrdup(session->pool, url_buf->data);
-
-          /* Now that we have the root_path, recreate the root_url. */
-          session->repos_root = session->repos_url;
-          session->repos_root.path = (char*)root_path;
-          session->repos_root_str = apr_uri_unparse(session->pool,
-                                                    &session->repos_root, 0);
-        }
     }
 
   *url = session->repos_root_str;

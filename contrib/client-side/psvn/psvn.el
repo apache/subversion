@@ -1058,7 +1058,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
     (goto-char (point-max))
     (insert str)
     (save-excursion
-      (goto-char (line-beginning-position))
+      (goto-char (svn-point-at-bol))
       (when (looking-at "Password for '\\(.+\\)': ")
         ;(svn-status-show-process-buffer)
         (let ((passwd (read-passwd
@@ -1484,7 +1484,7 @@ A and B must be line-info's."
                ["svn info" svn-status-info t]
                ["svn blame" svn-status-blame t]))
       (svn-status-face-set-temporary-during-popup
-       'svn-status-marked-popup-face (line-beginning-position) (line-end-position)
+       'svn-status-marked-popup-face (svn-point-at-bol) (svn-point-at-eol)
        svn-status-actual-popup-menu))))
 
 (defun svn-status-face-set-temporary-during-popup (face begin end menu &optional prefix)
@@ -3681,15 +3681,36 @@ If ARG then show diff between some other version of the selected files."
   (define-key svn-log-view-mode-map (kbd "e") 'svn-log-edit-log-entry)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
 
+(defvar svn-log-view-popup-menu-map ()
+  "Keymap used to show popup menu in `svn-log-view-mode' buffers.")
+(put 'svn-log-view-popup-menu-map 'risky-local-variable t) ;for Emacs 20.7
+(when (not svn-log-view-popup-menu-map)
+  (setq svn-log-view-popup-menu-map (make-sparse-keymap))
+  (suppress-keymap svn-log-view-popup-menu-map)
+  (define-key svn-log-view-popup-menu-map [down-mouse-3] 'svn-log-view-popup-menu))
+
 (easy-menu-define svn-log-view-mode-menu svn-log-view-mode-map
 "'svn-log-view-mode' menu"
                   '("SVN-LogView"
                     ["Show Changeset" svn-log-view-diff t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
+(defun svn-log-view-popup-menu (event)
+  (interactive "e")
+  (mouse-set-point event)
+  (let* ((rev (svn-log-revision-at-point)))
+    (when rev
+      (svn-status-face-set-temporary-during-popup
+       'svn-status-marked-popup-face (svn-point-at-bol) (svn-point-at-eol)
+       svn-log-view-mode-menu))))
+
 (defvar svn-log-view-font-lock-keywords
-  '(("^r[0-9]+ .+" . font-lock-keyword-face)
-  "Keywords in svn-log-view-mode."))
+  '(("^r[0-9]+ .+" (0 `(face
+                        font-lock-keyword-face
+                        mouse-face
+                        highlight
+                        keymap ,svn-log-view-popup-menu-map))))
+  "Keywords in svn-log-view-mode.")
 (put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
 
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"

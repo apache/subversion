@@ -88,35 +88,6 @@ svn_xml_is_xml_safe(const char *data, apr_size_t len)
   return TRUE;
 }
 
-svn_boolean_t
-svn_xml_is_xml_name_valid(const char *name)
-{
-  const char *p = name;
-
-  /* The characters we allow use identical representations in UTF8
-     and ASCII, so we can just test for the appropriate ASCII codes.
-     But we can't use standard C character notation ('A', 'B', etc)
-     because there's no guarantee that this C environment is using
-     ASCII. */
-
-
-  if (!(svn_ctype_isalpha(*p)
-        || *p == SVN_CTYPE_ASCII_COLON
-        || *p == SVN_CTYPE_ASCII_UNDERSCORE))
-    return FALSE;
-  p++;
-  for (; *p; p++)
-    {
-      if (!(svn_ctype_isalnum(*p)
-            || *p == SVN_CTYPE_ASCII_MINUS
-            || *p == SVN_CTYPE_ASCII_DOT
-            || *p == SVN_CTYPE_ASCII_COLON
-            || *p == SVN_CTYPE_ASCII_UNDERSCORE))
-        return FALSE;
-    }
-
-  return TRUE;
-}
 
 
 
@@ -494,7 +465,7 @@ svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
   if (*str == NULL)
     *str = svn_stringbuf_create("", pool);
   svn_stringbuf_appendcstr(*str,
-                           "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+                           "<?xml version=\"1.0\"?>\n");
 }
 
 

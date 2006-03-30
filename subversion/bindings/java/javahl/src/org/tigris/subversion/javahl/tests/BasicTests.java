@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
- * tests in subversion/tests/svn/basic_tests.py).
+ * tests in subversion/tests/cmdline/basic_tests.py).
  */
 public class BasicTests extends SVNTests
 {
@@ -93,6 +93,26 @@ public class BasicTests extends SVNTests
             fail("Version should always be available unless the " +
                  "native libraries failed to initialize: " + e);
         }
+    }
+
+    /**
+     * Tests Subversion path validation.
+     */
+    public void testPathValidation() throws Throwable
+    {
+        // Rather than segfaulting, JavaHL considers null an invalid path.
+        assertFalse("Path validation produced false-positive for null path",
+                    Path.isValid(null));
+
+        String path = "valid-path";
+        assertTrue("Validation check of valid path '" + path +
+                   "' should succeed", Path.isValid(path));
+
+        // File names cannot contain control characters.
+        path = "invalid-\u0001-path";
+        assertFalse("Validation check of invalid path '" + path +
+                    "' (which contains control characters) should fail",
+                    Path.isValid(path));
     }
 
     /**

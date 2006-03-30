@@ -143,6 +143,34 @@ print_status(void *baton,
     }
 }
 
+/* Simpler helper to allow use of svn_cl__try. */
+static svn_error_t *
+do_status(svn_cl__opt_state_t *opt_state,
+          const char *target,
+          const svn_opt_revision_t *rev,
+          void *status_baton,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *pool)
+{
+  svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
+
+  if (opt_state->xml)
+    SVN_ERR(print_start_target_xml(svn_path_local_style(target, pool), pool));
+
+  SVN_ERR(svn_client_status2(&repos_rev, target, rev,
+                             print_status, status_baton,
+                             opt_state->nonrecursive ? FALSE : TRUE,
+                             opt_state->verbose,
+                             opt_state->update,
+                             opt_state->no_ignore,
+                             opt_state->ignore_externals,
+                             ctx, pool));
+
+  if (opt_state->xml)
+    SVN_ERR(print_finish_target_xml(repos_rev, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -157,7 +185,6 @@ svn_cl__status(apr_getopt_t *os,
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
-  svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
@@ -211,19 +238,11 @@ svn_cl__status(apr_getopt_t *os,
       sb.xml_mode = opt_state->xml;
       sb.pool = subpool;
 
-      if (opt_state->xml)
-        SVN_ERR(print_start_target_xml(svn_path_local_style(target, pool),
-                                       pool));
-
-      SVN_ERR(svn_client_status2(&repos_rev, target, &rev, print_status, &sb,
-                                 opt_state->nonrecursive ? FALSE : TRUE,
-                                 opt_state->verbose,
-                                 opt_state->update,
-                                 opt_state->no_ignore,
-                                 opt_state->ignore_externals,
-                                 ctx, subpool));
-      if (opt_state->xml)
-        SVN_ERR(print_finish_target_xml(repos_rev, pool));
+      SVN_ERR(svn_cl__try(do_status(opt_state, target, &rev, &sb, ctx,
+                                    subpool),
+                          NULL, opt_state->quiet,
+                          SVN_ERR_WC_NOT_DIRECTORY, /* not versioned */
+                          SVN_NO_ERROR));
     }
 
   svn_pool_destroy(subpool);

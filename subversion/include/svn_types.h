@@ -615,7 +615,7 @@ svn_lock_t *
 svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 
 /**
- * Return a formatted universal Universal Unique IDentifier (UUID) string.
+ * Return a formatted Universal Unique IDentifier (UUID) string.
  *
  * @since New in 1.4.
  */

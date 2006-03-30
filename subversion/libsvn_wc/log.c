@@ -1111,28 +1111,37 @@ log_do_committed(struct log_runner *loggy,
                                  _("Error checking existence of '%s'"), name);
       if (kind == svn_node_file)
         {
-          svn_boolean_t modified;
-          const char *chosen;
+          svn_boolean_t modified = FALSE;
+          apr_time_t wf_time, tmpf_time;
 
-          /* Verify that the working file is the same as the tmpf file. */
-          if ((err = svn_wc__versioned_file_modcheck(&modified, wf,
-                                                     loggy->adm_access,
-                                                     tmpf, TRUE, pool)))
-            return svn_error_createf(pick_error_code(loggy), err,
-                                     _("Error comparing '%s' and '%s'"),
-                                     svn_path_local_style(wf, pool),
-                                     svn_path_local_style(tmpf, pool));
-
-          /* If they are the same, use the working file's timestamp,
-             else use the tmpf file's timestamp. */
-          chosen = modified ? tmpf : wf;
-
-          /* Get the timestamp from our chosen file. */
-          if ((err = svn_io_file_affected_time(&text_time, chosen, pool)))
+          /* Get the timestamp from working and temporary base file. */
+          if ((err = svn_io_file_affected_time(&wf_time, wf, pool)))
             return svn_error_createf
               (pick_error_code(loggy), err,
                _("Error getting 'affected time' for '%s'"),
-               svn_path_local_style(chosen, pool));
+               svn_path_local_style(wf, pool));
+          
+          if ((err = svn_io_file_affected_time(&tmpf_time, tmpf, pool)))
+            return svn_error_createf
+              (pick_error_code(loggy), err,
+               _("Error getting 'affected time' for '%s'"),
+               svn_path_local_style(tmpf, pool));
+
+          /* Verify that the working file is the same as the tmpf file. */
+          if (wf_time != tmpf_time)
+            {
+              if ((err = svn_wc__versioned_file_modcheck(&modified, wf,
+                                                         loggy->adm_access,
+                                                         tmpf, TRUE, pool)))
+                return svn_error_createf(pick_error_code(loggy), err,
+                                         _("Error comparing '%s' and '%s'"),
+                                         svn_path_local_style(wf, pool),
+                                         svn_path_local_style(tmpf, pool));
+            }
+
+          /* If they are the same, use the working file's timestamp,
+             else use the tmpf file's timestamp. */
+          text_time = modified ? tmpf_time : wf_time;
         }
     }
               
@@ -2166,7 +2175,7 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      const char *base_name,
                      apr_pool_t *pool)
 {
-  /* No need to check whether dst_path exists: ENOENT is ignored
+  /* No need to check whether BASE_NAME exists: ENOENT is ignored
      by the log-runner */
   svn_xml_make_open_tag(log_accum, pool,
                         svn_xml_self_closing,
@@ -2298,7 +2307,7 @@ svn_wc_cleanup2(const char *path,
     }
   else
     {
-      /* In an attempt to maintain consitency between the decisions made in
+      /* In an attempt to maintain consistency between the decisions made in
          this function, and those made in the access baton lock-removal code,
          we use the same test as the lock-removal code. */
       SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup, adm_access, pool));

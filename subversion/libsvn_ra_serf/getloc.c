@@ -61,9 +61,6 @@ typedef struct {
   /* Returned location hash */
   apr_hash_t *paths;
 
-  /* Current namespace list */
-  svn_ra_serf__ns_t *ns_list;
-
   /* Current state we're in */
   loc_state_list_t *state;
   loc_state_list_t *free_state;
@@ -108,15 +105,13 @@ static void pop_state(loc_context_t *loc_ctx)
   loc_ctx->free_state = free_state;
 }
 
-static void XMLCALL
-start_getloc(void *userData, const char *raw_name, const char **attrs)
+static svn_error_t *
+start_getloc(svn_ra_serf__xml_parser_t *parser,
+             void *userData,
+             svn_ra_serf__dav_props_t name,
+             const char **attrs)
 {
   loc_context_t *loc_ctx = userData;
-  svn_ra_serf__dav_props_t name;
-
-  svn_ra_serf__define_ns(&loc_ctx->ns_list, attrs, loc_ctx->pool);
-
-  name = svn_ra_serf__expand_ns(loc_ctx->ns_list, raw_name);
 
   if (!loc_ctx->state && strcmp(name.name, "get-locations-report") == 0)
     {
@@ -145,23 +140,24 @@ start_getloc(void *userData, const char *raw_name, const char **attrs)
                        apr_pstrdup(loc_ctx->pool, path));
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-end_getloc(void *userData, const char *raw_name)
+static svn_error_t *
+end_getloc(svn_ra_serf__xml_parser_t *parser,
+           void *userData,
+           svn_ra_serf__dav_props_t name)
 {
   loc_context_t *loc_ctx = userData;
-  svn_ra_serf__dav_props_t name;
   loc_state_list_t *cur_state;
 
   if (!loc_ctx->state)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   cur_state = loc_ctx->state;
-
-  name = svn_ra_serf__expand_ns(loc_ctx->ns_list, raw_name);
 
   if (cur_state->state == REPORT &&
       strcmp(name.name, "get-locations-report") == 0)
@@ -173,6 +169,8 @@ end_getloc(void *userData, const char *raw_name)
     {
       pop_state(loc_ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -187,10 +185,9 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_request_t *request;
-  serf_bucket_t *buckets, *req_bkt, *tmp;
+  serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
-  const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  const char *vcc_url, *relative_url, *basecoll_url, *req_url;
   int i;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
@@ -218,20 +215,20 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  add_tag_buckets(buckets,
-                  "S:path", path,
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:path", path,
+                               session->bkt_alloc);
 
-  add_tag_buckets(buckets,
-                  "S:peg-revision", apr_ltoa(pool, peg_revision),
-                  session->bkt_alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:peg-revision", apr_ltoa(pool, peg_revision),
+                               session->bkt_alloc);
 
   for (i = 0; i < location_revisions->nelts; i++)
     {
       svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i, svn_revnum_t);
-      add_tag_buckets(buckets,
-                      "S:location-revision", apr_ltoa(pool, rev),
-                      session->bkt_alloc);
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:location-revision", apr_ltoa(pool, rev),
+                                   session->bkt_alloc);
     }
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:get-locations>",
@@ -271,6 +268,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
+  parser_ctx->pool = pool;
   parser_ctx->user_data = loc_ctx;
   parser_ctx->start = start_getloc;
   parser_ctx->end = end_getloc;

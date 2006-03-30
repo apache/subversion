@@ -194,11 +194,13 @@ static void pop_state(svn_ra_serf__merge_context_t *ctx)
   ctx->free_state->info = NULL;
 }
 
-static void XMLCALL
-start_merge(void *userData, const char *name, const char **attrs)
+static svn_error_t *
+start_merge(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            svn_ra_serf__dav_props_t name,
+            const char **attrs)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
-  svn_ra_serf__dav_props_t prop_name;
   apr_pool_t *pool;
   svn_ra_serf__ns_t **ns_list;
 
@@ -213,13 +215,7 @@ start_merge(void *userData, const char *name, const char **attrs)
       ns_list = &ctx->state->ns_list;
     }
 
-  /* check for new namespaces */
-  svn_ra_serf__define_ns(ns_list, attrs, pool);
-
-  /* look up name space if present */
-  prop_name = svn_ra_serf__expand_ns(*ns_list, name);
-
-  if (!ctx->state && strcmp(prop_name.name, "merge-response") == 0)
+  if (!ctx->state && strcmp(name.name, "merge-response") == 0)
     {
       push_state(ctx, MERGE_RESPONSE);
     }
@@ -228,60 +224,61 @@ start_merge(void *userData, const char *name, const char **attrs)
       /* do nothing as we haven't seen our valid start tag yet. */
     }
   else if (ctx->state->state == MERGE_RESPONSE &&
-           strcmp(prop_name.name, "updated-set") == 0)
+           strcmp(name.name, "updated-set") == 0)
     {
       push_state(ctx, UPDATED_SET);
     }
   else if (ctx->state->state == UPDATED_SET &&
-           strcmp(prop_name.name, "response") == 0)
+           strcmp(name.name, "response") == 0)
     {
       push_state(ctx, RESPONSE);
     }
   else if (ctx->state->state == RESPONSE &&
-           strcmp(prop_name.name, "href") == 0)
+           strcmp(name.name, "href") == 0)
     {
-      ctx->state->info->prop_ns = prop_name.namespace;
+      ctx->state->info->prop_ns = name.namespace;
       ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
-                                                prop_name.name);
+                                                name.name);
       ctx->state->info->prop_val = NULL;
       push_state(ctx, PROP_VAL);
     }
   else if (ctx->state->state == RESPONSE &&
-           strcmp(prop_name.name, "propstat") == 0)
+           strcmp(name.name, "propstat") == 0)
     {
       push_state(ctx, PROPSTAT);
     }
   else if (ctx->state->state == PROPSTAT &&
-           strcmp(prop_name.name, "prop") == 0)
+           strcmp(name.name, "prop") == 0)
     {
       push_state(ctx, PROP);
     }
   else if (ctx->state->state == PROPSTAT &&
-           strcmp(prop_name.name, "status") == 0)
+           strcmp(name.name, "status") == 0)
     {
       /* Do nothing for now. */
     }
   else if (ctx->state->state == PROP &&
-           strcmp(prop_name.name, "resourcetype") == 0)
+           strcmp(name.name, "resourcetype") == 0)
     {
       push_state(ctx, RESOURCE_TYPE);
+      ctx->state->info->type = NONE;
     }
   else if (ctx->state->state == RESOURCE_TYPE &&
-           strcmp(prop_name.name, "baseline") == 0)
+           strcmp(name.name, "baseline") == 0)
     {
       ctx->state->info->type = BASELINE;
     }
   else if (ctx->state->state == RESOURCE_TYPE &&
-           strcmp(prop_name.name, "collection") == 0)
+           strcmp(name.name, "collection") == 0)
     {
       ctx->state->info->type = COLLECTION;
     }
   else if (ctx->state->state == PROP &&
-           strcmp(prop_name.name, "checked-in") == 0)
+           strcmp(name.name, "checked-in") == 0)
     {
-      ctx->state->info->prop_ns = prop_name.namespace;
+      ctx->state->info->prop_ns = name.namespace;
       ctx->state->info->prop_name = apr_pstrdup(ctx->state->info->pool,
-                                                prop_name.name);
+                                                name.name);
       ctx->state->info->prop_val = NULL;
       push_state(ctx, IGNORE_PROP_NAME);
     }
@@ -295,9 +292,9 @@ start_merge(void *userData, const char *name, const char **attrs)
     }
   else if (ctx->state->state == NEED_PROP_NAME)
     {
-      ctx->state->info->prop_ns = prop_name.namespace;
+      ctx->state->info->prop_ns = name.namespace;
       ctx->state->info->prop_name = apr_pstrdup(ctx->state->info->pool,
-                                                prop_name.name);
+                                                name.name);
       ctx->state->info->prop_val = NULL;
       push_state(ctx, PROP_VAL);
     }
@@ -305,24 +302,25 @@ start_merge(void *userData, const char *name, const char **attrs)
     {
       abort();
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-end_merge(void *userData, const char *raw_name)
+static svn_error_t *
+end_merge(svn_ra_serf__xml_parser_t *parser,
+          void *userData,
+          svn_ra_serf__dav_props_t name)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
-  svn_ra_serf__dav_props_t prop_name;
 
   if (!ctx->state)
     {
       /* nothing to close yet. */
-      return;
+      return SVN_NO_ERROR;
     }
 
-  prop_name = svn_ra_serf__expand_ns(ctx->state->ns_list, raw_name);
-
   if (ctx->state->state == RESPONSE &&
-      strcmp(prop_name.name, "response") == 0)
+      strcmp(name.name, "response") == 0)
     {
       merge_info_t *info = ctx->state->info;
 
@@ -381,17 +379,17 @@ end_merge(void *userData, const char *raw_name)
       pop_state(ctx);
     }
   else if (ctx->state->state == PROPSTAT &&
-           strcmp(prop_name.name, "propstat") == 0)
+           strcmp(name.name, "propstat") == 0)
     {
       pop_state(ctx);
     }
   else if (ctx->state->state == PROP &&
-           strcmp(prop_name.name, "prop") == 0)
+           strcmp(name.name, "prop") == 0)
     {
       pop_state(ctx);
     }
   else if (ctx->state->state == RESOURCE_TYPE &&
-           strcmp(prop_name.name, "resourcetype") == 0)
+           strcmp(name.name, "resourcetype") == 0)
     {
       pop_state(ctx);
     }
@@ -406,7 +404,7 @@ end_merge(void *userData, const char *raw_name)
 
       if (!info->prop_name)
         {
-          info->prop_name = apr_pstrdup(info->pool, prop_name.name);
+          info->prop_name = apr_pstrdup(info->pool, name.name);
         }
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
@@ -421,10 +419,15 @@ end_merge(void *userData, const char *raw_name)
 
       pop_state(ctx);
     }
+
+  return SVN_NO_ERROR;
 }
 
-static void XMLCALL
-cdata_merge(void *userData, const char *data, int len)
+static svn_error_t *
+cdata_merge(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            const char *data,
+            apr_size_t len)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
   if (ctx->state && ctx->state->state == PROP_VAL)
@@ -432,8 +435,9 @@ cdata_merge(void *userData, const char *data, int len)
       svn_ra_serf__expand_string(&ctx->state->info->prop_val,
                                  &ctx->state->info->prop_val_len,
                                  data, len, ctx->state->pool);
-
     }
+
+  return SVN_NO_ERROR;
 }
 
 #define MERGE_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:merge xmlns:D=\"DAV:\"><D:source><D:href>"
@@ -505,6 +509,7 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
+  parser_ctx->pool = pool;
   parser_ctx->user_data = merge_ctx;
   parser_ctx->start = start_merge;
   parser_ctx->end = end_merge;

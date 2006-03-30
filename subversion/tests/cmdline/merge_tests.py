@@ -3301,7 +3301,7 @@ test_list = [ None,
               cherry_pick_text_conflict,
               merge_file_replace,
               merge_dir_replace,
-              XFail(merge_file_replace_to_mixed_rev_wc),
+              merge_file_replace_to_mixed_rev_wc,
              ]
 
 if __name__ == '__main__':

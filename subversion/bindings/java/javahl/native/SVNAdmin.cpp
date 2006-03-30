@@ -42,66 +42,19 @@ SVNAdmin::~SVNAdmin()
 {
 
 }
-jlong SVNAdmin::getCppAddr()
-{
-    return reinterpret_cast<jlong>(this);
-}
+
 SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
-    JNIEnv *env = JNIUtil::getEnv();
-    if(fid == 0)
-    {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        fid = env->GetFieldID(clazz, "cppAddr", "J");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-    }
-
-    jlong cppAddr = env->GetLongField(jthis, fid);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    return reinterpret_cast<SVNAdmin*>(cppAddr);
-
+    jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
+						   JAVA_PACKAGE"/SVNAdmin");
+    return (cppAddr == 0 ? NULL : reinterpret_cast<SVNAdmin *>(cppAddr));
 }
 
 void SVNAdmin::dispose(jobject jthis)
 {
-    delete this;
     static jfieldID fid = 0;
-    JNIEnv *env = JNIUtil::getEnv();
-    if(fid == 0)
-    {
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return;
-        }
-        fid = env->GetFieldID(clazz, "cppAddr", "J");
-        if(JNIUtil::isJavaExceptionThrown())
-        {
-            return;
-        }
-    }
-
-    env->SetLongField(jthis, fid, 0);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return;
-    }
-}
-
-void SVNAdmin::finalize()
-{
-    JNIUtil::putFinalizedClient(this);
+    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNAdmin");
 }
 
 void SVNAdmin::create(const char *path, bool disableFsyncCommits,

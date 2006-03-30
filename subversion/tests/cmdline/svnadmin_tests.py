@@ -21,7 +21,8 @@ import string, sys, re, os.path
 
 # Our testing module
 import svntest
-
+from svntest import SVNAnyOutput
+from svntest.actions import SVNExpectedStdout, SVNExpectedStderr
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -89,18 +90,28 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     expected_stderr, 1, dump)
 
   if expected_stdout:
-    svntest.actions.compare_and_display_lines(
-      "Standard output", "STDOUT:", expected_stdout, output)
+    if expected_stdout == SVNAnyOutput:
+      if len(output) == 0:
+        raise SVNExpectedStdout
+    else:
+      svntest.actions.compare_and_display_lines(
+        "Standard output", "STDOUT:", expected_stdout, output)
 
   if expected_stderr:
-    svntest.actions.compare_and_display_lines(
-      "Standard error output", "STDERR:", expected_stderr, errput)
+    if expected_stderr == SVNAnyOutput:
+      if len(errput) == 0:
+        raise SVNExpectedStderr
+    else:
+      svntest.actions.compare_and_display_lines(
+        "Standard error output", "STDERR:", expected_stderr, errput)
+    # The expected error occurred, so don't try to verify the result
+    return
 
   if revs:
     # verify revs as wc states
     for rev in xrange(len(revs)):
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
-                                         svntest.SVNAnyOutput, [],
+                                         SVNAnyOutput, [],
                                          "update", "-r%s" % (rev+1),
                                          '--username', svntest.main.wc_author,
                                          '--password', svntest.main.wc_passwd,
@@ -158,7 +169,8 @@ def test_create(sbox):
 
 # dump stream tests need a dump file
 
-clean_dumpfile = \
+def clean_dumpfile():
+  return \
   [ "SVN-fs-dump-format-version: 2\n\n",
     "UUID: 668cc64a-31ed-0310-8ccb-b75d75bb44e3\n\n",
     "Revision-number: 0\n",
@@ -188,7 +200,7 @@ def extra_headers(sbox):
 
   test_create(sbox)
 
-  dumpfile = clean_dumpfile
+  dumpfile = clean_dumpfile()
 
   dumpfile[3:3] = \
        [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
@@ -196,20 +208,20 @@ def extra_headers(sbox):
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
 
 #----------------------------------------------------------------------
+# Ensure loading continues after skipping a bit of unknown extra content.
 def extra_blockcontent(sbox):
   "load success on oversized Content-length"
 
-  ###FIXME: This test fails but should succeed in the light of
-  # forward compatibility
-
   test_create(sbox)
 
-  dumpfile = clean_dumpfile[0:-2] + \
-             [ "Extra-content-length: 10\n",
-               "Content-length: 50\n\n",
-               "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\n",
-               "text\nextra text\n\n\n"]
+  dumpfile = clean_dumpfile()
 
+  # Replace "Content-length" line with two lines
+  dumpfile[8:9] = \
+       [ "Extra-content-length: 10\n",
+         "Content-length: 108\n\n" ]
+  # Insert the extra content after "PROPS-END\n"
+  dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
 
@@ -219,11 +231,12 @@ def inconsistent_headers(sbox):
 
   test_create(sbox)
 
-  dumpfile = clean_dumpfile
+  dumpfile = clean_dumpfile()
 
   dumpfile[-2] = "Content-length: 30\n\n"
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox, [], SVNAnyOutput,
+                             dumpfile_revisions, dumpfile)
 
 #----------------------------------------------------------------------
 
@@ -354,7 +367,7 @@ def hotcopy_format(sbox):
 test_list = [ None,
               extra_headers,
               extra_blockcontent,
-              XFail(inconsistent_headers),
+              inconsistent_headers,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,

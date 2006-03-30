@@ -2202,7 +2202,7 @@ process just hangs. Is my repository corrupt?</h3>
 Your repository is not corrupt, nor is your data lost. If your process
 accesses the repository directly (mod_dav_svn, svnlook, svnadmin, or
 if you access a `file://' URL), then it's using Berkeley DB to access
-your data.  Berkeley DB is journaling system, meaning that it logs
+your data.  Berkeley DB is a journaling system, meaning that it logs
 everything it is about to do before it does so.  If your process is
 interrupted (Control-C, or segfault), then a lockfile is left behind,
 along with a logfile describing unfinished business.  Any other
@@ -2339,11 +2339,11 @@ working copy is locked. Is my working copy corrupt?</h3>
 
 <p>
 Your working copy is not corrupt, nor is your data lost.  Subversion's
-working copy is journaling system, meaning that it logs everything it
+working copy is a journaling system, meaning that it logs everything it
 is about to do before it does so.  If the svn client program is
 interrupted violently (segfault or killed, not with Control-C), then
 one or more lockfiles are left behind, along with logfiles describing
-unfinished business.  (The`svn status' command will show an 'L' next
+unfinished business.  (The `svn status' command will show an 'L' next
 to locked directories.)  Any other process that attempts to access the
 working copy will fail when it sees the locks.  To awaken your working
 copy, you need to tell the svn client to finish the work.  Simply

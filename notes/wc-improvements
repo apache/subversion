@@ -23,7 +23,7 @@ in, and libsvn_wc is now faster and scales a bit better, but problems
 still remain.
 
 A good example of the problems caused by the "path as parameter" API
-is svn_wc_text_modified_p.  It's basic function is to determine if the
+is svn_wc_text_modified_p.  Its basic function is to determine if the
 base text file and the working file are the same or different, but
 physical IO operations have to be repeated because they are buried
 behind several layers of API.  It's difficult to fix without

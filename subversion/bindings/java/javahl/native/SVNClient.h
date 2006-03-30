@@ -140,10 +140,8 @@ public:
                   bool noDiffDelete, bool force);
 
     const char * getLastPath();
-    void finalize();
     void dispose(jobject jthis);
     static SVNClient * getCppObject(jobject jthis);
-    jlong getCppAddr();
     SVNClient();
     virtual ~SVNClient();
     static jobject createJavaLock(const svn_lock_t *lock);

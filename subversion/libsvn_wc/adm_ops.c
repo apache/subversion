@@ -7,7 +7,7 @@
  *            file in the working copy).
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -310,7 +310,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_process_committed2(const char *path,
+svn_wc_process_committed3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
                           svn_revnum_t new_revnum,
@@ -318,6 +318,7 @@ svn_wc_process_committed2(const char *path,
                           const char *rev_author,
                           apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
+                          const unsigned char *digest,
                           apr_pool_t *pool)
 {
   const char *base_name;
@@ -350,43 +351,38 @@ svn_wc_process_committed2(const char *path,
       SVN_ERR(remove_revert_file(&logtags, adm_access, base_name,
                                  TRUE, pool));
 
-      /* There may be a new text base is sitting in the adm tmp area by
-         now, because the commit succeeded.  A file that is copied, but not
-         otherwise modified, doesn't have a new text base, so we use
-         the unmodified text base.
-
-         ### Does this mean that a file committed with only prop mods
-         ### will still get its text base checksum recomputed?  Yes it
-         ### does, sadly.  But it's not enough to just check for that
-         ### condition, because in the case of an added file, there
-         ### may not be a pre-existing checksum in the entry.
-         ### Probably the best solution is to compute (or copy) the
-         ### checksum at 'svn add' (or 'svn cp') time, instead of
-         ### waiting until commit time.
-      */
-      latest_base = svn_wc__text_base_path(path, TRUE, pool);
-      SVN_ERR(svn_io_check_path(latest_base, &kind, pool));
-      if (kind == svn_node_none)
+      if (digest)
+        hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      else
         {
-          latest_base = svn_wc__text_base_path(path, FALSE, pool);
+          /* There may be a new text base sitting in the adm tmp area
+             by now, because the commit succeeded.  A file that is
+             copied, but not otherwise modified, doesn't have a new
+             text base, so we use the unmodified text base.
+
+             ### Does this mean that a file committed with only prop mods
+             ### will still get its text base checksum recomputed?  Yes it
+             ### does, sadly.  But it's not enough to just check for that
+             ### condition, because in the case of an added file, there
+             ### may not be a pre-existing checksum in the entry.
+             ### Probably the best solution is to compute (or copy) the
+             ### checksum at 'svn add' (or 'svn cp') time, instead of
+             ### waiting until commit time.
+          */
+          latest_base = svn_wc__text_base_path(path, TRUE, pool);
           SVN_ERR(svn_io_check_path(latest_base, &kind, pool));
-        }
+          if (kind == svn_node_none)
+            {
+              latest_base = svn_wc__text_base_path(path, FALSE, pool);
+              SVN_ERR(svn_io_check_path(latest_base, &kind, pool));
+            }
 
-      if (kind == svn_node_file)
-        {
-          /* It would be more efficient to compute the checksum as part of
-             some other operation that has to process all the bytes anyway
-             (such as copying or translation).  But that would make a lot
-             of other code more complex, since the relevant copy and/or
-             translation operations happened elsewhere, a long time ago.
-             If we were to obtain the checksum then/there, we'd still have
-             to somehow preserve it until now/here, which would result in
-             unexpected and hard-to-maintain dependencies.  Ick.
-
-             So instead we just do the checksum from scratch.  Ick. */
-          unsigned char digest[APR_MD5_DIGESTSIZE];
-          SVN_ERR(svn_io_file_checksum(digest, latest_base, pool));
-          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          if (kind == svn_node_file)
+            {
+              unsigned char local_digest[APR_MD5_DIGESTSIZE];
+              SVN_ERR(svn_io_file_checksum(local_digest, latest_base, pool));
+              hex_digest = svn_md5_digest_to_cstring(local_digest, pool);
+            }
         }
 
       /* Oh, and recursing at this point isn't really sensible. */
@@ -400,7 +396,7 @@ svn_wc_process_committed2(const char *path,
 
 
   /* Append a log command to set (overwrite) the 'committed-rev',
-     'committed-date', 'last-author', and possibly `checksum'
+     'committed-date', 'last-author', and possibly 'checksum'
      attributes in the entry.
 
      Note: it's important that this log command come *before* the
@@ -438,7 +434,7 @@ svn_wc_process_committed2(const char *path,
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
-     timestamp.)  */
+     timestamp). */
   SVN_ERR(svn_wc__loggy_committed(&logtags, adm_access,
                                   base_name, new_revnum, pool));
 
@@ -465,7 +461,7 @@ svn_wc_process_committed2(const char *path,
 
   /* Run the log file we just created. */
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-            
+
   if (recurse)
     {
       apr_hash_t *entries;
@@ -521,6 +517,22 @@ svn_wc_process_committed2(const char *path,
 }
 
 svn_error_t *
+svn_wc_process_committed2(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          apr_pool_t *pool)
+{
+  return svn_wc_process_committed3(path, adm_access, recurse, new_revnum,
+                                   rev_date, rev_author, wcprop_changes,
+                                   remove_lock, NULL, pool);
+}
+
+svn_error_t *
 svn_wc_process_committed(const char *path,
                          svn_wc_adm_access_t *adm_access,
                          svn_boolean_t recurse,
@@ -542,7 +554,7 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  /* Try, remove the file. */
+  /* Try to remove the file. */
   err = svn_io_remove_file(file, pool);
 
   /* Ignore file not found error. */
@@ -556,8 +568,8 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 }
 
 
-/* Recursively mark a tree ADM_ACCESS for with a SCHEDULE and/or EXISTENCE
-   flag and/or COPIED flag, depending on the state of MODIFY_FLAGS. */
+/* Recursively mark a tree ADM_ACCESS with a SCHEDULE and/or COPIED
+   flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
 mark_tree(svn_wc_adm_access_t *adm_access, 
           apr_uint32_t modify_flags,
@@ -596,7 +608,7 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       /* Skip "this dir".  */
       if (! strcmp((const char *)key, SVN_WC_ENTRY_THIS_DIR))
         continue;
-          
+
       base_name = key;
       fullpath = svn_path_join(svn_wc_adm_access_path(adm_access), base_name,
                                subpool);
@@ -1297,7 +1309,7 @@ svn_wc_add(const char *path,
     - For files, svn_wc_remove_from_revision_control(), baby.
 
     - Added directories may contain nothing but added children, and
-      reverting the addition of a directory necessary means reverting
+      reverting the addition of a directory necessarily means reverting
       the addition of all the directory's children.  Again,
       svn_wc_remove_from_revision_control() should do the trick.
 
@@ -2212,7 +2224,7 @@ resolve_found_entry_callback(const char *path,
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
-     the second one (where we're looking at THIS_DIR.)  */
+     the second one (where we're looking at THIS_DIR). */
   if ((entry->kind == svn_node_dir) 
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;

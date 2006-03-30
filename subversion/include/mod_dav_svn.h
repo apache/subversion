@@ -33,7 +33,7 @@ extern "C" {
    location block, process URI and return many things, allocated in
    r->pool:
 
-   * CLEANED_URI:  the uri with duplicate and trailing slashes removed.
+   * CLEANED_URI:     The uri with duplicate and trailing slashes removed.
 
    * TRAILING_SLASH:  Whether the uri had a trailing slash on it.
 
@@ -46,11 +46,11 @@ extern "C" {
 
    * REPOS_PATH:      The actual path within the repository filesystem, or
                       NULL if no part of the uri refers to a path in
-                      the repository.  (e.g. "!svn/vcc/default" or
-                      "!svn/bln/25")
+                      the repository (e.g. "!svn/vcc/default" or
+                      "!svn/bln/25").
 
 
-   So for example, consider the uri
+   For example, consider the uri
 
        /svn/repos/proj1/!svn/blah/13//A/B/alpha
 

@@ -1179,7 +1179,7 @@ main(int argc, const char *argv[])
      initialization from within libsvn_client itself, but it seems
      burdensome to demand that all clients call svn_client_init()
      before calling any other libsvn_client function... On the other
-     hand, the alternative is effective to demand that they call
+     hand, the alternative is effectively to demand that they call
      svn_config_ensure() instead, so maybe we should have a generic
      init function anyway.  Thoughts?  */
   err = svn_config_ensure(opt_state.config_dir, pool);

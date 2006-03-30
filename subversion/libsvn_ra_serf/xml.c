@@ -49,7 +49,6 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
     {
       if (strncmp(*tmp_attrs, "xmlns", 5) == 0)
         {
-          const char *attr, *attr_val;
           svn_ra_serf__ns_t *new_ns, *cur_ns;
           int found = 0;
 
@@ -174,8 +173,9 @@ svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
     }
 }
 
-void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
-                            const char *value, serf_bucket_alloc_t *bkt_alloc)
+void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
+                                  const char *value,
+                                  serf_bucket_alloc_t *bkt_alloc)
 {
   serf_bucket_t *tmp;
 
@@ -188,8 +188,11 @@ void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", 1, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(value, bkt_alloc);
-  serf_bucket_aggregate_append(agg_bucket, tmp);
+  if (value)
+    {
+      tmp = SERF_BUCKET_SIMPLE_STRING(value, bkt_alloc);
+      serf_bucket_aggregate_append(agg_bucket, tmp);
+    }
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</", 2, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
@@ -201,3 +204,49 @@ void add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
   serf_bucket_aggregate_append(agg_bucket, tmp);
 }
 
+void
+svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
+                            int state)
+{
+  svn_ra_serf__xml_state_t *new_state;
+
+  if (!parser->free_state)
+    {
+      new_state = apr_palloc(parser->pool, sizeof(*new_state));
+      apr_pool_create(&new_state->pool, parser->pool);
+    }
+  else
+    {
+      new_state = parser->free_state;
+      parser->free_state = parser->free_state->prev;
+
+      apr_pool_clear(new_state->pool);
+    }
+
+  if (parser->state)
+    {
+      new_state->private = parser->state->private;
+      new_state->ns_list = parser->state->ns_list;
+    }
+  else
+    {
+      new_state->private = NULL;
+      new_state->ns_list = NULL;
+    }
+
+  new_state->current_state = state;
+
+  /* Add it to the state chain. */
+  new_state->prev = parser->state;
+  parser->state = new_state;
+}
+
+void svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser)
+{
+  svn_ra_serf__xml_state_t *cur_state;
+
+  cur_state = parser->state;
+  parser->state = cur_state->prev;
+  cur_state->prev = parser->free_state;
+  parser->free_state = cur_state;
+}

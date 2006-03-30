@@ -109,6 +109,9 @@ typedef struct {
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
+
+  /* Error that we've received but not yet returned upstream. */
+  svn_error_t *pending_error;
 } svn_ra_serf__session_t;
 
 /*
@@ -149,50 +152,50 @@ static const svn_ra_serf__dav_props_t base_props[] =
   { "DAV:", "resourcetype" },
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
   { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t checked_in_props[] =
 {
   { "DAV:", "checked-in" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
   { "DAV:", "version-name" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t all_props[] =
 {
   { "DAV:", "allprop" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t vcc_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t check_path_props[] =
 {
   { "DAV:", "resourcetype" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t uuid_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
-  NULL
+  { NULL }
 };
 
 static const svn_ra_serf__dav_props_t repos_root_props[] =
 {
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
-  NULL
+  { NULL }
 };
 
 /* WC props compatibility with ra_dav. */
@@ -312,6 +315,9 @@ svn_ra_serf__handler_default(serf_request_t *request,
 
 /*
  * Handler that discards the entire request body.
+ *
+ * If baton is a svn_ra_serf__server_error_t and an error is detected, it
+ * will be populated for later detection.
  */
 apr_status_t
 svn_ra_serf__handler_discard_body(serf_request_t *request,
@@ -325,18 +331,56 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
 serf_request_t*
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 
+/* XML helper callbacks. */
+
+typedef struct svn_ra_serf__xml_state_t {
+  int current_state;
+
+  void *private;
+
+  apr_pool_t *pool;
+
+  svn_ra_serf__ns_t *ns_list;
+
+  struct svn_ra_serf__xml_state_t *prev;
+} svn_ra_serf__xml_state_t;
+
+typedef struct svn_ra_serf__xml_parser_t svn_ra_serf__xml_parser_t;
+
+typedef svn_error_t *
+(*svn_ra_serf__xml_start_element_t)(svn_ra_serf__xml_parser_t *parser,
+                                    void *baton,
+                                    svn_ra_serf__dav_props_t name,
+                                    const char **attrs);
+
+typedef svn_error_t *
+(*svn_ra_serf__xml_end_element_t)(svn_ra_serf__xml_parser_t *parser,
+                                  void *baton,
+                                  svn_ra_serf__dav_props_t name);
+
+typedef svn_error_t *
+(*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
+                                          void *baton,
+                                          const char *data,
+                                          apr_size_t len);
+
 /*
  * Helper structure associated with handle_xml_parser handler that will
  * specify how an XML response will be processed.
  */
-typedef struct {
+struct svn_ra_serf__xml_parser_t {
+  apr_pool_t *pool;
+
   void *user_data;
 
-  XML_StartElementHandler start;
-  XML_EndElementHandler end;
-  XML_CharacterDataHandler cdata;
+  svn_ra_serf__xml_start_element_t start;
+  svn_ra_serf__xml_end_element_t end;
+  svn_ra_serf__xml_cdata_chunk_handler_t cdata;
 
   XML_Parser xmlp;
+
+  svn_ra_serf__xml_state_t *state;
+  svn_ra_serf__xml_state_t *free_state;
 
   int *status_code;
   svn_boolean_t *done;
@@ -344,7 +388,38 @@ typedef struct {
 
   svn_ra_serf__list_t *done_item;
 
-} svn_ra_serf__xml_parser_t;
+  svn_boolean_t ignore_errors;
+  svn_error_t *error;
+};
+
+/*
+ * Parses a server-side error message into a local Subversion error.
+ */
+typedef struct {
+  /* Our local representation of the error. */
+  svn_error_t *error;
+
+  /* Have we checked to see if there's an XML error in this response? */
+  svn_boolean_t init;
+
+  /* Was there an XML error response? */
+  svn_boolean_t has_xml_response;
+
+  /* Are we done with the response? */
+  svn_boolean_t done;
+
+  /* Have we seen an error tag? */
+  svn_boolean_t in_error;
+
+  /* Should we be collecting the XML cdata for the error message? */
+  svn_boolean_t collect_message;
+
+  /* XML parser and namespace used to parse the remote response */
+  svn_ra_serf__xml_parser_t parser;
+
+  /* The length of the error message we received. */
+  apr_size_t message_len;
+} svn_ra_serf__server_error_t;
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
@@ -362,6 +437,13 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                apr_pool_t *pool);
 
 /** XML helper functions. **/
+
+void
+svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
+                            int state);
+
+void
+svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
 
 void
 svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket,
@@ -467,13 +549,20 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
                             const svn_ra_serf__dav_props_t *props,
                             apr_pool_t *pool);
 
+/* ### TODO: doco. */
+void
+svn_ra_serf__set_ver_prop(apr_hash_t *props,
+                          const char *path, svn_revnum_t rev,
+                          const char *ns, const char *name,
+                          const svn_string_t *val, apr_pool_t *pool);
+
 /** Property walker functions **/
 
-typedef void
+typedef svn_error_t *
 (*svn_ra_serf__walker_visitor_t)(void *baton,
-                                 const void *ns, apr_ssize_t ns_len,
-                                 const void *name, apr_ssize_t name_len,
-                                 const void *val,
+                                 const char *ns, apr_ssize_t ns_len,
+                                 const char *name, apr_ssize_t name_len,
+                                 const svn_string_t *val,
                                  apr_pool_t *pool);
 
 void
@@ -484,12 +573,12 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
-typedef void
+typedef svn_error_t *
 (*svn_ra_serf__path_rev_walker_t)(void *baton,
-                                  const void *path, apr_ssize_t path_len,
-                                  const void *ns, apr_ssize_t ns_len,
-                                  const void *name, apr_ssize_t name_len,
-                                  const void *val,
+                                  const char *path, apr_ssize_t path_len,
+                                  const char *ns, apr_ssize_t ns_len,
+                                  const char *name, apr_ssize_t name_len,
+                                  const svn_string_t *val,
                                   apr_pool_t *pool);
 void
 svn_ra_serf__walk_all_paths(apr_hash_t *props,
@@ -498,14 +587,38 @@ svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
+/* Higher-level variants on the walker. */
+typedef svn_error_t * (*svn_ra_serf__prop_set_t)(void *baton,
+                                                 const char *name,
+                                                 const svn_string_t *value,
+                                                 apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
+                             const char *ns, apr_ssize_t ns_len,
+                             const char *name, apr_ssize_t name_len,
+                             const svn_string_t *val,
+                             apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__set_flat_props(void *baton,
+                            const char *ns, apr_ssize_t ns_len,
+                            const char *name, apr_ssize_t name_len,
+                            const svn_string_t *val,
+                            apr_pool_t *pool);
+
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
-const void *
+const svn_string_t *
+svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
+                                 const char *path, svn_revnum_t rev,
+                                 const char *ns, const char *name);
+const char *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name);
 
 /* Same as get_prop, but for the unknown revision */
-const void *
+const char *
 svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns,
@@ -519,13 +632,13 @@ void
 svn_ra_serf__set_rev_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
-                          const void *val, apr_pool_t *pool);
+                          const svn_string_t *val, apr_pool_t *pool);
 
 /* Same as set_rev_prop, but sets it for the unknown revision. */
 void
 svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const char *ns, const char *name,
-                      const void *val, apr_pool_t *pool);
+                      const svn_string_t *val, apr_pool_t *pool);
 
 /** MERGE-related functions **/
 
@@ -683,3 +796,10 @@ svn_ra_serf__get_file(svn_ra_session_t *session,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
                       apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
+                             svn_revnum_t rev,
+                             const char *name,
+                             const svn_string_t *value,
+                             apr_pool_t *pool);

@@ -162,7 +162,7 @@ def blame_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ['<?xml version="1.0" encoding="utf-8"?>\n',
+  template = ['<?xml version="1.0"?>\n',
               '<blame>\n',
               '<target\n',
               '   path="' + file_path + '">\n',

@@ -457,14 +457,14 @@ svn_client__get_diff_summarize_editor(const char *target,
 
    The day that 'svn switch' came into existence, our old commit
    crawler (svn_wc_crawl_local_mods) became obsolete.  It relied far
-   too heavily on the on-disk heirarchy of files and directories, and
+   too heavily on the on-disk hierarchy of files and directories, and
    simply had no way to support disjoint working copy trees or nest
    working copies.  The primary reason for this is that commit
    process, in order to guarantee atomicity, is a single drive of a
    commit editor which is based not on working copy paths, but on
    URLs.  With the completion of 'svn switch', it became all too
-   likely that the on-disk working copy heirarchy would no longer be
-   guaranteed to map to a similar in-repository heirarchy.
+   likely that the on-disk working copy hierarchy would no longer be
+   guaranteed to map to a similar in-repository hierarchy.
 
    Aside from this new brokenness of the old system, an unrelated
    feature request had cropped up -- the ability to know in advance of
@@ -608,7 +608,12 @@ svn_client__condense_commit_items(const char **base_url,
 
    If the caller wants to keep track of any outstanding temporary
    files left after the transmission of text and property mods,
-   *TEMPFILES is the place to look.  */
+   *TEMPFILES is the place to look.
+
+   MD5 checksums, if available,  for the new text bases of committed
+   files are stored in *DIGESTS, which maps const char* paths (from the
+   items' paths) to const unsigned char* digests.  DIGESTS may be
+   null.  */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       apr_array_header_t *commit_items,
@@ -617,6 +622,7 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **tempfiles,
+                      apr_hash_t **digests,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 

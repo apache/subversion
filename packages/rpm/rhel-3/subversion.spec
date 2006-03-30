@@ -25,6 +25,7 @@ BuildPreReq: db4-devel
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
+BuildPreReq: gettext
 BuildPreReq: httpd >= %{apache_version}
 BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
@@ -94,6 +95,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Mar 20 2006 David Summers <david@summersoft.fay.ar.us> r18962
+- Added needed 'gettext' BuildPreReq.
+  Thanks go to Francis Giraldeau <francis.giraldeau@revolutionlinux.com>.
+
 * Sat Jan 07 2006 David Summers <david@summersoft.fay.ar.us> r18013
 - Simplify apache regression testing.
 

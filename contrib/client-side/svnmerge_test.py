@@ -288,6 +288,33 @@ def get_test_path():
 
 class TestCase_TestRepo(TestCase_SvnMerge):
     def setUp(self):
+        """Creates a working copy with the following structure:
+
+          test-branch/
+           test1
+           test2
+           test3
+
+        ...from a repository with the following structure:
+
+          /
+           trunk/
+            test1
+            test2
+            test3
+            test4
+            test5
+           branches/
+            testYYY-branch/
+             test1
+             test2
+             test3
+            test-branch/
+             test1
+             test2
+             test3
+           tags/
+        """
         self.cwd = os.getcwd()
 
         test_path = get_test_path()
@@ -360,6 +387,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Always remove the template directory when the tests have
         # completed.
         atexit.register(lambda: rmtree(template_path))
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        rmtree(self.test_path)
 
     def command_dict(self):
         return dict(TEMPLATE_PATH=self.template_path,
@@ -460,7 +491,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         out = self.svnmerge("avail --diff -r5")
         self.assertEqual(out.strip(), "")
 
-    def testCommitFile(self):
+    def test_log_msg_suggest(self):
         self.svnmerge("init -vf commit-log.txt", match="wrote commit message")
         self.assert_(os.path.exists("commit-log.txt"))
         os.remove("commit-log.txt")
@@ -483,16 +514,21 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("trunk")
         self.svnmerge("init", error=True, match="no copyfrom")
 
-    def tearDown(self):
-        os.chdir(self.cwd)
-        rmtree(self.test_path)
-
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
         self.svnmerge("init")
         self.svnmerge("avail -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
+
+    def testMergeRecordOnly(self):
+        """Check that flagging revisions as manually merged works."""
+        self.svnmerge("init")
+        self.svnmerge("avail -vv -r9", match=r"svn log.*-r9:9")
+        self.svnmerge("merge --record-only -F -vv -r9",
+                      nonmatch=r"svn merge -r 8:9")
+        out = self.svnmerge("avail -r9")
+        self.assertEqual(out.strip(), "")
 
     def testBidirectionalMerges(self):
         """Check that reflected revisions are recognized properly for bidirectional merges."""
