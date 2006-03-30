@@ -43,6 +43,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum {
+  NONE = 0,
   FILE_REVS_REPORT,
   FILE_REV,
   REV_PROP,
@@ -86,20 +87,6 @@ typedef struct {
 
 } blame_info_t;
 
-typedef struct blame_state_list_t {
-  /* The current state that we are in now. */
-  blame_state_e state;
-
-  /* temporary pool for this state's life time. */
-  apr_pool_t *pool;
-
-  /* Information */
-  blame_info_t *info;
-
-  /* The previous state we were in. */
-  struct blame_state_list_t *prev;
-} blame_state_list_t;
-
 typedef struct {
   /* pool passed to get_file_revs */
   apr_pool_t *pool;
@@ -108,10 +95,6 @@ typedef struct {
   const char *path;
   svn_revnum_t start;
   svn_revnum_t end;
-
-  /* Current state we're in */
-  blame_state_list_t *state;
-  blame_state_list_t *free_state;
 
   /* are we done? */
   svn_boolean_t done;
@@ -122,70 +105,33 @@ typedef struct {
 } blame_context_t;
 
 
-static void
-push_state(blame_context_t *blame_ctx, blame_state_e state)
+static blame_info_t *
+push_state(svn_ra_serf__xml_parser_t *parser,
+           blame_context_t *blame_ctx,
+           blame_state_e state)
 {
-  blame_state_list_t *new_state;
+  svn_ra_serf__xml_push_state(parser, state);
 
-  if (!blame_ctx->free_state)
+  if (state == FILE_REV)
     {
-      new_state = apr_palloc(blame_ctx->pool, sizeof(*blame_ctx->state));
-      apr_pool_create(&new_state->pool, blame_ctx->pool);
-      new_state->info = NULL;
-    }
-  else
-    {
-      new_state = blame_ctx->free_state;
-      blame_ctx->free_state = blame_ctx->free_state->prev;
-    }
-  new_state->state = state;
+      blame_info_t *info;
 
-  apr_pool_clear(new_state->pool);
+      info = apr_palloc(parser->state->pool, sizeof(*info));
 
-  if (state == FILE_REVS_REPORT)
-    {
-      /* do nothing for now */
-    }
-  else if (state == FILE_REV)
-    {
-      new_state->info = apr_palloc(new_state->pool, sizeof(*new_state->info));
+      info->pool = parser->state->pool;
 
-      new_state->info->pool = new_state->pool;
+      info->rev = SVN_INVALID_REVNUM;
+      info->path = NULL;
 
-      new_state->info->rev = SVN_INVALID_REVNUM;
-      new_state->info->path = NULL;
+      info->rev_props = apr_hash_make(info->pool);
+      info->prop_diffs = apr_array_make(info->pool, 0, sizeof(svn_prop_t));
 
-      new_state->info->rev_props = apr_hash_make(new_state->info->pool);
-      new_state->info->prop_diffs = apr_array_make(new_state->info->pool,
-                                                   0, sizeof(svn_prop_t));
+      info->stream = NULL;
 
-      new_state->info->stream = NULL;
-    }
-  /* if we have state info from our parent, reuse it. */
-  else if (blame_ctx->state && blame_ctx->state->info)
-    {
-      new_state->info = blame_ctx->state->info;
-    }
-  else
-    {
-      abort();
+      parser->state->private = info;
     }
 
-  /* Add it to the state chain. */
-  new_state->prev = blame_ctx->state;
-  blame_ctx->state = new_state;
-}
-
-static void pop_state(blame_context_t *blame_ctx)
-{
-  blame_state_list_t *free_state;
-  free_state = blame_ctx->state;
-  /* advance the current state */
-  blame_ctx->state = blame_ctx->state->prev;
-  free_state->prev = blame_ctx->free_state;
-  blame_ctx->free_state = free_state;
-  /* It's okay to reuse our info. */
-  /* ctx->free_state->info = NULL; */
+  return parser->state->private;
 }
 
 static const svn_string_t *
@@ -196,6 +142,11 @@ create_propval(blame_info_t *info)
   if (!info->prop_attr)
     {
       return svn_string_create("", info->pool);
+    }
+  else
+    {
+      info->prop_attr = apr_pmemdup(info->pool, info->prop_attr,
+                                    info->prop_attr_len + 1);
     }
 
   /* Include the null term. */
@@ -214,44 +165,43 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
             const char **attrs)
 {
   blame_context_t *blame_ctx = userData;
+  blame_state_e state;
 
-  if (!blame_ctx->state && strcmp(name.name, "file-revs-report") == 0)
+  state = parser->state->current_state;
+
+  if (!state && strcmp(name.name, "file-revs-report") == 0)
     {
-      push_state(blame_ctx, FILE_REVS_REPORT);
+      push_state(parser, blame_ctx, FILE_REVS_REPORT);
     }
-  else if (blame_ctx->state &&
-           blame_ctx->state->state == FILE_REVS_REPORT &&
+  else if (state == FILE_REVS_REPORT &&
            strcmp(name.name, "file-rev") == 0)
     {
       blame_info_t *info;
 
-      push_state(blame_ctx, FILE_REV);
-
-      info = blame_ctx->state->info;
+      info = push_state(parser, blame_ctx, FILE_REV);
 
       info->path = apr_pstrdup(info->pool,
-                               svn_ra_serf__find_attr(attrs, "name"));
+                               svn_ra_serf__find_attr(attrs, "path"));
       info->rev = SVN_STR_TO_REV(svn_ra_serf__find_attr(attrs, "rev"));
     }
-  else if (blame_ctx->state &&
-           blame_ctx->state->state == FILE_REV)
+  else if (state == FILE_REV)
     {
       blame_info_t *info;
       const char *enc;
 
-      info = blame_ctx->state->info;
+      info = parser->state->private;
 
       if (strcmp(name.name, "rev-prop") == 0)
         {
-          push_state(blame_ctx, REV_PROP);
+          push_state(parser, blame_ctx, REV_PROP);
         }
       else if (strcmp(name.name, "set-prop") == 0)
         {
-          push_state(blame_ctx, SET_PROP);
+          push_state(parser, blame_ctx, SET_PROP);
         }
       if (strcmp(name.name, "remove-prop") == 0)
         {
-          push_state(blame_ctx, REMOVE_PROP);
+          push_state(parser, blame_ctx, REMOVE_PROP);
         }
       else if (strcmp(name.name, "txdelta") == 0)
         {
@@ -265,10 +215,12 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
               (svn_txdelta_parse_svndiff(info->txdelta, info->txdelta_baton,
                                          TRUE, info->pool), info->pool);
 
-          push_state(blame_ctx, TXDELTA);
+          push_state(parser, blame_ctx, TXDELTA);
         }
 
-      switch (blame_ctx->state->state)
+      state = parser->state->current_state;
+
+      switch (state)
         {
         case REV_PROP:
         case SET_PROP:
@@ -302,23 +254,23 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
           svn_ra_serf__dav_props_t name)
 {
   blame_context_t *blame_ctx = userData;
-  blame_state_list_t *cur_state;
+  blame_state_e state;
   blame_info_t *info;
 
-  if (!blame_ctx->state)
+  state = parser->state->current_state;
+  info = parser->state->private;
+
+  if (!state)
     {
       return SVN_NO_ERROR;
     }
 
-  cur_state = blame_ctx->state;
-  info = cur_state->info;
-
-  if (cur_state->state == FILE_REVS_REPORT &&
+  if (state == FILE_REVS_REPORT &&
       strcmp(name.name, "file-revs-report") == 0)
     {
-      pop_state(blame_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == FILE_REV &&
+  else if (state == FILE_REV &&
            strcmp(name.name, "file-rev") == 0)
     {
       /* no file changes. */
@@ -330,34 +282,34 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
                                       NULL, NULL,
                                       info->prop_diffs, info->pool));
         }
-      pop_state(blame_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if ((cur_state->state == REV_PROP &&
-            strcmp(name.name, "rev-prop") == 0))
+  else if (state == REV_PROP &&
+           strcmp(name.name, "rev-prop") == 0)
     {
       apr_hash_set(info->rev_props,
                    info->prop_name, APR_HASH_KEY_STRING,
                    create_propval(info));
 
-      pop_state(blame_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if ((cur_state->state == SET_PROP &&
+  else if ((state == SET_PROP &&
             strcmp(name.name, "set-prop") == 0) ||
-           (cur_state->state == REMOVE_PROP &&
+           (state == REMOVE_PROP &&
             strcmp(name.name, "remove-prop") == 0))
     {
       svn_prop_t *prop = apr_array_push(info->prop_diffs);
       prop->name = info->prop_name;
       prop->value = create_propval(info);
 
-      pop_state(blame_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == TXDELTA &&
+  else if (state == TXDELTA &&
            strcmp(name.name, "txdelta") == 0)
     {
       svn_stream_close(info->stream);
 
-      pop_state(blame_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
 
   return SVN_NO_ERROR;
@@ -370,28 +322,32 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
             apr_size_t len)
 {
   blame_context_t *blame_ctx = userData;
+  blame_state_e state;
+  blame_info_t *info;
 
-  if (!blame_ctx->state)
+  state = parser->state->current_state;
+  info = parser->state->private;
+
+  if (!state)
     {
       return SVN_NO_ERROR;
     }
 
-  switch (blame_ctx->state->state)
+  switch (state)
     {
       case REV_PROP:
       case SET_PROP:
-        svn_ra_serf__expand_string(&blame_ctx->state->info->prop_attr,
-                                   &blame_ctx->state->info->prop_attr_len,
-                                   data, len, blame_ctx->state->info->pool);
+        svn_ra_serf__expand_string(&info->prop_attr, &info->prop_attr_len,
+                                   data, len, parser->state->pool);
         break;
       case TXDELTA:
-        if (blame_ctx->state->info->stream)
+        if (info->stream)
           {
             apr_size_t ret_len;
 
             ret_len = len;
 
-            svn_stream_write(blame_ctx->state->info->stream, data, &ret_len);
+            svn_stream_write(info->stream, data, &ret_len);
             if (ret_len != len)
               {
                 abort();
