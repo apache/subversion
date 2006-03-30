@@ -61,9 +61,6 @@ typedef struct {
   /* Returned location hash */
   apr_hash_t *paths;
 
-  /* Current namespace list */
-  svn_ra_serf__ns_t *ns_list;
-
   /* Current state we're in */
   loc_state_list_t *state;
   loc_state_list_t *free_state;
@@ -109,14 +106,12 @@ static void pop_state(loc_context_t *loc_ctx)
 }
 
 static svn_error_t *
-start_getloc(void *userData, const char *raw_name, const char **attrs)
+start_getloc(svn_ra_serf__xml_parser_t *parser,
+             void *userData,
+             svn_ra_serf__dav_props_t name,
+             const char **attrs)
 {
   loc_context_t *loc_ctx = userData;
-  svn_ra_serf__dav_props_t name;
-
-  svn_ra_serf__define_ns(&loc_ctx->ns_list, attrs, loc_ctx->pool);
-
-  name = svn_ra_serf__expand_ns(loc_ctx->ns_list, raw_name);
 
   if (!loc_ctx->state && strcmp(name.name, "get-locations-report") == 0)
     {
@@ -150,10 +145,11 @@ start_getloc(void *userData, const char *raw_name, const char **attrs)
 }
 
 static svn_error_t *
-end_getloc(void *userData, const char *raw_name)
+end_getloc(svn_ra_serf__xml_parser_t *parser,
+           void *userData,
+           svn_ra_serf__dav_props_t name)
 {
   loc_context_t *loc_ctx = userData;
-  svn_ra_serf__dav_props_t name;
   loc_state_list_t *cur_state;
 
   if (!loc_ctx->state)
@@ -162,8 +158,6 @@ end_getloc(void *userData, const char *raw_name)
     }
 
   cur_state = loc_ctx->state;
-
-  name = svn_ra_serf__expand_ns(loc_ctx->ns_list, raw_name);
 
   if (cur_state->state == REPORT &&
       strcmp(name.name, "get-locations-report") == 0)
@@ -274,6 +268,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
+  parser_ctx->pool = pool;
   parser_ctx->user_data = loc_ctx;
   parser_ctx->start = start_getloc;
   parser_ctx->end = end_getloc;

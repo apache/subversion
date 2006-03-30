@@ -62,9 +62,6 @@ struct svn_ra_serf__propfind_context_t {
    */
   apr_hash_t *ret_props;
 
-  /* Current namespace list */
-  svn_ra_serf__ns_t *ns_list;
-
   /* TODO use the state object as in the report */
   /* Are we parsing a property right now? */
   svn_boolean_t in_prop;
@@ -207,36 +204,32 @@ svn_ra_serf__set_prop(apr_hash_t *props,
  * Expat callback invoked on a start element tag for a PROPFIND response.
  */
 static svn_error_t *
-start_propfind(void *userData, const char *name, const char **attrs)
+start_propfind(svn_ra_serf__xml_parser_t *parser,
+               void *userData,
+               svn_ra_serf__dav_props_t name,
+               const char **attrs)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
-  svn_ra_serf__dav_props_t prop_name;
 
-  /* check for new namespaces */
-  svn_ra_serf__define_ns(&ctx->ns_list, attrs, ctx->pool);
-
-  /* look up name space if present */
-  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
-
-  if (!ctx->in_response && strcmp(prop_name.name, "response") == 0)
+  if (!ctx->in_response && strcmp(name.name, "response") == 0)
     {
       ctx->in_response = TRUE;
     }
-  else if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
+  else if (ctx->in_response && strcmp(name.name, "href") == 0)
     {
-      ctx->ns = prop_name.namespace;
-      ctx->attr_name = apr_pstrdup(ctx->pool, prop_name.name);
+      ctx->ns = name.namespace;
+      ctx->attr_name = apr_pstrdup(ctx->pool, name.name);
       ctx->collect_cdata = TRUE;
     }
-  else if (ctx->in_response && strcmp(prop_name.name, "prop") == 0)
+  else if (ctx->in_response && strcmp(name.name, "prop") == 0)
     {
       ctx->in_response = FALSE;
       ctx->in_prop = TRUE;
     }
   else if (ctx->in_prop && !ctx->attr_name)
     {
-      ctx->ns = prop_name.namespace;
-      ctx->attr_name = apr_pstrdup(ctx->pool, prop_name.name);
+      ctx->ns = name.namespace;
+      ctx->attr_name = apr_pstrdup(ctx->pool, name.name);
       ctx->attr_encoding = svn_ra_serf__find_attr(attrs, "V:encoding");
       /* we want to flag the cdata handler to pick up what's next. */
       ctx->collect_cdata = TRUE;
@@ -249,45 +242,41 @@ start_propfind(void *userData, const char *name, const char **attrs)
  * Expat callback invoked on an end element tag for a PROPFIND response.
  */
 static svn_error_t *
-end_propfind(void *userData, const char *name)
+end_propfind(svn_ra_serf__xml_parser_t *parser,
+             void *userData,
+             svn_ra_serf__dav_props_t name)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
-  svn_ra_serf__dav_props_t prop_name;
 
-  /* look up name space if present */
-  prop_name = svn_ra_serf__expand_ns(ctx->ns_list, name);
-
-  if (ctx->in_response && strcmp(prop_name.name, "response") == 0)
+  if (ctx->in_response && strcmp(name.name, "response") == 0)
     {
       ctx->in_response = FALSE;
     }
-  if (ctx->in_prop && strcmp(prop_name.name, "prop") == 0)
+  if (ctx->in_prop && strcmp(name.name, "prop") == 0)
     {
       ctx->in_prop = FALSE;
       ctx->in_response = TRUE;
     }
   else if (ctx->collect_cdata)
     {
-      /* if we didn't see a CDATA element, we want the tag name. */
+      /* if we didn't see a CDATA element, we may want the tag name
+       * as long as it isn't equivalent to the property name.
+       */
       if (!ctx->attr_val)
         {
-          char *colon = strchr(name, ':');
-          if (colon)
+          if (strcmp(ctx->attr_name, name.name) != 0)
             {
-              name = colon + 1;
+              ctx->attr_val = apr_pstrdup(ctx->pool, name.name);
+              ctx->attr_val_len = strlen(ctx->attr_val);
             }
-
-          /* However, if our element name is the same, we know we're empty. */
-          if (strcmp(ctx->attr_name, name) == 0)
+          else
             {
-              name = "";
+              ctx->attr_val = "";
+              ctx->attr_val_len = 1;
             }
-
-          ctx->attr_val = apr_pstrdup(ctx->pool, name);
-          ctx->attr_val_len = strlen(ctx->attr_val);
         }
    
-      if (ctx->in_response && strcmp(prop_name.name, "href") == 0)
+      if (ctx->in_response && strcmp(name.name, "href") == 0)
         {
           if (strcmp(ctx->depth, "1") == 0)
             {
@@ -361,7 +350,10 @@ end_propfind(void *userData, const char *name)
  * This callback can be called multiple times.
  */
 static svn_error_t *
-cdata_propfind(void *userData, const char *data, apr_size_t len)
+cdata_propfind(svn_ra_serf__xml_parser_t *parser,
+               void *userData,
+               const char *data,
+               apr_size_t len)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
   if (ctx->collect_cdata)
@@ -406,6 +398,7 @@ setup_propfind(serf_request_t *request,
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
+  parser_ctx->pool = pool;
   parser_ctx->user_data = ctx;
   parser_ctx->start = start_propfind;
   parser_ctx->end = end_propfind;

@@ -109,9 +109,6 @@ typedef struct {
   svn_revnum_t start;
   svn_revnum_t end;
 
-  /* Current namespace list */
-  svn_ra_serf__ns_t *ns_list;
-
   /* Current state we're in */
   blame_state_list_t *state;
   blame_state_list_t *free_state;
@@ -211,14 +208,12 @@ create_propval(blame_info_t *info)
 }
 
 static svn_error_t *
-start_blame(void *userData, const char *raw_name, const char **attrs)
+start_blame(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            svn_ra_serf__dav_props_t name,
+            const char **attrs)
 {
   blame_context_t *blame_ctx = userData;
-  svn_ra_serf__dav_props_t name;
-
-  svn_ra_serf__define_ns(&blame_ctx->ns_list, attrs, blame_ctx->pool);
-
-  name = svn_ra_serf__expand_ns(blame_ctx->ns_list, raw_name);
 
   if (!blame_ctx->state && strcmp(name.name, "file-revs-report") == 0)
     {
@@ -302,10 +297,11 @@ start_blame(void *userData, const char *raw_name, const char **attrs)
 }
 
 static svn_error_t *
-end_blame(void *userData, const char *raw_name)
+end_blame(svn_ra_serf__xml_parser_t *parser,
+          void *userData,
+          svn_ra_serf__dav_props_t name)
 {
   blame_context_t *blame_ctx = userData;
-  svn_ra_serf__dav_props_t name;
   blame_state_list_t *cur_state;
   blame_info_t *info;
 
@@ -316,8 +312,6 @@ end_blame(void *userData, const char *raw_name)
 
   cur_state = blame_ctx->state;
   info = cur_state->info;
-
-  name = svn_ra_serf__expand_ns(blame_ctx->ns_list, raw_name);
 
   if (cur_state->state == FILE_REVS_REPORT &&
       strcmp(name.name, "file-revs-report") == 0)
@@ -370,7 +364,10 @@ end_blame(void *userData, const char *raw_name)
 }
 
 static svn_error_t *
-cdata_blame(void *userData, const char *data, apr_size_t len)
+cdata_blame(svn_ra_serf__xml_parser_t *parser,
+            void *userData,
+            const char *data,
+            apr_size_t len)
 {
   blame_context_t *blame_ctx = userData;
 
@@ -530,6 +527,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
+  parser_ctx->pool = pool;
   parser_ctx->user_data = blame_ctx;
   parser_ctx->start = start_blame;
   parser_ctx->end = end_blame;
