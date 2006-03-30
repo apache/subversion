@@ -772,6 +772,9 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
         tmp_commit_info->date = apr_pstrdup(pool, tmp_commit_info->date);
       if (tmp_commit_info->author)
         tmp_commit_info->author = apr_pstrdup(pool, tmp_commit_info->author);
+      if (tmp_commit_info->post_commit_err)
+        tmp_commit_info->post_commit_err
+          = apr_pstrdup(pool, tmp_commit_info->post_commit_err);
       *commit_info_p = tmp_commit_info;
     }
 
