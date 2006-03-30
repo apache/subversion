@@ -246,7 +246,7 @@ path_driver_cb_func(void **dir_baton,
   void *edit_baton = cb->edit_baton;
   svn_fs_root_t *root = cb->root;
   svn_fs_path_change_t *change;
-  svn_boolean_t do_add = FALSE, do_delete = FALSE;
+  svn_boolean_t do_add = FALSE, do_delete = FALSE, do_rename = FALSE;
   svn_node_kind_t kind;
   void *file_baton = NULL;
   const char *copyfrom_path = NULL;
@@ -272,6 +272,10 @@ path_driver_cb_func(void **dir_baton,
     case svn_fs_path_change_replace:
       do_add = TRUE;
       do_delete = TRUE;
+      break;
+
+    case svn_fs_path_change_move:
+      do_rename = TRUE;
       break;
 
     case svn_fs_path_change_modify:
@@ -363,6 +367,76 @@ path_driver_cb_func(void **dir_baton,
 
           SVN_ERR(editor->add_file(path, parent_baton, copyfrom_path,
                                    copyfrom_rev, pool, &file_baton));
+        }
+    }
+  else if (do_rename)
+    {
+      /* Was this node copied? */
+      SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                 root, path, pool));
+
+      if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+        {
+          /* Save the source_root so that we can use it later, when we
+             need to generate text deltas. */
+
+          SVN_ERR(svn_fs_revision_root(&source_root,
+                                       svn_fs_root_fs(root),
+                                       copyfrom_rev, pool));
+
+          if (cb->authz_read_func)
+            {
+              SVN_ERR(cb->authz_read_func(&src_readable, source_root,
+                                          copyfrom_path,
+                                          cb->authz_read_baton, pool));
+            }
+        }
+
+      /* Do the right thing based on the path KIND. */
+      if (kind == svn_node_dir)
+        {
+          /* If there is a copyfrom path, and we're either not allowed to see
+             it or we're explicitly ignoring (i.e. the base_path doesn't match
+             the copyfrom path) or the copyfrom rev is prior to the low water
+             mark then we just do a recursive add of the source path contents.
+           */
+          if (copyfrom_path
+              && (! src_readable 
+                  || ! is_within_base_path(copyfrom_path+1, base_path,
+                                           base_path_len)
+                  || cb->low_water_mark > copyfrom_rev))
+            {
+              SVN_ERR(add_subdir(source_root, root, editor, edit_baton,
+                                 path, parent_baton, copyfrom_path,
+                                 cb->authz_read_func, cb->authz_read_baton,
+                                 pool, dir_baton));
+            }
+          else
+            {
+              SVN_ERR(editor->rename_dir_to(path, parent_baton,
+                                            copyfrom_path, copyfrom_rev,
+                                            pool, dir_baton));
+            }
+        }
+      else
+        {
+          /* If we have a copyfrom path, and we can't read it or we're just
+             ignoring it, or the copyfrom rev is prior to the low water mark
+             then we just null them out and do a raw add with no history at
+             all. */
+          if (copyfrom_path
+              && (! src_readable
+                  || ! is_within_base_path(copyfrom_path+1, base_path,
+                                           base_path_len)
+                  || cb->low_water_mark > copyfrom_rev))
+            {
+              copyfrom_path = NULL;
+              copyfrom_rev = SVN_INVALID_REVNUM;
+            }
+
+          /* XXX if copyfrom_path is bogus, switch to add_file */
+          SVN_ERR(editor->rename_file_to(path, parent_baton, copyfrom_path,
+                                         copyfrom_rev, pool, &file_baton));
         }
     }
   else if (! do_delete)

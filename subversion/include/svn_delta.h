@@ -873,6 +873,36 @@ typedef struct svn_delta_editor_t
   svn_error_t *(*abort_edit)(void *edit_baton,
                              apr_pool_t *pool);
 
+  /* XXX Figure out if we can add functions to this without reving the
+   *     structure before we merge anything into trunk. */
+  svn_error_t *(*rename_file_to)(const char *path,
+                                 void *parent_baton,
+                                 const char *source_path,
+                                 svn_revnum_t source_revision,
+                                 apr_pool_t *file_pool,
+                                 void **file_baton);
+
+  svn_error_t *(*rename_dir_to)(const char *path,
+                                void *parent_baton,
+                                const char *source_path,
+                                svn_revnum_t source_revision,
+                                apr_pool_t *dir_pool,
+                                void **child_baton);
+
+  svn_error_t *(*rename_file_from)(const char *path,
+                                   void *parent_baton,
+                                   const char *dest_path,
+                                   svn_revnum_t dest_revision,
+                                   apr_pool_t *file_pool,
+                                   void **file_baton);
+
+  svn_error_t *(*rename_dir_from)(const char *path,
+                                  void *parent_baton,
+                                  const char *dest_path,
+                                  svn_revnum_t dest_revision,
+                                  apr_pool_t *dir_pool,
+                                  void **child_baton);
+
 } svn_delta_editor_t;  
 
 

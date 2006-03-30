@@ -1456,7 +1456,8 @@ enum svn_node_action
   svn_node_action_change,
   svn_node_action_add,
   svn_node_action_delete,
-  svn_node_action_replace
+  svn_node_action_replace,
+  svn_node_action_rename
 };
 
 /** The different policies for processing the UUID in the dumpfile. */

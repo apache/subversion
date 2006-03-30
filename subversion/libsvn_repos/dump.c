@@ -443,6 +443,32 @@ dump_node(struct edit_baton *eb,
           /* ### someday write a node-copyfrom-source-checksum. */
         }
     }
+  else if (action == svn_node_action_rename)
+    {
+      SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                SVN_REPOS_DUMPFILE_NODE_ACTION ": rename\n"));
+
+      SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
+                                ": %ld\n"
+                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
+                                ": %s\n",
+                                cmp_rev, cmp_path));
+
+      SVN_ERR(svn_fs_revision_root(&compare_root, 
+                                   svn_fs_root_fs(eb->fs_root),
+                                   compare_rev, pool));
+
+      /* Need to decide if the copied node had any extra textual or
+         property mods as well.  */
+      SVN_ERR(svn_fs_props_changed(&must_dump_props,
+                                   compare_root, compare_path,
+                                   eb->fs_root, path, pool));
+      if (kind == svn_node_file)
+        SVN_ERR(svn_fs_contents_changed(&must_dump_text,
+                                        compare_root, compare_path,
+                                        eb->fs_root, path, pool));
+    }
 
   if ((! must_dump_text) && (! must_dump_props))
     {
@@ -777,6 +803,48 @@ change_dir_prop(void *parent_baton,
 }
 
 
+static svn_error_t *
+rename_file_to(const char *path,
+               void *parent_baton,
+               const char *src_path,
+               svn_revnum_t src_rev,
+               apr_pool_t *pool,
+               void **file_baton)
+{
+  struct dir_baton *db = parent_baton;
+  struct edit_baton *eb = db->edit_baton;
+
+  SVN_ERR(dump_node(eb, path, svn_node_file, svn_node_action_rename,
+                    FALSE, src_path, src_rev, pool));
+
+  *file_baton = NULL;  /* muhahahaha again */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+rename_dir_to(const char *path,
+              void *parent_baton,
+              const char *src_path,
+              svn_revnum_t src_rev,
+              apr_pool_t *pool,
+              void **child_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  struct dir_baton *new_db 
+    = make_dir_baton(path, src_path, src_rev, eb, pb, TRUE, pool);
+
+  SVN_ERR(dump_node(eb, path, svn_node_dir, svn_node_action_rename,
+                    FALSE, src_path, src_rev, pool));
+
+  new_db->written_out = TRUE;
+
+  *child_baton = new_db;
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
@@ -815,6 +883,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
   dump_editor->change_dir_prop = change_dir_prop;
   dump_editor->add_file = add_file;
   dump_editor->open_file = open_file;
+  dump_editor->rename_file_to = rename_file_to;
+  dump_editor->rename_dir_to = rename_dir_to;
 
   *edit_baton = eb;
   *editor = dump_editor;

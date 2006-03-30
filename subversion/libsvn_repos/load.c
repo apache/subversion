@@ -801,6 +801,8 @@ make_node_baton(apr_hash_t *headers,
         nb->action = svn_node_action_delete;
       else if (! strcmp(val, "replace"))
         nb->action = svn_node_action_replace;
+      else if (! strcmp(val, "rename"))
+        nb->action = svn_node_action_rename;
     }
 
   nb->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -1011,6 +1013,36 @@ new_node_record(void **node_baton,
         SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
 
         SVN_ERR(maybe_add_with_history(nb, rb, pool));
+        break;
+      }
+    case svn_node_action_rename:
+      {
+        svn_fs_root_t *copy_root;
+        svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
+        svn_revnum_t *src_rev_from_map;
+        apr_size_t len;
+
+        SVN_ERR(svn_stream_printf(pb->outstream, pool,
+                                  _("     * renaming path : %s to %s..."),
+                                  nb->path, nb->copyfrom_path));
+
+
+        if ((src_rev_from_map = apr_hash_get(pb->rev_map, &nb->copyfrom_rev,
+                                             sizeof(nb->copyfrom_rev))))
+          src_rev = *src_rev_from_map;
+
+        if (! SVN_IS_VALID_REVNUM(src_rev))
+          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                   _("Relative source revision %ld is not"
+                                     " available in current repository"),
+                                   src_rev);
+
+        SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, src_rev, pool));
+        SVN_ERR(svn_fs_move(copy_root, nb->copyfrom_path,
+                            rb->txn_root, nb->path, pool));
+
+        len = 10;
+        SVN_ERR(svn_stream_write(pb->outstream, "RENAMED...", &len));
         break;
       }
     default:

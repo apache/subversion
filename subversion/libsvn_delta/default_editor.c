@@ -146,7 +146,11 @@ static const svn_delta_editor_t default_editor =
   close_file,
   absent_xxx_func,
   single_baton_func,
-  single_baton_func
+  single_baton_func,
+  add_item,
+  add_item,
+  add_item,
+  add_item
 };
 
 svn_delta_editor_t *
