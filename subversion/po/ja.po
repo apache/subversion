@@ -12161,3 +12161,6 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
 #~ "同期先のリポジトリを初期化します。"
+
+#~ msgid "Cannot copy between two different filesystems ('%s' and '%s')."
+#~ msgstr "二つの異なるファイルシステム ('%s' と '%s') の間でコピーはできません。"
