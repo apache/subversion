@@ -407,7 +407,9 @@ class RevisionSet:
     """
     A set of revisions, held in dictionary form for easy manipulation. If we
     were to rewrite this script for Python 2.3+, we would subclass this from
-    set (or UserSet).
+    set (or UserSet).  As this class does not include branch
+    information, it's assumed that one instance will be used per
+    branch.
     """
     def __init__(self, parm):
         """Constructs a RevisionSet from a string in property form, or from
