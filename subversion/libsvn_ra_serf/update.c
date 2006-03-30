@@ -550,10 +550,7 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
       abort();
     }
 
-  if (!dir->dir_baton)
-    {
-      SVN_ERR(open_dir(dir));
-    }
+  SVN_ERR(open_dir(dir));
 
   return close_dir(dir);
 }
@@ -1279,10 +1276,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = parser->state->private;
 
-      if (!info->dir->dir_baton)
-        {
-          open_dir(info->dir);
-        }
+      SVN_ERR(open_dir(info->dir));
 
       name_buf = svn_stringbuf_dup(info->dir->name_buf,
                                    info->dir->dir_baton_pool);
@@ -1306,10 +1300,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           abort();
         }
 
-      if (!info->dir->dir_baton)
-        {
-          open_dir(info->dir);
-        }
+      SVN_ERR(open_dir(info->dir));
+
       ctx->update_editor->absent_directory(file_name,
                                            info->dir->dir_baton,
                                            info->dir->pool);
@@ -1507,10 +1499,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info = parser->state->private;
 
       /* At this point, we *must* create our parent's names. */
-      if (!info->dir->dir_baton)
-        {
-          open_dir(info->dir);
-        }
+      SVN_ERR(open_dir(info->dir));
 
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
