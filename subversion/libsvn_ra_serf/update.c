@@ -1983,7 +1983,11 @@ finish_report(void *report_baton,
         }
       if (status)
         {
-          return svn_error_wrap_apr(status, _("Error retrieving REPORT"));
+          if (sess->pending_error)
+            return sess->pending_error;
+
+          return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
+                                    status);
         }
 
       /* Switch our connection. */
