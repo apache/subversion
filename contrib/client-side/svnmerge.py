@@ -58,8 +58,7 @@ from bisect import bisect
 
 NAME = "svnmerge"
 if not hasattr(sys, "version_info") or sys.version_info < (2, 0):
-    print "%s requires Python 2.0 or newer" % NAME
-    sys.exit(1)
+    error("requires Python 2.0 or newer")
 
 # Set up the separator used to separate individual log messages from
 # each revision merged into the target location.  Also, create a
@@ -766,13 +765,11 @@ def check_old_prop_version(branch_dir, props):
             changed = True
 
     if changed:
-        print "%s: old property values detected; an upgrade is required." % NAME
-        print
-        print 'Please execute and commit these changes to upgrade:'
-        print
-        print 'svn propset "%s" "%s" "%s"' % \
-            (opts["prop"], format_merge_props(fixed), branch_dir)
-        sys.exit(1)
+        err_msg = "old property values detected; an upgrade is required.\n\n"
+        err_msg += "Please execute and commit these changes to upgrade:\n\n"
+        err_msg += 'svn propset "%s" "%s" "%s"' % \
+                   (opts["prop"], format_merge_props(fixed), branch_dir)
+        error(err_msg)
 
 def analyze_revs(target_dir, url, begin=1, end=None,
                  find_reflected=False):
@@ -1690,10 +1687,10 @@ if __name__ == "__main__":
     try:
         main(sys.argv[1:])
     except LaunchError, (ret, cmd, out):
-        print "%s: command execution failed (exit code: %d)" % (NAME, ret)
-        print cmd
-        print "".join(out)
-        sys.exit(1)
+        err_msg = "command execution failed (exit code: %d)\n" % ret
+        err_msg += cmd + "\n"
+        err_msg += "".join(out)
+        error(err_msg)
     except KeyboardInterrupt:
         # Avoid traceback on CTRL+C
         print "aborted by user"
