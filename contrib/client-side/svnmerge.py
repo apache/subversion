@@ -142,7 +142,6 @@ default_opts = {
     "commit-verbose": True,
 }
 logs = {}
-mergeprops = {}
 
 def console_width():
     """Get the width of the console screen (if any)."""
@@ -277,6 +276,9 @@ class RevisionLog:
         specified URL. URL must be the URL for a directory in the repository.
         """
 
+        # Save the specified URL
+        self.url = url
+
         # Look for revisions
         revision_re = re.compile(r"^r(\d+)")
 
@@ -301,6 +303,22 @@ class RevisionLog:
                 self.revs.append(rev)
             elif srcdir_change_re.match(line):
                 self.propchange_revs.append(rev)
+
+        self._merges = None
+
+    def merge_metadata(self):
+        """
+        Return a VersionedProperty object, with a cached view of the merge
+        metadata in the range of this log.
+        """
+
+        # Load merge metadata if necessary
+        if not self._merges:
+            self._merges = VersionedProperty(self.url, opts["prop"])
+            self._merges.load(self)
+
+        return self._merges
+
 
 class VersionedProperty:
     """
@@ -796,8 +814,6 @@ def analyze_revs(target_dir, url, begin=1, end=None,
             return RevisionSet(""), RevisionSet(""), RevisionSet("")
 
     logs[url] = RevisionLog(url, begin, end, find_reflected)
-    mergeprops[url] = VersionedProperty(url, opts["prop"])
-    mergeprops[url].load(logs[url])
     revs = RevisionSet(logs[url].revs)
 
     if end == "HEAD":
@@ -810,14 +826,14 @@ def analyze_revs(target_dir, url, begin=1, end=None,
     reflected_revs = []
 
     if find_reflected:
-        mergeinfo = mergeprops[url]
+        merge_metadata = logs[url].merge_metadata()
 
         report("checking for reflected changes in %d revision(s)"
-               % len(mergeinfo.keys()))
+               % len(merge_metadata.keys()))
 
         old_revs = None
-        for rev in mergeinfo.keys():
-            new_revs = mergeinfo.get(rev).get(target_dir)
+        for rev in merge_metadata.keys():
+            new_revs = merge_metadata.get(rev).get(target_dir)
             if new_revs != old_revs:
                 reflected_revs.append("%s" % rev)
             old_revs = new_revs
@@ -1045,11 +1061,12 @@ def action_merge(branch_dir, branch_props):
     # We try to keep the number of merge operations as low as possible,
     # because it is faster and reduces the number of conflicts.
     old_merge_props = branch_props
+    merge_metadata = logs[opts["head-url"]].merge_metadata()
     for start,end in minimal_merge_intervals(revs, phantom_revs):
 
         # Set merge props appropriately if bidirectional support is enabled
         if opts["bidirectional"]:
-          new_merge_props = mergeprops[opts["head-url"]].get(start-1)
+          new_merge_props = merge_metadata.get(start-1)
           if new_merge_props != old_merge_props:
               set_merge_props(branch_dir, new_merge_props)
               old_merge_props = new_merge_props
@@ -1603,7 +1620,6 @@ def main(args):
     # Initialize default options
     opts = default_opts.copy()
     logs.clear()
-    mergeprops.clear()
 
     optsparser = CommandOpts(global_opts, common_opts, command_table,
                              version="%%prog r%s\n  modified: %s\n\n"
