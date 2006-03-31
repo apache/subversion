@@ -498,6 +498,15 @@ class RevisionSet:
         revs.update(rs._revs)
         return RevisionSet(revs)
 
+def merge_props_to_revision_set(merge_props, path):
+    """A converter which returns a RevisionSet instance containing the
+    revisions from PATH as known to BRANCH_PROPS.  BRANCH_PROPS is a
+    dictionary of path -> revision set branch integration information
+    (as returned by get_merge_props())."""
+    if not merge_props.has_key(path):
+        error('no integration info available for repository path "%s"' % path)
+    return RevisionSet(merge_props[path])
+
 def dict_from_revlist_prop(propvalue):
     """Given a property value as a string containing per-head revision
     lists, return a dictionary whose key is a relative path to a head
@@ -873,6 +882,33 @@ def minimal_merge_intervals(revs, phantom_revs):
     ret.reverse()
     return ret
 
+def display_revisions(revs, display_style, head_url):
+    """Show REVS as dictated by DISPLAY_STYLE, either numerically, in
+    log format, or as diffs."""
+    if display_style == "revisions":
+        if revs:
+            report("available revisions to be merged are:")
+            print revs
+    elif display_style == "logs":
+        for start,end in revs.normalized():
+            svn_command('log --incremental -v -r %d:%d %s' % \
+                        (start, end, head_url))
+    elif display_style == "diffs":
+        for start, end in revs.normalized():
+            print
+            if start == end:
+                print "%s: changes in revision %d follow" % (NAME, start)
+            else:
+                print "%s: changes in revisions %d-%d follow" % (NAME,
+                                                                 start, end)
+            print
+
+            # Note: the starting revision number to 'svn diff' is
+            # NOT inclusive so we have to subtract one from ${START}.
+            svn_command("diff -r %d:%d %s" % (start - 1, end, head_url))
+    else:
+        assert False, "unhandled display style: %s" % display_style
+
 def action_init(branch_dir, branch_props):
     """Initialize a branch for merges."""
     # Check branch directory is ready for being modified
@@ -923,32 +959,42 @@ def action_avail(branch_dir, branch_props):
     if opts["revision"]:
         revs = revs & RevisionSet(opts["revision"])
 
-    # Show them, either numerically, in log format, or as diffs
-    if opts["avail-display"] == "revisions":
-        if revs:
-            report("available revisions to be merged are:")
-            print revs
-    elif opts["avail-display"] == "logs":
-        for start,end in revs.normalized():
-            svn_command('log --incremental -v -r %d:%d %s' % \
-                        (start, end, opts["head-url"]))
-    elif opts["avail-display"] == "diffs":
-        for start,end in revs.normalized():
-            print
-            if start == end:
-                print "%s: changes in revision %d follow" % (NAME, start)
-            else:
-                print "%s: changes in revisions %d-%d follow" % (NAME,
-                                                                 start, end)
-            print
+    display_revisions(revs, opts["avail-display"], opts["head-url"])
 
-            # Note: the starting revision number to 'svn diff' is
-            # NOT inclusive so we have to subtract one from ${START}.
-            svn_command('diff -r %d:%d %s' % \
-                        (start-1, end, opts["head-url"]))
-    else:
-        assert False, \
-               "unhandled 'avail' display type: %s" % opts["avail-display"]
+def action_integrated(branch_dir, branch_props):
+    """Show change sets already merged.  This set of revisions is
+    calculated from taking svnmerge-integrated property from the
+    branch, and subtracting any revision older than the branch
+    creation revision."""
+    # Extract the integration info for the branch_dir
+    branch_props = get_merge_props(branch_dir)
+    check_old_prop_version(branch_dir, branch_props)
+    revs = merge_props_to_revision_set(branch_props, opts["head-path"])
+
+    # Lookup the oldest revision on the branch path.
+    ### TODO: Refactor this to use a modified RevisionLog class.
+    oldest_branch_rev = -1
+    lines = None
+    try:
+        lines = launchsvn("log -r 1:HEAD --limit=1 -q " + branch_dir)
+    except LaunchError, e:
+        # Assume that --limit isn't supported by the installed 'svn'.
+        lines = launchsvn("log -r 1:HEAD -q " + branch_dir)
+    if lines and len(lines) > 1:
+        i = lines[1].find(" ")
+        if i != -1:
+            oldest_branch_rev = int(lines[1][1:i])
+    if oldest_branch_rev == -1:
+        error("unable to determine oldest branch revision")
+
+    # Subtract any revisions which pre-date the branch.
+    revs = revs - range(1, oldest_branch_rev)
+
+    # Limit to revisions specified by -r (if any)
+    if opts["revision"]:
+        revs = revs & RevisionSet(opts["revision"])
+
+    display_revisions(revs, opts["integrated-display"], opts["head-url"])
 
 def action_merge(branch_dir, branch_props):
     """Record merge meta data, and do the actual merge (if not
@@ -1487,6 +1533,25 @@ command_table = {
         "-S",
     ]),
 
+    "integrated": (action_integrated,
+    "integrated [OPTION...] [PATH]",
+    """Show merged revisions available for PATH as a revision list.
+    If --revision is given, the revisions shown will be limited to
+    those also specified in the option.""",
+    [
+        Option("-d", "--diff",
+               dest="integrated-display",
+               value="diffs",
+               default="revisions",
+               help="show corresponding diff instead of revision list"),
+        Option("-l", "--log",
+               dest="integrated-display",
+               value="logs",
+               help="show corresponding log history instead of revision list"),
+        "-r",
+        "-S",
+    ]),
+
     "merge": (action_merge,
     "merge [OPTION...] [PATH]",
     """Merge in revisions into PATH from its head. If --revision is omitted,
@@ -1560,7 +1625,7 @@ def main(args):
             head = args[0]
         elif len(args) > 1:
             optsparser.error("wrong number of parameters", cmd)
-    elif str(cmd) in ["avail", "merge", "block", "unblock"]:
+    elif str(cmd) in ["avail", "integrated", "merge", "block", "unblock"]:
         if len(args) == 1:
             branch_dir = args[0]
         elif len(args) > 1:
@@ -1614,12 +1679,8 @@ def main(args):
 
     # Get previously merged revisions (except when command is init)
     if str(cmd) != "init":
-        if not branch_props.has_key(opts["head-path"]):
-            error('no integration info available for repository path "%s"'
-                  % opts["head-path"])
-
-        revs = branch_props[opts["head-path"]]
-        opts["merged-revs"] = RevisionSet(revs)
+        opts["merged-revs"] = merge_props_to_revision_set(branch_props,
+                                                          opts["head-path"])
 
     # Perform the action
     cmd(branch_dir, branch_props)

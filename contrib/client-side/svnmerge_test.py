@@ -421,12 +421,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.chdir("foo")
         self.svnmerge("init", error=True, match="working dir")
         self.svnmerge("avail", error=True, match="working dir")
+        self.svnmerge("integrated", error=True, match="working dir")
         self.svnmerge("merge", error=True, match="working dir")
         self.svnmerge("block", error=True, match="working dir")
         self.svnmerge("unblock", error=True, match="working dir")
 
     def testCheckNoIntegrationInfo(self):
         self.svnmerge("avail", error=True, match="no integration")
+        self.svnmerge("integrated", error=True, match="no integration")
         self.svnmerge("merge", error=True, match="no integration")
         self.svnmerge("block", error=True, match="no integration")
         self.svnmerge("unblock", error=True, match="no integration")
@@ -491,6 +493,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         out = self.svnmerge("avail --diff -r5")
         self.assertEqual(out.strip(), "")
 
+        self.svnmerge("integrated", match=r"^3-6$")
+        self.svnmerge("integrated --log -r5", match=r"| r5 ")
+        self.svnmerge("integrated --diff -r5", match=r"Index: test2")
+
     def test_log_msg_suggest(self):
         self.svnmerge("init -vf commit-log.txt", match="wrote commit message")
         self.assert_(os.path.exists("commit-log.txt"))
@@ -529,6 +535,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                       nonmatch=r"svn merge -r 8:9")
         out = self.svnmerge("avail -r9")
         self.assertEqual(out.strip(), "")
+        self.svnmerge("integrated", match=r"^3-6,9$")
+        self.svnmerge("integrated -r9", match=r"^9$")
 
     def testBidirectionalMerges(self):
         """Check that reflected revisions are recognized properly for bidirectional merges."""
