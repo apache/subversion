@@ -974,7 +974,7 @@ def action_integrated(branch_dir, branch_props):
     lines = None
     try:
         lines = launchsvn("log -r 1:HEAD --limit=1 -q " + branch_dir)
-    except LaunchError, e:
+    except LaunchError:
         # Assume that --limit isn't supported by the installed 'svn'.
         lines = launchsvn("log -r 1:HEAD -q " + branch_dir)
     if lines and len(lines) > 1:
