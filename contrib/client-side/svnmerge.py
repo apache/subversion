@@ -414,7 +414,7 @@ class VersionedProperty:
         # Get the current value of the property
         return self.raw_get(rev)
 
-    def keys(self):
+    def changed_revs(self):
         """
         Get a list of the revisions in which this property changed.
         """
@@ -829,10 +829,10 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         merge_metadata = logs[url].merge_metadata()
 
         report("checking for reflected changes in %d revision(s)"
-               % len(merge_metadata.keys()))
+               % len(merge_metadata.changed_revs()))
 
         old_revs = None
-        for rev in merge_metadata.keys():
+        for rev in merge_metadata.changed_revs():
             new_revs = merge_metadata.get(rev).get(target_dir)
             if new_revs != old_revs:
                 reflected_revs.append("%s" % rev)
