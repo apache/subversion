@@ -233,6 +233,43 @@ typedef svn_error_t *(*svn_txdelta_window_handler_t)
 typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 
 
+/** A typedef for a function that will set @a *window to the next
+ * window from a @c svn_txdelta_stream_t object.  If there are no more
+ * delta windows, null will be used.  The returned window, if any,
+ * will be allocated in @a pool.  @a baton is the baton specified
+ * when the stream was created.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *
+(*svn_txdelta_next_window_fn_t)(svn_txdelta_window_t **window,
+                                void *baton,
+                                apr_pool_t *pool);
+
+/** A typedef for a function that will return the md5 checksum of the
+ * fulltext deltified by a @c svn_txdelta_stream_t object.  Will
+ * return null if the final null window hasn't yet been returned by
+ * the stream.  The returned value will be allocated in the same pool
+ * as the stream.  @a baton is the baton specified when the stream was
+ * created.
+ *
+ * @since New in 1.4.
+ */
+typedef const unsigned char *
+(*svn_txdelta_md5_digest_fn_t)(void *baton);
+
+/** Create and return a generic text delta stream with @a baton, @a
+ * next_window_fn and @a md5_digest_fn.  Allocate the new stream in @a
+ * pool.
+ *
+ * @since New in 1.4.
+ */
+svn_txdelta_stream_t *
+svn_txdelta_stream_create(void *baton,
+                          svn_txdelta_next_window_fn_t next_window,
+                          svn_txdelta_md5_digest_fn_t md5_digest,
+                          apr_pool_t *pool);
+
 /** Set @a *window to a pointer to the next window from the delta stream
  * @a stream.  When we have completely reconstructed the target string,
  * set @a *window to zero.
