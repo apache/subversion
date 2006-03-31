@@ -205,7 +205,7 @@ void svn_handle_warning2(FILE *stream, svn_error_t *error, const char *prefix);
 void svn_handle_warning(FILE *stream, svn_error_t *error);
 
 
-/** A statement macro for checking error return values.
+/** A statement macro for checking error values.
  *
  * Evaluate @a expr.  If it yields an error, return that error from the
  * current function.  Otherwise, continue.
