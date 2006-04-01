@@ -1100,26 +1100,31 @@ close_directory(void *dir_baton,
          either BASE or WORKING. */
       apr_hash_t *originalprops;
 
-      if (b->edit_baton->use_text_base)
+      if (b->added)
         {
-          svn_wc_adm_access_t *adm_access;
-
-          SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access,
-                                            b->edit_baton->anchor,
-                                            b->path, b->pool));
-
-          SVN_ERR(svn_wc_get_prop_diffs(NULL, &originalprops,
-                                        b->path, adm_access, pool));
+          originalprops = apr_hash_make(b->pool);
         }
       else
         {
-          /* This path might not exist in the working copy, in which case
-             originalprops is set to an empty hash. */
-          SVN_ERR(svn_wc_prop_list(&originalprops, b->path,
-                                   b->edit_baton->anchor, pool));
-          /* ### need to combine the BASE->repos changes in b->propchanges
-             with the WORKING->BASE propchanges, if any, so that
-             b->propchanges becomes WORKING->repos. */
+          if (b->edit_baton->use_text_base)
+            {
+              svn_wc_adm_access_t *adm_access;
+
+              SVN_ERR(svn_wc_adm_retrieve(&adm_access,
+                                          b->edit_baton->anchor, b->path,
+                                          b->pool));
+
+              SVN_ERR(svn_wc_get_prop_diffs(NULL, &originalprops,
+                                            b->path, adm_access, pool));
+            }
+          else
+            {
+              SVN_ERR(svn_wc_prop_list(&originalprops, b->path,
+                                       b->edit_baton->anchor, pool));
+              /* ### need to combine the BASE->repos changes in b->propchanges
+                 with the WORKING->BASE propchanges, if any, so that
+                 b->propchanges becomes WORKING->repos. */
+            }
         }
 
       if (! b->edit_baton->reverse_order)
