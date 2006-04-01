@@ -2397,6 +2397,32 @@ def diff_base_repos_moved(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+# A diff of an added file within an added directory should work, and
+# shouldn't produce an error.
+def diff_added_subtree(sbox):
+  "wc->repos diff of added subtree"
+
+  sbox.build()
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Roll the wc back to r0 (i.e. an empty wc).
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'up', '-r0')
+
+    # We shouldn't get any errors when we request a diff showing the
+    # addition of the greek tree.  The diff contains additions of files
+    # and directories with parents that don't currently exist in the wc,
+    # which is what we're testing here.
+    svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                       'diff', '-r', 'BASE:1')
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -2438,6 +2464,7 @@ test_list = [ None,
               diff_nonrecursive_checkout_deleted_dir,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
+              XFail(diff_added_subtree),
               ]
 
 if __name__ == '__main__':
