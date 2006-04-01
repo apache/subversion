@@ -2464,7 +2464,7 @@ test_list = [ None,
               diff_nonrecursive_checkout_deleted_dir,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
-              XFail(diff_added_subtree),
+              diff_added_subtree,
               ]
 
 if __name__ == '__main__':
