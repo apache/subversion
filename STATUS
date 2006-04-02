@@ -122,18 +122,10 @@ Approved changes:
     Votes:
       +1: malcolm, dlr
 
-  * r19039, r19057
-    Branch: 1.3.x-r19039
-    Support APR and APR-util versions >= 0.9.10.
-    Justification:
-      They're breaking that limit now.
-    Votes:
-      +1: dlr, lundblad, jaa
-
   * r19041, r19060
     Fix RPM to build after 19039, r19057 changed.
     Justification:
       Broken RPM build.
-    Notes: Depends on r19039, r19057, respectively.
+    Notes: Depends on r19039, r19057; these are merged in with r19125.
     Votes:
       +1: david, dlr
