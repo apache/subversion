@@ -84,13 +84,12 @@ dnl Configure APR --------------------------
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-APR_VER_REGEX=["0\.9\.[5-9]"]
-APR_VER_REGEX_TOO="1\."
-APU_VER_REGEX=["0\.9\.[5-9]"]
-APU_VER_REGEX_TOO="1\."
 
-SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)
-SVN_LIB_APRUTIL($APU_VER_REGEX, $APU_VER_REGEX_TOO)
+APR_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+APU_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+
+SVN_LIB_APR($APR_VER_REGEXES)
+SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 dnl What version of Expat are we using? -----------------
 
