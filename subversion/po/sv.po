@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-04-02 21:34+0200\n"
-"PO-Revision-Date: 2006-03-06 08:33+0100\n"
+"PO-Revision-Date: 2006-04-02 21:51+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2954,9 +2954,8 @@ msgid "Failed writing updated file"
 msgstr "MIsslyckades att skriva uppdaterad fil"
 
 #: libsvn_ra_serf/getloc.c:289
-#, fuzzy
 msgid "File doesn't exist on HEAD"
-msgstr "Sökvägen \"%s\" finns inte i huvudrevision"
+msgstr "Filen finns inte i huvudrevisionen"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -2973,9 +2972,9 @@ msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versionen för RA-laddaren (%d) stöds ej för ra_serf"
 
 #: libsvn_ra_serf/update.c:1989
-#, fuzzy, c-format
+#, c-format
 msgid "Error retrieving REPORT (%d)"
-msgstr "Fel vid hämtning av rapport"
+msgstr "Fel vid hämtning av rapport (%d)"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -5169,9 +5168,8 @@ msgid "Can't open stderr"
 msgstr "Kan inte öppna standard fel"
 
 #: svn/diff-cmd.c:182
-#, fuzzy
 msgid "'new' option only valid with 'old' option"
-msgstr "Flaggan \"incremental\" är endast tillåten i XML-läge"
+msgstr "Flaggan \"new\" är endast tillåten tillsammans med \"old\""
 
 #: svn/diff-cmd.c:211
 #, c-format
@@ -5838,7 +5836,6 @@ msgstr ""
 "     omedelbar arkivering.\n"
 
 #: svn/main.c:294
-#, fuzzy
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5868,7 +5865,7 @@ msgid ""
 msgstr ""
 "Visa skillnaderna mellan två sökvägar.\n"
 "användning: 1. diff [-c M | -r N[:M]] [MÅL[@REV]...]\n"
-"            2. diff [-C M | -r N[:M]] --old=GAMMALT-MÅL[@GAMMALREV]\n"
+"            2. diff [-C M | -r N[:M]] --old=GAMMALT-MÅL[@GAMMALREV] \\\n"
 "               [--new=NYTT-MÅL[@NYREV]] [SÖKVÄG...]\n"
 "            3. diff GAMMAL-URL[@GAMMALREV] NY-URL[@NYREV]\n"
 "\n"
@@ -5880,17 +5877,15 @@ msgstr ""
 "     målen är en sökväg till en arbetskopia, används den aktuella arbets-\n"
 "     versionen. Annars är standardvärdet HEAD.\n"
 "\n"
-"  2. Visa skillnaden mellan GAMMALT_MÅL som den såg ut i GAMMALREV och\n"
+"  2. Visa skillnaden mellan GAMMALT-MÅL som den såg ut i GAMMALREV och\n"
 "     NYTT-MÅL som den såg ut i NYREV. Om en eller flera SÖKVÄGar anges,\n"
 "     ska dessa vara relativa GAMMALT-MÅL och NYTT-MÅL och de begränsar\n"
 "     i så fall utskriften till skillnaderna i dessa sökvägar.\n"
 "     GAMMALT-MÅL och NYTT-MÅL kan vara sökvägar till en arbetskopia\n"
 "     eller URL[@REV]. Standardvärdet för NYTT-MÅL är GAMMALT-MÅL. -r N\n"
 "     sätter standardvärdet för GAMMALREV till N. -r N:M sätter\n"
-"     standardvädet för GAMMALREV till N och för NYREV till M; -c M sätter\n"
-"     standardvärdet för GAMMALREV till M-1 och för NYREV till M.\n"
-"     -c M sätter standardvärdet för GAMMALREV till M och för NYREV till M-"
-"1.\n"
+"     standardvädet för GAMMALREV till N och för NYREV till M.\n"
+"\n"
 "  3. Kortare sätt att skriva \"svn diff --old=GAMMAL-URL[@GAMMALREV]\n"
 "     --new=NY-URL[@NYREV]\".\n"
 "\n"
@@ -6689,7 +6684,7 @@ msgstr ""
 
 #: svn/main.c:920 svn/main.c:1112
 msgid "Can't specify -c with --old"
-msgstr ""
+msgstr "Kan inte ange -c med --old"
 
 #: svn/main.c:927
 msgid "Non-numeric change argument given to -c"
@@ -7027,9 +7022,9 @@ msgid "Unversioned properties on revision %ld:\n"
 msgstr "Ej versionshanterade egenskaper på revision %ld:\n"
 
 #: svn/proplist-cmd.c:119
-#, fuzzy, c-format
+#, c-format
 msgid "Properties on '%s':\n"
-msgstr "satte egenskapen \"%s\" på \"%s\"\n"
+msgstr "Egenskaper på \"%s\":\n"
 
 #: svn/props.c:51
 msgid ""
@@ -8258,7 +8253,7 @@ msgstr "skriv serverns process-ID till filen arg"
 
 #: svnserve/main.c:165
 msgid "run as a windows service (SCM only)"
-msgstr ""
+msgstr "kör som en Windows-tjänst (enacst från SCM)"
 
 #: svnserve/main.c:177
 #, c-format
@@ -8289,7 +8284,7 @@ msgstr "Flaggan --tunnel-user är endast giltig i tunnel-läge.\n"
 msgid ""
 "svnserve: The --service flag is only valid if the process is started by the "
 "Service Control Manager.\n"
-msgstr ""
+msgstr "svnserve: Flaggan --service är endast tillåten om processen startas av tjänsthanteraren (SCM).\n"
 
 #: svnserve/main.c:568
 #, c-format
@@ -8329,24 +8324,24 @@ msgstr "Kan inte skapa tråd"
 #: svnserve/winservice.c:341
 #, c-format
 msgid "Failed to create winservice_start_event"
-msgstr ""
+msgstr "Kunde inte skapa \"winservice_start_event\""
 
 #: svnserve/winservice.c:352
 #, c-format
 msgid "The service failed to start"
-msgstr ""
+msgstr "Tjänsten kunde inte starta"
 
 #: svnserve/winservice.c:400
 #, c-format
 msgid "Failed to connect to Service Control Manager"
-msgstr ""
+msgstr "Kunde inte ansluta till tjänsthanteraren (SCM)"
 
 #: svnserve/winservice.c:411
 #, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service."
-msgstr ""
+msgstr "Tjänsten kunde inte starta; ett internt fel inträffade då tjänsten skulle startas."
 
 #: svnsync/main.c:65
 msgid ""
