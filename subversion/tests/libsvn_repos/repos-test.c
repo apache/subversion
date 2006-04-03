@@ -1526,16 +1526,6 @@ commit_editor_authz  (const char **msg,
                                 youngest_rev, subpool,
                                 &dir2_baton));
 
-  /* Test denied access to a directory. */
-  err = editor->open_directory("/A/C", dir_baton, SVN_INVALID_REVNUM,
-                               subpool, &dir2_baton);
-  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNREADABLE)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
-                             "Got %s error instead of expected "
-                             "SVN_ERR_AUTHZ_UNREADABLE",
-                             err ? "unexpected" : "no");
-  svn_error_clear(err);
-
   /* Open /A/D.  This should be granted. */
   SVN_ERR(editor->open_directory("/A/D", dir_baton, SVN_INVALID_REVNUM,
                                  subpool, &dir_baton));
