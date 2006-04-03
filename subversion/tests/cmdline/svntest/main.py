@@ -666,16 +666,15 @@ def run_one_test(n, test_list):
   reset_config_dir()
   return exit_code
 
-def _internal_run_tests(test_list, testnum=None):
+def _internal_run_tests(test_list, testnums):
+  """Run the tests from TEST_LIST whose indices are listed in TESTNUMS."""
+
   exit_code = 0
 
-  if testnum is None:
-    for n in range(1, len(test_list)):
-      # 1 is the only return code that indicates actual test failure.
-      if run_one_test(n, test_list) == 1:
-        exit_code = 1
-  else:
-    exit_code = run_one_test(testnum, test_list)
+  for testnum in testnums:
+    # 1 is the only return code that indicates actual test failure.
+    if run_one_test(testnum, test_list) == 1:
+      exit_code = 1
 
   _cleanup_deferred_test_paths()
   return exit_code
@@ -684,13 +683,15 @@ def _internal_run_tests(test_list, testnum=None):
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
-# There are three modes for invoking this routine, and they all depend
-# on parsing sys.argv[]:
+# This routine parses sys.argv to decide what to do.  Basic usage:
 #
-#   1.  No command-line arguments: all tests in TEST_LIST are run.
-#   2.  Number 'N' passed on command-line: only test N is run
-#   3.  String "list" passed on command-line:  print each test's docstring.
-
+# test-script.py [list] [<testnum>]...
+#
+# list : Subcommand to print the docstrings for the chosen tests
+# instead of running them.
+#
+# [<testnum>]... : the numbers of the tests that should be run.  If no
+# testnums are specified, then all tests in TEST_LIST are run.
 def run_tests(test_list):
   """Main routine to run all tests in TEST_LIST.
 
@@ -702,7 +703,9 @@ def run_tests(test_list):
   global fs_type
   global verbose_mode
   global cleanup_mode
-  testnum = None
+  testnums = []
+  # Should the tests be listed (as opposed to executed)?
+  list_tests = 0
 
   # Explicitly set this so that commands that commit but don't supply a
   # log message will fail rather than invoke an editor.
@@ -713,23 +716,11 @@ def run_tests(test_list):
 
   for arg in args:
     if arg == "list":
-      print "Test #  Mode   Test Description"
-      print "------  -----  ----------------"
-      n = 1
-      for x in test_list[1:]:
-        testcase.TestCase(x, n).list()
-        n = n+1
-
-      # done. just exit with success.
-      sys.exit(0)
-
-    if arg.startswith('BASE_URL='):
+      list_tests = 1
+    elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
-      if testnum is not None:
-        print 'Too many arguments: "' + arg + '"'
-        sys.exit(1)
-      testnum = int(arg)
+      testnums.append(int(arg))
 
   for opt, val in opts:
     if opt == "--url":
@@ -747,16 +738,30 @@ def run_tests(test_list):
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
-  exit_code = _internal_run_tests(test_list, testnum)
+  if not testnums:
+    # If no test numbers were listed explicitly, include all of them:
+    testnums = range(1, len(test_list))
 
-  # remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  # This ensures that an 'import' will happen the next time we run.
-  safe_rmtree(temp_dir)
+  if list_tests:
+    print "Test #  Mode   Test Description"
+    print "------  -----  ----------------"
+    for testnum in testnums:
+      testcase.TestCase(test_list[testnum], testnum).list()
 
-  _cleanup_deferred_test_paths()
+    # done. just exit with success.
+    sys.exit(0)
 
-  # return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  else:
+    exit_code = _internal_run_tests(test_list, testnums)
+
+    # remove all scratchwork: the 'pristine' repository, greek tree, etc.
+    # This ensures that an 'import' will happen the next time we run.
+    safe_rmtree(temp_dir)
+
+    _cleanup_deferred_test_paths()
+
+    # return the appropriate exit code from the tests.
+    sys.exit(exit_code)
 
 
 ######################################################################
