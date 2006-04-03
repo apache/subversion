@@ -791,7 +791,9 @@ inside loops."
 ;;;###autoload
 (defun svn-status (dir &optional arg)
   "Examine the status of Subversion working copy in directory DIR.
-If ARG then pass the -u argument to `svn status'."
+If ARG is -, allow editing of the parameters. One could add -N to
+run svn status non recursively to make it faster.
+For every other non nil ARG pass the -u argument to `svn status'."
   (interactive (list (svn-read-directory-name "SVN status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
@@ -818,9 +820,13 @@ If ARG then pass the -u argument to `svn status'."
       (setq svn-status-initial-window-configuration (current-window-configuration)))
     (let* ((status-buf (get-buffer-create svn-status-buffer-name))
            (proc-buf (get-buffer-create "*svn-process*"))
-           (status-option (if svn-status-verbose
-                              (if arg "-uv" "-v")
-                            (if arg "-u" ""))))
+           (want-edit (eq arg '-))
+           (status-option (if want-edit
+                              (if svn-status-verbose "-v" "")
+                            (if svn-status-verbose
+                                (if arg "-uv" "-v")
+                              (if arg "-u" ""))))
+           (svn-status-edit-svn-command (or want-edit svn-status-edit-svn-command)))
       (save-excursion
         (set-buffer status-buf)
         (setq default-directory dir)
@@ -882,16 +888,17 @@ for example: '(\"revert\" \"file1\"\)
 ARGLIST is flattened and any every nil value is discarded.
 
 If the variable `svn-status-edit-svn-command' is non-nil then the user
-is prompted for give extra arguments, which are appended to ARGLIST."
+can edit ARGLIST before running svn."
   (setq arglist (svn-status-flatten-list arglist))
   (if (eq (process-status "svn") nil)
       (progn
         (when svn-status-edit-svn-command
-          (setq arglist (append arglist
-                                (split-string
-                                 (read-from-minibuffer
-                                  (format "Run `svn %s' with extra arguments: "
-                                          (mapconcat 'identity arglist " "))))))
+          (setq arglist (append
+                         (list (car arglist))
+                         (split-string
+                          (read-from-minibuffer
+                           (format "svn %s flags: " (car arglist))
+                           (mapconcat 'identity (cdr arglist) " ")))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run %s: %S" cmdtype arglist))
