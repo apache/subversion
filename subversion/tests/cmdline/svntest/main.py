@@ -429,10 +429,12 @@ def create_repos(path):
   stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path, *opts)
 
   # Skip tests if we can't create the repository.
-  for line in stderr:
-    if line.find('Unknown FS type') != -1:
-      raise Skip
   if stderr:
+    for line in stderr:
+      if line.find('Unknown FS type') != -1:
+        raise Skip
+    # If the FS type is known, assume the repos couldn't be created
+    # (e.g. due to a missing 'svnadmin' binary).
     raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
