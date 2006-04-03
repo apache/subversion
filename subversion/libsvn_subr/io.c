@@ -2643,23 +2643,23 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
   char c;
 
   for (i = 0; i < *limit; i++)
-  {
-    SVN_ERR(svn_io_file_getc(&c, file, pool)); 
-    /* Note: this error could be APR_EOF, which
-       is totally fine.  The caller should be aware of
-       this. */
+    {
+      SVN_ERR(svn_io_file_getc(&c, file, pool)); 
+      /* Note: this error could be APR_EOF, which
+         is totally fine.  The caller should be aware of
+         this. */
 
-    if (c == '\n')
-      {
-        buf[i] = '\0';
-        *limit = i;
-        return SVN_NO_ERROR;
-      }
-    else
-      {
-        buf[i] = c;
-      }
-  }
+      if (c == '\n')
+        {
+          buf[i] = '\0';
+          *limit = i;
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          buf[i] = c;
+        }
+    }
 
   err = file_name_get(&name, file, pool);
   if (err)
