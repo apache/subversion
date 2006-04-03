@@ -89,10 +89,9 @@ Candidate changes:
   * r18893
     Explicitly close WC locks when an operation is cancelled to avoid
     leaving stray WC locks behind.
+    Branch: 1.3.x-r18893
     Justification:
       Oft-complained-about usability annoyance, regression from 1.1
-      Note:
-        Causes a conflict, so needs a backport branch.
     Votes:
       +1: dlr, philip
       +0: lundblad
