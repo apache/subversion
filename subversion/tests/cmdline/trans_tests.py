@@ -349,33 +349,31 @@ def keywords_from_birth(sbox):
     print "Id expansion failed for", id_with_space_path
     raise svntest.Failure
   fp.close()
-  
-def enable_translation(sbox):
-  "enable translation, check status, commit"
 
-  raise svntest.Failure
+#----------------------------------------------------------------------
+
+#def enable_translation(sbox):
+#  "enable translation, check status, commit"
+
   # TODO: Turn on newline conversion and/or keyword substitution for all
   # sorts of files, with and without local mods, and verify that
   # status shows the right stuff.  The, commit those mods.
 
 #----------------------------------------------------------------------
 
-def checkout_translated():
-  "checkout files that have translation enabled"
+#def checkout_translated():
+#  "checkout files that have translation enabled"
 
-  raise svntest.Failure
   # TODO: Checkout a tree which contains files with translation
   # enabled.
 
 #----------------------------------------------------------------------
 
-def disable_translation():
-  "disable translation, check status, commit"
+#def disable_translation():
+#  "disable translation, check status, commit"
 
-  raise svntest.Failure
   # TODO: Disable translation on files which have had it enabled,
   # with and without local mods, check status, and commit.
-  
 
 #----------------------------------------------------------------------
 
@@ -757,9 +755,9 @@ def propset_revert_noerror(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               keywords_from_birth,
-              XFail(enable_translation),
-              XFail(checkout_translated),
-              XFail(disable_translation),
+              # enable_translation,
+              # checkout_translated,
+              # disable_translation,
               update_modified_with_translation,
               eol_change_is_text_mod,
               keyword_expanded_on_checkout,
