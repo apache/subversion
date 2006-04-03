@@ -166,7 +166,7 @@ property.  This is related to the <a href="#revision-blocking"
 <p>Fundamentally, the use case is to support merge tracking of change
 set which is sufficiently different when ported to a different branch
 that use of <code>svn merge</code> is no longer appropriate.  Examples
-scenarios include:
+scenarios include:</p>
 
 <ul>
   <li>The actual change you want to apply to branch has no overlap
@@ -179,14 +179,14 @@ scenarios include:
   automatic merging impossible.</li>
 </ul>
 
-David James cites a specific example from Subversion's own
-development:
+<p>David James cites a specific example from Subversion's own
+development:</p>
 
-<blockquote>"When I merge from trunk to 1.3.x, I often run into
+<blockquote><p>"When I merge from trunk to 1.3.x, I often run into
 conflicts, so I create a temporary merge branch. If I tried to merge
 from the temporary merge branch to 1.3.x, the merge metadata would be
 lost because svnmerge.py does not track indirect metadata. To correct
-this metadata, I'd use [this feature]."</blockquote></p>
+this metadata, I'd use [this feature]."</p></blockquote>
 
 <p>Use may be predicated on information from the <em>Show Change Sets
 Available for Merge</em> feature (<a href="#auditing">Auditing</a>
