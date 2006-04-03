@@ -100,6 +100,12 @@ class TestCase_RevisionSet(unittest.TestCase):
         self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
         self.assertEqual(str(rs), "1,3-6,8-18")
 
+    def test_sorted(self):
+        "Test the sorted() function of the RevisionSet class."
+        rs = svnmerge.RevisionSet("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
+        self.assertEqual(rs.sorted(), [1, 3, 4, 5, 6, 8, 9, 10, 11,
+                                       12, 13, 14, 15, 16, 17, 18])
+
     def test_length(self):
         rs = svnmerge.RevisionSet("3-8")
         self.assertEqual(len(rs), 6)
