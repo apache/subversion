@@ -85,6 +85,9 @@ class SVNRepositoryCopyFailure(Failure):
   "Exception raised if unable to copy a repository"
   pass
 
+class SVNRepositoryCreateFailure(Failure):
+  "Exception raised if unable to create a repository"
+  pass
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -429,6 +432,8 @@ def create_repos(path):
   for line in stderr:
     if line.find('Unknown FS type') != -1:
       raise Skip
+  if stderr:
+    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),
