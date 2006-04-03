@@ -603,7 +603,8 @@ while (defined (my $load_dir = &get_next_load_dir))
               or die "$0: cannot chdir '$load_dir': $!\n";
 
             find({no_chdir   => 1,
-                  preprocess => sub { sort { $b cmp $a } @_ },
+                  preprocess => sub { sort { $b cmp $a }
+                                      grep { $_ !~ /^[._]svn$/ } @_ },
                   wanted     => $wanted
                  }, '.');
 
@@ -1034,7 +1035,8 @@ while (defined (my $load_dir = &get_next_load_dir))
       or die "$0: cannot chdir '$load_dir': $!\n";
 
     find({no_chdir   => 1,
-          preprocess => sub { sort { $b cmp $a } @_ },
+          preprocess => sub { sort { $b cmp $a }
+                              grep { $_ !~ /^[._]svn$/ } @_ },
           wanted     => $wanted
          }, '.');
 
@@ -1569,7 +1571,7 @@ sub recursive_ls_and_hash
                     digest => $file_digest};
     };
   find({no_chdir   => 1,
-        preprocess => sub { grep { $_ !~ /\.svn$/ } @_ },
+        preprocess => sub { grep { $_ !~ /^[._]svn$/ } @_ },
         wanted     => $wanted
        }, '.');
 
