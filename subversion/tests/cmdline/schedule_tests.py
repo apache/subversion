@@ -35,18 +35,16 @@ Item = svntest.wc.StateItem
 #
 #   Each test must return on success or raise on failure.
 #
-#   NOTE: Tests in this section should be written in triplets.  First
-#   compose a test which make schedule changes and local mods, and
-#   verifies that status output is as expected.  Secondly, compose a
-#   test which calls the first test (to do all the dirty work), then
-#   test reversion of those changes.  Finally, compose a third test
-#   which, again, calls the first test to "set the stage", and then
-#   commit those changes.
-#
-#----------------------------------------------------------------------
 
 #######################################################################
 #  Stage I - Schedules and modifications, verified with `svn status'
+#
+#  These tests make schedule changes and local mods, and verify that status
+#  output is as expected.  In a second stage, reversion of these changes is
+#  tested.  Potentially, a third stage could test committing these same
+#  changes.
+#
+#  NOTE: these tests are run within the Stage II tests, not on their own.
 #
 
 def add_files(sbox):
@@ -249,6 +247,9 @@ def delete_dirs(sbox):
 #######################################################################
 #  Stage II - Reversion of changes made in Stage I
 #
+#  Each test in Stage II calls the corresponding Stage I test
+#  and then also tests reversion of those changes.
+#
 
 def check_reversion(files, output):
   expected_output = []
@@ -383,62 +384,10 @@ def revert_delete_dirs(sbox):
                                                    '--recursive', wc_dir)
   check_reversion(files, output)
 
+
 #######################################################################
-#  Stage III - Commit of modifications made in Stage 1
+#  Regression tests
 #
-
-def commit_add_files(sbox):
-  "commit: add some files"
-
-  add_files(sbox)
-
-  raise svntest.Failure
-
-#----------------------------------------------------------------------
-
-def commit_add_directories(sbox):
-  "commit: add some directories"
-
-  add_directories(sbox)
-
-  raise svntest.Failure
-
-#----------------------------------------------------------------------
-
-def commit_nested_adds(sbox):
-  "commit: add some nested files and directories"
-
-  nested_adds(sbox)
-
-  raise svntest.Failure
-
-#----------------------------------------------------------------------
-
-def commit_add_executable(sbox):
-  "commit: add some executable files"
-
-  add_executable(sbox)
-
-  raise svntest.Failure
-
-
-#----------------------------------------------------------------------
-
-def commit_delete_files(sbox):
-  "commit: delete some files"
-
-  delete_files(sbox)
-
-  raise svntest.Failure
-
-#----------------------------------------------------------------------
-
-def commit_delete_dirs(sbox):
-  "commit: delete some directories"
-
-  delete_dirs(sbox)
-
-  raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #863:
@@ -685,24 +634,12 @@ def delete_non_existent(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              add_files,
-              add_directories,
-              nested_adds,
-              Skip(add_executable, (os.name != 'posix')),
-              delete_files,
-              delete_dirs,
               revert_add_files,
               revert_add_directories,
               revert_nested_adds,
               Skip(revert_add_executable, (os.name != 'posix')),
               revert_delete_files,
               revert_delete_dirs,
-              XFail(commit_add_files),
-              XFail(commit_add_directories),
-              XFail(commit_nested_adds),
-              Skip(XFail(commit_add_executable), (os.name != 'posix')),
-              XFail(commit_delete_files),
-              XFail(commit_delete_dirs),
               unschedule_missing_added,
               delete_missing,
               revert_inside_newly_added_dir,
