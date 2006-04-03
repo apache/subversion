@@ -1367,7 +1367,6 @@ get_combined_window(svn_txdelta_window_t **result,
   apr_pool_t *pool, *new_pool;
   int i;
   svn_txdelta_window_t *window, *nwin;
-  svn_stream_t *stream;
   struct rep_state *rs;
 
   assert(rb->rs_list->nelts >= 2);
@@ -1376,14 +1375,7 @@ get_combined_window(svn_txdelta_window_t **result,
 
   /* Read the next window from the original rep. */
   rs = APR_ARRAY_IDX(rb->rs_list, 0, struct rep_state *);
-  stream = svn_stream_from_aprfile(rs->file, pool);
-  SVN_ERR(svn_txdelta_read_svndiff_window(&window, stream, rs->ver, pool));
-  rs->chunk_index++;
-  SVN_ERR(get_file_offset(&rs->off, rs->file, pool));
-  if (rs->off > rs->end)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Reading one svndiff window read beyond the end "
-                              "of the representation"));
+  SVN_ERR(read_window(&window, rb->chunk_index, rs, pool));
 
   /* Combine in the windows from the other delta reps, if needed. */
   for (i = 1; i < rb->rs_list->nelts - 1; i++)
