@@ -4777,7 +4777,8 @@ move_plus_delete_test(const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
-  svn_revnum_t after_rev;
+  const char *path;
+  svn_revnum_t after_rev, rev;
 
   *msg = "make moves and deletes play nicely";
 
@@ -4801,6 +4802,18 @@ move_plus_delete_test(const char **msg,
   SVN_ERR(svn_fs_move(rev_root, "A/D", txn_root, "A/A", pool));
   SVN_ERR(svn_fs_delete(txn_root, "A/A/gamma", pool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "A/A", pool));
+
+  if (! path || strcmp(path, "/A/D") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A/D'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 1)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
 
   return SVN_NO_ERROR;
 }
@@ -4848,6 +4861,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(move_closest_copy_test),
     SVN_TEST_PASS(move_plus_copy_test),
     SVN_TEST_PASS(move_copied_from_test),
-    SVN_TEST_PASS(move_plus_delete_test),
+    SVN_TEST_XFAIL(move_plus_delete_test),
     SVN_TEST_NULL
   };
