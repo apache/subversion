@@ -381,12 +381,14 @@ abs_builddir = fix_case(abs_builddir)
 
 # Run the tests
 if run_svnserve:
-  svnserve = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
-  svnserve.start()
+  daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
 if run_httpd:
-  httpd = Httpd(abs_httpd_dir, abs_builddir, httpd_port)
-  httpd.start()
+  daemon = Httpd(abs_httpd_dir, abs_builddir, httpd_port)
+
+# Start service daemon, if any
+if daemon:
+  daemon.start()
 
 print 'Testing', objdir, 'configuration on', repo_loc
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
@@ -404,6 +406,9 @@ except:
 else:
   os.chdir(old_cwd)
 
+# Stop service daemon, if any
+if daemon:
+  daemon = None
 
 # Remove the execs again
 for tgt in copied_execs:
