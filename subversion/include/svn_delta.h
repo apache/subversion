@@ -893,15 +893,13 @@ typedef struct svn_delta_editor_t
                                    void *parent_baton,
                                    const char *dest_path,
                                    svn_revnum_t dest_revision,
-                                   apr_pool_t *file_pool,
-                                   void **file_baton);
+                                   apr_pool_t *file_pool);
 
   svn_error_t *(*rename_dir_from)(const char *path,
                                   void *parent_baton,
                                   const char *dest_path,
                                   svn_revnum_t dest_revision,
-                                  apr_pool_t *dir_pool,
-                                  void **child_baton);
+                                  apr_pool_t *dir_pool);
 
 } svn_delta_editor_t;  
 

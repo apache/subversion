@@ -234,6 +234,16 @@ is_within_base_path(const char *path, const char *base_path, int base_len)
   return FALSE;
 }
 
+
+/* A wrapper around svn_fs_path_change_t that lets us bring along some
+ * extra bookkeeping information needed by replay. */
+typedef struct {
+  svn_fs_path_change_t *change;
+  const char *dest_path;
+  svn_revnum_t src_rev;
+} change_entry_t;
+
+
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
@@ -245,6 +255,7 @@ path_driver_cb_func(void **dir_baton,
   const svn_delta_editor_t *editor = cb->editor;
   void *edit_baton = cb->edit_baton;
   svn_fs_root_t *root = cb->root;
+  change_entry_t *entry;
   svn_fs_path_change_t *change;
   svn_boolean_t do_add = FALSE, do_delete = FALSE, do_rename = FALSE;
   svn_node_kind_t kind;
@@ -258,7 +269,9 @@ path_driver_cb_func(void **dir_baton,
 
   *dir_baton = NULL;
 
-  change = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
+  entry = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
+  change = entry->change;
+
   switch (change->change_kind)
     {
     case svn_fs_path_change_add:
@@ -286,8 +299,37 @@ path_driver_cb_func(void **dir_baton,
 
   /* Handle any deletions. */
   if (do_delete)
-    SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM, 
-                                 parent_baton, pool));
+    {
+      if (! entry->dest_path)
+        SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM, 
+                                     parent_baton, pool));
+      else
+        {
+          SVN_ERR(svn_fs_revision_root(&source_root,
+                                       svn_fs_root_fs(root),
+                                       entry->src_rev, pool));
+
+          SVN_ERR(svn_fs_check_path(&kind, source_root, path, pool));
+          if ((kind != svn_node_dir) && (kind != svn_node_file))
+            return svn_error_createf 
+              (SVN_ERR_FS_NOT_FOUND, NULL, 
+               _("Filesystem path '%s' is neither a file nor a directory"),
+               path);
+
+          if (kind == svn_node_dir)
+            SVN_ERR(editor->rename_dir_from(entry->dest_path,
+                                            parent_baton,
+                                            path,
+                                            SVN_INVALID_REVNUM,
+                                            pool));
+          else
+            SVN_ERR(editor->rename_file_from(entry->dest_path,
+                                             parent_baton,
+                                             path,
+                                             SVN_INVALID_REVNUM,
+                                             pool));
+        }
+    }
 
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
@@ -601,6 +643,39 @@ svn_repos_replay2(svn_fs_root_t *root,
       path = key;
       change = val;
 
+      if (change->change_kind == svn_fs_path_change_move)
+        {
+          change_entry_t *entry = apr_pcalloc(pool, sizeof(*entry));
+          svn_revnum_t copyfrom_rev;
+          const char *copyfrom_path;
+
+          if (path[0] == '/')
+            ++path;
+
+          SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                     root, path, pool));
+
+          /* XXX authz checking for source of move */
+
+          if (copyfrom_path[0] == '/')
+            ++copyfrom_path;
+
+          entry->dest_path = path;
+          entry->src_rev = copyfrom_rev;
+          entry->change = apr_pmemdup(pool, change, sizeof(*change));
+          entry->change->change_kind = svn_fs_path_change_delete;
+
+          if (is_within_base_path(copyfrom_path, base_path, base_path_len))
+            {
+              APR_ARRAY_PUSH(paths, const char *) = copyfrom_path;
+
+              /* XXX what if it's already there? */
+
+              apr_hash_set(changed_paths, copyfrom_path, APR_HASH_KEY_STRING,
+                           entry);
+            }
+        }
+
       if (authz_read_func)
         SVN_ERR(authz_read_func(&allowed, root, path, authz_read_baton,
                                 pool));
@@ -617,8 +692,15 @@ svn_repos_replay2(svn_fs_root_t *root,
              we don't want anything to do with it... */
           if (is_within_base_path(path, base_path, base_path_len))
             {
+              change_entry_t *entry = apr_pcalloc(pool, sizeof(*entry));
+
+              entry->change = change;
+
               APR_ARRAY_PUSH(paths, const char *) = path;
-              apr_hash_set(changed_paths, path, keylen, change);
+
+              /* XXX what if it's already there? */
+
+              apr_hash_set(changed_paths, path, APR_HASH_KEY_STRING, entry);
             }
         }
     }

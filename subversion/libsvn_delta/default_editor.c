@@ -128,6 +128,17 @@ close_file(void *file_baton,
 }
 
 
+static svn_error_t *
+rename_from(const char *path,
+            void *parent_baton,
+            const char *src_path,
+            svn_revnum_t src_rev,
+            apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
 
 static const svn_delta_editor_t default_editor =
 {
@@ -149,8 +160,8 @@ static const svn_delta_editor_t default_editor =
   single_baton_func,
   add_item,
   add_item,
-  add_item,
-  add_item
+  rename_from,
+  rename_from
 };
 
 svn_delta_editor_t *
