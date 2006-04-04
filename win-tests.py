@@ -145,7 +145,8 @@ def copy_changed_file(src, tgt):
 def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
-    if os.path.splitext(name)[1] != ".exe":
+    ext = os.path.splitext(name)[1]
+    if ext != ".exe" and ext != ".so":
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
