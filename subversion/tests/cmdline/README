@@ -34,11 +34,11 @@ Invoke with one or more numeric arguments to run those particular tests:
 
    $ ./basic_tests.py 7 13 17
 
-And invoke with the "list" subcommand to list information about some
-or all tests available in that script:
+And invoke with the "--list" option to list information about some or
+all tests available in that script:
 
-   $ ./basic_tests.py list 2 3 4
-   $ ./basic_tests.py list
+   $ ./basic_tests.py --list 2 3 4
+   $ ./basic_tests.py --list
 
 Note: if you are building Subversion in a directory other than the source
 directory (q.v. INSTALL), you will have to invoke the tests from within

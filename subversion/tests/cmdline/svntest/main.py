@@ -692,9 +692,9 @@ def _internal_run_tests(test_list, testnums):
 #
 # This routine parses sys.argv to decide what to do.  Basic usage:
 #
-# test-script.py [list] [<testnum>]...
+# test-script.py [--list] [<testnum>]...
 #
-# list : Subcommand to print the docstrings for the chosen tests
+# --list : Option to print the docstrings for the chosen tests
 # instead of running them.
 #
 # [<testnum>]... : the numbers of the tests that should be run.  If no
@@ -719,10 +719,11 @@ def run_tests(test_list):
   os.environ['SVN_EDITOR'] = ''
 
   opts, args = my_getopt(sys.argv[1:], 'v',
-                         ['url=', 'fs-type=', 'verbose', 'cleanup'])
+                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list'])
 
   for arg in args:
     if arg == "list":
+      # This is an old deprecated variant of the "--list" option:
       list_tests = 1
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
@@ -741,6 +742,9 @@ def run_tests(test_list):
 
     elif opt == "--cleanup":
       cleanup_mode = 1
+
+    elif opt == "--list":
+      list_tests = 1
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
