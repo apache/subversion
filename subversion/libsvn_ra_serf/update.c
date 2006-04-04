@@ -1266,6 +1266,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name;
       svn_stringbuf_t *name_buf;
       report_info_t *info;
+      apr_pool_t *tmppool;
 
       file_name = svn_ra_serf__find_attr(attrs, "name");
 
@@ -1278,14 +1279,17 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                   info->dir->dir_baton_pool);
+      apr_pool_create(&tmppool, info->dir->dir_baton_pool);
+
+      name_buf = svn_stringbuf_dup(info->dir->name_buf, tmppool);
       svn_path_add_component(name_buf, file_name);
 
-      info->dir->update_editor->delete_entry(name_buf->data,
-                                             SVN_INVALID_REVNUM,
-                                             info->dir->dir_baton,
-                                             info->dir->dir_baton_pool);
+      SVN_ERR(info->dir->update_editor->delete_entry(name_buf->data,
+                                                     SVN_INVALID_REVNUM,
+                                                     info->dir->dir_baton,
+                                                     tmppool));
+
+      apr_pool_destroy(tmppool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-directory") == 0)
