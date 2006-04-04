@@ -26,6 +26,29 @@
 #include "ra_serf.h"
 
 
+/* Our current parsing state we're in for the PROPFIND response. */
+typedef enum {
+  NONE = 0,
+  RESPONSE,
+  PROP,
+  PROPVAL,
+} prop_state_e;
+
+typedef struct {
+  apr_pool_t *pool;
+
+  /* Current ns, attribute name, and value of the property we're parsing */
+  const char *ns;
+
+  const char *name;
+
+  const char *val;
+  apr_size_t val_len;
+
+  const char *encoding;
+
+} prop_info_t;
+
 /*
  * This structure represents a pending PROPFIND response.
  */
@@ -62,25 +85,10 @@ struct svn_ra_serf__propfind_context_t {
    */
   apr_hash_t *ret_props;
 
-  /* TODO use the state object as in the report */
-  /* Are we parsing a property right now? */
-  svn_boolean_t in_prop;
-  svn_boolean_t in_response;
-
-  /* Should we be harvesting the CDATA elements */
-  svn_boolean_t collect_cdata;
-
   /* If we're dealing with a Depth: 1 response,
    * we may be dealing with multiple paths.
    */
   const char *current_path;
-
-  /* Current ns, attribute name, and value of the property we're parsing */
-  const char *ns;
-  const char *attr_name;
-  const char *attr_val;
-  apr_size_t attr_val_len;
-  const char *attr_encoding;
 
   /* Returned status code. */
   int status_code;
@@ -200,6 +208,26 @@ svn_ra_serf__set_prop(apr_hash_t *props,
                                    val, pool);
 }
 
+static prop_info_t *
+push_state(svn_ra_serf__xml_parser_t *parser,
+           svn_ra_serf__propfind_context_t *propfind,
+           prop_state_e state)
+{
+  svn_ra_serf__xml_push_state(parser, state);
+
+  if (state == PROPVAL)
+    {
+      prop_info_t *info;
+
+      info = apr_pcalloc(parser->state->pool, sizeof(*info));
+      info->pool = parser->state->pool;
+
+      parser->state->private = info;
+    }
+
+  return parser->state->private;
+}
+
 /*
  * Expat callback invoked on a start element tag for a PROPFIND response.
  */
@@ -210,29 +238,32 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
                const char **attrs)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
+  prop_state_e state;
+  prop_info_t *info;
 
-  if (!ctx->in_response && strcmp(name.name, "response") == 0)
+  state = parser->state->current_state;
+
+  if (!state && strcmp(name.name, "response") == 0)
     {
-      ctx->in_response = TRUE;
+      svn_ra_serf__xml_push_state(parser, RESPONSE);
     }
-  else if (ctx->in_response && strcmp(name.name, "href") == 0)
+  else if (state == RESPONSE && strcmp(name.name, "href") == 0)
     {
-      ctx->ns = name.namespace;
-      ctx->attr_name = apr_pstrdup(ctx->pool, name.name);
-      ctx->collect_cdata = TRUE;
+      info = push_state(parser, ctx, PROPVAL);
+      info->ns = name.namespace;
+      info->name = apr_pstrdup(info->pool, name.name);
     }
-  else if (ctx->in_response && strcmp(name.name, "prop") == 0)
+  else if (state == RESPONSE && strcmp(name.name, "prop") == 0)
     {
-      ctx->in_response = FALSE;
-      ctx->in_prop = TRUE;
+      push_state(parser, ctx, PROP);
     }
-  else if (ctx->in_prop && !ctx->attr_name)
+  else if (state == PROP)
     {
-      ctx->ns = name.namespace;
-      ctx->attr_name = apr_pstrdup(ctx->pool, name.name);
-      ctx->attr_encoding = svn_ra_serf__find_attr(attrs, "V:encoding");
-      /* we want to flag the cdata handler to pick up what's next. */
-      ctx->collect_cdata = TRUE;
+      info = push_state(parser, ctx, PROPVAL);
+      info->ns = name.namespace;
+      info->name = apr_pstrdup(info->pool, name.name);
+      info->encoding = apr_pstrdup(info->pool,
+                                   svn_ra_serf__find_attr(attrs, "V:encoding"));
     }
 
   return SVN_NO_ERROR;
@@ -247,60 +278,67 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
              svn_ra_serf__dav_props_t name)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
+  prop_state_e state;
+  prop_info_t *info;
 
-  if (ctx->in_response && strcmp(name.name, "response") == 0)
+  state = parser->state->current_state;
+  info = parser->state->private;
+
+  if (state == RESPONSE && strcmp(name.name, "response") == 0)
     {
-      ctx->in_response = FALSE;
+      svn_ra_serf__xml_pop_state(parser);
     }
-  if (ctx->in_prop && strcmp(name.name, "prop") == 0)
+  else if (state == PROP && strcmp(name.name, "prop") == 0)
     {
-      ctx->in_prop = FALSE;
-      ctx->in_response = TRUE;
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (ctx->collect_cdata)
+  else if (state == PROPVAL)
     {
+      const char *ns, *pname, *val;
+      svn_string_t *val_str;
+
       /* if we didn't see a CDATA element, we may want the tag name
        * as long as it isn't equivalent to the property name.
        */
-      if (!ctx->attr_val)
+      if (!info->val)
         {
-          if (strcmp(ctx->attr_name, name.name) != 0)
+          if (strcmp(info->name, name.name) != 0)
             {
-              ctx->attr_val = apr_pstrdup(ctx->pool, name.name);
-              ctx->attr_val_len = strlen(ctx->attr_val);
+              info->val = name.name;
+              info->val_len = strlen(info->val);
             }
           else
             {
-              ctx->attr_val = "";
-              ctx->attr_val_len = 1;
+              info->val = "";
+              info->val_len = 1;
             }
         }
    
-      if (ctx->in_response && strcmp(name.name, "href") == 0)
+      if (parser->state->prev->current_state == RESPONSE &&
+          strcmp(name.name, "href") == 0)
         {
           if (strcmp(ctx->depth, "1") == 0)
             {
-              ctx->current_path = svn_path_canonicalize(ctx->attr_val,
-                                                        ctx->pool);
+              ctx->current_path = svn_path_canonicalize(info->val, ctx->pool);
             }
           else
             {
               ctx->current_path = ctx->path;
             }
         }
-      else if (ctx->attr_encoding)
+      else if (info->encoding)
         {
-          if (strcmp(ctx->attr_encoding, "base64") == 0)
+          if (strcmp(info->encoding, "base64") == 0)
             {
               svn_string_t encoded;
               const svn_string_t *decoded;
 
-              encoded.data = ctx->attr_val;
-              encoded.len = ctx->attr_val_len;
+              encoded.data = info->val;
+              encoded.len = info->val_len;
 
-              decoded = svn_base64_decode_string(&encoded, ctx->pool);
-              ctx->attr_val = decoded->data;
-              ctx->attr_val_len = decoded->len;
+              decoded = svn_base64_decode_string(&encoded, parser->state->pool);
+              info->val = decoded->data;
+              info->val_len = decoded->len;
             }
           else
             {
@@ -308,38 +346,31 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
             }
         }
 
+      ns = apr_pstrdup(ctx->pool, info->ns);
+      pname = apr_pstrdup(ctx->pool, info->name);
+      val = apr_pmemdup(ctx->pool, info->val, info->val_len);
+      val_str = svn_string_ncreate(val, info->val_len, ctx->pool);
+
       /* set the return props and update our cache too. */
       svn_ra_serf__set_ver_prop(ctx->ret_props,
                                 ctx->current_path, ctx->rev,
-                                ctx->ns, ctx->attr_name,
-                                svn_string_ncreate(ctx->attr_val,
-                                                   ctx->attr_val_len,
-                                                   ctx->pool),
+                                ns, pname, val_str,
                                 ctx->pool);
       if (ctx->cache_props)
         {
-          const char *pname, *val;
-          svn_string_t *val_str;
-
-          pname = apr_pstrdup(ctx->sess->pool, ctx->attr_name);
-          val = apr_pmemdup(ctx->sess->pool, ctx->attr_val,
-                            ctx->attr_val_len);
-          val_str = svn_string_ncreate(val, ctx->attr_val_len,
-                                       ctx->sess->pool);
+          ns = apr_pstrdup(ctx->sess->pool, info->ns);
+          pname = apr_pstrdup(ctx->sess->pool, info->name);
+          val = apr_pmemdup(ctx->sess->pool, info->val, info->val_len);
+          val_str = svn_string_ncreate(val, info->val_len, ctx->sess->pool);
 
           svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
-                                    ctx->current_path, ctx->rev, ctx->ns,
-                                    pname, val_str,
+                                    ctx->current_path, ctx->rev,
+                                    ns, pname, val_str,
                                     ctx->sess->pool);
         }
 
-      /* we're done with it. */
-      ctx->collect_cdata = FALSE;
-      ctx->attr_name = NULL;
-      ctx->attr_val = NULL;
-      ctx->attr_encoding = NULL;
+      svn_ra_serf__xml_pop_state(parser);
     }
-  /* FIXME: destroy namespaces as we end a handler */
 
   return SVN_NO_ERROR;
 }
@@ -356,10 +387,16 @@ cdata_propfind(svn_ra_serf__xml_parser_t *parser,
                apr_size_t len)
 {
   svn_ra_serf__propfind_context_t *ctx = userData;
-  if (ctx->collect_cdata)
+  prop_state_e state;
+  prop_info_t *info;
+
+  state = parser->state->current_state;
+  info = parser->state->private;
+
+  if (state == PROPVAL)
     {
-      svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
-                                 data, len, ctx->pool);
+      svn_ra_serf__expand_string(&info->val, &info->val_len, data, len,
+                                 info->pool);
     }
 
   return SVN_NO_ERROR;
@@ -487,7 +524,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
       new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
 
-      new_prop_ctx->pool = pool;
+      new_prop_ctx->pool = apr_hash_pool_get(ret_props);
       new_prop_ctx->path = path;
       new_prop_ctx->cache_props = cache_props;
       new_prop_ctx->find_props = find_props;
