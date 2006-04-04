@@ -16,7 +16,7 @@ Candidate changes:
       Path based authz in svnserve is a key feature of 1.3.x.
     Branch: to be created
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
   * r18983
     Allow the libsvn_swig_py library to link on OpenBSD.
