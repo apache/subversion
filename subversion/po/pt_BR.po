@@ -4705,7 +4705,7 @@ msgstr "URL mal formada no repositório"
 
 #: libsvn_ra_dav/session.c:601
 msgid "Network socket initialization failed"
-msgstr "Falhou inicialização de de socket de rede"
+msgstr "Falhou inicialização de socket de rede"
 
 #: libsvn_ra_dav/session.c:618
 msgid "SSL is not supported"
