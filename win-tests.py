@@ -379,6 +379,7 @@ if create_dirs:
 # Ensure the tests directory is correctly cased
 abs_builddir = fix_case(abs_builddir)
 
+daemon = None
 # Run the tests
 if run_svnserve:
   daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
@@ -408,7 +409,7 @@ else:
 
 # Stop service daemon, if any
 if daemon:
-  daemon = None
+  del daemon
 
 # Remove the execs again
 for tgt in copied_execs:
