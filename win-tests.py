@@ -180,7 +180,7 @@ def locate_libs():
     libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
     copy_changed_file(libintl_dll_path, abs_objdir)
 
-  os.environ['APR_ICONV_PATH'] = apriconv_so_path
+  os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
   
 def fix_case(path):
