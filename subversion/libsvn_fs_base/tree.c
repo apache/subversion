@@ -3215,6 +3215,15 @@ txn_body_copied_from(void *baton, trail_t *trail)
                                                 copy->src_txn_id, 
                                                 trail, trail->pool));
         }
+
+      /* If a moved node has subsequently been modified, it won't have
+       * a move id tacked onto its entry in the parent dir, so we'll have
+       * to catch it here. */
+      else if (copy->kind == copy_kind_move)
+        {
+          args->result_path = copy->src_path;
+          args->result_rev = copy->src_rev;
+        }
     }
   return SVN_NO_ERROR;
 }
