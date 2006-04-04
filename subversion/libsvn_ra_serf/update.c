@@ -173,6 +173,9 @@ typedef struct report_info_t
   /* Has the server told us to go fetch - only valid if we had it already */
   svn_boolean_t fetch_file;
 
+  /* The properties for this file */
+  apr_hash_t *props;
+
   /* pool passed to update->add_file, etc. */
   apr_pool_t *editor_pool;
 
@@ -328,6 +331,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       /* Create the root property tree. */
       new_info->dir->props = apr_hash_make(new_info->pool);
+      new_info->props = new_info->dir->props;
       new_info->dir->removed_props = apr_hash_make(new_info->pool);
 
       /* Point to the update_editor */
@@ -366,6 +370,8 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       /* Point at our parent's directory state. */
       new_info->dir = info->dir;
       info->dir->ref_count++;
+
+      new_info->props = apr_hash_make(new_info->pool);
 
       parser->state->private = new_info;
     }
@@ -442,9 +448,6 @@ open_dir(report_dir_t *dir)
     {
       apr_pool_create(&dir->dir_baton_pool, dir->pool);
 
-      dir->name_buf = svn_stringbuf_create("", dir->dir_baton_pool);
-      dir->name = dir->name_buf->data;
-
       SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
                                             dir->dir_baton_pool,
                                             &dir->dir_baton));
@@ -454,12 +457,6 @@ open_dir(report_dir_t *dir)
       SVN_ERR(open_dir(dir->parent_dir));
 
       apr_pool_create(&dir->dir_baton_pool, dir->parent_dir->dir_baton_pool);
-
-      /* Expand our name. */
-      dir->name_buf = svn_stringbuf_dup(dir->parent_dir->name_buf,
-                                        dir->dir_baton_pool);
-      svn_path_add_component(dir->name_buf, dir->base_name);
-      dir->name = dir->name_buf->data;
 
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
@@ -654,13 +651,10 @@ handle_fetch(serf_request_t *request,
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       info = fetch_ctx->info;
 
-      if (!info->dir->dir_baton)
+      err = open_dir(info->dir);
+      if (err)
         {
-          err = open_dir(info->dir);
-          if (err)
-            {
-              return error_fetch(request, fetch_ctx, err);
-            }
+          return error_fetch(request, fetch_ctx, err);
         }
 
       apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
@@ -669,7 +663,7 @@ handle_fetch(serf_request_t *request,
       if (!info->name)
         {
           info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                             info->dir->dir_baton_pool);
+                                             info->editor_pool);
           svn_path_add_component(info->name_buf, info->base_name);
           info->name = info->name_buf->data;
         }
@@ -807,21 +801,24 @@ handle_fetch(serf_request_t *request,
             }
 
           /* set all of the properties we received */
-          svn_ra_serf__walk_all_props(info->dir->props,
-                         info->base_name,
-                         info->base_rev,
-                         set_file_props,
-                         info, info->editor_pool);
+          svn_ra_serf__walk_all_props(info->props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      set_file_props,
+                                      info, info->editor_pool);
           svn_ra_serf__walk_all_props(info->dir->removed_props,
-                         info->base_name,
-                         info->base_rev,
-                         remove_file_props,
-                         info, info->editor_pool);
-          svn_ra_serf__walk_all_props(info->dir->props,
-                         info->url,
-                         info->target_rev,
-                         set_file_props,
-                         info, info->editor_pool);
+                                      info->base_name,
+                                      info->base_rev,
+                                      remove_file_props,
+                                      info, info->editor_pool);
+          if (info->fetch_props)
+            {
+              svn_ra_serf__walk_all_props(info->props,
+                                          info->url,
+                                          info->target_rev,
+                                          set_file_props,
+                                          info, info->editor_pool);
+            }
 
           err = info->dir->update_editor->close_file(info->file_baton, NULL,
                                                      info->editor_pool);
@@ -944,7 +941,7 @@ handle_propchange_only(report_info_t *info)
   if (!info->name)
     {
       info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                         info->dir->dir_baton_pool);
+                                         info->editor_pool);
       svn_path_add_component(info->name_buf, info->base_name);
       info->name = info->name_buf->data;
     }
@@ -977,14 +974,17 @@ handle_propchange_only(report_info_t *info)
     }
 
   /* set all of the properties we received */
-  svn_ra_serf__walk_all_props(info->dir->props,
+  svn_ra_serf__walk_all_props(info->props,
                               info->base_name, info->base_rev,
                               set_file_props, info, info->editor_pool);
   svn_ra_serf__walk_all_props(info->dir->removed_props,
                               info->base_name, info->base_rev,
                               remove_file_props, info, info->editor_pool);
-  svn_ra_serf__walk_all_props(info->dir->props, info->url, info->target_rev,
-                              set_file_props, info, info->editor_pool);
+  if (info->fetch_props)
+    {
+      svn_ra_serf__walk_all_props(info->props, info->url, info->target_rev,
+                                  set_file_props, info, info->editor_pool);
+    }
 
   SVN_ERR(info->dir->update_editor->close_file(info->file_baton, NULL,
                                                info->editor_pool));
@@ -1008,22 +1008,20 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
   conn = ctx->sess->conns[ctx->sess->cur_conn];
 
   /* go fetch info->name from DAV:checked-in */
-  checked_in_url =
-      svn_ra_serf__get_ver_prop(info->dir->props, info->base_name,
+  info->url =
+      svn_ra_serf__get_ver_prop(info->props, info->base_name,
                                 info->base_rev, "DAV:", "checked-in");
 
-  if (!checked_in_url)
+  if (!info->url)
     {
       abort();
     }
-
-  info->url = checked_in_url;
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   info->propfind = NULL;
   if (info->fetch_props)
     {
-      svn_ra_serf__deliver_props(&info->propfind, info->dir->props,
+      svn_ra_serf__deliver_props(&info->propfind, info->props,
                                  ctx->sess, conn,
                                  info->url, info->target_rev, "0", all_props,
                                  FALSE, &ctx->done_propfinds, info->dir->pool);
@@ -1138,10 +1136,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->fetch_props = TRUE;
 
       info->dir->base_name = "";
-      info->dir->name = NULL;
+      info->dir->name_buf = svn_stringbuf_create("", info->pool);
+      info->dir->name = info->dir->name_buf->data;
 
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
+      info->name_buf = info->dir->name_buf;
     }
   else if (!state)
     {
@@ -1151,7 +1151,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "open-directory") == 0)
     {
       const char *rev, *dirname;
-      report_dir_t *dir_info;
+      report_dir_t *dir;
       report_info_t *info;
 
       rev = svn_ra_serf__find_attr(attrs, "rev");
@@ -1170,43 +1170,52 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, OPEN_DIR);
 
-      dir_info = info->dir;
+      dir = info->dir;
 
       info->base_rev = apr_atoi64(rev);
-      info->dir->base_rev = info->base_rev;
-      info->dir->target_rev = ctx->target_rev;
+      dir->base_rev = info->base_rev;
+      dir->target_rev = ctx->target_rev;
+
       info->fetch_props = FALSE;
 
-      info->dir->base_name = apr_pstrdup(info->dir->pool, dirname);
-      info->dir->name = NULL;
+      dir->base_name = apr_pstrdup(dir->pool, dirname);
+      info->base_name = dir->base_name;
 
-      info->base_name = dir_info->base_name;
-      info->name = dir_info->name;
+      /* Expand our name. */
+      dir->name_buf = svn_stringbuf_dup(dir->parent_dir->name_buf, dir->pool);
+      svn_path_add_component(dir->name_buf, dir->base_name);
+
+      dir->name = dir->name_buf->data;
+      info->name = dir->name;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-directory") == 0)
     {
       const char *dir_name;
-      report_dir_t *dir_info;
+      report_dir_t *dir;
       report_info_t *info;
 
       dir_name = svn_ra_serf__find_attr(attrs, "name");
 
       info = push_state(parser, ctx, ADD_DIR);
 
-      dir_info = info->dir;
+      dir = info->dir;
 
-      dir_info->base_name = apr_pstrdup(dir_info->pool, dir_name);
-      dir_info->name = NULL;
+      dir->base_name = apr_pstrdup(dir->pool, dir_name);
+      info->base_name = dir->base_name;
 
-      info->base_name = dir_info->base_name;
-      info->name = dir_info->name;
+      /* Expand our name. */
+      dir->name_buf = svn_stringbuf_dup(dir->parent_dir->name_buf, dir->pool);
+      svn_path_add_component(dir->name_buf, dir->base_name);
+
+      dir->name = dir->name_buf->data;
+      info->name = dir->name;
 
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
-      dir_info->base_rev = info->base_rev;
-      dir_info->target_rev = ctx->target_rev;
-      dir_info->fetch_props = TRUE;
+      dir->base_rev = info->base_rev;
+      dir->target_rev = ctx->target_rev;
+      dir->fetch_props = TRUE;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "open-file") == 0)
@@ -1318,7 +1327,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         {
           info = push_state(parser, ctx, IGNORE_PROP_NAME);
           info->prop_ns = name.namespace;
-          info->prop_name = apr_pstrdup(info->pool, name.name);
+          info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1335,7 +1344,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
           info = push_state(parser, ctx, PROP);
           info->prop_ns = new_prop_name.namespace;
-          info->prop_name = apr_pstrdup(info->pool, new_prop_name.name);
+          info->prop_name = apr_pstrdup(parser->state->pool,
+                                        new_prop_name.name);
           info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1365,7 +1375,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         {
           info = push_state(parser, ctx, IGNORE_PROP_NAME);
           info->prop_ns = name.namespace;
-          info->prop_name = apr_pstrdup(info->pool, name.name);
+          info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1399,7 +1409,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
           info = push_state(parser, ctx, PROP);
           info->prop_ns = new_prop_name.namespace;
-          info->prop_name = apr_pstrdup(info->pool, new_prop_name.name);
+          info->prop_name = apr_pstrdup(parser->state->pool,
+                                        new_prop_name.name);
           info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1420,7 +1431,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, PROP);
       
       info->prop_ns = name.namespace;
-      info->prop_name = apr_pstrdup(info->pool, name.name);
+      info->prop_name = apr_pstrdup(parser->state->pool, name.name);
       info->prop_val = NULL;
       info->prop_val_len = 0;
     }
@@ -1502,14 +1513,10 @@ end_report(svn_ra_serf__xml_parser_t *parser,
     {
       report_info_t *info = parser->state->private;
 
-      /* At this point, we *must* create our parent's names. */
-      SVN_ERR(open_dir(info->dir));
-
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
         {
-          info->name_buf = svn_stringbuf_dup(info->dir->name_buf,
-                                             info->dir->dir_baton_pool);
+          info->name_buf = svn_stringbuf_dup(info->dir->name_buf, info->pool);
           svn_path_add_component(info->name_buf, info->base_name);
           info->name = info->name_buf->data;
         }
@@ -1537,7 +1544,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           svn_stringbuf_t *path;
           svn_boolean_t fix_root = FALSE;
 
-          c = svn_ra_serf__get_ver_prop(info->dir->props, info->base_name,
+          c = svn_ra_serf__get_ver_prop(info->props, info->base_name,
                                         info->base_rev, "DAV:", "checked-in");
 
           path = svn_stringbuf_create(c, info->pool);
@@ -1577,8 +1584,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
               root_len = strlen(ctx->sess->repos_root.path) + 1;
 
-              svn_path_add_component(path,
-                                     &ctx->source[root_len]);
+              svn_path_add_component(path, &ctx->source[root_len]);
             }
 
           svn_path_add_component(path, info->name);
@@ -1648,7 +1654,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
       if (strcmp(name.name, "remove-prop") != 0)
         {
-          props = dir->props;
+          props = info->props;
         }
       else
         {
@@ -1679,11 +1685,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
         }
 
-      set_val = apr_pmemdup(dir->pool, info->prop_val, info->prop_val_len);
-      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, dir->pool);
+      set_val = apr_pmemdup(info->pool, info->prop_val, info->prop_val_len);
+      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, info->pool);
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
-                                ns->namespace, ns->url, set_val_str, dir->pool);
+                                ns->namespace, ns->url, set_val_str,
+                                info->pool);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if ((state == IGNORE_PROP_NAME || state == NEED_PROP_NAME))
