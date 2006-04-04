@@ -1024,7 +1024,7 @@ new_node_record(void **node_baton,
 
         SVN_ERR(svn_stream_printf(pb->outstream, pool,
                                   _("     * renaming path : %s to %s..."),
-                                  nb->path, nb->copyfrom_path));
+                                  nb->copyfrom_path, nb->path));
 
 
         if ((src_rev_from_map = apr_hash_get(pb->rev_map, &nb->copyfrom_rev,
