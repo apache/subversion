@@ -23,6 +23,7 @@
 #include <apr_file_io.h>
 
 #ifdef AS400
+#include <apr_portable.h>
 #include <spawn.h>
 #include <fcntl.h>
 #endif
@@ -171,11 +172,11 @@ run_hook_cmd(const char *name,
   return err;
 }
 #else /* Run hooks with spawn() on OS400. */
+#define AS400_BUFFER_SIZE 256
 {
   const char *script_stderr_utf8 = "";
   const char **native_args;
-  char buffer[20];
-  int rc, fd_map[3], stderr_pipe[2], stdin_pipe[2], exitcode;
+  int fd_map[3], stderr_pipe[2], exitcode;
   svn_stringbuf_t *script_output = svn_stringbuf_create("", pool);
   pid_t child_pid, wait_rv;
   apr_size_t args_arr_size = 0, i;
@@ -211,17 +212,13 @@ run_hook_cmd(const char *name,
   /* Map stdin. */
   if (stdin_handle)
     {
-      /* This is a bit cumbersome, but spawn can't work with apr_file_t, so
-       * if there is stdin for the script we open another pipe to the
-       * script's stdin which we can later write what we read from
-       * stdin_handle. */
-      if (pipe(stdin_pipe) != 0)
+      /* Get OS400 file descriptor of APR stdin file and map it. */
+      if (apr_os_file_get(&fd_map[0], stdin_handle))
         {
           return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                   "Can't create stdin pipe for hook '%s'",
-                                   cmd);
+                                   "Error converting APR file to OS400 "
+                                   "type for hook script '%s'", cmd);
         }
-      fd_map[0] = stdin_pipe[0];
     }
   else
     {
@@ -273,38 +270,6 @@ run_hook_cmd(const char *name,
                                cmd);
     }
 
-  /* If there is "APR stdin", read it and then write it to the hook's
-   * stdin pipe. */
-  if (stdin_handle)
-    {
-      while (1)
-        {
-          apr_size_t bytes_read = sizeof(buffer);
-          int wc;
-          svn_error_t *err = svn_io_file_read(stdin_handle, buffer,
-                                              &bytes_read, pool);
-          if (err && APR_STATUS_IS_EOF(err->apr_err))
-            break;
-
-          if (err)
-            return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                     "Error piping stdin to hook "
-                                     "script '%s'", cmd);
-
-          wc = write(stdin_pipe[1], buffer, bytes_read);
-          if (wc == -1)     
-            return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                     "Error piping stdin to hook "
-                                     "script '%s'", cmd);
-        }
-
-      /* Close the write end of the stdin pipe. */
-      if (close(stdin_pipe[1]) == -1)
-        return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                 "Error closing write end of stdin pipe "
-                                 "to hook script '%s'", cmd);
-    }
-
   /* Close the stdout file descriptor. */
   if (close(fd_map[1]) == -1)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
@@ -318,33 +283,37 @@ run_hook_cmd(const char *name,
                              "Error closing write end of stderr pipe to "
                              "hook script '%s'", cmd);
 
-  /* Read the hook's stderr if we care about that. */
-  if (read_errstream)
+  while (read_errstream)
     {
-      while (1)
+      int rc;
+
+      svn_stringbuf_ensure(script_output,
+                           script_output->len + AS400_BUFFER_SIZE + 1);
+
+      rc = read(stderr_pipe[0],
+                &(script_output->data[script_output->len]),
+                AS400_BUFFER_SIZE);
+
+      if (rc == -1)
         {
-          rc = read(stderr_pipe[0], buffer, sizeof(buffer));
-          if (rc == -1)
-            {
-              return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                       "Error reading stderr of hook "
-                                       "script '%s'", cmd);
-            }
-
-          svn_stringbuf_appendbytes(script_output, buffer, rc);
-
-          /* If read() returned 0 then EOF was found. */
-          if (rc == 0)
-            {
-              /* Close the read end of the stderr pipe. */
-              if (close(stderr_pipe[0]) == -1)
-                return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                         "Error closing read end of stderr "
-                                         "pipe to hook script '%s'", cmd);
-              break;
-            }
+          return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                   "Error reading stderr of hook "
+                                   "script '%s'", cmd);
         }
+
+      script_output->len += rc;
+
+      /* If read() returned 0 then EOF was found and we are done reading
+       * stderr. */
+      if (rc == 0)
+        break;
     }
+
+  /* Close the read end of the stderr pipe. */
+  if (read_errstream && close(stderr_pipe[0]) == -1)
+    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                             "Error closing read end of stderr "
+                             "pipe to hook script '%s'", cmd);
 
   /* Wait for the child process to complete. */
   wait_rv = waitpid(child_pid, &exitcode, 0);
@@ -354,12 +323,6 @@ run_hook_cmd(const char *name,
                                "Error waiting for process completion of "
                                "hook script '%s'", cmd);
     }
-
-  /* Close read end of stdin pipe if it exists. */
-  if (close(fd_map[0]) == -1)
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                             "Error closing read end of stdin pipe to hook "
-                             "script '%s'", cmd);
 
   if (!svn_stringbuf_isempty(script_output))
     {
