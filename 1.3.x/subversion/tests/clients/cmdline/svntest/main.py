@@ -475,18 +475,18 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
     dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
     load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
   else:
-    dump_out, dump_err, dump_out_file, dump_err_file = ebcdic.os400_run_cmd_va('/py_tests/svnadmin',
+    dump_out, dump_err, dump_out_file, dump_err_file = ebcdic.os400_run_cmd_va(svnadmin_binary,
                                                                                None, 1, 0, 'dump',
                                                                                src_path)
     if ignore_uuid:
-      load_out, load_err, of, ef = ebcdic.os400_run_cmd_va('/py_tests/svnadmin',
+      load_out, load_err, of, ef = ebcdic.os400_run_cmd_va(svnadmin_binary,
                                                            None, 0, 0, 'load',
                                                            dst_path,
                                                            '--ignore-uuid',
                                                            '<',
                                                            dump_out_file)
     else:
-      load_out, load_err, of, ef = ebcdic.os400_run_cmd_va('/py_tests/svnadmin',
+      load_out, load_err, of, ef = ebcdic.os400_run_cmd_va(svnadmin_binary,
                                                            None, 0, 0, 'load',
                                                            dst_path, '<',
                                                            dump_out_file)
@@ -793,4 +793,4 @@ safe_rmtree(temp_dir)
 import actions
 
 
-### End of file.
+### End of file. 
