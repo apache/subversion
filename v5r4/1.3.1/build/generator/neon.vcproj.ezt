@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="neon"
+	SccProjectName=""
+	SccLocalPath=""
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="[neon_path]\Debug"
+			IntermediateDirectory="[neon_path]\Debug"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_neon.bat debug"
+				ReBuildCommandLine="cmd /c build_neon.bat debug rebuild"
+				Output="[neon_path]\libneonD.lib"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="[neon_path]\Release"
+			IntermediateDirectory="[neon_path]\Release"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_neon.bat release"
+				ReBuildCommandLine="cmd /c build_neon.bat release rebuild"
+				Output="[neon_path]\libneon.lib"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			[for neon_sources]<File
+				RelativePath="[neon_sources]">
+			</File>
+[end]
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+			[for neon_headers]<File
+				RelativePath="[neon_headers]">
+			</File>
+[end]
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

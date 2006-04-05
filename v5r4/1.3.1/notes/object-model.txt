@@ -1,0 +1,18 @@
+
+		     The Subversion Object Model
+                     ---------------------------
+
+Rules of thumb for translating Subverion's C header files
+(subversion/include/svn_*.h) into a wrapper language's object model:
+
+* C modules define a Java package, Python module, etc.
+
+* Module functions and callbacks should be methods of an
+  interface/mix-in.
+
+* Batons are opaque data structures, and can be represented as empty
+  interfaces or callable objects.  Contexts are generally represented
+  as class state.
+
+* In languages for which it is applicable, returned svn_error_t's
+  should be declared as thrown exceptions.
