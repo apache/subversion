@@ -2557,6 +2557,7 @@ if no files have been marked."
   (when (string= (buffer-name) svn-status-buffer-name)
     (delete-other-windows))
   (pop-to-buffer "*svn-process*")
+  (svn-process-mode)
   (when svn-status-wash-control-M-in-process-buffers
     (svn-status-remove-control-M))
   (when scroll-to-top
@@ -2588,6 +2589,8 @@ Consider svn-status-window-alist to choose the buffer name."
               (insert-buffer-substring "*svn-process*")
               (when scroll-to-top
                 (goto-char (point-min))))
+            (when (eq window-mode t) ;; *svn-info* buffer
+              (svn-info-mode))
             (other-window 1))
         (svn-status-show-process-buffer-internal scroll-to-top)))))
 
@@ -2619,12 +2622,14 @@ See `svn-status-marked-files' for what counts as selected."
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
   (svn-run t t 'info "info" "--targets" svn-status-temp-arg-file))
 
-;; Todo: add possiblity to specify the revision
-(defun svn-status-blame ()
-  "Run `svn blame' on the current file."
-  (interactive)
-  ;;(svn-run t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
-  (svn-run t t 'blame "blame" (svn-status-line-info->filename (svn-status-get-line-information))))
+(defun svn-status-blame (revision)
+  "Run `svn blame' on the current file.
+When called with a prefix argument, ask the user for the REVISION to use."
+  (interactive "P")
+  (when current-prefix-arg
+    (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
+  (unless revision (setq revision "BASE"))
+  (svn-run t t 'blame "blame" "-r" revision (svn-status-line-info->filename (svn-status-get-line-information))))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -3774,6 +3779,42 @@ When called with a prefix argument, ask the user for the revision."
     (insert log-message)
     (goto-char (point-min))
     (setq svn-log-edit-update-log-entry rev)))
+
+;; --------------------------------------------------------------------------------
+;; svn-info-mode
+;; --------------------------------------------------------------------------------
+(defvar svn-info-mode-map () "Keymap used in `svn-info-mode' buffers.")
+(put 'svn-info-mode-map 'risky-local-variable t) ;for Emacs 20.7
+
+(when (not svn-info-mode-map)
+  (setq svn-info-mode-map (make-sparse-keymap))
+  (define-key svn-info-mode-map [?q] 'bury-buffer))
+
+(defun svn-info-mode ()
+  "Major Mode to view informative output from svn."
+  (interactive)
+  (kill-all-local-variables)
+  (use-local-map svn-info-mode-map)
+  (setq major-mode 'svn-info-mode)
+  (setq mode-name "svn-info"))
+
+;; --------------------------------------------------------------------------------
+;; svn-process-mode
+;; --------------------------------------------------------------------------------
+(defvar svn-process-mode-map () "Keymap used in `svn-process-mode' buffers.")
+(put 'svn-process-mode-map 'risky-local-variable t) ;for Emacs 20.7
+
+(when (not svn-process-mode-map)
+  (setq svn-process-mode-map (make-sparse-keymap))
+  (define-key svn-process-mode-map [?q] 'bury-buffer))
+
+(defun svn-process-mode ()
+  "Major Mode to view process output from svn."
+  (interactive)
+  (kill-all-local-variables)
+  (use-local-map svn-process-mode-map)
+  (setq major-mode 'svn-process-mode)
+  (setq mode-name "svn-process"))
 
 ;; --------------------------------------------------------------------------------
 ;; svn status persistent options
