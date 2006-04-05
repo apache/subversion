@@ -157,6 +157,9 @@ struct entries_accumulator
 
   /* Don't leave home without one. */
   apr_pool_t *pool;
+
+  /* Cleared before handling each entry. */
+  apr_pool_t *scratch_pool;
 };
 
 
@@ -220,7 +223,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     if (name && strcmp(name, "svn:this_dir") == 0)
       name = SVN_WC_ENTRY_THIS_DIR;
   }
-  entry->name = name ? name : SVN_WC_ENTRY_THIS_DIR;
+  entry->name = name ? apr_pstrdup(pool, name) : SVN_WC_ENTRY_THIS_DIR;
 
   /* Attempt to set revision (resolve_to_defaults may do it later, too) */
   {
@@ -242,7 +245,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING);
 
     if (entry->url)
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+        entry->url = apr_pstrdup(pool, entry->url);
+      }
   }
 
   /* Set up repository root.  Make sure it is a prefix of url. */
@@ -257,6 +263,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                      "root"),
                                    name ? name : SVN_WC_ENTRY_THIS_DIR);
         *modify_flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+        entry->repos = apr_pstrdup(pool, entry->repos);
       }
   }
 
@@ -316,7 +323,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       {
         *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
         /* Normalize "" (used by the log runner) to NULL */
-        entry->prejfile = *(entry->prejfile) ? entry->prejfile : NULL;
+        entry->prejfile = *(entry->prejfile)
+          ? apr_pstrdup(pool, entry->prejfile) : NULL;
       }
 
     if ((entry->conflict_old
@@ -326,7 +334,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
         /* Normalize "" (used by the log runner) to NULL */
         entry->conflict_old =
-          *(entry->conflict_old) ? entry->conflict_old : NULL;
+          *(entry->conflict_old)
+          ? apr_pstrdup(pool, entry->conflict_old) : NULL;
       }
 
     if ((entry->conflict_new
@@ -336,7 +345,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
         /* Normalize "" (used by the log runner) to NULL */
         entry->conflict_new =
-          *(entry->conflict_new) ? entry->conflict_new : NULL;
+          *(entry->conflict_new)
+          ? apr_pstrdup(pool, entry->conflict_new) : NULL;
       }
 
     if ((entry->conflict_wrk
@@ -346,7 +356,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
         /* Normalize "" (used by the log runner) to NULL */
         entry->conflict_wrk =
-          *(entry->conflict_wrk) ? entry->conflict_wrk : NULL;
+          *(entry->conflict_wrk)
+          ? apr_pstrdup(pool, entry->conflict_wrk) : NULL;
       }
   }
 
@@ -360,7 +371,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     entry->copyfrom_url = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                                        APR_HASH_KEY_STRING);
     if (entry->copyfrom_url)
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+        entry->copyfrom_url = apr_pstrdup(pool, entry->copyfrom_url);
+      }
 
     revstr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, 
                           APR_HASH_KEY_STRING);
@@ -433,7 +447,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     entry->checksum = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHECKSUM,
                                    APR_HASH_KEY_STRING);
     if (entry->checksum)
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+        entry->checksum = apr_pstrdup(pool, entry->checksum);
+      }
   }
 
   /* UUID. */
@@ -441,7 +458,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     entry->uuid = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_UUID,
                                APR_HASH_KEY_STRING);
     if (entry->uuid)
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_UUID;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_UUID;
+        entry->uuid = apr_pstrdup(pool, entry->uuid);
+      }
   }
 
   /* Setup last-committed values. */
@@ -471,26 +491,38 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     entry->cmt_author = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
                                      APR_HASH_KEY_STRING);
     if (entry->cmt_author)
+      {
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
+        entry->cmt_author = apr_pstrdup(pool, entry->cmt_author);
+      }
   }
 
   /* Lock token. */
   entry->lock_token = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
                                    APR_HASH_KEY_STRING);
   if (entry->lock_token)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_TOKEN;
+    {
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_TOKEN;
+      entry->lock_token = apr_pstrdup(pool, entry->lock_token);
+    }
 
   /* lock owner. */
   entry->lock_owner = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER,
                                    APR_HASH_KEY_STRING);
   if (entry->lock_owner)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
+    {
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
+      entry->lock_owner = apr_pstrdup(pool, entry->lock_owner);
+    }
 
   /* lock comment. */
   entry->lock_comment = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
                                      APR_HASH_KEY_STRING);
   if (entry->lock_comment)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_COMMENT;
+    {
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_COMMENT;
+      entry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
+    }
 
   /* lock creation date. */
   {
@@ -536,14 +568,20 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                        SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
                                        APR_HASH_KEY_STRING);
   if (entry->cachable_props)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS;
+    {
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS;
+      entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
+    }
 
   /* present-props string. */
   entry->present_props = apr_hash_get(atts, 
                                       SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
                                       APR_HASH_KEY_STRING);
   if (entry->present_props)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_PRESENT_PROPS;
+    {
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_PRESENT_PROPS;
+      entry->present_props = apr_pstrdup(pool, entry->present_props);
+    }
 
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -566,8 +604,9 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   if (strcmp(tagname, SVN_WC__ENTRIES_ENTRY))
     return;
 
+  svn_pool_clear(accum->scratch_pool);
   /* Make an entry from the attributes. */
-  attributes = svn_xml_make_att_hash(atts, accum->pool);
+  attributes = svn_xml_make_att_hash(atts, accum->scratch_pool);
   err = svn_wc__atts_to_entry(&entry, &modify_flags, attributes, accum->pool);
   if (err)
     {
@@ -710,6 +749,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   accum.entries = entries;
   accum.show_hidden = show_hidden;
   accum.pool = svn_wc_adm_access_pool(adm_access);
+  accum.scratch_pool = svn_pool_create(pool);
 
   /* Create the XML parser */
   svn_parser = svn_xml_make_parser(&accum,
@@ -738,6 +778,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
                            svn_path_local_style
                            (svn_wc_adm_access_path(adm_access), pool)));
   } while (! is_final);
+
+  svn_pool_destroy(accum.scratch_pool);
 
   /* Close the entries file. */
   SVN_ERR(svn_wc__close_adm_file(infile, svn_wc_adm_access_path(adm_access),
