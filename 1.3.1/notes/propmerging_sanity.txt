@@ -1,0 +1,143 @@
+
+When merging property lists together during 'svn up' and 'svn merge',
+things can get tricky.  In the case of file texts, we have a nice
+diff3 algorithm to do a 3-way merge for us.  But for properties,
+libsvn_wc needs to do the 3-way merge itself.  This document explains
+what's going on.
+
+
+'svn update'
+-------------
+
+The old-baseprops live in .svn/.
+
+During update, the server sends a bunch of 'propset' commands of the
+form {name, val}.  (val == NULL implies a deletion.  If name doesn't
+already exist, it implies an addition.)
+
+The propsets are applied to old-baseprops, producing new-baseprops.
+
+Meanwhile, the user may have made local edits to the workingprops.
+
+So our ancestry diagram looks like:
+
+                     old-baseprops
+                    /             \
+ (server-propsets) /               \ (local-edit-propsets)
+                  /                 \
+                 v                   v
+          new-baseprops             workingprops
+
+
+Because the old-baseprops are a common ancestor, the 3-way merge
+algorithm is relatively simple.  All we need to do is compare two
+lists of 'propsets':
+
+    1. the propset list sent from the server (which transforms
+       old-baseprops into new-baseprops)
+
+    2. the propset list representing local edits (which transforms
+       old-baseprops into workingprops)
+
+If there are no local edits at all (i.e. the 2nd list is empty), then
+we simply apply the first list to workingprops, and we're done.  No
+conflicts can possibly happen; the common ancestor here guarantees
+that workingprops and new-baseprops will be identical when we're done.
+
+If there are local edits (i.e. the 2nd list is non-empty), then
+
+       foreach propset in server-propsets:
+          if propname exists in localedit-propsets:
+             compare intentions of the 2 propsets, possibly mark conflict.
+          else:
+             apply propset to workingprops.
+
+Note that because of the common ancestor here, the *only way* property
+conflicts can happen is if local-mods are present.
+
+
+
+'svn merge'
+-----------
+
+This is a harder problem, because we're not guaranteed a common
+ancestor.
+
+During the merge command, the server sends the complete list of
+old-baseprops from the 'left' side of the merge, as well as a list of
+propsets which can be applied to get the new-baseprops (which
+represent the 'right' side of the merge):
+
+                old-baseprops
+                    |
+                    |  (server-propsets)
+                    |
+                    v
+                new-baseprops
+
+But the target of the merge could be *anything*.  It has a completely
+unrelated set of baseprops, no common ancestor.
+
+
+     old-baseprops                    target-baseprops
+          |                                 |         
+          |  (server-propsets)              |  (localedit-propsets)
+          |                                 |                      
+          v                                 v
+     new-baseprops                      workingprops
+
+
+So for a correct 3-way merge, our algorithm needs to be different.  We
+can't blindly apply the server propsets to the workingprops, we need
+to carefully look at the server-propsets as *deltas*, noticing the
+"from" and "to" values.
+
+The upshot here is that while 'svn update' can *only* produce
+conflicts when local-mods are present, 'svn merge' can produce
+conflicts anytime, even in the absence of local-mods.
+
+After some discussion on the dev@ list, we've decided to implement the
+following algorithm.  It works correctly for 'svn merge', because it
+makes no assumption about a common ancestor.  The FROM variable
+represents the old-baseprops coming from the server.  The algorithm
+still works for 'svn up', of course;  in that case, the FROM variable
+simply represents the value of target-baseprops.
+
+
+      foreach propset in server-propsets:
+
+         /* we have old-baseprops, so we can do this */
+         convert into propdelta of the form (PROPNAME, FROM, TO).
+
+         if FROM == NULL:  /* adding a new property */
+
+            if PROPNAME exists in workingprops:
+               if (value of PROPNAME in workingprops) == TO:
+                  do nothing, it's a 'clean merge'
+               else:
+                  conflict: "property already exists with different value" 
+
+            else:  /* PROPNAME doesn't exist in workingprops */
+               set property as a new local mod
+
+
+         else: /* FROM != NULL -- changing or deleting a property */
+
+            if PROPNAME doesn't exist in workingprops:
+               print "skipped: cannot change/delete non-existent property"
+
+            else:  /* PROPNAME exists in workingprops */
+
+               if (value of PROPNAME in workingprops) == FROM:
+                  /* note: this may destroy existing local mods,
+                     because target-baseprops are being ignored.  */
+                  apply the propchange.
+
+               else if (value of PROPNAME in workingprops) == TO:
+                  do nothing, it's a 'clean merge'  
+
+               else:  /* has some other  value */
+                  conflict:  "property has conflicting value"
+
+
+

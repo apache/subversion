@@ -1,0 +1,123 @@
+This file tracks the status of releases in the 1.3.x line.
+
+See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.3.2:
+================
+
+Candidate changes:
+
+  * r18983
+    Allow the libsvn_swig_py library to link on OpenBSD.
+    Justification:
+      Would otherwise have to edit/override the Makefile.
+    Votes:
+      +1: dlr, djames
+
+  * r18549:
+    Prevent svn_load_dirs.pl from trying to import .svn or _svn
+      directories, which can cause svn core dumps since it treads over
+      the working copies' .svn files.  Ouch!
+    Justification:
+      Causing core dumps bad.  Importing files from .svn into
+      Subversion also bad.
+    Votes:
+      +1: blair
+
+  * r18550:
+    Educate svn_load_dirs.pl to support symlinks.
+    Justification:
+      Nice for people using svn_load_dirs.pl to automatically update
+      checked in symlinks from vendor drops.
+    Votes:
+      +1: blair
+
+  * r17280, r18172, r18205, r18491
+    Upgrade SWIG bindings to be compatible with SWIG 1.3.26-1.3.28
+    Branch: 1.3.x-r17280
+    Note:
+      Depends on r18924 et al.
+    Votes:
+      +1: djames
+      +0: blair, malcolm
+
+  * r18853
+    Document that the SWIG bindings are compatible with SWIG 1.3.28
+    Note:
+      Depends on r17280 et al.
+    Votes:
+      +1: malcolm
+
+  * r18114, r18681
+    In mailer.py:
+    Fix bug: named substitutions gathered from defaults.for_repos were being
+    ignored for sections which contained a specific for_repos option (r18114),
+    and for fallback invocations of the [defaults] section (r18681).
+    Justification:
+      This can enable extensive simplification of configurations which want
+      to put the repository name into the *_subject_prefix options.
+    Votes:
+      +1: maxb
+
+  * r18504, r18509
+    Add svnauthz-validate tool.
+    Justification:
+      Useful tool, low impact.
+    Notes:
+      Take diff to build.conf from r18509 then copy all of tools/server-side
+      from r18509, it's all that's in that directory.
+    Votes:
+      +1: rooneg, dlr
+
+  * r18924, r17931, r18928, r18951, r18953
+    Support SWIG 1.3.28.
+    Justification:
+      The latest stable SWIG version is 1.3.28. To be used extensively,
+      the Ruby bindings should support SWIG 1.3.28.
+    Votes:
+      +1: kou
+
+  * r17333 and associated test case (copied from trunk)
+    Fix issue #2306: modification of "svn:needs-lock" should adjust
+    the native file system's read-only attribute within a WC.
+    Branch: 1.3.x-r17333
+    Justification:
+      Backport of a change to trunk which resolves buggy behavior on
+      Windows, behavior which is inconsistent with Linux.
+    Notes:
+      dlr does not have a Windows development environment, and thus
+      cannot adequately test this change.  Additional testing is
+      especially important given the heavy amount of modification
+      which was necessary when backporting the change from trunk.
+    Votes:
+      +0: dlr
+      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
+
+  * r18144, r18164, r18170, r18171, r18184, r18434, r18882
+    and r18037, r18127 (only tools/dev/stress.pl)
+    Add support for BDB-4.4 and automatic recovery of wedged databases.
+    Justification:
+      See above about automatic recovery of wedged databases.
+    Votes:
+      +1: brane
+
+  * r18893
+    Explicitly close WC locks when an operation is cancelled to avoid
+    leaving stray WC locks behind.
+    Justification:
+      Bug fix for oft-complained-about usability annoyance.
+    Votes:
+      +1: dlr
+
+Approved changes:
+
+  * r18254
+    Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
+    Justification:
+      Avoids precedence bugs when used in boolean expressions.
+    Note:
+      Depends on r18144 et al. - unmergeable until those revs are merged.
+    Votes:
+      +1: brane, lundblad, malcolm, dlr
