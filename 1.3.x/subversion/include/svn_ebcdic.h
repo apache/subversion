@@ -202,61 +202,6 @@ svn_ebcdic_set_file_mtime(const char *fname,
                           apr_pool_t *pool);  
 
 
-/** Handles unix-type qsh(ell) scripts on the iSeries.  
- * 
- * Invoke @a cmd with @a args, using utf8-encoded @a path as working 
- * directory.  
- *
- * @a args is a list of utf8-encoded (<tt>const char *</tt>)'s, terminated by
- * @c NULL.  @c ARGS[0] is the name of the program, though it need not be the
- * same as @a cmd.
- * 
- * If @a check_exitcode is FALSE, @c SVN_NO_ERROR is returned.
- * @a exitcode is set to 0 if the script ran successfully or a non-zero iSeries
- * specific error code if not, @a exitwhy is undefined.
- * 
- * If @a check_exitcode is TRUE:
- * 
- *   If @a exitcode == 0 then the script ran successfully and returned no error,
- *   @a exitwhy is set to APR_PROC_EXIT.
- * 
- *   If @a exitcode == -1 the script failed to run, @a exitwhy is set to
- *   APR_PROC_EXIT and an svn_error_t is returned with the iSeries specific
- *   errno contained within the message:
- *
- *     "Unable to run script 'script_name'.  Returned error number =  errno".
- *
- *   For all other values of @a exitcode an @c SVN_ERR_EXTERNAL_PROGRAM error is
- *   returned and @a exitwhy is set one of the following values:
- *   
- *     APR_PROC_EXIT   - The script process ran to completion but returned an
- *                       error exit code.  
- *
- *     APR_PROC_SIGNAL - The script process ended because of the receipt of a
- *                       terminating signal that was not caught by the script
- *                       process.
- *
- *     APR_PROC_EXIT   - The script process ended because of an error condition.
- *
- * If @a read_stdout is TRUE, include output to stdout from the script
- * in any returned error message.
- * 
- * If @a read_stderr is TRUE, include output to stderr from the script
- * in any returned error message.
- */
-svn_error_t *
-svn_ebcdic_run_unix_type_script (const char *path,
-                                 const char *cmd,
-                                 const char *const *args,
-                                 int *exitcode,
-                                 apr_exit_why_e *exitwhy,
-                                 svn_boolean_t check_exitcode,
-                                 svn_boolean_t read_stdout,
-                                 svn_boolean_t read_sterr,
-                                 svn_stringbuf_t **err_stream,
-                                 apr_pool_t *pool);
-
-
 /** Copy @a from_path to @a to_path atomically.  Both @a from_path and
  * @a to_path are utf8-encoded filenames.  If @a to_perms is true, set 
  * @a to_path's permissions to match those of @a from_path.
