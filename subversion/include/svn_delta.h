@@ -590,11 +590,11 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * @a copyfrom_path and @a copyfrom_revision.  If @a copyfrom_path is
  * non-@c NULL, then @a copyfrom_path and @a copyfrom_revision indicate where
  * the file or directory should be copied from (to create the file
- * or directory being added).  In that case @a copyfrom_path must be the
- * URL of a file inside the same repository as the new file or directory.
- * If @a copyfrom_path is @c NULL, then @a copyfrom_revision must be
- * @c SVN_INVALID_REVNUM; it is invalid to pass a mix of valid and invalid
- * copyfrom arguments.
+ * or directory being added).  In that case, @a copyfrom_path must be
+ * either a path relative to the root of the edit, or a URI from the
+ * repository being edited.  If @a copyfrom_path is @c NULL, then @a
+ * copyfrom_revision must be @c SVN_INVALID_REVNUM; it is invalid to
+ * pass a mix of valid and invalid copyfrom arguments.
  *
  *
  * <h3>Function Call Ordering</h3>
