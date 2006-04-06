@@ -327,7 +327,8 @@ def get_test_path():
 
 class TestCase_TestRepo(TestCase_SvnMerge):
     def setUp(self):
-        """Creates a working copy with the following structure:
+        """Creates a working copy of a branch at r13 with the
+        following structure, containing revisions (3-6, 13):
 
           test-branch/
            test1
@@ -336,23 +337,25 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         ...from a repository with the following structure:
 
-          /
-           trunk/
-            test1
-            test2
-            test3
-            test4
-            test5
-           branches/
-            testYYY-branch/
-             test1
-             test2
-             test3
-            test-branch/
-             test1
-             test2
-             test3
-           tags/
+          Path                        Created rev
+          ----                        -----------
+          /                           0
+           trunk/                     3
+            test1                     4
+            test2                     5
+            test3                     6
+            test4                     9
+            test5                     10
+           branches/                  1
+            testYYY-branch/           11 (renamed from testXXX-branch in 12)
+             test1                    4
+             test2                    5
+             test3                    6
+            test-branch/              13 (copied from trunk@6)
+             test1                    4
+             test2                    5
+             test3                    6
+           tags/                      2
         """
         self.cwd = os.getcwd()
 
