@@ -44,7 +44,7 @@ typedef struct dir_stack_t
  */
 static svn_error_t *
 open_dir(apr_array_header_t *db_stack,
-         const svn_delta_editor_t *editor,
+         const svn_delta_editor2_t *editor,
          const char *path,
          svn_revnum_t revision,
          apr_pool_t *pool)
@@ -82,7 +82,7 @@ open_dir(apr_array_header_t *db_stack,
  */
 static svn_error_t *
 pop_stack(apr_array_header_t *db_stack,
-          const svn_delta_editor_t *editor)
+          const svn_delta_editor2_t *editor)
 {
   dir_stack_t *item;
 
@@ -125,13 +125,13 @@ count_components(const char *path)
 
 /*** Public interfaces ***/
 svn_error_t *
-svn_delta_path_driver(const svn_delta_editor_t *editor,
-                      void *edit_baton,
-                      svn_revnum_t revision,
-                      apr_array_header_t *paths,
-                      svn_delta_path_driver_cb_func_t callback_func,
-                      void *callback_baton,
-                      apr_pool_t *pool)
+svn_delta_path_driver2(const svn_delta_editor2_t *editor,
+                       void *edit_baton,
+                       svn_revnum_t revision,
+                       apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool)
 {
   apr_array_header_t *db_stack = apr_array_make(pool, 4, sizeof(void *));
   const char *last_path = NULL;
@@ -275,4 +275,22 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_delta_path_driver(const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      svn_revnum_t revision,
+                      apr_array_header_t *paths,
+                      svn_delta_path_driver_cb_func_t callback_func,
+                      void *callback_baton,
+                      apr_pool_t *pool)
+{
+  return svn_delta_path_driver2(svn_delta_editor_to_editor2(editor, pool),
+                                edit_baton,
+                                revision,
+                                paths,
+                                callback_func,
+                                callback_baton,
+                                pool);
 }

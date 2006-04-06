@@ -157,6 +157,32 @@ static const svn_delta_editor_t default_editor =
   close_file,
   absent_xxx_func,
   single_baton_func,
+  single_baton_func
+};
+
+svn_delta_editor_t *
+svn_delta_default_editor(apr_pool_t *pool)
+{
+  return apr_pmemdup(pool, &default_editor, sizeof(default_editor));
+}
+
+static const svn_delta_editor2_t default_editor2 =
+{
+  set_target_revision,  
+  open_root,
+  delete_entry,
+  add_item,
+  open_item,
+  change_prop,
+  single_baton_func,
+  absent_xxx_func,
+  add_item,
+  open_item,
+  apply_textdelta,
+  change_prop,
+  close_file,
+  absent_xxx_func,
+  single_baton_func,
   single_baton_func,
   add_item,
   add_item,
@@ -164,8 +190,34 @@ static const svn_delta_editor_t default_editor =
   rename_from
 };
 
-svn_delta_editor_t *
-svn_delta_default_editor(apr_pool_t *pool)
+svn_delta_editor2_t *
+svn_delta_default_editor2(apr_pool_t *pool)
 {
-  return apr_pmemdup(pool, &default_editor, sizeof(default_editor));
+  return apr_pmemdup(pool, &default_editor2, sizeof(default_editor2));
+}
+
+svn_delta_editor2_t *
+svn_delta_editor_to_editor2(const svn_delta_editor_t *editor,
+                            apr_pool_t *pool)
+{
+  svn_delta_editor2_t *editor2 = svn_delta_default_editor2(pool);
+
+  editor2->set_target_revision = editor->set_target_revision;
+  editor2->open_root = editor->open_root;
+  editor2->delete_entry = editor->delete_entry;
+  editor2->add_directory = editor->add_directory;
+  editor2->open_directory = editor->open_directory;
+  editor2->change_dir_prop = editor->change_dir_prop;
+  editor2->close_directory = editor->close_directory;
+  editor2->absent_directory = editor->absent_directory;
+  editor2->add_file = editor->add_file;
+  editor2->open_file = editor->open_file;
+  editor2->apply_textdelta = editor->apply_textdelta;
+  editor2->change_file_prop = editor->change_file_prop;
+  editor2->close_file = editor->close_file;
+  editor2->absent_file = editor->absent_file;
+  editor2->close_edit = editor->close_edit;
+  editor2->abort_edit = editor->abort_edit;
+
+  return editor2;
 }

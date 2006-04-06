@@ -847,7 +847,7 @@ rename_dir_to(const char *path,
 
 
 static svn_error_t *
-get_dump_editor(const svn_delta_editor_t **editor,
+get_dump_editor(const svn_delta_editor2_t **editor,
                 void **edit_baton,
                 svn_fs_t *fs,
                 svn_revnum_t to_rev,
@@ -862,7 +862,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
      Set it up for the directory baton we create here, which is the
      root baton. */
   struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
-  svn_delta_editor_t *dump_editor = svn_delta_default_editor(pool);
+  svn_delta_editor2_t *dump_editor = svn_delta_default_editor2(pool);
 
   /* Set up the edit baton. */
   eb->stream = stream;
@@ -974,7 +974,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  const svn_delta_editor_t *dump_editor;
+  const svn_delta_editor2_t *dump_editor;
   void *dump_edit_baton;
   svn_revnum_t i;  
   svn_fs_t *fs = svn_repos_fs(repos);
@@ -1091,20 +1091,20 @@ svn_repos_dump_fs2(svn_repos_t *repos,
         {
           svn_fs_root_t *from_root;
           SVN_ERR(svn_fs_revision_root(&from_root, fs, from_rev, subpool));
-          SVN_ERR(svn_repos_dir_delta(from_root, "/", "",
-                                      to_root, "/",
-                                      dump_editor, dump_edit_baton,
-                                      NULL,
-                                      NULL,
-                                      FALSE, /* don't send text-deltas */
-                                      TRUE, /* recurse */
-                                      FALSE, /* don't send entry props */
-                                      FALSE, /* don't ignore ancestry */
-                                      subpool));
+          SVN_ERR(svn_repos_dir_delta2(from_root, "/", "",
+                                       to_root, "/",
+                                       dump_editor, dump_edit_baton,
+                                       NULL,
+                                       NULL,
+                                       FALSE, /* don't send text-deltas */
+                                       TRUE, /* recurse */
+                                       FALSE, /* don't send entry props */
+                                       FALSE, /* don't ignore ancestry */
+                                       subpool));
         }
       else
         {
-          SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
+          SVN_ERR(svn_repos_replay3(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                     dump_editor, dump_edit_baton,
                                     NULL, NULL, subpool));
         }

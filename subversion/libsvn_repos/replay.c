@@ -101,7 +101,7 @@
 
 struct path_driver_cb_baton
 {
-  const svn_delta_editor_t *editor;
+  const svn_delta_editor2_t *editor;
   void *edit_baton;
 
   /* The root of the revision we're replaying. */
@@ -132,7 +132,7 @@ struct path_driver_cb_baton
 static svn_error_t *
 add_subdir(svn_fs_root_t *source_root,
            svn_fs_root_t *target_root,
-           const svn_delta_editor_t *editor,
+           const svn_delta_editor2_t *editor,
            void *edit_baton,
            const char *path,
            void *parent_baton,
@@ -252,7 +252,7 @@ path_driver_cb_func(void **dir_baton,
                     apr_pool_t *pool)
 {
   struct path_driver_cb_baton *cb = callback_baton;
-  const svn_delta_editor_t *editor = cb->editor;
+  const svn_delta_editor2_t *editor = cb->editor;
   void *edit_baton = cb->edit_baton;
   svn_fs_root_t *root = cb->root;
   change_entry_t *entry;
@@ -598,11 +598,11 @@ path_driver_cb_func(void **dir_baton,
 
 
 svn_error_t *
-svn_repos_replay2(svn_fs_root_t *root,
+svn_repos_replay3(svn_fs_root_t *root,
                   const char *base_path,
                   svn_revnum_t low_water_mark,
                   svn_boolean_t send_deltas,
-                  const svn_delta_editor_t *editor,
+                  const svn_delta_editor2_t *editor,
                   void *edit_baton,
                   svn_repos_authz_func_t authz_read_func,
                   void *authz_read_baton,
@@ -738,11 +738,33 @@ svn_repos_replay2(svn_fs_root_t *root,
     }
 
   /* Call the path-based editor driver. */
-  SVN_ERR(svn_delta_path_driver(editor, edit_baton, 
-                                SVN_INVALID_REVNUM, paths, 
-                                path_driver_cb_func, &cb_baton, pool));
+  SVN_ERR(svn_delta_path_driver2(editor, edit_baton, 
+                                 SVN_INVALID_REVNUM, paths, 
+                                 path_driver_cb_func, &cb_baton, pool));
   
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_replay2(svn_fs_root_t *root,
+                  const char *base_path,
+                  svn_revnum_t low_water_mark,
+                  svn_boolean_t send_deltas,
+                  const svn_delta_editor_t *editor,
+                  void *edit_baton,
+                  svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,
+                  apr_pool_t *pool)
+{
+  return svn_repos_replay3(root,
+                           base_path,
+                           low_water_mark,
+                           send_deltas,
+                           svn_delta_editor_to_editor2(editor, pool),
+                           edit_baton,
+                           authz_read_func,
+                           authz_read_baton,
+                           pool);
 }
 
 svn_error_t *

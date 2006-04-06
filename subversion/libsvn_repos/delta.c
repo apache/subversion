@@ -48,7 +48,7 @@
    deep in the recursion can get access to this traversal's global
    parameters, without using global variables.  */
 struct context {
-  const svn_delta_editor_t *editor;
+  const svn_delta_editor2_t *editor;
   const char *edit_base_path;
   svn_fs_root_t *source_root;
   svn_fs_root_t *target_root;
@@ -197,20 +197,20 @@ not_a_dir_error(const char *role,
 
 /* Public interface to computing directory deltas.  */
 svn_error_t *
-svn_repos_dir_delta(svn_fs_root_t *src_root,
-                    const char *src_parent_dir,
-                    const char *src_entry,
-                    svn_fs_root_t *tgt_root,
-                    const char *tgt_fullpath,
-                    const svn_delta_editor_t *editor,
-                    void *edit_baton,
-                    svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton,
-                    svn_boolean_t text_deltas,
-                    svn_boolean_t recurse,
-                    svn_boolean_t entry_props,
-                    svn_boolean_t ignore_ancestry,
-                    apr_pool_t *pool)
+svn_repos_dir_delta2(svn_fs_root_t *src_root,
+                     const char *src_parent_dir,
+                     const char *src_entry,
+                     svn_fs_root_t *tgt_root,
+                     const char *tgt_fullpath,
+                     const svn_delta_editor2_t *editor,
+                     void *edit_baton,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_boolean_t text_deltas,
+                     svn_boolean_t recurse,
+                     svn_boolean_t entry_props,
+                     svn_boolean_t ignore_ancestry,
+                     apr_pool_t *pool)
 {
   void *root_baton = NULL;
   struct context c;
@@ -373,6 +373,37 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_dir_delta(svn_fs_root_t *src_root,
+                    const char *src_parent_dir,
+                    const char *src_entry,
+                    svn_fs_root_t *tgt_root,
+                    const char *tgt_fullpath,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_boolean_t text_deltas,
+                    svn_boolean_t recurse,
+                    svn_boolean_t entry_props,
+                    svn_boolean_t ignore_ancestry,
+                    apr_pool_t *pool)
+{
+  return svn_repos_dir_delta2(src_root,
+                              src_parent_dir,
+                              src_entry,
+                              tgt_root,
+                              tgt_fullpath,
+                              svn_delta_editor_to_editor2(editor, pool),
+                              edit_baton,
+                              authz_read_func,
+                              authz_read_baton,
+                              text_deltas,
+                              recurse,
+                              entry_props,
+                              ignore_ancestry,
+                              pool);
+}
 
 
 /* Retrieving the base revision from the path/revision hash.  */

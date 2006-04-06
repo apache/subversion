@@ -590,6 +590,29 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * This function's maximum memory consumption is at most roughly
  * proportional to the greatest depth of the tree under @a tgt_root, not
  * the total size of the delta.
+ *
+ * @since XXX
+ */
+svn_error_t *
+svn_repos_dir_delta2(svn_fs_root_t *src_root,
+                     const char *src_parent_dir,
+                     const char *src_entry,
+                     svn_fs_root_t *tgt_root,
+                     const char *tgt_path,
+                     const svn_delta_editor2_t *editor,
+                     void *edit_baton,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_boolean_t text_deltas,
+                     svn_boolean_t recurse,
+                     svn_boolean_t entry_props,
+                     svn_boolean_t ignore_ancestry,
+                     apr_pool_t *pool);
+
+/** Like @c svn_repos_dir_delta2, but using an @c svn_delta_editor_t instead
+ * of an @c svn_delta_editor2_t.
+ *
+ * @deprecated provided for backwards compatibility with the XXX API.
  */
 svn_error_t *
 svn_repos_dir_delta(svn_fs_root_t *src_root,
@@ -637,7 +660,26 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
  *
+ * @since New in XXX
+ */
+svn_error_t *
+svn_repos_replay3(svn_fs_root_t *root,
+                  const char *base_dir,
+                  svn_revnum_t low_water_mark,
+                  svn_boolean_t send_deltas,
+                  const svn_delta_editor2_t *editor,
+                  void *edit_baton,
+                  svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,
+                  apr_pool_t *pool);
+
+/** 
+ * Similar to @c svn_repos_replay3() but with an @c svn_delta_editor_t
+ * instead of an @c svn_delta_editor2_t.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_repos_replay2(svn_fs_root_t *root,

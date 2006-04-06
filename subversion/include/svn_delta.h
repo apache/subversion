@@ -477,6 +477,12 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
+ * XXX document use of rename functions XXX
+ *
+ * @note You <em>MUST</em> use @c svn_delta_default_editor2 to create
+ *       this structure, as it may be extended in the future which will
+ *       result in a change in its size.
+ *
  * <h3>Function Usage</h3>
  *
  * Here's how to use these functions to express a tree delta.
@@ -645,9 +651,10 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * particular operation being detected.  Moreover, once an editing
  * function returns an error, the edit is dead; the only further
  * operation which may be called on the editor is abort_edit.
+ *
+ * @since New in XXX.
  */
-typedef struct svn_delta_editor_t
-{
+typedef struct {
   /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.
    */
@@ -873,8 +880,7 @@ typedef struct svn_delta_editor_t
   svn_error_t *(*abort_edit)(void *edit_baton,
                              apr_pool_t *pool);
 
-  /* XXX Figure out if we can add functions to this without reving the
-   *     structure before we merge anything into trunk. */
+  /** XXX document me. */
   svn_error_t *(*rename_file_to)(const char *path,
                                  void *parent_baton,
                                  const char *source_path,
@@ -882,6 +888,7 @@ typedef struct svn_delta_editor_t
                                  apr_pool_t *file_pool,
                                  void **file_baton);
 
+  /** XXX document me. */
   svn_error_t *(*rename_dir_to)(const char *path,
                                 void *parent_baton,
                                 const char *source_path,
@@ -889,22 +896,29 @@ typedef struct svn_delta_editor_t
                                 apr_pool_t *dir_pool,
                                 void **child_baton);
 
+  /** XXX document me. */
   svn_error_t *(*rename_file_from)(const char *path,
                                    void *parent_baton,
                                    const char *dest_path,
                                    svn_revnum_t dest_revision,
                                    apr_pool_t *file_pool);
 
+  /** XXX document me. */
   svn_error_t *(*rename_dir_from)(const char *path,
                                   void *parent_baton,
                                   const char *dest_path,
                                   svn_revnum_t dest_revision,
                                   apr_pool_t *dir_pool);
 
-} svn_delta_editor_t;  
+} svn_delta_editor2_t;
 
 
-/** Return a default delta editor template, allocated in @a pool.
+/** Create a default version of @c svn_delta_editor2_t, allocated in
+ * @a pool.
+ *
+ * This is the <em>only</em> way to create an @c svn_delta_editor2_t,
+ * ensuring that if the API is extended in the future you will still
+ * get default versions of new functions added to your old editors.
  *
  * The editor functions in the template do only the most basic
  * baton-swapping: each editor function that produces a baton does so
@@ -916,8 +930,130 @@ typedef struct svn_delta_editor_t
  * you care about.  The ones you don't care about, you don't have to
  * implement -- you can rely on the template's implementation to
  * safely do nothing of consequence.
+ *
+ * @since New in XXX.
+ */
+svn_delta_editor2_t *svn_delta_default_editor2(apr_pool_t *pool);
+
+/**
+ * Like @c svn_delta_editor2_t, but without the ability to express move
+ * operations.
+ *
+ * @deprecated Provided for compatibility with the XXX API.
+ */
+typedef struct svn_delta_editor_t
+{
+  /** @see svn_delta_editor2_t::set_target_revision */
+  svn_error_t *(*set_target_revision)(void *edit_baton,
+                                      svn_revnum_t target_revision,
+                                      apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::open_root */
+  svn_error_t *(*open_root)(void *edit_baton,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *dir_pool,
+                            void **root_baton);
+
+  /** @see svn_delta_editor2_t::delete_entry */
+  svn_error_t *(*delete_entry)(const char *path,
+                               svn_revnum_t revision,
+                               void *parent_baton,
+                               apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::add_directory */
+  svn_error_t *(*add_directory)(const char *path,
+                                void *parent_baton,
+                                const char *copyfrom_path,
+                                svn_revnum_t copyfrom_revision,
+                                apr_pool_t *dir_pool,
+                                void **child_baton);
+
+  /** @see svn_delta_editor2_t::open_directory */
+  svn_error_t *(*open_directory)(const char *path,
+                                 void *parent_baton,
+                                 svn_revnum_t base_revision,
+                                 apr_pool_t *dir_pool,
+                                 void **child_baton);
+
+  /** @see svn_delta_editor2_t::change_dir_prop */
+  svn_error_t *(*change_dir_prop)(void *dir_baton,
+                                  const char *name,
+                                  const svn_string_t *value,
+                                  apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::close_directory */
+  svn_error_t *(*close_directory)(void *dir_baton,
+                                  apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::absent_directory */
+  svn_error_t *(*absent_directory)(const char *path,
+                                   void *parent_baton,
+                                   apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::add_file */
+  svn_error_t *(*add_file)(const char *path,
+                           void *parent_baton,
+                           const char *copy_path,
+                           svn_revnum_t copy_revision,
+                           apr_pool_t *file_pool,
+                           void **file_baton);
+
+  /** @see svn_delta_editor2_t::open_file */
+  svn_error_t *(*open_file)(const char *path,
+                            void *parent_baton,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *file_pool,
+                            void **file_baton);
+
+  /** @see svn_delta_editor2_t::apply_textdelta */
+  svn_error_t *(*apply_textdelta)(void *file_baton,
+                                  const char *base_checksum,
+                                  apr_pool_t *pool,
+                                  svn_txdelta_window_handler_t *handler,
+                                  void **handler_baton);
+
+  /** @see svn_delta_editor2_t::change_file_prop */
+  svn_error_t *(*change_file_prop)(void *file_baton,
+                                   const char *name,
+                                   const svn_string_t *value,
+                                   apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::close_file */
+  svn_error_t *(*close_file)(void *file_baton,
+                             const char *text_checksum,
+                             apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::absent_file */
+  svn_error_t *(*absent_file)(const char *path,
+                              void *parent_baton,
+                              apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::close_edit */
+  svn_error_t *(*close_edit)(void *edit_baton, 
+                             apr_pool_t *pool);
+
+  /** @see svn_delta_editor2_t::abort_edit */
+  svn_error_t *(*abort_edit)(void *edit_baton,
+                             apr_pool_t *pool);
+
+} svn_delta_editor_t;
+
+
+/** Return a default delta editor template, allocated in @a pool.
+ *
+ * @deprecated Provided for compatibility with the XXX API.
  */
 svn_delta_editor_t *svn_delta_default_editor(apr_pool_t *pool);
+
+/**
+ * Make an @c svn_delta_editor2_t out of an @c svn_delta_editor_t.
+ *
+ * @since New in XXX.
+ */
+svn_delta_editor2_t *
+svn_delta_editor_to_editor2(const svn_delta_editor_t *editor,
+                            apr_pool_t *pool);
+
 
 /** A text-delta window handler which does nothing.
  *
@@ -993,6 +1129,23 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)
  * directory openings.  
  *
  * Use @a pool for all necessary allocations. 
+ *
+ * @since New in XXX
+ */
+svn_error_t *
+svn_delta_path_driver2(const svn_delta_editor2_t *editor,
+                       void *edit_baton,
+                       svn_revnum_t revision,
+                       apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool);
+
+/**
+ * Like @c svn_delta_path_driver2 but with an @c svn_delta_editor_t instead
+ * of an @c svn_delta_editor2_t.
+ *
+ * @deprecated Provided for compatibility with the XXX API.
  */
 svn_error_t *
 svn_delta_path_driver(const svn_delta_editor_t *editor,
