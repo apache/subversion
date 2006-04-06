@@ -42,6 +42,7 @@
  * This enum represents the current state of our XML parsing for a MERGE.
  */
 typedef enum {
+  NONE = 0,
   MERGE_RESPONSE,
   UPDATED_SET,
   RESPONSE,
@@ -58,7 +59,7 @@ typedef enum {
 } merge_state_e;
 
 typedef enum {
-  NONE,
+  UNSET,
   BASELINE,
   COLLECTION,
   CHECKED_IN,
@@ -78,29 +79,6 @@ typedef struct {
   apr_size_t prop_val_len;
 } merge_info_t;
 
-/*
- * Encapsulates all of the REPORT parsing state that we need to know at
- * any given time.
- *
- * Previous states are stored in ->prev field.
- */
-typedef struct merge_state_list_t {
-   /* The current state that we are in now. */
-  merge_state_e state;
-
-  /* Information */
-  merge_info_t *info;
-
-  /* Temporary pool */
-  apr_pool_t *pool;
-
-  /* Temporary namespace list allocated from ->pool */
-  svn_ra_serf__ns_t *ns_list;
-
-  /* The previous state we were in. */
-  struct merge_state_list_t *prev;
-} merge_state_list_t;
-
 /* Structure associated with a MERGE request. */
 struct svn_ra_serf__merge_context_t
 {
@@ -118,80 +96,30 @@ struct svn_ra_serf__merge_context_t
 
   svn_boolean_t done;
 
-  svn_ra_serf__ns_t *ns_list;
-
   svn_commit_info_t *commit_info;
-
-  /* the current state we are in for parsing the REPORT response.
-   *
-   * could allocate this as an array rather than a linked list.
-   *
-   * (We tend to use only about 8 or 9 states in a given update-report,
-   * but in theory it could be much larger based on the number of directories
-   * we are adding.)
-   */
-  merge_state_list_t *state;
-  /* A list of previous states that we have created but aren't using now. */
-  merge_state_list_t *free_state;
 
 };
 
 
-static void push_state(svn_ra_serf__merge_context_t *ctx, merge_state_e state)
+static merge_info_t *
+push_state(svn_ra_serf__xml_parser_t *parser,
+           svn_ra_serf__merge_context_t *ctx,
+           merge_state_e state)
 {
-  merge_state_list_t *new_state;
+  merge_info_t *info;
 
-  if (!ctx->free_state)
-    {
-      new_state = apr_palloc(ctx->pool, sizeof(*ctx->state));
-
-      apr_pool_create(&new_state->pool, ctx->pool);
-    }
-  else
-    {
-      new_state = ctx->free_state;
-      ctx->free_state = ctx->free_state->prev;
-
-      apr_pool_clear(new_state->pool);
-    }
-  new_state->state = state;
+  svn_ra_serf__xml_push_state(parser, state);
 
   if (state == RESPONSE)
     {
-      new_state->info = apr_palloc(ctx->pool, sizeof(*new_state->info));
-      apr_pool_create(&new_state->info->pool, ctx->pool);
-      new_state->info->props = apr_hash_make(new_state->info->pool);
-    }
-  /* if we have state info from our parent, reuse it. */
-  else if (ctx->state && ctx->state->info)
-    {
-      new_state->info = ctx->state->info;
+      info = apr_palloc(parser->state->pool, sizeof(*info));
+      info->pool = parser->state->pool;
+      info->props = apr_hash_make(info->pool);
+
+      parser->state->private = info;
     }
 
-  if (!ctx->state)
-    {
-      /* Attach to the root state. */
-      new_state->ns_list = ctx->ns_list;
-    }
-  else
-    {
-      new_state->ns_list = ctx->state->ns_list;
-    }
-
-  /* Add it to the state chain. */
-  new_state->prev = ctx->state;
-  ctx->state = new_state;
-}
-
-static void pop_state(svn_ra_serf__merge_context_t *ctx)
-{
-  merge_state_list_t *free_state;
-  free_state = ctx->state;
-  /* advance the current state */
-  ctx->state = ctx->state->prev;
-  free_state->prev = ctx->free_state;
-  ctx->free_state = free_state;
-  ctx->free_state->info = NULL;
+  return parser->state->private;
 }
 
 static svn_error_t *
@@ -202,101 +130,100 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
 {
   svn_ra_serf__merge_context_t *ctx = userData;
   apr_pool_t *pool;
-  svn_ra_serf__ns_t **ns_list;
+  merge_state_e state;
+  merge_info_t *info;
 
-  if (!ctx->state)
-    {
-      pool = ctx->pool;
-      ns_list = &ctx->ns_list;
-    }
-  else
-    {
-      pool = ctx->state->pool;
-      ns_list = &ctx->state->ns_list;
-    }
+  state = parser->state->current_state;
 
-  if (!ctx->state && strcmp(name.name, "merge-response") == 0)
+  if (state == NONE &&
+      strcmp(name.name, "merge-response") == 0)
     {
-      push_state(ctx, MERGE_RESPONSE);
+      push_state(parser, ctx, MERGE_RESPONSE);
     }
-  else if (!ctx->state)
+  else if (state == NONE)
     {
       /* do nothing as we haven't seen our valid start tag yet. */
     }
-  else if (ctx->state->state == MERGE_RESPONSE &&
+  else if (state == MERGE_RESPONSE &&
            strcmp(name.name, "updated-set") == 0)
     {
-      push_state(ctx, UPDATED_SET);
+      push_state(parser, ctx, UPDATED_SET);
     }
-  else if (ctx->state->state == UPDATED_SET &&
+  else if (state == UPDATED_SET &&
            strcmp(name.name, "response") == 0)
     {
-      push_state(ctx, RESPONSE);
+      push_state(parser, ctx, RESPONSE);
     }
-  else if (ctx->state->state == RESPONSE &&
+  else if (state == RESPONSE &&
            strcmp(name.name, "href") == 0)
     {
-      ctx->state->info->prop_ns = name.namespace;
-      ctx->state->info->prop_name = apr_pstrdup(ctx->state->pool,
-                                                name.name);
-      ctx->state->info->prop_val = NULL;
-      push_state(ctx, PROP_VAL);
+      info = push_state(parser, ctx, PROP_VAL);
+
+      info->prop_ns = name.namespace;
+      info->prop_name = apr_pstrdup(info->pool, name.name);
+      info->prop_val = NULL;
+      info->prop_val_len = 0;
     }
-  else if (ctx->state->state == RESPONSE &&
+  else if (state == RESPONSE &&
            strcmp(name.name, "propstat") == 0)
     {
-      push_state(ctx, PROPSTAT);
+      push_state(parser, ctx, PROPSTAT);
     }
-  else if (ctx->state->state == PROPSTAT &&
+  else if (state == PROPSTAT &&
            strcmp(name.name, "prop") == 0)
     {
-      push_state(ctx, PROP);
+      push_state(parser, ctx, PROP);
     }
-  else if (ctx->state->state == PROPSTAT &&
+  else if (state == PROPSTAT &&
            strcmp(name.name, "status") == 0)
     {
       /* Do nothing for now. */
     }
-  else if (ctx->state->state == PROP &&
+  else if (state == PROP &&
            strcmp(name.name, "resourcetype") == 0)
     {
-      push_state(ctx, RESOURCE_TYPE);
-      ctx->state->info->type = NONE;
+      info = push_state(parser, ctx, RESOURCE_TYPE);
+      info->type = UNSET;
     }
-  else if (ctx->state->state == RESOURCE_TYPE &&
+  else if (state == RESOURCE_TYPE &&
            strcmp(name.name, "baseline") == 0)
     {
-      ctx->state->info->type = BASELINE;
+      info = parser->state->private;
+
+      info->type = BASELINE;
     }
-  else if (ctx->state->state == RESOURCE_TYPE &&
+  else if (state == RESOURCE_TYPE &&
            strcmp(name.name, "collection") == 0)
     {
-      ctx->state->info->type = COLLECTION;
+      info = parser->state->private;
+
+      info->type = COLLECTION;
     }
-  else if (ctx->state->state == PROP &&
+  else if (state == PROP &&
            strcmp(name.name, "checked-in") == 0)
     {
-      ctx->state->info->prop_ns = name.namespace;
-      ctx->state->info->prop_name = apr_pstrdup(ctx->state->info->pool,
-                                                name.name);
-      ctx->state->info->prop_val = NULL;
-      push_state(ctx, IGNORE_PROP_NAME);
+      info = push_state(parser, ctx, IGNORE_PROP_NAME);
+
+      info->prop_ns = name.namespace;
+      info->prop_name = apr_pstrdup(info->pool, name.name);
+      info->prop_val = NULL;
+      info->prop_val_len = 0;
     }
-  else if (ctx->state->state == PROP)
+  else if (state == PROP)
     {
-      push_state(ctx, PROP_VAL);
+      push_state(parser, ctx, PROP_VAL);
     }
-  else if (ctx->state->state == IGNORE_PROP_NAME)
+  else if (state == IGNORE_PROP_NAME)
     {
-      push_state(ctx, PROP_VAL);
+      push_state(parser, ctx, PROP_VAL);
     }
-  else if (ctx->state->state == NEED_PROP_NAME)
+  else if (state == NEED_PROP_NAME)
     {
-      ctx->state->info->prop_ns = name.namespace;
-      ctx->state->info->prop_name = apr_pstrdup(ctx->state->info->pool,
-                                                name.name);
-      ctx->state->info->prop_val = NULL;
-      push_state(ctx, PROP_VAL);
+      info = push_state(parser, ctx, PROP_VAL);
+      info->prop_ns = name.namespace;
+      info->prop_name = apr_pstrdup(info->pool, name.name);
+      info->prop_val = NULL;
+      info->prop_val_len = 0;
     }
   else
     {
@@ -312,42 +239,50 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           svn_ra_serf__dav_props_t name)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
+  merge_state_e state;
+  merge_info_t *info;
 
-  if (!ctx->state)
+  state = parser->state->current_state;
+  info = parser->state->private;
+
+  if (state == NONE)
     {
       /* nothing to close yet. */
       return SVN_NO_ERROR;
     }
 
-  if (ctx->state->state == RESPONSE &&
+  if (state == RESPONSE &&
       strcmp(name.name, "response") == 0)
     {
-      merge_info_t *info = ctx->state->info;
-
       if (info->type == BASELINE)
         {
-          const char *ver_str;
+          const char *str;
 
-          ver_str = apr_hash_get(info->props, "version-name",
+          str = apr_hash_get(info->props, "version-name",
                                  APR_HASH_KEY_STRING);
-          if (ver_str)
+          if (str)
             {
-              ctx->commit_info->revision = SVN_STR_TO_REV(ver_str);
+              ctx->commit_info->revision = SVN_STR_TO_REV(str);
             }
           else
             {
               ctx->commit_info->revision = SVN_INVALID_REVNUM;
             }
 
-          ctx->commit_info->date = apr_hash_get(info->props,
-                                                "creationdate",
-                                                APR_HASH_KEY_STRING);
-          ctx->commit_info->author = apr_hash_get(info->props,
-                                                  "creator-displayname",
-                                                  APR_HASH_KEY_STRING);
-          ctx->commit_info->post_commit_err = apr_hash_get(info->props,
-                                                           "post-commit-err",
-                                                           APR_HASH_KEY_STRING);
+          ctx->commit_info->date =
+              apr_pstrdup(ctx->pool,
+                          apr_hash_get(info->props,
+                                       "creationdate", APR_HASH_KEY_STRING));
+
+          ctx->commit_info->author =
+              apr_pstrdup(ctx->pool,
+                          apr_hash_get(info->props, "creator-displayname",
+                                       APR_HASH_KEY_STRING));
+
+          ctx->commit_info->post_commit_err =
+             apr_pstrdup(ctx->pool,
+                         apr_hash_get(info->props,
+                                      "post-commit-err", APR_HASH_KEY_STRING));
         }
       else if (ctx->session->wc_callbacks->push_wc_prop)
         {
@@ -372,36 +307,33 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                                        href,
                                        SVN_RA_SERF__WC_CHECKED_IN_URL,
                                        &checked_in_str,
-                                       ctx->state->info->pool);
+                                       info->pool);
 
         }
 
-      pop_state(ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (ctx->state->state == PROPSTAT &&
+  else if (state == PROPSTAT &&
            strcmp(name.name, "propstat") == 0)
     {
-      pop_state(ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (ctx->state->state == PROP &&
+  else if (state == PROP &&
            strcmp(name.name, "prop") == 0)
     {
-      pop_state(ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (ctx->state->state == RESOURCE_TYPE &&
+  else if (state == RESOURCE_TYPE &&
            strcmp(name.name, "resourcetype") == 0)
     {
-      pop_state(ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if ((ctx->state->state == IGNORE_PROP_NAME ||
-            ctx->state->state == NEED_PROP_NAME))
+  else if (state == IGNORE_PROP_NAME || state == NEED_PROP_NAME)
     {
-      pop_state(ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (ctx->state->state == PROP_VAL)
+  else if (state == PROP_VAL)
     {
-      merge_info_t *info = ctx->state->info;
-
       if (!info->prop_name)
         {
           info->prop_name = apr_pstrdup(info->pool, name.name);
@@ -416,8 +348,9 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
       info->prop_ns = NULL;
       info->prop_name = NULL;
       info->prop_val = NULL;
+      info->prop_val_len = 0;
 
-      pop_state(ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
 
   return SVN_NO_ERROR;
@@ -430,11 +363,16 @@ cdata_merge(svn_ra_serf__xml_parser_t *parser,
             apr_size_t len)
 {
   svn_ra_serf__merge_context_t *ctx = userData;
-  if (ctx->state && ctx->state->state == PROP_VAL)
+  merge_state_e state;
+  merge_info_t *info;
+
+  state = parser->state->current_state;
+  info = parser->state->private;
+
+  if (state == PROP_VAL)
     {
-      svn_ra_serf__expand_string(&ctx->state->info->prop_val,
-                                 &ctx->state->info->prop_val_len,
-                                 data, len, ctx->state->pool);
+      svn_ra_serf__expand_string(&info->prop_val, &info->prop_val_len,
+                                 data, len, parser->state->pool);
     }
 
   return SVN_NO_ERROR;
