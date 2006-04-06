@@ -243,7 +243,7 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (!state && strcmp(name.name, "response") == 0)
+  if (state == NONE && strcmp(name.name, "response") == 0)
     {
       svn_ra_serf__xml_push_state(parser, RESPONSE);
     }
