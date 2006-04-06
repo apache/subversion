@@ -733,21 +733,21 @@ def construct_merged_log_message(url, revnums):
     log message that is clearer in describing merges that contain
     other merges. Trailing newlines are removed from the embedded
     log messages."""
-    logs = ['']
+    messages = ['']
     longest_sep = ''
     for r in revnums.sorted():
-        message = get_commit_log(opts["head-url"], r)
+        message = get_commit_log(url, r)
         if message:
             message = rstrip(message, "\n") + "\n"
-            logs.append(prefix_lines(LOG_LINE_PREFIX, message))
+            messages.append(prefix_lines(LOG_LINE_PREFIX, message))
             for match in LOG_SEPARATOR_RE.findall(message):
                 sep = match[1]
                 if len(sep) > len(longest_sep):
                     longest_sep = sep
 
     longest_sep += LOG_SEPARATOR + "\n"
-    logs.append('')
-    return longest_sep.join(logs)
+    messages.append('')
+    return longest_sep.join(messages)
 
 def get_default_head(branch_dir, branch_props):
     """Return the default head for branch_dir (given its branch_props). Error
@@ -756,13 +756,13 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    dir = url_to_rlpath(target_to_url(branch_dir))
+    directory = url_to_rlpath(target_to_url(branch_dir))
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
     # possible integration sources.
-    if props.has_key(dir):
-        del props[dir]
+    if props.has_key(directory):
+        del props[directory]
 
     if len(props) > 1:
         error('multiple heads found. '
@@ -1253,8 +1253,7 @@ class CommandOpts:
         def __call__(self, *args, **kwargs):
             return self.func(*args, **kwargs)
 
-    def __init__(self, global_opts, common_opts, command_table,
-                 version=None):
+    def __init__(self, global_opts, common_opts, command_table, version=None):
         self.progname = NAME
         self.version = version.replace("%prog", self.progname)
         self.cwidth = console_width() - 2
