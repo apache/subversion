@@ -26,6 +26,7 @@
 #include <serf_bucket_types.h>
 
 #include "svn_path.h"
+#include "svn_private_config.h"
 
 #include "ra_serf.h"
 
@@ -691,9 +692,20 @@ handler_default(serf_request_t *request,
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
-      if (!APR_STATUS_IS_EOF(status) || strcmp(ctx->method, "HEAD") != 0)
+      if (!APR_STATUS_IS_EOF(status))
         {
           return status;
+        }
+      /* If we got an EOF here when we're not a HEAD request,
+       * something went really wrong: either the server closed on us
+       * early or we're reading too much.  Either way, scream loudly.
+       */
+      if (strcmp(ctx->method, "HEAD") != 0)
+        {
+          ctx->session->pending_error =
+              svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("Premature EOF seen from server."));
+          return ctx->session->pending_error->apr_err;
         }
     }
 

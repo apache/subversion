@@ -547,6 +547,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
       handler = apr_pcalloc(pool, sizeof(*handler));
 
+      handler->method = "PROPFIND";
       handler->delegate = setup_propfind;
       handler->delegate_baton = new_prop_ctx;
       handler->session = new_prop_ctx->sess;
