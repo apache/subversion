@@ -1041,7 +1041,9 @@ can edit ARGLIST before running svn."
                   (svn-status-property-parse-property-names))
                  ((eq svn-process-cmd 'propset)
                   (svn-status-remove-temp-file-maybe)
-                  (svn-status-update))
+                  (if (member svn-status-propedit-property-name '("svn:keywords"))
+                      (svn-status-update-with-command-list (svn-status-parse-property-output))
+                    (svn-status-update)))
                  ((eq svn-process-cmd 'propdel)
                   (svn-status-update))))
           ((string= event "killed\n")
@@ -1845,6 +1847,9 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <deleted>"))
           ((equal action 'replaced)
            (setq tag-string " <replaced>"))
+          ((equal action 'propset)
+           ;;(setq tag-string " <propset>")
+           (svn-status-line-info->set-propmark line-info svn-status-file-modified-after-save-flag))
           ((equal action 'added-wc)
            (svn-status-line-info->set-filemark line-info ?A)
            (svn-status-line-info->set-localrev line-info 0))
@@ -1941,8 +1946,25 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
           (setq skip nil))
         (forward-line 1))
       result)))
-;;(svn-status-parse-ar-output)
+;; (svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
+
+(defun svn-status-parse-property-output ()
+  "Parse the output of svn propset.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((result))
+      (dolist (line (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
+        (message "%s" line)
+        (when (string-match "property '\\(.+\\)' set on '\\(.+\\)'" line)
+          ;;(message "property %s - file %s" (match-string 1 line) (match-string 2 line))
+          (setq result (cons (list (match-string 2 line) 'propset) result))))
+      result)))
+
+;; (svn-status-parse-property-output)
+;; (svn-status-update-with-command-list (svn-status-parse-property-output))
+
 
 (defun svn-status-line-info->symlink-p (line-info)
   "Return non-nil if LINE-INFO refers to a symlink, nil otherwise.
