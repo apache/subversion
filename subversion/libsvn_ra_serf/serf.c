@@ -71,6 +71,36 @@ ra_serf_get_schemes(apr_pool_t *pool)
 }
 
 static svn_error_t *
+load_config(svn_ra_serf__session_t *session,
+            apr_hash_t *config_hash,
+            apr_pool_t *pool)
+{
+  svn_config_t *config;
+  const char *server_group;
+
+  config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
+                        APR_HASH_KEY_STRING);
+
+  SVN_ERR(svn_config_get_bool(config, &session->using_compression,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+
+  server_group = svn_config_find_group(config,
+                                       session->repos_url.hostname,
+                                       SVN_CONFIG_SECTION_GROUPS, pool);
+
+  if (server_group)
+    {
+      SVN_ERR(svn_config_get_bool(config, &session->using_compression,
+                                  server_group,
+                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION,
+                                  session->using_compression));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char *repos_URL,
                   const svn_ra_callbacks2_t *callbacks,
@@ -103,6 +133,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
     }
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
+  SVN_ERR(load_config(serf_sess, config, pool));
+
   /* register cleanups */
   apr_pool_cleanup_register(serf_sess->pool, serf_sess,
                             svn_ra_serf__cleanup_serf_session,
@@ -124,7 +156,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                url.scheme, url.hostname);
     }
 
-  serf_sess->conns[0]->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+  serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
+  serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostinfo = url.hostinfo;
 
   /* go ahead and tell serf about the connection. */

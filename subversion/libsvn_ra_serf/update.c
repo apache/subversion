@@ -567,7 +567,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
-  else
+  else if (fetch_ctx->conn->using_compression == TRUE)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -1969,6 +1969,7 @@ finish_report(void *report_baton,
       sess->conns[i]->address = sess->conns[0]->address;
       sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
+      sess->conns[i]->using_compression = sess->conns[0]->using_compression;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->auth_header = sess->auth_header;
       sess->conns[i]->auth_value = sess->auth_value;

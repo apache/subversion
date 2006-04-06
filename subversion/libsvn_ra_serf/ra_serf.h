@@ -49,6 +49,9 @@ typedef struct {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
+  /* Should we ask for compressed responses? */
+  svn_boolean_t using_compression;
+
   /* What was the last HTTP status code we got on this connection? */
   int last_status_code;
 
@@ -79,6 +82,9 @@ typedef struct {
 
   /* Are we using ssl */
   svn_boolean_t using_ssl;
+
+  /* Should we ask for compressed responses? */
+  svn_boolean_t using_compression;
 
   /* The current connection */
   svn_ra_serf__connection_t **conns;
