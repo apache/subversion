@@ -26,8 +26,6 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include "svn_cmdline.h"
-#include "svn_opt.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_test.h"
@@ -39,7 +37,7 @@
 /* Some Subversion test programs may want to parse options in the
    argument list, so we remember it here. */
 int test_argc;
-const char **test_argv;
+char **test_argv;
 
 
 /* Test option: Print more output */
@@ -47,27 +45,6 @@ static int verbose_mode = 0;
 
 /* Test option: Remove test directories after success */
 static int cleanup_mode = 0;
-
-/* Option parsing enums and structures */
-enum {
-  cleanup_opt = SVN_OPT_FIRST_LONGOPT_ID,
-  fstype_opt,
-  list_opt,
-  verbose_opt
-};
-
-static const apr_getopt_option_t cl_options[] =
-{
-  {"cleanup",       cleanup_opt, 0,
-                    N_("remove test directories after success")},
-  {"fs-type",       fstype_opt, 1,
-                    N_("specify a filesystem backend type ARG")},
-  {"list",          list_opt, 0,
-                    N_("lists all the tests with their short description")},
-  {"verbose",       verbose_opt, 0,
-                    N_("print extra information")},
-  {0,               0, 0, 0}
-};
 
 
 /* ================================================================= */
@@ -222,20 +199,15 @@ do_test_num(const char *progname,
 
 /* Standard svn test program */
 int
-main(int argc, const char *argv[])
+main(int argc, char *argv[])
 {
-  const char *prog_name;
+  char *prog_name;
   int test_num;
   int i;
   int got_error = 0;
   apr_pool_t *pool, *test_pool;
   int ran_a_test = 0;
-  int list_mode = 0;
-  int opt_id;
-  apr_status_t apr_err;
-  apr_getopt_t *os;
-  svn_error_t *err;
-  char errmsg[200];
+  char **arg;
   /* How many tests are there? */
   int array_size = get_array_size();
   
@@ -272,38 +244,15 @@ main(int argc, const char *argv[])
   test_argc = argc;
   test_argv = argv;
 
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, prog_name);
-  while (1)
+  /* Scan the command line for the --verbose and --cleanup flags */
+  for (arg = &argv[1]; *arg; ++arg)
     {
-      const char *opt_arg;
-
-      /* Parse the next option. */
-      apr_err = apr_getopt_long(os, cl_options, &opt_id, &opt_arg);
-      if (APR_STATUS_IS_EOF(apr_err))
-        break;
-      else if (apr_err)
-        {
-          fprintf(stderr,"apr_getopt_long failed : [%d] %s\n",
-                  apr_err, apr_strerror(apr_err, (char*)errmsg, 200));
-          exit(1);
-        }
-
-      switch (opt_id) {
-        case cleanup_opt:
-          cleanup_mode = 1;
-          break;
-        case fstype_opt:
-          opts.fs_type = apr_pstrdup(pool, opt_arg);
-          break;
-        case list_opt:
-          list_mode = 1;
-          break;
-        case verbose_opt:
-          verbose_mode = 1;
-          break;
-      }
+      if (strcmp(*arg, "--cleanup") == 0)
+        cleanup_mode = 1;
+      else if (strcmp(*arg, "--verbose") == 0)
+        verbose_mode = 1;
+      else if (strncmp(*arg, "--fs-type=", 10) == 0)
+        opts.fs_type = apr_pstrdup(pool, (*arg) + 10);
     }
 
   /* Create an iteration pool for the tests */
@@ -312,7 +261,7 @@ main(int argc, const char *argv[])
 
   if (argc >= 2)  /* notice command-line arguments */
     {
-      if (! strcmp(argv[1], "list") || list_mode)
+      if (! strcmp(argv[1], "list"))
         {
           ran_a_test = 1;
 
@@ -344,6 +293,11 @@ main(int argc, const char *argv[])
                   /* Clear the per-function pool */
                   svn_pool_clear(test_pool);
                   svn_pool_clear(cleanup_pool);
+                }
+              else if (argv[i][0] != '-')
+                {
+                  /* (probably) a source directory pathname */
+                  printf("notice: ignoring argument %d: '%s'\n", i, argv[i]);
                 }
             }
         }
