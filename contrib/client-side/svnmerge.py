@@ -895,12 +895,14 @@ def minimal_merge_intervals(revs, phantom_revs):
     ret.reverse()
     return ret
 
-def display_revisions(revs, display_style, head_url):
+def display_revisions(revs, display_style, revisions_msg, head_url):
     """Show REVS as dictated by DISPLAY_STYLE, either numerically, in
-    log format, or as diffs."""
+    log format, or as diffs.  When displaying revisions numerically,
+    prefix output with REVISIONS_MSG when in verbose mode.  Otherwise,
+    request logs or diffs using HEAD_URL."""
     if display_style == "revisions":
         if revs:
-            report("available revisions to be merged are:")
+            report(revisions_msg)
             print revs
     elif display_style == "logs":
         for start,end in revs.normalized():
@@ -972,7 +974,9 @@ def action_avail(branch_dir, branch_props):
     if opts["revision"]:
         revs = revs & RevisionSet(opts["revision"])
 
-    display_revisions(revs, opts["avail-display"], opts["head-url"])
+    display_revisions(revs, opts["avail-display"],
+                      "revisions available to be merged are:",
+                      opts["head-url"])
 
 def action_integrated(branch_dir, branch_props):
     """Show change sets already merged.  This set of revisions is
@@ -993,6 +997,7 @@ def action_integrated(branch_dir, branch_props):
     except LaunchError:
         # Assume that --limit isn't supported by the installed 'svn'.
         lines = launchsvn("log -r 1:HEAD -q " + branch_dir)
+    report('determining oldest branch revision for "%s"' % branch_dir)
     if lines and len(lines) > 1:
         i = lines[1].find(" ")
         if i != -1:
@@ -1001,13 +1006,16 @@ def action_integrated(branch_dir, branch_props):
         error("unable to determine oldest branch revision")
 
     # Subtract any revisions which pre-date the branch.
+    report("subtracting revisions which pre-date the branch (%d)" %
+           oldest_branch_rev)
     revs = revs - range(1, oldest_branch_rev)
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
         revs = revs & RevisionSet(opts["revision"])
 
-    display_revisions(revs, opts["integrated-display"], opts["head-url"])
+    display_revisions(revs, opts["integrated-display"],
+                      "revisions already integrated are:", opts["head-url"])
 
 def action_merge(branch_dir, branch_props):
     """Record merge meta data, and do the actual merge (if not
