@@ -1101,7 +1101,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (!state && strcmp(name.name, "target-revision") == 0)
+  if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
       const char *rev;
 
@@ -1116,7 +1116,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                               SVN_STR_TO_REV(rev),
                                               ctx->sess->pool);
     }
-  else if (!state && strcmp(name.name, "open-directory") == 0)
+  else if (state == NONE && strcmp(name.name, "open-directory") == 0)
     {
       const char *rev;
       report_info_t *info;
@@ -1143,7 +1143,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->name = info->dir->name;
       info->name_buf = info->dir->name_buf;
     }
-  else if (!state)
+  else if (state == NONE)
     {
       /* do nothing as we haven't seen our valid start tag yet. */
     }
@@ -1449,7 +1449,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (!state)
+  if (state == NONE)
     {
       /* nothing to close yet. */
       return SVN_NO_ERROR;
@@ -1994,8 +1994,7 @@ finish_report(void *report_baton,
         }
       if (status)
         {
-          if (sess->pending_error)
-            return sess->pending_error;
+          SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
                                     status);

@@ -169,7 +169,7 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (!state && strcmp(name.name, "file-revs-report") == 0)
+  if (state == NONE && strcmp(name.name, "file-revs-report") == 0)
     {
       push_state(parser, blame_ctx, FILE_REVS_REPORT);
     }
@@ -260,7 +260,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
   state = parser->state->current_state;
   info = parser->state->private;
 
-  if (!state)
+  if (state == NONE)
     {
       return SVN_NO_ERROR;
     }
@@ -328,7 +328,7 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
   state = parser->state->current_state;
   info = parser->state->private;
 
-  if (!state)
+  if (state == NONE)
     {
       return SVN_NO_ERROR;
     }
