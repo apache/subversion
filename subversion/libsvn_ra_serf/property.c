@@ -310,7 +310,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
           else
             {
               info->val = "";
-              info->val_len = 1;
+              info->val_len = 0;
             }
         }
    
