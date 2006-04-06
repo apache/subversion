@@ -42,6 +42,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum {
+  NONE = 0,
   REPORT,
   ITEM,
   VERSION,
@@ -51,6 +52,8 @@ typedef enum {
 } log_state_e;
 
 typedef struct {
+  apr_pool_t *pool;
+
   /* The currently collected value as we build it up */
   const char *tmp;
   apr_size_t tmp_len;
@@ -66,17 +69,6 @@ typedef struct {
   const char *comment;
 } log_info_t;
 
-typedef struct log_state_list_t {
-  /* The current state that we are in now. */
-  log_state_e state;
-
-  /* Information */
-  log_info_t *info;
-
-  /* The previous state we were in. */
-  struct log_state_list_t *prev;
-} log_state_list_t;
-
 typedef struct {
   apr_pool_t *pool;
 
@@ -84,10 +76,6 @@ typedef struct {
   int limit;
   int count;
   svn_boolean_t changed_paths;
-
-  /* Current state we're in */
-  log_state_list_t *state;
-  log_state_list_t *free_state;
 
   /* are we done? */
   svn_boolean_t done;
@@ -98,67 +86,26 @@ typedef struct {
 } log_context_t;
 
 
-static void
-push_state(log_context_t *log_ctx, log_state_e state)
+static log_info_t *
+push_state(svn_ra_serf__xml_parser_t *parser,
+           log_context_t *log_ctx,
+           log_state_e state)
 {
-  log_state_list_t *new_state;
+  svn_ra_serf__xml_push_state(parser, state);
 
-  if (!log_ctx->free_state)
+  if (state == ITEM)
     {
-      new_state = apr_palloc(log_ctx->pool, sizeof(*log_ctx->state));
-      new_state->info = NULL;
-    }
-  else
-    {
-      new_state = log_ctx->free_state;
-      log_ctx->free_state = log_ctx->free_state->prev;
-    }
-  new_state->state = state;
+      log_info_t *info;
 
-  if (state == REPORT)
-    {
-      /* do nothing for now */
-    }
-  else if (state == ITEM)
-    {
-      if (!new_state->info)
-        {
-          new_state->info = apr_palloc(log_ctx->pool, sizeof(*new_state->info));
-        }
+      info = apr_pcalloc(parser->state->pool, sizeof(*info));
 
-      new_state->info->paths = NULL;
-      new_state->info->version = SVN_INVALID_REVNUM;
-      new_state->info->creator = NULL;
-      new_state->info->date = NULL;
-      new_state->info->comment = NULL;
-      new_state->info->tmp = NULL;
-      new_state->info->tmp_len = 0;
-    }
-  /* if we have state info from our parent, reuse it. */
-  else if (log_ctx->state && log_ctx->state->info)
-    {
-      new_state->info = log_ctx->state->info;
-    }
-  else
-    {
-      abort();
+      info->pool = parser->state->pool;
+      info->version = SVN_INVALID_REVNUM;
+
+      parser->state->private = info;
     }
 
-  /* Add it to the state chain. */
-  new_state->prev = log_ctx->state;
-  log_ctx->state = new_state;
-}
-
-static void pop_state(log_context_t *log_ctx)
-{
-  log_state_list_t *free_state;
-  free_state = log_ctx->state;
-  /* advance the current state */
-  log_ctx->state = log_ctx->state->prev;
-  free_state->prev = log_ctx->free_state;
-  log_ctx->free_state = free_state;
-  /* It's okay to reuse our info. */
-  /* ctx->free_state->info = NULL; */
+  return parser->state->private;
 }
 
 static svn_error_t *
@@ -168,42 +115,43 @@ start_log(svn_ra_serf__xml_parser_t *parser,
           const char **attrs)
 {
   log_context_t *log_ctx = userData;
+  log_state_e state;
 
-  if (!log_ctx->state && strcmp(name.name, "log-report") == 0)
+  state = parser->state->current_state;
+
+  if (state == NONE &&
+      strcmp(name.name, "log-report") == 0)
     {
-      push_state(log_ctx, REPORT);
+      push_state(parser, log_ctx, REPORT);
     }
-  else if (log_ctx->state &&
-           log_ctx->state->state == REPORT &&
+  else if (state == REPORT &&
            strcmp(name.name, "log-item") == 0)
     {
       log_ctx->count++;
       if (log_ctx->limit && log_ctx->count > log_ctx->limit)
         {
-          log_ctx->state = NULL;
           return SVN_NO_ERROR;
         }
 
-      push_state(log_ctx, ITEM);
+      push_state(parser, log_ctx, ITEM);
     }
-  else if (log_ctx->state &&
-           log_ctx->state->state == ITEM)
+  else if (state == ITEM)
     {
       if (strcmp(name.name, "version-name") == 0)
         {
-          push_state(log_ctx, VERSION);
+          push_state(parser, log_ctx, VERSION);
         }
       else if (strcmp(name.name, "creator-displayname") == 0)
         {
-          push_state(log_ctx, CREATOR);
+          push_state(parser, log_ctx, CREATOR);
         }
       else if (strcmp(name.name, "date") == 0)
         {
-          push_state(log_ctx, DATE);
+          push_state(parser, log_ctx, DATE);
         }
       else if (strcmp(name.name, "comment") == 0)
         {
-          push_state(log_ctx, COMMENT);
+          push_state(parser, log_ctx, COMMENT);
         }
     }
 
@@ -216,61 +164,58 @@ end_log(svn_ra_serf__xml_parser_t *parser,
         svn_ra_serf__dav_props_t name)
 {
   log_context_t *log_ctx = userData;
-  log_state_list_t *cur_state;
+  log_state_e state;
+  log_info_t *info;
 
-  if (!log_ctx->state)
-    {
-      return SVN_NO_ERROR;
-    }
+  state = parser->state->current_state;
+  info = parser->state->private;
 
-  cur_state = log_ctx->state;
-
-  if (cur_state->state == REPORT &&
+  if (state == REPORT &&
       strcmp(name.name, "log-report") == 0)
     {
-      pop_state(log_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == ITEM &&
+  else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
     {
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
-                                cur_state->info->paths,
-                                cur_state->info->version,
-                                cur_state->info->creator,
-                                cur_state->info->date,
-                                cur_state->info->comment,
-                                log_ctx->pool));
+                                info->paths,
+                                info->version,
+                                info->creator,
+                                info->date,
+                                info->comment,
+                                info->pool));
 
-       pop_state(log_ctx);
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == VERSION &&
+  else if (state == VERSION &&
            strcmp(name.name, "version-name") == 0)
     {
-      cur_state->info->version = SVN_STR_TO_REV(cur_state->info->tmp);
-      cur_state->info->tmp = NULL;
-      pop_state(log_ctx);
+      info->version = SVN_STR_TO_REV(info->tmp);
+      info->tmp_len = 0;
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == CREATOR &&
+  else if (state == CREATOR &&
            strcmp(name.name, "creator-displayname") == 0)
     {
-      cur_state->info->creator = cur_state->info->tmp;
-      cur_state->info->tmp = NULL;
-      pop_state(log_ctx);
+      info->creator = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->tmp_len = 0;
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == DATE &&
+  else if (state == DATE &&
            strcmp(name.name, "date") == 0)
     {
-      cur_state->info->date = cur_state->info->tmp;
-      cur_state->info->tmp = NULL;
-      pop_state(log_ctx);
+      info->date = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->tmp_len = 0;
+      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (cur_state->state == COMMENT &&
+  else if (state == COMMENT &&
            strcmp(name.name, "comment") == 0)
     {
-      cur_state->info->comment = cur_state->info->tmp;
-      cur_state->info->tmp = NULL;
-      pop_state(log_ctx);
+      info->comment = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->tmp_len = 0;
+      svn_ra_serf__xml_pop_state(parser);
     }
 
   return SVN_NO_ERROR;
@@ -283,21 +228,20 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
           apr_size_t len)
 {
   log_context_t *log_ctx = userData;
+  log_state_e state;
+  log_info_t *info;
 
-  if (!log_ctx->state)
-    {
-      return SVN_NO_ERROR;
-    }
+  state = parser->state->current_state;
+  info = parser->state->private;
 
-  switch (log_ctx->state->state)
+  switch (state)
     {
       case VERSION:
       case CREATOR:
       case DATE:
       case COMMENT:
-        svn_ra_serf__expand_string(&log_ctx->state->info->tmp,
-                                   &log_ctx->state->info->tmp_len,
-                                   data, len, log_ctx->pool);
+        svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
+                                   data, len, parser->state->pool);
         break;
       default:
         break;
