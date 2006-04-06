@@ -2,7 +2,7 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_sorts.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -89,7 +90,8 @@ static svn_wc_adm_access_t missing;
 
 
 static svn_error_t *
-do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
+do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
+         svn_boolean_t recurse);
 
 
 /* Write, to LOG_ACCUM, log entries to convert an old WC that did not have
@@ -275,9 +277,12 @@ pool_cleanup(void *p)
   svn_boolean_t cleanup;
   svn_error_t *err;
 
+  if (lock->type == svn_wc__adm_access_closed)
+    return SVN_NO_ERROR;
+
   err = svn_wc__adm_is_cleanup_required(&cleanup, lock, lock->pool);
   if (!err)
-    err = do_close(lock, cleanup);
+    err = do_close(lock, cleanup, TRUE);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -1033,7 +1038,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (! p_access || err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
             {
               if (p_access)
-                svn_error_clear(do_close(p_access, FALSE));
+                svn_error_clear(do_close(p_access, FALSE, TRUE));
               svn_error_clear(p_access_err);
               return err;
             }
@@ -1057,8 +1062,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (err)
             {
               svn_error_clear(p_access_err);
-              svn_error_clear(do_close(p_access, FALSE));
-              svn_error_clear(do_close(t_access, FALSE));
+              svn_error_clear(do_close(p_access, FALSE, TRUE));
+              svn_error_clear(do_close(t_access, FALSE, TRUE));
               return err;
             }
 
@@ -1072,11 +1077,11 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                              svn_path_basename(t_entry->url, pool)))))
             {
               /* Switched or disjoint, so drop P_ACCESS */
-              err = do_close(p_access, FALSE);
+              err = do_close(p_access, FALSE, TRUE);
               if (err)
                 {
                   svn_error_clear(p_access_err);
-                  svn_error_clear(do_close(t_access, FALSE));
+                  svn_error_clear(do_close(t_access, FALSE, TRUE));
                   return err;
                 }
               p_access = NULL;
@@ -1089,8 +1094,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             {
               /* Need P_ACCESS, so the read-only temporary won't do */
               if (t_access)
-                svn_error_clear(do_close(t_access, FALSE));
-              svn_error_clear(do_close(p_access, FALSE));
+                svn_error_clear(do_close(t_access, FALSE, TRUE));
+              svn_error_clear(do_close(p_access, FALSE, TRUE));
               return p_access_err;
             }
           else if (t_access)
@@ -1105,7 +1110,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (err)
             {
               if (p_access)
-                svn_error_clear(do_close(p_access, FALSE));
+                svn_error_clear(do_close(p_access, FALSE, TRUE));
               return err;
             }
           if (t_entry && t_entry->kind == svn_node_dir)
@@ -1140,51 +1145,43 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
  */
 static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access,
-         svn_boolean_t preserve_lock)
+         svn_boolean_t preserve_lock,
+         svn_boolean_t recurse)
 {
-  apr_hash_index_t *hi;
 
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
-  apr_pool_cleanup_kill(adm_access->pool, adm_access, pool_cleanup);
-
-  /* Close children */
-  if (adm_access->set)
+  /* Close descendant batons */
+  if (recurse && adm_access->set)
     {
-      /* The documentation says that modifying a hash while iterating over
-         it is allowed but unpredictable!  So, first loop to identify and
-         copy direct descendents, second loop to close them. */
       int i;
-      apr_array_header_t *children = apr_array_make(adm_access->pool, 1,
-                                                    sizeof(adm_access));
+      apr_array_header_t *children
+        = svn_sort__hash(adm_access->set, svn_sort_compare_items_as_paths,
+                         adm_access->pool);
 
-      for (hi = apr_hash_first(adm_access->pool, adm_access->set);
-           hi;
-           hi = apr_hash_next(hi))
+      /* Go backwards through the list to close children before their
+         parents. */
+      for (i = children->nelts - 1; i >= 0; --i)
         {
-          const void *key;
-          void *val;
-          const char *path;
-          svn_wc_adm_access_t *associated;
-          const char *name;
-          apr_hash_this(hi, &key, NULL, &val);
-          path = key;
-          associated = val;
-          name = svn_path_is_child(adm_access->path, path, adm_access->pool);
-          if (name && svn_path_is_single_path_component(name))
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i,
+                                                  svn_sort__item_t);
+          const char *path = item->key;
+          svn_wc_adm_access_t *child = item->value;
+
+          if (child == &missing)
             {
-              if (associated != &missing)
-                *(svn_wc_adm_access_t**)apr_array_push(children) = associated;
-              /* Deleting current element is allowed and predictable */
+              /* We don't close the missing entry, but get rid of it from
+                 the set. */
               apr_hash_set(adm_access->set, path, APR_HASH_KEY_STRING, NULL);
+              continue;
             }
-        }
-      for (i = 0; i < children->nelts; ++i)
-        {
-          svn_wc_adm_access_t *child = APR_ARRAY_IDX(children, i,
-                                                     svn_wc_adm_access_t*);
-          SVN_ERR(do_close(child, preserve_lock));
+
+          if (! svn_path_is_ancestor(adm_access->path, path)
+              || strcmp(adm_access->path, path) == 0)
+            continue;
+
+          SVN_ERR(do_close(child, preserve_lock, FALSE));
         }
     }
 
@@ -1215,7 +1212,7 @@ do_close(svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
 {
-  return do_close(adm_access, FALSE);
+  return do_close(adm_access, FALSE, TRUE);
 }
 
 svn_boolean_t
