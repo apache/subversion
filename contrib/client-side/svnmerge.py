@@ -435,6 +435,8 @@ class RevisionSet:
 
         self._revs = {}
 
+        revision_range_split_re = re.compile('[-:]')
+
         if isinstance(parm, types.DictType):
             self._revs = parm.copy()
         elif isinstance(parm, types.ListType):
@@ -444,12 +446,15 @@ class RevisionSet:
             parm = parm.strip()
             if parm:
                 for R in parm.split(","):
-                    if "-" in R:
-                        s,e = R.split("-")
-                        for rev in range(int(s), int(e)+1):
+                    rev_or_revs = re.split(revision_range_split_re, R)
+                    if len(rev_or_revs) == 1:
+                        self._revs[int(rev_or_revs[0])] = 1
+                    elif len(rev_or_revs) == 2:
+                        for rev in range(int(rev_or_revs[0]),
+                                         int(rev_or_revs[1])+1):
                             self._revs[rev] = 1
                     else:
-                        self._revs[int(R)] = 1
+                        raise ValueError, 'Ill formatted revision range: ' + R
 
     def sorted(self):
         revnums = self._revs.keys()

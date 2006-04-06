@@ -84,6 +84,11 @@ class TestCase_RevisionSet(unittest.TestCase):
         self.assert_(2 in rs)
         self.assert_(9 not in rs)
 
+        rs = svnmerge.RevisionSet("10: 15, 12:48,2 ")
+        self.assert_(17 in rs)
+        self.assert_(2 in rs)
+        self.assert_(9 not in rs)
+
     def test_constr_dict(self):
         rs = svnmerge.RevisionSet({18:1, 24:1, 25:1, 43:1})
         self.assert_(24 in rs)
@@ -95,8 +100,16 @@ class TestCase_RevisionSet(unittest.TestCase):
         self.assertRaises(ValueError, svnmerge.RevisionSet, "10;12-15")
         self.assertRaises(ValueError, svnmerge.RevisionSet, "10,foo,3-15")
 
+        self.assertRaises(ValueError, svnmerge.RevisionSet, "10:12:15")
+        self.assertRaises(ValueError, svnmerge.RevisionSet, "10;12:15")
+        self.assertRaises(ValueError, svnmerge.RevisionSet, "10,foo,3:15")
+
     def test_normalized(self):
         rs = svnmerge.RevisionSet("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
+        self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
+        self.assertEqual(str(rs), "1,3-6,8-18")
+
+        rs = svnmerge.RevisionSet("8:15,16:18, 4:6, 9, 18, 1:1, 3:3")
         self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
         self.assertEqual(str(rs), "1,3-6,8-18")
 
@@ -106,10 +119,21 @@ class TestCase_RevisionSet(unittest.TestCase):
         self.assertEqual(rs.sorted(), [1, 3, 4, 5, 6, 8, 9, 10, 11,
                                        12, 13, 14, 15, 16, 17, 18])
 
+        rs = svnmerge.RevisionSet("8:15,16:18, 4:6, 9, 18, 1:1, 3:3")
+        self.assertEqual(rs.sorted(), [1, 3, 4, 5, 6, 8, 9, 10, 11,
+                                       12, 13, 14, 15, 16, 17, 18])
+
     def test_length(self):
         rs = svnmerge.RevisionSet("3-8")
         self.assertEqual(len(rs), 6)
         rs = svnmerge.RevisionSet("3-8,4-10")
+        self.assertEqual(len(rs), 8)
+        rs = svnmerge.RevisionSet("1,3,5")
+        self.assertEqual(len(rs), 3)
+
+        rs = svnmerge.RevisionSet("3:8")
+        self.assertEqual(len(rs), 6)
+        rs = svnmerge.RevisionSet("3:8,4:10")
         self.assertEqual(len(rs), 8)
         rs = svnmerge.RevisionSet("1,3,5")
         self.assertEqual(len(rs), 3)
@@ -123,12 +147,21 @@ class TestCase_RevisionSet(unittest.TestCase):
             rs = svnmerge.RevisionSet("4-13,1-5,34,20-22,18-21")
             self.assertEqual(list(iter(rs)), range(1,14)+range(18,23)+[34])
 
+            rs = svnmerge.RevisionSet("4:13,1:5,34,20:22,18:21")
+            self.assertEqual(list(iter(rs)), range(1,14)+range(18,23)+[34])
+
     def test_union(self):
         rs = svnmerge.RevisionSet("3-8,4-10") | svnmerge.RevisionSet("7-14,1")
         self.assertEqual(str(rs), "1,3-14")
 
+        rs = svnmerge.RevisionSet("3:8,4:10") | svnmerge.RevisionSet("7:14,1")
+        self.assertEqual(str(rs), "1,3-14")
+
     def test_subtraction(self):
         rs = svnmerge.RevisionSet("3-8,4-10") - svnmerge.RevisionSet("7-14,1")
+        self.assertEqual(str(rs), "3-6")
+
+        rs = svnmerge.RevisionSet("3:8,4:10") - svnmerge.RevisionSet("7:14,1")
         self.assertEqual(str(rs), "3-6")
 
     def test_constr_empty(self):
