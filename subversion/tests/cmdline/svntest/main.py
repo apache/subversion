@@ -655,7 +655,6 @@ def run_one_test(n, test_list):
   current_repo_url = None
 
   tc = testcase.TestCase(test_list[n], n)
-  func_code = tc.func_code()
   if tc.need_sandbox():
     # ooh! this function takes a sandbox argument
     sandbox = Sandbox(tc.get_sandbox_name(), n)
