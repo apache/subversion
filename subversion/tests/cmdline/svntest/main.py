@@ -658,9 +658,7 @@ def run_one_test(n, test_list):
   func_code = tc.func_code()
   if tc.need_sandbox():
     # ooh! this function takes a sandbox argument
-    module, unused = \
-      os.path.splitext(os.path.basename(func_code.co_filename))
-    sandbox = Sandbox(module, n)
+    sandbox = Sandbox(tc.get_sandbox_name(), n)
     args = (sandbox,)
   else:
     sandbox = None
