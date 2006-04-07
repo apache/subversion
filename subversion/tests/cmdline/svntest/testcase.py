@@ -63,6 +63,13 @@ class _Predicate:
     if not string.lower(description[0]) == description[0]:
       print 'WARNING: Test doc string is capitalized'
 
+  def need_sandbox(self):
+    return self.func.func_code.co_argcount != 0
+
+  def get_sandbox_name(self):
+    filename = self.func.func_code.co_filename
+    return os.path.splitext(os.path.basename(filename))[0]
+
   def list_mode(self):
     return self.text[3]
 
@@ -110,14 +117,10 @@ class TestCase:
     self.index = index
 
   def need_sandbox(self):
-    return self._func_code().co_argcount != 0
+    return self.pred.need_sandbox()
 
   def get_sandbox_name(self):
-    filename = self._func_code().co_filename
-    return os.path.splitext(os.path.basename(filename))[0]
-
-  def _func_code(self):
-    return self.pred.func.func_code
+    return self.pred.get_sandbox_name()
 
   def list(self):
     print " %2d     %-5s  %s" % (self.index,
