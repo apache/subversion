@@ -92,6 +92,7 @@ Commit access for specific areas:
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
+       mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
 
   Translation of message files:
 
