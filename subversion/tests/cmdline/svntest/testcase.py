@@ -80,6 +80,9 @@ class TestCase:
     if not string.lower(name[0]) == name[0]:
       print 'WARNING: Test doc string is capitalized'
 
+  def need_sandbox(self):
+    return self.func_code().co_argcount != 0
+
   def func_code(self):
     return self.pred.func.func_code
 
