@@ -663,12 +663,20 @@ class TestRunner:
           self.pred.get_description()
     self.pred.check_description()
 
-  def run(self, args):
+  def run(self):
     """Run self.pred on ARGS, return the result.  The return value is
         - 0 if the test was successful
         - 1 if it errored in a way that indicates test failure
         - 2 if the test skipped
         """
+    if self.need_sandbox():
+      # ooh! this function takes a sandbox argument
+      sandbox = Sandbox(self.get_sandbox_name(), self.index)
+      args = (sandbox,)
+    else:
+      sandbox = None
+      args = ()
+
     result = 0
     if self.pred.cond:
       print self.pred.skip_text(),
@@ -712,6 +720,8 @@ class TestRunner:
       result = self.pred.convert_result(result)
     self._print_name()
     sys.stdout.flush()
+    if sandbox is not None and not result and cleanup_mode:
+      sandbox.cleanup_test_paths()
     return result
 
 
@@ -737,19 +747,8 @@ def run_one_test(n, test_list):
   current_repo_dir = None
   current_repo_url = None
 
-  tc = TestRunner(test_list[n], n)
-  if tc.need_sandbox():
-    # ooh! this function takes a sandbox argument
-    sandbox = Sandbox(tc.get_sandbox_name(), n)
-    args = (sandbox,)
-  else:
-    sandbox = None
-    args = ()
-
   # Run the test.
-  exit_code = tc.run(args)
-  if sandbox is not None and not exit_code and cleanup_mode:
-    sandbox.cleanup_test_paths()
+  exit_code = TestRunner(test_list[n], n).run()
   reset_config_dir()
   return exit_code
 
