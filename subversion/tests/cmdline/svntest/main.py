@@ -2,9 +2,9 @@
 #
 #  main.py: a shared, automated test suite for Subversion
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -242,11 +242,11 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-  return run_command_stdin(command, error_expected, binary_mode, 
+  return run_command_stdin(command, error_expected, binary_mode,
                            None, *varargs)
 
 # Run any binary, supplying input text, logging the command line
-def run_command_stdin(command, error_expected, binary_mode=0, 
+def run_command_stdin(command, error_expected, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -467,7 +467,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
-  
+
   while 1:
     data = dump_out.read(1024*1024)  # Arbitrary buffer size
     if data == "":
@@ -520,7 +520,7 @@ def set_repos_paths(repo_dir):
 
 def canonicalize_url(input):
   "Canonicalize the url, if the scheme is unknown, returns intact input"
-  
+
   m = re.match(r"^((file://)|((svn|svn\+ssh|http|https)(://)))", input)
   if m:
     scheme = m.group(1)
