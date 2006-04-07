@@ -47,6 +47,9 @@ class _Predicate:
       self.text = ['PASS: ', 'FAIL: ', 'SKIP: ', '']
     assert type(self.func) is type(lambda x: 0)
 
+  def get_description(self):
+    return self.func.__doc__
+
   def list_mode(self):
     return self.text[3]
 
@@ -94,7 +97,7 @@ class TestCase:
     self.index = index
 
   def _check_name(self):
-    name = self.pred.func.__doc__
+    name = self.pred.get_description()
     if not name:
       raise Exception(self.pred.func.__name__ + ' lacks required doc string')
 
@@ -118,12 +121,12 @@ class TestCase:
   def list(self):
     print " %2d     %-5s  %s" % (self.index,
                                  self.pred.list_mode(),
-                                 self.pred.func.__doc__)
+                                 self.pred.get_description())
     self._check_name()
 
   def _print_name(self):
     print os.path.basename(sys.argv[0]), str(self.index) + ":", \
-          self.pred.func.__doc__
+          self.pred.get_description()
     self._check_name()
 
   def run(self, args):
