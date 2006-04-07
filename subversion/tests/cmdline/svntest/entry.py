@@ -2,9 +2,9 @@
 #
 #  entry.py:  module to parse '.svn/entries' file
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -55,7 +55,7 @@ class svn_entryparser:
 
     if attrs.has_key('name'):
       entry = svn_entry(attrs) # create new entry object
-      
+
       # Derive missing values
       if not entry.atts.has_key('kind'):
         entry.atts['kind'] = 'file' # default kind if none mentioned
@@ -68,7 +68,7 @@ class svn_entryparser:
           parent = self.entry_dict[""]
           entry.atts['ancestor'] = parent.atts['ancestor'] + '/' \
                                    + entry.atts['name']
-                  
+
       self.entry_dict[attrs['name']] = entry  # store the new entry
 
 

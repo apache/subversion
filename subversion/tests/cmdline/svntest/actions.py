@@ -2,9 +2,9 @@
 #
 #  actions.py:  routines that actually run the svn client.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -47,7 +47,7 @@ class SVNExpectedStderr(SVNUnexpectedOutput):
   pass
 
 class SVNIncorrectDatatype(SVNUnexpectedOutput):
-  """Exception raised if invalid input is passed to the 
+  """Exception raised if invalid input is passed to the
   run_and_verify_* API"""
   pass
 
@@ -70,7 +70,7 @@ def guarantee_greek_repository(path):
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_dir):
     main.create_repos(main.pristine_dir)
-    
+
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
 
@@ -135,7 +135,7 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
   "Run svnversion command and check its output"
 
   out, err = main.run_svnversion(wc_dir, repo_url)
-  
+
   if type(expected_stdout) is type([]):
     compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
   elif expected_stdout == SVNAnyOutput:
@@ -144,7 +144,7 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
       raise SVNExpectedStdout
   elif expected_stdout is not None:
     raise SVNIncorrectDatatype("Unexpected specification for stdout data")
-  
+
   if type(expected_stderr) is type([]):
     compare_and_display_lines(message, 'STDERR', expected_stderr, err)
   elif expected_stderr == SVNAnyOutput:
@@ -154,7 +154,7 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
   else:
     raise SVNIncorrectDatatype("Unexpected specification for stderr data")
   return out, err
-  
+
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   """Invokes main.run_svn with *VARARGS, return stdout and stderr as
@@ -301,7 +301,7 @@ def verify_update(actual_output, wc_dir_name,
                   singleton_handler_b, b_baton,
                   check_props):
   """Verify update of WC_DIR_NAME.
-  
+
   The subcommand output (found in ACTUAL_OUTPUT) will be verified
   against OUTPUT_TREE, and the working copy itself will be verified
   against DISK_TREE.  If optional STATUS_OUTPUT_TREE is given, then
@@ -379,7 +379,7 @@ def run_and_verify_update(wc_dir_name,
     for line in errput:
       match = rm.search(line)
       if match:
-        return 
+        return
     raise main.SVNUnmatchedError
 
   mytree = tree.build_tree_from_checkout (output)
@@ -415,12 +415,12 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more
   details.
-  
+
   If CHECK_PROPS is set, then disk comparison will examine props.
 
   If DRY_RUN is set then a --dry-run merge will be carried out first and
   the output compared with that of the full merge.
-  
+
   Returns if successful, raises on failure."""
 
   if isinstance(output_tree, wc.State):
@@ -447,7 +447,7 @@ def run_and_verify_merge(dir, rev1, rev2, url,
       print "Dry-run merge altered working copy"
       print "============================================================="
       raise
-      
+
 
   # Update and make a tree of the output.
   merge_command = merge_command + args
@@ -568,10 +568,10 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     status_output_tree = status_output_tree.old_tree()
 
   # Commit.
-  output, errput = main.run_svn(error_re_string, 'ci', 
+  output, errput = main.run_svn(error_re_string, 'ci',
                                 '--username', main.wc_author,
-                                '--password', main.wc_passwd, 
-                                '-m', 'log msg', 
+                                '--password', main.wc_passwd,
+                                '-m', 'log msg',
                                 *args)
 
   if (error_re_string):
@@ -588,7 +588,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   lastline = ""
   if len(output):
     lastline = string.strip(output.pop())
-    
+
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
     if not match:
@@ -610,10 +610,10 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     if not match:
       # whoops, it was important output, put it back.
       output.append(lastline)
-    
+
   # Convert the output into a tree.
   mytree = tree.build_tree_from_commit (output)
-    
+
   # Verify actual output against expected output.
   try:
     tree.compare_trees (mytree, output_tree)
@@ -621,7 +621,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       display_trees("Output of commit is unexpected.",
                     "OUTPUT TREE", output_tree, mytree)
       raise
-    
+
   # Verify via 'status' command too, if possible.
   if status_output_tree:
     run_and_verify_status(wc_dir_name, status_output_tree)
@@ -643,7 +643,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
 
-  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', 
+  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  wc_dir_name)
@@ -786,7 +786,7 @@ def duplicate_dir(wc_name, wc_copy_name):
 
   main.safe_rmtree(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
-  
+
 
 
 def get_virginal_state(wc_dir, rev):
