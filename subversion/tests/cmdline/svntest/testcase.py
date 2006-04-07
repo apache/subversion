@@ -81,13 +81,13 @@ class TestCase:
       print 'WARNING: Test doc string is capitalized'
 
   def need_sandbox(self):
-    return self.func_code().co_argcount != 0
+    return self._func_code().co_argcount != 0
 
   def get_sandbox_name(self):
-    filename = self.func_code().co_filename
+    filename = self._func_code().co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
-  def func_code(self):
+  def _func_code(self):
     return self.pred.func.func_code
 
   def list(self):
