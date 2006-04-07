@@ -667,44 +667,43 @@ class TestRunner:
       args = ()
 
     result = 0
-    if self.pred.cond:
-      print self.pred.skip_text(),
-    else:
-      try:
-        rc = apply(self.pred.func, args)
-        if rc is not None:
-          print 'STYLE ERROR in',
-          self._print_name()
-          print 'Test driver returned a status code.'
-          sys.exit(255)
-      except Skip, ex:
-        result = 2
-      except Failure, ex:
-        result = 1
-        # We captured Failure and its subclasses. We don't want to print
-        # anything for plain old Failure since that just indicates test
-        # failure, rather than relevant information. However, if there
-        # *is* information in the exception's arguments, then print it.
-        if ex.__class__ != Failure or ex.args:
-          ex_args = str(ex)
-          if ex_args:
-            print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
-          else:
-            print 'EXCEPTION:', ex.__class__.__name__
-      except KeyboardInterrupt:
-        print 'Interrupted'
-        sys.exit(0)
-      except SystemExit, ex:
-        print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
-        print ex.code and 'FAIL: ' or 'PASS: ',
+    try:
+      if self.pred.cond:
+        raise Skip
+      rc = apply(self.pred.func, args)
+      if rc is not None:
+        print 'STYLE ERROR in',
         self._print_name()
-        raise
-      except:
-        result = 1
-        print 'UNEXPECTED EXCEPTION:'
-        traceback.print_exc(file=sys.stdout)
-      print self.pred.run_text(result),
-      result = self.pred.convert_result(result)
+        print 'Test driver returned a status code.'
+        sys.exit(255)
+    except Skip, ex:
+      result = 2
+    except Failure, ex:
+      result = 1
+      # We captured Failure and its subclasses. We don't want to print
+      # anything for plain old Failure since that just indicates test
+      # failure, rather than relevant information. However, if there
+      # *is* information in the exception's arguments, then print it.
+      if ex.__class__ != Failure or ex.args:
+        ex_args = str(ex)
+        if ex_args:
+          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+        else:
+          print 'EXCEPTION:', ex.__class__.__name__
+    except KeyboardInterrupt:
+      print 'Interrupted'
+      sys.exit(0)
+    except SystemExit, ex:
+      print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
+      print ex.code and 'FAIL: ' or 'PASS: ',
+      self._print_name()
+      raise
+    except:
+      result = 1
+      print 'UNEXPECTED EXCEPTION:'
+      traceback.print_exc(file=sys.stdout)
+    print self.pred.run_text(result),
+    result = self.pred.convert_result(result)
     self._print_name()
     sys.stdout.flush()
     if sandbox is not None and not result and cleanup_mode:
