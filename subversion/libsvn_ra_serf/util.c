@@ -704,7 +704,7 @@ handler_default(serf_request_t *request,
         {
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                               _("Premature EOF seen from server."));
+                               _("Premature EOF seen from server"));
           return ctx->session->pending_error->apr_err;
         }
     }

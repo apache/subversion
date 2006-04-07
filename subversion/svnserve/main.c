@@ -183,7 +183,7 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  svn_error_clear(svn_cmdline_fputs(_("Usage: svnserve [options]\n"
+  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [options]\n"
                                       "\n"
                                       "Valid options:\n"),
                                     stdout, pool));

@@ -409,7 +409,7 @@ winservice_start(void)
       winservice_cleanup();
       return svn_error_wrap_apr
         (apr_status, _("The service failed to start; an internal error"
-                       " occurred while starting the service."));
+                       " occurred while starting the service"));
     }
 }
 
