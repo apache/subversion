@@ -45,9 +45,9 @@ from svntest import wc
 #     1) imports this 'svntest' package
 #
 #     2) contains a number of related 'test' routines.  (Each test
-#        routine should take no arguments, and return a 0 on success or
-#        non-zero on failure.  Each test should also contain a short
-#        docstring.)
+#        routine should take no arguments, and return None on success
+#        or throw a Failure exception on failure.  Each test should
+#        also contain a short docstring.)
 #
 #     3) places all the tests into a list that begins with None.
 #
