@@ -51,15 +51,15 @@ class _Predicate:
     return self.func.__doc__
 
   def check_description(self):
-    name = self.get_description()
-    if not name:
+    description = self.get_description()
+    if not description:
       raise Exception(self.func.__name__ + ' lacks required doc string')
 
-    if len(name) > 50:
+    if len(description) > 50:
       print 'WARNING: Test doc string exceeds 50 characters'
-    if name[-1] == '.':
+    if description[-1] == '.':
       print 'WARNING: Test doc string ends in a period (.)'
-    if not string.lower(name[0]) == name[0]:
+    if not string.lower(description[0]) == description[0]:
       print 'WARNING: Test doc string is capitalized'
 
   def list_mode(self):
