@@ -633,11 +633,6 @@ def _cleanup_test_path(path, retrying=None):
     _deferred_test_paths.append(path)
 
 
-class SVNTestStatusCodeError(Exception):
-  'Test driver returned a status code.'
-  pass
-
-
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
   runing the test and test list output."""
@@ -678,12 +673,10 @@ class TestRunner:
       try:
         rc = apply(self.pred.func, args)
         if rc is not None:
-          raise SVNTestStatusCodeError
-      except SVNTestStatusCodeError, ex:
-        print "STYLE ERROR in",
-        self._print_name()
-        print ex.__doc__
-        sys.exit(255)
+          print 'STYLE ERROR in',
+          self._print_name()
+          print 'Test driver returned a status code.'
+          sys.exit(255)
       except Skip, ex:
         result = 2
       except Failure, ex:
