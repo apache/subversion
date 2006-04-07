@@ -48,12 +48,13 @@ class _Predicate:
     assert type(self.func) is type(lambda x: 0)
 
   def get_description(self):
-    return self.func.__doc__
+    description = self.func.__doc__
+    if not description:
+      raise Exception(self.func.__name__ + ' lacks required doc string')
+    return description
 
   def check_description(self):
     description = self.get_description()
-    if not description:
-      raise Exception(self.func.__name__ + ' lacks required doc string')
 
     if len(description) > 50:
       print 'WARNING: Test doc string exceeds 50 characters'
