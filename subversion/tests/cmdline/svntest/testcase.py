@@ -50,6 +50,18 @@ class _Predicate:
   def get_description(self):
     return self.func.__doc__
 
+  def check_description(self):
+    name = self.get_description()
+    if not name:
+      raise Exception(self.func.__name__ + ' lacks required doc string')
+
+    if len(name) > 50:
+      print 'WARNING: Test doc string exceeds 50 characters'
+    if name[-1] == '.':
+      print 'WARNING: Test doc string ends in a period (.)'
+    if not string.lower(name[0]) == name[0]:
+      print 'WARNING: Test doc string is capitalized'
+
   def list_mode(self):
     return self.text[3]
 
@@ -96,18 +108,6 @@ class TestCase:
     self.pred = _Predicate(func)
     self.index = index
 
-  def _check_name(self):
-    name = self.pred.get_description()
-    if not name:
-      raise Exception(self.pred.func.__name__ + ' lacks required doc string')
-
-    if len(name) > 50:
-      print 'WARNING: Test doc string exceeds 50 characters'
-    if name[-1] == '.':
-      print 'WARNING: Test doc string ends in a period (.)'
-    if not string.lower(name[0]) == name[0]:
-      print 'WARNING: Test doc string is capitalized'
-
   def need_sandbox(self):
     return self._func_code().co_argcount != 0
 
@@ -122,12 +122,12 @@ class TestCase:
     print " %2d     %-5s  %s" % (self.index,
                                  self.pred.list_mode(),
                                  self.pred.get_description())
-    self._check_name()
+    self.pred.check_description()
 
   def _print_name(self):
     print os.path.basename(sys.argv[0]), str(self.index) + ":", \
           self.pred.get_description()
-    self._check_name()
+    self.pred.check_description()
 
   def run(self, args):
     """Run self.pred on ARGS, return the result.  The return value is
