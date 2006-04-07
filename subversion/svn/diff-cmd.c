@@ -179,7 +179,8 @@ svn_cl__diff(apr_getopt_t *os,
   else if (opt_state->new_target)
     {
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("'new' option only valid with 'old' option"));
+                              _("'--new' option only valid with "
+                                "'--old' option"));
     }
   else
     {
