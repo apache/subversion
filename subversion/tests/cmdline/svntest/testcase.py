@@ -21,7 +21,7 @@ import traceback # for print_exc()
 
 import svntest
 
-__all__ = ['TestCase', 'XFail', 'Skip']
+__all__ = ['XFail', 'Skip', 'TestCase']
 
 
 class SVNTestStatusCodeError(Exception):
@@ -58,6 +58,31 @@ class _Predicate:
 
   def convert_result(self, result):
     return result
+
+
+class XFail(_Predicate):
+  "A test that is expected to fail."
+
+  def __init__(self, func):
+    _Predicate.__init__(self, func)
+    self.text[0] = 'XPASS:'
+    self.text[1] = 'XFAIL:'
+    if self.text[3] == '':
+      self.text[3] = 'XFAIL'
+  def convert_result(self, result):
+    # Conditions are reversed here: a failure expected, therefore it
+    # isn't an error; a pass is an error.
+    return not result
+
+
+class Skip(_Predicate):
+  "A test that will be skipped when a condition is true."
+
+  def __init__(self, func, cond):
+    _Predicate.__init__(self, func)
+    self.cond = cond
+    if self.cond:
+      self.text[3] = 'SKIP'
 
 
 class TestCase:
@@ -151,30 +176,6 @@ class TestCase:
     self._print_name()
     sys.stdout.flush()
     return result
-
-
-class XFail(_Predicate):
-  "A test that is expected to fail."
-
-  def __init__(self, func):
-    _Predicate.__init__(self, func)
-    self.text[0] = 'XPASS:'
-    self.text[1] = 'XFAIL:'
-    if self.text[3] == '':
-      self.text[3] = 'XFAIL'
-  def convert_result(self, result):
-    # Conditions are reversed here: a failure expected, therefore it
-    # isn't an error; a pass is an error.
-    return not result
-
-class Skip(_Predicate):
-  "A test that will be skipped when a condition is true."
-
-  def __init__(self, func, cond):
-    _Predicate.__init__(self, func)
-    self.cond = cond
-    if self.cond:
-      self.text[3] = 'SKIP'
 
 
 ### End of file.
