@@ -646,12 +646,6 @@ class TestRunner:
     self.pred = testcase.create_predicate(func)
     self.index = index
 
-  def need_sandbox(self):
-    return self.pred.need_sandbox()
-
-  def get_sandbox_name(self):
-    return self.pred.get_sandbox_name()
-
   def list(self):
     print " %2d     %-5s  %s" % (self.index,
                                  self.pred.list_mode(),
@@ -669,9 +663,9 @@ class TestRunner:
         - 1 if it errored in a way that indicates test failure
         - 2 if the test skipped
         """
-    if self.need_sandbox():
+    if self.pred.need_sandbox():
       # ooh! this function takes a sandbox argument
-      sandbox = Sandbox(self.get_sandbox_name(), self.index)
+      sandbox = Sandbox(self.pred.get_sandbox_name(), self.index)
       args = (sandbox,)
     else:
       sandbox = None
