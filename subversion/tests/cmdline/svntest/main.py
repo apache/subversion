@@ -658,7 +658,7 @@ class TestRunner:
     self.pred.check_description()
 
   def run(self):
-    """Run self.pred on ARGS, return the result.  The return value is
+    """Run self.pred and return the result.  The return value is
         - 0 if the test was successful
         - 1 if it errored in a way that indicates test failure
         - 2 if the test skipped
