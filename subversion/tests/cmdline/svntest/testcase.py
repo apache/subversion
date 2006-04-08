@@ -17,7 +17,6 @@
 ######################################################################
 
 import os, sys, string
-import traceback # for print_exc()
 
 import svntest
 
