@@ -34,7 +34,6 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
-#include "svn_io.h"
 #include "svn_private_config.h"
 
 #include "ra_svn.h"
@@ -51,6 +50,9 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
 
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
+  conn->sock = sock;
+  conn->in_file = in_file;
+  conn->out_file = out_file;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -58,13 +60,6 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
   conn->pool = pool;
-
-  
-  if (sock != NULL)
-    svn_ra_svn__sock_streams(sock, &conn->in_stream, &conn->out_stream, pool);
-  else
-    svn_ra_svn__file_streams(in_file, out_file, &conn->in_stream,
-                             &conn->out_stream, pool);
   return conn;
 }
 
@@ -94,21 +89,45 @@ svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                        APR_HASH_KEY_STRING) != NULL);
 }
 
-void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
-                                   ra_svn_block_handler_t handler,
-                                   void *baton)
+void
+svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
+                              ra_svn_block_handler_t handler,
+                              void *baton)
 {
   apr_interval_time_t interval = (handler) ? 0 : -1;
 
   conn->block_handler = handler;
   conn->block_baton = baton;
-  svn_stream_timeout(conn->out_stream, interval);
+  if (conn->sock)
+    apr_socket_timeout_set(conn->sock, interval);
+  else
+    apr_file_pipe_timeout_set(conn->out_file, interval);
 }
 
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool)
 {
-  return svn_stream_data_pending(conn->in_stream);
+  apr_pollfd_t pfd;
+  int n;
+
+  if (conn->sock)
+    {
+      pfd.desc_type = APR_POLL_SOCKET;
+      pfd.desc.s = conn->sock;
+    }
+  else
+    {
+      pfd.desc_type = APR_POLL_FILE;
+      pfd.desc.f = conn->in_file;
+    }
+  pfd.p = pool;
+  pfd.reqevents = APR_POLLIN;
+#ifndef AS400
+  return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
+#else
+  /* OS400 requires a pool argument for apr_poll(). */
+  return ((apr_poll(&pfd, 1, &n, 0, pool) == APR_SUCCESS) && n);
+#endif
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -132,13 +151,19 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *data, apr_size_t len)
 {
   const char *end = data + len;
+  apr_status_t status;
   apr_size_t count;
   apr_pool_t *subpool = NULL;
 
   while (data < end)
     {
       count = end - data;
-      SVN_ERR(svn_stream_write(conn->out_stream, data, &count));
+      if (conn->sock)
+        status = apr_socket_send(conn->sock, data, &count);
+      else
+        status = apr_file_write(conn->out_file, data, &count);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't write to connection"));
       if (count == 0)
         {
           if (!subpool)
@@ -187,7 +212,7 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
-    __attribute__ ((format (printf, 3, 4)));
+  __attribute__ ((format(printf, 3, 4)));
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
 {
@@ -215,11 +240,23 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
   return data + copylen;
 }
 
-/* Read data from from input stream. */
+/* Read data from socket or input file as appropriate. */
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
                                   apr_size_t *len)
 {
-  SVN_ERR(svn_stream_read(conn->in_stream, data, len));
+  apr_status_t status;
+
+  /* Always block for reading. */
+  if (conn->sock && conn->block_handler)
+    apr_socket_timeout_set(conn->sock, -1);
+  if (conn->sock)
+    status = apr_socket_recv(conn->sock, data, len);
+  else
+    status = apr_file_read(conn->in_file, data, len);
+  if (conn->sock && conn->block_handler)
+    apr_socket_timeout_set(conn->sock, 0);
+  if (status && !APR_STATUS_IS_EOF(status))
+    return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             _("Connection closed unexpectedly"));
@@ -460,7 +497,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   char readbuf[4096];
   apr_size_t readbuf_len;
-  svn_stringbuf_t *stringbuf = svn_stringbuf_create ("", pool);
+  svn_stringbuf_t *stringbuf = svn_stringbuf_create("", pool);
 
   /* We can't store strings longer than the maximum size of apr_size_t,
    * so check for wrapping */

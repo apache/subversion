@@ -7,6 +7,9 @@ import sys
 import string
 
 import gen_base
+import generator.swig.header_wrappers
+import generator.swig.checkout_swig_header
+import generator.swig.external_runtime
 import generator.util.executable
 _exec = generator.util.executable
 
@@ -115,50 +118,29 @@ class Generator(gen_base.GeneratorBase):
     cfiles.sort()
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
-    ########################################
-    self.begin_section('SWIG header wrappers')
+    # this is here because autogen-standalone needs it too
+    self.ofile.write('SWIG_INCLUDES = -I$(abs_srcdir)/subversion/include \\\n'
+        '  -I$(abs_srcdir)/subversion/bindings/swig \\\n'
+        '  -I$(abs_srcdir)/subversion/bindings/swig/include \\\n'
+        '  -I$(abs_srcdir)/subversion/bindings/swig/proxy \\\n'
+        '  -I$(abs_builddir)/subversion/bindings/swig/proxy \\\n'
+        '  $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)\n\n')
 
-    for fname in self.includes:
-      wrapper_fname = build_path_join(self.swig.proxy_dir,
-        string.replace(build_path_basename(fname),".h","_h.swg"))
-      python_script = "$(abs_srcdir)/build/generator/swig/header_wrappers.py"
-      self.ofile.write(
-        '%s: %s %s\n\t$(PYTHON) %s %s $(SWIG) $<\n' % ( 
-          wrapper_fname, fname, python_script,
-          python_script, self.conf))
-      self.ofile.write(
-        'swig-headers: %s\n' % wrapper_fname +
-        'extraclean-swig-headers-%s:\n' % wrapper_fname + 
-        '\trm -f $(abs_srcdir)/%s\n' % wrapper_fname + 
-        'clean-swig-headers-%s:\n' % wrapper_fname + 
-        '\tif test $(abs_srcdir) != $(abs_builddir); then ' +
-        'rm -f $(abs_builddir)/%s; ' % wrapper_fname + 
-        'fi\n' +
-        'clean-swig-headers: clean-swig-headers-%s\n' % wrapper_fname +
-        'extraclean-swig-headers: extraclean-swig-headers-%s\n' % wrapper_fname
-      )
-    self.ofile.write('\n')
+    if self.release_mode:
+      self.ofile.write('RELEASE_MODE = 1\n\n')
+    
+    ########################################
+    self.begin_section('SWIG headers (wrappers and external runtimes)')
+
+    if not self.release_mode:
+      for swig in (generator.swig.header_wrappers,
+                   generator.swig.checkout_swig_header,
+                   generator.swig.external_runtime):
+        gen = swig.Generator(self.conf, "swig")
+        gen.write_makefile_rules(self.ofile)
 
     ########################################
-    self.begin_section('SWIG external runtime')
-
-    runtime_pattern = '%s/swig_%%s_external_runtime.swg' % self.swig.proxy_dir
-    python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
-    build_runtime = '$(PYTHON) %s ' % python_script + \
-      '$(abs_srcdir)/build.conf "$(SWIG)"'
-    runtimes = map(lambda lang: runtime_pattern % lang, self.swig_lang)
-    self.ofile.write(
-      '%s:\n' % " ".join(runtimes) +
-      '\t%s\n' % build_runtime +
-      'swig-headers: %s\n' % " ".join(runtimes) +
-      'extraclean-runtime:\n' +
-      '\trm -f %s\n' % " ".join(map(lambda x: "$(abs_srcdir)/" + x,
-        runtimes) + map(lambda x: "$(abs_builddir)/" + x, runtimes)) +
-      'extraclean-swig-headers: extraclean-runtime\n')
-    self.ofile.write('\n')
-
-    ########################################
-    self.begin_section('SWIG autogeneration rules')
+    self.begin_section('SWIG autogen rules')
 
     # write dependencies and build rules for generated .c files
     swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
@@ -172,28 +154,13 @@ class Generator(gen_base.GeneratorBase):
     for objname, sources in swig_c_deps:
       lang = objname.lang
       swig_lang_deps[lang].append(str(objname))
-      self.ofile.write(
-        'extraclean-swig-%s:\n' % objname +
-        '\trm -f $(abs_builddir)/%s $(abs_srcdir)/%s\n' % (objname, objname) +
-        'extraclean-swig-%s: extraclean-swig-%s\n' % (short[lang], objname) +
-        'clean-swig-%s:\n' % objname + 
-        '\tif test $(abs_srcdir) != $(abs_builddir); then ' +
-        'rm -f $(abs_builddir)/%s; ' % objname + 
-        'rm -f $(abs_builddir)/%s; ' % sources[0] + 
-        'fi\n' +
-        'clean-swig-headers: clean-swig-%s\n' % objname
-      ) 
     
     for lang in self.swig.langs:
       lang_deps = string.join(swig_lang_deps[lang])
       self.ofile.write(
-        'autogen-swig-%s: swig-headers %s\n' % (short[lang], lang_deps) +
-        'swig-%s: autogen-swig-%s\n' % (short[lang], short[lang]) +
+        'autogen-swig-%s: %s\n' % (short[lang], lang_deps) +
         'autogen-swig: autogen-swig-%s\n' % short[lang] +
-        'extraclean-swig-%s: extraclean-swig-headers\n' % short[lang] +
-        'clean-swig-%s: clean-swig-headers\n' % short[lang] +
-        'extraclean-swig-%s: clean-swig-%s\n' % (short[lang], short[lang]) +
-        'extraclean: extraclean-swig-%s\n' % short[lang])
+        '\n')
     self.ofile.write('\n')
     
     ########################################
@@ -204,19 +171,11 @@ class Generator(gen_base.GeneratorBase):
       source = str(sources[0])
       source_dir = build_path_dirname(source)
       opts = self.swig.opts[objname.lang]
-      self.ofile.write('%s: %s\n' % (objname, deps) +
-        '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
-        'cp -pf $(abs_srcdir)/%s/*.i ' % source_dir +
-        '$(abs_builddir)/%s; fi\n' % source_dir +
-        '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
-        '-o $@ $(abs_builddir)/%s\n' % source +
-        'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
-        'copy-swig-%s: %s\n' % (objname, objname) +
-        '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
-        '-e $(abs_srcdir)/%s -a ' % objname + 
-        '! -e $(abs_builddir)/%s; then ' % objname +
-        'cp -pf $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
-      )
+      if not self.release_mode:
+        self.ofile.write('%s: %s\n' % (objname, deps) +
+          '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
+          '-o $@ $(top_srcdir)/%s\n' % source
+        )
 
     self.ofile.write('\n')
 
@@ -252,6 +211,11 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(link_dep, gen_base.TargetLinked):
           if link_dep.external_lib:
             libs.append(link_dep.external_lib)
+          elif link_dep.external_project:
+            # FIXME: This is a temporary workaround to fix build breakage
+            # expeditiously.  It is of questionable validity for a build
+            # node to have external_project but not have external_lib.
+            pass
           else:
             # append the output of the target to our stated dependencies
             if not self.assume_shared_libs:
@@ -460,11 +424,13 @@ class Generator(gen_base.GeneratorBase):
           dirname, fname = build_path_splitfile(file)
           if area == 'locale':
             lang, objext = os.path.splitext(fname)
-            self.ofile.write('\tcd %s ; $(INSTALL_%s) %s '
-                             '$(DESTDIR)%s/%s/LC_MESSAGES/$(PACKAGE_NAME)%s\n'
-                             % (dirname, upper_var, fname,
-                                build_path_join('$(%sdir)' % area_var), lang,
-                                objext))
+            installdir = '$(DESTDIR)$(%sdir)/%s/LC_MESSAGES' % (area_var, lang)
+            self.ofile.write('\t$(MKDIR) %s\n'
+                             '\tcd %s ; $(INSTALL_%s) %s '
+                             '%s/$(PACKAGE_NAME)%s\n'
+                             % (installdir,
+                                dirname, upper_var, fname,
+                                installdir, objext))
           else:
             self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                              % (dirname, upper_var, fname,
@@ -534,20 +500,11 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
     standalone.write('abs_builddir = %s\n' % os.getcwd())
+    standalone.write('top_srcdir = .\n')
+    standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
-    swig_includes = ['-DSVN_SWIG_VERSION=%d' % self.swig.version(),
-                     '-Iapr/include', '-Iapr-util/include']
-    for dirs in self.include_dirs, self.swig_include_dirs:
-      for dir in string.split(string.strip(dirs)):
-        swig_includes.append("-I%s" % dir)
-        swig_includes.append("-I$(abs_srcdir)/%s" % dir)
-    if not os.path.exists("apr/include"):
-      try:
-        swig_includes.append("-I%s" % _exec.output("apr-config --includedir"))
-      except AssertionError:
-        pass
-    standalone.write('SWIG_INCLUDES = %s\n' % string.join(swig_includes))
+    standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
 

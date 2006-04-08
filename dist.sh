@@ -25,8 +25,8 @@
 #        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
 #        -apru ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
 #
-#   When building a alpha, beta or rc tarballs pass the apppropriate flag
-#   followeb by the number for that releasse.  For example you'd do
+#   When building alpha, beta or rc tarballs pass the appropriate flag
+#   followed by the number for that release.  For example you'd do
 #   the following for a Beta 1 release:
 #      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -beta 1
 # 
@@ -187,6 +187,11 @@ rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
 echo "Removed and recreated $DIST_SANDBOX"
 
+LC_ALL=C
+LANG=C
+export LC_ALL
+export LANG
+
 echo "Exporting revision $REVISION of Subversion into sandbox..."
 (cd "$DIST_SANDBOX" && \
  ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
@@ -235,45 +240,11 @@ install_dependency neon "$NEON_PATH"
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
-echo "Running ./autogen.sh in sandbox, to create ./configure ..."
-(cd "$DISTPATH" && ./autogen.sh --release) || exit 1
-
-if [ ! -f $DISTPATH/neon/configure ]; then
-  echo "Creating neon configure"
-  (cd "$DISTPATH/neon" && ./autogen.sh) || exit 1
-fi
-
-echo "Removing any autom4te.cache directories that might exist..."
-find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
-
-echo "Downloading book into sandbox..."
-
-BOOK_PDF=http://svnbook.red-bean.com/en/1.1/svn-book.pdf
-BOOK_HTML=http://svnbook.red-bean.com/en/1.1/svn-book.html
-
-# We don't include the book source in newer versions of our trees
-# so if the doc/book/book path doesn't exist then use doc/book
-if [ -d "$DISTPATH/doc/book/book" ]; then
-  BOOK_DEST="$DISTPATH/doc/book/book"
-else
-  BOOK_DEST="$DISTPATH/doc/book"
-fi
-
-$HTTP_FETCH $BOOK_PDF $HTTP_FETCH_OUTPUT "$BOOK_DEST/svn-book.pdf" ||
-  ( echo "ERROR: Problem getting the svn-book.pdf file." && exit 1 )
-
-$HTTP_FETCH $BOOK_HTML $HTTP_FETCH_OUTPUT "$BOOK_DEST/svn-book.html" ||
-  ( echo "ERROR: Problem getting the svn-book.html file." && exit 1 )
-
-cat > "$DISTPATH/ChangeLog.CVS" <<EOF
-The old CVS ChangeLog is kept at 
-
-     http://subversion.tigris.org/
-
-If you want to see changes since Subversion went self-hosting,
-you probably want to use the "svn log" command -- and if it 
-does not do what you need, please send in a patch!
-EOF
+# Massage the new version number into svn_version.h.  We need to do
+# this before running autogen.sh --release on the subversion code,
+# because otherwise svn_version.h's mtime makes SWIG files regenerate
+# on end-user's systems, when they should just be compiled by the
+# Release Manager and left at that.
 
 ver_major=`echo $VERSION | cut -d '.' -f 1`
 ver_minor=`echo $VERSION | cut -d '.' -f 2`
@@ -294,6 +265,27 @@ sed \
 mv -f "$vsn_file.tmp" "$vsn_file"
 
 cp "$vsn_file" "svn_version.h.dist"
+
+echo "Running ./autogen.sh in sandbox, to create ./configure ..."
+(cd "$DISTPATH" && ./autogen.sh --release) || exit 1
+
+if [ ! -f $DISTPATH/neon/configure ]; then
+  echo "Creating neon configure"
+  (cd "$DISTPATH/neon" && ./autogen.sh) || exit 1
+fi
+
+echo "Removing any autom4te.cache directories that might exist..."
+find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
+
+cat > "$DISTPATH/ChangeLog.CVS" <<EOF
+The old CVS ChangeLog is kept at 
+
+     http://subversion.tigris.org/
+
+If you want to see changes since Subversion went self-hosting,
+you probably want to use the "svn log" command -- and if it 
+does not do what you need, please send in a patch!
+EOF
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are

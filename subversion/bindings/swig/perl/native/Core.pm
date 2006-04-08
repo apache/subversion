@@ -3,8 +3,8 @@ use warnings;
 
 package SVN::Core;
 use SVN::Base qw(Core svn_ VERSION);
-$SVN::Core::VERSION = "$SVN::Core::VER_MAJOR.$SVN::Core::VER_MINOR." .
-                      "$SVN::Core::VER_MICRO";
+# Some build tool hates VERSION assign across two lines.
+$SVN::Core::VERSION = "$SVN::Core::VER_MAJOR.$SVN::Core::VER_MINOR.$SVN::Core::VER_MICRO";
 
 =head1 NAME
 
@@ -928,6 +928,15 @@ use SVN::Base qw(Core SVN_AUTH_SSL_);
 
 package _p_svn_lock_t;
 use SVN::Base qw(Core svn_lock_t_);
+
+package SVN::MD5;
+use overload
+    '""' => sub { SVN::Core::md5_digest_to_cstring(${$_[0]})};
+
+sub new {
+    my ($class, $digest) = @_;
+    bless \$digest, $class;
+}
 
 =head1 AUTHORS
 

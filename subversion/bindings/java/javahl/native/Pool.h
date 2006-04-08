@@ -38,7 +38,7 @@ class Pool
 public:
     Pool();
     ~Pool();
-    apr_pool_t * pool () const;
+    apr_pool_t * pool() const;
 private:
     /**
      * the apr pool request pool

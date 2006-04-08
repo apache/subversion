@@ -163,6 +163,12 @@ class Generator(gen_win.WinGeneratorBase):
                             depends=deplist,
                             ))
 
+    # the path name in the .sln template is already enclosed with ""
+    # therefore, remove them from the path itself
+    for target in targets:
+      target.path = string.rstrip(target.path, '"')
+      target.path = string.lstrip(target.path, '"')
+
     targets.sort(lambda x, y: cmp(x.name, y.name))
 
     configs = [ ]
@@ -182,7 +188,10 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
+    if self.vsnet_version == '9.00':
+      self.write_with_template('subversion_vcnet.sln', 'vc2005_sln.ezt', data)
+    else:
+      self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
 
 
 # compatibility with older Pythons:

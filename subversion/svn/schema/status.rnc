@@ -1,0 +1,62 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn status"
+
+# The DTD compatibility annotations namespace, used for adding default
+# attribute values.
+namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
+
+include "common.rnc"
+
+start = status
+
+status = element status { target* }
+
+target = element target { attlist.target, entry*, against? }
+attlist.target &=
+  ## The target path.
+  attribute path { string }
+
+## Status information for a path under the target.
+entry = element entry { attlist.entry, wc-status, repos-status? }
+attlist.entry &=
+  ## Path inside the target.
+  attribute path { text }
+
+## Status of the entry in the working copy.
+wc-status = element wc-status { attlist.wc-status, commit?, lock? }
+
+attlist.wc-status &=
+  ## Item/text status.
+  attribute item {
+    "added" | "conflicted" | "deleted" | "ignored" | "modified" | "replaced"
+    | "external" | "unversioned" | "incomplete" | "obstructed" | "normal"
+    | "none"
+  },
+  ## Properties status.
+  attribute props { "conflicted" | "modified" | "normal" | "none" },
+  ## Base revision number.
+  attribute revision { revnum.type }?,
+  ## WC directory locked.
+  [ a:defaultValue = "false" ]
+  attribute wc-locked { "true" | "false" }?,
+  ## Add with history.
+  [ a:defaultValue = "false" ]
+  attribute copied { "true" | "false" }?,
+  # Item switched relative to its parent.
+  [ a:defaultValue = "false" ]
+  attribute switched { "true" | "false" }?
+
+## Status in repository (if --update was specified).
+repos-status = element repos-status { attlist.repos-status, lock? }
+attlist.repos-status &=
+  ## Text/item status in the repository.
+  attribute item {
+    "added" | "deleted" | "modified" | "replaced" | "none"
+  },
+  ## Properties status in repository.
+  attribute props { "modified" | "none" }
+
+against = element against { attlist.against, empty }
+attlist.against &=
+  ## Revision number at which the repository information was obtained.
+  attribute revision { revnum.type }

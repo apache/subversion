@@ -27,7 +27,7 @@
 #endif // _MSC_VER > 1000
 
 #include <jni.h>
-#include <svn_auth.h>
+#include "svn_auth.h"
 #include <string>
 /**
  * This class requests username/password and informations about 

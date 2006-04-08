@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 112;
+use Test::More tests => 117;
 use strict;
 
 # shut up about variables that are only used once.
@@ -18,7 +18,7 @@ use File::Path qw(rmtree);
 
 # do not use cleanup because it will fail, some files we
 # will not have write perms to.
-my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
+my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repospath = catdir($testpath,'repo');
 my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')
@@ -161,6 +161,23 @@ is($ci_commit1->revision,$current_rev,
 # get rid of log_msg callback
 is($ctx->log_msg(undef),undef,
    'Clearing the log_msg callback works');
+
+# test info() on WC
+is($ctx->info("$wcpath/dir1/new", undef, 'WORKING',
+              sub
+              {
+                 my($infopath,$svn_info_t,$pool) = @_;
+                 is($infopath,"new",'path passed to receiver is same as WC');
+                 isa_ok($svn_info_t,'_p_svn_info_t');
+                 isa_ok($pool,'_p_apr_pool_t',
+                        'pool param is _p_apr_pool_t');
+              }, 0),
+   undef,
+   'info should return undef');
+
+isa_ok($ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0),
+       '_p_svn_error_t',
+       'info should return _p_svn_error_t for a nonexistent file');
 
 # test getting the log
 is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,

@@ -68,9 +68,11 @@ class PoolTestCase(unittest.TestCase):
     """Check that integer struct members work correctly"""
  
     # Test good integer assignment operations
-    head_revision = svn.core.svn_opt_revision_t()
-    head_revision.kind = svn.core.svn_opt_revision_head
-    self.assertEqual(head_revision.kind, svn.core.svn_opt_revision_head)
+    rev = svn.core.svn_opt_revision_t()
+    rev.kind = svn.core.svn_opt_revision_number
+    rev.value.number = 10
+    self.assertEqual(rev.kind, svn.core.svn_opt_revision_number)
+    self.assertEqual(rev.value.number, 10)
 
     # Test bad integer assignment operations
     def test_bad_assignment(self):

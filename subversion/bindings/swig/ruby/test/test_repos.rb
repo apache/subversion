@@ -111,6 +111,13 @@ class SvnReposTest < Test::Unit::TestCase
     end_rev = info3.revision
 
     logs = @repos.logs(file, start_rev, end_rev, end_rev - start_rev + 1)
+    logs = logs.collect do |changed_paths, revision, author, date, message|
+      paths = {}
+      changed_paths.each do |key, changed_path|
+        paths[key] = changed_path.action
+      end
+      [paths, revision, author, date, message]
+    end
     assert_equal([
                    [
                      {"/#{file}" => "A"},

@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include <svn_client.h>
+#include "svn_client.h"
 
 /**
  * this class holds a java callback object, which will receive every line of 
@@ -37,7 +37,7 @@ class BlameCallback
 public:
     BlameCallback(jobject jcallback);
     ~BlameCallback();
-    void callback(svn_revnum_t revision, const char *author,
+    svn_error_t *callback(svn_revnum_t revision, const char *author,
                       const char *date, const char *line, apr_pool_t *pool);
 private:
     /**

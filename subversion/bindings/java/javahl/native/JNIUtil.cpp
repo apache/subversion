@@ -26,9 +26,10 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include <svn_pools.h>
-#include <svn_config.h>
-#include <svn_path.h>
+#include "svn_pools.h"
+#include "svn_config.h"
+#include "svn_wc.h"
+#include "svn_path.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
 #ifdef WIN32
@@ -37,7 +38,7 @@
    that should be fine for now, but a better solution must be found in
    combination with issue #850. */
 extern "C" {
-#include "arch/win32/apr_arch_utf8.h"
+#include <arch/win32/apr_arch_utf8.h>
 };
 #endif
 
@@ -66,33 +67,41 @@ std::ofstream JNIUtil::g_logStream;
  */
 bool JNIUtil::JNIInit(JNIEnv *env)
 {
-    // the main part of this method has to be run only once during the run a 
+    // clear all standing exceptions.
+    env->ExceptionClear();
+
+    // remember the env paramater for the remainder of the request
+    setEnv(env);
+
+    // lock the list of finalized objects
+    JNICriticalSection cs(*g_finalizedObjectsMutex) ;
+    if(isExceptionThrown())
+    {
+        return false;
+    }
+
+    // delete all finalized, but not yet deleted objects
+    for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin(); 
+        it != g_finalizedObjects.end(); it++)
+    {
+        delete *it;
+    }
+    g_finalizedObjects.clear();
+
+    return true;
+}
+/**
+ * initialize the environment for all requests
+ * @param env   the JNI environment for this request
+ */
+bool JNIUtil::JNIGlobalInit(JNIEnv *env)
+{
+	// this method has to be run only once during the run a 
     // programm
     static bool run = false;
     if(run) // already run
     {
-        // clear all standing exceptions.
-        env->ExceptionClear();
-
-        // remember the env paramater for the remainder of the request
-        setEnv(env);
-
-        // lock the list of finalized objects
-        JNICriticalSection cs(*g_finalizedObjectsMutex) ;
-        if(isExceptionThrown())
-        {
-            return false;
-        }
-
-        // delete all finalized, but not yet deleted objects
-        for(std::list<SVNBase*>::iterator it = g_finalizedObjects.begin(); 
-            it != g_finalizedObjects.end(); it++)
-        {
-            delete *it;
-        }
-        g_finalizedObjects.clear();
-
-        return true;
+		return true;
     }
     run = true;
     // do not run this part more than one time. 
@@ -184,8 +193,8 @@ bool JNIUtil::JNIInit(JNIEnv *env)
         inwords = lstrlenW (ucs2_path);
         outbytes = outlength = 3 * (inwords + 1);
         utf8_path = (char *)apr_palloc (pool, outlength);
-        apr_err = apr_conv_ucs2_to_utf8 (ucs2_path, &inwords,
-                                         utf8_path, &outbytes);
+        apr_err = apr_conv_ucs2_to_utf8 ((const apr_wchar_t *) ucs2_path,
+                                         &inwords, utf8_path, &outbytes);
         if (!apr_err && (inwords > 0 || outbytes == 0))
           apr_err = APR_INCOMPLETE;
         if (apr_err)
@@ -211,6 +220,27 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 
     /* Create our top-level pool. */
     g_pool = svn_pool_create (NULL);
+
+#if defined(WIN32) || defined(__CYGWIN__)
+    /* See http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt */
+    /* ### This code really only needs to be invoked by consumers of
+       ### the libsvn_wc library, which basically means SVNClient. */
+    if (getenv ("SVN_ASP_DOT_NET_HACK"))
+    {
+        svn_error_t *err = svn_wc_set_adm_dir("_svn", g_pool);
+        if (err)
+        {
+            if (stderr)
+            {
+                fprintf(stderr,
+                        "%s: error: SVN_ASP_DOT_NET_HACK failed: %s\n",
+                        "svnjavahl", err->message);
+            }
+            svn_error_clear(err);
+            return FALSE;
+        }
+    }
+#endif
 
     // we use the default directory for config files
     // this can be changed later
@@ -279,7 +309,7 @@ JNIMutex *JNIUtil::getGlobalPoolMutex()
  */
 void JNIUtil::throwError(const char *message)
 {
-    if(getLogLevel() >= errorLog)
+    if (getLogLevel() >= errorLog)
     {
         JNICriticalSection cs(*g_logMutex);
         g_logStream << "Error thrown <" << message << ">" << std::endl;
@@ -375,28 +405,21 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     }
     env->Throw(static_cast<jthrowable>(error));
 }
-/**
- * put the object on the finalized object list
- * it will be deleted by another thread during the next request
- * @param cl    the C++ peer of the finalized object
- */
-void JNIUtil::putFinalizedClient(SVNBase *cl)
+
+void JNIUtil::putFinalizedClient(SVNBase *object)
 {
-    // log this, because the object should have disposed
-    if(getLogLevel() >= errorLog)
-    {
-        JNICriticalSection cs(*g_logMutex);
-        g_logStream << "a client object was not disposed" << std::endl;
-    }
-    JNICriticalSection cs(*g_finalizedObjectsMutex);
-    if(isExceptionThrown())
-    {
-        return;
-    }
-
-    g_finalizedObjects.push_back(cl);
-
+    enqueueForDeletion(object);
 }
+
+void JNIUtil::enqueueForDeletion(SVNBase *object)
+{
+    JNICriticalSection cs(*g_finalizedObjectsMutex);
+    if (!isExceptionThrown())
+    {
+        g_finalizedObjects.push_back(object);
+    }
+}
+
 /**
  * Handle an apr error (those are not expected) by throwing an error
  * @param error the apr error number
@@ -436,6 +459,7 @@ bool JNIUtil::isExceptionThrown()
  */
 void JNIUtil::setEnv(JNIEnv *env)
 {
+	JNIThreadData::pushNewThreadData();
     JNIThreadData *data = JNIThreadData::getThreadData();
     data->m_env = env;
     data->m_exceptionThrown = false;
@@ -705,10 +729,9 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
  */
 void JNIUtil::throwNullPointerException(const char *message)
 {
-    if(getLogLevel() >= errorLog)
+    if (getLogLevel() >= errorLog)
     {
-        JNICriticalSection cs(*g_logMutex);
-        g_logStream << "NullPointerException thrown" << std::endl;
+        logMessage("NullPointerException thrown");
     }
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/lang/NullPointerException");

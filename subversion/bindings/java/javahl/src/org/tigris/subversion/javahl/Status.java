@@ -592,9 +592,19 @@ public class Status
      * Revision#SVN_INVALID_REVNUM} if up to date.
      * @since 1.3
      */
-    public Revision getReposLastCmtRevision()
+    public Revision.Number getReposLastCmtRevision()
     {
         return Revision.createNumber(reposLastCmtRevision);
+    }
+
+    /**
+     * @return The last committed revision as a long integer, or
+     * <code>-1</code> if up to date.
+     * @since 1.3
+     */
+    public long getReposLastCmtRevisionNumber()
+    {
+        return reposLastCmtRevision;
     }
 
     /**

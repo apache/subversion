@@ -20,7 +20,4 @@ SVN::TxDelta::send_txstream ($txstream, @handle);
 
 is ($result, $tgttext, 'delta self test');
 
-TODO: {
-local $TODO = 'md5 to be populated.';
-is($md5, 'a22b3dadcbddac48d2f1eae3ec5fb86a', 'md5 matched');
-}
+is("$md5", 'a22b3dadcbddac48d2f1eae3ec5fb86a', 'md5 matched');

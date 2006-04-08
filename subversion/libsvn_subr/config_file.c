@@ -26,6 +26,7 @@
 #include "svn_types.h"
 #include "svn_path.h"
 #include "svn_auth.h"
+#include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_user.h"
@@ -41,90 +42,142 @@ typedef struct parse_context_t
   const char *file;
 
   /* The file descriptor */
-  FILE *fd;
+  svn_stream_t *stream;
 
   /* The current line in the file */
   int line;
+
+  /* Cached ungotten character  - streams don't support ungetc()
+     [emulate it] */
+  int ungotten_char;
+  svn_boolean_t have_ungotten_char;
 
   /* Temporary strings, allocated from the temp pool */
   svn_stringbuf_t *section;
   svn_stringbuf_t *option;
   svn_stringbuf_t *value;
-
-  /* Temporary pool parsing */
-  apr_pool_t *pool;
 } parse_context_t;
 
 
-/* Eat chars from FD until encounter non-whitespace, newline, or EOF.
+
+/* Emulate getc() because streams don't support it.
+ *
+ * In order to be able to ungetc(), use the CXT instead of the stream
+ * to be able to store the 'ungotton' character.
+ *
+ */
+static APR_INLINE svn_error_t *
+parser_getc(parse_context_t *ctx, int *c)
+{
+  if (ctx->have_ungotten_char)
+    {
+      *c = ctx->ungotten_char;
+      ctx->have_ungotten_char = FALSE;
+    }
+  else
+    {
+      char char_buf;
+      apr_size_t readlen = 1;
+
+      SVN_ERR(svn_stream_read(ctx->stream, &char_buf, &readlen));
+
+      if (readlen == 1)
+        *c = char_buf;
+      else
+        *c = EOF;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Emulate ungetc() because streams don't support it.
+ *
+ * Use CTX to store the ungotten character C.
+ */
+static APR_INLINE svn_error_t *
+parser_ungetc(parse_context_t *ctx, int c)
+{
+  ctx->ungotten_char = c;
+  ctx->have_ungotten_char = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Eat chars from STREAM until encounter non-whitespace, newline, or EOF.
    Set *PCOUNT to the number of characters eaten, not counting the
    last one, and return the last char read (the one that caused the
    break).  */
-static APR_INLINE int
-skip_whitespace (FILE* fd, int *pcount)
+static APR_INLINE svn_error_t *
+skip_whitespace(parse_context_t *ctx, int *c, int *pcount)
 {
-  int ch = getc (fd);
+  int ch;
   int count = 0;
-  while (ch != EOF && ch != '\n' && apr_isspace (ch))
+
+  SVN_ERR(parser_getc(ctx, &ch));
+  while (ch != EOF && ch != '\n' && apr_isspace(ch))
     {
       ++count;
-      ch = getc (fd);
+      SVN_ERR(parser_getc(ctx, &ch));
     }
   *pcount = count;
-  return ch;
+  *c = ch;
+  return SVN_NO_ERROR;
 }
 
 
 /* Skip to the end of the line (or file).  Returns the char that ended
    the line; the char is either EOF or newline. */
-static APR_INLINE int
-skip_to_eoln (FILE *fd)
+static APR_INLINE svn_error_t *
+skip_to_eoln(parse_context_t *ctx, int *c)
 {
-  int ch = getc (fd);
+  int ch;
+
+  SVN_ERR(parser_getc(ctx, &ch));
   while (ch != EOF && ch != '\n')
-    ch = getc (fd);
-  return ch;
+    SVN_ERR(parser_getc(ctx, &ch));
+
+  *c = ch;
+  return SVN_NO_ERROR;
 }
 
 
 /* Parse a single option value */
 static svn_error_t *
-parse_value (int *pch, parse_context_t *ctx)
+parse_value(int *pch, parse_context_t *ctx)
 {
   svn_boolean_t end_of_val = FALSE;
   int ch;
 
   /* Read the first line of the value */
-  svn_stringbuf_setempty (ctx->value);
-  for (ch = getc (ctx->fd); /* last ch seen was ':' or '=' in parse_option. */
-       ch != EOF && ch != '\n';
-       ch = getc (ctx->fd))
+  svn_stringbuf_setempty(ctx->value);
+  SVN_ERR(parser_getc(ctx, &ch));
+  while (ch != EOF && ch != '\n')
+    /* last ch seen was ':' or '=' in parse_option. */
     {
       const char char_from_int = ch;
-      svn_stringbuf_appendbytes (ctx->value, &char_from_int, 1);
+      svn_stringbuf_appendbytes(ctx->value, &char_from_int, 1);
+      SVN_ERR(parser_getc(ctx, &ch));
     }
   /* Leading and trailing whitespace is ignored. */
-  svn_stringbuf_strip_whitespace (ctx->value);
+  svn_stringbuf_strip_whitespace(ctx->value);
 
   /* Look for any continuation lines. */
   for (;;)
     {
+
       if (ch == EOF || end_of_val)
         {
-          if (!ferror (ctx->fd))
-            {
-              /* At end of file. The value is complete, there can't be
-                 any continuation lines. */
-              svn_config_set (ctx->cfg, ctx->section->data,
-                              ctx->option->data, ctx->value->data);
-            }
+          /* At end of file. The value is complete, there can't be
+             any continuation lines. */
+          svn_config_set(ctx->cfg, ctx->section->data,
+                         ctx->option->data, ctx->value->data);
           break;
         }
       else
         {
           int count;
           ++ctx->line;
-          ch = skip_whitespace (ctx->fd, &count);
+          SVN_ERR(skip_whitespace(ctx, &ch, &count));
 
           switch (ch)
             {
@@ -147,24 +200,23 @@ parse_value (int *pch, parse_context_t *ctx)
                      it's either a section, option or comment.  Put
                      the char back into the stream, because it doesn't
                      belong to us. */
-                  ungetc (ch, ctx->fd);
+                  SVN_ERR(parser_ungetc(ctx, ch));
                   end_of_val = TRUE;
                 }
               else
                 {
                   /* This is a continuation line. Read it. */
-                  svn_stringbuf_appendbytes (ctx->value, " ", 1);
+                  svn_stringbuf_appendbytes(ctx->value, " ", 1);
 
-                  for (;
-                       ch != EOF && ch != '\n';
-                       ch = getc (ctx->fd))
+                  while (ch != EOF && ch != '\n')
                     {
                       const char char_from_int = ch;
-                      svn_stringbuf_appendbytes (ctx->value,
-                                                 &char_from_int, 1);
+                      svn_stringbuf_appendbytes(ctx->value,
+                                                &char_from_int, 1);
+                      SVN_ERR(parser_getc(ctx, &ch));
                     }
                   /* Trailing whitespace is ignored. */
-                  svn_stringbuf_strip_whitespace (ctx->value);
+                  svn_stringbuf_strip_whitespace(ctx->value);
                 }
             }
         }
@@ -177,34 +229,33 @@ parse_value (int *pch, parse_context_t *ctx)
 
 /* Parse a single option */
 static svn_error_t *
-parse_option (int *pch, parse_context_t *ctx)
+parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
 
-  svn_stringbuf_setempty (ctx->option);
-  for (ch = *pch;               /* Yes, the first char is relevant. */
-       ch != EOF && ch != ':' && ch != '=' && ch != '\n';
-       ch = getc (ctx->fd))
+  svn_stringbuf_setempty(ctx->option);
+  ch = *pch;   /* Yes, the first char is relevant. */
+  while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
       const char char_from_int = ch;
-      svn_stringbuf_appendbytes (ctx->option, &char_from_int, 1);
+      svn_stringbuf_appendbytes(ctx->option, &char_from_int, 1);
+      SVN_ERR(parser_getc(ctx, &ch));
     }
 
   if (ch != ':' && ch != '=')
     {
       ch = EOF;
-      err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                               "%s:%d: Option must end with ':' or '='",
-                               svn_path_local_style (ctx->file,
-                                                     ctx->cfg->pool),
-                               ctx->line);
+      err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
+                              "%s:%d: Option must end with ':' or '='",
+                              svn_path_local_style(ctx->file, pool),
+                              ctx->line);
     }
   else
     {
       /* Whitespace around the name separator is ignored. */
-      svn_stringbuf_strip_whitespace (ctx->option);
-      err = parse_value (&ch, ctx);
+      svn_stringbuf_strip_whitespace(ctx->option);
+      err = parse_value(&ch, ctx);
     }
 
   *pch = ch;
@@ -221,33 +272,32 @@ parse_option (int *pch, parse_context_t *ctx)
  * starts a section name.
  */
 static svn_error_t *
-parse_section_name (int *pch, parse_context_t *ctx)
+parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
 
-  svn_stringbuf_setempty (ctx->section);
-  for (ch = getc (ctx->fd);
-       ch != EOF && ch != ']' && ch != '\n';
-       ch = getc (ctx->fd))
+  svn_stringbuf_setempty(ctx->section);
+  SVN_ERR(parser_getc(ctx, &ch));
+  while (ch != EOF && ch != ']' && ch != '\n')
     {
       const char char_from_int = ch;
-      svn_stringbuf_appendbytes (ctx->section, &char_from_int, 1);
+      svn_stringbuf_appendbytes(ctx->section, &char_from_int, 1);
+      SVN_ERR(parser_getc(ctx, &ch));
     }
 
   if (ch != ']')
     {
       ch = EOF;
-      err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                               "%s:%d: Section header must end with ']'",
-                               svn_path_local_style (ctx->file,
-                                                     ctx->cfg->pool),
-                               ctx->line);
+      err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
+                              "%s:%d: Section header must end with ']'",
+                              svn_path_local_style(ctx->file, pool),
+                              ctx->line);
     }
   else
     {
       /* Everything from the ']' to the end of the line is ignored. */
-      ch = skip_to_eoln (ctx->fd);
+      SVN_ERR(skip_to_eoln(ctx, &ch));
       if (ch != EOF)
         ++ctx->line;
     }
@@ -258,9 +308,9 @@ parse_section_name (int *pch, parse_context_t *ctx)
 
 
 svn_error_t *
-svn_config__sys_config_path (const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool)
+svn_config__sys_config_path(const char **path_p,
+                            const char *fname,
+                            apr_pool_t *pool)
 {
   /* ### This never actually returns error in practice.  Perhaps the
      prototype should change? */
@@ -272,14 +322,14 @@ svn_config__sys_config_path (const char **path_p,
 #ifdef WIN32
   {
     const char *folder;
-    SVN_ERR (svn_config__win_config_path (&folder, TRUE, pool));
-    *path_p = svn_path_join_many (pool, folder,
-                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+    SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
+    *path_p = svn_path_join_many(pool, folder,
+                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
 #else  /* ! WIN32 */
 
- *path_p = svn_path_join_many (pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+  *path_p = svn_path_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
 #endif /* WIN32 */
 
@@ -288,10 +338,10 @@ svn_config__sys_config_path (const char **path_p,
 
 
 svn_error_t *
-svn_config__user_config_path (const char *config_dir,
-                              const char **path_p,
-                              const char *fname,
-                              apr_pool_t *pool)
+svn_config__user_config_path(const char *config_dir,
+                             const char **path_p,
+                             const char *fname,
+                             apr_pool_t *pool)
 {
   /* ### This never actually returns error in practice.  Perhaps the
      prototype should change? */
@@ -309,19 +359,19 @@ svn_config__user_config_path (const char *config_dir,
 #ifdef WIN32
   {
     const char *folder;
-    SVN_ERR (svn_config__win_config_path (&folder, FALSE, pool));
-    *path_p = svn_path_join_many (pool, folder,
-                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
+    *path_p = svn_path_join_many(pool, folder,
+                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
 #else  /* ! WIN32 */
   {
-    const char *homedir = svn_user_get_homedir (pool); 
+    const char *homedir = svn_user_get_homedir(pool); 
     if (! homedir)
       return SVN_NO_ERROR;
-    *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (homedir, pool),
-                                  SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+    *path_p = svn_path_join_many(pool,
+                                 svn_path_canonicalize(homedir, pool),
+                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
   }
 #endif /* WIN32 */
 
@@ -332,94 +382,67 @@ svn_config__user_config_path (const char *config_dir,
 
 /*** Exported interfaces. ***/
 
-#ifndef WIN32
-svn_error_t *
-svn_config__open_file (FILE **pfile,
-                       const char *filename,
-                       const char *mode,
-                       apr_pool_t *pool)
-{
-  const char *filename_native;
-  SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native, filename, pool));
-  *pfile = fopen (filename_native, mode);
-  return SVN_NO_ERROR;
-}
-#endif /* WIN32 */
-
 
 svn_error_t *
-svn_config__parse_file (svn_config_t *cfg, const char *file,
-                        svn_boolean_t must_exist)
+svn_config__parse_file(svn_config_t *cfg, const char *file,
+                       svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  apr_pool_t *pool = svn_pool_create (cfg->pool);
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
-  FILE *fd;
-  /* "Why," you ask yourself, "is he using stdio FILE's instead of
-     apr_file_t's?"  The answer is simple: newline translation.  For
-     all that it has an APR_BINARY flag, APR doesn't do newline
-     translation in files.  The only portable way I know to get
-     translated text files is to use the standard stdio library. */
+  apr_file_t *f;
 
-  SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));
-  if (fd == NULL)
+  /* No need for buffering; a translated stream buffers */
+  err = svn_io_file_open(&f, file, APR_BINARY | APR_READ,
+                         APR_OS_DEFAULT, pool);
+
+  if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
-      if (errno != ENOENT)
-        return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  _("Can't open config file '%s'"),
-                                  svn_path_local_style (file, pool));
-      else if (must_exist && errno == ENOENT)
-        return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  _("Can't find config file '%s'"),
-                                  svn_path_local_style (file, pool));
-      else
-        return SVN_NO_ERROR;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR(err);
 
   ctx.cfg = cfg;
   ctx.file = file;
-  ctx.fd = fd;
+  ctx.stream = svn_subst_stream_translated(svn_stream_from_aprfile(f, pool),
+                                           "\n", TRUE, NULL, FALSE, pool);
   ctx.line = 1;
-  ctx.pool = pool;
-  ctx.section = svn_stringbuf_create("", ctx.pool);
-  ctx.option = svn_stringbuf_create("", ctx.pool);
-  ctx.value = svn_stringbuf_create("", ctx.pool);
+  ctx.have_ungotten_char = FALSE;
+  ctx.section = svn_stringbuf_create("", pool);
+  ctx.option = svn_stringbuf_create("", pool);
+  ctx.value = svn_stringbuf_create("", pool);
 
   do
     {
-      ch = skip_whitespace (fd, &count);
+      SVN_ERR(skip_whitespace(&ctx, &ch, &count));
+
       switch (ch)
         {
         case '[':               /* Start of section header */
           if (count == 0)
-            err = parse_section_name (&ch, &ctx);
+            SVN_ERR(parse_section_name(&ch, &ctx, pool));
           else
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Section header"
-                                       " must start in the first column",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
+                                     "%s:%d: Section header"
+                                     " must start in the first column",
+                                     svn_path_local_style(file, pool),
+                                     ctx.line);
           break;
 
         case '#':               /* Comment */
           if (count == 0)
             {
-              ch = skip_to_eoln(fd);
+              SVN_ERR(skip_to_eoln(&ctx, &ch));
               ++ctx.line;
             }
           else
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Comment"
-                                       " must start in the first column",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
+                                     "%s:%d: Comment"
+                                     " must start in the first column",
+                                     svn_path_local_style(file, pool),
+                                     ctx.line);
           break;
 
         case '\n':              /* Empty line */
@@ -430,40 +453,28 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
           break;
 
         default:
-          if (svn_stringbuf_isempty (ctx.section))
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Section header expected",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+          if (svn_stringbuf_isempty(ctx.section))
+            return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
+                                     "%s:%d: Section header expected",
+                                     svn_path_local_style(file, pool),
+                                     ctx.line);
           else if (count != 0)
-            {
-              ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
-                                       "%s:%d: Option expected",
-                                       svn_path_local_style (file, pool),
-                                       ctx.line);
-            }
+            return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
+                                     "%s:%d: Option expected",
+                                     svn_path_local_style(file, pool),
+                                     ctx.line);
           else
-            err = parse_option (&ch, &ctx);
+            SVN_ERR(parse_option(&ch, &ctx, pool));
           break;
         }
     }
   while (ch != EOF);
 
-  if (ferror (fd))
-    {
-      err = svn_error_createf (-1, /* FIXME: Wrong error code. */
-                               NULL,
-                               "%s:%d: Read error",
-                               svn_path_local_style (file, pool), ctx.line);
-    }
+  /* Close the file and streams (and other cleanup): */
+  SVN_ERR(svn_stream_close(ctx.stream));
+  SVN_ERR(svn_io_file_close(f, pool));
 
-  svn_pool_destroy (ctx.pool);
-  fclose (fd);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -472,27 +483,27 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
    failure.  PATH is assumed to be a path to the user's private config
    directory. */
 static void
-ensure_auth_dirs (const char *path,
-                  apr_pool_t *pool)
+ensure_auth_dirs(const char *path,
+                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *auth_dir, *auth_subdir;
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
-  auth_dir = svn_path_join_many (pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
-  err = svn_io_check_path (auth_dir, &kind, pool);
+  auth_dir = svn_path_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  err = svn_io_check_path(auth_dir, &kind, pool);
   if (err || kind == svn_node_none)
     {
-      svn_error_clear (err);
+      svn_error_clear(err);
       /* 'chmod 700' permissions: */
-      err = svn_io_dir_make (auth_dir,
-                             (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
-                             pool);
+      err = svn_io_dir_make(auth_dir,
+                            (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
+                            pool);
       if (err)
         {
           /* Don't try making subdirs if we can't make the top-level dir. */
-          svn_error_clear (err);
+          svn_error_clear(err);
           return;
         }
     }
@@ -500,56 +511,56 @@ ensure_auth_dirs (const char *path,
   /* If a provider exists that wants to store credentials in
      ~/.subversion, a subdirectory for the cred_kind must exist. */
 
-  auth_subdir = svn_path_join_many (pool, auth_dir,
-                                    SVN_AUTH_CRED_SIMPLE, NULL);
-  err = svn_io_check_path (auth_subdir, &kind, pool);
+  auth_subdir = svn_path_join_many(pool, auth_dir,
+                                   SVN_AUTH_CRED_SIMPLE, NULL);
+  err = svn_io_check_path(auth_subdir, &kind, pool);
   if (err || kind == svn_node_none)
     {
-      svn_error_clear (err);
-      svn_error_clear (svn_io_dir_make (auth_subdir, APR_OS_DEFAULT, pool));
+      svn_error_clear(err);
+      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
     }
       
-  auth_subdir = svn_path_join_many (pool, auth_dir,
-                                    SVN_AUTH_CRED_USERNAME, NULL);
-  err = svn_io_check_path (auth_subdir, &kind, pool);
+  auth_subdir = svn_path_join_many(pool, auth_dir,
+                                   SVN_AUTH_CRED_USERNAME, NULL);
+  err = svn_io_check_path(auth_subdir, &kind, pool);
   if (err || kind == svn_node_none)
     {
-      svn_error_clear (err);
-      svn_error_clear (svn_io_dir_make (auth_subdir, APR_OS_DEFAULT, pool));
+      svn_error_clear(err);
+      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
     }
 
-  auth_subdir = svn_path_join_many (pool, auth_dir,
-                                    SVN_AUTH_CRED_SSL_SERVER_TRUST, NULL);
-  err = svn_io_check_path (auth_subdir, &kind, pool);
+  auth_subdir = svn_path_join_many(pool, auth_dir,
+                                   SVN_AUTH_CRED_SSL_SERVER_TRUST, NULL);
+  err = svn_io_check_path(auth_subdir, &kind, pool);
   if (err || kind == svn_node_none)
     {
-      svn_error_clear (err);
-      svn_error_clear (svn_io_dir_make (auth_subdir, APR_OS_DEFAULT, pool));
+      svn_error_clear(err);
+      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
     }
 }
 
 
 svn_error_t *
-svn_config_ensure (const char *config_dir, apr_pool_t *pool)
+svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 {
   const char *path;
   svn_node_kind_t kind;
   svn_error_t *err;
 
   /* Ensure that the user-specific config directory exists.  */
-  SVN_ERR (svn_config__user_config_path (config_dir, &path, NULL, pool));
+  SVN_ERR(svn_config__user_config_path(config_dir, &path, NULL, pool));
 
   if (! path)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_none)
     {
-      err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
+      err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
       if (err)
         {
           /* Don't throw an error, but don't continue. */
-          svn_error_clear (err);
+          svn_error_clear(err);
           return SVN_NO_ERROR;
         }
     }
@@ -558,7 +569,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
       /* ### config directory already exists, but for the sake of
          smooth upgrades, try to ensure that the auth/ subdirs exist
          as well.  we can remove this check someday in the future. */
-      ensure_auth_dirs (path, pool);
+      ensure_auth_dirs(path, pool);
 
       return SVN_NO_ERROR;
     }
@@ -570,16 +581,16 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
      something's preventing it. */
 
   /** If non-existent, try to create a number of auth/ subdirectories. */
-  ensure_auth_dirs (path, pool);
+  ensure_auth_dirs(path, pool);
 
   /** Ensure that the `README.txt' file exists. **/
-  SVN_ERR (svn_config__user_config_path
-           (config_dir, &path, SVN_CONFIG__USR_README_FILE, pool));
+  SVN_ERR(svn_config__user_config_path
+          (config_dir, &path, SVN_CONFIG__USR_README_FILE, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path(path, &kind, pool);
   if (err)
     return SVN_NO_ERROR;
 
@@ -804,29 +815,29 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    APR_EOL_STR
    APR_EOL_STR;
 
-      err = svn_io_file_open (&f, path,
-                              (APR_WRITE | APR_CREATE | APR_EXCL),
-                              APR_OS_DEFAULT,
-                              pool);
+      err = svn_io_file_open(&f, path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             pool);
 
       if (! err)
         {
-          SVN_ERR (svn_io_file_write_full (f, contents, 
-                                           strlen (contents), NULL, pool));
-          SVN_ERR (svn_io_file_close (f, pool));
+          SVN_ERR(svn_io_file_write_full(f, contents, 
+                                         strlen(contents), NULL, pool));
+          SVN_ERR(svn_io_file_close(f, pool));
         }
 
-      svn_error_clear (err);
+      svn_error_clear(err);
     }
 
   /** Ensure that the `servers' file exists. **/
-  SVN_ERR (svn_config__user_config_path
-           (config_dir, &path, SVN_CONFIG_CATEGORY_SERVERS, pool));
+  SVN_ERR(svn_config__user_config_path
+          (config_dir, &path, SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path(path, &kind, pool);
   if (err)
     return SVN_NO_ERROR;
   
@@ -983,29 +994,29 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"
         APR_EOL_STR;
 
-      err = svn_io_file_open (&f, path,
-                              (APR_WRITE | APR_CREATE | APR_EXCL),
-                              APR_OS_DEFAULT,
-                              pool);
+      err = svn_io_file_open(&f, path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             pool);
 
       if (! err)
         {
-          SVN_ERR (svn_io_file_write_full (f, contents, 
-                                           strlen (contents), NULL, pool));
-          SVN_ERR (svn_io_file_close (f, pool));
+          SVN_ERR(svn_io_file_write_full(f, contents, 
+                                         strlen(contents), NULL, pool));
+          SVN_ERR(svn_io_file_close(f, pool));
         }
 
-      svn_error_clear (err);
+      svn_error_clear(err);
     }
 
   /** Ensure that the `config' file exists. **/
-  SVN_ERR (svn_config__user_config_path
-           (config_dir, &path, SVN_CONFIG_CATEGORY_CONFIG, pool));
+  SVN_ERR(svn_config__user_config_path
+          (config_dir, &path, SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path(path, &kind, pool);
   if (err)
     return SVN_NO_ERROR;
   
@@ -1214,19 +1225,19 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         APR_EOL_STR;
         
-      err = svn_io_file_open (&f, path,
-                              (APR_WRITE | APR_CREATE | APR_EXCL),
-                              APR_OS_DEFAULT,
-                              pool);
+      err = svn_io_file_open(&f, path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             pool);
 
       if (! err)
         {
-          SVN_ERR (svn_io_file_write_full (f, contents, 
-                                           strlen (contents), NULL, pool));
-          SVN_ERR (svn_io_file_close (f, pool));
+          SVN_ERR(svn_io_file_write_full(f, contents, 
+                                         strlen(contents), NULL, pool));
+          SVN_ERR(svn_io_file_close(f, pool));
         }
 
-      svn_error_clear (err);
+      svn_error_clear(err);
     }
 
   return SVN_NO_ERROR;

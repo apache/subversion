@@ -61,9 +61,16 @@ AC_DEFUN(SVN_FIND_JDK,
   dnl /System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Commands
   dnl See http://developer.apple.com/qa/qa2001/qa1170.html
   os_arch="`uname`"
-  if test "$os_arch" = "Darwin" -a "$JDK" = "/usr" -a -d "/Library/Java/Home"; then
+  if test "$os_arch" = "Darwin" && test "$JDK" = "/usr" &&
+     test -d "/Library/Java/Home"; then
       JDK="/Library/Java/Home"
   fi
+  if test "$os_arch" = "Darwin" && test "$JDK" = "/Library/Java/Home"; then
+      JRE_LIB_DIR="/System/Library/Frameworks/JavaVM.framework/Classes"
+  else
+      JRE_LIB_DIR="$JDK/jre/lib"
+  fi
+
   if test -f "$JDK/include/jni.h"; then
     dnl This *must* be fully expanded, or we'll have problems later in find.
     JNI_INCLUDEDIR="$JDK/include"
@@ -94,7 +101,7 @@ AC_DEFUN(SVN_FIND_JDK,
                                 look for jikes (PATH optional).  This behavior
                                 can be switched off by supplying 'no'.]),
     [
-        if test "$withval" != "no" -a "$withval" != "yes"; then
+        if test "$withval" != "no" && test "$withval" != "yes"; then
           dnl Assume a path was provided.
           jikes_options="$withval $jikes_options"
         fi
@@ -103,22 +110,22 @@ AC_DEFUN(SVN_FIND_JDK,
     if test "$requested_jikes" != "no"; then
       dnl Look for a usable jikes binary.
       for jikes in $jikes_options; do
-        if test -z "$jikes_found" -a -x "$jikes"; then
+        if test -z "$jikes_found" && test -x "$jikes"; then
           jikes_found="yes"
           JAVAC="$jikes"
-          JAVA_CLASSPATH="$JDK/jre/lib"
-          for jar in $JDK/jre/lib/*.jar; do
+          JAVA_CLASSPATH="$JRE_LIB_DIR"
+          for jar in $JRE_LIB_DIR/*.jar; do
             JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
           done
         fi
       done
     fi
-    if test -n "$requested_jikes" -a "$requested_jikes" != "no"; then
+    if test -n "$requested_jikes" && test "$requested_jikes" != "no"; then
       dnl Jikes was explicitly requested.  Verify that it was provided.
       if test -z "$jikes_found"; then
         AC_MSG_ERROR([Could not find a usable version of Jikes])
-      elif test -n "$jikes_found" -a "$requested_jikes" != "yes" \
-                -a "$JAVAC" != "$requested_jikes"; then
+      elif test -n "$jikes_found" && test "$requested_jikes" != "yes" &&
+           test "$JAVAC" != "$requested_jikes"; then
         AC_MSG_WARN([--with-jikes PATH was invalid, substitute found])
       fi
     fi

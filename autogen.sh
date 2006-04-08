@@ -5,11 +5,13 @@
 
 # Run tests to ensure that our build requirements are met
 RELEASE_MODE=""
+RELEASE_ARGS=""
 SKIP_DEPS=""
 while test $# != 0; do
   case "$1" in
     --release)
       RELEASE_MODE="$1"
+      RELEASE_ARGS="--release"
       shift
       ;;
     -s)
@@ -30,9 +32,6 @@ done
 # ### same reason, all parameters should be quoted, so that buildcheck.sh
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
-
-### temporary cleanup during transition to libtool 1.4
-(cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
 
 #
 # Handle some libtool helper files
@@ -59,7 +58,7 @@ if [ ! -f $ltfile ]; then
 fi
 
 echo "Copying libtool helper: $ltfile"
-cp $ltfile ac-helpers/libtool.m4
+cp $ltfile build/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.
 #
@@ -76,33 +75,39 @@ if test -z "$PYTHON"; then
   exit 1
 fi
 
+# Compile SWIG headers into standalone C files if we are in release mode
+if test -n "$RELEASE_MODE"; then
+  echo "Generating SWIG code..."
+  # Generate build-outputs.mk in non-release-mode, so that we can
+  # build the SWIG-related files
+  "$PYTHON" ./gen-make.py build.conf || gen_failed=1
+
+  # Build the SWIG-related files
+  make -f autogen-standalone.mk autogen-swig
+fi
+
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
-  "$PYTHON" ./gen-make.py -s build.conf || gen_failed=1
+  "$PYTHON" ./gen-make.py $RELEASE_ARGS -s build.conf || gen_failed=1
 
   ### if apr and apr-util are not subdirs, then this fails. only do it
   ### for the release (from dist.sh; for now)
   if test -n "$RELEASE_MODE"; then
     echo "Creating MSVC files (no dependencies)..."
-    "$PYTHON" ./gen-make.py -t dsp -s build.conf || gen_failed=1
+    "$PYTHON" ./gen-make.py $RELEASE_ARGS -t dsp -s build.conf || gen_failed=1
   fi
 else
   echo "Creating build-outputs.mk..."
-  "$PYTHON" ./gen-make.py build.conf || gen_failed=1
+  "$PYTHON" ./gen-make.py $RELEASE_ARGS build.conf || gen_failed=1
 
   ### if apr and apr-util are not subdirs, then this fails. only do it
   ### for the release (from dist.sh; for now)
   if test -n "$RELEASE_MODE"; then
     echo "Creating MSVC files..."
-    "$PYTHON" ./gen-make.py -t dsp -s build.conf || gen_failed=1
+    "$PYTHON" ./gen-make.py $RELEASE_ARGS -t dsp -s build.conf || gen_failed=1
   fi
 fi
 
-# Compile SWIG headers into standalone C files if we are in release mode
-if test -n "$RELEASE_MODE"; then
-  echo "Generating SWIG code..."
-  make -f autogen-standalone.mk autogen-swig
-fi
 rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then

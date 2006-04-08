@@ -56,7 +56,8 @@ AC_DEFUN(SVN_LIB_NEON,
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do
-        if test "$NEON_VERSION" = "$svn_allowed_neon" -o $svn_allowed_neon = "any"; then
+        if test "$NEON_VERSION" = "$svn_allowed_neon" ||
+           test "$svn_allowed_neon" = "any"; then
           echo "Using neon found in source directory."
           svn_allowed_neon_in_srcdir="yes"
           SVN_NEON_INCLUDES=-'I$(abs_srcdir)/neon/src'
@@ -80,7 +81,7 @@ dnl Configure neon --------------------------
           if test -f "$abs_builddir/apr-util/xml/expat/lib/expat.h" ; then
             args="$args --with-expat='$abs_builddir/apr-util/xml/expat/lib/libexpat.la'"
           fi
-          SVN_SUBDIR_CONFIG(neon, $args)
+          SVN_EXTERNAL_PROJECT([neon], [$args])
 
           if test -f "$abs_builddir/neon/neon-config" ; then
             # Also find out which macros neon defines (but ignore extra include paths):
@@ -90,7 +91,6 @@ dnl Configure neon --------------------------
             svn_lib_neon="yes"
           fi
 
-          SVN_SUBDIRS="$SVN_SUBDIRS neon"
           break
         fi
       done
@@ -129,7 +129,8 @@ AC_DEFUN(SVN_NEON_CONFIG,
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do
-        if test "$NEON_VERSION" = "$svn_allowed_neon" -o $svn_allowed_neon = "any"; then
+        if test "$NEON_VERSION" = "$svn_allowed_neon" ||
+           test "$svn_allowed_neon" = "any"; then
             svn_allowed_neon_on_system="yes"
             SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
             NEON_LIBS=`$neon_config --la-file`

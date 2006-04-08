@@ -3,6 +3,7 @@ require "svn/error"
 require "svn/util"
 require "svn/core"
 require "svn/fs"
+require "svn/client"
 require "svn/ext/repos"
 
 module Svn

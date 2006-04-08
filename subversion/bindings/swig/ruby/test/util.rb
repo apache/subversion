@@ -14,7 +14,8 @@ module SvnTestUtil
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_path = File.join("test", "wc")
+    @wc_base_dir = File.join("test", "wc-tmp")
+    @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = File.join("test", "tmp")
     @config_path = File.join("test", "config")
@@ -48,6 +49,26 @@ module SvnTestUtil
       puts "after pools: #{after_pools}"
       STDOUT.flush
     end
+  end
+
+  def change_gc_status(prev_disabled)
+    begin
+      yield
+    ensure
+      if prev_disabled
+        GC.disable
+      else
+        GC.enable
+      end
+    end
+  end
+  
+  def gc_disable(&block)
+    change_gc_status(GC.disable, &block)
+  end
+
+  def gc_enable(&block)
+    change_gc_status(GC.enable, &block)
   end
 
   def setup_tmp(path=@tmp_path)
@@ -117,7 +138,7 @@ module SvnTestUtil
   end
 
   def teardown_wc
-    FileUtils.rm_rf(@wc_path)
+    FileUtils.rm_rf(@wc_base_dir)
   end
   
   def setup_config
@@ -201,5 +222,4 @@ exit 1
     auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
     auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
   end
-  
 end

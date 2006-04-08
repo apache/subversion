@@ -61,15 +61,32 @@ public:
     static void setEnv(JNIEnv *);
     static bool isExceptionThrown();
     static void handleAPRError(int error, const char *op);
+
+    /**
+     * Put @a object in the list of finalized objects queued up to be
+     * deleted (by another thread) during the next operation.
+     *
+     * @param object The C++ peer of the finalized (Java) object.
+     * @since 1.4.0
+     */
+    static void enqueueForDeletion(SVNBase *object);
+
+    /**
+     * @deprecated Use the more appropriately named
+     * enqueueForDeletion() instead.
+     */
     static void putFinalizedClient(SVNBase *cl);
+
     static void handleSVNError(svn_error_t *err);
     static jstring makeSVNErrorMessage(svn_error_t *err);
     static void throwError(const char *message);
     static apr_pool_t * getPool();
+	static bool JNIGlobalInit(JNIEnv *env);
     static bool JNIInit(JNIEnv *env);
     static JNIMutex *getGlobalPoolMutex();
     enum { formatBufferSize = 2048 };
     enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
+
 private:
     static void assembleErrorMessage(svn_error_t *err, int depth,
                                          apr_status_t parent_apr_err,

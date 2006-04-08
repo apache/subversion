@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>The Subversion Release Procedure</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center;">The Subversion Release Procedure</h1>
+
+<p>If you are the current Release Manager for the Subversion project,
+or aspire to be, you should read and follow this procedure.</p>
+
+<pre>
+$LastChangedDate: 2006-04-03 18:57:54 +0200 (Mon, 03 Apr 2006) $
+</pre>
+
+<![CDATA[=========================================================]]>
+
+<!-- Other pages seem to use "h2" for ToC, but I think "h1" works
+     better, because the ToC is fundamentally different from other
+     sections and therefore it's confusing when it looks the same as
+     the others. -->
+<div class="h1"><!-- no 'id' or 'title' attribute for ToC -->
+<h1>Table of Contents</h1>
+
+<ul>
+<li><a href="#release-manager-role"
+             >Being the Release Manager</a></li>
+<li><a href="#release-branches"
+             >Creating and maintaining release branches</a></li>
+<li><a href="#porting-changes"
+             >Porting changes to release branches</a></li>
+<li><a href="#the-changes-file"
+             >Managing the CHANGES file</a></li>
+<li><a href="#before-release"
+             >Preparing to roll a release</a></li>
+<li><a href="#rolling-release"
+             >Rolling a release</a></li>
+<li><a href="#blessing-release"
+             >Blessing a release</a></li>
+<li><a href="#releasing-release"
+             >The actual releasing</a></li>
+</ul>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="release-manager-role" title="release-manager-role">
+<h2>Being the Release Manager</h2>
+
+<p>The role of the Release Manager in the Subversion project is to
+handle the process of getting code stabilized, packaged and released
+to the general public.  If we were building planes, the RM would be
+the guy looking at the construction checklists, painting the airline
+logo on the fuselage, and delivering the finished unit to the
+customer.</p>
+
+<p>As such, there is no real development associated with being an RM.
+All the work you have to do is non-coding: coordinating people,
+centralizing information, and being the public voice announcing new
+stable releases.  A lot of the tasks that the RM has to do are
+repetitive, and not automated either because nobody has broken down
+and written the tools yet, or because the tasks require human
+validation that makes automation a little superfluous.</p>
+
+<p>You may be thinking at this stage that the RM's duty is
+unglamorous, and you are kinda right.  If you are looking for a
+position within the project that will bring fame and fortune, you're
+better off implementing stuff that really needs to be done on trunk.
+If you're looking for something that really helps people who don't
+care about releases focus on code, then RMing is for you.</p>
+
+<p>So, you are the Release Manager.  What do you need to do?  This is
+what the rest of this document is about.</p>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="release-branches" title="release-branches">
+<h2>Creating and maintaining release branches</h2>
+
+<p>A new release branch is created for each new major and minor
+release.  So, for example, a new release branch is created when
+preparing to release version 2.0.0, or version 1.3.0.  However, when
+preparing to release 1.3.1 (a micro-version increment), the release
+branch created for 1.3.0 is used.</p>
+
+<p>If you are preparing for a micro release, then there is no release
+branch to create. You just pick up where you left off in the current
+minor version release branch.</p>
+
+<p>The time at which a new release branch needs to be created is fuzzy
+at best.  Generally, we have a soft schedule of releasing a new minor
+version every 6 months.  So, approximately 4 months after the previous
+minor release is a good time to start proposing a branch. But remember
+that this is flexible, depending on what features are being
+developed.</p>
+
+<p>Once people agree that a new release branch should be made, the
+Release Manager creates it with the following procedure (substitute
+A.B with the version you're preparing, eg. 1.3, or 2.0):</p>
+
+<ul>
+<li><p>Create the new release branch with a server-side copy:</p>
+    <pre>
+      svn cp http://svn.collab.net/repos/svn/trunk \
+             http://svn.collab.net/repos/svn/branches/A.B.x \
+             -m "Create the release branch for release A.B.0."
+    </pre></li>
+
+<li><p>Edit <tt>subversion/include/svn_version.h</tt> on trunk and
+    increment the version numbers there.  Do not commit these changes
+    yet.</p>
+    <p>The version number on trunk always reflects the major/minor
+    version that will immediately follow the one for which you just
+    created a branch (eg. 2.1.0 for the 2.0.x branch, and 1.4.0 for
+    the 1.3.x branch).</p></li>
+
+<li><p>Edit <tt>CHANGES</tt> on trunk to introduce a new section for the
+    upcoming release.  The section starts with:</p>
+    <pre>
+      Version A.B.0 (released XX XXXXX 200X, from branches/A.B.x)
+      http://svn.collab.net/repos/svn/tags/A.B.0
+    </pre>
+    <p>Leave the release date blank for now. It will remain this way
+    until rolling time.</p></li>
+
+<li><p>Commit both these changes with the following log message:</p>
+    <pre>
+      Increment the trunk version number, and introduce a new CHANGES
+      section for the upcoming A.B.0 release.
+
+      * subversion/include/svn_version.h: Increment version number.
+
+      * CHANGES: New section for A.B.0.
+    </pre></li>
+</ul>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="porting-changes" title="porting-changes">
+<h2>Porting changes to release branches</h2>
+
+<p>Once a release branch has been created, no development <i>ever</i>
+takes place there.  The only changes permitted are ones made to
+various bookkeeping files such as <tt>STATUS</tt>, and changes merged
+in from trunk.</p>
+
+<p>The protocol used to accept or refuse the merging of changes from
+trunk is of interest to all Subversion developers, and as such is
+documented in <a
+href="hacking.html#release-stabilization">the
+release stabilization section of the hacking guide</a>.</p>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="the-changes-file" title="the-changes-file">
+<h2>Managing the CHANGES file</h2>
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="before-release" title="before-release">
+<h2>Preparing to roll a release</h2>
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="rolling-release" title="rolling-release">
+<h2>Rolling a release</h2>
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="blessing-release" title="blessing-release">
+<h2>Blessing a release</h2>
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h2" id="releasing-release" title="releasing-release">
+<h2>The actual releasing</h2>
+</div>
+
+</div>
+</body>
+</html>

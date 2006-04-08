@@ -2,7 +2,7 @@
  * xdelta.c:  xdelta generator.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -40,13 +40,12 @@ struct adler32
   apr_uint32_t s1;
   apr_uint32_t s2;
   apr_uint32_t len;
-  apr_uint32_t mask;
 };
 
 /* Feed C into the adler32 checksum.  */
 
 static APR_INLINE void
-adler32_in (struct adler32 *ad, const char c)
+adler32_in(struct adler32 *ad, const char c)
 {
   ad->s1 += ((apr_uint32_t) (c)) & ADLER32_CHAR_MASK;
   ad->s1 &= ADLER32_MASK;
@@ -58,7 +57,7 @@ adler32_in (struct adler32 *ad, const char c)
 /* Remove the result of byte C from the adler32 checksum.  */
 
 static APR_INLINE void
-adler32_out (struct adler32 *ad, const char c)
+adler32_out(struct adler32 *ad, const char c)
 {
   ad->s1 -= ((apr_uint32_t) (c)) & ADLER32_CHAR_MASK;
   ad->s1 &= ADLER32_MASK;
@@ -70,7 +69,7 @@ adler32_out (struct adler32 *ad, const char c)
 /* Return the current adler32 checksum in the adler32 structure.  */
 
 static APR_INLINE apr_uint32_t
-adler32_sum (const struct adler32 *ad)
+adler32_sum(const struct adler32 *ad)
 {
   return (ad->s2 << 16) | (ad->s1);
 }
@@ -79,98 +78,164 @@ adler32_sum (const struct adler32 *ad)
    DATALEN.  Return the initialized structure.  */
 
 static APR_INLINE struct adler32 *
-init_adler32 (struct adler32 *ad, const char *data, apr_uint32_t datalen)
+init_adler32(struct adler32 *ad, const char *data, apr_uint32_t datalen)
 {
   ad->s1 = 1;
   ad->s2 = 0;
-  ad->mask = ADLER32_MASK;
   ad->len = 0;
   while (datalen--)
-    adler32_in (ad, *(data++));
+    adler32_in(ad, *(data++));
   return ad;
 }
 
-/* Match structure used in the xdelta matches hashtable.  This contains the
-   position and length of the initial match.  */
+/* Size of the blocks we compute checksums for. This was chosen out of
+   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
+#define MATCH_BLOCKSIZE 64
 
-struct match
+/* Information for a block of the delta source.  The length of the
+   block is the smaller of MATCH_BLOCKSIZE and the difference between
+   the size of the source data and the position of this block. */
+struct block
 {
-  apr_uint32_t pos;
-  apr_uint32_t len;
+  apr_uint32_t adlersum;
+  apr_size_t pos;
 };
 
-/* Initialize the matches table from DATA.  This goes through every
-   block of BLOCKSIZE bytes in the source and checksums it, inserting the
-   result into the MATCHES table.  */
-
-static void
-init_matches_table (const char *data,
-                    apr_size_t datalen,
-                    apr_size_t blocksize,
-                    apr_hash_t *matches,
-                    apr_pool_t *pool)
+/* A hash table, using open addressing, of the blocks of the source. */
+struct blocks
 {
-  apr_size_t i = 0;
+  /* The largest valid index of slots. */
+  apr_size_t max;
+  /* The vector of blocks.  A pos value of (apr_size_t)-1 represents an unused
+     slot. */
+  struct block *slots;
+};
+
+
+/* Return a hash value calculated from the adler32 SUM, suitable for use with
+   our hash table. */
+static apr_size_t hash_func(apr_uint32_t sum)
+{
+  /* Since the adl32 checksum have a bad distribution for the 11th to 16th
+     bits when used for our small block size, we add some bits from the
+     other half of the checksum. */
+  return sum ^ (sum >> 12);
+}
+
+/* Insert a block with the checksum ADLERSUM at position POS in the source data
+   into the table BLOCKS.  Ignore duplicates. */
+static void
+add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
+{
+  apr_size_t h = hash_func(adlersum) & blocks->max;
+
+  /* This will terminate, since we know that we will not fill the table. */
+  while (blocks->slots[h].pos != (apr_size_t)-1)
+    {
+      /* No duplicates! */
+      if (blocks->slots[h].adlersum == adlersum)
+        return;
+      h = (h + 1) & blocks->max;
+    }
+  blocks->slots[h].adlersum = adlersum;
+  blocks->slots[h].pos = pos;
+}
+
+/* Find a block in BLOCKS with the checksum ADLERSUM, returning its position
+   in the source data.  If there is no such block, return (apr_size_t)-1. */
+static apr_size_t
+find_block(const struct blocks *blocks, apr_uint32_t adlersum)
+{
+  apr_size_t h = hash_func(adlersum) & blocks->max;
+
+  while (blocks->slots[h].adlersum != adlersum
+         && blocks->slots[h].pos != (apr_size_t)-1)
+    h = (h + 1) & blocks->max;
+
+  return blocks->slots[h].pos;
+}
+      
+/* Initialize the matches table from DATA of size DATALEN.  This goes
+   through every block of MATCH_BLOCKSIZE bytes in the source and
+   checksums it, inserting the result into the BLOCKS table.  */
+static void
+init_blocks_table(const char *data,
+                   apr_size_t datalen,
+                  struct blocks *blocks,
+                   apr_pool_t *pool)
+{
+  apr_size_t i;
   struct adler32 adler;
-  for (i = 0; i < datalen; i += blocksize)
+  apr_size_t nblocks;
+  apr_size_t nslots = 1;
+
+  /* Be pesimistic about the block count. */
+  nblocks = datalen / MATCH_BLOCKSIZE + 1;
+  /* Find nearest larger power of two. */
+  while (nslots <= nblocks)
+    nslots *= 2;
+  /* Double the number of slots to avoid a too high load. */
+  nslots *= 2;
+  blocks->max = nslots - 1;
+  blocks->slots = apr_palloc(pool, nslots * sizeof(*(blocks->slots)));
+  for (i = 0; i < nslots; ++i)
+    {
+      /* Avoid using an indeterminate value in the lookup. */
+      blocks->slots[i].adlersum = 0;
+      blocks->slots[i].pos = (apr_size_t)-1;
+    }
+
+  for (i = 0; i < datalen; i += MATCH_BLOCKSIZE)
     {
       /* If this is the last piece, it may be blocksize large */
       apr_uint32_t step =
-        ((i + blocksize) >= datalen) ? (datalen - i) : blocksize;
+        ((i + MATCH_BLOCKSIZE) >= datalen) ? (datalen - i) : MATCH_BLOCKSIZE;
       apr_uint32_t adlersum =
-        adler32_sum (init_adler32 (&adler, data + i, step));
-      if (apr_hash_get (matches, &adlersum, sizeof (adlersum)) == NULL)
-        {
-          struct match *newmatch = apr_palloc (pool, sizeof *newmatch);
-          apr_uint32_t *key = apr_palloc (pool, sizeof *key);
-          newmatch->pos = i;
-          newmatch->len = step;
-          *key = adlersum;
-          apr_hash_set (matches, key, sizeof (*key), newmatch);
-        }
+        adler32_sum(init_adler32(&adler, data + i, step));
+      add_block(blocks, adlersum, i);
     }
 }
 
-/* Try to find a match for the target data B in MATCHES, and then extend the
-   match as long as data in A and B at the match position continues to match.
-   We set the position in a we ended up in (in case we extended it backwards)
-   in APOSP, the length of the match in ALENP, and the amount to advance B in
-   BADVANCEP.  PENDING_INSERT is a pointer to a stringbuf pointer that is the
-   last insert operation that has not been committed yet to the delta stream,
-   if any.  This is used when extending the matches backwards, possibly
-   alleviating the need for the insert entirely. 
-   Return TRUE if the lookup found a match, regardless of length.
-   Return FALSE otherwise.  */
-
+/* Try to find a match for the target data B in BLOCKS, and then
+   extend the match as long as data in A and B at the match position
+   continues to match.  We set the position in a we ended up in (in
+   case we extended it backwards) in APOSP, the length of the match in
+   ALENP, and the amount to advance B in BADVANCEP.
+   *PENDING_INSERT_LENP is the length of the last insert operation that
+   has not been committed yet to the delta stream, or 0 if there is no
+   pending insert.  This is used when extending the match backwards,
+   in which case *PENDING_INSERT_LENP is adjusted, possibly
+   alleviating the need for the insert entirely.  Return TRUE if the
+   lookup found a match, regardless of length.  Return FALSE
+   otherwise.  */
 static svn_boolean_t
-find_match (apr_hash_t *matches,
-            const struct adler32 *rolling,
-            const char *a,
-            apr_size_t asize,
-            const char *b,
-            apr_size_t bsize,
-            apr_size_t bpos,
-            apr_size_t *aposp,
-            apr_size_t *alenp,
-            apr_size_t *badvancep,
-            svn_stringbuf_t **pending_insert)
+find_match(const struct blocks *blocks,
+           const struct adler32 *rolling,
+           const char *a,
+           apr_size_t asize,
+           const char *b,
+           apr_size_t bsize,
+           apr_size_t bpos,
+           apr_size_t *aposp,
+           apr_size_t *alenp,
+           apr_size_t *badvancep,
+           apr_size_t *pending_insert_lenp)
 {
-  apr_uint32_t sum = adler32_sum (rolling);
+  apr_uint32_t sum = adler32_sum(rolling);
   apr_size_t alen, badvance, apos;
-  struct match *match;
   apr_size_t tpos, tlen;
 
+  tpos = find_block(blocks, sum);
+
   /* See if we have a match.  */
-  match = apr_hash_get (matches, &sum, sizeof (sum));
-  if (match == NULL)
+  if (tpos == (apr_size_t)-1)
     return FALSE;
 
-  /* See where our match started.  */
-  tpos = match->pos;
-  tlen = match->len;
+  tlen = ((tpos + MATCH_BLOCKSIZE) >= asize)
+    ? (asize - tpos) : MATCH_BLOCKSIZE;
 
   /* Make sure it's not a false match.  */
-  if (memcmp (a + tpos, b + bpos, tlen) != 0)
+  if (memcmp(a + tpos, b + bpos, tlen) != 0)
     return FALSE;
 
   apos = tpos;
@@ -186,21 +251,15 @@ find_match (apr_hash_t *matches,
     }
 
   /* See if we can extend backwards into a previous insert hunk.  */
-  if (*pending_insert)
+  while (apos > 0
+         && bpos > 0
+         && a[apos - 1] == b[bpos - 1]
+         && *pending_insert_lenp > 0)
     {
-      while (apos > 0
-             && bpos > 0
-             && a[apos - 1] == b[bpos - 1]
-             && (*pending_insert)->len != 0)
-        {
-          svn_stringbuf_chop (*pending_insert, 1);
-          --apos;
-          --bpos;
-          ++alen;
-        }
-      /* If we completely consumed the entire insert, delete it.  */
-      if ((*pending_insert)->len == 0)
-        *pending_insert = NULL;
+      --(*pending_insert_lenp);
+      --apos;
+      --bpos;
+      ++alen;
     }
 
   *aposp = apos;
@@ -208,10 +267,6 @@ find_match (apr_hash_t *matches,
   *badvancep = badvance;
   return TRUE;
 }
-
-/* Size of the blocks we compute checksums for. This was chosen out of
-   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
-#define MATCH_BLOCKSIZE 64
 
 
 /* Compute a delta from A to B using xdelta.
@@ -239,32 +294,31 @@ find_match (apr_hash_t *matches,
      entirely.  This can happen due to stream alignment.
 */
 static void
-compute_delta (svn_txdelta__ops_baton_t *build_baton,
-               const char *a,
-               apr_uint32_t asize,
-               const char *b,
-               apr_uint32_t bsize,
-               apr_pool_t *pool)
+compute_delta(svn_txdelta__ops_baton_t *build_baton,
+              const char *a,
+              apr_uint32_t asize,
+              const char *b,
+              apr_uint32_t bsize,
+              apr_pool_t *pool)
 {
-  apr_hash_t *matches = apr_hash_make(pool);
+  struct blocks blocks;
   struct adler32 rolling;
-  apr_size_t sz, lo, hi;
-  svn_stringbuf_t *pending_insert = NULL;
-
-  /* Initialize the matches table.  */
-  init_matches_table (a, asize, MATCH_BLOCKSIZE, matches, pool);
+  apr_size_t sz, lo, hi, pending_insert_start = 0, pending_insert_len = 0;
 
   /* If the size of the target is smaller than the match blocksize, just
      insert the entire target.  */
   if (bsize < MATCH_BLOCKSIZE)
     {
-      svn_txdelta__insert_op (build_baton, svn_txdelta_new,
-                              0, bsize, b, pool);
+      svn_txdelta__insert_op(build_baton, svn_txdelta_new,
+                             0, bsize, b, pool);
       return;
     }
 
+  /* Initialize the matches table.  */
+  init_blocks_table(a, asize, &blocks, pool);
+
   /* Initialize our rolling checksum.  */
-  init_adler32 (&rolling, b, MATCH_BLOCKSIZE);
+  init_adler32(&rolling, b, MATCH_BLOCKSIZE);
   for (sz = bsize, lo = 0, hi = MATCH_BLOCKSIZE; lo < sz;)
     {
       apr_size_t apos = 0;
@@ -273,69 +327,59 @@ compute_delta (svn_txdelta__ops_baton_t *build_baton,
       apr_size_t next;
       svn_boolean_t match;
 
-      match = find_match (matches, &rolling, a, asize, b, bsize, lo, &apos, 
-                          &alen, &badvance, &pending_insert);
+      match = find_match(&blocks, &rolling, a, asize, b, bsize, lo, &apos, 
+                         &alen, &badvance, &pending_insert_len);
 
       /* If we didn't find a real match, insert the byte at the target
          position into the pending insert.  */
       if (! match)
-        {
-
-          if (pending_insert != NULL)
-            svn_stringbuf_appendbytes (pending_insert, b + lo, 1);
-          else
-            pending_insert = svn_stringbuf_ncreate (b + lo, 1, pool);
-        }
+        ++pending_insert_len;
       else
         {
-          /* The only legal way to end up here is to find a match.  If we
-             didn't find a match, we are going to generate a copy instruction
-             when we should have generated an insert, so something about the
-             condition above, or what the match routine did, is wrong.  */
-          assert (match);
-
-          if (pending_insert)
+          if (pending_insert_len > 0)
             {
-              svn_txdelta__insert_op (build_baton, svn_txdelta_new,
-                                      0, pending_insert->len,
-                                      pending_insert->data, pool);
-              pending_insert = NULL;
+              svn_txdelta__insert_op(build_baton, svn_txdelta_new,
+                                     0, pending_insert_len,
+                                     b + pending_insert_start, pool);
+              pending_insert_len = 0;
             }
-          svn_txdelta__insert_op (build_baton, svn_txdelta_source,
-                                  apos, alen, NULL, pool);
+          /* Reset the pending insert start to immediately after the
+             match. */
+          pending_insert_start = lo + badvance;
+          svn_txdelta__insert_op(build_baton, svn_txdelta_source,
+                                 apos, alen, NULL, pool);
         }
       next = lo;
       for (; next < lo + badvance; ++next)
         {
-          adler32_out (&rolling, b[next]);
+          adler32_out(&rolling, b[next]);
           if (next + MATCH_BLOCKSIZE < bsize)
-            adler32_in (&rolling, b[next + MATCH_BLOCKSIZE]);
+            adler32_in(&rolling, b[next + MATCH_BLOCKSIZE]);
         }
       lo = next;
       hi = lo + MATCH_BLOCKSIZE;
     }
 
   /* If we still have an insert pending at the end, throw it in.  */
-  if (pending_insert)
+  if (pending_insert_len > 0)
     {
-      svn_txdelta__insert_op (build_baton, svn_txdelta_new,
-                              0, pending_insert->len,
-                              pending_insert->data, pool);
-      pending_insert = NULL;
+      svn_txdelta__insert_op(build_baton, svn_txdelta_new,
+                             0, pending_insert_len,
+                             b + pending_insert_start, pool);
     }
 }
 
 void
-svn_txdelta__xdelta (svn_txdelta__ops_baton_t *build_baton,
-                     const char *data,
-                     apr_size_t source_len,
-                     apr_size_t target_len,
-                     apr_pool_t *pool)
+svn_txdelta__xdelta(svn_txdelta__ops_baton_t *build_baton,
+                    const char *data,
+                    apr_size_t source_len,
+                    apr_size_t target_len,
+                    apr_pool_t *pool)
 {
   /*  We should never be asked to compute something when the source_len is 0,
       because it should have asked vdelta or some other compressor.  */
-  assert (source_len != 0);
-  compute_delta (build_baton, data, source_len,
-                 data + source_len, target_len,
-                 pool);
+  assert(source_len != 0);
+  compute_delta(build_baton, data, source_len,
+                data + source_len, target_len,
+                pool);
 }

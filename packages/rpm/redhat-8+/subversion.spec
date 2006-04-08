@@ -19,6 +19,7 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
+Patch0: apr.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apr >= %{apr_version}
@@ -26,10 +27,12 @@ Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.0.14
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
+BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
+BuildPreReq: gettext
 BuildPreReq: httpd >= %{apache_version}
 BuildPreReq: apr-devel >= %{apr_version}
 BuildPreReq: apr-util-devel >= %{apr_version}
@@ -101,6 +104,20 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Mar 20 2006 David Summers <david@summersoft.fay.ar.us> r18962
+- Added needed 'gettext' BuildPreReq.
+  Thanks go to Francis Giraldeau <francis.giraldeau@revolutionlinux.com>.
+
+* Sat Jan 07 2006 David Summers <david@summersoft.fay.ar.us> r18013
+- Simplify apache regression testing.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
+- Figured out how to disable module configuration with --disable-mod-activation.
+
+* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17828
+- Fixed Subversion bug # 1456: Subversion RedHat RPMS have bad interaction with
+  NFS server/client.
+
 * Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16237
 - Updated to swig 1.3.25 to get rid of run-time dependencies on swig package.
   With this update, only the developer/packager needs to install swig.
@@ -372,6 +389,9 @@ Tools for Subversion.
 %prep
 %setup -q
 
+# APR patch
+%patch0 -p0
+
 if [ -f /usr/bin/autoconf-2.53 ]; then
    AUTOCONF="autoconf-2.53"
    AUTOHEADER="autoheader-2.53"
@@ -379,15 +399,12 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-
-# Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/redhat-8+/install.patch
-
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
 
 %configure \
+	--disable-mod-activation \
 	--with-swig=/usr/bin/swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
@@ -415,25 +432,14 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
 %if %{make_ra_dav_bdb_check}
-echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=bdb
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -447,7 +453,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 make svncheck CLEANUP=true FS_TYPE=fsfs
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
@@ -455,17 +461,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_fsfs_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-killall httpd || true
-sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
-cat > passwd <<EOF
-jrandom:xCGl35kV9oWCY
-jconstant:xCGl35kV9oWCY
-EOF
-/usr/sbin/httpd -f `pwd`/httpd.conf
-sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=fsfs
-killall httpd
+make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -503,6 +499,10 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
+# Fix RPATH
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
+chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
+
 %post server
 # Restart apache server if needed.
 source /etc/init.d/functions
@@ -529,6 +529,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnsync
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
@@ -553,9 +554,7 @@ rm -rf $RPM_BUILD_ROOT
 %files server
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.la
 %{apache_dir}/lib/httpd/modules/mod_authz_svn.so
 
 %files perl

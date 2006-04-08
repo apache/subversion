@@ -29,8 +29,7 @@ class SVNShell(Cmd):
   def __init__(self, path):
     """initialize an SVNShell object"""
     Cmd.__init__(self)
-    if path[-1] == '/':
-      path = path[:-1]
+    path = core.svn_path_canonicalize(path)
     self.fs_ptr = repos.fs(repos.open(path))
     self.is_rev = 1
     self.rev = fs.youngest_rev(self.fs_ptr)
@@ -74,11 +73,12 @@ class SVNShell(Cmd):
       print "Path '%s' is not a file." % catpath
       return
     ### be nice to get some paging in here.
-    filelen = fs.file_length(self.root, catpath)
     stream = fs.file_contents(self.root, catpath)
-    while filelen > core.SVN_STREAM_CHUNK_SIZE:
-      print core.svn_stream_read(stream, int(core.SVN_STREAM_CHUNK_SIZE))
-    print core.svn_stream_read(stream, int(filelen))
+    while 1:
+      data = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
+      sys.stdout.write(data)
+      if len(data) < core.SVN_STREAM_CHUNK_SIZE:
+        break
     
   def do_cd(self, arg):
     """change directory"""

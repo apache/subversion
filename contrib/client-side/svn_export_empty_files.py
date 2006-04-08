@@ -24,11 +24,11 @@ the local directory name.  If the --delete command line option is
 given, then files and directories in PATH that do not exist in the
 Subversion repository are deleted.
 
-As Subversion does have any built-in tools to help locate files and
-directories, in extremely large repositories it can be hard to find
-what you are looking for.  This script was written to create a smaller
-non-working working copy that can be crawled with find or find's
-locate utility to make it easier to find files.
+As Subversion does not have any built-in tools to help locate files
+and directories, in extremely large repositories it can be hard to
+find what you are looking for.  This script was written to create a
+smaller non-working working copy that can be crawled with find or
+find's locate utility to make it easier to find files.
 
 $HeadURL$
 $LastChangedRevision$

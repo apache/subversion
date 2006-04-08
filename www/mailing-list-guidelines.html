@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
   @import "tigris-branding/css/tigris.css";
@@ -43,6 +43,15 @@ contribution</a>, then mail <a
 href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>.</p>
 
 <p>When in doubt, mail users@, not dev@.</p>
+
+<p>Please do <i>not</i> post to dev@ as a last resort after failing to
+get an answer on users@.  The two lists have different charters:
+users@ is a support forum, dev@ is a development discussion list.
+When a support question goes unanswered on users@, that is
+unfortunate, but it does not necessarily make the question on-topic
+for dev@.  (Of course, if the mail is about a possible bug in
+Subversion, and got no reaction on users@, then asking on dev@ is
+fine&nbsp;&mdash;&nbsp;bugs are a development topic.)</p>
 
 </div>
 
@@ -219,6 +228,11 @@ away.  If the patch addresses a particular issue, include the issue
 number as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".
 Developers who are interested in that particular issue will know to
 read the mail.</p>
+
+<p>Generate the patch with <tt>svn&nbsp;diff</tt> from the top of a
+Subversion trunk working copy.  If the file you're diffing is not
+under revision control, you can achieve the same effect by using
+<tt>diff&nbsp;-u</tt>.</p>
 
 <p>If you can, send your patch as an attachment, using a mime-type of
 text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders

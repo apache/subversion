@@ -18,6 +18,13 @@
 
 from libsvn.core import *
 import libsvn.core as _core
+import atexit as _atexit
+
+def _cleanup_application_pool():
+  """Cleanup the application pool before exiting"""
+  if application_pool and application_pool.valid():
+    application_pool.destroy()
+_atexit.register(_cleanup_application_pool)
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
   for name, value in symbol_dict.items():
@@ -26,11 +33,6 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 
 
 Pool = _core.svn_pool_create
-
-# Hide raw pool management functions.
-# If you still want to use these, use libsvn.core instead.
-del apr_pool_destroy
-del apr_pool_clear
 
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
@@ -182,10 +184,14 @@ def svn_pool_destroy(pool):
   
   assert pool is not None
 
-  if hasattr(pool,"destroy"):
+  # New in 1.3.x: All pools are automatically destroyed when Python shuts
+  # down. For compatibility with 1.2.x, we won't report an error if your
+  # app tries to destroy a pool during the shutdown process. Instead, we
+  # check to make sure the application_pool is still around before calling
+  # pool.destroy().
+  if application_pool and application_pool.valid():
     pool.destroy()
-  else:
-    _core.apr_pool_destroy(pool)
+apr_pool_destroy = svn_pool_destroy
 
 def svn_pool_clear(pool):
   """Deprecated. Use Pool.clear instead. This is a compatibility
@@ -194,10 +200,8 @@ def svn_pool_clear(pool):
 
   assert pool is not None
 
-  if hasattr(pool,"clear"):
-    pool.clear()
-  else:
-    _core.apr_pool_clear(pool)
+  pool.clear()
+apr_pool_clear = svn_pool_clear
 
 def run_app(func, *args, **kw):
   '''Deprecated: Application-level pools are now created

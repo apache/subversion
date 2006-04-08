@@ -38,6 +38,8 @@ public:
     static void del(void *);
     static JNIThreadData * getThreadData();
     static bool initThreadData();
+	static void pushNewThreadData();
+	static void popThreadData();
     JNIThreadData();
     ~JNIThreadData();
     /**
@@ -57,6 +59,10 @@ public:
      */
     Pool *m_requestPool;
 private:
+	/**
+	 *	pointer to previous thread information to enable reentrent calls
+	 */
+	JNIThreadData *m_previous;
     /**
      * the key to address this thread local storage
      */

@@ -26,9 +26,9 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include <svn_client.h>
-#include <svn_wc.h>
-#include <svn_types.h>
+#include "svn_client.h"
+#include "svn_wc.h"
+#include "svn_types.h"
 /**
  * this class contains all the mappers between the C enum's and the matching
  * java int's.

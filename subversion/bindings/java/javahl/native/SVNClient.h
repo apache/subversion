@@ -36,7 +36,7 @@ class JNIByteArray;
 class Prompter;
 class BlameCallback;
 class CommitMessage;
-#include <svn_client.h>
+#include "svn_client.h"
 #include "SVNBase.h"
 
 class SVNClient :public SVNBase
@@ -114,6 +114,8 @@ public:
     void setPrompt(Prompter *prompter);
     void password(const char *pi_password);
     void username(const char *pi_username);
+    jstring getAdminDirectoryName();
+    jboolean isAdminDirectory(const char *name);
     jobject info(const char *path);
     jobject singleStatus(const char *path, bool onServer);
     jobjectArray status(const char *path, bool descend, bool onServer,
@@ -138,10 +140,8 @@ public:
                   bool noDiffDelete, bool force);
 
     const char * getLastPath();
-    void finalize();
     void dispose(jobject jthis);
     static SVNClient * getCppObject(jobject jthis);
-    jlong getCppAddr();
     SVNClient();
     virtual ~SVNClient();
     static jobject createJavaLock(const svn_lock_t *lock);

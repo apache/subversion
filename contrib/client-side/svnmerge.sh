@@ -2,12 +2,12 @@
 #
 # Copyright (c) 2004-2005, Awarix, Inc.
 # All rights reserved.
-# 
+#
 # Subject to the following obligations and disclaimer of warranty,
 # use and redistribution of this software, in source or object code
 # forms, with or without modifications are expressly permitted by
 # Awarix; provided, however, that:
-# 
+#
 #    (i)  Any and all reproductions of the source or object code
 #         must include the copyright notice above and the following
 #         disclaimer of warranties; and
@@ -15,7 +15,7 @@
 #         Awarix trademarks, including the mark "AWARIX"
 #         on advertising, endorsements, or otherwise except as such
 #         appears in the above copyright notice or in the software.
-# 
+#
 # THIS SOFTWARE IS BEING PROVIDED BY AWARIX "AS IS", AND
 # TO THE MAXIMUM EXTENT PERMITTED BY LAW, AWARIX MAKES NO
 # REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, REGARDING

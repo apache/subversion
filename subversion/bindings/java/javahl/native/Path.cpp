@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,6 +19,7 @@
  * @brief Implementation of the class Path
  */
 
+#include <jni.h>
 #include "Path.h"
 #include "svn_path.h"
 #include "JNIUtil.h"
@@ -109,4 +110,24 @@ Path::operator=(const Path & pi_path)
 svn_error_t *Path::error_occured() const
 {
     return m_error_occured;
+}
+
+jboolean Path::isValid(const char *p)
+{
+    if (p == NULL)
+    {
+        return JNI_FALSE;
+    }
+
+    Pool requestPool;
+    svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
+    if (err == SVN_NO_ERROR)
+    {
+        return JNI_TRUE;
+    }
+    else
+    {
+        svn_error_clear(err);
+        return JNI_FALSE;
+    }
 }

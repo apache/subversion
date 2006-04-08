@@ -22,7 +22,15 @@ extern "C" {
 
 #include <rubyio.h>
 
-void svn_swig_rb_nls_initialize(void);
+typedef struct apr_pool_wrapper_t
+{
+  apr_pool_t *pool;
+  svn_boolean_t destroyed;
+  struct apr_pool_wrapper_t *parent;
+  apr_array_header_t *children;
+} apr_pool_wrapper_t;
+
+void svn_swig_rb_initialize(void);
 
 VALUE svn_swig_rb_svn_delta_editor(void);
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
@@ -101,12 +109,11 @@ svn_error_t *svn_swig_rb_repos_authz_callback(svn_repos_authz_access_t required,
                                               void *baton,
                                               apr_pool_t *pool);
   
-svn_error_t *svn_swig_rb_get_commit_log_func(const char **log_msg,
-                                             const char **tmp_file,
-                                             apr_array_header_t *commit_items,
-                                             void *baton,
-                                             apr_pool_t *pool);
-
+svn_error_t *svn_swig_rb_get_commit_log_func2(const char **log_msg,
+                                              const char **tmp_file,
+                                              const apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,

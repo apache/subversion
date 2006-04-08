@@ -32,24 +32,24 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_resolved (const char *path,
-                     svn_boolean_t recursive,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_resolved(const char *path,
+                    svn_boolean_t recursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path, TRUE,
-                                   recursive ? -1 : 0,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, TRUE,
+                                 recursive ? -1 : 0,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
 
-  SVN_ERR (svn_wc_resolved_conflict2 (path, adm_access, TRUE, TRUE, recursive,
-                                      ctx->notify_func2, ctx->notify_baton2,
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      pool));
+  SVN_ERR(svn_wc_resolved_conflict2(path, adm_access, TRUE, TRUE, recursive,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool));
 
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
 }

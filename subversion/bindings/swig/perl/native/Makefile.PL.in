@@ -36,23 +36,19 @@ my $apr_ldflags = '@SVN_APR_EXPORT_LIBS@'
 
 chomp $apr_shlib_path_var;
 
-my $lddlflags = $Config{lddlflags};
-$lddlflags =~ s,(^| )-L/usr/local/lib( |$),,g;
-
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     INC  => join(' ',$apr_cflags, $apu_cflags, 
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",
+                 " -I$svnlib_builddir",
                  " -I$swig_srcdir -g"),
     OBJECT => q/$(O_FILES)/,
-    LIBS => [join(' ', 
+    LIBS => [join(' ', $apr_ldflags,
                   (map {$_ = abs_path($_); "-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
-                  $apr_ldflags,
                   `$swig -perl -ldflags`)],
-    test => { TESTS => "$swig_srcdir/perl/native/t/*.t" },
-    LDDLFLAGS => $lddlflags
+    test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
 );
 
 sub perlish {

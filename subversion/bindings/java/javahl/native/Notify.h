@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include <svn_wc.h>
+#include "svn_wc.h"
 /**
  *  this class passes notification from subversion to a java object
  */
@@ -53,15 +53,14 @@ public:
    * @param prop_state state of properties after action occurred
    * @param revision revision number after action occurred
    */
-    static void notify (
-        void *baton,
-        const char *path,
-        svn_wc_notify_action_t action,
-        svn_node_kind_t kind,
-        const char *mime_type,
-        svn_wc_notify_state_t content_state,
-        svn_wc_notify_state_t prop_state,
-        svn_revnum_t revision);
+    static void notify(void *baton,
+                       const char *path,
+                       svn_wc_notify_action_t action,
+                       svn_node_kind_t kind,
+                       const char *mime_type,
+                       svn_wc_notify_state_t content_state,
+                       svn_wc_notify_state_t prop_state,
+                       svn_revnum_t revision);
   /**
    * Handler for Subversion notifications.
    *
@@ -73,14 +72,13 @@ public:
    * @param prop_state state of properties after action occurred
    * @param revision revision number  after action occurred
    */
-    void onNotify (
-        const char *path,
-        svn_wc_notify_action_t action,
-        svn_node_kind_t kind,
-        const char *mime_type,
-        svn_wc_notify_state_t content_state,
-        svn_wc_notify_state_t prop_state,
-        svn_revnum_t revision);
+    void onNotify(const char *path,
+                  svn_wc_notify_action_t action,
+                  svn_node_kind_t kind,
+                  const char *mime_type,
+                  svn_wc_notify_state_t content_state,
+                  svn_wc_notify_state_t prop_state,
+                  svn_revnum_t revision);
 
 };
 // !defined(AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)

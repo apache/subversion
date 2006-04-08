@@ -2,7 +2,7 @@
  * entries.h :  manipulating entries
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -67,6 +67,10 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_LOCK_OWNER         "lock-owner"
 #define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
 #define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
+#define SVN_WC__ENTRY_ATTR_HAS_PROPS          "has-props"
+#define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
+#define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
+#define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -83,32 +87,30 @@ extern "C" {
    If initial rev is valid and non-zero, then mark the 'this_dir'
    entry as being incomplete.
 */
-svn_error_t *svn_wc__entries_init (const char *path,
-                                   const char *uuid,
-                                   const char *url,
-                                   const char *repos,
-                                   svn_revnum_t initial_rev,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__entries_init(const char *path,
+                                  const char *uuid,
+                                  const char *url,
+                                  const char *repos,
+                                  svn_revnum_t initial_rev,
+                                  apr_pool_t *pool);
 
 
 /* Create or overwrite an `entries' file for ADM_ACCESS using the contents
    of ENTRIES.  See also svn_wc_entries_read() in the public api. */
-svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
-                                    svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool);
+svn_error_t *svn_wc__entries_write(apr_hash_t *entries,
+                                   svn_wc_adm_access_t *adm_access,
+                                   apr_pool_t *pool);
 
 
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
-   keys and values are both char *.  Allocate the entry itself in
-   POOL, but don't copy attributes into POOL.  Instead,
-   (*NEW_ENTRY)->attributes and any allocated members in *NEW_ENTRY
-   will refer directly to ATTS and its values.
+   keys and values are both char *.  Allocate the entry and copy
+   attributes into POOL as needed.
 
    Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
-svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
-                                    apr_uint32_t *modify_flags,
-                                    apr_hash_t *atts,
-                                    apr_pool_t *pool);
+svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
+                                   apr_uint32_t *modify_flags,
+                                   apr_hash_t *atts,
+                                   apr_pool_t *pool);
 
 
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
@@ -140,6 +142,10 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_LOCK_OWNER         0x00800000
 #define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       0x01000000
 #define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE 0x02000000
+#define SVN_WC__ENTRY_MODIFY_HAS_PROPS          0x04000000
+#define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      0x08000000
+#define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     0x10000000
+#define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      0x20000000
 
 
 /* ...or perhaps this to mean all of those above... */
@@ -150,9 +156,9 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FORCE         0x80000000
 
 
-/* Modify an entry for NAME in access baton PATH by folding ("merging")
-   in changes, and sync those changes to disk.  New values for the
-   entry are pulled from their respective fields in ENTRY, and
+/* Modify an entry for NAME in access baton ADM_ACCESS by folding in
+   ("merging") changes, and sync those changes to disk.  New values
+   for the entry are pulled from their respective fields in ENTRY, and
    MODIFY_FLAGS is a bitmask to specify which of those field to pay
    attention to.  ADM_ACCESS must hold a write lock.
 
@@ -161,11 +167,11 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
      'svn_node_dir', 'svn_node_file'.
 
    - NAME can be NULL to specify that the caller wishes to modify the
-     "this dir" entry in PATH.
+     "this dir" entry in ADM_ACCESS.
 
    If DO_SYNC is FALSE then the modification will be entirely local to the
    access baton, if DO_SYNC is TRUE the modification will be written to
-   the entries file.  Be careful when setting DO_SYNC to FALSE, if there
+   the entries file.  Be careful when setting DO_SYNC to FALSE: if there
    is no subsequent svn_wc__entries_write call the modifications will be
    lost when the access baton is closed.
 
@@ -173,15 +179,15 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
    NOTE: when you call this function, the entries file will be read,
    tweaked and finally, if DO_SYNC is TRUE, written back out.  */
-svn_error_t *svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
-                                   const char *name,
-                                   svn_wc_entry_t *entry,
-                                   apr_uint32_t modify_flags,
-                                   svn_boolean_t do_sync,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
+                                  const char *name,
+                                  svn_wc_entry_t *entry,
+                                  apr_uint32_t modify_flags,
+                                  svn_boolean_t do_sync,
+                                  apr_pool_t *pool);
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
-void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
+void svn_wc__entry_remove(apr_hash_t *entries, const char *name);
 
 
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
@@ -201,14 +207,14 @@ void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.) 
  */
 svn_error_t *
-svn_wc__tweak_entry (apr_hash_t *entries,
-                     const char *name,
-                     const char *new_url,
-                     const char *repos,
-                     svn_revnum_t new_rev,
-                     svn_boolean_t allow_removal,
-                     svn_boolean_t *write_required,
-                     apr_pool_t *pool);
+svn_wc__tweak_entry(apr_hash_t *entries,
+                    const char *name,
+                    const char *new_url,
+                    const char *repos,
+                    svn_revnum_t new_rev,
+                    svn_boolean_t allow_removal,
+                    svn_boolean_t *write_required,
+                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

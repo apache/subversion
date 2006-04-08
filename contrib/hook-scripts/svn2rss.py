@@ -40,7 +40,8 @@ if len(sys.argv) == 1:
    
 try:
     opts, args = getopt.getopt(sys.argv[1:],"h", ["help", "svn-path=",
-                                                    "revision=",                                                                    "repos-path=", "url=",
+                                                    "revision=",
+                                                    "repos-path=", "url=",
                                                     "rss-file="])
 except getopt.GetoptError, msg:
     print msg

@@ -28,6 +28,10 @@
 #include <ap_config.h>
 #include <apr_uri.h>
 #include <mod_dav.h>
+#if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
+#include <mod_auth.h>
+extern APR_OPTIONAL_FN_TYPE(ap_satisfies) *ap_satisfies;
+#endif
 
 #include "mod_dav_svn.h"
 #include "svn_path.h"
@@ -41,6 +45,7 @@ extern module AP_MODULE_DECLARE_DATA authz_svn_module;
 typedef struct {
     int authoritative;
     int anonymous;
+    int no_auth_when_anon_ok;
     const char *base_path;
     const char *access_file;
 } authz_svn_config_rec;
@@ -75,8 +80,18 @@ static const command_rec authz_svn_cmds[] =
     AP_INIT_FLAG("AuthzSVNAnonymous", ap_set_flag_slot,
                  (void *)APR_OFFSETOF(authz_svn_config_rec, anonymous),
                  OR_AUTHCFG,
-                 "Set to 'Off' to skip access control when no authenticated "
-                 "user is required. (default is On.)"),
+                 "Set to 'Off' to disable two special-case behaviours of "
+                 "this module: (1) interaction with the 'Satisfy Any' "
+                 "directive, and (2) enforcement of the authorization "
+                 "policy even when no 'Require' directives are present. "
+                 "(default is On.)"),
+    AP_INIT_FLAG("AuthzSVNNoAuthWhenAnonymousAllowed", ap_set_flag_slot,
+                 (void *)APR_OFFSETOF(authz_svn_config_rec,
+                                      no_auth_when_anon_ok),
+                 OR_AUTHCFG,
+                 "Set to 'On' to suppress authentication and authorization "
+                 "for requests which anonymous users are allowed to perform. "
+                 "(default is Off.)"),
     { NULL }
 };
 
@@ -108,6 +123,7 @@ static int req_check_access(request_rec *r,
     svn_error_t *svn_err;
     const char *cache_key;
     void *user_data;
+    char errbuf[256];
 
     switch (r->method_number) {
     /* All methods requiring read access to all subtrees of r->uri */
@@ -239,7 +255,8 @@ static int req_check_access(request_rec *r,
                             svn_err->apr_err < APR_OS_START_CANONERR) ?
                            0 : svn_err->apr_err),
                           r, "Failed to load the AuthzSVNAccessFile: %s",
-                          svn_err->message);
+                          svn_err_best_message(svn_err,
+                                               errbuf, sizeof(errbuf)));
             svn_error_clear(svn_err);
 
             return DECLINED;
@@ -289,7 +306,7 @@ static int req_check_access(request_rec *r,
                           svn_err->apr_err < APR_OS_START_CANONERR) ?
                          0 : svn_err->apr_err),
                         r, "Failed to perform access control: %s",
-                        svn_err->message);
+                        svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
           svn_error_clear(svn_err);
 
           return DECLINED;
@@ -335,7 +352,7 @@ static int req_check_access(request_rec *r,
                           svn_err->apr_err < APR_OS_START_CANONERR) ?
                          0 : svn_err->apr_err),
                         r, "Failed to perform access control: %s",
-                        svn_err->message);
+                        svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
           svn_error_clear(svn_err);
 
           return DECLINED;
@@ -349,6 +366,45 @@ static int req_check_access(request_rec *r,
      */
 
     return OK;
+}
+
+/* Log a message indicating the access control decision made about a
+ * request.  FILE and LINE should be supplied via the APLOG_MARK macro.
+ * ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
+ * about the request.  DEST_REPOS_PATH may be NULL. */
+static void log_access_verdict(const char *file, int line,
+                               const request_rec *r,
+                               int allowed,
+                               const char *repos_path,
+                               const char *dest_repos_path)
+{
+  int level = allowed ? APLOG_INFO : APLOG_ERR;
+  const char *verdict = allowed ? "granted" : "denied";
+
+  if (r->user) {
+      if (dest_repos_path) {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: '%s' %s %s %s", verdict, r->user,
+                        r->method, repos_path, dest_repos_path);
+      }
+      else {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: '%s' %s %s", verdict, r->user,
+                        r->method, repos_path);
+      }
+  }
+  else {
+      if (dest_repos_path) {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: - %s %s %s", verdict,
+                        r->method, repos_path, dest_repos_path);
+      }
+      else {
+          ap_log_rerror(file, line, level, 0, r,
+                        "Access %s: - %s %s", verdict,
+                        r->method, repos_path);
+      }
+  }
 }
 
 /*
@@ -395,17 +451,7 @@ static int access_checker(request_rec *r)
             return DECLINED;
 
         if (!ap_some_auth_required(r)) {
-            if (dest_repos_path) {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: - %s %s %s",
-                    r->method, repos_path, dest_repos_path);
-            }
-            else {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: - %s %s",
-                    r->method, repos_path);
-            }
-
+            log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
         }
 
         return HTTP_FORBIDDEN;
@@ -414,18 +460,35 @@ static int access_checker(request_rec *r)
     if (status != OK)
         return status;
 
-    if (dest_repos_path) {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: - %s %s %s",
-            r->method, repos_path, dest_repos_path);
-    }
-    else {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: - %s %s",
-            r->method, repos_path);
-    }
+    log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
 
     return OK;
+}
+
+static int check_user_id(request_rec *r)
+{
+    authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
+                                                      &authz_svn_module);
+    const char *repos_path;
+    const char *dest_repos_path = NULL;
+    int status;
+
+    /* We are not configured to run, or, an earlier module has already
+     * authenticated this request. */
+    if (!conf->access_file || !conf->no_auth_when_anon_ok || r->user)
+        return DECLINED;
+
+    /* If anon access is allowed, return OK, preventing later modules
+     * from issuing an HTTP_UNAUTHORIZED.  Also pass a note to our
+     * auth_checker hook that access has already been checked. */
+    status = req_check_access(r, conf, &repos_path, &dest_repos_path);
+    if (status == OK) {
+        apr_table_setn(r->notes, "authz_svn-anon-ok", (const char*)1);
+        log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+        return OK;
+    }
+
+    return status;
 }
 
 static int auth_checker(request_rec *r)
@@ -440,19 +503,16 @@ static int auth_checker(request_rec *r)
     if (!conf->access_file)
         return DECLINED;
 
+    /* Previous hook (check_user_id) already did all the work,
+     * and, as a sanity check, r->user hasn't been set since then? */
+    if (!r->user && apr_table_get(r->notes, "authz_svn-anon-ok")) {
+        return OK;
+    }
+      
     status = req_check_access(r, conf, &repos_path, &dest_repos_path);
     if (status == DECLINED) {
         if (conf->authoritative) {
-            if (dest_repos_path) {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: '%s' %s %s %s",
-                    r->user, r->method, repos_path, dest_repos_path);
-            }
-            else {
-                ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-                    "Access denied: '%s' %s %s",
-                    r->user, r->method, repos_path);
-            }
+            log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
             ap_note_auth_failure(r);
             return HTTP_FORBIDDEN;
         }
@@ -463,16 +523,7 @@ static int auth_checker(request_rec *r)
     if (status != OK)
         return status;
 
-    if (dest_repos_path) {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: '%s' %s %s %s",
-            r->user, r->method, repos_path, dest_repos_path);
-    }
-    else {
-        ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-            "Access granted: '%s' %s %s",
-            r->user, r->method, repos_path);
-    }
+    log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
 
     return OK;
 }
@@ -483,7 +534,13 @@ static int auth_checker(request_rec *r)
 
 static void register_hooks(apr_pool_t *p)
 {
+    static const char * const mod_ssl[] = { "mod_ssl.c", NULL };
+
     ap_hook_access_checker(access_checker, NULL, NULL, APR_HOOK_LAST);
+    /* Our check_user_id hook must be before any module which will return
+     * HTTP_UNAUTHORIZED (mod_auth_basic, etc.), but after mod_ssl, to
+     * give SSLOptions +FakeBasicAuth a chance to work. */
+    ap_hook_check_user_id(check_user_id, mod_ssl, NULL, APR_HOOK_FIRST);
     ap_hook_auth_checker(auth_checker, NULL, NULL, APR_HOOK_FIRST);
 }
 

@@ -10,7 +10,7 @@ use SVN::Base(qw(Client svn_client_ checkout update switch add mkdir delete
                  revert resolved copy move revprop_set propset
                  proplist revvprop_list export ls cat import propget
                  uuid_from_url uuid_from_path url_from_path revprop_get
-                 revprop_list)); 
+                 revprop_list info)); 
 
 =head1 NAME
 
@@ -722,6 +722,38 @@ reported.  $status is a svn_wc_status_t object.
 
 The return of the status_func subroutine is ignored.
 
+=item $ctx-E<gt>info($path_or_url, $peg_revision, $revision, \&receiver, $recurse);
+
+Invokes \&receiver passing it information about $path_or_url for $revision.
+The information returned is system-generated metadata, not the sort of
+"property" metadata created by users.  For methods available on the object
+passed to \&receiver, B<see svn_info_t>.
+
+If both revision arguments are either svn_opt_revision_unspecified or NULL,
+then information will be pulled solely from the working copy; no network
+connections will be made.
+
+Otherwise, information will be pulled from a repository.  The actual node
+revision selected is determined by the $path_or_url as it exists in
+$peg_revision.  If $peg_revision is undef, then it defaults to HEAD for URLs
+or WORKING for WC targets.
+
+If $path_or_url is not a local path, then if $revision is PREV (or some other
+kind that requires a local path), an error will be returned, because the
+desired revision cannot be determined.
+
+Uses the authentication baton cached in ctx to authenticate against the
+repository.
+
+If $recurse is true (and $path_or_url is a directory) this will be a recursive
+operation, invoking $receiver on each child.
+
+ my $receiver = sub {
+     my( $path, $info, $pool ) = @_;
+     print "Current revision of $path is ", $info->rev, "\n";
+ };
+ $ctx->info( 'foo/bar.c', undef, 'WORKING', $receiver, 0 );
+
 =item $ctx-E<gt>switch($path, $url, $revision, $recursive, $pool);
 
 Switch working tree $path to $url at $revision.
@@ -793,7 +825,8 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
                        revert resolved copy move revprop_set propset
                        proplist revvprop_list export ls cat import
                        propget uuid_from_url uuid_from_path
-                       url_from_path revprop_get revprop_list))
+                       url_from_path revprop_get revprop_list
+                       info))
 {
     no strict 'refs';
     my $real_function = \&{"SVN::_Client::svn_client_$function"};
@@ -820,7 +853,7 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
                 last;
             }
         }
-        
+
         if (!defined($ctx))
         {
             # Allows import to work while not breaking use SVN::Client.
@@ -1190,6 +1223,83 @@ and functions.  Others are documented in L<SVN::Core> and L<SVN::Wc>.
 If an object is not documented, it is more than likely opaque and 
 not something you can do anything with, except pass to other functions
 that require such objects.
+
+=cut
+
+package _p_svn_info_t;
+use SVN::Base qw(Client svn_info_t_);
+
+=head2 svn_info_t
+
+=over 8
+
+=item $info->URL()
+
+Where the item lives in the repository.
+
+=item $info->rev()
+
+The revision of the object.  If path_or_url is a working-copy
+path, then this is its current working revnum.  If path_or_url
+is a URL, then this is the repos revision that path_or_url lives in.
+
+=item $info->kind()
+
+The node's kind.
+
+=item $info->repos_root_URL()
+
+The root URL of the repository.
+
+=item $info->repos_UUID()
+
+The repository's UUID.
+
+=item $info->last_changed_rev()
+
+The last revision in which this object changed.
+
+=item $info->last_changed_date()
+
+The date of the last_changed_rev.
+
+=item $info->last_changed_author()
+
+The author of the last_changed_rev.
+
+=item $info->lock()
+
+An exclusive lock, if present.  Could be either local or remote.
+
+=back
+
+See SVN::Wc::svn_wc_entry_t for the rest of these.   svn_client.h indicates
+that these were copied from that struct and mean the same things.   They are
+also only useful when working with a WC.
+
+=over 8
+
+=item $info->has_wc_info()
+
+=item $info->schedule()
+
+=item $info->copyfrom_url()
+
+=item $info->copyfrom_rev()
+
+=item $info->text_time()
+
+=item $info->prop_time()
+
+=item $info->checksum()
+
+=item $info->conflict_old()
+
+=item $info->conflict_new()
+
+=item $info->conflict_wrk()
+
+=item $info->prejfile()
 
 =cut
 

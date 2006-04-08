@@ -26,9 +26,30 @@ import java.io.OutputStream;
 public interface SVNClientInterface
 {
     /**
-    * release the native peer (should not depend on finalize)
-    */
+     * release the native peer (should not depend on finalize)
+     */
     void dispose();
+    /**
+     * @return Version information about the underlying native libraries.
+     */
+    public Version getVersion();
+    /**
+     * @return The name of the working copy's administrative
+     * directory, which is usually <code>.svn</code>.
+     * @see <a
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
+     * on changing this as a work-around for the behavior of ASP.Net
+     * on Windows.
+     * @since 1.3
+     */
+    public String getAdminDirectoryName();
+    /**
+     * @param name The name of the directory to compare.
+     * @return Whether <code>name</code> is that of a working copy
+     * administrative directory.
+     * @since 1.3
+     */
+    public boolean isAdminDirectory(String name);
     /**
       * Returns the last destination path submitted.
       * @deprecated
@@ -39,7 +60,7 @@ public interface SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
@@ -50,7 +71,7 @@ public interface SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
@@ -62,7 +83,7 @@ public interface SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if existant.
+     * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.

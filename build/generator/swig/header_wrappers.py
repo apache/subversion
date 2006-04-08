@@ -9,7 +9,7 @@ import os, re, string, sys, glob, shutil
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
-from gen_base import unique, native_path, build_path_basename
+from gen_base import unique, native_path, build_path_basename, build_path_join
 import generator.swig
 
 class Generator(generator.swig.Generator):
@@ -20,14 +20,31 @@ class Generator(generator.swig.Generator):
     generator.swig.Generator.__init__(self, conf, swig_path)
 
     # Build list of header files
-    self.header_files = []
-    for include_dir in string.split(self.include_dirs):
-      hdrs = glob.glob(os.path.join(native_path(include_dir), "*.h"))
-      self.header_files.extend(hdrs)
+    self.header_files = map(native_path, self.includes)
     self.header_basenames = map(os.path.basename, self.header_files)
 
-  # Ignore svn_md5.h because SWIG can't parse it
-  _ignores = ["svn_md5.h", "svn_repos_parse_fns_t"]
+  # Ignore svn_repos_parse_fns_t because SWIG can't parse it
+  _ignores = ["svn_repos_parse_fns_t"]
+
+  def write_makefile_rules(self, makefile):
+    """Write makefile rules for generating SWIG wrappers for Subversion
+    header files."""
+    wrapper_fnames = []
+    python_script = '$(abs_srcdir)/build/generator/swig/header_wrappers.py'
+    makefile.write('GEN_SWIG_WRAPPER = cd $(top_srcdir) && $(PYTHON)' +
+                   ' %s build.conf $(SWIG)\n\n'  % python_script)
+    for fname in self.includes:
+      wrapper_fname = build_path_join(self.proxy_dir,
+        self.proxy_filename(build_path_basename(fname)))
+      wrapper_fnames.append(wrapper_fname)
+      makefile.write(
+        '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
+        '\t$(GEN_SWIG_WRAPPER) %s\n\n' % fname
+      )
+    makefile.write('SWIG_WRAPPERS = %s\n\n' % string.join(wrapper_fnames))
+    for short_name in self.short.values():
+      makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
+    makefile.write('\n\n')
 
   def proxy_filename(self, include_filename):
     """Convert a .h filename into a _h.swg filename"""
@@ -106,10 +123,12 @@ class Generator(generator.swig.Generator):
   _re_includes = re.compile(r'#\s*include\s*[<"]([^<">;\s]+)')
 
   """Regular expression for parsing structs from a C header file"""
-  _re_structs = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b\s*(\{?)')
+  _re_structs = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                           r'(svn_[a-z_0-9]+)\b\s*(\{?)')
 
   """Regular expression for parsing callbacks from a C header file"""
-  _re_callbacks = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b|'
+  _re_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                             r'(svn_[a-z_0-9]+)\b|'
                              r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
 
   """Regular expression for parsing parameter names from a parameter list"""

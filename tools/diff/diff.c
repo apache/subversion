@@ -25,8 +25,7 @@
 #include "svn_io.h"
 
 
-static
-svn_error_t *
+static svn_error_t *
 do_diff(svn_stream_t *ostream,
         const char *original, const char *modified,
         svn_boolean_t *has_changes,

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,7 +46,7 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_delta_version (void);
+const svn_version_t *svn_delta_version(void);
 
 
 /**  Text deltas.
@@ -180,8 +180,40 @@ typedef struct svn_txdelta_window_t
  *
  * @since New in 1.3.
  */
-svn_txdelta_window_t *svn_txdelta_window_dup (
-  const svn_txdelta_window_t *window, apr_pool_t *pool);
+svn_txdelta_window_t *
+svn_txdelta_window_dup(const svn_txdelta_window_t *window,
+                       apr_pool_t *pool);
+
+/**
+ * Compose two delta windows, yielding a third, allocated in @a pool.
+ *
+ * @since New in 1.4
+ *
+ */
+svn_txdelta_window_t *
+svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
+                            const svn_txdelta_window_t *window_B,
+                            apr_pool_t *pool);
+
+/**
+ * Apply the instructions from @a window to a source view @a sbuf to
+ *  produce a target view @a tbuf.  
+ *
+ * @a sbuf is assumed to have @a window->sview_len bytes of data and
+ * @a tbuf is assumed to have room for @a tlen bytes of output.  @a
+ * tlen may be more than @a window->tview_len, so return the actual
+ * number of bytes written.  @a sbuf is not touched and may be NULL if
+ * @a window contains no source-copy operations. This is purely a
+ * memory operation; nothing can go wrong as long as we have a valid
+ * window. 
+ *
+ * @since New in 1.4
+ *
+ */
+void
+svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
+                               const char *sbuf, char *tbuf,
+                               apr_size_t *tlen);
 
 /** A typedef for functions that consume a series of delta windows, for
  * use in caller-pushes interfaces.  Such functions will typically
@@ -189,8 +221,8 @@ svn_txdelta_window_t *svn_txdelta_window_dup (
  * somewhere.  At the end of the delta window stream, you must call
  * this function passing zero for the @a window argument.
  */
-typedef svn_error_t * (*svn_txdelta_window_handler_t)
-                      (svn_txdelta_window_t *window, void *baton);
+typedef svn_error_t *(*svn_txdelta_window_handler_t)
+  (svn_txdelta_window_t *window, void *baton);
 
 
 /** A delta stream --- this is the hat from which we pull a series of
@@ -201,15 +233,52 @@ typedef svn_error_t * (*svn_txdelta_window_handler_t)
 typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 
 
+/** A typedef for a function that will set @a *window to the next
+ * window from a @c svn_txdelta_stream_t object.  If there are no more
+ * delta windows, null will be used.  The returned window, if any,
+ * will be allocated in @a pool.  @a baton is the baton specified
+ * when the stream was created.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *
+(*svn_txdelta_next_window_fn_t)(svn_txdelta_window_t **window,
+                                void *baton,
+                                apr_pool_t *pool);
+
+/** A typedef for a function that will return the md5 checksum of the
+ * fulltext deltified by a @c svn_txdelta_stream_t object.  Will
+ * return null if the final null window hasn't yet been returned by
+ * the stream.  The returned value will be allocated in the same pool
+ * as the stream.  @a baton is the baton specified when the stream was
+ * created.
+ *
+ * @since New in 1.4.
+ */
+typedef const unsigned char *
+(*svn_txdelta_md5_digest_fn_t)(void *baton);
+
+/** Create and return a generic text delta stream with @a baton, @a
+ * next_window_fn and @a md5_digest_fn.  Allocate the new stream in @a
+ * pool.
+ *
+ * @since New in 1.4.
+ */
+svn_txdelta_stream_t *
+svn_txdelta_stream_create(void *baton,
+                          svn_txdelta_next_window_fn_t next_window,
+                          svn_txdelta_md5_digest_fn_t md5_digest,
+                          apr_pool_t *pool);
+
 /** Set @a *window to a pointer to the next window from the delta stream
  * @a stream.  When we have completely reconstructed the target string,
  * set @a *window to zero.
  *
  * The window will be allocated in @a pool.
  */
-svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
-                                      svn_txdelta_stream_t *stream,
-                                      apr_pool_t *pool);
+svn_error_t *svn_txdelta_next_window(svn_txdelta_window_t **window,
+                                     svn_txdelta_stream_t *stream,
+                                     apr_pool_t *pool);
 
 
 /** Return the @a md5 digest for the complete fulltext deltified by
@@ -217,7 +286,7 @@ svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
  * @c NULL window.  The digest is allocated in the same memory as @a 
  * STREAM.
  */
-const unsigned char *svn_txdelta_md5_digest (svn_txdelta_stream_t *stream);
+const unsigned char *svn_txdelta_md5_digest(svn_txdelta_stream_t *stream);
 
 /** Set @a *stream to a pointer to a delta stream that will turn the byte
  * string from @a source into the byte stream from @a target.
@@ -228,10 +297,10 @@ const unsigned char *svn_txdelta_md5_digest (svn_txdelta_stream_t *stream);
  *
  * Do any necessary allocation in a sub-pool of @a pool.
  */
-void svn_txdelta (svn_txdelta_stream_t **stream,
-                  svn_stream_t *source,
-                  svn_stream_t *target,
-                  apr_pool_t *pool);
+void svn_txdelta(svn_txdelta_stream_t **stream,
+                 svn_stream_t *source,
+                 svn_stream_t *target,
+                 apr_pool_t *pool);
 
 
 /**
@@ -244,10 +313,10 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
  * 
  * @since New in 1.1.
  */
-svn_stream_t *svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
-                                       void *handler_baton,
-                                       svn_stream_t *source,
-                                       apr_pool_t *pool);
+svn_stream_t *svn_txdelta_target_push(svn_txdelta_window_handler_t handler,
+                                      void *handler_baton,
+                                      svn_stream_t *source,
+                                      apr_pool_t *pool);
 
 
 /** Send the contents of @a string to window-handler @a handler/@a baton. 
@@ -256,10 +325,10 @@ svn_stream_t *svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
  *
  * All temporary allocation is performed in @a pool.
  */
-svn_error_t *svn_txdelta_send_string (const svn_string_t *string,
-                                      svn_txdelta_window_handler_t handler,
-                                      void *handler_baton,
-                                      apr_pool_t *pool);
+svn_error_t *svn_txdelta_send_string(const svn_string_t *string,
+                                     svn_txdelta_window_handler_t handler,
+                                     void *handler_baton,
+                                     apr_pool_t *pool);
 
 /** Send the contents of @a stream to window-handler @a handler/@a baton. 
  * This is effectively a 'copy' operation, resulting in delta windows that 
@@ -271,21 +340,21 @@ svn_error_t *svn_txdelta_send_string (const svn_string_t *string,
  *
  * All temporary allocation is performed in @a pool.
  */
-svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
-                                      svn_txdelta_window_handler_t handler,
-                                      void *handler_baton,
-                                      unsigned char *digest,
-                                      apr_pool_t *pool);
+svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
+                                     svn_txdelta_window_handler_t handler,
+                                     void *handler_baton,
+                                     unsigned char *digest,
+                                     apr_pool_t *pool);
 
 /** Send the contents of @a txstream to window-handler @a handler/@a baton. 
  * Windows will be extracted from the stream and delivered to the handler.
  *
  * All temporary allocation is performed in @a pool.
  */
-svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
-                                        svn_txdelta_window_handler_t handler,
-                                        void *handler_baton,
-                                        apr_pool_t *pool);
+svn_error_t *svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
+                                       svn_txdelta_window_handler_t handler,
+                                       void *handler_baton,
+                                       apr_pool_t *pool);
 
 
 /** Prepare to apply a text delta.  @a source is a readable generic stream
@@ -308,13 +377,13 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * @note To avoid lifetime issues, @a error_info is copied into 
  * @a pool or a subpool thereof.
  */
-void svn_txdelta_apply (svn_stream_t *source,
-                        svn_stream_t *target,
-                        unsigned char *result_digest,
-                        const char *error_info,
-                        apr_pool_t *pool,
-                        svn_txdelta_window_handler_t *handler,
-                        void **handler_baton);
+void svn_txdelta_apply(svn_stream_t *source,
+                       svn_stream_t *target,
+                       unsigned char *result_digest,
+                       const char *error_info,
+                       apr_pool_t *pool,
+                       svn_txdelta_window_handler_t *handler,
+                       void **handler_baton);
 
 
 
@@ -324,12 +393,25 @@ void svn_txdelta_apply (svn_stream_t *source,
  * @a output is a writable generic stream to write the svndiff data to.
  * Allocation takes place in a sub-pool of @a pool.  On return, @a *handler
  * is set to a window handler function and @a *handler_baton is set to
- * the value to pass as the @a baton argument to @a *handler.
+ * the value to pass as the @a baton argument to @a *handler. The svndiff
+ * version is @a version.
+ *
+ * @since New in 1.4.
  */
-void svn_txdelta_to_svndiff (svn_stream_t *output,
+void svn_txdelta_to_svndiff2(svn_stream_t *output,
                              apr_pool_t *pool,
                              svn_txdelta_window_handler_t *handler,
-                             void **handler_baton);
+                             void **handler_baton, int version);
+
+/** Similar to svn_txdelta_to_svndiff2, but always using svndiff
+ * version 0.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ */
+void svn_txdelta_to_svndiff(svn_stream_t *output,
+                            apr_pool_t *pool,
+                            svn_txdelta_window_handler_t *handler,
+                            void **handler_baton);
 
 /** Return a writable generic stream which will parse svndiff-format
  * data into a text delta, invoking @a handler with @a handler_baton
@@ -338,10 +420,10 @@ void svn_txdelta_to_svndiff (svn_stream_t *output,
  * svndiff data set will result in @c SVN_ERR_SVNDIFF_UNEXPECTED_END,
  * else this error condition will be ignored.
  */
-svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
-                                         void *handler_baton,
-                                         svn_boolean_t error_on_early_close,
-                                         apr_pool_t *pool);
+svn_stream_t *svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
+                                        void *handler_baton,
+                                        svn_boolean_t error_on_early_close,
+                                        apr_pool_t *pool);
 
 /**
  * Read and parse one delta window in svndiff format from the
@@ -354,10 +436,10 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
-                                              svn_stream_t *stream,
-                                              int svndiff_version,
-                                              apr_pool_t *pool);
+svn_error_t *svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
+                                             svn_stream_t *stream,
+                                             int svndiff_version,
+                                             apr_pool_t *pool);
 
 /**
  * Skip one delta window in svndiff format in the file @a file.  and
@@ -370,9 +452,9 @@ svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_txdelta_skip_svndiff_window (apr_file_t *file,
-                                              int svndiff_version,
-                                              apr_pool_t *pool);
+svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
+                                             int svndiff_version,
+                                             apr_pool_t *pool);
 
 /** @} */
 
@@ -508,8 +590,10 @@ svn_error_t *svn_txdelta_skip_svndiff_window (apr_file_t *file,
  * @a copyfrom_path and @a copyfrom_revision.  If @a copyfrom_path is
  * non-@c NULL, then @a copyfrom_path and @a copyfrom_revision indicate where
  * the file or directory should be copied from (to create the file
- * or directory being added).  If @a copyfrom_path is @c NULL, then
- * @a copyfrom_revision must be @c SVN_INVALID_REVNUM; it is invalid to
+ * or directory being added).  In that case, @a copyfrom_path must be
+ * either a path relative to the root of the edit, or a URI from the
+ * repository being edited.  If @a copyfrom_path is @c NULL, then @a
+ * copyfrom_revision must be @c SVN_INVALID_REVNUM; it is invalid to
  * pass a mix of valid and invalid copyfrom arguments.
  *
  *
@@ -606,9 +690,9 @@ typedef struct svn_delta_editor_t
   /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.
    */
-  svn_error_t *(*set_target_revision) (void *edit_baton,
-                                       svn_revnum_t target_revision,
-                                       apr_pool_t *pool);
+  svn_error_t *(*set_target_revision)(void *edit_baton,
+                                      svn_revnum_t target_revision,
+                                      apr_pool_t *pool);
 
   /** Set @a *root_baton to a baton for the top directory of the change.
    * (This is the top of the subtree being changed, not necessarily
@@ -622,10 +706,10 @@ typedef struct svn_delta_editor_t
    * @a dir_pool. It is also typical to (possibly) save this pool for later
    * usage by @c close_directory.
    */
-  svn_error_t *(*open_root) (void *edit_baton,
-                             svn_revnum_t base_revision,
-                             apr_pool_t *dir_pool,
-                             void **root_baton);
+  svn_error_t *(*open_root)(void *edit_baton,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *dir_pool,
+                            void **root_baton);
 
 
   /** Remove the directory entry named @a path, a child of the directory
@@ -635,10 +719,10 @@ typedef struct svn_delta_editor_t
    *
    * All allocations should be performed in @a pool.
    */
-  svn_error_t *(*delete_entry) (const char *path,
-                                svn_revnum_t revision,
-                                void *parent_baton,
-                                apr_pool_t *pool);
+  svn_error_t *(*delete_entry)(const char *path,
+                               svn_revnum_t revision,
+                               void *parent_baton,
+                               apr_pool_t *pool);
 
 
   /** We are going to add a new subdirectory named @a path.  We will use
@@ -653,12 +737,12 @@ typedef struct svn_delta_editor_t
    * @a dir_pool. It is also typical to (possibly) save this pool for later
    * usage by @c close_directory.
    */
-  svn_error_t *(*add_directory) (const char *path,
-                                 void *parent_baton,
-                                 const char *copyfrom_path,
-                                 svn_revnum_t copyfrom_revision,
-                                 apr_pool_t *dir_pool,
-                                 void **child_baton);
+  svn_error_t *(*add_directory)(const char *path,
+                                void *parent_baton,
+                                const char *copyfrom_path,
+                                svn_revnum_t copyfrom_revision,
+                                apr_pool_t *dir_pool,
+                                void **child_baton);
 
   /** We are going to make changes in a subdirectory (of the directory
    * identified by @a parent_baton). The subdirectory is specified by
@@ -671,32 +755,35 @@ typedef struct svn_delta_editor_t
    * @a dir_pool. It is also typical to (possibly) save this pool for later
    * usage by @c close_directory.
    */
-  svn_error_t *(*open_directory) (const char *path,
-                                  void *parent_baton,
-                                  svn_revnum_t base_revision,
-                                  apr_pool_t *dir_pool,
-                                  void **child_baton);
+  svn_error_t *(*open_directory)(const char *path,
+                                 void *parent_baton,
+                                 svn_revnum_t base_revision,
+                                 apr_pool_t *dir_pool,
+                                 void **child_baton);
 
   /** Change the value of a directory's property.
    * - @a dir_baton specifies the directory whose property should change.
    * - @a name is the name of the property to change.
-   * - @a value is the new value of the property, or @c NULL if the property
-   *   should be removed altogether.  
+   * - @a value is the new (final) value of the property, or @c NULL if the
+   *   property should be removed altogether.
+   *
+   * The callback is guaranteed to be called exactly once for each property
+   * whose value differs between the start and the end of the edit.
    *
    * All allocations should be performed in @a pool.
    */
-  svn_error_t *(*change_dir_prop) (void *dir_baton,
-                                   const char *name,
-                                   const svn_string_t *value,
-                                   apr_pool_t *pool);
+  svn_error_t *(*change_dir_prop)(void *dir_baton,
+                                  const char *name,
+                                  const svn_string_t *value,
+                                  apr_pool_t *pool);
 
   /** We are done processing a subdirectory, whose baton is @a dir_baton
    * (set by @c add_directory or @c open_directory).  We won't be using
    * the baton any more, so whatever resources it refers to may now be
    * freed.
    */
-  svn_error_t *(*close_directory) (void *dir_baton,
-                                   apr_pool_t *pool);
+  svn_error_t *(*close_directory)(void *dir_baton,
+                                  apr_pool_t *pool);
 
 
   /** In the directory represented by @a parent_baton, indicate that
@@ -704,9 +791,9 @@ typedef struct svn_delta_editor_t
    * cannot be conveyed to the edit consumer (perhaps because of
    * authorization restrictions).
    */
-  svn_error_t *(*absent_directory) (const char *path,
-                                    void *parent_baton,
-                                    apr_pool_t *pool);
+  svn_error_t *(*absent_directory)(const char *path,
+                                   void *parent_baton,
+                                   apr_pool_t *pool);
 
   /** We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
@@ -720,12 +807,12 @@ typedef struct svn_delta_editor_t
    * @a file_pool. It is also typical to save this pool for later usage
    * by @c apply_textdelta and possibly @c close_file.
    */
-  svn_error_t *(*add_file) (const char *path,
-                            void *parent_baton,
-                            const char *copy_path,
-                            svn_revnum_t copy_revision,
-                            apr_pool_t *file_pool,
-                            void **file_baton);
+  svn_error_t *(*add_file)(const char *path,
+                           void *parent_baton,
+                           const char *copy_path,
+                           svn_revnum_t copy_revision,
+                           apr_pool_t *file_pool,
+                           void **file_baton);
 
   /** We are going to make change to a file named @a path, which resides
    * in the directory identified by @a parent_baton.
@@ -739,11 +826,11 @@ typedef struct svn_delta_editor_t
    * @a file_pool. It is also typical to save this pool for later usage
    * by @c apply_textdelta and possibly @c close_file.
    */
-  svn_error_t *(*open_file) (const char *path,
-                             void *parent_baton,
-                             svn_revnum_t base_revision,
-                             apr_pool_t *file_pool,
-                             void **file_baton);
+  svn_error_t *(*open_file)(const char *path,
+                            void *parent_baton,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *file_pool,
+                            void **file_baton);
 
   /** Apply a text delta, yielding the new revision of a file.
    *
@@ -767,24 +854,27 @@ typedef struct svn_delta_editor_t
    * still be an error if @a base_checksum is neither null nor the hex
    * MD5 checksum of the empty string).
    */
-  svn_error_t *(*apply_textdelta) (void *file_baton,
-                                   const char *base_checksum,
-                                   apr_pool_t *pool,
-                                   svn_txdelta_window_handler_t *handler,
-                                   void **handler_baton);
+  svn_error_t *(*apply_textdelta)(void *file_baton,
+                                  const char *base_checksum,
+                                  apr_pool_t *pool,
+                                  svn_txdelta_window_handler_t *handler,
+                                  void **handler_baton);
 
   /** Change the value of a file's property.
    * - @a file_baton specifies the file whose property should change.
    * - @a name is the name of the property to change.
-   * - @a value is the new value of the property, or @c NULL if the property
-   *   should be removed altogether.
+   * - @a value is the new (final) value of the property, or @c NULL if the
+   *   property should be removed altogether.
+   *
+   * The callback is guaranteed to be called exactly once for each property
+   * whose value differs between the start and the end of the edit.
    *
    * All allocations should be performed in @a pool.
    */
-  svn_error_t *(*change_file_prop) (void *file_baton,
-                                    const char *name,
-                                    const svn_string_t *value,
-                                    apr_pool_t *pool);
+  svn_error_t *(*change_file_prop)(void *file_baton,
+                                   const char *name,
+                                   const svn_string_t *value,
+                                   apr_pool_t *pool);
 
   /** We are done processing a file, whose baton is @a file_baton (set by
    * @c add_file or @c open_file).  We won't be using the baton any
@@ -797,30 +887,30 @@ typedef struct svn_delta_editor_t
    * SVN_ERR_CHECKSUM_MISMATCH is returned if they do not match.  If
    * there is no new fulltext, @a text_checksum is ignored.
    */
-  svn_error_t *(*close_file) (void *file_baton,
-                              const char *text_checksum,
-                              apr_pool_t *pool);
+  svn_error_t *(*close_file)(void *file_baton,
+                             const char *text_checksum,
+                             apr_pool_t *pool);
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a file in the edit source, but cannot be
    * conveyed to the edit consumer (perhaps because of authorization
    * restrictions).
    */
-  svn_error_t *(*absent_file) (const char *path,
-                               void *parent_baton,
-                               apr_pool_t *pool);
+  svn_error_t *(*absent_file)(const char *path,
+                              void *parent_baton,
+                              apr_pool_t *pool);
 
   /** All delta processing is done.  Call this, with the @a edit_baton for
    * the entire edit.
    */
-  svn_error_t *(*close_edit) (void *edit_baton, 
-                              apr_pool_t *pool);
+  svn_error_t *(*close_edit)(void *edit_baton, 
+                             apr_pool_t *pool);
 
   /** The editor-driver has decided to bail out.  Allow the editor to
    * gracefully clean up things if it needs to.
    */
-  svn_error_t *(*abort_edit) (void *edit_baton,
-                              apr_pool_t *pool);
+  svn_error_t *(*abort_edit)(void *edit_baton,
+                             apr_pool_t *pool);
 
 } svn_delta_editor_t;  
 
@@ -838,15 +928,15 @@ typedef struct svn_delta_editor_t
  * implement -- you can rely on the template's implementation to
  * safely do nothing of consequence.
  */
-svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
+svn_delta_editor_t *svn_delta_default_editor(apr_pool_t *pool);
 
 /** A text-delta window handler which does nothing.
  *
  * Editors can return this handler from apply_textdelta if they don't
  * care about text delta windows.
  */
-svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
-                                            void *baton);
+svn_error_t *svn_delta_noop_window_handler(svn_txdelta_window_t *window,
+                                           void *baton);
 
 /** Return a cancellation editor that wraps @a wrapped_editor.
  *
@@ -858,13 +948,13 @@ svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
  * @a *edit_baton is set to @a wrapped_baton.
  */
 svn_error_t *
-svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   const svn_delta_editor_t *wrapped_editor,
-                                   void *wrapped_baton,
-                                   const svn_delta_editor_t **editor,
-                                   void **edit_baton,
-                                   apr_pool_t *pool);
+svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  const svn_delta_editor_t *wrapped_editor,
+                                  void *wrapped_baton,
+                                  const svn_delta_editor_t **editor,
+                                  void **edit_baton,
+                                  apr_pool_t *pool);
 
 /** @} */
 
@@ -896,12 +986,12 @@ svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
  * handler of this callback must call the editor's open_root()
  * function and return the top-level root dir baton in @a *dir_baton. 
  */
-typedef svn_error_t *
-(*svn_delta_path_driver_cb_func_t) (void **dir_baton,
-                                    void *parent_baton,
-                                    void *callback_baton,
-                                    const char *path,
-                                    apr_pool_t *pool);
+typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)
+  (void **dir_baton,
+   void *parent_baton,
+   void *callback_baton,
+   const char *path,
+   apr_pool_t *pool);
   
 
 /** Drive @a editor (with its @a edit_baton) in such a way that
@@ -916,13 +1006,13 @@ typedef svn_error_t *
  * Use @a pool for all necessary allocations. 
  */
 svn_error_t *
-svn_delta_path_driver (const svn_delta_editor_t *editor,
-                       void *edit_baton,
-                       svn_revnum_t revision,
-                       apr_array_header_t *paths,
-                       svn_delta_path_driver_cb_func_t callback_func,
-                       void *callback_baton,
-                       apr_pool_t *pool);
+svn_delta_path_driver(const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      svn_revnum_t revision,
+                      apr_array_header_t *paths,
+                      svn_delta_path_driver_cb_func_t callback_func,
+                      void *callback_baton,
+                      apr_pool_t *pool);
 
 /** @} */
 

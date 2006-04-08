@@ -46,30 +46,6 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
-    apr_initialize
-    at_exit do
-      if $DEBUG
-        i = 0
-        loop do
-          i += 1
-          print "number of pools before GC(#{i}): "
-          before_pools = Svn::Core::Pool.number_of_pools
-          p before_pools
-          GC.start
-          after_pools = Svn::Core::Pool.number_of_pools
-          print "number of pools after GC(#{i}): "
-          p after_pools
-          break if before_pools == after_pools
-        end
-        puts "GC ran #{i} times"
-      end
-      
-      # We don't need to call apr_termintae because pools
-      # are destroyed by ruby's GC.
-      # Svn::Core.apr_terminate
-    end
-    nls_init
-    
     class << self
       alias binary_mime_type? mime_type_is_binary
     end
@@ -83,7 +59,7 @@ module Svn
     AuthCredSSLServerTrust = AuthCredSslServerTrust
     
     
-    Pool = Svn::Ext::Core::Apr_pool_t
+    Pool = Svn::Ext::Core::Apr_pool_wrapper_t
     
     class Pool
       class << self
@@ -91,12 +67,23 @@ module Svn
           ObjectSpace.each_object(Pool) {}
         end
       end
+
+      alias _initialize initialize
+      private :_initialize
+      def initialize(parent=nil)
+        _initialize(parent)
+        @parent = parent
+      end
     end
 
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
-      CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      if Core.const_defined?(:STREAM_CHUNK_SIZE)
+        CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
+      else
+        CHUNK_SIZE = 8192
+      end
 
       def write(data)
         Core.stream_write(self, data)
@@ -182,15 +169,16 @@ module Svn
 
     Diff = SWIG::TYPE_p_svn_diff_t
     class Diff
-      attr_accessor :original, :modified, :latest
+      attr_accessor :original, :modified, :latest, :ancestor
 
       class << self
         def version
           Core.diff_version
         end
 
-        def file_diff(original, modified)
-          diff = Core.diff_file_diff(original, modified)
+        def file_diff(original, modified, options=nil)
+          options ||= Core::DiffFileOptions.new
+          diff = Core.diff_file_diff_2(original, modified, options)
           if diff
             diff.original = original
             diff.modified = modified
@@ -198,8 +186,9 @@ module Svn
           diff
         end
 
-        def file_diff3(original, modified, latest)
-          diff = Core.diff_file_diff3(original, modified, latest)
+        def file_diff3(original, modified, latest, options=nil)
+          options ||= Core::DiffFileOptions.new
+          diff = Core.diff_file_diff3_2(original, modified, latest, options)
           if diff
             diff.original = original
             diff.modified = modified
@@ -207,8 +196,21 @@ module Svn
           end
           diff
         end
+
+        def file_diff4(original, modified, latest, ancestor, options=nil)
+          options ||= Core::DiffFileOptions.new
+          args = [original, modified, latest, ancestor, options]
+          diff = Core.diff_file_diff4_2(*args)
+          if diff
+            diff.original = original
+            diff.modified = modified
+            diff.latest = latest
+            diff.ancestor = ancestor
+          end
+          diff
+        end
       end
-      
+
       def unified(orig_label, mod_label, header_encoding=nil)
         header_encoding ||= Svn::Core.locale_charset
         output = StringIO.new
@@ -245,6 +247,28 @@ module Svn
 
       def diff?
         Core.diff_contains_diffs(self)
+      end
+    end
+
+    class DiffFileOptions
+      class << self
+        undef new
+        def new(*args)
+          options = Svn::Core.diff_file_options_create(*args)
+          options.__send__("initialize", *args)
+          options
+        end
+
+        def parse(*args)
+          options = new
+          options.parse(*args)
+          options
+        end
+      end
+
+      def parse(*args)
+        args = args.first if args.size == 1 and args.first.is_a?(Array)
+        Svn::Core.diff_file_options_parse(self, args)
       end
     end
 

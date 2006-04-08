@@ -46,10 +46,10 @@ const char *review =
 
 
 static svn_error_t *
-test1 (const char **msg, 
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test1(const char **msg, 
+      svn_boolean_t msg_only,
+      svn_test_opts_t *opts,
+      apr_pool_t *pool)
 {
   svn_error_t *result;
   svn_stringbuf_t *key;
@@ -61,36 +61,36 @@ test1 (const char **msg,
     return SVN_NO_ERROR;
 
   /* Build a hash in memory, and fill it with test data. */
-  proplist = apr_hash_make (pool);
+  proplist = apr_hash_make(pool);
 
-  key = svn_stringbuf_create ("color", pool);
-  apr_hash_set (proplist, key->data, key->len,
-                svn_string_create ("red", pool));
+  key = svn_stringbuf_create("color", pool);
+  apr_hash_set(proplist, key->data, key->len,
+               svn_string_create("red", pool));
   
-  key = svn_stringbuf_create ("wine review", pool);
-  apr_hash_set (proplist, key->data, key->len,
-               svn_string_create (review, pool));
+  key = svn_stringbuf_create("wine review", pool);
+  apr_hash_set(proplist, key->data, key->len,
+               svn_string_create(review, pool));
   
-  key = svn_stringbuf_create ("price", pool);
-  apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("US $6.50", pool));
+  key = svn_stringbuf_create("price", pool);
+  apr_hash_set(proplist, key->data, key->len,
+               svn_string_create("US $6.50", pool));
 
   /* Test overwriting: same key both times, but different values. */
-  key = svn_stringbuf_create ("twice-used property name", pool);
-  apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the FIRST value.", pool));
-  apr_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the SECOND value.", pool));
+  key = svn_stringbuf_create("twice-used property name", pool);
+  apr_hash_set(proplist, key->data, key->len,
+               svn_string_create("This is the FIRST value.", pool));
+  apr_hash_set(proplist, key->data, key->len,
+               svn_string_create("This is the SECOND value.", pool));
 
   /* Dump the hash to a file. */
-  apr_file_open (&f, "hashdump.out",
-            (APR_WRITE | APR_CREATE),
-            APR_OS_DEFAULT, pool);
+  apr_file_open(&f, "hashdump.out",
+                (APR_WRITE | APR_CREATE),
+                APR_OS_DEFAULT, pool);
 
-  result = svn_hash_write2 (proplist, svn_stream_from_aprfile (f, pool),
-                            SVN_HASH_TERMINATOR, pool);
+  result = svn_hash_write2(proplist, svn_stream_from_aprfile(f, pool),
+                           SVN_HASH_TERMINATOR, pool);
 
-  apr_file_close (f);
+  apr_file_close(f);
 
   return result;
 }
@@ -99,10 +99,10 @@ test1 (const char **msg,
 
 
 static svn_error_t *
-test2 (const char **msg, 
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test2(const char **msg, 
+      svn_boolean_t msg_only,
+      svn_test_opts_t *opts,
+      apr_pool_t *pool)
 {
   svn_error_t *result;
   apr_file_t *f;
@@ -112,14 +112,14 @@ test2 (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  new_proplist = apr_hash_make (pool);
+  new_proplist = apr_hash_make(pool);
 
-  apr_file_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
+  apr_file_open(&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
 
-  result = svn_hash_read2 (new_proplist, svn_stream_from_aprfile (f, pool),
-                           SVN_HASH_TERMINATOR, pool);
+  result = svn_hash_read2(new_proplist, svn_stream_from_aprfile(f, pool),
+                          SVN_HASH_TERMINATOR, pool);
 
-  apr_file_close (f);
+  apr_file_close(f);
 
   return result;
 }
@@ -127,10 +127,10 @@ test2 (const char **msg,
 
 
 static svn_error_t *
-test3 (const char **msg, 
-       svn_boolean_t msg_only,
-       svn_test_opts_t *opts,
-       apr_pool_t *pool)
+test3(const char **msg, 
+      svn_boolean_t msg_only,
+      svn_test_opts_t *opts,
+      apr_pool_t *pool)
 {
   apr_hash_index_t *this;
   svn_error_t *err;
@@ -143,12 +143,12 @@ test3 (const char **msg,
     return SVN_NO_ERROR;
 
   /* Build a hash in global variable "proplist", then write to a file. */
-  err = test1 (&ignored, FALSE, opts, pool);
+  err = test1(&ignored, FALSE, opts, pool);
   if (err)
     return err;
 
   /* Read this file back into global variable "new_proplist" */
-  err = test2 (&ignored, FALSE, opts, pool);
+  err = test2(&ignored, FALSE, opts, pool);
   if (err)
     return err;
 
@@ -156,9 +156,9 @@ test3 (const char **msg,
      same data. */
   
   /* Loop over our original hash */
-  for (this = apr_hash_first (pool, proplist); 
+  for (this = apr_hash_first(pool, proplist); 
        this; 
-       this = apr_hash_next (this))
+       this = apr_hash_next(this))
     {
       const void *key;
       apr_ssize_t keylen;
@@ -166,25 +166,25 @@ test3 (const char **msg,
       svn_string_t *orig_str, *new_str;
       
       /* Get a key and val. */
-      apr_hash_this (this, &key, &keylen, &val);
+      apr_hash_this(this, &key, &keylen, &val);
       orig_str = val;
 
       /* Look up the key in the new hash */
-      new_str = apr_hash_get (new_proplist, key, keylen);
+      new_str = apr_hash_get(new_proplist, key, keylen);
 
       /* Does the new hash contain the key at all? */
       if (new_str == NULL)
         found_discrepancy = 1;
 
       /* Do the two strings contain identical data? */
-      else if (! svn_string_compare (orig_str, new_str))
+      else if (! svn_string_compare(orig_str, new_str))
         found_discrepancy = 1;
     }
 
 
   if (found_discrepancy)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0,
-                              "found discrepancy reading back hash table");
+    return svn_error_createf(SVN_ERR_TEST_FAILED, 0,
+                             "found discrepancy reading back hash table");
 
   return SVN_NO_ERROR;
 }
@@ -202,8 +202,8 @@ test3 (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test1),
-    SVN_TEST_PASS (test2),
-    SVN_TEST_PASS (test3),
+    SVN_TEST_PASS(test1),
+    SVN_TEST_PASS(test2),
+    SVN_TEST_PASS(test3),
     SVN_TEST_NULL
   };

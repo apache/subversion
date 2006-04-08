@@ -38,6 +38,7 @@
 %ignore svn_ra_svn_init;
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
+%ignore svn_ra_serf_init;
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
