@@ -511,15 +511,20 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
   if (!*prop_ctx)
     {
-      svn_boolean_t cache_satisfy;
       svn_ra_serf__handler_t *handler;
 
-      cache_satisfy = check_cache(ret_props, sess, path, rev, find_props, pool);
-
-      if (cache_satisfy)
+      if (cache_props == TRUE)
         {
-          *prop_ctx = NULL;
-          return SVN_NO_ERROR;
+          svn_boolean_t cache_satisfy;
+
+          cache_satisfy = check_cache(ret_props, sess, path, rev, find_props,
+                                      pool);
+          
+          if (cache_satisfy)
+            {
+              *prop_ctx = NULL;
+              return SVN_NO_ERROR;
+            }
         }
 
       new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
