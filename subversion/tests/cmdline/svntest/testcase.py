@@ -65,6 +65,9 @@ class _Predicate:
     filename = self.func.func_code.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
+  def run(self, args):
+    return apply(self.func, args)
+
   def list_mode(self):
     return self.text[3]
 
