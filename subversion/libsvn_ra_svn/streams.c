@@ -135,17 +135,12 @@ sock_read_cb(void *baton, char *buffer, apr_size_t *len)
 {
   baton_t *sb = baton;
   apr_status_t status;
-  apr_interval_time_t interval; 
   apr_socket_t *sock = sb->d.s;
   
-  status = apr_socket_timeout_get(sock, &interval);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't get socket timeout"));
-
   /* Always block on read. */
   apr_socket_timeout_set(sock, -1);
   status = apr_socket_recv(sock, buffer, len);
-  apr_socket_timeout_set(sock, interval);
+  apr_socket_timeout_set(sock, 0);
   if (status && !APR_STATUS_IS_EOF(status))
     return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
