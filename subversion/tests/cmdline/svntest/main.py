@@ -667,7 +667,6 @@ class TestRunner:
       sandbox = None
       args = ()
 
-    result = 0
     try:
       rc = self.pred.run(args)
       if rc is not None:
@@ -675,6 +674,7 @@ class TestRunner:
         self._print_name()
         print 'Test driver returned a status code.'
         sys.exit(255)
+      result = 0
     except Skip, ex:
       result = 2
     except Failure, ex:
