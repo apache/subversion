@@ -480,16 +480,18 @@ get_version_url(dir_context_t *dir)
     }
   else
     {
+      svn_ra_serf__propfind_context_t *propfind_ctx;
       apr_hash_t *props;
 
       props = apr_hash_make(dir->pool);
 
-      SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                          session,
-                                          dir->commit->conn,
-                                          session->repos_url.path,
-                                          dir->base_revision, "0",
-                                          checked_in_props, dir->pool));
+      propfind_ctx = NULL;
+      svn_ra_serf__deliver_props(&propfind_ctx, props, session,
+                                 dir->commit->conn, session->repos_url.path,
+                                 dir->base_revision, "0",
+                                 checked_in_props, FALSE, NULL, dir->pool);
+      
+      SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, dir->pool));
 
       root_checkout =
           svn_ra_serf__get_ver_prop(props, session->repos_url.path,
@@ -836,6 +838,7 @@ open_root(void *edit_baton,
 {
   commit_context_t *ctx = edit_baton;
   svn_ra_serf__options_context_t *opt_ctx;
+  svn_ra_serf__propfind_context_t *propfind_ctx;
   svn_ra_serf__handler_t *handler;
   simple_request_context_t *mkact_ctx;
   proppatch_context_t *proppatch_ctx;
@@ -888,31 +891,23 @@ open_root(void *edit_baton,
       abort();
     }
 
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     ctx->session, ctx->conn,
+                                     ctx->session->repos_url.path,
+                                     ctx->pool));
+
   /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
   props = apr_hash_make(ctx->pool);
+  propfind_ctx = NULL;
+  svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
+                             ctx->conn, vcc_url, SVN_INVALID_REVNUM, "0",
+                             checked_in_props, FALSE, NULL, ctx->pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                      ctx->session, ctx->session->conns[0],
-                                      ctx->session->repos_url.path,
-                                      SVN_INVALID_REVNUM, "0", base_props,
-                                      ctx->pool));
+  SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, ctx->session, ctx->pool));
 
-  vcc_url = svn_ra_serf__get_prop(props, ctx->session->repos_url.path,
-                                  "DAV:", "version-controlled-configuration");
-
-  if (!vcc_url)
-    {
-      abort();
-    }
-
-  /* Using the version-controlled-configuration, fetch the checked-in prop. */
-  SVN_ERR(svn_ra_serf__retrieve_props(props,
-                                      ctx->session, ctx->session->conns[0],
-                                      vcc_url, SVN_INVALID_REVNUM, "0",
-                                      checked_in_props, ctx->pool));
-
-  ctx->baseline_url = svn_ra_serf__get_prop(props, vcc_url,
-                                            "DAV:", "checked-in");
+  ctx->baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url,
+                                                SVN_INVALID_REVNUM,
+                                                "DAV:", "checked-in");
 
   if (!ctx->baseline_url)
     {
@@ -1224,7 +1219,7 @@ add_file(const char *path,
   file_context_t *new_file;
 
   /* Ensure our directory has been checked out */
-  checkout_dir(dir);
+  SVN_ERR(checkout_dir(dir));
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
 
@@ -1683,6 +1678,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                              apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  svn_ra_serf__propfind_context_t *propfind_ctx;
   proppatch_context_t *proppatch_ctx;
   commit_context_t *commit;
   const char *vcc_url, *checked_in_href, *ns;
@@ -1702,9 +1698,12 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, commit->session, commit->conn,
-                                      vcc_url, rev, "0",
-                                      checked_in_props, pool));
+  propfind_ctx = NULL;
+  svn_ra_serf__deliver_props(&propfind_ctx, props, commit->session,
+                             commit->conn, vcc_url, rev, "0",
+                             checked_in_props, FALSE, NULL, pool);
+
+  SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, commit->session, pool));
 
   checked_in_href = svn_ra_serf__get_ver_prop(props, vcc_url, rev,
                                               "DAV:", "href");

@@ -267,7 +267,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *vcc_url, *path;
+  const char *vcc_url;
 
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
@@ -277,15 +277,9 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                                      session->repos_url.path, pool));
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, rev, "0",
-                                      checked_in_props, pool));
+                                      vcc_url, rev, "0", all_props, pool));
 
-  path = svn_ra_serf__get_ver_prop(props, vcc_url, rev, "DAV:", "href");
-
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      path, rev, "0", all_props, pool));
-
-  svn_ra_serf__walk_all_props(props, path, rev, svn_ra_serf__set_flat_props,
+  svn_ra_serf__walk_all_props(props, vcc_url, rev, svn_ra_serf__set_flat_props,
                               *ret_props, pool);
 
   return SVN_NO_ERROR;
@@ -735,18 +729,6 @@ svn_ra_serf__get_locks(svn_ra_session_t *session,
   /* TODO Shh.  We're telling a white lie for now. */
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                           _("Server does not support locking features"));
-}
-
-static svn_error_t *
-svn_ra_serf__replay(svn_ra_session_t *session,
-                    svn_revnum_t revision,
-                    svn_revnum_t low_water_mark,
-                    svn_boolean_t text_deltas,
-                    const svn_delta_editor_t *editor,
-                    void *edit_baton,
-                    apr_pool_t *pool)
-{
-  abort();
 }
 
 static const svn_ra__vtable_t serf_vtable = {
