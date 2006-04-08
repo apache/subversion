@@ -123,6 +123,9 @@ svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                                          const char *date,
                                          const char *author,
                                          void *baton);
+svn_error_t *svn_swig_rb_commit_callback2(const svn_commit_info_t *commit_info,
+                                          void *baton,
+                                          apr_pool_t *pool);
 svn_error_t *svn_swig_rb_cancel_func(void *cancel_baton);
 
 svn_error_t *svn_swig_rb_info_receiver(void *baton,
