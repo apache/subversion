@@ -350,8 +350,19 @@ module Svn
                         ignore_ancestry)
       end
 
-      def replay(editor)
-        Repos.replay(self, editor)
+      def replay(editor, base_dir=nil, low_water_mark=nil, send_deltas=false,
+                 &callback)
+        base_dir ||= ""
+        low_water_mark ||= Core::INVALID_REVNUM
+        if callback
+          authz_read_func = Proc.new do |root, path|
+            callback.call(root, path)
+          end
+        else
+          authz_read_func = Proc.new {true}
+        end
+        Repos.replay2(self, base_dir, low_water_mark, send_deltas,
+                      editor, authz_read_func)
       end
 
       def copied_from(path)
