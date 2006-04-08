@@ -46,6 +46,10 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
+    # for backward compatibility
+    SWIG_INVALID_REVNUM = INVALID_REVNUM
+    SWIG_IGNORED_REVNUM = IGNORED_REVNUM
+
     class << self
       alias binary_mime_type? mime_type_is_binary
     end
