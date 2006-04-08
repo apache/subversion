@@ -596,6 +596,7 @@ c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
 DEFINE_DUP(wc_notify, wc_dup_notify)
 DEFINE_DUP2(txdelta_window)
 DEFINE_DUP2(info)
+DEFINE_DUP2(commit_info)
 DEFINE_DUP2(lock)
 DEFINE_DUP2(auth_ssl_server_cert_info)
 DEFINE_DUP2(wc_entry)
@@ -1575,6 +1576,28 @@ svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                        INT2NUM(new_revision),
                        c2r_string2(date),
                        c2r_string2(author));
+    invoke_callback_handle_error(args, rb_pool, &err);
+  }
+  
+  return err;
+}
+
+svn_error_t *
+svn_swig_rb_commit_callback2(const svn_commit_info_t *commit_info,
+                             void *baton, apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(3,
+                       proc,
+                       rb_id_call(),
+                       c2r_commit_info__dup(commit_info));
     invoke_callback_handle_error(args, rb_pool, &err);
   }
   

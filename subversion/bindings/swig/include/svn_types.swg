@@ -423,6 +423,18 @@
 };
 
 /* -----------------------------------------------------------------------
+   Callback: svn_commit_callback2_t
+   svn_ra get_commit_editor2()
+   svn_repos_get_commit_editor4()
+*/
+
+%typemap(ruby, in) (svn_commit_callback2_t callback, void *callback_baton)
+{
+  $1 = svn_swig_rb_commit_callback2;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+};
+
+/* -----------------------------------------------------------------------
    Callback: svn_cancel_func_t
 */
 
