@@ -30,6 +30,9 @@ extern "C" {
 #include <apr_thread_proc.h>
 #include "svn_ra_svn.h"
 
+#define SVN_RA_SVN__IOCTL_TIMEOUT 0 /* ARG points to apr_interval_time_t */
+#define SVN_RA_SVN__IOCTL_PENDING 1 /* ARG points to svn_boolean_t result */
+
 /* Handler for blocked writes. */
 typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
@@ -40,9 +43,8 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
   apr_socket_t *sock;     /* NULL if using in_file/out_file */
-  apr_file_t *in_file;
-  apr_file_t *out_file;
-  apr_proc_t *proc;       /* Used by client.c when sock is NULL */
+  svn_stream_t *in_stream;
+  svn_stream_t *out_stream;
   char read_buf[4096];
   char *read_ptr;
   char *read_end;
@@ -94,6 +96,17 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * @a pool for temporary allocations. */
 svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
                                                apr_pool_t *pool);
+
+/* Set *in and *out to streams that are mapped onto operations on sock. */
+void svn_ra_svn__stream_pair_from_sock(apr_socket_t *sock, svn_stream_t **in,
+                                       svn_stream_t **out, apr_pool_t *pool);
+
+/* Set *in and *out to streams that are mapped onto operations on in_file
+   and out_file, respectively. */
+void svn_ra_svn__stream_pair_from_files(apr_file_t *in_file,
+                                        apr_file_t *out_file,
+                                        svn_stream_t **in, svn_stream_t **out,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
