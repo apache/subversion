@@ -176,8 +176,9 @@ module Svn
           Core.diff_version
         end
 
-        def file_diff(original, modified)
-          diff = Core.diff_file_diff(original, modified)
+        def file_diff(original, modified, options=nil)
+          options ||= Core::DiffFileOptions.new
+          diff = Core.diff_file_diff_2(original, modified, options)
           if diff
             diff.original = original
             diff.modified = modified
@@ -185,8 +186,9 @@ module Svn
           diff
         end
 
-        def file_diff3(original, modified, latest)
-          diff = Core.diff_file_diff3(original, modified, latest)
+        def file_diff3(original, modified, latest, options=nil)
+          options ||= Core::DiffFileOptions.new
+          diff = Core.diff_file_diff3_2(original, modified, latest, options)
           if diff
             diff.original = original
             diff.modified = modified
