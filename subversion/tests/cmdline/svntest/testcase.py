@@ -129,7 +129,10 @@ class Skip(_Predicate):
 
 
 def create_test_case(func):
-  return _Predicate(func)
+  if isinstance(func, TestCase):
+    return func
+  else:
+    return _Predicate(func)
 
 
 ### End of file.
