@@ -38,7 +38,6 @@ class _Predicate:
       self.__class__ = func.__class__
     else:
       self.func = func
-      self.cond = 0
       self.text = ['PASS: ', 'FAIL: ', 'SKIP: ', '']
     assert type(self.func) is type(lambda x: 0)
 
@@ -66,8 +65,6 @@ class _Predicate:
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, args):
-    if self.cond:
-      raise svntest.Skip
     return apply(self.func, args)
 
   def list_mode(self):
@@ -106,6 +103,12 @@ class Skip(_Predicate):
     self.cond = cond
     if self.cond:
       self.text[3] = 'SKIP'
+
+  def run(self, args):
+    if self.cond:
+      raise svntest.Skip
+    else:
+      return _Predicate.run(self, args)
 
 
 def create_predicate(func):
