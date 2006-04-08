@@ -27,6 +27,10 @@ class TestCase:
   """A thing that can be tested.  This is an abstract class with
   several methods that need to be overridden."""
 
+  def __init__(self):
+    self._result_text = ['PASS: ', 'FAIL: ', 'SKIP: ']
+    self._list_mode_text = ''
+
   def get_description(self):
     raise NotImplementedError()
 
@@ -50,10 +54,10 @@ class TestCase:
     raise NotImplementedError()
 
   def list_mode(self):
-    raise NotImplementedError()
+    return self._list_mode_text
 
   def run_text(self, result=0):
-    raise NotImplementedError()
+    return self._result_text[result]
 
   def convert_result(self, result):
     return result
@@ -72,9 +76,8 @@ class _Predicate(TestCase):
       self.__dict__ = func.__dict__
       self.__class__ = func.__class__
     else:
+      TestCase.__init__(self)
       self.func = func
-      self._result_text = ['PASS: ', 'FAIL: ', 'SKIP: ']
-      self._list_mode_text = ''
     assert type(self.func) is type(lambda x: 0)
 
   def get_description(self):
@@ -92,12 +95,6 @@ class _Predicate(TestCase):
 
   def run(self, args):
     return apply(self.func, args)
-
-  def list_mode(self):
-    return self._list_mode_text
-
-  def run_text(self, result=0):
-    return self._result_text[result]
 
 
 class XFail(_Predicate):
