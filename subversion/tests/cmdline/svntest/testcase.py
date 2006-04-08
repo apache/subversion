@@ -117,20 +117,26 @@ class XFail(TestCase):
     return not self.test_case.convert_result(result)
 
 
-class Skip(_Predicate):
+class Skip(TestCase):
   "A test that will be skipped when a condition is true."
 
-  def __init__(self, func, cond):
-    _Predicate.__init__(self, func)
+  def __init__(self, test_case, cond):
+    TestCase.__init__(self)
+    self.test_case = create_test_case(test_case)
     self.cond = cond
     if self.cond:
       self._list_mode_text = 'SKIP'
+    # Delegate most methods to self.test_case:
+    self.get_description = self.test_case.get_description
+    self.need_sandbox = self.test_case.need_sandbox
+    self.get_sandbox_name = self.test_case.get_sandbox_name
+    self.convert_result = self.test_case.convert_result
 
   def run(self, args):
     if self.cond:
       raise svntest.Skip
     else:
-      return _Predicate.run(self, args)
+      return self.test_case.run(args)
 
 
 def create_test_case(func):
