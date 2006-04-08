@@ -639,7 +639,7 @@ class TestRunner:
   runing the test and test list output."""
 
   def __init__(self, func, index):
-    self.pred = testcase.create_predicate(func)
+    self.pred = testcase.create_test_case(func)
     self.index = index
 
   def list(self):

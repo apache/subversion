@@ -23,7 +23,46 @@ import svntest
 __all__ = ['XFail', 'Skip']
 
 
-class _Predicate:
+class TestCase:
+  """A thing that can be tested.  This is an abstract class with
+  several methods that need to be overridden."""
+
+  def get_description(self):
+    raise NotImplementedError()
+
+  def check_description(self):
+    description = self.get_description()
+
+    if len(description) > 50:
+      print 'WARNING: Test doc string exceeds 50 characters'
+    if description[-1] == '.':
+      print 'WARNING: Test doc string ends in a period (.)'
+    if not string.lower(description[0]) == description[0]:
+      print 'WARNING: Test doc string is capitalized'
+
+  def need_sandbox(self):
+    return 0
+
+  def get_sandbox_name(self):
+    return 'sandbox'
+
+  def run(self, args):
+    raise NotImplementedError()
+
+  def list_mode(self):
+    raise NotImplementedError()
+
+  def skip_text(self):
+    raise NotImplementedError()
+
+  def run_text(self, result=0):
+    raise NotImplementedError()
+
+  def convert_result(self, result):
+    return result
+
+
+class _Predicate(TestCase):
   """A general-purpose predicate that encapsulates a test case (function),
   a condition for its execution and a set of display properties for test
   lists and test log output."""
@@ -46,16 +85,6 @@ class _Predicate:
       raise Exception(self.func.__name__ + ' lacks required doc string')
     return description
 
-  def check_description(self):
-    description = self.get_description()
-
-    if len(description) > 50:
-      print 'WARNING: Test doc string exceeds 50 characters'
-    if description[-1] == '.':
-      print 'WARNING: Test doc string ends in a period (.)'
-    if not string.lower(description[0]) == description[0]:
-      print 'WARNING: Test doc string is capitalized'
-
   def need_sandbox(self):
     return self.func.func_code.co_argcount != 0
 
@@ -74,9 +103,6 @@ class _Predicate:
 
   def run_text(self, result=0):
     return self.text[result]
-
-  def convert_result(self, result):
-    return result
 
 
 class XFail(_Predicate):
@@ -110,7 +136,7 @@ class Skip(_Predicate):
       return _Predicate.run(self, args)
 
 
-def create_predicate(func):
+def create_test_case(func):
   return _Predicate(func)
 
 
