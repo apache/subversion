@@ -52,9 +52,6 @@ class TestCase:
   def list_mode(self):
     raise NotImplementedError()
 
-  def skip_text(self):
-    raise NotImplementedError()
-
   def run_text(self, result=0):
     raise NotImplementedError()
 
@@ -97,9 +94,6 @@ class _Predicate(TestCase):
 
   def list_mode(self):
     return self.text[3]
-
-  def skip_text(self):
-    return self.text[2]
 
   def run_text(self, result=0):
     return self.text[result]
