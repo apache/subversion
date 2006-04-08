@@ -668,8 +668,6 @@ class TestRunner:
 
     result = 0
     try:
-      if self.pred.cond:
-        raise Skip
       rc = self.pred.run(args)
       if rc is not None:
         print 'STYLE ERROR in',

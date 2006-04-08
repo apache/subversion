@@ -66,6 +66,8 @@ class _Predicate:
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, args):
+    if self.cond:
+      raise svntest.Skip
     return apply(self.func, args)
 
   def list_mode(self):
