@@ -78,7 +78,7 @@ class _Predicate(TestCase):
     else:
       TestCase.__init__(self)
       self.func = func
-    assert type(self.func) is type(lambda x: 0)
+      assert type(self.func) is type(lambda x: 0)
 
   def get_description(self):
     description = self.func.__doc__
