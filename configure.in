@@ -78,6 +78,9 @@ SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_LATEST_WORKING_VER, $NEON_URL)
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
 
+dnl Search for OpenSSL.
+SVN_LIB_SSL
+
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution
