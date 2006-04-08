@@ -235,6 +235,28 @@ module Svn
       end
     end
 
+    class DiffFileOptions
+      class << self
+        undef new
+        def new(*args)
+          options = Svn::Core.diff_file_options_create(*args)
+          options.__send__("initialize", *args)
+          options
+        end
+
+        def parse(*args)
+          options = new
+          options.parse(*args)
+          options
+        end
+      end
+
+      def parse(*args)
+        args = args.first if args.size == 1 and args.first.is_a?(Array)
+        Svn::Core.diff_file_options_parse(self, args)
+      end
+    end
+
     class Version
 
       alias _initialize initialize
