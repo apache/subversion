@@ -97,19 +97,24 @@ class _Predicate(TestCase):
     return apply(self.func, args)
 
 
-class XFail(_Predicate):
+class XFail(TestCase):
   "A test that is expected to fail."
 
-  def __init__(self, func):
-    _Predicate.__init__(self, func)
-    self._result_text[0] = 'XPASS:'
-    self._result_text[1] = 'XFAIL:'
-    if self._list_mode_text == '':
-      self._list_mode_text = 'XFAIL'
+  def __init__(self, test_case):
+    TestCase.__init__(self)
+    self.test_case = create_test_case(test_case)
+    self._result_text = ['XPASS:', 'XFAIL:', self.test_case.run_text(2)]
+    self._list_mode_text = self.test_case.list_mode() or 'XFAIL'
+    # Delegate most methods to self.test_case:
+    self.get_description = self.test_case.get_description
+    self.need_sandbox = self.test_case.need_sandbox
+    self.get_sandbox_name = self.test_case.get_sandbox_name
+    self.run = self.test_case.run
+
   def convert_result(self, result):
-    # Conditions are reversed here: a failure expected, therefore it
-    # isn't an error; a pass is an error.
-    return not result
+    # Conditions are reversed here: a failure is expected, therefore
+    # it isn't an error; a pass is an error.
+    return not self.test_case.convert_result(result)
 
 
 class Skip(_Predicate):
