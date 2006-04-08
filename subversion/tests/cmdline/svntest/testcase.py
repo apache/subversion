@@ -73,7 +73,8 @@ class _Predicate(TestCase):
       self.__class__ = func.__class__
     else:
       self.func = func
-      self.text = ['PASS: ', 'FAIL: ', 'SKIP: ', '']
+      self._result_text = ['PASS: ', 'FAIL: ', 'SKIP: ']
+      self._list_mode_text = ''
     assert type(self.func) is type(lambda x: 0)
 
   def get_description(self):
@@ -93,10 +94,10 @@ class _Predicate(TestCase):
     return apply(self.func, args)
 
   def list_mode(self):
-    return self.text[3]
+    return self._list_mode_text
 
   def run_text(self, result=0):
-    return self.text[result]
+    return self._result_text[result]
 
 
 class XFail(_Predicate):
@@ -104,10 +105,10 @@ class XFail(_Predicate):
 
   def __init__(self, func):
     _Predicate.__init__(self, func)
-    self.text[0] = 'XPASS:'
-    self.text[1] = 'XFAIL:'
-    if self.text[3] == '':
-      self.text[3] = 'XFAIL'
+    self._result_text[0] = 'XPASS:'
+    self._result_text[1] = 'XFAIL:'
+    if self._list_mode_text == '':
+      self._list_mode_text = 'XFAIL'
   def convert_result(self, result):
     # Conditions are reversed here: a failure expected, therefore it
     # isn't an error; a pass is an error.
@@ -121,7 +122,7 @@ class Skip(_Predicate):
     _Predicate.__init__(self, func)
     self.cond = cond
     if self.cond:
-      self.text[3] = 'SKIP'
+      self._list_mode_text = 'SKIP'
 
   def run(self, args):
     if self.cond:
