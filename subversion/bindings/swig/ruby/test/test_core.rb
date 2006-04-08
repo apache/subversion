@@ -331,7 +331,32 @@ EOT
                                       latest.path)
     assert_equal(expected, diff.merge)
   end
-  
+
+  def test_diff_file_options
+    args = ["--ignore-all-space"]
+    options = Svn::Core::DiffFileOptions.parse(*args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_ALL,
+                 options.ignore_space)
+    assert_false(options.ignore_eol_style)
+
+    args = ["--ignore-space-change"]
+    options = Svn::Core::DiffFileOptions.parse(*args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_CHANGE,
+                 options.ignore_space)
+    assert_false(options.ignore_eol_style)
+
+    args = ["--ignore-space-change", "--ignore-eol-style"]
+    options = Svn::Core::DiffFileOptions.parse(*args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_CHANGE,
+                 options.ignore_space)
+    assert_true(options.ignore_eol_style)
+
+    options = Svn::Core::DiffFileOptions.parse(args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_CHANGE,
+                 options.ignore_space)
+    assert_true(options.ignore_eol_style)
+  end
+
   def test_create_commit_info
     info = Svn::Core::CommitInfo.new
     now = Time.now.gmtime
