@@ -155,10 +155,15 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *rev;
 
       rev = svn_ra_serf__find_attr(attrs, "rev");
+      if (!rev)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing revision attr in target-revision element"));
+        }
 
-      ctx->editor->set_target_revision(ctx->editor_baton,
-                                       SVN_STR_TO_REV(rev),
-                                       parser->state->pool);
+      SVN_ERR(ctx->editor->set_target_revision(ctx->editor_baton,
+                                               SVN_STR_TO_REV(rev),
+                                               parser->state->pool));
     }
   else if (state == REPORT &&
            strcmp(name.name, "open-root") == 0)
@@ -167,6 +172,12 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       replay_info_t *info;
 
       rev = svn_ra_serf__find_attr(attrs, "rev");
+
+      if (!rev)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing revision attr in open-root element"));
+        }
 
       info = push_state(parser, ctx, OPEN_DIR);
 
@@ -181,7 +192,17 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       replay_info_t *info;
 
       file_name = svn_ra_serf__find_attr(attrs, "name");
+      if (!file_name)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing name attr in delete-entry element"));
+        }
       rev = svn_ra_serf__find_attr(attrs, "rev");
+      if (!rev)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing revision attr in delete-entry element"));
+        }
 
       info = push_state(parser, ctx, DELETE_ENTRY);
 
@@ -196,8 +217,18 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *rev, *dirname;
       replay_info_t *info;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
       dirname = svn_ra_serf__find_attr(attrs, "path");
+      if (!dirname)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing path attr in open-directory element"));
+        }
+      rev = svn_ra_serf__find_attr(attrs, "rev");
+      if (!rev)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing revision attr in open-directory element"));
+        }
 
       info = push_state(parser, ctx, OPEN_DIR);
 
@@ -213,6 +244,11 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       replay_info_t *info;
 
       dir_name = svn_ra_serf__find_attr(attrs, "path");
+      if (!dir_name)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing path attr in add-directory element"));
+        }
       copyfrom = svn_ra_serf__find_attr(attrs, "copyfrom-path");
       copyrev = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
 
@@ -243,7 +279,17 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       replay_info_t *info;
 
       file_name = svn_ra_serf__find_attr(attrs, "name");
+      if (!file_name)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing name attr in open-file element"));
+        }
       rev = svn_ra_serf__find_attr(attrs, "rev");
+      if (!rev)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing revision attr in open-file element"));
+        }
 
       info = push_state(parser, ctx, OPEN_FILE);
 
@@ -259,6 +305,11 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       replay_info_t *info;
 
       file_name = svn_ra_serf__find_attr(attrs, "name");
+      if (!file_name)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                    _("Missing name attr in add-file element"));
+        }
       copyfrom = svn_ra_serf__find_attr(attrs, "copyfrom-path");
       copyrev = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
 
@@ -314,6 +365,12 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       svn_boolean_t del_prop;
 
       prop_name = svn_ra_serf__find_attr(attrs, "name");
+      if (!prop_name)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Missing name attr in %s element"),
+                                   name.name);
+        }
 
       info = push_state(parser, ctx, CHANGE_PROP);
 
