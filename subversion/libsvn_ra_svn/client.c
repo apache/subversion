@@ -50,6 +50,7 @@ typedef struct {
   svn_boolean_t is_tunneled;
   svn_auth_baton_t *auth_baton;
   const char *user;
+  const char *hostname;
   const char *realm_prefix;
   const char **tunnel_argv;
 } ra_svn_session_baton_t;
@@ -291,6 +292,14 @@ static svn_error_t *do_auth(ra_svn_session_baton_t *sess,
 
   realmstring = realm ? apr_psprintf(pool, "%s %s", sess->realm_prefix, realm)
     : sess->realm_prefix;
+
+#ifdef SVN_HAVE_SSL
+  if (find_mech(mechlist, "STARTTLS"))
+    SVN_ERR(svn_ra_svn__conn_ssl_client(sess->conn, sess->auth_baton,
+                                        sess->hostname, realmstring,
+                                        pool));
+#endif
+
   if (sess->is_tunneled && find_mech(mechlist, "EXTERNAL"))
     {
       /* Ask the server to use the tunnel connection environment (on
@@ -633,6 +642,7 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
   sess->is_tunneled = (tunnel_argv != NULL);
   sess->auth_baton = auth_baton;
   sess->user = uri->user;
+  sess->hostname = uri->hostname;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
                                     uri->port);
   sess->tunnel_argv = tunnel_argv;
@@ -656,9 +666,13 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(ww)c", (apr_uint64_t) 2,
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(ww!", (apr_uint64_t) 2,
                                      SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                     SVN_RA_SVN_CAP_SVNDIFF1, url));
+                                     SVN_RA_SVN_CAP_SVNDIFF1));
+#ifdef SVN_HAVE_SSL
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_STARTTLS));
+#endif
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)c", url));
       SVN_ERR(handle_auth_request(sess, pool));
     }
 

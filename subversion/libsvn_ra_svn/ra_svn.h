@@ -29,6 +29,7 @@ extern "C" {
 #include <apr_file_io.h>
 #include <apr_thread_proc.h>
 #include "svn_ra_svn.h"
+#include "svn_auth.h"
 
 #define SVN_RA_SVN__IOCTL_TIMEOUT 0 /* ARG points to apr_interval_time_t */
 #define SVN_RA_SVN__IOCTL_PENDING 1 /* ARG points to svn_boolean_t result */
@@ -107,6 +108,18 @@ void svn_ra_svn__stream_pair_from_files(apr_file_t *in_file,
                                         apr_file_t *out_file,
                                         svn_stream_t **in, svn_stream_t **out,
                                         apr_pool_t *pool);
+
+/* Wrap the streams associated with CONN with new streams that map to
+ * SSL operations on the existing streams, perform an SSL_connect
+ * operation, and verify that the server certificate matches HOSTNAME,
+ * using AUTH_BATON and REALM for user interaction.  Use POOL for any
+ * allocation.
+ */
+svn_error_t *svn_ra_svn__conn_ssl_client(svn_ra_svn_conn_t *conn,
+                                         svn_auth_baton_t *auth_baton,
+                                         const char *hostname,
+                                         const char *realm,
+                                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

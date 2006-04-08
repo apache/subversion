@@ -760,6 +760,16 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 6,
              "Client/server version mismatch")
 
+  /** @since New in 1.4. */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_SSL_INIT,
+             SVN_ERR_RA_SVN_CATEGORY_START + 7,
+             "Could not initialize SSL")
+
+  /** @since New in 1.4. */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_SSL_ERROR,
+             SVN_ERR_RA_SVN_CATEGORY_START + 8,
+             "SSL network error")
+
   /* libsvn_auth errors */
 
        /* this error can be used when an auth provider doesn't have
