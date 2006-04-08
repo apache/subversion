@@ -22,8 +22,11 @@
 # ======================
 #
 # abort                   中断
+# add-directory element   add-directory 要素
+# add-file element        add-file 要素
 # ancestor                祖先
 # ancestry                系統
+# apply-textdelta element     apply-textdelta 要素
 # attempted ...           〜しようとしました
 # attribute               属性
 # author                  変更者
@@ -35,12 +38,15 @@
 # character converter     文字列コンバータ
 # child                   子ノード
 # cleanup                 掃除
+# close-directory element     close-directory 要素
+# close-file element      close-file 要素
 # commit                  コミット
 # conflict                衝突
 # contents                内容
 # copyfrom                コピー元
 # creating ...            〜を作成しています
 # datestamp               タイムスタンプ
+# delete-entry element    delete-entry 要素
 # delta                   差分
 # deltification           差分化
 # destination             コピー先 / 移動先
@@ -83,6 +89,7 @@
 # MIME type               MIME タイプ
 # modified                修正された
 # mutex                   相互排除ロック
+# name attr               name 属性
 # native encoding         ネイティブのエンコーディング
 # no ... available        利用できる〜がありません
 # node kind               ノード種別
@@ -91,8 +98,12 @@
 # non-file                ファイルでない
 # null                    空の
 # object                  オブジェクト
+# open-directory element  open-directory 要素
+# open-file element       open-file 要素
+# open-root element       open-root 要素
 # out of date             リポジトリ側と比べて古くなった
 # overflow                溢れる
+# path attr               path 属性
 # post-commit hook        post-commit フック
 # post-lock hook          post-lock フック
 # post-revprop-change hook    post-revprop-change フック
@@ -113,7 +124,9 @@
 # repository              リポジトリ
 # repository root         リポジトリのルート
 # representation          表現
+# rev attr                rev 属性
 # revision                リビジョン
+# revision attr           rev 属性
 # root of edit            編集用ルートパス
 # scheduled for ...       〜準備中の
 # source                  コピー元 / 移動元 / マージ元
@@ -125,6 +138,7 @@
 # stolen                  (ロックが) 奪われた
 # store                   保存する
 # target                  対象
+# target-revision element     target-revision 要素
 # text-base               テキストベース
 # textual contents        テキスト
 # token                   トークン
@@ -145,8 +159,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-04-08 00:22+0900\n"
-"PO-Revision-Date: 2006-04-08 00:21+0900\n"
+"POT-Creation-Date: 2006-04-09 08:40+0900\n"
+"PO-Revision-Date: 2006-04-09 08:31+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2687,7 +2701,7 @@ msgstr "CHECKOUT レスポンスに 'Location:' ヘッダが含まれていま�
 msgid "Could not create a DELETE request (%s)"
 msgstr "DELETE リクエストを作成できませんでした (%s)"
 
-#: libsvn_ra_dav/commit.c:1169 libsvn_ra_serf/commit.c:1280
+#: libsvn_ra_dav/commit.c:1169 libsvn_ra_serf/commit.c:1275
 #, c-format
 msgid "File '%s' already exists"
 msgstr "ファイル '%s' は既に存在しています"
@@ -2763,8 +2777,8 @@ msgid "Incomplete lock data returned"
 msgstr "不完全なロックデータが返されました"
 
 #: libsvn_ra_dav/fetch.c:1819 libsvn_ra_dav/fetch.c:1827
-#: libsvn_ra_dav/fetch.c:1831 libsvn_ra_serf/serf.c:726
-#: libsvn_ra_serf/serf.c:737
+#: libsvn_ra_dav/fetch.c:1831 libsvn_ra_serf/serf.c:720
+#: libsvn_ra_serf/serf.c:731
 msgid "Server does not support locking features"
 msgstr "ロック機能をサーバがサポートしていません"
 
@@ -2888,48 +2902,49 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "1 つ以上の属性を変更できませんでした。リポジトリに変更は加えられていません"
 
-#: libsvn_ra_dav/replay.c:137
+#: libsvn_ra_dav/replay.c:137 libsvn_ra_serf/replay.c:161
 msgid "Missing revision attr in target-revision element"
-msgstr "対象リビジョン要素にリビジョン属性がありません"
+msgstr "target-revision 要素に rev 属性がありません"
 
-#: libsvn_ra_dav/replay.c:154
+#: libsvn_ra_dav/replay.c:154 libsvn_ra_serf/replay.c:179
 msgid "Missing revision attr in open-root element"
-msgstr "ルート解放要素にリビジョン属性がありません"
+msgstr "open-root 要素に rev 属性がありません"
 
-#: libsvn_ra_dav/replay.c:172
+#: libsvn_ra_dav/replay.c:172 libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
-msgstr "エントリ削除要素に名前属性がありません"
+msgstr "delete-entry 要素に name 属性がありません"
 
 #: libsvn_ra_dav/replay.c:176
 msgid "Missing rev attr in delete-entry element"
-msgstr "エントリ削除要素にリビジョン属性がありません"
+msgstr "delete-entry 要素に rev 属性がありません"
 
 #: libsvn_ra_dav/replay.c:205
 msgid "Missing name attr in open-directory element"
-msgstr "ディレクトリ解放要素に名前要素がありません"
+msgstr "open-directory 要素に name 属性がありません"
 
 #: libsvn_ra_dav/replay.c:257 libsvn_ra_dav/replay.c:366
+#: libsvn_ra_serf/replay.c:371
 #, c-format
 msgid "Missing name attr in %s element"
-msgstr "%s 要素に名前属性がありません"
+msgstr "%s 要素に name 属性がありません"
 
 #: libsvn_ra_dav/replay.c:303
 msgid "Got apply-textdelta element without preceding add-file or open-file"
 msgstr ""
-"add-file や open-file を先におこなっていないのに apply-textdelta 要素を使って"
-"います"
+"add-file 要素や open-file 要素を先に使っていないのに apply-textdelta 要素を"
+"使っています"
 
 #: libsvn_ra_dav/replay.c:329
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr ""
-"add-file や open-file を先におこなっていないのに close-file 要素を使っていま"
-"す"
+"add-file 要素や open-file 要素を先に使っていないのに close-file 要素を使って"
+"います"
 
 #: libsvn_ra_dav/replay.c:344
 msgid "Got close-directory element without ever opening a directory"
 msgstr "ディレクトリを開かずに close-directory 要素を使っています"
 
-#: libsvn_ra_dav/replay.c:471
+#: libsvn_ra_dav/replay.c:471 libsvn_ra_serf/replay.c:492
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "ストリームへの書き込み中にエラーが発生しました: 予想外の EOF です"
@@ -3130,7 +3145,7 @@ msgstr "リポジトリ '%s' を開けませんでした"
 msgid "Path '%s' not present"
 msgstr "パス '%s' は存在しません"
 
-#: libsvn_ra_serf/commit.c:822
+#: libsvn_ra_serf/commit.c:824
 #, c-format
 msgid "Failed writing updated file"
 msgstr "更新されたファイルを書き込めませんでした"
@@ -3138,6 +3153,34 @@ msgstr "更新されたファイルを書き込めませんでした"
 #: libsvn_ra_serf/getloc.c:289
 msgid "File doesn't exist on HEAD"
 msgstr "ファイルが HEAD に存在しません"
+
+#: libsvn_ra_serf/replay.c:204
+msgid "Missing revision attr in delete-entry element"
+msgstr "delete-entry 要素に rev 属性がありません"
+
+#: libsvn_ra_serf/replay.c:224
+msgid "Missing path attr in open-directory element"
+msgstr "open-directory 要素に path 属性がありません"
+
+#: libsvn_ra_serf/replay.c:230
+msgid "Missing revision attr in open-directory element"
+msgstr "open-directory 要素に rev 属性がありません"
+
+#: libsvn_ra_serf/replay.c:250
+msgid "Missing path attr in add-directory element"
+msgstr "add-directory 要素に path 属性がありません"
+
+#: libsvn_ra_serf/replay.c:285
+msgid "Missing name attr in open-file element"
+msgstr "open-file 要素に name 属性がありません"
+
+#: libsvn_ra_serf/replay.c:291
+msgid "Missing revision attr in open-file element"
+msgstr "open-file 要素に rev 属性がありません"
+
+#: libsvn_ra_serf/replay.c:311
+msgid "Missing name attr in add-file element"
+msgstr "add-file 要素に name 属性がありません"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -3148,7 +3191,7 @@ msgstr "WebDAV プロトコルを使い serf でリポジトリにアクセス�
 msgid "Could not lookup hostname: %s://%s"
 msgstr "ホスト名を検索できませんでした: %s://%s"
 
-#: libsvn_ra_serf/serf.c:804
+#: libsvn_ra_serf/serf.c:786
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr ""
