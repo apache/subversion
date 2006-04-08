@@ -69,16 +69,9 @@ class _Predicate(TestCase):
   lists and test log output."""
 
   def __init__(self, func):
-    if isinstance(func, _Predicate):
-      # Whee, this is better than blessing objects in Perl!
-      # For the unenlightened: What we're doing here is adopting the
-      # identity *and class* of 'func'
-      self.__dict__ = func.__dict__
-      self.__class__ = func.__class__
-    else:
-      TestCase.__init__(self)
-      self.func = func
-      assert type(self.func) is type(lambda x: 0)
+    TestCase.__init__(self)
+    self.func = func
+    assert type(self.func) is type(lambda x: 0)
 
   def get_description(self):
     description = self.func.__doc__
