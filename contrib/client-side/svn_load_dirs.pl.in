@@ -998,8 +998,8 @@ while (defined (my $load_dir = &get_next_load_dir))
         if ($source_is_exe)
           {
             print "Adding to '$source_path' property 'svn:executable' with ",
-                  "value ''.\n";
-            my $property = {name => 'svn:executable', value => ''};
+                  "value '*'.\n";
+            my $property = {name => 'svn:executable', value => '*'};
             push (@{$add_files{$source_path}{properties}},
                   $property);
           }
