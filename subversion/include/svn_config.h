@@ -104,6 +104,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
+#define SVN_CONFIG_OPTION_SSL_SERVER_CERT_FILE      "ssl-server-cert"
+#define SVN_CONFIG_OPTION_SSL_SERVER_KEY_FILE       "ssl-server-key"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"

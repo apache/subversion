@@ -624,6 +624,52 @@ svn_ra_svn__conn_ssl_client(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Helper method for more verbose SSL errors. */
+static const char *
+ssl_last_error(apr_pool_t *pool)
+{
+  unsigned long ssl_error = ERR_get_error();
+  char *buffer;
+  
+  if (ssl_error == 0)
+    return strerror(errno);
+
+  buffer = apr_pcalloc(pool, 256);  
+  ERR_error_string_n(ssl_error, buffer, 256);
+  return buffer;
+}
+
+
+svn_error_t *
+svn_ra_svn_conn_ssl_server(svn_ra_svn_conn_t *conn, const char *cert,
+                           const char *key, apr_pool_t *pool)
+{
+  SSL_CTX *ctx;
+  ssl_baton_t *baton;
+
+  svn_ra_svn_flush(conn, pool);
+
+  SVN_ERR(ssl_create(TRUE, &ctx, pool));
+
+  if (SSL_CTX_use_certificate_chain_file(ctx, cert) != 1)
+    return svn_error_createf(SVN_ERR_RA_SVN_SSL_INIT, NULL,
+                             "Could not load SSL certificate from '%s': %s.",
+                             cert, ssl_last_error(pool));
+
+  if (SSL_CTX_use_RSAPrivateKey_file(ctx, key, SSL_FILETYPE_PEM) != 1)
+    return svn_error_createf(SVN_ERR_RA_SVN_SSL_INIT, NULL,
+                             "Could not load SSL key from '%s': %s.",
+                             key, ssl_last_error(pool));
+
+  if (!SSL_CTX_check_private_key(ctx))
+    return svn_error_createf(SVN_ERR_RA_SVN_SSL_INIT, NULL,
+                             "Could not verify SSL key: %s.",
+                             ssl_last_error(pool));
+
+  SVN_ERR(wrap_conn(conn, ctx, &baton, pool));
+  SVN_ERR(do_ssl_operation(baton, SSL_accept, NULL, NULL, NULL, NULL));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_ra_svn__ssl_initialize(apr_pool_t *pool)

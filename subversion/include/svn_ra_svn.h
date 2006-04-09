@@ -365,6 +365,20 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     svn_config_t *pwdb, const char **user,
                                     svn_boolean_t *success);
 
+
+
+/** This function is only intended for use by svnserve.
+ *
+ * Perform the server-side steps of the SSL session handshake
+ * on @a conn, using the certificate at @a cert and the key
+ * in @a key.  Use @a pool for any allocation.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_ra_svn_conn_ssl_server(svn_ra_svn_conn_t *conn,
+                                        const char *cert, const char *key,
+                                        apr_pool_t *pool);
+
 /**
  *
  * Initialize the OpenSSL library.

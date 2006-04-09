@@ -56,6 +56,8 @@ typedef struct {
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
+  const char *cert_file;   /* SSL certificate for server */
+  const char *key_file;    /* SSL private key for server */
   int protocol_version;
   apr_pool_t *pool;
 } server_baton_t;
@@ -205,7 +207,8 @@ static enum access_type current_access(server_baton_t *b)
    access. */
 static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                server_baton_t *b, enum access_type required,
-                               svn_boolean_t needs_username)
+                               svn_boolean_t needs_username,
+                               svn_boolean_t showtls)
 {
   if (!needs_username && get_access(b, UNAUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
@@ -213,6 +216,10 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
   if (b->pwdb && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "CRAM-MD5"));
+#ifdef SVN_HAVE_SSL
+  if (showtls)
+    SVN_ERR(svn_ra_svn_write_word(conn, pool, "STARTTLS"));
+#endif
   return SVN_NO_ERROR;
 }
 
@@ -319,14 +326,22 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * authentication succeeded. */
 static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  server_baton_t *b, enum access_type required,
-                                 svn_boolean_t needs_username)
+                                 svn_boolean_t needs_username,
+                                 svn_boolean_t dotls)
 {
   svn_boolean_t success;
   const char *mech, *mecharg;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
-  SVN_ERR(send_mechs(conn, pool, b, required, needs_username));
+  SVN_ERR(send_mechs(conn, pool, b, required, needs_username, dotls));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)c)", b->realm));
+
+#if SVN_HAVE_SSL
+  if (dotls)
+    SVN_ERR(svn_ra_svn_conn_ssl_server(conn, b->cert_file, b->key_file,
+                                       pool));
+#endif
+
   do
     {
       SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &mech, &mecharg));
@@ -435,7 +450,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
   if (b->user == NULL
       && get_access(b, AUTHENTICATED) >= req
       && (b->tunnel_user || b->pwdb) && b->protocol_version >= 2)
-    SVN_ERR(auth_request(conn, pool, b, req, TRUE));
+    SVN_ERR(auth_request(conn, pool, b, req, TRUE, FALSE));
 
   /* Now that an authentication has been done get the new take of
      authz on the request. */
@@ -2159,6 +2174,11 @@ static svn_error_t *find_repos(const char *url, const char *root,
       b->authzdb = NULL;
     }
 
+  svn_config_get(b->cfg, &b->cert_file, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_SSL_SERVER_CERT_FILE, NULL);
+  svn_config_get(b->cfg, &b->key_file, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_SSL_SERVER_KEY_FILE, NULL);
+  
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
      above, because we can't know about access it grants until paths
@@ -2208,7 +2228,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
    * start sending an empty mechlist. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
-  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
+  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE,
+                     b.cert_file && b.key_file));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(ww))",
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE, 
                                  SVN_RA_SVN_CAP_SVNDIFF1));
@@ -2230,6 +2251,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nw(?c)l",
                                      &ver, &mech, &mecharg, &caplist));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+      if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_STARTTLS))
+        return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                                _("SSL not supported for version 1"));
       SVN_ERR(auth(conn, pool, mech, mecharg, &b, READ_ACCESS, FALSE,
                    &success));
       if (!success)
@@ -2259,7 +2283,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       err = find_repos(client_url, params->root, &b, pool);
       if (!err)
         {
-          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
+          svn_boolean_t tls;
+          tls = svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_STARTTLS);
+          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE, tls));
           if (current_access(&b) == NO_ACCESS)
             err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                    "Not authorized for access");
