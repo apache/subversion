@@ -357,13 +357,14 @@ fill_cert_info(ssl_baton_t *ssl_baton, apr_pool_t *pool, const char *hostname,
   if (cert_buffer_size > 0)
     {
       svn_string_t certdata;
-      unsigned char *p = apr_pcalloc(pool, cert_buffer_size);
+      unsigned char *derbuffer = apr_pcalloc(pool, cert_buffer_size);
+      unsigned char *p = derbuffer;
 
       i2d_X509(peer, &p);
-      certdata.data = (char *)p;
+      certdata.data = (char *)derbuffer;
       certdata.len = cert_buffer_size;
       ascii_cert = svn_base64_encode_string(&certdata, pool);
-      cert_info->ascii_cert = apr_pstrdup(pool, ascii_cert->data);
+      cert_info->ascii_cert = ascii_cert->data;
     }
 
   /* Read the certificate validity dates, but keep the output format
