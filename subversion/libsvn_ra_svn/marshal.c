@@ -103,15 +103,13 @@ svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 
   conn->block_handler = handler;
   conn->block_baton = baton;
-  svn_stream_ioctl(conn->out_stream, SVN_RA_SVN__IOCTL_TIMEOUT, &interval);
+  svn_ra_svn__stream_timeout(conn->out_stream, interval);
 }
 
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool)
 {
-  svn_boolean_t result;
-  svn_stream_ioctl(conn->in_stream, SVN_RA_SVN__IOCTL_PENDING, &result);
-  return result;
+  return svn_ra_svn__stream_pending(conn->in_stream);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -141,7 +139,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   while (data < end)
     {
       count = end - data;
-      SVN_ERR(svn_stream_write(conn->out_stream, data, &count));
+      SVN_ERR(svn_stream_write(conn->out_stream->stream, data, &count));
       if (count == 0)
         {
           if (!subpool)
@@ -222,7 +220,7 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
                                   apr_size_t *len)
 {
-  SVN_ERR(svn_stream_read(conn->in_stream, data, len));
+  SVN_ERR(svn_stream_read(conn->in_stream->stream, data, len));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             _("Connection closed unexpectedly"));

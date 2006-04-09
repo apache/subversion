@@ -31,8 +31,18 @@ extern "C" {
 #include "svn_ra_svn.h"
 #include "svn_auth.h"
 
-#define SVN_RA_SVN__IOCTL_TIMEOUT 0 /* ARG points to apr_interval_time_t */
-#define SVN_RA_SVN__IOCTL_PENDING 1 /* ARG points to svn_boolean_t result */
+
+typedef svn_boolean_t (*pending_fn_t)(void *baton);
+
+typedef void (*timeout_fn_t)(void *baton, apr_interval_time_t timeout);
+
+typedef struct svn_ra_svn_stream {
+  svn_stream_t *stream;
+  void *baton;
+  pending_fn_t pending_fn;
+  timeout_fn_t timeout_fn;
+} svn_ra_svn_stream_t;
+
 
 /* Handler for blocked writes. */
 typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
@@ -44,8 +54,8 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
   apr_socket_t *sock;     /* NULL if using in_file/out_file */
-  svn_stream_t *in_stream;
-  svn_stream_t *out_stream;
+  svn_ra_svn_stream_t *in_stream;
+  svn_ra_svn_stream_t *out_stream;
   char read_buf[4096];
   char *read_ptr;
   char *read_end;
@@ -99,14 +109,17 @@ svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
                                                apr_pool_t *pool);
 
 /* Set *in and *out to streams that are mapped onto operations on sock. */
-void svn_ra_svn__stream_pair_from_sock(apr_socket_t *sock, svn_stream_t **in,
-                                       svn_stream_t **out, apr_pool_t *pool);
+void svn_ra_svn__stream_pair_from_sock(apr_socket_t *sock,
+                                       svn_ra_svn_stream_t **in,
+                                       svn_ra_svn_stream_t **out,
+                                       apr_pool_t *pool);
 
 /* Set *in and *out to streams that are mapped onto operations on in_file
    and out_file, respectively. */
 void svn_ra_svn__stream_pair_from_files(apr_file_t *in_file,
                                         apr_file_t *out_file,
-                                        svn_stream_t **in, svn_stream_t **out,
+                                        svn_ra_svn_stream_t **in,
+                                        svn_ra_svn_stream_t **out,
                                         apr_pool_t *pool);
 
 /* Wrap the streams associated with CONN with new streams that map to
@@ -120,6 +133,13 @@ svn_error_t *svn_ra_svn__conn_ssl_client(svn_ra_svn_conn_t *conn,
                                          const char *hostname,
                                          const char *realm,
                                          apr_pool_t *pool);
+
+/* Set the timeout for operations on STREAM to INTERVAL. */
+void svn_ra_svn__stream_timeout(svn_ra_svn_stream_t *stream,
+                                apr_interval_time_t interval);
+
+/* Return whether or not there is data pending on STREAM. */
+svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn_stream_t *stream);
 
 #ifdef __cplusplus
 }

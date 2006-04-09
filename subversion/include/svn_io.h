@@ -513,11 +513,6 @@ svn_error_t *svn_io_dir_file_copy(const char *src_path,
  * to the maximum extent possible; thus, a short read with no
  * associated error implies the end of the input stream, and a short
  * write should never occur without an associated error.
- *
- * An ioctl handler can be registered in order to add additional
- * functionality to a particular stream.  The stream implementation
- * assigns no meaning to any particular command or arg; it is the
- * responsibility of the caller to do so.
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -536,10 +531,6 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 
-/** Ioctl handler function for a generic stream.  @see svn_stream_t. */
-typedef svn_error_t *(*svn_ioctl_fn_t)(void *baton,
-                                       int cmd,
-                                       void *arg);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *svn_stream_create(void *baton, apr_pool_t *pool);
@@ -556,8 +547,6 @@ void svn_stream_set_write(svn_stream_t *stream, svn_write_fn_t write_fn);
 /** Set @a stream's close function to @a close_fn */
 void svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn);
 
-/** Set @a stream's ioctl function to @a ioctl_fn */
-void svn_stream_set_ioctl(svn_stream_t *stream, svn_ioctl_fn_t ioctl_fn);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *svn_stream_empty(apr_pool_t *pool);
@@ -657,8 +646,6 @@ svn_error_t *svn_stream_write(svn_stream_t *stream, const char *data,
 /** Close a generic stream. @see svn_stream_t. */
 svn_error_t *svn_stream_close(svn_stream_t *stream);
 
-/** Ioctl a generic stream. @see svn_stream_t. */
-svn_error_t *svn_stream_ioctl(svn_stream_t *stream, int cmd, void *arg);
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.

@@ -58,8 +58,8 @@
 
 /* Baton for a SSL stream connection. */
 typedef struct ssl_baton {
-  svn_stream_t *in;              /* Inherited input stream. */
-  svn_stream_t *out;             /* Inherited output stream. */
+  svn_ra_svn_stream_t *in;       /* Inherited input stream. */
+  svn_ra_svn_stream_t *out;      /* Inherited output stream. */
   SSL *ssl;                      /* The SSL to use for this connection. */
   BIO *internal_bio;             /* The Subversion/SSL side of a BIO pair. */
   BIO *network_bio;              /* The network side of a BIO pair. */
@@ -97,7 +97,8 @@ network_biopair_interop(ssl_baton_t *conn)
       write_pos = 0;
       do {
           apr_size_t num_write = from_bio - write_pos;
-          SVN_ERR(svn_stream_write(conn->out, buffer + write_pos, &num_write));
+          SVN_ERR(svn_stream_write(conn->out->stream, buffer + write_pos,
+                                           &num_write));
           write_pos += num_write;
       } while (write_pos < from_bio);
     }
@@ -109,7 +110,7 @@ network_biopair_interop(ssl_baton_t *conn)
 
       apr_size_t num_read = want_read;
 
-      SVN_ERR(svn_stream_read(conn->in, buffer, &num_read));
+      SVN_ERR(svn_stream_read(conn->in->stream, buffer, &num_read));
 
       if (num_read == 0)
         return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
@@ -408,30 +409,28 @@ fill_cert_info(ssl_baton_t *ssl_baton, apr_pool_t *pool, const char *hostname,
 }
 
 
-static svn_error_t *
-ssl_ioctl_cb(void *baton, int cmd, void *arg)
+static void
+ssl_timeout_cb(void *baton, apr_interval_time_t interval)
 {
   ssl_baton_t *ssl_baton = baton;
+  svn_ra_svn__stream_timeout(ssl_baton->out, interval);
+}
 
-  if (cmd == SVN_RA_SVN__IOCTL_TIMEOUT)
-    svn_stream_ioctl(ssl_baton->out, cmd, arg);
-  else /* must be SVN_RA_SVN__IOCTL_PENDING */
-    {
-      int n;
-      svn_boolean_t *result = arg;
-      /* Note that SSL_pending may return number of bytes to read,
-       * even if the data is not application data. */
-      svn_error_t *err = do_ssl_operation(ssl_baton, SSL_pending,
-                                          NULL, NULL, NULL, &n);
-      if (!err)
-        *result = n > 0;
-      else
-        {
-          svn_error_clear(err);
-          *result = 0;
-        }
-    }
-  return SVN_NO_ERROR;
+static svn_boolean_t
+ssl_pending_cb(void *baton)
+{
+  ssl_baton_t *ssl_baton = baton;
+  int n;
+
+  /* Note that SSL_pending may return number of bytes to read,
+   * even if the data is not application data. */
+  svn_error_t *err = do_ssl_operation(ssl_baton, SSL_pending,
+                                      NULL, NULL, NULL, &n);
+  if (!err)
+    return n > 0;
+
+  svn_error_clear(err);
+  return FALSE;
 }
 
 
@@ -495,6 +494,7 @@ static svn_error_t *
 wrap_conn(svn_ra_svn_conn_t *conn, SSL_CTX *ctx, ssl_baton_t **result,
           apr_pool_t *pool)
 {
+  svn_ra_svn_stream_t *s;
   ssl_baton_t *ssl_baton = apr_palloc(pool, sizeof(*ssl_baton));
 
   ssl_baton->in = conn->in_stream;
@@ -520,12 +520,16 @@ wrap_conn(svn_ra_svn_conn_t *conn, SSL_CTX *ctx, ssl_baton_t **result,
   apr_pool_cleanup_register(pool, ssl_baton, cleanup_ssl,
                             apr_pool_cleanup_null);
 
-  conn->out_stream = conn->in_stream = svn_stream_empty(pool);
 
-  svn_stream_set_baton(conn->in_stream, ssl_baton);
-  svn_stream_set_read(conn->in_stream, ssl_read_cb);
-  svn_stream_set_write(conn->in_stream, ssl_write_cb);
-  svn_stream_set_ioctl(conn->in_stream, ssl_ioctl_cb);
+  s = apr_palloc(pool, sizeof(*s));
+  s->stream = svn_stream_empty(pool);
+  conn->out_stream = conn->in_stream = s;
+
+  svn_stream_set_baton(s->stream, ssl_baton);
+  svn_stream_set_read(s->stream, ssl_read_cb);
+  svn_stream_set_write(s->stream, ssl_write_cb);
+  s->pending_fn = ssl_pending_cb;
+  s->timeout_fn = ssl_timeout_cb;
 
   *result = ssl_baton;
   return SVN_NO_ERROR;

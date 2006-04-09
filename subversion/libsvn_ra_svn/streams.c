@@ -43,12 +43,11 @@ typedef struct {
   apr_pool_t *pool;
 } baton_t;
 
-/* set PENDING to indicate whether or not there is data available for
-   reading descriptor DESC of type TYPE, using POOL for any necessary
+/* Return whether or not there is data available for reading
+   descriptor DESC of type TYPE, using POOL for any necessary
    allocations */
-static void
-pending(apr_descriptor *desc, apr_datatype_e type, svn_boolean_t *pending,
-        apr_pool_t *pool)
+static svn_boolean_t
+pending(apr_descriptor *desc, apr_datatype_e type, apr_pool_t *pool)
 {
   apr_pollfd_t pfd;
   apr_status_t status;
@@ -63,7 +62,7 @@ pending(apr_descriptor *desc, apr_datatype_e type, svn_boolean_t *pending,
 #else
   status = apr_poll(&pfd, 1, &n, 0);
 #endif
-  *pending = (status == APR_SUCCESS && n);
+  return (status == APR_SUCCESS && n);
 }
 
 static svn_error_t *
@@ -91,25 +90,32 @@ file_write_cb(void *baton, const char *buffer, apr_size_t *len)
 }
 
 
-static svn_error_t *
-file_ioctl_cb(void *baton, int cmd, void *arg)
+static void
+file_timeout_cb(void *baton, apr_interval_time_t interval)
 {
   baton_t *b = baton;
-  if (cmd == SVN_RA_SVN__IOCTL_TIMEOUT)
-    apr_file_pipe_timeout_set(b->d.f, *(apr_interval_time_t *)arg);
-  else /* must be SVN_RA_SVN__IOCTL_PENDING */
-    pending(&b->d, APR_POLL_FILE, arg, b->pool);
-  return SVN_NO_ERROR;
+  apr_file_pipe_timeout_set(b->d.f, interval);
+}
+
+static svn_boolean_t
+file_pending_cb(void *baton)
+{
+  baton_t *b = baton;
+  return pending(&b->d, APR_POLL_FILE, b->pool);
 }
 
 
 void
 svn_ra_svn__stream_pair_from_files(apr_file_t *in_file, apr_file_t *out_file,
-                                   svn_stream_t **in, svn_stream_t **out,
+                                   svn_ra_svn_stream_t **in_stream,
+                                   svn_ra_svn_stream_t **out_stream,
                                    apr_pool_t *pool)
 {
   baton_t *inb = apr_palloc(pool, sizeof(*inb));
   baton_t *outb = apr_palloc(pool, sizeof(*outb));
+
+  svn_ra_svn_stream_t *in = apr_palloc(pool, sizeof(*in));
+  svn_ra_svn_stream_t *out = apr_palloc(pool, sizeof(*out));
 
   inb->d.f = in_file;
   inb->pool = pool;
@@ -117,16 +123,23 @@ svn_ra_svn__stream_pair_from_files(apr_file_t *in_file, apr_file_t *out_file,
   outb->d.f = out_file;
   outb->pool = pool;
 
-  *in = svn_stream_empty(pool);
-  *out = svn_stream_empty(pool);
+  in->stream = svn_stream_empty(pool);
+  out->stream = svn_stream_empty(pool);
 
-  svn_stream_set_baton(*in, inb);
-  svn_stream_set_read(*in, file_read_cb);
-  svn_stream_set_ioctl(*in, file_ioctl_cb);
+  svn_stream_set_baton(in->stream, inb);
+  svn_stream_set_read(in->stream, file_read_cb);
+  in->baton = inb;
+  in->timeout_fn = file_timeout_cb;
+  in->pending_fn = file_pending_cb;
+  
+  svn_stream_set_baton(out->stream, outb);
+  svn_stream_set_write(out->stream, file_write_cb);
+  out->baton = outb;
+  out->timeout_fn = file_timeout_cb;
+  out->pending_fn = file_pending_cb;
 
-  svn_stream_set_baton(*out, outb);
-  svn_stream_set_write(*out, file_write_cb);
-  svn_stream_set_ioctl(*out, file_ioctl_cb);
+  *in_stream = in;
+  *out_stream = out;
 }
 
 
@@ -161,30 +174,56 @@ sock_write_cb(void *baton, const char *buffer, apr_size_t *len)
 }
 
 
-static svn_error_t *
-sock_ioctl_cb(void *baton, int cmd, void *arg)
+static void
+sock_timeout_cb(void *baton, apr_interval_time_t interval)
 {
-  baton_t *sb = baton;
-  if (cmd == SVN_RA_SVN__IOCTL_TIMEOUT)
-    apr_socket_timeout_set(sb->d.s, *(apr_interval_time_t *)arg);
-  else /* must be SVN_RA_SVN__IOCTL_PENDING */
-    pending(&sb->d, APR_POLL_SOCKET, arg, sb->pool);
-  return SVN_NO_ERROR;
+  baton_t *b = baton;
+  apr_socket_timeout_set(b->d.s, interval);
+}
+
+
+static svn_boolean_t
+sock_pending_cb(void *baton)
+{
+  baton_t *b = baton;
+  return pending(&b->d, APR_POLL_FILE, b->pool);
 }
 
 
 void
-svn_ra_svn__stream_pair_from_sock(apr_socket_t *sock, svn_stream_t **in,
-                                  svn_stream_t **out, apr_pool_t *pool)
+svn_ra_svn__stream_pair_from_sock(apr_socket_t *sock,
+                                  svn_ra_svn_stream_t **in_stream,
+                                  svn_ra_svn_stream_t **out_stream,
+                                  apr_pool_t *pool)
 {
   baton_t *sb = apr_palloc(pool, sizeof(*sb));
+
+  svn_ra_svn_stream_t *s = apr_palloc(pool, sizeof(*s));
+
   sb->d.s = sock;
   sb->pool = pool;
 
-  *out = *in = svn_stream_empty(pool);
+  s->stream = svn_stream_empty(pool);
+  svn_stream_set_baton(s->stream, sb);
+  svn_stream_set_read(s->stream, sock_read_cb);
+  svn_stream_set_write(s->stream, sock_write_cb);
+  s->baton = sb;
+  s->timeout_fn = sock_timeout_cb;
+  s->pending_fn = sock_pending_cb;
+  *out_stream = *in_stream = s;
+}
 
-  svn_stream_set_baton(*in, sb);
-  svn_stream_set_read(*in, sock_read_cb);
-  svn_stream_set_write(*in, sock_write_cb);
-  svn_stream_set_ioctl(*in, sock_ioctl_cb);
+
+void
+svn_ra_svn__stream_timeout(svn_ra_svn_stream_t *stream,
+                           apr_interval_time_t interval)
+{
+  stream->timeout_fn(stream->baton, interval);  
+}
+
+
+svn_boolean_t
+svn_ra_svn__stream_pending(svn_ra_svn_stream_t *stream)
+{
+  return stream->pending_fn(stream->baton);  
 }

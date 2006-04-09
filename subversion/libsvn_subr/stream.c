@@ -44,7 +44,6 @@ struct svn_stream_t {
   svn_read_fn_t read_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
-  svn_ioctl_fn_t ioctl_fn;
 };
 
 
@@ -93,13 +92,6 @@ svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
 }
 
 
-void
-svn_stream_set_ioctl(svn_stream_t *stream, svn_ioctl_fn_t ioctl_fn)
-{
-  stream->ioctl_fn = ioctl_fn;
-}
-
-
 svn_error_t *
 svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
@@ -122,14 +114,6 @@ svn_stream_close(svn_stream_t *stream)
   if (stream->close_fn == NULL)
     return SVN_NO_ERROR;
   return stream->close_fn(stream->baton);
-}
-
-
-svn_error_t *
-svn_stream_ioctl(svn_stream_t *stream, int cmd, void *arg)
-{
-  assert(stream->ioctl_fn != NULL);
-  return stream->ioctl_fn(stream->baton, cmd, arg);
 }
 
 
