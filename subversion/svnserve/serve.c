@@ -40,6 +40,13 @@
 #include "svn_props.h"
 #include "svn_user.h"
 
+#ifdef SVN_HAVE_SSL
+#define SVNSERVE_CAN_TLS TRUE
+#else
+#define SVNSERVE_CAN_TLS FALSE
+#endif
+
+
 #include "server.h"
 
 typedef struct {
@@ -2228,8 +2235,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
    * start sending an empty mechlist. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
-  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE,
-                     b.cert_file && b.key_file));
+  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE, SVNSERVE_CAN_TLS));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(ww))",
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE, 
                                  SVN_RA_SVN_CAP_SVNDIFF1));
@@ -2283,8 +2289,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       err = find_repos(client_url, params->root, &b, pool);
       if (!err)
         {
-          svn_boolean_t tls;
-          tls = svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_STARTTLS);
+          svn_boolean_t tls = FALSE;
+          if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_STARTTLS))
+            tls = SVNSERVE_CAN_TLS && b.cert_file && b.key_file;
           SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE, tls));
           if (current_access(&b) == NO_ACCESS)
             err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
