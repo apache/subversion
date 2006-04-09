@@ -28,7 +28,10 @@
 ;; (see http://subversion.tigris.org)
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
 ;; At the moment the following commands are implemented:
+;;
 ;; M-x svn-status: run 'svn -status -v'
+;; M-x svn-examine (like psvn.el cvs-examine) is alias for svn-status
+;;
 ;; and show the result in the svn-status-buffer-name buffer (normally: *svn-status*).
 ;; If svn-status-verbose is set to nil, only "svn status" without "-v"
 ;; is run. Currently you have to toggle this variable manually.
@@ -787,53 +790,80 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
-(defvar svn-status-display-new-status-buffer nil)
+
+
+;;;###autoload (defalias 'svn-examine 'svn-status)
+(defalias 'svn-examine 'svn-status)
+
 ;;;###autoload
 (defun svn-status (dir &optional arg)
   "Examine the status of Subversion working copy in directory DIR.
 If ARG is -, allow editing of the parameters. One could add -N to
 run svn status non recursively to make it faster.
-For every other non nil ARG pass the -u argument to `svn status'."
+For every other non nil ARG pass the -u argument to `svn status'.
+
+If there is no .svn directory, examine if there is SVN and run
+`cvs-examine'. Otherwise ask if to run `dired'."
   (interactive (list (svn-read-directory-name "SVN status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
-  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
+  (let ((svn-dir (format "%s%s"
+                         (file-name-as-directory dir)
+                         (svn-wc-adm-dir-name)))
+        (cvs-dir (format "%sCVS" (file-name-as-directory dir))))
+    (cond
+     ((file-directory-p svn-dir)
+      (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
+      (svn-status-1 dir arg))
+     ((and (file-directory-p cvs-dir)
+           (fboundp 'cvs-examine))
+      (cvs-examine dir nil))
+     (t
+      (when (y-or-n-p
+             (format
+              (concat
+               "%s "
+               "is not Subversion controlled (missing %s "
+               "directory). "
+               "Run dired instead? ")
+              dir
+              (svn-wc-adm-dir-name)))
+        (dired dir))))))
+
+(defvar svn-status-display-new-status-buffer nil)
+(defun svn-status-1 (dir &optional arg)
+  "Examine DIR. See `svn-status' for more information."
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
-  (if (not (file-exists-p (concat dir "/" (svn-wc-adm-dir-name) "/")))
-      (when (y-or-n-p
-             (concat dir
-                     " does not seem to be a Subversion working copy (no "
-                     (svn-wc-adm-dir-name) " directory).  "
-                     "Run dired instead? "))
-        (dired dir))
-    (setq dir (file-name-as-directory dir))
-    (when svn-status-load-state-before-svn-status
-      (unless (string= dir (car svn-status-directory-history))
-        (svn-status-load-state t)))
-    (setq svn-status-directory-history (delete dir svn-status-directory-history))
-    (add-to-list 'svn-status-directory-history dir)
-    (if (string= (buffer-name) svn-status-buffer-name)
-        (setq svn-status-display-new-status-buffer nil)
-      (setq svn-status-display-new-status-buffer t)
-      ;;(message "psvn: Saving initial window configuration")
-      (setq svn-status-initial-window-configuration (current-window-configuration)))
-    (let* ((status-buf (get-buffer-create svn-status-buffer-name))
-           (proc-buf (get-buffer-create "*svn-process*"))
-           (want-edit (eq arg '-))
-           (status-option (if want-edit
-                              (if svn-status-verbose "-v" "")
-                            (if svn-status-verbose
-                                (if arg "-uv" "-v")
-                              (if arg "-u" ""))))
-           (svn-status-edit-svn-command (or want-edit svn-status-edit-svn-command)))
-      (save-excursion
-        (set-buffer status-buf)
-        (setq default-directory dir)
-        (set-buffer proc-buf)
-        (setq default-directory dir
-              svn-status-remote (when arg t))
-        (svn-run t t 'status "status" status-option)))))
+  (setq dir (file-name-as-directory dir))
+  (when svn-status-load-state-before-svn-status
+    (unless (string= dir (car svn-status-directory-history))
+      (svn-status-load-state t)))
+  (setq svn-status-directory-history (delete dir svn-status-directory-history))
+  (add-to-list 'svn-status-directory-history dir)
+  (if (string= (buffer-name) svn-status-buffer-name)
+      (setq svn-status-display-new-status-buffer nil)
+    (setq svn-status-display-new-status-buffer t)
+    ;;(message "psvn: Saving initial window configuration")
+    (setq svn-status-initial-window-configuration
+          (current-window-configuration)))
+  (let* ((status-buf (get-buffer-create svn-status-buffer-name))
+         (proc-buf (get-buffer-create "*svn-process*"))
+         (want-edit (eq arg '-))
+         (status-option (if want-edit
+                            (if svn-status-verbose "-v" "")
+                          (if svn-status-verbose
+                              (if arg "-uv" "-v")
+                            (if arg "-u" ""))))
+         (svn-status-edit-svn-command
+          (or want-edit svn-status-edit-svn-command)))
+    (save-excursion
+      (set-buffer status-buf)
+      (setq default-directory dir)
+      (set-buffer proc-buf)
+      (setq default-directory dir
+            svn-status-remote (when arg t))
+      (svn-run t t 'status "status" status-option))))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"
@@ -949,7 +979,7 @@ can edit ARGLIST before running svn."
     (error "You can only run one svn process at once!")))
 
 (defun svn-process-sentinel-fixup-path-seperators ()
-	"Convert all path separators to UNIX style.
+    "Convert all path separators to UNIX style.
 \(This is a no-op unless `system-type' is windows-nt\)"
   (when (eq system-type 'windows-nt)
       (save-excursion
@@ -2280,7 +2310,7 @@ See `svn-status-marked-files' for what counts as selected."
   (mapcar 'svn-status-line-info->filename (svn-status-get-file-list use-marked-files)))
 
 (defun svn-status-select-line ()
-	"Return information about the file under point.
+    "Return information about the file under point.
 \(Only used for debugging\)"
   (interactive)
   (let ((info (svn-status-get-line-information)))
@@ -2290,7 +2320,7 @@ See `svn-status-marked-files' for what counts as selected."
       (message "No file on this line"))))
 
 (defun svn-status-ensure-cursor-on-file ()
-	"Raise an error unless point is on a valid file."
+    "Raise an error unless point is on a valid file."
   (unless (svn-status-get-line-information)
     (error "No file on the current line")))
 
