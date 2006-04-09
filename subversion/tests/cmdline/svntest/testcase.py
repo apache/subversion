@@ -63,10 +63,16 @@ class TestCase:
     return result
 
 
-class _Predicate(TestCase):
-  """A general-purpose predicate that encapsulates a test case (function),
-  a condition for its execution and a set of display properties for test
-  lists and test log output."""
+class FunctionTestCase(TestCase):
+  """A TestCase based on a naked Python function object.
+
+  FUNC should be a function that returns None on success and throws an
+  svntest.Failure exception on failure.  It should have a brief
+  docstring describing what it does (and fulfilling the conditions
+  enforced by TestCase.check_description()).  FUNC may take zero or
+  one argument.  It it takes an argument, it will be invoked with an
+  svntest.main.Sandbox instance as argument.  (The sandbox's name is
+  derived from the file name in which FUNC was defined.)"""
 
   def __init__(self, func):
     TestCase.__init__(self)
@@ -74,15 +80,23 @@ class _Predicate(TestCase):
     assert type(self.func) is type(lambda x: 0)
 
   def get_description(self):
+    """Use the function's docstring as a description."""
+
     description = self.func.__doc__
     if not description:
       raise Exception(self.func.__name__ + ' lacks required doc string')
     return description
 
   def need_sandbox(self):
+    """If the function requires an argument, then we need to pass it a
+    sandbox."""
+
     return self.func.func_code.co_argcount != 0
 
   def get_sandbox_name(self):
+    """Base the sandbox's name on the name of the file in which the
+    function was defined."""
+
     filename = self.func.func_code.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
@@ -136,7 +150,7 @@ def create_test_case(func):
   if isinstance(func, TestCase):
     return func
   else:
-    return _Predicate(func)
+    return FunctionTestCase(func)
 
 
 ### End of file.
