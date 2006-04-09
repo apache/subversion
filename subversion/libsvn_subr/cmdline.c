@@ -183,11 +183,6 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       }
   }
  
-#ifdef HAVE_SVN_SSL
-  SSL_load_error_strings();
-  SSL_library_init();
-#endif
-
   return EXIT_SUCCESS;
 }
 

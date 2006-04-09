@@ -356,6 +356,10 @@ int main(int argc, const char *argv[])
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
+#ifdef SVN_HAVE_SSL
+  SVN_INT_ERR(svn_ra_svn__ssl_initialize(pool));
+#endif
+
   params.root = "/";
   params.tunnel = FALSE;
   params.tunnel_user = NULL;

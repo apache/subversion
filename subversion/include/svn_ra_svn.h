@@ -366,6 +366,16 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     svn_boolean_t *success);
 
 /**
+ *
+ * Initialize the OpenSSL library.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_ra_svn__ssl_initialize(apr_pool_t *pool);
+
+
+
+/**
  * Get libsvn_ra_svn version information.
  * @since New in 1.1.
  */

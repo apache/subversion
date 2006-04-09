@@ -620,4 +620,13 @@ svn_ra_svn__conn_ssl_client(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_ra_svn__ssl_initialize(apr_pool_t *pool)
+{
+  SSL_load_error_strings();
+  SSL_library_init();
+  return SVN_NO_ERROR;
+}
+
 #endif /* SVN_HAVE_SSL */

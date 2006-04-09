@@ -2044,6 +2044,10 @@ svn_ra_svn__init(const svn_version_t *loader_version,
 
   *vtable = &ra_svn_vtable;
 
+#ifdef SVN_HAVE_SSL
+  SVN_ERR(svn_ra_svn__ssl_initialize(pool));
+#endif
+
   return SVN_NO_ERROR;
 }
 
