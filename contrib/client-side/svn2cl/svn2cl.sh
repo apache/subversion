@@ -36,19 +36,23 @@ set -e
 set -u
 
 # svn2cl version
-VERSION="0.6"
+VERSION="0.7"
 
 # set default parameters
 PWD=`pwd`
-STRIPPREFIX=`basename $PWD`
+STRIPPREFIX="AUTOMATICALLY-DETERMINED"
 LINELEN=75
 GROUPBYDAY="no"
 INCLUDEREV="no"
 BREAKBEFOREMSG="no"
+REPARAGRAPH="no"
+SEPARATEDAYLOGS="no"
 CHANGELOG=""
 OUTSTYLE="cl"
 SVNCMD="svn --verbose --xml log"
 AUTHORSFILE=""
+TMPFILES=""
+PATHS=""
 
 # do command line checking
 prog=`basename $0`
@@ -75,12 +79,20 @@ do
       GROUPBYDAY="yes";
       shift
       ;;
+    --separate-daylogs)
+      SEPARATEDAYLOGS="yes"
+      shift
+      ;;
     -i|--include-rev)
       INCLUDEREV="yes";
       shift
       ;;
     --break-before-msg)
       BREAKBEFOREMSG="yes"
+      shift
+      ;;
+    --reparagraph)
+      REPARAGRAPH="yes"
       shift
       ;;
     -f|--file|-o|--output)
@@ -138,23 +150,25 @@ do
       echo "Generate a ChangeLog from a subversion repository."
       echo ""
       echo "  --strip-prefix=NAME  prefix to strip from all entries, defaults"
-      echo "                       to the name of the current directory"
+      echo "                       path inside the repository"
       echo "  --linelen=NUM        maximum length of an output line"
       echo "  --group-by-day       group changelog entries by day"
+      echo "  --separate-daylogs   put a blank line between grouped by day entries"
       echo "  -i, --include-rev    include revision numbers"
       echo "  --break-before-msg   add a line break between the log paths and"
       echo "                       log message"
+      echo "  --reparagraph        rewrap lines inside a paragraph"
       echo "  -o, --output=FILE    output to FILE instead of ChangeLog"
       echo "  -f, --file=FILE      alias for -o, --output"
       echo "  --stdout             output to stdout instead of ChangeLog"
-      echo "  --authors=FILE       xml file to read for authors"
+      echo "  --authors=FILE       file to read for authors"
       echo "  --html               output as html instead of plain text"
       echo "  -h, --help           display this help and exit"
       echo "  -V, --version        output version information and exit"
       echo ""
       echo "PATH arguments and the following options are passed to the svn log"
-      echo "command: -r, --revision, --target --stop-on-copy, --username,"
-      echo "--password, --no-auth-cache, --non-interactive, --config-dir,"
+      echo "command: -r, --revision, --targets --stop-on-copy, --username,"
+      echo "--password, --no-auth-cache, --non-interactive, --config-dir and"
       echo "--limit (see \`svn help log' for more information)."
       exit 0
       ;;
@@ -166,6 +180,7 @@ do
     *)
       arg=`echo "$1" | sed "s/'/'\"'\"'/g"`
       SVNCMD="$SVNCMD '$arg'"
+      PATHS="$PATHS '$arg'"
       shift
       ;;
   esac
@@ -182,6 +197,23 @@ dir=`dirname $prog`
 dir=`cd $dir && pwd`
 XSL="$dir/svn2${OUTSTYLE}.xsl"
 
+# check if the authors file is formatted as a legacy
+# colon separated file
+if [ -n "$AUTHORSFILE" ] && \
+    egrep '^(#.*|[a-zA-Z0-9].*:)' "$AUTHORSFILE" > /dev/null 2>/dev/null
+then
+  # create a temporary file
+  tmpfile=`mktemp -t svn2cl.XXXXXX 2> /dev/null || tempfile -s .svn2cl 2> /dev/null || echo "$AUTHORSFILE.$$.xml"`
+  arg=`echo "$tmpfile" | sed "s/'/'\"'\"'/g"`
+  TMPFILES="$TMPFILES '$arg'"
+  # generate an authors.xml file on the fly
+  echo '<authors>' > "$tmpfile"
+  sed -n 's/&/\&amp;/g;s/</\&lt;/g;s/>/\&gt;/g;s|^\([a-zA-Z0-9][^:]*\):\(.*\)$| <author uid="\1">\2</author>|p' \
+      < "$AUTHORSFILE"  >> "$tmpfile"
+  echo '</authors>' >> "$tmpfile"
+  AUTHORSFILE="$tmpfile"
+fi
+
 # find the absolute path of the authors file
 # (otherwise xsltproc will find the file relative to svn2cl.xsl)
 pwd=`pwd`
@@ -194,6 +226,13 @@ then
   [ "$OUTSTYLE" != "cl" ] && CHANGELOG="$CHANGELOG.$OUTSTYLE"
 fi
 
+# try to determin a prefix to strip from all paths
+if [ "$STRIPPREFIX" = "AUTOMATICALLY-DETERMINED" ]
+then
+  # FIXME: this breaks with spaces in repository names
+  STRIPPREFIX=`eval "svn info $PATHS" | awk '/^URL:/{url=$2} /^Repository Root:/{root=$3} END{if(root){print substr(url,length(root)+2)}else{gsub("^.*/","",url);print url}}'`
+fi
+
 # redirect stdout to the changelog file if needed
 if [ "x$CHANGELOG" != "x-" ]
 then
@@ -203,9 +242,17 @@ fi
 # actually run the command we need
 eval "$SVNCMD" | \
   xsltproc --stringparam strip-prefix "$STRIPPREFIX" \
-           --stringparam linelen $LINELEN \
-           --stringparam groupbyday $GROUPBYDAY \
-           --stringparam include-rev $INCLUDEREV \
-           --stringparam breakbeforemsg $BREAKBEFOREMSG \
+           --stringparam linelen "$LINELEN" \
+           --stringparam groupbyday "$GROUPBYDAY" \
+           --stringparam separate-daylogs "$SEPARATEDAYLOGS" \
+           --stringparam include-rev "$INCLUDEREV" \
+           --stringparam breakbeforemsg "$BREAKBEFOREMSG" \
+           --stringparam reparagraph "$REPARAGRAPH" \
            --stringparam authorsfile "$AUTHORSFILE" \
            "$XSL" -
+
+# clean up temporary files
+[ -n "$TMPFILES" ] && eval "rm -f $TMPFILES"
+
+# we're done (the previous command could return false)
+exit 0
