@@ -251,20 +251,66 @@ class SvnWcTest < Test::Unit::TestCase
   end
 
   def test_merge
+    left = <<-EOL
+a
+b
+c
+d
+e
+EOL
+    right = <<-EOR
+A
+b
+c
+d
+E
+EOR
+    merge_target = <<-EOM
+a
+b
+C
+d
+e
+EOM
+    expect = <<-EOE
+A
+b
+C
+d
+E
+EOE
+
+    left_label = "left"
+    right_label = "right"
+    merge_target_label = "merge_target"
+
+    left_file = "left"
+    right_file = "right"
+    merge_target_file = "merge_target"
+    left_path = File.join(@wc_path, left_file)
+    right_path = File.join(@wc_path, right_file)
+    merge_target_path = File.join(@wc_path, merge_target_file)
+
     log = "sample log"
-    source1 = "source"
-    source2 = "SOURCE"
-    source3 = "SHOYU"
-    file = "file"
-    path = File.join(@wc_path, file)
     ctx = make_context(log)
 
-    File.open(path, "w") {|f| f.print(source1)}
-    ctx.add(path)
-    rev1 = ctx.ci(@wc_path).revision
-    
+    File.open(left_path, "w") {|f| f.print(left)}
+    File.open(right_path, "w") {|f| f.print(right)}
+    File.open(merge_target_path, "w") {|f| f.print(merge_target)}
+    ctx.add(left_path)
+    ctx.add(right_path)
+    ctx.add(merge_target_path)
+
+    ctx.ci(@wc_path)
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      assert_equal(Svn::Wc::MERGE_MERGED,
+                   access.merge(left_path, right_path, merge_target_path,
+                                left_label, right_label, merge_target_label))
+      assert_equal(expect, File.read(merge_target_path))
+    end
   end
-  
+
   def test_status
     source = "source"
     file1 = "file1"
@@ -305,7 +351,7 @@ class SvnWcTest < Test::Unit::TestCase
       FileUtils.touch(path4)
       access.add(path4)
       assert(File.exist?(path4))
-      access.add_repos_file(path5, path2, {})
+      access.add_repos_file2(path5, path2, {})
       assert_equal(source, File.open(path5) {|f| f.read})
 
       status = access.status(path2)
@@ -341,5 +387,75 @@ class SvnWcTest < Test::Unit::TestCase
       ctx.cleanup(@wc_path)
       assert(!Svn::Wc.locked?(@wc_path))
     end
+  end
+
+  def test_translated_file
+    src_file = "src"
+    crlf_file = "crlf"
+    cr_file = "cr"
+    lf_file = "lf"
+    src_path = File.join(@wc_path, src_file)
+    crlf_path = File.join(@wc_path, crlf_file)
+    cr_path = File.join(@wc_path, cr_file)
+    lf_path = File.join(@wc_path, lf_file)
+
+    source = "a\n"
+    crlf_source = source.gsub(/\n/, "\r\n")
+    cr_source = source.gsub(/\n/, "\r")
+    lf_source = source.gsub(/\n/, "\n")
+
+    File.open(crlf_path, "w") {}
+    File.open(cr_path, "w") {}
+    File.open(lf_path, "w") {}
+
+    log = "log"
+    ctx = make_context(log)
+    ctx.add(crlf_path)
+    ctx.add(cr_path)
+    ctx.add(lf_path)
+    ctx.prop_set("svn:eol-style", "CRLF", crlf_path)
+    ctx.prop_set("svn:eol-style", "CR", cr_path)
+    ctx.prop_set("svn:eol-style", "LF", lf_path)
+    ctx.ci(crlf_path)
+    ctx.ci(cr_path)
+    ctx.ci(lf_path)
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      File.open(src_path, "wb") {|f| f.print(source)}
+      translated_file = access.translated_file(src_path, lf_path,
+                                               Svn::Wc::TRANSLATE_TO_NF)
+      File.open(src_path, "wb") {|f| f.print(File.read(translated_file))}
+
+      translated_file = access.translated_file(src_path, crlf_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(crlf_source, File.read(translated_file))
+      translated_file = access.translated_file(src_path, cr_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(cr_source, File.read(translated_file))
+      translated_file = access.translated_file(src_path, lf_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(lf_source, File.read(translated_file))
+    end
+  end
+
+  def test_revision_status
+    log = "log"
+    file = "file"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print("a")}
+    ctx = make_context(log)
+    ctx.add(path)
+    ctx.ci(path)
+
+    File.open(path, "w") {|f| f.print("b")}
+    ctx.ci(path)
+
+    File.open(path, "w") {|f| f.print("c")}
+    rev = ctx.ci(path).revision
+
+    status = Svn::Wc::RevisionStatus.new(path, nil, true)
+    assert_equal(rev, status.min_rev)
+    assert_equal(rev, status.max_rev)
   end
 end

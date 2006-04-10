@@ -2129,9 +2129,11 @@ svn_swig_rb_repos_file_rev_handler(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_wc_relocation_validator(void *baton,
-                                    const char *uuid,
-                                    const char *url)
+svn_swig_rb_wc_relocation_validator2(void *baton,
+                                     const char *uuid,
+                                     const char *url,
+                                     svn_boolean_t root,
+                                     apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
@@ -2141,15 +2143,16 @@ svn_swig_rb_wc_relocation_validator(void *baton,
   if (!NIL_P(proc)) {
     VALUE args;
 
-    args = rb_ary_new3(4,
+    args = rb_ary_new3(5,
                        proc,
                        rb_id_call(),
                        c2r_string2(uuid),
-                       c2r_string2(url));
-    
+                       c2r_string2(url),
+                       root ? Qtrue : Qfalse);
+
     invoke_callback_handle_error(args, rb_pool, &err);
   }
-  
+
   return err;
 }
 

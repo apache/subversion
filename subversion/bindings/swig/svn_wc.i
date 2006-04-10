@@ -51,11 +51,18 @@
     svn_wc_entry_t **,
     svn_wc_adm_access_t **,
     svn_wc_status_t **,
-    svn_wc_status2_t **
+    svn_wc_status2_t **,
+    svn_wc_revision_status_t **
 };
 
-/* svn_wc_check_wc(wc_format) */
-%apply int *OUTPUT { int * };
+/*
+   svn_wc_check_wc(wc_format)
+   svn_wc_merge(wc_format)
+*/
+%apply int *OUTPUT {
+  int *,
+  enum svn_wc_merge_outcome_t *
+};
 
 /*
    svn_wc_prop_list()
@@ -73,6 +80,7 @@
 
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *baseprops,
+  apr_hash_t *new_base_props,
   apr_hash_t *new_props
 };
 
@@ -82,9 +90,11 @@
     const char *diff3_cmd,
     const char *uuid,
     const char *repos,
+    const char *new_text_path,
     const char *copyfrom_url,
     const char *rev_date,
-    const char *rev_author
+    const char *rev_author,
+    const char *trail_url
 }
 
 %apply const char **OUTPUT { char **url };
@@ -192,6 +202,23 @@
 }
 
 /* -----------------------------------------------------------------------
+   apr_array_header_t *merge_options
+   svn_wc_merge2()
+*/
+%typemap(ruby, in) apr_array_header_t *merge_options
+{
+  if (NIL_P($input)) {
+    $1 == NULL;
+  } else {
+    VALUE rb_pool;
+    apr_pool_t *pool;
+
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+    $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+  }
+}
+
+/* -----------------------------------------------------------------------
    Callback: svn_wc_notify_func_t
    svn_client_ctx_t
    svn_wc many
@@ -268,14 +295,14 @@
 }
 
 /* -----------------------------------------------------------------------
-   Callback: svn_wc_relocation_validator_t
-   svn_wc_relocate()
+   Callback: svn_wc_relocation_validator2_t
+   svn_wc_relocate2()
 */
 
-%typemap(ruby, in) (svn_wc_relocation_validator_t validator,
+%typemap(ruby, in) (svn_wc_relocation_validator2_t validator,
                     void *validator_baton)
 {
-  $1 = svn_swig_rb_wc_relocation_validator;
+  $1 = svn_swig_rb_wc_relocation_validator2;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 

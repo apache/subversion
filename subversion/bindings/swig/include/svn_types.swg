@@ -535,6 +535,19 @@
 }
 %typemap(perl5, argout) const unsigned char digest[] {}
 
+%typemap(ruby, in) const unsigned char *digest
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else if (RSTRING($input)->len != APR_MD5_DIGESTSIZE) {
+    rb_raise(rb_eArgError, "digest size (%d) must be %d",
+             RSTRING($input)->len, APR_MD5_DIGESTSIZE);
+  } else {
+    $1 = ($1_ltype)StringValuePtr($input);
+  }
+}
+%typemap(ruby, argout) const unsigned char *digest {}
+
 /*
    svn_txdelta_send_stream() uses *digest not digest[] .
    svn_txdelta_apply() uses *result_digest not digest[] .
