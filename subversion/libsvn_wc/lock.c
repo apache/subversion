@@ -455,11 +455,25 @@ do_open(svn_wc_adm_access_t **adm_access,
     {
       /* By reading the format file we check both that PATH is a directory
          and that it is a working copy. */
+      /* ### We will read the entries file later.  Maybe read the whole
+         file here instead to avoid reopening it. */
       err = svn_io_read_version_file(&wc_format,
                                      svn_wc__adm_path(path, FALSE, pool,
-                                                      SVN_WC__ADM_FORMAT,
+                                                      SVN_WC__ADM_ENTRIES,
                                                       NULL),
                                      pool);
+      /* If the entries file doesn't start with a version number, we're dealing
+         with a pre-format 7 working copy, so we need to get the format from
+         the format file instead. */
+      if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
+        {
+          svn_error_clear(err);
+          err = svn_io_read_version_file(&wc_format,
+                                         svn_wc__adm_path(path, FALSE, pool,
+                                                          SVN_WC__ADM_FORMAT,
+                                                          NULL),
+                                         pool);
+        }
       if (err)
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,

@@ -1,9 +1,9 @@
 This is the TODO file for the nonxml-entries branch:
 
-* Read/write new entries format.  (Patch undergoing cleanup)
-
 * Ensure support for old formats.
 
 * Support WC upgrading.
 
 * Fix error handling in entries parsing.
+
+* Document new functions.
