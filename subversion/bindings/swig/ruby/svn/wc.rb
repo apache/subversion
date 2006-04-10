@@ -137,8 +137,8 @@ module Svn
         Wc.has_binary_prop(path, self)
       end
 
-      def text_modified?(filename, force=false)
-        Wc.text_modified_p(filename, force, self)
+      def text_modified?(filename, force=false, compare_textbases=true)
+        Wc.text_modified_p2(filename, force, self, compare_textbases)
       end
       
       def props_modified?(path)
@@ -211,6 +211,15 @@ module Svn
                           new_props, copyfrom_url, copyfrom_rev)
       end
 
+      def add_repos_file2(dst_path, new_text_base_path, new_base_props,
+                          new_text_path=nil, new_props=nil,
+                          copyfrom_url=nil, copyfrom_rev=0)
+        Wc.add_repos_file2(dst_path, self,
+                           new_text_base_path, new_text_path,
+                           new_base_props, new_props,
+                           copyfrom_url, copyfrom_rev)
+      end
+
       def remove_from_revision_control(name, destroy_wf=true,
                                        instant_error=true,
                                        cancel_func=nil)
@@ -230,10 +239,11 @@ module Svn
 
       def process_committed(path, new_revnum, rev_date=nil, rev_author=nil,
                             wcprop_changes=[], recurse=true,
-                            remove_lock=true)
-        Wc.process_committed2(path, self, recurse,
+                            remove_lock=true, digest=nil)
+        Wc.process_committed3(path, self, recurse,
                               new_revnum, rev_date,
-                              rev_author, wcprop_changes, remove_lock)
+                              rev_author, wcprop_changes,
+                              remove_lock, digest)
       end
 
       def crawl_revisions(path, reporter, restore_files=true,
@@ -304,10 +314,10 @@ module Svn
 
       def merge(left, right, merge_target, left_label,
                 right_label, target_label, dry_run=false,
-                diff3_cmd=nil)
-        Wc.merge(left, right, merge_target, self,
-                 left_label, right_label, target_label,
-                 dry_run, diff3_cmd)
+                diff3_cmd=nil, merge_options=nil)
+        Wc.merge2(left, right, merge_target, self,
+                  left_label, right_label, target_label,
+                  dry_run, diff3_cmd, merge_options)
       end
 
       def merge_props(path, baseprops, propchanges, base_merge=true,
@@ -322,11 +332,8 @@ module Svn
                            base_merge, dry_run)
       end
 
-      def relocate(path, from, to, recurse=true)
-        validator = Proc.new do |uuid, url|
-          yield(uuid, url)
-        end
-        Wc.relocate(path, self, from, to, recurse, validator)
+      def relocate(path, from, to, recurse=true, validator=nil)
+        Wc.relocate2(path, self, from, to, recurse, validator)
       end
 
       def revert(path, recurse=true, use_commit_times=true,
@@ -335,9 +342,17 @@ module Svn
                    cancel_func, notify_func)
       end
 
+      def translated_file(src, versioned_file, flags)
+        Wc.translated_file2(src, versioned_file, self, flags)
+      end
+
       def transmit_text_deltas(path, editor, file_baton, fulltext=false)
         Wc.transmit_text_deltas(path, self, fulltext,
                                 editor, file_baton)
+      end
+
+      def transmit_text_deltas2(path, editor, file_baton, fulltext=false)
+        Wc.transmit_text_deltas2(path, self, fulltext, editor, file_baton)
       end
 
       def transmit_prop_deltas(path, entry, editor, baton)
@@ -465,6 +480,14 @@ module Svn
         lock_state = NOTIFY_LOCK_STATE_UNLOCKED
       end
     end
-    
+
+    class RevisionStatus
+      class << self
+        undef new
+        def new(wc_path, trail_url, committed, cancel_func=nil)
+          Wc.revision_status(wc_path, trail_url, committed, cancel_func)
+        end
+      end
+    end
   end
 end

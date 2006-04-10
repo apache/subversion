@@ -195,9 +195,11 @@ svn_error_t *svn_swig_rb_repos_file_rev_handler(void *baton,
                                                 apr_array_header_t *prop_diffs,
                                                 apr_pool_t *pool);
 
-svn_error_t *svn_swig_rb_wc_relocation_validator(void *baton,
-                                                 const char *uuid,
-                                                 const char *url);
+svn_error_t *svn_swig_rb_wc_relocation_validator2(void *baton,
+                                                  const char *uuid,
+                                                  const char *url,
+                                                  svn_boolean_t root,
+                                                  apr_pool_t *pool);
 
 
 /* auth provider callbacks */
