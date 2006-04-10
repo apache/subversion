@@ -72,7 +72,7 @@ const svn_version_t *svn_wc_version(void);
    * specifies to take the latter form as input and transform it
    * to the former.
    *
-   * Either this flag or @c SVN_WC_TRANSLATE_FROM_NF should be specified,
+   * Either this flag or @c SVN_WC_TRANSLATE_TO_NF should be specified,
    * but not both.
    */
 #define SVN_WC_TRANSLATE_FROM_NF                 0x00000000
