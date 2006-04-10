@@ -24,7 +24,7 @@
 .\" IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 .\" OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 .\" IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-.TH "svn2cl" "1" "Feb 2006" "Version 0.6" "User Commands"
+.TH "svn2cl" "1" "Apr 2006" "Version 0.7" "User Commands"
 .nh
 .SH "NAME"
 svn2cl \- Create a ChangeLog from a subversion log.
@@ -43,13 +43,14 @@ If PATH is not given, \fBsvn2cl\fP will run svn log on the current directory, so
 
 .TP
 \fB\-\-strip\-prefix\fR=\fINAME\fR
-Strip NAME from the first part of all file names (e.g. project/trunk).
-Defaults to the name of the current directory.
+Strip \fINAME\fR from the first part of all file names (e.g. project/trunk).
+By defaults the current path inside the repository is stripped.
 
 .TP
 \fB\-\-linelen\fR=\fINUM\fR
-Wrap lines at NUM characters.
+Wrap lines at \fINUM\fR characters.
 By default, lines are wrapped at 75 characters.
+This option is ignored when the \-\-html option is specified.
 
 .TP
 \fB\-\-group\-by\-day\fR
@@ -57,18 +58,29 @@ This option causes all commit messages to be grouped by day, as long as all the 
 By default each message is listed separately with its own timestamp.
 
 .TP
+\fB\-\-separate\-daylogs\fR
+Include a blank line between log entries when they are grouped by day.
+Only useful with the \fB\-\-group\-by\-day\fR option.
+This option is ignored when the \-\-html option is specified, edit \fBsvn2html.css\fP to tune the layout.
+
+.TP
 \fB\-i\fR, \fB\-\-include\-rev\fR
 Include the subversion revision number in the ChangeLog.
+If the \-\-html option is specified this is implied, edit \fBsvn2html.css\fP to turn it off.
 
 .TP
 \fB\-\-break-before-msg\fR
 Add a line break between the log paths and the log message.
-This option only applies to the normal text output.
-To acomplish this for the html output edit the css file.
+If the \-\-html option is specified this is implied, edit \fBsvn2html.css\fP to turn it off.
+
+.TP
+\fB\-\-reparagraph\fR
+Newlines inside paragraphs are ignored and paragraphs are re-wrapped.
+Paragraphs are separated by empty lines.
 
 .TP
 \fB\-o\fR, \fB\-f\fR, \fB\-\-output\fR=\fIFILE\fR, \fB\-\-file\fR=\fIFILE\fR
-Output ChangeLog to FILE instead of the default ChangeLog (or ChangeLog.html for html output).
+Output ChangeLog to \fIFILE\fR instead of the default \fBChangeLog\fP (or \fBChangeLog.html\fP for html output).
 
 .TP
 \fB\-\-stdout\fR
@@ -76,7 +88,7 @@ Output ChangeLog to stdout instead of to a file.
 
 .TP
 \fB\-\-authors\fR=\fIFILE\fR
-The file is used to map author names as exported by svn to full names.
+The \fIFILE\fR is used to map author names as exported by svn to full names.
 An author file should look something like:
 .ft B
     <?xml version="1.0" encoding="utf-8"?>
@@ -86,6 +98,13 @@ An author file should look something like:
       </author>
     </authors>
 .ft R
+.br
+As a bonus an authors file that looks like the following is internally converted to the xml represantation:
+.ft B
+    arthur:Arthur de Jong <arthur@ch.tudelft.nl>
+.ft R
+.br
+Note that the \-\-authors option has pretty poor performance at the moment.
 
 .TP
 \fB\-\-html\fR
@@ -103,7 +122,7 @@ Show version of program.
 
 .PP
 Optional PATH arguments and the following options are passed directly to the `\fBsvn \-\-xml log\fP' command:
-\fB\-r\fR, \fB\-\-revision\fR, \fB\-\-target\fR, \fB\-\-stop\-on\-copy\fR, \fB\-\-username\fR, \fB\-\-password\fR, \fB\-\-no\-auth\-cache\fR, \fB\-\-non\-interactive\fR, \fB\-\-config\-dir\fR, \fB\-\-limit\fR.
+\fB\-r\fR, \fB\-\-revision\fR, \fB\-\-targets\fR, \fB\-\-stop\-on\-copy\fR, \fB\-\-username\fR, \fB\-\-password\fR, \fB\-\-no\-auth\-cache\fR, \fB\-\-non\-interactive\fR, \fB\-\-config\-dir\fR and \fB\-\-limit\fR.
 .br
 See `\fBsvn help log\fP' for more information on these options.
 

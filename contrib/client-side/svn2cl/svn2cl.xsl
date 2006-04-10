@@ -11,8 +11,10 @@
        xsltproc ++stringparam strip-prefix `basename $(pwd)` \
                 ++stringparam linelen 75 \
                 ++stringparam groupbyday yes \
+                ++stringparam separate-daylogs yes \
                 ++stringparam include-rev yes \
                 ++stringparam breakbeforemsg yes \
+                ++stringparam reparagraph yes \
                 ++stringparam authorsfile FILE \
                 svn2cl.xsl - > ChangeLog
 
@@ -78,14 +80,22 @@
  <!-- whether entries should be grouped by day -->
  <xsl:param name="groupbyday" select="'no'" />
 
+ <!-- whether to seperate log messages by empty lines -->
+ <xsl:param name="separate-daylogs" select="'no'" />
+
  <!-- whether a revision number should be included -->
  <xsl:param name="include-rev" select="'no'" />
 
  <!-- whether the log message should start on a new line -->
  <xsl:param name="breakbeforemsg" select="'no'" />
 
+ <!-- whether the message should be rewrapped within one paragraph -->
+ <xsl:param name="reparagraph" select="'no'" />
+
  <!-- location of authors file if any -->
  <xsl:param name="authorsfile" select="''" />
+ <xsl:key name="author-lookup" match="author" use="@uid"/>
+ <xsl:variable name="authors-top" select="document($authorsfile)/authors"/>
 
  <!-- add newlines at the end of the changelog -->
  <xsl:template match="log">
@@ -95,39 +105,60 @@
 
  <!-- format one entry from the log -->
  <xsl:template match="logentry">
-  <!-- save log entry number -->
-  <xsl:variable name="pos" select="position()" />
-  <!-- fetch previous entry's date -->
-  <xsl:variable name="prevdate">
-   <xsl:apply-templates select="../logentry[position()=(($pos)-1)]/date" />
-  </xsl:variable>
-  <!-- fetch previous entry's author -->
-  <xsl:variable name="prevauthor">
-   <xsl:apply-templates select="../logentry[position()=(($pos)-1)]/author" />
-  </xsl:variable>
-  <!-- fetch this entry's date -->
-  <xsl:variable name="date">
-   <xsl:apply-templates select="date" />
-  </xsl:variable>
-  <!-- fetch this entry's author -->
-  <xsl:variable name="author">
-   <xsl:apply-templates select="author" />
-  </xsl:variable>
-  <!-- check if header is changed -->
-  <xsl:if test="($prevdate!=$date) or ($prevauthor!=$author)">
-   <!-- add newline -->
-   <xsl:if test="not(position()=1)">
+  <xsl:choose>
+   <!-- if we're grouping we should omit some headers -->
+   <xsl:when test="$groupbyday='yes'">
+    <!-- save log entry number -->
+    <xsl:variable name="pos" select="position()" />
+    <!-- fetch previous entry's date -->
+    <xsl:variable name="prevdate">
+     <xsl:apply-templates select="../logentry[position()=(($pos)-1)]/date" />
+    </xsl:variable>
+    <!-- fetch previous entry's author -->
+    <xsl:variable name="prevauthor">
+     <xsl:value-of select="normalize-space(../logentry[position()=(($pos)-1)]/author)" />
+    </xsl:variable>
+    <!-- fetch this entry's date -->
+    <xsl:variable name="date">
+     <xsl:apply-templates select="date" />
+    </xsl:variable>
+    <!-- fetch this entry's author -->
+    <xsl:variable name="author">
+     <xsl:value-of select="normalize-space(author)" />
+    </xsl:variable>
+    <!-- check if header is changed -->
+    <xsl:if test="($prevdate!=$date) or ($prevauthor!=$author)">
+     <!-- add newline -->
+     <xsl:if test="not(position()=1)">
+      <xsl:text>&newl;</xsl:text>
+     </xsl:if>
+     <!-- date -->
+     <xsl:value-of select="$date" />
+     <!-- two spaces -->
+     <xsl:text>&space;&space;</xsl:text>
+     <!-- author's name -->
+     <xsl:apply-templates select="author" />
+     <!-- two newlines -->
      <xsl:text>&newl;</xsl:text>
-   </xsl:if>
-   <!-- date -->
-   <xsl:apply-templates select="date" />
-   <!-- two spaces -->
-   <xsl:text>&space;&space;</xsl:text>
-   <!-- author's name -->
-   <xsl:apply-templates select="author" />
-   <!-- two newlines -->
-   <xsl:text>&newl;&newl;</xsl:text>
-  </xsl:if>
+     <xsl:if test="$separate-daylogs!='yes'"><xsl:text>&newl;</xsl:text></xsl:if>
+    </xsl:if>
+   </xsl:when>
+   <!-- write the log header -->
+   <xsl:otherwise>
+    <!-- add newline -->
+    <xsl:if test="not(position()=1)">
+     <xsl:text>&newl;</xsl:text>
+    </xsl:if>
+    <!-- date -->
+    <xsl:apply-templates select="date" />
+    <!-- two spaces -->
+    <xsl:text>&space;&space;</xsl:text>
+    <!-- author's name -->
+    <xsl:apply-templates select="author" />
+    <!-- two newlines -->
+    <xsl:text>&newl;&newl;</xsl:text>
+   </xsl:otherwise>
+  </xsl:choose>
   <!-- get paths string -->
   <xsl:variable name="paths">
    <xsl:apply-templates select="paths" />
@@ -151,6 +182,8 @@
     <xsl:with-param name="txt" select="msg" />
    </xsl:call-template>
   </xsl:variable>
+  <!-- add newline here if separate-daylogs is in effect -->
+  <xsl:if test="$groupbyday='yes' and $separate-daylogs='yes'"><xsl:text>&newl;</xsl:text></xsl:if>
   <!-- first line is indented (other indents are done in wrap template) -->
   <xsl:text>&tab;*&space;</xsl:text>
   <!-- print the paths and message nicely wrapped -->
@@ -173,15 +206,22 @@
 
  <!-- format author -->
  <xsl:template match="author">
-  <xsl:variable name="author" select="normalize-space(.)" />
+  <xsl:variable name="uid" select="normalize-space(.)" />
+  <!-- try to lookup author in authorsfile -->
+  <xsl:variable name="author">
+   <xsl:if test="$authorsfile!=''">
+    <xsl:for-each select="$authors-top">
+     <xsl:value-of select="normalize-space(key('author-lookup',$uid))" />
+    </xsl:for-each>
+   </xsl:if>
+  </xsl:variable>
+  <!-- present result -->
   <xsl:choose>
-   <!-- try to look up the author in the authorsfile -->
-   <xsl:when test="$authorsfile!='' and document($authorsfile)//author[@uid=$author]">
-    <xsl:value-of select="normalize-space(document($authorsfile)//author[@uid=$author])" />
-   </xsl:when>
-   <!-- just use the author name as given by svn -->
-   <xsl:otherwise>
+   <xsl:when test="string($author)">
     <xsl:value-of select="$author" />
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:value-of select="$uid" />
    </xsl:otherwise>
   </xsl:choose>
  </xsl:template>
@@ -337,6 +377,21 @@
     <xsl:call-template name="trim-newln">
      <xsl:with-param name="txt" select="substring($txt,1,string-length($txt)-1)" />
     </xsl:call-template>
+   </xsl:when>
+   <!-- if the message has paragrapgs, find the first one -->
+   <xsl:when test="$reparagraph='yes' and contains($txt,'&newl;&newl;')">
+     <!-- remove newlines from first paragraph -->
+     <xsl:value-of select="normalize-space(substring-before($txt,'&newl;&newl;'))" />
+     <!-- paragraph separator -->
+     <xsl:text>&newl;&newl;</xsl:text>
+     <!-- do the rest of the text -->
+     <xsl:call-template name="trim-newln">
+      <xsl:with-param name="txt" select="substring-after($txt,'&newl;&newl;')" />
+     </xsl:call-template>
+   </xsl:when>
+   <!-- remove more single newlines -->
+   <xsl:when test="$reparagraph='yes'">
+    <xsl:value-of select="normalize-space($txt)" />
    </xsl:when>
    <!-- no newlines found, we're done -->
    <xsl:otherwise>
