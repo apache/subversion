@@ -137,8 +137,8 @@ module Svn
         Wc.has_binary_prop(path, self)
       end
 
-      def text_modified?(filename, force=false, compare_textbases=true)
-        Wc.text_modified_p2(filename, force, self, compare_textbases)
+      def text_modified?(filename, force=false)
+        Wc.text_modified_p(filename, force, self)
       end
       
       def props_modified?(path)
