@@ -54,24 +54,6 @@
 
 /*** reading and writing the entries file ***/
 
-struct entries_accumulator
-{
-  /* Keys are entry names, vals are (struct svn_wc_entry_t *)'s. */
-  apr_hash_t *entries; 
-
-  /* The parser that's parsing it, for signal_expat_bailout(). */
-  svn_xml_parser_t *parser;
-
-  /* Should we include 'deleted' entries in the hash? */
-  svn_boolean_t show_hidden;
-
-  /* Don't leave home without one. */
-  apr_pool_t *pool;
-
-  /* Cleared before handling each entry. */
-  apr_pool_t *scratch_pool;
-};
-
 
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
@@ -818,11 +800,27 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   return SVN_NO_ERROR;
 }
 
-                       
+/* Used when reading an entries file in XML format. */
+struct entries_accumulator
+{
+  /* Keys are entry names, vals are (struct svn_wc_entry_t *)'s. */
+  apr_hash_t *entries; 
 
+  /* The parser that's parsing it, for signal_expat_bailout(). */
+  svn_xml_parser_t *parser;
+
+  /* Should we include 'deleted' entries in the hash? */
+  svn_boolean_t show_hidden;
+
+  /* Don't leave home without one. */
+  apr_pool_t *pool;
+
+  /* Cleared before handling each entry. */
+  apr_pool_t *scratch_pool;
+};
+
+                       
 /* Called whenever we find an <open> tag of some kind. */
-#if 0
-/* ### Use for backwards compatibility. */
 static void
 handle_start_tag(void *userData, const char *tagname, const char **atts)
 {
@@ -860,7 +858,53 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   else
     apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
 }
-#endif
+
+/* Parse BUF of size SIZE as an entries file in XML format, storing the parsed
+   entries in ENTRIES.  Use pool for temporary allocations and the pool of
+   ADM_ACCESS for the returned entries. */
+static svn_error_t *
+parse_entries_xml(svn_wc_adm_access_t *adm_access,
+                  apr_hash_t *entries,
+                  svn_boolean_t show_hidden,
+                  const char *buf,
+                  apr_size_t size,
+                  apr_pool_t *pool)
+{
+  svn_xml_parser_t *svn_parser;
+  struct entries_accumulator accum;
+
+  /* Set up userData for the XML parser. */
+  accum.entries = entries;
+  accum.show_hidden = show_hidden;
+  accum.pool = svn_wc_adm_access_pool(adm_access);
+  accum.scratch_pool = svn_pool_create(pool);
+
+  /* Create the XML parser */
+  svn_parser = svn_xml_make_parser(&accum,
+                                   handle_start_tag,
+                                   NULL,
+                                   NULL,
+                                   pool);
+
+  /* Store parser in its own userdata, so callbacks can call
+     svn_xml_signal_bailout() */
+  accum.parser = svn_parser;
+
+  /* Parse. */
+  SVN_ERR_W(svn_xml_parse(svn_parser, buf, size, TRUE),
+            apr_psprintf(pool,
+                         _("XML parser failed in '%s'"),
+                         svn_path_local_style
+                         (svn_wc_adm_access_path(adm_access), pool)));
+
+  svn_pool_destroy(accum.scratch_pool);
+
+  /* Clean up the XML parser */
+  svn_xml_free_parser(svn_parser);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Use entry SRC to fill in blank portions of entry DST.  SRC itself
@@ -983,32 +1027,34 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
   /* If the first byte of the file is not a digit, then it is probably in XML
      format. */
-  /* ### Fall back on XML format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
-    abort();
-
-  /* Skip format line. */
-  /* ### Could read it here and report it to caller if it wants it. */
-  curp = memchr(curp, '\n', buf->len);
-  if (! curp)
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                             _("Invalid version line in entries file of '%s'"),
-                             svn_path_local_style(path, pool));
-  ++curp;
-
-  while (curp != endp)
+    SVN_ERR(parse_entries_xml(adm_access, entries, show_hidden,
+                              buf->data, buf->len, pool));
+  else
     {
-      SVN_ERR(read_entry(&entry,  &curp, endp,
-                         svn_wc_adm_access_pool(adm_access)));
-      assert(*curp == '\n');
+      /* Skip format line. */
+      /* ### Could read it here and report it to caller if it wants it. */
+      curp = memchr(curp, '\n', buf->len);
+      if (! curp)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Invalid version line in entries file of '%s'"),
+                                 svn_path_local_style(path, pool));
       ++curp;
-      if ((entry->deleted || entry->absent)
-          && (entry->schedule != svn_wc_schedule_add)
-          && (entry->schedule != svn_wc_schedule_replace)
-          && (! show_hidden))
-        ;
-      else
-        apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+
+      while (curp != endp)
+        {
+          SVN_ERR(read_entry(&entry,  &curp, endp,
+                             svn_wc_adm_access_pool(adm_access)));
+          assert(*curp == '\n');
+          ++curp;
+          if ((entry->deleted || entry->absent)
+              && (entry->schedule != svn_wc_schedule_add)
+              && (entry->schedule != svn_wc_schedule_replace)
+              && (! show_hidden))
+            ;
+          else
+            apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+        }
     }
 
   /* Close the entries file. */
