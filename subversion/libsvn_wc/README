@@ -125,6 +125,12 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
    Since format 7, this file also contains the format number of this
    working copy directory.
 
+   Also, the presence of this file means that the entire process of
+   creating the adm area was completed, because this is always the
+   last file created.  Of course, that's no guarantee that someone
+   didn't muck things up afterwards, but it's good enough for
+   existence-checking.
+
 `dir-props'
 
    Properties for this directory.  These are the "working" properties
@@ -319,10 +325,14 @@ The entries file
 This section describes the entries file as of format 7 and beyond.  See below
 for the older XML-based format.
 
-The first line of the entries file contains the format version for
-this working copy directory.  No whitespace is allowed before or after
-the number (except for the terminating newline).  The changes in each
-format are listed in wc.h.
+The entries file is a series of lines, separated by line feed (0x0a)
+characters.  All whitespace is significant.  The character encoding of
+the file is UTF-8 with no BOM (byte order mark) allowed at the beginning.
+
+The first line contains the format version for this working copy
+directory.  No whitespace is allowed before or after the number
+(except for the terminating newline).  The changes in each format are
+listed in wc.h.
 
 The rest of the file contains one line for each directory entry.  Each
 line contains a number of ordered fields as described below.  The
@@ -330,14 +340,14 @@ fields are terminated by a vertical line ("|") character.  Empty
 fields are represented by just the terminator.  Empty fields that are
 only followed by empty fields may be omited from the line.
 
-The characters "|", "\" and ASCII control characters (0x01 - 0x31 and
-0x7f) must be escaped when they occur in a field.  The escaping uses
-the syntax "\xHH", where "HH" are the two hexadecimal digits
-representing the escaped byte.  The character encoding of the entries
-file is UTF-8, with no leading BOM allowed.
+The bytes representing the characters "|", "\" and ASCII control
+characters (0x01 - 0x31 and 0x7f) must be escaped when they occur in a
+field.  The escaping uses the syntax "\xHH", where "HH" are the two
+hexadecimal digits (either upper- or lowercase) representing the
+escaped byte.  No other bytes may be escaped.
 
 A field may be boolean, in which case it can have one of the values
-'t`, meaning true or 'f`, meaning false.  Unless otherwise specified,
+`t', meaning true or `f', meaning false.  Unless otherwise specified,
 boolean fields default to `f' if emtpy.  Timestamps are stored in
 the format produced by svn_time_to_cstring().
 
