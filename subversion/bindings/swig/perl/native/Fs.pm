@@ -23,7 +23,7 @@ package _p_svn_fs_t;
 our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
 		  change_rev_prop list_transactions open_txn begin_txn
 		  get_uuid set_uuid set_access get_access
-                  lock unlock get_lock get_locks generate_lock_token/;
+                  lock unlock get_lock get_locks generate_lock_token path/;
 
 for (@methods) {
     no strict 'refs';
@@ -42,6 +42,7 @@ our @methods = qw/apply_textdelta apply_text change_node_prop
 		 revision_root_revision/;
 
 *fs = *SVN::Fs::root_fs;
+*txn_name = *_p_svn_fs_txn_t::root_name;
 
 for (@methods) {
     no strict 'refs';

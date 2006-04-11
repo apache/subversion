@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 11;
+use Test::More tests => 16;
 use strict;
 no warnings 'once'; # shut up about variables that are only used once.
 
@@ -22,10 +22,17 @@ my $fs = $repos->fs;
 cmp_ok($fs->youngest_rev, '==', 0,
        "new repository start with rev 0");
 
+is($fs->path, "$repospath/db", '$fs->path()');
+is(SVN::Fs::type($fs->path), 'fsfs', 'SVN::Fs::type()');
+
 my $txn = $fs->begin_txn($fs->youngest_rev);
 
 my $txns = $fs->list_transactions;
 ok(eq_array($fs->list_transactions, [$txn->name]), 'list transaction');
+
+isa_ok($txn->root, '_p_svn_fs_root_t', '$txn->root()');
+is($txn->root->txn_name, $txn->name, '$txn->root->txn_name()');
+is($fs->revision_root($fs->youngest_rev)->txn_name, undef);
 
 $txn->root->make_dir('trunk');
 
