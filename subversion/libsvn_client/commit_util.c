@@ -406,7 +406,7 @@ harvest_committables(apr_hash_t *committables,
           else /* ### See issue #830 */
             return svn_error_createf 
               (SVN_ERR_BAD_URL, NULL,
-               _("Commit item '%s' has copy flag but no copyfrom URL\n"),
+               _("Commit item '%s' has copy flag but no copyfrom URL"),
                svn_path_local_style(path, pool));
         }
     }
