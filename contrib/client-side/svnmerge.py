@@ -942,6 +942,11 @@ def action_init(branch_dir, branch_props):
            (branch_dir, revs, opts["head-url"]))
 
     revs = str(revs)
+    # If the head-path already has an entry in the svnmerge-integrated
+    # property, simply error out.
+    if not opts["force"] and branch_props.has_key(opts["head-path"]):
+        error('%s has already been initialized at %s\n'
+              'Use --force to re-initialize' % (opts["head-path"], branch_dir))
     branch_props[opts["head-path"]] = revs
 
     # Set property
