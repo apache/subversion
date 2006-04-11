@@ -96,6 +96,9 @@ do_bool_attr(svn_boolean_t *entry_flag,
   return SVN_NO_ERROR;
 }
 
+/* Read an escaped byte on the form 'xHH' from [*BUF, END), placing
+   the byte in *RESULT.  Advance *BUF to point after the escape
+   sequence. */
 static svn_error_t *
 read_escaped(char *result, char **buf, const char *end)
 {
@@ -117,6 +120,10 @@ read_escaped(char *result, char **buf, const char *end)
   return SVN_NO_ERROR;
 }
 
+/* Read a field, possibly with escaped bytes, from [*BUF, END),
+   stopping at the | terminator.  Place the read string in *RESULT, or set
+   *RESULT to NULL if it is the empty string.  Allocate the returned string
+   in POOL.  Advance *BUF to point after the terminator. */
 static svn_error_t *
 read_str(const char **result,
          char **buf, const char *end,
@@ -164,10 +171,12 @@ read_str(const char **result,
   return SVN_NO_ERROR;
 }
 
+/* Read a boolean field from [*BUF, END), placing the result
+   in *RESULT.  If there is no boolean value (just a terminating |),
+   it defaults to false.  Advance *BUF to point after the terminator. */
 static svn_error_t *
 read_bool(svn_boolean_t *result,
-          char **buf, const char *end,
-          apr_pool_t *pool)
+          char **buf, const char *end)
 {
   assert(*buf != end);
   if (**buf == '|')
@@ -188,9 +197,14 @@ read_bool(svn_boolean_t *result,
   return SVN_NO_ERROR;
 }
 
+/* Read a field from [*BUF, END), terminated by a | character.
+   The field may not contain escape sequences.  The field is not
+   copyed and the buffer is modified in place, by replacing the
+   terminator with a NUL byte.  Make *BUF point after the original
+   terminator. */
 static svn_error_t *
 read_val(const char **result,
-          char **buf, const char *end, apr_pool_t *pool)
+          char **buf, const char *end)
 {
   const char *start = *buf;
 
@@ -211,6 +225,10 @@ read_val(const char **result,
   return SVN_NO_ERROR;
 }
   
+/* Read a revision number from [*BUF, END) stopping at the |
+   terminator.  Set *RESULT to the revision number, or
+   SVN_INVALID_REVNUM if there is none.  Use POOL for temporary
+   allocations.  Make *BUF point after the terminator.  */
 static svn_error_t *
 read_revnum(svn_revnum_t *result,
             char **buf,
@@ -219,7 +237,7 @@ read_revnum(svn_revnum_t *result,
 {
   const char *val;
 
-  SVN_ERR(read_val(&val, buf, end, pool));
+  SVN_ERR(read_val(&val, buf, end));
 
   if (val)
     *result = SVN_STR_TO_REV(val);
@@ -229,6 +247,10 @@ read_revnum(svn_revnum_t *result,
   return SVN_NO_ERROR;
 }
 
+/* Read a timestamp from [*BUF, END) stopping at the | terminator.
+   Set *RESULT to the resulting timestamp, or 0 if there is none.  Use
+   POOL for temporary allocations.  Make *BUF point after the
+   terminator. */
 static svn_error_t *
 read_time(apr_time_t *result,
           char **buf, const char *end,
@@ -236,7 +258,7 @@ read_time(apr_time_t *result,
 {
   const char *val;
 
-  SVN_ERR(read_val(&val, buf, end, pool));
+  SVN_ERR(read_val(&val, buf, end));
   if (val)
     SVN_ERR(svn_time_from_cstring(result, val, pool));
   else
@@ -245,6 +267,10 @@ read_time(apr_time_t *result,
   return SVN_NO_ERROR;
 }
 
+/* Allocate an entry from POOL and read it from [*BUF, END).  The
+   buffer may be modified in place while parsing.  Return the new
+   entry in *NEW_ENTRY.  Advance *BUF to point at the end of the entry
+   line. */
 static svn_error_t *
 read_entry(svn_wc_entry_t **new_entry,
            char **buf, const char *end,
@@ -262,7 +288,7 @@ read_entry(svn_wc_entry_t **new_entry,
   /* Set up kind. */
   {
     const char *kindstr;
-    SVN_ERR(read_val(&kindstr, buf, end, pool));
+    SVN_ERR(read_val(&kindstr, buf, end));
     if (kindstr)
       {
         if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR))
@@ -301,7 +327,7 @@ read_entry(svn_wc_entry_t **new_entry,
   /* Look for a schedule attribute on this entry. */
   {
     const char *schedulestr;
-    SVN_ERR(read_val(&schedulestr, buf, end, pool));
+    SVN_ERR(read_val(&schedulestr, buf, end));
     entry->schedule = svn_wc_schedule_normal;
     if (schedulestr)
       {
@@ -340,21 +366,21 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* has-props flag. */
-  SVN_ERR(read_bool(&entry->has_props, buf, end, pool));
+  SVN_ERR(read_bool(&entry->has_props, buf, end));
   MAYBE_DONE;
 
   /* has-prop-mods flag. */
-  SVN_ERR(read_bool(&entry->has_prop_mods, buf, end, pool));
+  SVN_ERR(read_bool(&entry->has_prop_mods, buf, end));
   MAYBE_DONE;
 
   /* cachable-props string. */
-  SVN_ERR(read_val(&entry->cachable_props, buf, end, pool));
+  SVN_ERR(read_val(&entry->cachable_props, buf, end));
   if (entry->cachable_props)
     entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   MAYBE_DONE;
 
   /* present-props string. */
-  SVN_ERR(read_val(&entry->present_props, buf, end, pool));
+  SVN_ERR(read_val(&entry->present_props, buf, end));
   if (entry->present_props)
     entry->present_props = apr_pstrdup(pool, entry->present_props);
   MAYBE_DONE;
@@ -372,7 +398,7 @@ read_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry copied? */
-  SVN_ERR(read_bool(&entry->copied, buf, end, pool));
+  SVN_ERR(read_bool(&entry->copied, buf, end));
   MAYBE_DONE;
 
   SVN_ERR(read_str(&entry->copyfrom_url, buf, end, pool));
@@ -381,15 +407,15 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* Is this entry deleted? */
-  SVN_ERR(read_bool(&entry->deleted, buf, end, pool));
+  SVN_ERR(read_bool(&entry->deleted, buf, end));
   MAYBE_DONE;
 
   /* Is this entry absent? */
-  SVN_ERR(read_bool(&entry->absent, buf, end, pool));
+  SVN_ERR(read_bool(&entry->absent, buf, end));
   MAYBE_DONE;
 
   /* Is this entry incomplete? */
-  SVN_ERR(read_bool(&entry->incomplete, buf, end, pool));
+  SVN_ERR(read_bool(&entry->incomplete, buf, end));
   MAYBE_DONE;
 
   /* UUID. */
@@ -1245,6 +1271,8 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
+/* Append STR to BUF, terminating it with a | byte.  Escape bytes that
+   needs escaping.  Use POOL for temporary allocations. */
 static void
 write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
 {
@@ -1268,6 +1296,7 @@ write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
   svn_stringbuf_appendbytes(buf, "|", 1);
 }
 
+/* Append VAL and a terminator to BUF. */
 static void
 write_bool(svn_stringbuf_t *buf, svn_boolean_t val)
 {
@@ -1275,6 +1304,8 @@ write_bool(svn_stringbuf_t *buf, svn_boolean_t val)
                            val ? "t|" : "|");
 }
 
+/* Append the representation of REVNUM to BUF and a terminator, using
+   POOL for temporary allocations. */
 static void
 write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
 {
@@ -1283,6 +1314,9 @@ write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
   svn_stringbuf_appendbytes(buf, "|", 1);
 }
 
+/* Append the timestamp VAL to BUF (or the empty string if VAL is 0),
+   terminating it with a | character.  Use POOL for temporary
+   allocations. */
 static void
 write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
 {
@@ -1291,6 +1325,8 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
   svn_stringbuf_appendbytes(buf, "|", 1);
 }
 
+/* Append the string VAL of length LEN to BUF, without escaping any
+   bytes. */
 static void
 write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
 {
