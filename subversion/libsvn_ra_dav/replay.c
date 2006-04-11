@@ -497,7 +497,6 @@ svn_ra_dav__replay(svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  const char *vcc_url;
   replay_baton_t rb;
 
   const char *body
@@ -509,8 +508,6 @@ svn_ra_dav__replay(svn_ra_session_t *session,
                    "</S:replay-report>",
                    revision, low_water_mark, send_deltas);
 
-  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->url->data, pool));
-
   memset(&rb, 0, sizeof(rb));
 
   rb.editor = editor;
@@ -521,7 +518,7 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "REPORT", vcc_url, body,
+  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "REPORT", ras->url->data, body,
                                      NULL, NULL,
                                      start_element,
                                      cdata_handler,
