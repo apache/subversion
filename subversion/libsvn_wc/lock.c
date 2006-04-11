@@ -167,9 +167,14 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       const char *path = svn_wc__adm_path(adm_access->path, FALSE, pool,
                                           SVN_WC__ADM_FORMAT, NULL);
       svn_boolean_t convert_to_propcaching =
-        (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION);
+        (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION
+         || adm_access->wc_format <= SVN_WC__XML_ENTRIES_VERSION);
 
-      /* Convert an old WC that doesn't use propcaching. */
+      /* Convert an old WC that doesn't use propcaching or that has XML entries
+         files.  Since subversion was never released with a format
+         with propcaching and still keeping the XML entries files, we
+         use the same procedure for both cases.  It will not hurt to
+         reinstall the props, just take some extra time. */
       if (convert_to_propcaching)
         {
           svn_boolean_t cleanup_required;

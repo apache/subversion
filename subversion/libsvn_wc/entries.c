@@ -1479,7 +1479,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 {
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *bigstr
-    = svn_stringbuf_createf(pool, "%d\n", svn_wc__adm_wc_format(adm_access));
+    = svn_stringbuf_createf(pool, "%d\n", SVN_WC__VERSION);
   apr_file_t *outfile = NULL;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;

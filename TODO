@@ -1,7 +1,5 @@
 This is the TODO file for the nonxml-entries branch:
 
-* Support WC upgrading.
-
 * Fix error handling in entries parsing.
 
 * Document new functions.
