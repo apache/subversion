@@ -341,10 +341,10 @@ fields are represented by just the terminator.  Empty fields that are
 only followed by empty fields may be omited from the line.
 
 The bytes representing the characters "|", "\" and ASCII control
-characters (0x01 - 0x31 and 0x7f) must be escaped when they occur in a
+characters (0x01 - 0x1f and 0x7f) must be escaped when they occur in a
 field.  The escaping uses the syntax "\xHH", where "HH" are the two
 hexadecimal digits (either upper- or lowercase) representing the
-escaped byte.  No other bytes may be escaped.
+escaped byte.  No other bytes may be escaped.  NUL bytes are not allowed.
 
 A field may be boolean, in which case it can have one of the values
 `t', meaning true or `f', meaning false.  Unless otherwise specified,
