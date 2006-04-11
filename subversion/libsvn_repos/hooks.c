@@ -1,4 +1,4 @@
-/* hooks.c : running repository hooks and sentinels
+/* hooks.c : running repository hooks
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -34,9 +34,6 @@
 #include "svn_utf.h"
 #include "repos.h"
 #include "svn_private_config.h"
-
-/* In the code below, "hook" is sometimes used indiscriminately to
-   mean either hook or sentinel.  */
 
 
 
