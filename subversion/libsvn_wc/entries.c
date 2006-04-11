@@ -108,7 +108,7 @@ read_escaped(char *result, char **buf, const char *end)
   if (end - *buf < 3 || **buf != 'x' || ! svn_ctype_isxdigit((*buf)[1])
       || ! svn_ctype_isxdigit((*buf)[2]))
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid escaped character"));
+                            _("Invalid escape sequence"));
   (*buf)++;
   digits[0] = *((*buf)++);
   digits[1] = *((*buf)++);
@@ -131,7 +131,9 @@ read_str(const char **result,
 {
   svn_stringbuf_t *s = NULL;
   const char *start;
-  assert(*buf != end);
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
   if (**buf == '|')
     {
       *result = NULL;
@@ -158,7 +160,9 @@ read_str(const char **result,
         (*buf)++;
     }
 
-  assert(*buf != end);
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
 
   if (s)
     {
@@ -178,7 +182,9 @@ static svn_error_t *
 read_bool(svn_boolean_t *result,
           char **buf, const char *end)
 {
-  assert(*buf != end);
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
   if (**buf == '|')
     {
       *result = FALSE;
@@ -190,9 +196,12 @@ read_bool(svn_boolean_t *result,
   else if (**buf == 'f')
     *result = FALSE;
   else
-    abort();
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Invalid boolean field"));
   (*buf)++;
-  assert(*buf != end && **buf == '|');
+  if (*buf == end || **buf != '|')
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
   (*buf)++;
   return SVN_NO_ERROR;
 }
@@ -208,7 +217,9 @@ read_val(const char **result,
 {
   const char *start = *buf;
 
-  assert(*buf != end);
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
   if (**buf == '|')
     {
       (*buf)++;
@@ -218,7 +229,9 @@ read_val(const char **result,
 
   while (*buf != end && **buf != '|')
     (*buf)++;
-  assert(*buf != end);
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
   **buf = '\0';
   *result = start;
   (*buf)++;
@@ -1041,6 +1054,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries = apr_hash_make(svn_wc_adm_access_pool(adm_access));
   char *curp, *endp;
   svn_wc_entry_t *entry;
+  int lineno;
 
   /* Open the entries file. */
   SVN_ERR(svn_wc__open_adm_file(&infile, path,
@@ -1063,16 +1077,33 @@ read_entries(svn_wc_adm_access_t *adm_access,
       curp = memchr(curp, '\n', buf->len);
       if (! curp)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                 _("Invalid version line in entries file of '%s'"),
+                                 _("Invalid version line in entries file "
+                                   "of '%s'"),
                                  svn_path_local_style(path, pool));
       ++curp;
+      lineno = 2;
 
       while (curp != endp)
         {
-          SVN_ERR(read_entry(&entry,  &curp, endp,
-                             svn_wc_adm_access_pool(adm_access)));
-          assert(*curp == '\n');
+          svn_error_t *err = read_entry(&entry, &curp, endp,
+                                        svn_wc_adm_access_pool(adm_access));
+      if (! err)
+        {
+          /* We allow extra fields at the end of the line, for extensibility.
+           */
+          curp = memchr(curp, '\n', endp - curp);
+          if (! curp)
+            err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                   _("Missing newline at end of entry"));
+        }
+      if (err)
+        return svn_error_createf(err->apr_err, err,
+                                 _("Error on line %d in entries file for "
+                                   "'%s':"),
+                                 lineno, svn_path_local_style(path, pool));
+      
           ++curp;
+          ++lineno;
           if ((entry->deleted || entry->absent)
               && (entry->schedule != svn_wc_schedule_add)
               && (entry->schedule != svn_wc_schedule_replace)
