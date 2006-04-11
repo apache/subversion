@@ -91,7 +91,7 @@ create_hash_table(apr_size_t num_slots, apr_pool_t *pool)
 
 /* Convert a key to a pointer to the key's hash bucket.
    We use a 2-universal multiplicative hash function. If you're
-   windering about the selected multiplier, take a look at the
+   wondering about the selected multiplier, take a look at the
    comments in apr/tables/apr_hash.c:find_entry for a discussion
    on fast string hashes; it's very illuminating.
 
@@ -156,7 +156,7 @@ store_mapping(hash_table_t *table, const char* key, apr_size_t idx)
 
    Note that the vdelta algorithm allows copies that cross the
    source/target data boundary. Because our internal delta
-   representation has different opcodes for source and terget copies,
+   representation has different opcodes for source and target copies,
    we split them in two. This means that the opcode stream in the
    delta window can contain copies shorter than VD_KEY_SIZE. These
    could be represented by insert ops instead, but we'll leave them

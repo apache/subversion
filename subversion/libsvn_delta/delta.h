@@ -44,7 +44,7 @@ extern "C" {
 
 typedef struct svn_txdelta__ops_baton_t {
   int num_ops;                  /* current number of ops */
-  int src_ops;                  /* current number of source copy ope */
+  int src_ops;                  /* current number of source copy ops */
   int ops_size;                 /* number of ops allocated */
   svn_txdelta_op_t *ops;        /* the operations */
 
