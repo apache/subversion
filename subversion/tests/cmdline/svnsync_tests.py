@@ -100,11 +100,11 @@ def run_test(sbox, dump_file_name):
     "synchronize", dest_sbox.repo_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
+  if errput:
+    raise svntest.actions.SVNUnexpectedStderr(errput)
   if not output:
     # should be: ['Committing rev 1\n', 'Committing rev 2\n']
     raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
-  if errput:
-    raise svntest.actions.SVNUnexpectedStderr(errput)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
