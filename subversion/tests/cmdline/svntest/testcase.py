@@ -125,9 +125,9 @@ class XFail(TestCase):
 
 
 class Skip(TestCase):
-  "A test that will be skipped when a condition is true."
+  """A test that will be skipped if condition COND is true."""
 
-  def __init__(self, test_case, cond):
+  def __init__(self, test_case, cond=1):
     TestCase.__init__(self)
     self.test_case = create_test_case(test_case)
     self.cond = cond
