@@ -196,10 +196,9 @@ run_hook_cmd(const char *name,
   /* Convert UTF-8 args to EBCDIC for use by spawn(). */
   for (i = 0; args[i] != NULL; i++)
     {
-      SVN_ERR(svn_utf_cstring_from_utf8_ex((const char**)(&(native_args[i])),
-                                           args[i], (const char *)0,
-                                           "svn-repos-utoe-xlate-handle",
-                                           pool));
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2((const char**)(&(native_args[i])),
+                                            args[i], (const char *)0,
+                                            pool));
     }
 
   /* Make the last element in the array a NULL pointer as required
@@ -324,11 +323,9 @@ run_hook_cmd(const char *name,
   if (!svn_stringbuf_isempty(script_output))
     {
       /* OS400 scripts produce EBCDIC stderr, so convert it. */
-      SVN_ERR(svn_utf_cstring_to_utf8_ex(&script_stderr_utf8,
-                                         script_output->data,
-                                         (const char*)0,
-                                         "svn-repos-etou-xlate-handle",
-                                         pool));
+      SVN_ERR(svn_utf_cstring_to_utf8_ex2(&script_stderr_utf8,
+                                          script_output->data,
+                                          (const char*)0, pool));
     }
 
   if (WIFEXITED(exitcode))
