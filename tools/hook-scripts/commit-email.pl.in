@@ -60,9 +60,8 @@ my $no_diff_added = 0;
 # End of Configuration section.
 ######################################################################
 
-# Since the path to svnlook depends upon the local installation
-# preferences, check that the required programs exist to ensure that
-# the administrator has set up the script properly.
+# Check that the required programs exist to ensure that the
+# administrator has set up the script properly.
 {
   my $ok = 1;
   foreach my $program ($sendmail, $svnlook)
@@ -136,14 +135,17 @@ while (@ARGV)
           }
         else
           {
-            # Here handle -m.
-            unless ($arg eq '-m')
+            if ($arg eq '-m')
               {
-                die "$0: internal error: should only handle -m here.\n";
+                $current_project                = &new_project;
+                $current_project->{match_regex} = $value;
+                push(@project_settings_list, $current_project);
               }
-            $current_project                = &new_project;
-            $current_project->{match_regex} = $value;
-            push(@project_settings_list, $current_project);
+            else
+              {
+                die "$0: internal error:"
+                  . " should not be handling `$arg' here.\n";
+              }
           }
       }
     else
@@ -504,10 +506,12 @@ sub usage
       "  -s subject_prefix     Subject line prefix\n",
       "\n",
       "This script supports a single repository with multiple projects,\n",
-      "where each project receives email only for commits that modify that\n",
-      "project.  A project is identified by using the -m command line option\n",
-      "with a regular expression argument.  If a commit has a path that\n",
-      "matches the regular expression, then the entire commit matches.\n",
+      "where each project receives email only for actions that affect that\n",
+      "project.  A project is identified by using the -m command line\n".
+      "option with a regular expression argument.  If the given revision\n",
+      "contains modifications to a path that matches the regular\n",
+      "expression, then the action applies to the project.\n",
+      "\n",
       "Any of the following -h, -l, -r and -s command line options and\n",
       "following email addresses are associated with this project.  The\n",
       "next -m resets the -h, -l, -r and -s command line options and the\n",
