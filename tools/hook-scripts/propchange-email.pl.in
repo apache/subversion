@@ -8,6 +8,8 @@
 # For usage, see the usage subroutine or run the script with no
 # command line arguments.
 #
+# This script requires Subversion 1.2.0 or later.
+#
 # $HeadURL$
 # $LastChangedDate$
 # $LastChangedBy$
@@ -37,7 +39,6 @@ BEGIN {
 
 use strict;
 use Carp;
-use Cwd 'abs_path';
 
 ######################################################################
 # Configuration section.
@@ -48,9 +49,6 @@ my $sendmail = "/usr/sbin/sendmail";
 # Svnlook path.
 my $svnlook = "@SVN_BINDIR@/svnlook";
 
-# Svn path.
-my $svn = "@SVN_BINDIR@/svn";
-
 # End of Configuration section.
 ######################################################################
 
@@ -58,7 +56,7 @@ my $svn = "@SVN_BINDIR@/svn";
 # administrator has set up the script properly.
 {
   my $ok = 1;
-  foreach my $program ($sendmail, $svnlook, $svn)
+  foreach my $program ($sendmail, $svnlook)
     {
       if (-e $program)
         {
@@ -240,10 +238,8 @@ if ($diff_file)
   }
 else
   {
-    # Get the property value using svn.
-    my $repos_url = 'file://' . &abs_path($repos);
-    @svnlines = &read_from_process($svn, 'propget', '--revprop', '-r', $rev,
-                                      $propname, $repos_url);
+    @svnlines = &read_from_process($svnlook, 'propget', '--revprop', '-r',
+                                   $rev, $repos, $propname);
   }
 
 # Figure out what directories have changed using svnlook.  This is
