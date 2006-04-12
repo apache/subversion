@@ -1,13 +1,13 @@
 #!/usr/bin/env perl
 
 # ====================================================================
-# commit-email.pl: send a commit email for commit REVISION in
-# repository REPOS to some email addresses.
+# commit-email.pl: send a notification email describing either a
+# commit or a revprop-change action on a Subversion repository.
 #
 # For usage, see the usage subroutine or run the script with no
 # command line arguments.
 #
-# This script requires Subversion 1.1.0 or later.
+# This script requires Subversion 1.2.0 or later.
 #
 # $HeadURL$
 # $LastChangedDate$
@@ -95,11 +95,21 @@ my $no_diff_added = 0;
 # implicit rule that matches all paths.
 my @project_settings_list = (&new_project);
 
-# Process the command line arguments till there are none left.  The
-# first two arguments that are not used by a command line option are
-# the repository path and the revision number.
+# Process the command line arguments till there are none left.
+# In commit mode: The first two arguments that are not used by a command line
+# option are the repository path and the revision number.
+# In revprop-change mode: The first four arguments that are not used by a
+# command line option are the repository path, the revision number, the
+# author, and the property name. This script has no support for the fifth
+# argument (action) added to the post-revprop-change hook in Subversion
+# 1.2.0 yet - patches welcome!
 my $repos;
 my $rev;
+my $author;
+my $propname;
+
+my $mode = 'commit';
+my $diff_file;
 
 # Use the reference to the first project to populate.
 my $current_project = $project_settings_list[0];
@@ -108,6 +118,8 @@ my $current_project = $project_settings_list[0];
 # project.  If a key exists but has a false value (''), then the
 # command line option is allowed but requires special handling.
 my %opt_to_hash_key = ('--from' => 'from_address',
+                       '--revprop-change' => '',
+                       '-d'     => '',
                        '-h'     => 'hostname',
                        '-l'     => 'log_file',
                        '-m'     => '',
@@ -125,11 +137,15 @@ while (@ARGV)
             die "$0: command line option `$arg' is not recognized.\n";
           }
 
-        unless (@ARGV)
+        my $value;
+        if ($arg ne '--revprop-change')
           {
-            die "$0: command line option `$arg' is missing a value.\n";
+            unless (@ARGV)
+              {
+                die "$0: command line option `$arg' is missing a value.\n";
+              }
+            $value = shift @ARGV;
           }
-        my $value = shift @ARGV;
 
         if ($hash_key)
           {
@@ -142,6 +158,29 @@ while (@ARGV)
                 $current_project                = &new_project;
                 $current_project->{match_regex} = $value;
                 push(@project_settings_list, $current_project);
+              }
+            elsif ($arg eq '-d')
+              {
+                if ($mode ne 'revprop-change')
+                  {
+                    die "$0: `-d' is valid only when used after"
+                      . " `--revprop-change'.\n";
+                  }
+                if ($diff_file)
+                  {
+                    die "$0: command line option `$arg'"
+                      . " can only be used once.\n";
+                  }
+                $diff_file = $value;
+              }
+            elsif ($arg eq '--revprop-change')
+              {
+                if (defined $repos)
+                  {
+                    die "$0: `--revprop-change' must be specified before"
+                      . " the first non-option argument.\n";
+                  }
+                $mode = 'revprop-change';
               }
             else
               {
@@ -160,6 +199,14 @@ while (@ARGV)
           {
             $rev = $arg;
           }
+        elsif (! defined $author && $mode eq 'revprop-change')
+          {
+            $author = $arg;
+          }
+        elsif (! defined $propname && $mode eq 'revprop-change')
+          {
+            $propname = $arg;
+          }
         else
           {
             push(@{$current_project->{email_addresses}}, $arg);
@@ -167,9 +214,14 @@ while (@ARGV)
       }
   }
 
-# If the revision number is undefined, then there were not enough
-# command line arguments.
-&usage("$0: too few arguments.") unless defined $rev;
+if ($mode eq 'commit')
+  {
+    &usage("$0: too few arguments.") unless defined $rev;
+  }
+elsif ($mode eq 'revprop-change')
+  {
+    &usage("$0: too few arguments.") unless defined $propname;
+  }
 
 # Check the validity of the command line arguments.  Check that the
 # revision is an integer greater than 0 and that the repository
@@ -214,15 +266,7 @@ unless (-d _)
   exit 1 unless $ok;
 }
 
-######################################################################
-# Harvest data using svnlook.
-
-# Get the author, date, and log from svnlook.
-my @svnlooklines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
-my $author = shift @svnlooklines;
-my $date = shift @svnlooklines;
-shift @svnlooklines;
-my @log = map { "$_\n" } @svnlooklines;
+# Harvest common data needed for both commit or revprop-change.
 
 # Figure out what directories have changed using svnlook.
 my @dirschanged = &read_from_process($svnlook, 'dirs-changed', $repos,
@@ -244,7 +288,7 @@ for (my $i=0; $i<@dirschanged; ++$i)
   }
 
 # Figure out what files have changed using svnlook.
-@svnlooklines = &read_from_process($svnlook, 'changed', $repos, '-r', $rev);
+my @svnlooklines = &read_from_process($svnlook, 'changed', $repos, '-r', $rev);
 
 # Parse the changed nodes.
 my @adds;
@@ -277,94 +321,162 @@ foreach my $line (@svnlooklines)
       }
   }
 
-# Get the diff from svnlook.
-my @no_diff_deleted = $no_diff_deleted ? ('--no-diff-deleted') : ();
-my @no_diff_added = $no_diff_added ? ('--no-diff-added') : ();
-my @difflines = &read_from_process($svnlook, 'diff', $repos,
-                                   '-r', $rev, @no_diff_deleted,
-                                   @no_diff_added);
-
-######################################################################
-# Modified directory name collapsing.
-
-# Collapse the list of changed directories only if the root directory
-# was not modified, because otherwise everything is under root and
-# there's no point in collapsing the directories, and only if more
-# than one directory was modified.
-my $commondir = '';
-my @dirschanged_orig = @dirschanged;
-if (!$rootchanged and @dirschanged > 1)
-  {
-    my $firstline    = shift @dirschanged;
-    my @commonpieces = split('/', $firstline);
-    foreach my $line (@dirschanged)
-      {
-        my @pieces = split('/', $line);
-        my $i = 0;
-        while ($i < @pieces and $i < @commonpieces)
-          {
-            if ($pieces[$i] ne $commonpieces[$i])
-              {
-                splice(@commonpieces, $i, @commonpieces - $i);
-                last;
-              }
-            $i++;
-          }
-      }
-    unshift(@dirschanged, $firstline);
-
-    if (@commonpieces)
-      {
-        $commondir = join('/', @commonpieces);
-        my @new_dirschanged;
-        foreach my $dir (@dirschanged)
-          {
-            if ($dir eq $commondir)
-              {
-                $dir = '.';
-              }
-            else
-              {
-                $dir =~ s#^\Q$commondir/\E##;
-              }
-            push(@new_dirschanged, $dir);
-          }
-        @dirschanged = @new_dirschanged;
-      }
-  }
-my $dirlist = join(' ', @dirschanged);
-
-######################################################################
-# Assembly of log message.
-
-# Put together the body of the log message.
+# Declare variables which carry information out of the inner scope of
+# the conditional blocks below.
+my $subject_base;
 my @body;
-push(@body, "Author: $author\n");
-push(@body, "Date: $date\n");
-push(@body, "New Revision: $rev\n");
-push(@body, "\n");
-if (@adds)
+
+if ($mode eq 'commit')
   {
-    @adds = sort @adds;
-    push(@body, "Added:\n");
-    push(@body, map { "   $_\n" } @adds);
+    ######################################################################
+    # Harvest data using svnlook.
+
+    # Get the author, date, and log from svnlook.
+    my @infolines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
+    my $author = shift @infolines;
+    my $date = shift @infolines;
+    shift @infolines;
+    my @log = map { "$_\n" } @infolines;
+
+    # Get the diff from svnlook.
+    my @no_diff_deleted = $no_diff_deleted ? ('--no-diff-deleted') : ();
+    my @no_diff_added = $no_diff_added ? ('--no-diff-added') : ();
+    my @difflines = &read_from_process($svnlook, 'diff', $repos,
+                                       '-r', $rev, @no_diff_deleted,
+                                       @no_diff_added);
+
+    ######################################################################
+    # Modified directory name collapsing.
+
+    # Collapse the list of changed directories only if the root directory
+    # was not modified, because otherwise everything is under root and
+    # there's no point in collapsing the directories, and only if more
+    # than one directory was modified.
+    my $commondir = '';
+    my @edited_dirschanged = @dirschanged;
+    if (!$rootchanged and @edited_dirschanged > 1)
+      {
+        my $firstline    = shift @edited_dirschanged;
+        my @commonpieces = split('/', $firstline);
+        foreach my $line (@edited_dirschanged)
+          {
+            my @pieces = split('/', $line);
+            my $i = 0;
+            while ($i < @pieces and $i < @commonpieces)
+              {
+                if ($pieces[$i] ne $commonpieces[$i])
+                  {
+                    splice(@commonpieces, $i, @commonpieces - $i);
+                    last;
+                  }
+                $i++;
+              }
+          }
+        unshift(@edited_dirschanged, $firstline);
+
+        if (@commonpieces)
+          {
+            $commondir = join('/', @commonpieces);
+            my @new_dirschanged;
+            foreach my $dir (@edited_dirschanged)
+              {
+                if ($dir eq $commondir)
+                  {
+                    $dir = '.';
+                  }
+                else
+                  {
+                    $dir =~ s#^\Q$commondir/\E##;
+                  }
+                push(@new_dirschanged, $dir);
+              }
+            @edited_dirschanged = @new_dirschanged;
+          }
+      }
+    my $dirlist = join(' ', @edited_dirschanged);
+
+    ######################################################################
+    # Assembly of log message.
+
+    if ($commondir ne '')
+      {
+        $subject_base = "r$rev - in $commondir: $dirlist";
+      }
+    else
+      {
+        $subject_base = "r$rev - $dirlist";
+      }
+
+    # Put together the body of the log message.
+    push(@body, "Author: $author\n");
+    push(@body, "Date: $date\n");
+    push(@body, "New Revision: $rev\n");
+    push(@body, "\n");
+    if (@adds)
+      {
+        @adds = sort @adds;
+        push(@body, "Added:\n");
+        push(@body, map { "   $_\n" } @adds);
+      }
+    if (@dels)
+      {
+        @dels = sort @dels;
+        push(@body, "Removed:\n");
+        push(@body, map { "   $_\n" } @dels);
+      }
+    if (@mods)
+      {
+        @mods = sort @mods;
+        push(@body, "Modified:\n");
+        push(@body, map { "   $_\n" } @mods);
+      }
+    push(@body, "Log:\n");
+    push(@body, @log);
+    push(@body, "\n");
+    push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines);
   }
-if (@dels)
+elsif ($mode eq 'revprop-change')
   {
-    @dels = sort @dels;
-    push(@body, "Removed:\n");
-    push(@body, map { "   $_\n" } @dels);
+    ######################################################################
+    # Harvest data.
+
+    my @svnlines;
+    # Get the diff file if it was provided, otherwise the property value.
+    if ($diff_file)
+      {
+        open(DIFF_FILE, $diff_file) or die "$0: cannot read `$diff_file': $!\n";
+        @svnlines = <DIFF_FILE>;
+        close DIFF_FILE;
+      }
+    else
+      {
+        @svnlines = &read_from_process($svnlook, 'propget', '--revprop', '-r',
+                                       $rev, $repos, $propname);
+      }
+
+    # Figure out what directories have changed using svnlook.  This is
+    # merely so we can determine what project might care about receiving
+    # this log.
+    my @dirschanged = &read_from_process($svnlook, 'dirs-changed', $repos,
+                                         '-r', $rev);
+
+    ######################################################################
+    # Assembly of log message.
+
+    $subject_base = "propchange - r$rev $propname";
+
+    # Put together the body of the log message.
+    push(@body, "Author: $author\n");
+    push(@body, "Revision: $rev\n");
+    push(@body, "Property Name: $propname\n");
+    push(@body, "\n");
+    unless ($diff_file)
+      {
+        push(@body, "New Property Value:\n");
+      }
+    push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @svnlines);
+    push(@body, "\n");
   }
-if (@mods)
-  {
-    @mods = sort @mods;
-    push(@body, "Modified:\n");
-    push(@body, map { "   $_\n" } @mods);
-  }
-push(@body, "Log:\n");
-push(@body, @log);
-push(@body, "\n");
-push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines);
 
 # Go through each project and see if there are any matches for this
 # project.  If so, send the log out.
@@ -372,7 +484,7 @@ foreach my $project (@project_settings_list)
   {
     my $match_re = $project->{match_re};
     my $match    = 0;
-    foreach my $path (@dirschanged_orig, @adds, @dels, @mods)
+    foreach my $path (@dirschanged, @adds, @dels, @mods)
       {
         if ($path =~ $match_re)
           {
@@ -391,16 +503,8 @@ foreach my $project (@project_settings_list)
     my $log_file        = $project->{log_file};
     my $reply_to        = $project->{reply_to};
     my $subject_prefix  = $project->{subject_prefix};
-    my $subject;
+    my $subject         = $subject_base;
 
-    if ($commondir ne '')
-      {
-        $subject = "r$rev - in $commondir: $dirlist";
-      }
-    else
-      {
-        $subject = "r$rev - $dirlist";
-      }
     if ($subject_prefix =~ /\w/)
       {
         $subject = "$subject_prefix $subject";
@@ -489,8 +593,12 @@ exit 0;
 sub usage
 {
   warn "@_\n" if @_;
-  die "usage: $0 REPOS REVNUM [[-m regex] [options] [email_addr ...]] ...\n",
-      "options are\n",
+  die "usage (commit mode):\n",
+      "  $0 REPOS REVNUM [[-m regex] [options] [email_addr ...]] ...\n",
+      "usage: (revprop-change mode):\n",
+      "  $0 --revprop-change REPOS REVNUM USER PROPNAME [-d diff_file] \\\n",
+      "    [[-m regex] [options] [email_addr ...]] ...\n",
+      "options are:\n",
       "  --from email_address  Email address for 'From:' (overrides -h)\n",
       "  -h hostname           Hostname to append to author for 'From:'\n",
       "  -l logfile            Append mail contents to this log file\n",
@@ -517,7 +625,12 @@ sub usage
       "a list of email addresses on the command line.  If you do not want\n",
       "a rule that matches the entire repository, then use -m with a\n",
       "regular expression before any other command line options or email\n",
-      "addresses.\n";
+      "addresses.\n",
+      "\n",
+      "'revprop-change' mode:\n",
+      "The message will contain a copy of the diff_file if it is provided,\n",
+      "otherwise a copy of the (assumed to be new) property value.\n",
+      "\n";
 }
 
 # Return a new hash data structure for a new empty project that
