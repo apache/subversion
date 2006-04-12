@@ -553,8 +553,8 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p2(&modified, path, FALSE,
-                                      adm_access, TRUE, pool));
+      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
+                                     adm_access, pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
@@ -1396,8 +1396,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p2(&modified, b->path, FALSE,
-                                    adm_access, TRUE, pool));
+    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
+                                   adm_access, pool));
 
   if (modified)
     {
