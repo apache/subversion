@@ -686,51 +686,6 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-svn_ra_serf__lock(svn_ra_session_t *session,
-                  apr_hash_t *path_revs,
-                  const char *comment,
-                  svn_boolean_t force,
-                  svn_ra_lock_callback_t lock_func,
-                  void *lock_baton,
-                  apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__unlock(svn_ra_session_t *session,
-                    apr_hash_t *path_tokens,
-                    svn_boolean_t force,
-                    svn_ra_lock_callback_t lock_func,
-                    void *lock_baton,
-                    apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__get_lock(svn_ra_session_t *session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      apr_pool_t *pool)
-{
-  /* TODO Shh.  We're telling a white lie for now. */
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                          _("Server does not support locking features"));
-}
-
-static svn_error_t *
-svn_ra_serf__get_locks(svn_ra_session_t *session,
-                       apr_hash_t **locks,
-                       const char *path,
-                       apr_pool_t *pool)
-{
-  /* TODO Shh.  We're telling a white lie for now. */
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                          _("Server does not support locking features"));
-}
-
 static const svn_ra__vtable_t serf_vtable = {
   ra_serf_version,
   ra_serf_get_description,

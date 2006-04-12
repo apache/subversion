@@ -740,6 +740,8 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
     prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;
   else if (strcmp(name, "repository-uuid") == 0)
     prop_name = SVN_PROP_ENTRY_UUID;
+  else if (strcmp(name, "lock-token") == 0)
+    prop_name = SVN_PROP_ENTRY_LOCK_TOKEN;
   else if (strcmp(name, "checked-in") == 0)
     prop_name = SVN_RA_SERF__WC_CHECKED_IN_URL;
   else

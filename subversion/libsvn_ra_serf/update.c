@@ -155,6 +155,9 @@ typedef struct report_info_t
   /* the canonical url for this file. */
   const char *url;
 
+  /* lock token, if we had one to start off with. */
+  const char *lock_token;
+
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this file. */
   svn_revnum_t base_rev;
 
@@ -262,6 +265,8 @@ typedef struct {
   svn_boolean_t ignore_ancestry;
   svn_boolean_t recurse;
   svn_boolean_t text_deltas;
+
+  apr_hash_t *lock_path_tokens;
 
   /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
@@ -552,6 +557,41 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
   return close_dir(dir);
 }
 
+/* This function works around a bug in mod_dav_svn in that it will not
+ * send remove-prop in the update report when a lock property disappears
+ * when send-all is false.
+ *
+ * Therefore, we'll try to look at our properties and see if there's
+ * an active lock.  If not, then we'll assume there isn't a lock
+ * anymore.
+ */
+static void
+check_lock(report_info_t *info)
+{
+  const char *lock_val;
+      
+  lock_val = svn_ra_serf__get_ver_prop(info->props, info->url,
+                                       info->target_rev,
+                                       "DAV:", "lockdiscovery");
+
+  if (lock_val)
+    {
+      lock_val = apr_pstrdup(info->editor_pool, lock_val);
+      apr_collapse_spaces(lock_val, lock_val);
+    }
+
+  if (!lock_val || lock_val[0] == '\0')
+    {
+      svn_string_t *str;
+
+      str = svn_string_ncreate("", 1, info->editor_pool);
+
+      svn_ra_serf__set_ver_prop(info->dir->removed_props, info->base_name,
+                                info->base_rev, "DAV:", "lock-token",
+                                str, info->pool);
+    }
+}
+
 static apr_status_t
 headers_fetch(serf_bucket_t *headers,
               void *baton,
@@ -813,6 +853,9 @@ handle_fetch(serf_request_t *request,
                                       info, info->editor_pool);
           if (info->fetch_props)
             {
+              if (info->lock_token)
+                check_lock(info);
+
               svn_ra_serf__walk_all_props(info->props,
                                           info->url,
                                           info->target_rev,
@@ -972,6 +1015,9 @@ handle_propchange_only(report_info_t *info)
                                                     &info->textdelta,
                                                     &info->textdelta_baton));
     }
+
+  if (info->lock_token)
+    check_lock(info);
 
   /* set all of the properties we received */
   svn_ra_serf__walk_all_props(info->props,
@@ -1520,6 +1566,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           svn_path_add_component(info->name_buf, info->base_name);
           info->name = info->name_buf->data;
         }
+      
+      info->lock_token = apr_hash_get(ctx->lock_path_tokens, info->name,
+                                      APR_HASH_KEY_STRING);
+      
+      if (info->lock_token && info->fetch_props == FALSE)
+        info->fetch_props = TRUE;
 
       /* If we have a WC, we can dive all the way into the WC to get the
        * previous URL so we can do an differential GET with the base URL.
@@ -1746,6 +1798,14 @@ set_path(void *report_baton,
 
   if (lock_token)
     {
+      const char *path_copy, *token_copy;
+
+      path_copy = apr_pstrdup(report->pool, path);
+      token_copy = apr_pstrdup(report->pool, lock_token);
+
+      apr_hash_set(report->lock_path_tokens, path_copy, APR_HASH_KEY_STRING,
+                   token_copy);
+
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
                                           sizeof(" lock-token=\"")-1,
                                           report->sess->bkt_alloc);
@@ -1843,6 +1903,14 @@ link_path(void *report_baton,
 
   if (lock_token)
     {
+      const char *path_copy, *token_copy;
+
+      path_copy = apr_pstrdup(report->pool, path);
+      token_copy = apr_pstrdup(report->pool, lock_token);
+
+      apr_hash_set(report->lock_path_tokens, path_copy, APR_HASH_KEY_STRING,
+                   token_copy);
+
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
                                           sizeof(" lock-token=\"")-1,
                                           report->sess->bkt_alloc);
@@ -2171,6 +2239,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->recurse = recurse;
   report->ignore_ancestry = ignore_ancestry;
   report->text_deltas = text_deltas;
+  report->lock_path_tokens = apr_hash_make(pool);
 
   if (src_path)
     {
