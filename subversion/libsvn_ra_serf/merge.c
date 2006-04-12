@@ -290,13 +290,19 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
         {
           const char *href, *checked_in;
           svn_string_t checked_in_str;
+          apr_size_t href_len;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
           checked_in = apr_hash_get(info->props, "checked-in",
                                     APR_HASH_KEY_STRING);
 
-          /* Be more precise than this? */
-          href += ctx->merge_url_len + 1;
+          href_len = strlen(href);
+          if (href_len == ctx->merge_url_len)
+              href = "";
+          else if (href_len > ctx->merge_url_len)
+              href += ctx->merge_url_len + 1;
+          else
+             abort();
 
           checked_in_str.data = checked_in;
           checked_in_str.len = strlen(checked_in);
@@ -304,12 +310,12 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           /* We now need to dive all the way into the WC to update the
            * base VCC url.
            */
-          ctx->session->wc_callbacks->push_wc_prop(
+          SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
                                        ctx->session->wc_callback_baton,
                                        href,
                                        SVN_RA_SERF__WC_CHECKED_IN_URL,
                                        &checked_in_str,
-                                       info->pool);
+                                       info->pool));
 
         }
 

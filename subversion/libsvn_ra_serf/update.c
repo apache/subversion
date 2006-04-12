@@ -576,8 +576,10 @@ check_lock(report_info_t *info)
 
   if (lock_val)
     {
-      lock_val = apr_pstrdup(info->editor_pool, lock_val);
-      apr_collapse_spaces(lock_val, lock_val);
+      char *new_lock;
+      new_lock = apr_pstrdup(info->editor_pool, lock_val);
+      apr_collapse_spaces(new_lock, new_lock);
+      lock_val = new_lock;
     }
 
   if (!lock_val || lock_val[0] == '\0')
@@ -840,6 +842,9 @@ handle_fetch(serf_request_t *request,
               return error_fetch(request, fetch_ctx, err);
             }
 
+          if (info->lock_token)
+            check_lock(info);
+
           /* set all of the properties we received */
           svn_ra_serf__walk_all_props(info->props,
                                       info->base_name,
@@ -853,9 +858,6 @@ handle_fetch(serf_request_t *request,
                                       info, info->editor_pool);
           if (info->fetch_props)
             {
-              if (info->lock_token)
-                check_lock(info);
-
               svn_ra_serf__walk_all_props(info->props,
                                           info->url,
                                           info->target_rev,
@@ -1382,16 +1384,21 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                strcmp(name.name, "remove-prop") == 0)
         {
           const char *full_prop_name;
-          svn_ra_serf__dav_props_t new_prop_name;
-
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
-          new_prop_name = svn_ra_serf__expand_ns(parser->state->ns_list,
-                                                 full_prop_name);
+          const char *colon;
 
           info = push_state(parser, ctx, PROP);
-          info->prop_ns = new_prop_name.namespace;
-          info->prop_name = apr_pstrdup(parser->state->pool,
-                                        new_prop_name.name);
+
+          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          colon = strchr(full_prop_name, ':');
+
+          if (colon)
+            colon++;
+          else
+            colon = full_prop_name;
+
+          info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
+                                         colon - full_prop_name);
+          info->prop_name = apr_pstrdup(parser->state->pool, colon);
           info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1447,16 +1454,21 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                strcmp(name.name, "remove-prop") == 0)
         {
           const char *full_prop_name;
-          svn_ra_serf__dav_props_t new_prop_name;
-
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
-          new_prop_name = svn_ra_serf__expand_ns(parser->state->ns_list,
-                                                 full_prop_name);
+          const char *colon;
 
           info = push_state(parser, ctx, PROP);
-          info->prop_ns = new_prop_name.namespace;
-          info->prop_name = apr_pstrdup(parser->state->pool,
-                                        new_prop_name.name);
+
+          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          colon = strchr(full_prop_name, ':');
+
+          if (colon)
+            colon++;
+          else
+            colon = full_prop_name;
+
+          info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
+                                         colon - full_prop_name);
+          info->prop_name = apr_pstrdup(parser->state->pool, colon);
           info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1665,6 +1677,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       apr_hash_t *props;
       const char *set_val;
       svn_string_t *set_val_str;
+      apr_pool_t *pool;
 
       info = parser->state->private;
       dir = info->dir;
@@ -1707,10 +1720,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (strcmp(name.name, "remove-prop") != 0)
         {
           props = info->props;
+          pool = info->pool;
         }
       else
         {
           props = dir->removed_props;
+          pool = dir->pool;
           info->prop_val = "";
           info->prop_val_len = 1;
         }
@@ -1737,12 +1752,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
         }
 
-      set_val = apr_pmemdup(info->pool, info->prop_val, info->prop_val_len);
-      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, info->pool);
+      set_val = apr_pmemdup(pool, info->prop_val, info->prop_val_len);
+      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, pool);
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
-                                ns->namespace, ns->url, set_val_str,
-                                info->pool);
+                                ns->namespace, ns->url, set_val_str, pool);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if ((state == IGNORE_PROP_NAME || state == NEED_PROP_NAME))
