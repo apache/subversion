@@ -1,4 +1,2 @@
 This is the TODO file for the nonxml-entries branch:
 
-* Resolve the corner case (but still important), where cleanup on an old
-  WC will partially upgrade it.

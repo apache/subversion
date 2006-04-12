@@ -1538,19 +1538,348 @@ write_entry(svn_stringbuf_t *buf,
   svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
+/* Append a single entry ENTRY as an XML element to the string OUTPUT,
+   using the entry for "this dir" THIS_DIR for
+   comparison/optimization.  Allocations are done in POOL.  */
+static void
+write_entry_xml(svn_stringbuf_t **output,
+                svn_wc_entry_t *entry,
+                const char *name,
+                svn_wc_entry_t *this_dir,
+                apr_pool_t *pool)
+{
+  apr_hash_t *atts = apr_hash_make(pool);
+  const char *valuestr;
 
+  /*** Create a hash that represents an entry. ***/
+
+  assert(name);
+
+  /* Name */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING, 
+               entry->name);
+
+  /* Revision */
+  if (SVN_IS_VALID_REVNUM(entry->revision))
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
+                 apr_psprintf(pool, "%ld", entry->revision));
+  
+  /* URL */
+  if (entry->url)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
+                 entry->url);
+  
+  /* Repository root */
+  if (entry->repos)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                 entry->repos);
+
+  /* Kind */
+  switch (entry->kind)
+    {
+    case svn_node_dir:
+      valuestr = SVN_WC__ENTRIES_ATTR_DIR_STR;
+      break;
+
+    case svn_node_none:
+      valuestr = NULL;
+      break;
+
+    case svn_node_file:
+    case svn_node_unknown:
+    default:
+      valuestr = SVN_WC__ENTRIES_ATTR_FILE_STR;
+      break;
+    }
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KIND, APR_HASH_KEY_STRING, valuestr);
+
+  /* Schedule */
+  switch (entry->schedule)
+    {
+    case svn_wc_schedule_add:
+      valuestr = SVN_WC__ENTRY_VALUE_ADD;
+      break;
+
+    case svn_wc_schedule_delete:
+      valuestr = SVN_WC__ENTRY_VALUE_DELETE;
+      break;
+
+    case svn_wc_schedule_replace:
+      valuestr = SVN_WC__ENTRY_VALUE_REPLACE;
+      break;
+
+    case svn_wc_schedule_normal:
+    default:
+      valuestr = NULL;
+      break;
+    }
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING, 
+               valuestr);
+
+  /* Conflicts */
+  if (entry->conflict_old)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD, APR_HASH_KEY_STRING,
+                 entry->conflict_old);
+
+  if (entry->conflict_new)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW, APR_HASH_KEY_STRING,
+                 entry->conflict_new);
+
+  if (entry->conflict_wrk)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK, APR_HASH_KEY_STRING,
+                 entry->conflict_wrk);
+
+  if (entry->prejfile)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PREJFILE, APR_HASH_KEY_STRING,
+                 entry->prejfile);
+
+  /* Copy-related Stuff */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING,
+               (entry->copied ? "true" : NULL));
+
+  if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
+                 apr_psprintf(pool, "%ld",
+                              entry->copyfrom_rev));
+
+  if (entry->copyfrom_url)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
+                 entry->copyfrom_url);
+
+  /* Deleted state */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
+               (entry->deleted ? "true" : NULL));
+
+  /* Absent state */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_ABSENT, APR_HASH_KEY_STRING,
+               (entry->absent ? "true" : NULL));
+
+  /* Incomplete state */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
+               (entry->incomplete ? "true" : NULL));
+
+  /* Timestamps */
+  if (entry->text_time)
+    {
+      apr_hash_set(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
+                   svn_time_to_cstring(entry->text_time, pool));
+    }
+  if (entry->prop_time)
+    {
+      apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
+                   svn_time_to_cstring(entry->prop_time, pool));
+    }
+
+  /* Checksum */
+  if (entry->checksum)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHECKSUM, APR_HASH_KEY_STRING,
+                 entry->checksum);
+
+  /* Last-commit stuff */
+  if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
+                 apr_psprintf(pool, "%ld", entry->cmt_rev));
+
+  if (entry->cmt_author)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,
+                 entry->cmt_author);
+
+  if (entry->uuid)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
+                 entry->uuid);
+
+  if (entry->cmt_date)
+    {
+      apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CMT_DATE, APR_HASH_KEY_STRING,
+                   svn_time_to_cstring(entry->cmt_date, pool));
+    }
+    
+  /* Lock token */
+  if (entry->lock_token)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN, APR_HASH_KEY_STRING,
+                 entry->lock_token);
+
+  /* Lock owner */
+  if (entry->lock_owner)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER, APR_HASH_KEY_STRING,
+                 entry->lock_owner);
+
+  /* Lock comment */
+  if (entry->lock_comment)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT, APR_HASH_KEY_STRING,
+                 entry->lock_comment);
+
+  /* Lock creation date */
+  if (entry->lock_creation_date)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
+                 APR_HASH_KEY_STRING,
+                 svn_time_to_cstring(entry->lock_creation_date, pool));
+
+  /* Has-props flag. */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
+               (entry->has_props ? "true" : NULL));
+
+  /* Prop-mods. */
+  if (entry->has_prop_mods)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                 APR_HASH_KEY_STRING, "true");
+  
+  /* Cachable props. */
+  if (entry->cachable_props && *entry->cachable_props)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                 APR_HASH_KEY_STRING, entry->cachable_props);
+
+  /* Present props. */
+  if (entry->present_props
+      && *entry->present_props)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
+                 APR_HASH_KEY_STRING, entry->present_props);
+
+  /*** Now, remove stuff that can be derived through inheritance rules. ***/
+
+  /* We only want to write out 'revision' and 'url' for the
+     following things:
+     1. the current directory's "this dir" entry.
+     2. non-directory entries:
+        a. which are marked for addition (and consequently should
+           have an invalid revnum) 
+        b. whose revision or url is valid and different than 
+           that of the "this dir" entry.
+  */
+  if (strcmp(name, SVN_WC_ENTRY_THIS_DIR))
+    {
+      /* This is NOT the "this dir" entry */
+      if (! strcmp(name, "."))
+        {
+          /* By golly, if this isn't recognized as the "this dir"
+             entry, and it looks like '.', we're just asking for an
+             infinite recursion to happen.  Abort! */
+          abort();
+        }
+
+      if (entry->kind == svn_node_dir)
+        {
+          /* We don't write url, revision, repository root or uuid for subdir
+             entries. */
+          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
+                       NULL);
+          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
+                       NULL);
+          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                       NULL);
+          apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
+                       NULL);
+        }
+      else
+        {
+          /* If this is not the "this dir" entry, and the revision is
+             the same as that of the "this dir" entry, don't write out
+             the revision. */
+          if (entry->revision == this_dir->revision)
+            apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION, 
+                         APR_HASH_KEY_STRING, NULL);
+
+          /* If this is not the "this dir" entry, and the uuid is
+             the same as that of the "this dir" entry, don't write out
+             the uuid. */
+          if (entry->uuid && this_dir->uuid)
+            {
+              if (strcmp(entry->uuid, this_dir->uuid) == 0)
+                apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID, 
+                             APR_HASH_KEY_STRING, NULL);
+            }
+
+          /* If this is not the "this dir" entry, and the url is
+             trivially calculable from that of the "this dir" entry,
+             don't write out the url */
+          if (entry->url)
+            {
+              if (strcmp(entry->url,
+                         svn_path_url_add_component(this_dir->url, 
+                                                    name, pool)) == 0)
+                apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL,
+                             APR_HASH_KEY_STRING, NULL);
+            }
+
+          /* Avoid writing repository root if that's the same as this_dir. */
+          if (entry->repos && this_dir->repos
+              && strcmp(entry->repos, this_dir->repos) == 0)
+            apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                         NULL);
+
+          /* Cachable props are also inherited. */
+          if (entry->cachable_props && this_dir->cachable_props
+              && strcmp(entry->cachable_props, this_dir->cachable_props) == 0)
+            apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
+                         APR_HASH_KEY_STRING, NULL);
+        }
+    }
+
+  /* Append the entry onto the accumulating string. */
+  svn_xml_make_open_tag_hash(output,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__ENTRIES_ENTRY,
+                             atts);
+}
+
+/* Construct an entries file from the ENTRIES hash in XML format in a
+   newly allocated stringbuf and return it in *OUTPUT.  Allocate the
+   result in POOL.  THIS_DIR is the this_dir entry in ENTRIES.  */
+static void
+write_entries_xml(svn_stringbuf_t **output,
+                  apr_hash_t *entries,
+                  svn_wc_entry_t *this_dir,
+                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  svn_xml_make_header(output, pool);
+  svn_xml_make_open_tag(output, pool, svn_xml_normal,
+                        SVN_WC__ENTRIES_TOPLEVEL,
+                        "xmlns",
+                        SVN_XML_NAMESPACE,
+                        NULL);
+
+  /* Write out "this dir" */
+  write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
+
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      svn_wc_entry_t *this_entry;
+
+      svn_pool_clear(subpool);
+
+      /* Get the entry and make sure its attributes are up-to-date. */
+      apr_hash_this(hi, &key, NULL, &val);
+      this_entry = val;
+
+      /* Don't rewrite the "this dir" entry! */
+      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
+        continue;
+
+      /* Append the entry to output */
+      write_entry_xml(output, this_entry, key, this_dir, subpool);
+    }
+
+  svn_xml_make_close_tag(output, pool, SVN_WC__ENTRIES_TOPLEVEL);
+
+  svn_pool_destroy(subpool);
+}
+                  
 svn_error_t *
 svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_stringbuf_t *bigstr
-    = svn_stringbuf_createf(pool, "%d\n", SVN_WC__VERSION);
+  svn_stringbuf_t *bigstr = NULL;
   apr_file_t *outfile = NULL;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
 
@@ -1579,30 +1908,39 @@ svn_wc__entries_write(apr_hash_t *entries,
                                 (APR_WRITE | APR_CREATE),
                                 pool));
 
-  /* Write out "this dir" */
-  write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
-      const void *key;
-      void *val;
-      svn_wc_entry_t *this_entry;
+      apr_pool_t *subpool = svn_pool_create(pool);
+      bigstr = svn_stringbuf_createf(pool, "%d\n",
+                                     svn_wc__adm_wc_format(adm_access));
+      /* Write out "this dir" */
+      write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
 
-      svn_pool_clear(subpool);
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          svn_wc_entry_t *this_entry;
 
-      /* Get the entry and make sure its attributes are up-to-date. */
-      apr_hash_this(hi, &key, NULL, &val);
-      this_entry = val;
+          svn_pool_clear(subpool);
 
-      /* Don't rewrite the "this dir" entry! */
-      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
-        continue;
+          /* Get the entry and make sure its attributes are up-to-date. */
+          apr_hash_this(hi, &key, NULL, &val);
+          this_entry = val;
 
-      /* Append the entry to BIGSTR */
-      write_entry(bigstr, this_entry, key, this_dir, subpool);
+          /* Don't rewrite the "this dir" entry! */
+          if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
+            continue;
+
+          /* Append the entry to BIGSTR */
+          write_entry(bigstr, this_entry, key, this_dir, subpool);
+        }
+
+      svn_pool_destroy(subpool);
     }
-
-  svn_pool_destroy(subpool);
+  else
+    /* This is needed during cleanup of a not yet upgraded WC. */
+    write_entries_xml(&bigstr, entries, this_dir, pool);
 
   SVN_ERR_W(svn_io_file_write_full(outfile, bigstr->data, 
                                    bigstr->len, NULL, pool),
