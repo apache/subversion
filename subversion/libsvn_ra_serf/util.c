@@ -369,6 +369,34 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
     }
 }
 
+apr_status_t
+svn_ra_serf__handle_status_only(serf_request_t *request,
+                                serf_bucket_t *response,
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_ra_serf__simple_request_context_t *ctx = baton;
+
+  status = svn_ra_serf__handler_discard_body(request, response,
+                                             &ctx->server_error, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      serf_status_line sl;
+      apr_status_t rv;
+
+      rv = serf_bucket_response_status(response, &sl);
+      
+      ctx->status = sl.code;
+      ctx->reason = sl.reason;
+
+      ctx->done = TRUE;
+    }
+
+  return status;
+}
+
 static apr_status_t
 handle_auth(svn_ra_serf__session_t *session,
             svn_ra_serf__connection_t *conn,

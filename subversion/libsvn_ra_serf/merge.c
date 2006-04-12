@@ -86,6 +86,9 @@ struct svn_ra_serf__merge_context_t
 
   svn_ra_serf__session_t *session;
 
+  apr_hash_t *lock_tokens;
+  svn_boolean_t keep_locks;
+
   const char *activity_url;
   apr_size_t activity_url_len;
 
@@ -97,7 +100,6 @@ struct svn_ra_serf__merge_context_t
   svn_boolean_t done;
 
   svn_commit_info_t *commit_info;
-
 };
 
 
@@ -378,9 +380,81 @@ cdata_merge(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+static apr_status_t
+setup_merge_headers(serf_bucket_t *headers,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  svn_ra_serf__merge_context_t *ctx = baton;
+
+  if (!ctx->keep_locks)
+    {
+      serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
+                              SVN_DAV_OPTION_RELEASE_LOCKS);
+    }
+
+  return APR_SUCCESS;
+}
+
+#define LOCK_HEADER "<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+#define LOCK_TRAILER "</S:lock-token-list>"
+
+static void
+create_lock_token_list(svn_ra_serf__merge_context_t *merge,
+                       serf_bucket_t *body,
+                       serf_bucket_alloc_t *alloc,
+                       apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  serf_bucket_t *tmp;
+
+  if (!merge->lock_tokens || apr_hash_count(merge->lock_tokens) == 0)
+    return;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(LOCK_HEADER, sizeof(LOCK_HEADER) - 1,
+                                      alloc);
+
+  serf_bucket_aggregate_append(body, tmp);
+
+  for (hi = apr_hash_first(pool, merge->lock_tokens);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_string_t path;
+      svn_stringbuf_t *xml_path = NULL;
+
+      apr_hash_this(hi, &key, &klen, &val);
+
+      path.data = key;
+      path.len = klen;
+
+      svn_xml_escape_cdata_string(&xml_path, &path, pool);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:lock>",
+                                          sizeof("<S:lock>") - 1,
+                                          alloc);
+      serf_bucket_aggregate_append(body, tmp);
+
+      svn_ra_serf__add_tag_buckets(body, "lock-path", xml_path->data, alloc);
+      svn_ra_serf__add_tag_buckets(body, "lock-token", val, alloc);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:lock>",
+                                          sizeof("</S:lock>") - 1,
+                                          alloc);
+      serf_bucket_aggregate_append(body, tmp);
+    }
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(LOCK_TRAILER, sizeof(LOCK_TRAILER) - 1,
+                                      alloc);
+  serf_bucket_aggregate_append(body, tmp);
+}
+
 #define MERGE_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:merge xmlns:D=\"DAV:\"><D:source><D:href>"
- 
-#define MERGE_TRAILER "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:version-name/><D:resourcetype/><D:creationdate/><D:creator-displayname/></D:prop></D:merge>"
+#define MERGE_BODY "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:version-name/><D:resourcetype/><D:creationdate/><D:creator-displayname/></D:prop>"
+#define MERGE_TRAILER "</D:merge>"
 
 static serf_bucket_t*
 create_merge_body(void *baton,
@@ -402,6 +476,13 @@ create_merge_body(void *baton,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
+  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(MERGE_BODY,
+                                          sizeof(MERGE_BODY) - 1,
+                                          alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+
+  create_lock_token_list(ctx, body_bkt, alloc, pool);
+
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(MERGE_TRAILER,
                                           sizeof(MERGE_TRAILER) - 1,
                                           alloc);
@@ -417,6 +498,8 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
                               const char *path,
                               const char *activity_url,
                               apr_size_t activity_url_len,
+                              apr_hash_t *lock_tokens,
+                              svn_boolean_t keep_locks,
                               apr_pool_t *pool)
 {
   svn_ra_serf__merge_context_t *merge_ctx;
@@ -430,6 +513,9 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
 
   merge_ctx->activity_url = activity_url;
   merge_ctx->activity_url_len = activity_url_len;
+
+  merge_ctx->lock_tokens = lock_tokens;
+  merge_ctx->keep_locks = keep_locks;
 
   merge_ctx->commit_info = svn_create_commit_info(pool);
 
@@ -454,6 +540,9 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   parser_ctx->cdata = cdata_merge;
   parser_ctx->done = &merge_ctx->done;
   parser_ctx->status_code = &merge_ctx->status;
+
+  handler->header_delegate = setup_merge_headers;
+  handler->header_delegate_baton = merge_ctx;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;

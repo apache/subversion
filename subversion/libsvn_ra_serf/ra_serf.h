@@ -427,6 +427,19 @@ typedef struct {
   apr_size_t message_len;
 } svn_ra_serf__server_error_t;
 
+typedef struct {
+  int status;
+  const char *reason;
+  svn_boolean_t done;
+  svn_ra_serf__server_error_t server_error;
+} svn_ra_serf__simple_request_context_t;
+
+apr_status_t
+svn_ra_serf__handle_status_only(serf_request_t *request,
+                                serf_bucket_t *response,
+                                void *baton,
+                                apr_pool_t *pool);
+
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
@@ -667,6 +680,8 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
                               const char *path,
                               const char *activity_url,
                               apr_size_t activity_url_len,
+                              apr_hash_t *lock_tokens,
+                              svn_boolean_t keep_locks,
                               apr_pool_t *pool);
 
 /** OPTIONS-related functions **/
@@ -818,3 +833,32 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                     const svn_delta_editor_t *editor,
                     void *edit_baton,
                     apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__lock(svn_ra_session_t *ra_session,
+                  apr_hash_t *path_revs,
+                  const char *comment,
+                  svn_boolean_t force,
+                  svn_ra_lock_callback_t lock_func,
+                  void *lock_baton,
+                  apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__unlock(svn_ra_session_t *ra_session,
+                    apr_hash_t *path_tokens,
+                    svn_boolean_t force,
+                    svn_ra_lock_callback_t lock_func,
+                    void *lock_baton,
+                    apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
+                      svn_lock_t **lock,
+                      const char *path,
+                      apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
+                       apr_hash_t **locks,
+                       const char *path,
+                       apr_pool_t *pool);
