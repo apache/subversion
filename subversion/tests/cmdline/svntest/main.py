@@ -705,7 +705,7 @@ class TestRunner:
     result = self.pred.convert_result(result)
     self._print_name()
     sys.stdout.flush()
-    if sandbox is not None and not result and cleanup_mode:
+    if sandbox is not None and result != 1 and cleanup_mode:
       sandbox.cleanup_test_paths()
     return result
 
