@@ -1000,25 +1000,26 @@ def action_integrated(branch_dir, branch_props):
 
     # Lookup the oldest revision on the branch path.
     ### TODO: Refactor this to use a modified RevisionLog class.
-    oldest_branch_rev = -1
+    oldest_src_rev = -1
     lines = None
+    src_url = opts["head-url"]
     try:
-        lines = launchsvn("log -r 1:HEAD --limit=1 -q " + branch_dir)
+        lines = launchsvn("log -r 1:HEAD --limit=1 -q " + src_url)
     except LaunchError:
         # Assume that --limit isn't supported by the installed 'svn'.
-        lines = launchsvn("log -r 1:HEAD -q " + branch_dir)
-    report('determining oldest branch revision for "%s"' % branch_dir)
+        lines = launchsvn("log -r 1:HEAD -q " + src_url)
+    report('determining oldest source URL revision for "%s"' % src_url)
     if lines and len(lines) > 1:
         i = lines[1].find(" ")
         if i != -1:
-            oldest_branch_rev = int(lines[1][1:i])
-    if oldest_branch_rev == -1:
-        error("unable to determine oldest branch revision")
+            oldest_src_rev = int(lines[1][1:i])
+    if oldest_src_rev == -1:
+        error("unable to determine oldest source revision")
 
     # Subtract any revisions which pre-date the branch.
-    report("subtracting revisions which pre-date the branch (%d)" %
-           oldest_branch_rev)
-    revs = revs - range(1, oldest_branch_rev)
+    report("subtracting revisions which pre-date the source URL (%d)" %
+           oldest_src_rev)
+    revs = revs - RevisionSet(range(1, oldest_src_rev))
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
