@@ -73,8 +73,8 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
   buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap); 
   va_end(ap);
 
-  SVN_ERR(svn_utf_cstring_from_utf8_ex(&buf_apr, buf, encoding, NULL,
-                                       apr_file_pool_get(fptr)));
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&buf_apr, buf, encoding,
+                                        apr_file_pool_get(fptr)));
 
   return svn_io_file_write_full(fptr, buf_apr, strlen(buf_apr), 
                                 NULL, apr_file_pool_get(fptr));

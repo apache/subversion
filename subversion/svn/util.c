@@ -145,9 +145,8 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
                                            NULL, FALSE, pool));
       translated_contents = svn_string_create("", pool);
       if (encoding)
-        SVN_ERR(svn_utf_cstring_from_utf8_ex(&translated_contents->data,
-                                             translated, encoding, NULL,
-                                             pool));
+        SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated_contents->data,
+                                              translated, encoding, pool));
       else
         SVN_ERR(svn_utf_cstring_from_utf8(&translated_contents->data,
                                           translated, pool));
