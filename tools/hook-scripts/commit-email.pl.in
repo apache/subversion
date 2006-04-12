@@ -7,6 +7,8 @@
 # For usage, see the usage subroutine or run the script with no
 # command line arguments.
 #
+# This script requires Subversion 1.1.0 or later.
+#
 # $HeadURL$
 # $LastChangedDate$
 # $LastChangedBy$
@@ -214,15 +216,6 @@ unless (-d _)
 
 ######################################################################
 # Harvest data using svnlook.
-
-# Change into suitable directory so that svnlook diff can create its .svnlook
-# directory. This could be removed - it's only for compatibility with
-# 1.0.x svnlook - from 1.1.0, svnlook will be sensible about choosing a
-# temporary directory all by itself.
-my $tmp_dir = ((defined($ENV{'TEMP'}) && -d $ENV{'TEMP'}) ?
-               $ENV{'TEMP'} : '/tmp');
-chdir($tmp_dir)
-  or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # Get the author, date, and log from svnlook.
 my @svnlooklines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
