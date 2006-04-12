@@ -331,29 +331,32 @@ handle_lock(serf_request_t *request,
 {
   svn_ra_serf__xml_parser_t *xml_ctx = handler_baton;
   lock_info_t *ctx = xml_ctx->user_data;
+  apr_status_t status;
 
   if (ctx->read_headers == FALSE)
     {
       serf_bucket_t *headers;
       const char *val;
 
-       serf_status_line sl;
-       apr_status_t rv;
+      serf_status_line sl;
+      apr_status_t rv;
 
-       rv = serf_bucket_response_status(response, &sl);
+      rv = serf_bucket_response_status(response, &sl);
 
-       /* 423 == Locked */
-       if (sl.code == 423)
-         {
-           svn_error_t *err;
+      ctx->status_code = sl.code;
 
-           err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                  _("Lock request failed: %d %s"),
-                                  sl.code, sl.reason);
-           xml_ctx->error = err;
-           return err->apr_err;
-         }
-      
+      /* 423 == Locked */
+      if (sl.code == 423)
+        {
+          svn_error_t *err;
+
+          err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                 _("Lock request failed: %d %s"),
+                                 sl.code, sl.reason);
+          xml_ctx->error = err;
+          return err->apr_err;
+        }
+
       headers = serf_bucket_response_get_headers(response);
 
       val = serf_bucket_headers_get(headers, SVN_DAV_LOCK_OWNER_HEADER);
@@ -379,7 +382,22 @@ handle_lock(serf_request_t *request,
       ctx->read_headers = TRUE;
     }
 
-  return svn_ra_serf__handle_xml_parser(request, response, handler_baton, pool);
+  /* Forbidden when a lock doesn't exist. */
+  if (ctx->status_code == 403)
+    {
+      status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      if (APR_STATUS_IS_EOF(status))
+        {
+          ctx->done = TRUE;
+        }
+    }
+  else
+    {
+      status = svn_ra_serf__handle_xml_parser(request, response, handler_baton,
+                                              pool);
+    }
+
+  return status;
 }
 
 #define GET_LOCK "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\"><prop><lockdiscovery/></prop></propfind>"

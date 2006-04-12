@@ -626,6 +626,13 @@ svn_ra_serf__set_flat_props(void *baton,
                             const svn_string_t *val,
                             apr_pool_t *pool);
 
+svn_error_t *
+svn_ra_serf__set_bare_props(void *baton,
+                            const char *ns, apr_ssize_t ns_len,
+                            const char *name, apr_ssize_t name_len,
+                            const svn_string_t *val,
+                            apr_pool_t *pool);
+
 /* Get PROPS for PATH at REV revision with a NS:NAME. */
 const svn_string_t *
 svn_ra_serf__get_ver_prop_string(apr_hash_t *props,

@@ -279,7 +279,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                       vcc_url, rev, "0", all_props, pool));
 
-  svn_ra_serf__walk_all_props(props, vcc_url, rev, svn_ra_serf__set_flat_props,
+  svn_ra_serf__walk_all_props(props, vcc_url, rev, svn_ra_serf__set_bare_props,
                               *ret_props, pool);
 
   return SVN_NO_ERROR;
