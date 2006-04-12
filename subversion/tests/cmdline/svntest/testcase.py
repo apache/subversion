@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os, sys, string
+import os, sys, string, types
 
 import svntest
 
@@ -77,7 +77,7 @@ class FunctionTestCase(TestCase):
   def __init__(self, func):
     TestCase.__init__(self)
     self.func = func
-    assert type(self.func) is type(lambda x: 0)
+    assert type(self.func) is types.FunctionType
 
   def get_description(self):
     """Use the function's docstring as a description."""
