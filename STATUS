@@ -93,7 +93,7 @@ Candidate changes:
       Required for RFC compliance; prevents picky mailers (e.g. Courier)
       from munging incoming commit emails containing non-ASCII chararacters.
     Votes:
-      +1: malcolm
+      +1: malcolm, dlr
 
 
 Approved changes:
