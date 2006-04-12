@@ -120,8 +120,8 @@ class XFail(TestCase):
 
   def convert_result(self, result):
     # Conditions are reversed here: a failure is expected, therefore
-    # it isn't an error; a pass is an error.
-    return not self.test_case.convert_result(result)
+    # it isn't an error; a pass is an error; but a skip remains a skip.
+    return {0:1, 1:0, 2:2}[self.test_case.convert_result(result)]
 
 
 class Skip(TestCase):
