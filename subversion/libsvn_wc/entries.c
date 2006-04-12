@@ -1087,20 +1087,20 @@ read_entries(svn_wc_adm_access_t *adm_access,
         {
           svn_error_t *err = read_entry(&entry, &curp, endp,
                                         svn_wc_adm_access_pool(adm_access));
-      if (! err)
-        {
-          /* We allow extra fields at the end of the line, for extensibility.
-           */
-          curp = memchr(curp, '\n', endp - curp);
-          if (! curp)
-            err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                                   _("Missing newline at end of entry"));
-        }
-      if (err)
-        return svn_error_createf(err->apr_err, err,
-                                 _("Error on line %d in entries file for "
-                                   "'%s':"),
-                                 lineno, svn_path_local_style(path, pool));
+          if (! err)
+            {
+              /* We allow extra fields at the end of the line, for
+                 extensibility. */
+              curp = memchr(curp, '\n', endp - curp);
+              if (! curp)
+                err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                       _("Missing newline at end of entry"));
+            }
+          if (err)
+            return svn_error_createf(err->apr_err, err,
+                                     _("Error on line %d in entries file for "
+                                       "'%s':"),
+                                     lineno, svn_path_local_style(path, pool));
       
           ++curp;
           ++lineno;
