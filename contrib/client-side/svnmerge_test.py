@@ -493,20 +493,17 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
 
-        # Check that the revision was blocked correctly
-        out = self.svnmerge("avail")
-        out = out.rstrip().split("\n")
-        self.assertEqual(out[-1].strip(), "10")
+        # Check that the revision is still available
+        self.svnmerge("avail", match=r"\A10$")
 
         # Block all remaining revisions
         self.svnmerge("block", match="'svnmerge-blocked' set")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
 
-        # Check that all revisions were blocked correctly
-        out = self.svnmerge("avail")
-        out = out.rstrip().split("\n")
-        self.assertEqual(out[-1].strip(), "")
+        # Check that no revisions are available, now that they have
+        # been blocked
+        self.svnmerge("avail", match=r"\A\Z")
 
         # Unblock all revisions
         self.svnmerge("unblock", match="'svnmerge-blocked' deleted")
@@ -514,26 +511,21 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         # Check that all revisions are available
-        out = self.svnmerge("avail")
-        out = out.rstrip().split("\n")
-        self.assertEqual(out[-1].strip(), "9-10")
+        self.svnmerge("avail", match="\A9-10$")
 
     def testBasic(self):
         self.svnmerge("init")
         p = self.getproperty()
         self.assertEqual("/trunk:1-6", p)
 
-        out = self.svnmerge("avail -v", match=r"phantom.*7-8")
-        out = out.rstrip().split("\n")
-        self.assertEqual(out[-1].strip(), "9-10")
+        self.svnmerge("avail", match=r"\A9-10$")
+        self.svnmerge("avail -v", match=r"phantom.*7-8")
 
         self.svnmerge("avail --log", match=r"| r7.*| r8")
         self.svnmerge("avail --diff -r9", match="Index: test4")
 
-        out = self.svnmerge("avail --log -r5")
-        self.assertEqual(out.strip(), "")
-        out = self.svnmerge("avail --diff -r5")
-        self.assertEqual(out.strip(), "")
+        self.svnmerge("avail --log -r5", match=r"\A\Z")
+        self.svnmerge("avail --diff -r5", match=r"\A\Z")
 
         self.svnmerge("integrated", match=r"^3-6$")
         self.svnmerge("integrated --log -r5", match=r"| r5 ")
@@ -575,8 +567,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("avail -vv -r9", match=r"svn log.*-r9:9")
         self.svnmerge("merge --record-only -F -vv -r9",
                       nonmatch=r"svn merge -r 8:9")
-        out = self.svnmerge("avail -r9")
-        self.assertEqual(out.strip(), "")
+        self.svnmerge("avail -r9", match=r"\A$")
         self.svnmerge("integrated", match=r"^3-6,9$")
         self.svnmerge("integrated -r9", match=r"^9$")
 
