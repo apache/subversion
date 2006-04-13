@@ -204,12 +204,12 @@ module Svn
       attr_accessor :baton
 
       def set_path(path, revision, start_empty=true, lock_token=nil)
-        Rs.reporter2_invoke_set_path(self, @baton, path, revision,
+        Ra.reporter2_invoke_set_path(self, @baton, path, revision,
                                      start_empty, lock_token)
       end
       
       def delete_path(path)
-        Rs.reporter2_invoke_set_path(self, @baton, path)
+        Ra.reporter2_invoke_set_path(self, @baton, path)
       end
       
       def link_path(path, url, revision, start_empty=true, lock_token=nil)

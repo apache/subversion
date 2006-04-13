@@ -1896,12 +1896,12 @@ ra_callbacks_push_wc_prop(void *baton,
   if (!NIL_P(callbacks)) {
     VALUE args;
 
-    args = rb_ary_new3(4,
+    args = rb_ary_new3(5,
                        callbacks,
                        rb_id_push_wc_prop(),
                        c2r_string2(path),
                        c2r_string2(name),
-                       c2r_svn_string((void *)name, NULL));
+                       c2r_svn_string((void *)value, NULL));
     
     invoke_callback_handle_error(args, Qnil, &err);
   }
