@@ -761,10 +761,20 @@ handler_default(serf_request_t *request,
   else if (sl.code >= 500)
     {
       svn_ra_serf__server_error_t server_err;
+      apr_status_t status;
 
       memset(&server_err, 0, sizeof(server_err));
       status = svn_ra_serf__handler_discard_body(request, response,
                                                  &server_err, pool);
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          status = svn_ra_serf__is_conn_closing(response);
+          if (status == SERF_ERROR_CLOSING)
+            {
+              serf_connection_reset(ctx->conn->conn);
+            }
+        }
 
       if (server_err.error)
         {
