@@ -18,6 +18,15 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
+  * r19149, r19151
+    Fix mis-reporting of failed repository creation.
+    Justification:
+      Improves robustness of testing framework.
+    Branch: 1.3.x-r19149
+    Notes: Branch needed due to rename of test subdirectory.
+    Votes:
+      +1: dlr
+
   * r19143, r19181, r19192
     Allow path based authz in svnserve without giving read access to the
     root of the repository.
