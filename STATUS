@@ -9,6 +9,15 @@ Status of 1.3.2:
 
 Candidate changes:
 
+  * r19348
+    Fix crash in 'svn status -u' when there are missing subdirectories.
+    Justification:
+      Crash bad!
+    Branch: to be created
+    Notes: Branch needed due to rename of test subdirectory.
+    Votes:
+      +1: rooneg
+
   * r19143, r19181, r19192
     Allow path based authz in svnserve without giving read access to the
     root of the repository.
