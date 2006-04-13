@@ -1851,7 +1851,11 @@ ra_callbacks_get_wc_prop(void *baton,
                        c2r_string2(name));
     
     result = invoke_callback_handle_error(args, Qnil, &err);
-    *value = r2c_svn_string(result, NULL, pool);
+    if (NIL_P(result)) {
+      *value = NULL;
+    } else {
+      *value = r2c_svn_string(result, NULL, pool);
+    }
   }
   
   return err;
