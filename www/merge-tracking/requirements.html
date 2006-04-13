@@ -61,6 +61,7 @@ users@ list and in other forums.</p>
     <ul>
       <li>Show Change Sets Available for Merge</li>
       <li>Show Change Sets Already Merged</li>
+      <li>Show Change Sets Blocked from Merging</li>
       <li><em>Merged From</em> info for Change Set and/or Path</li>
       <li><em>Merged To</em> info for Change Set and/or Path</li>
       <li>Find Paths containing Specific Incarnation of Versioned Resource</li>
@@ -159,9 +160,9 @@ tracking.</p>
 <h4>Record Manual Merge</h4>
 
 <p>Allow change sets to be marked as merged, effectively a way to
-manipulate the merge memory stored in the "svnmerge-integrated"
-property.  This is related to the <a href="#revision-blocking"
->revision blocking</a> concept.</p>
+manipulate the merge memory on a source and destination.  This is
+related to the <a href="#revision-blocking">revision blocking</a>
+concept.</p>
 
 <p>Fundamentally, the use case is to support merge tracking of change
 set which is sufficiently different when ported to a different branch
@@ -268,6 +269,11 @@ information:</p>
   last touched by A, even if the merge was committed by you and you
   are not A.  This must also work when merging a range of revisions
   with different authors.</li>
+
+  <li>If you've <a href="#revision-blocking">blocked</a> some set
+  of revisions from being merged from branch B into some destination
+  (e.g. trunk), you should be able to discover which revisions have
+  been blocked.</li>
 
   <li>If you merge rN into a branch B, and rN was committed by author
   A, then <code>svn log -rN</code> should show both the original
