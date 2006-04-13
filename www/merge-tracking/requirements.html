@@ -49,6 +49,7 @@ users@ list and in other forums.</p>
       <li><a href="#manual-merge">Record Manual Merge</a></li>
       <li><a href="#rollback-merge">Rollback Merge</a></li>
       <li><a href="#revision-blocking">Block/Unblock Change Set</a></li>
+      <li><a href="#properties">Properties</a></li>
       <li><a href="#merge-previews">Preview</a></li>
       <li><a href="#automated-merge">SCM Automation</a></li>
       <li><a href="#distributable-resolution">Distribution of Conflict
@@ -215,6 +216,19 @@ features (<a href="#auditing">Auditing</a> section).</p>
 merging.</p>
 
 </div>  <!-- revision-blocking -->
+
+<div class="h4" id="properties">
+<h4>Properties</h4>
+
+<p>Changes to arbitrary properties set on a versioned resource should
+be mergable exactly as entries within a directory (e.g. add, deleted,
+etc.), or content in a file (see <a href="#repeated-merge">repeated
+merge</a>).</p>
+
+<p>Subversion's <em>revision properties</em> (sometimes referred to as
+<em>revprops</em>) need not be handled.</p>
+
+</div>  <!-- properties -->
 
 <div class="h4" id="merge-previews">
 <h4>Merge Previews</h4>
