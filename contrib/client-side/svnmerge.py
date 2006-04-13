@@ -1661,7 +1661,7 @@ def main(args):
             head = args[0]
         elif len(args) > 1:
             optsparser.error("wrong number of parameters", cmd)
-    elif str(cmd) in ["avail", "integrated", "merge", "block", "unblock"]:
+    elif str(cmd) in command_table.keys():
         if len(args) == 1:
             branch_dir = args[0]
         elif len(args) > 1:
