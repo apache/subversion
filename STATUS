@@ -16,7 +16,7 @@ Candidate changes:
     Branch: to be created
     Notes: Branch needed due to rename of test subdirectory.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
   * r19143, r19181, r19192
     Allow path based authz in svnserve without giving read access to the
