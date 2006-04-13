@@ -161,7 +161,7 @@ module Svn
       end
 
       def change_dir_prop(dir_baton, name, value)
-        args = [self, @baton, dir_baton, name, value]
+        args = [self, dir_baton, name, value]
         Svn::Delta.editor_invoke_change_dir_prop(*args)
       end
 
