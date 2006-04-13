@@ -13,7 +13,7 @@ Candidate changes:
     Fix crash in 'svn status -u' when there are missing subdirectories.
     Justification:
       Crash bad!
-    Branch: to be created
+    Branch: 1.3.x-r19348
     Notes: Branch needed due to rename of test subdirectory.
     Votes:
       +1: rooneg, dlr
