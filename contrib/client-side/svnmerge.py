@@ -765,8 +765,13 @@ def get_default_head(branch_dir, branch_props):
         del props[directory]
 
     if len(props) > 1:
-        error('multiple heads found. '
-              'Explicit head argument (-S/--head) required.')
+        err_msg = "multiple heads found. "
+        err_msg += "Explicit head argument (-S/--head) required.\n"
+        err_msg += "The head values available are:"
+        repo_root = get_repo_root(branch_dir)
+        for prop in props:
+          err_msg += "\n  " + repo_root + prop
+        error(err_msg)
 
     return props.keys()[0]
 
