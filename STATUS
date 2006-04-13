@@ -19,7 +19,7 @@ Candidate changes:
       +1: rooneg, dlr
 
   * r19149, r19151
-    Fix mis-reporting of failed repository creation.
+    Fix mis-reporting of failed repository creation by svntest.
     Justification:
       Improves robustness of testing framework.
     Branch: 1.3.x-r19149
