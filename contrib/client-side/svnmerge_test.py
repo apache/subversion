@@ -496,10 +496,22 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Check that the revision is still available
         self.svnmerge("avail", match=r"\A10$")
 
+        # Check that the revision was blocked correctly
+        self.svnmerge("avail -B", match=r"\A9$")
+
+        # Check that both revisions are available with avail -A
+        self.svnmerge("avail -A", match=r"\A9-10$")
+
         # Block all remaining revisions
         self.svnmerge("block", match="'svnmerge-blocked' set")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
+
+        # Check that all revisions were blocked correctly
+        self.svnmerge("avail -B", match=r"\A9-10$")
+
+        # Check that all revisions are available using avail -A
+        self.svnmerge("avail -A", match=r"\A9-10$")
 
         # Check that no revisions are available, now that they have
         # been blocked
@@ -512,6 +524,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         # Check that all revisions are available
         self.svnmerge("avail", match="\A9-10$")
+        self.svnmerge("avail -A", match="\A9-10$")
+
+        # Check that no revisions are blocked
+        self.svnmerge("avail -B", match="\A$")
 
     def testBasic(self):
         self.svnmerge("init")
@@ -520,6 +536,9 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("avail", match=r"\A9-10$")
         self.svnmerge("avail -v", match=r"phantom.*7-8")
+
+        self.svnmerge("avail -B", match="\A$")
+        self.svnmerge("avail -A", match="\A9-10$")
 
         self.svnmerge("avail --log", match=r"| r7.*| r8")
         self.svnmerge("avail --diff -r9", match="Index: test4")
