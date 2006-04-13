@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path, re, time
+import string, sys, os.path, re, time, shutil
 
 # Our testing module
 import svntest
@@ -844,6 +844,29 @@ def status_unversioned_dir(sbox):
 
 #----------------------------------------------------------------------  
 
+def status_dash_u_missing_dir(sbox):
+  "status on missing directory"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  a_d_g = os.path.join(wc_dir, "A", "D", "G")
+
+  # ok, blow away the A/D/G directory
+  shutil.rmtree(a_d_g)
+
+  xout = ["       *            " + os.path.join(a_d_g, "pi") + "\n",
+          "       *            " + os.path.join(a_d_g, "rho") + "\n",
+          "       *            " + os.path.join(a_d_g, "tau") + "\n",
+          "!      *       ?    " + a_d_g + "\n",
+          "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
+          "Status against revision:      1\n" ]
+
+  # now run status -u, we should be able to do this without crashing
+  svntest.actions.run_and_verify_svn(None,
+                                     xout,
+                                     [],
+                                     "status", "-u", wc_dir)
+
+#----------------------------------------------------------------------  
 
 ########################################################################
 # Run the tests
@@ -870,6 +893,7 @@ test_list = [ None,
               status_in_xml,
               status_ignored_dir,
               status_unversioned_dir,
+              status_dash_u_missing_dir,
              ]
 
 if __name__ == '__main__':
