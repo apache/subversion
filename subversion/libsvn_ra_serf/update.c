@@ -330,6 +330,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
+      new_info->lock_token = NULL;
 
       new_info->dir = apr_pcalloc(new_info->pool, sizeof(*new_info->dir));
       new_info->dir->pool = new_info->pool;
@@ -371,6 +372,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->file_baton = NULL;
+      new_info->lock_token = NULL;
 
       /* Point at our parent's directory state. */
       new_info->dir = info->dir;
@@ -590,7 +592,7 @@ check_lock(report_info_t *info)
 
       svn_ra_serf__set_ver_prop(info->dir->removed_props, info->base_name,
                                 info->base_rev, "DAV:", "lock-token",
-                                str, info->pool);
+                                str, info->dir->pool);
     }
 }
 
