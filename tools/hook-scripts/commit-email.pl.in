@@ -124,7 +124,8 @@ my %opt_to_hash_key = ('--from' => 'from_address',
                        '-l'     => 'log_file',
                        '-m'     => '',
                        '-r'     => 'reply_to',
-                       '-s'     => 'subject_prefix');
+                       '-s'     => 'subject_prefix',
+                       '--diff' => '');
 
 while (@ARGV)
   {
@@ -181,6 +182,10 @@ while (@ARGV)
                       . " the first non-option argument.\n";
                   }
                 $mode = 'revprop-change';
+              }
+            elsif ($arg eq '--diff')
+              {
+                $current_project->{show_diff} = parse_boolean($value);
               }
             else
               {
@@ -338,13 +343,6 @@ if ($mode eq 'commit')
     shift @infolines;
     my @log = map { "$_\n" } @infolines;
 
-    # Get the diff from svnlook.
-    my @no_diff_deleted = $no_diff_deleted ? ('--no-diff-deleted') : ();
-    my @no_diff_added = $no_diff_added ? ('--no-diff-added') : ();
-    my @difflines = &read_from_process($svnlook, 'diff', $repos,
-                                       '-r', $rev, @no_diff_deleted,
-                                       @no_diff_added);
-
     ######################################################################
     # Modified directory name collapsing.
 
@@ -433,7 +431,6 @@ if ($mode eq 'commit')
     push(@body, "Log:\n");
     push(@body, @log);
     push(@body, "\n");
-    push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines);
   }
 elsif ($mode eq 'revprop-change')
   {
@@ -478,6 +475,9 @@ elsif ($mode eq 'revprop-change')
     push(@body, "\n");
   }
 
+# Cached information - calculated when first needed.
+my @difflines;
+
 # Go through each project and see if there are any matches for this
 # project.  If so, send the log out.
 foreach my $project (@project_settings_list)
@@ -504,6 +504,7 @@ foreach my $project (@project_settings_list)
     my $reply_to        = $project->{reply_to};
     my $subject_prefix  = $project->{subject_prefix};
     my $subject         = $subject_base;
+    my $diff_wanted     = $project->{show_diff} and $mode eq 'commit';
 
     if ($subject_prefix =~ /\w/)
       {
@@ -556,6 +557,17 @@ foreach my $project (@project_settings_list)
 
     push(@head, "\n");
 
+    if ($diff_wanted and not @difflines)
+      {
+        # Get the diff from svnlook.
+        my @no_diff_deleted = $no_diff_deleted ? ('--no-diff-deleted') : ();
+        my @no_diff_added = $no_diff_added ? ('--no-diff-added') : ();
+        @difflines = &read_from_process($svnlook, 'diff', $repos,
+                                        '-r', $rev, @no_diff_deleted,
+                                        @no_diff_added);
+        @difflines = map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines;
+      }
+
     if ($sendmail =~ /\w/ and @email_addresses)
       {
         # Open a pipe to sendmail.
@@ -563,6 +575,7 @@ foreach my $project (@project_settings_list)
         if (open(SENDMAIL, "| $command"))
           {
             print SENDMAIL @head, @body;
+            print SENDMAIL @difflines if $diff_wanted;
             close SENDMAIL
               or warn "$0: error in closing `$command' for writing: $!\n";
           }
@@ -578,6 +591,7 @@ foreach my $project (@project_settings_list)
         if (open(LOGFILE, ">> $log_file"))
           {
             print LOGFILE @head, @body;
+            print LOGFILE @difflines if $diff_wanted;
             close LOGFILE
               or warn "$0: error in closing `$log_file' for appending: $!\n";
           }
@@ -605,6 +619,8 @@ sub usage
       "  -m regex              Regular expression to match committed path\n",
       "  -r email_address      Email address for 'Reply-To:'\n",
       "  -s subject_prefix     Subject line prefix\n",
+      "  --diff y|n            Include diff in message (default: y)\n",
+      "                        (applies to commit mode only)\n",
       "\n",
       "This script supports a single repository with multiple projects,\n",
       "where each project receives email only for actions that affect that\n",
@@ -613,10 +629,10 @@ sub usage
       "contains modifications to a path that matches the regular\n",
       "expression, then the action applies to the project.\n",
       "\n",
-      "Any of the following -h, -l, -r and -s command line options and\n",
-      "following email addresses are associated with this project.  The\n",
-      "next -m resets the -h, -l, -r and -s command line options and the\n",
-      "list of email addresses.\n",
+      "Any of the following -h, -l, -r, -s and --diff command line options\n",
+      "and following email addresses are associated with this project.  The\n",
+      "next -m resets the -h, -l, -r, -s and --diff command line options\n",
+      "and the list of email addresses.\n",
       "\n",
       "To support a single project conveniently, the script initializes\n",
       "itself with an implicit -m . rule that matches any modifications\n",
@@ -643,7 +659,16 @@ sub new_project
           log_file        => '',
           match_regex     => '.',
           reply_to        => '',
-          subject_prefix  => ''};
+          subject_prefix  => '',
+          show_diff       => 1};
+}
+
+sub parse_boolean
+{
+  if ($_[0] eq 'y') { return 1; };
+  if ($_[0] eq 'n') { return 0; };
+
+  die "$0: valid boolean options are 'y' or 'n', not '$_[0]'\n";
 }
 
 # Start a child process safely without using /bin/sh.
