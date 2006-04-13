@@ -107,6 +107,18 @@ typedef struct {
   svn_ra_serf__simple_request_context_t progress;
 } proppatch_context_t;
 
+typedef struct {
+  const char *path;
+
+  svn_revnum_t revision;
+
+  const char *lock_token;
+  apr_hash_t *lock_token_hash;
+  svn_boolean_t keep_locks;
+
+  svn_ra_serf__simple_request_context_t progress;
+} delete_context_t;
+
 /* Represents a directory. */
 typedef struct dir_context_t {
   /* Pool for our directory. */
@@ -833,12 +845,55 @@ setup_delete_headers(serf_bucket_t *headers,
                      void *baton,
                      apr_pool_t *pool)
 {
-  svn_revnum_t *revision = baton;
+  delete_context_t *ctx = baton;
+  const char *lock_tokens;
 
   serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
-                          apr_ltoa(pool, *revision));
+                          apr_ltoa(pool, ctx->revision));
+
+  if (ctx->lock_token_hash)
+    {
+      ctx->lock_token = apr_hash_get(ctx->lock_token_hash, ctx->path,
+                                     APR_HASH_KEY_STRING);
+
+      if (ctx->lock_token)
+        {
+          const char *token_header;
+
+          token_header = apr_pstrcat(pool, "<", ctx->path, "> (<",
+                                     ctx->lock_token, ">)", NULL);
+
+          serf_bucket_headers_set(headers, "If", token_header);
+          
+          if (ctx->keep_locks)
+            serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
+                                    SVN_DAV_OPTION_KEEP_LOCKS);
+        }
+    }
 
   return APR_SUCCESS;
+}
+
+#define XML_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+
+static serf_bucket_t *
+create_delete_body(void *baton,
+                   serf_bucket_alloc_t *alloc,
+                   apr_pool_t *pool)
+{
+  delete_context_t *ctx = baton;
+  serf_bucket_t *body, *tmp;
+
+  body = serf_bucket_aggregate_create(alloc);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(XML_HEADER, sizeof(XML_HEADER) - 1,
+                                      alloc);
+  serf_bucket_aggregate_append(body, tmp);
+
+  svn_ra_serf__merge_lock_token_list(ctx->lock_token_hash, ctx->path,
+                                     body, alloc, pool);
+
+  return body;
 }
 
 /* Helper function to write the svndiff stream to temporary file. */
@@ -986,23 +1041,30 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   dir_context_t *dir = parent_baton;
-  svn_ra_serf__simple_request_context_t *delete_ctx;
+  delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
+  const char *lock_token;
+  svn_error_t *err;
 
   /* Ensure our directory has been checked out */
   SVN_ERR(checkout_dir(dir));
 
   /* DELETE our entry */
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
+  delete_ctx->path = path;
+  delete_ctx->revision = revision;
+  delete_ctx->lock_token_hash = dir->commit->lock_tokens;
+  delete_ctx->keep_locks = dir->commit->keep_locks;
+
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->session = dir->commit->session;
   handler->conn = dir->commit->conn;
 
   handler->response_handler = svn_ra_serf__handle_status_only;
-  handler->response_baton = delete_ctx;
+  handler->response_baton = &delete_ctx->progress;
 
   handler->header_delegate = setup_delete_headers;
-  handler->header_delegate_baton = &revision;
+  handler->header_delegate_baton = delete_ctx;
 
   handler->method = "DELETE";
   handler->path =
@@ -1012,12 +1074,36 @@ delete_entry(const char *path,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done,
-                                        dir->commit->session, pool));
+  err = svn_ra_serf__context_run_wait(&delete_ctx->progress.done,
+                                      dir->commit->session, pool);
 
-  if (delete_ctx->status != 204)
+  if (err &&
+      (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
+       err->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN ||
+       err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||
+       err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED))
     {
-      return return_response_err(handler, delete_ctx);
+      svn_error_clear(err);
+
+      handler->body_delegate = create_delete_body;
+      handler->body_delegate_baton = delete_ctx;
+      handler->body_type = "text/xml";
+      
+      svn_ra_serf__request_create(handler);
+     
+      delete_ctx->progress.done = 0; 
+
+      SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->progress.done,
+                                            dir->commit->session, pool));
+    }
+  else
+    {
+      return err;
+    }
+
+  if (delete_ctx->progress.status != 204)
+    {
+      return return_response_err(handler, &delete_ctx->progress);
     }
 
   apr_hash_set(dir->commit->deleted_entries,

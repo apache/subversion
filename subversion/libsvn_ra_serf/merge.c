@@ -405,16 +405,17 @@ setup_merge_headers(serf_bucket_t *headers,
 #define LOCK_HEADER "<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">"
 #define LOCK_TRAILER "</S:lock-token-list>"
 
-static void
-create_lock_token_list(svn_ra_serf__merge_context_t *merge,
-                       serf_bucket_t *body,
-                       serf_bucket_alloc_t *alloc,
-                       apr_pool_t *pool)
+void
+svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
+                                   const char *parent,
+                                   serf_bucket_t *body,
+                                   serf_bucket_alloc_t *alloc,
+                                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   serf_bucket_t *tmp;
 
-  if (!merge->lock_tokens || apr_hash_count(merge->lock_tokens) == 0)
+  if (!lock_tokens || apr_hash_count(lock_tokens) == 0)
     return;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(LOCK_HEADER, sizeof(LOCK_HEADER) - 1,
@@ -422,7 +423,7 @@ create_lock_token_list(svn_ra_serf__merge_context_t *merge,
 
   serf_bucket_aggregate_append(body, tmp);
 
-  for (hi = apr_hash_first(pool, merge->lock_tokens);
+  for (hi = apr_hash_first(pool, lock_tokens);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -436,6 +437,9 @@ create_lock_token_list(svn_ra_serf__merge_context_t *merge,
 
       path.data = key;
       path.len = klen;
+
+      if (parent && !svn_path_is_ancestor(parent, key))
+        continue;
 
       svn_xml_escape_cdata_string(&xml_path, &path, pool);
 
@@ -487,7 +491,8 @@ create_merge_body(void *baton,
                                           alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  create_lock_token_list(ctx, body_bkt, alloc, pool);
+  svn_ra_serf__merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt, alloc,
+                                     pool);
 
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(MERGE_TRAILER,
                                           sizeof(MERGE_TRAILER) - 1,

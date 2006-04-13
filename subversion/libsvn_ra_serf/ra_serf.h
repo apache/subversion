@@ -679,6 +679,13 @@ svn_ra_serf__merge_get_commit_info(svn_ra_serf__merge_context_t *ctx);
 int
 svn_ra_serf__merge_get_status(svn_ra_serf__merge_context_t *ctx);
 
+void
+svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
+                                   const char *parent,
+                                   serf_bucket_t *body,
+                                   serf_bucket_alloc_t *alloc,
+                                   apr_pool_t *pool);
+
 /* Create an MERGE request */
 svn_error_t *
 svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
