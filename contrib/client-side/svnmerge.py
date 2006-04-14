@@ -1008,11 +1008,12 @@ def action_integrated(branch_dir, branch_props):
     oldest_src_rev = -1
     lines = None
     src_url = opts["head-url"]
+    cmd = "log -r1:HEAD --stop-on-copy -q " + src_url
     try:
-        lines = launchsvn("log -r 1:HEAD --limit=1 -q " + src_url)
+        lines = launchsvn(cmd + " --limit=1")
     except LaunchError:
         # Assume that --limit isn't supported by the installed 'svn'.
-        lines = launchsvn("log -r 1:HEAD -q " + src_url)
+        lines = launchsvn(cmd)
     report('determining oldest source URL revision for "%s"' % src_url)
     if lines and len(lines) > 1:
         i = lines[1].find(" ")
