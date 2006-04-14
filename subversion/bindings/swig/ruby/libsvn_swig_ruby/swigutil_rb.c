@@ -994,6 +994,16 @@ typedef struct {
   VALUE baton;
 } item_baton;
 
+static void
+add_baton(VALUE editor, VALUE baton)
+{
+  if (NIL_P((rb_ivar_get(editor, rb_id_baton())))) {
+    rb_ivar_set(editor, rb_id_baton(), rb_ary_new());
+  }
+  
+  rb_ary_push(rb_ivar_get(editor, rb_id_baton()), baton);
+}
+
 static item_baton *
 make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 {
@@ -1001,9 +1011,33 @@ make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 
   newb->editor = editor;
   newb->baton = baton;
-  rb_ary_push(rb_ivar_get(editor, rb_id_baton()), baton);
+  add_baton(editor, baton);
 
   return newb;
+}
+
+static VALUE
+add_baton_if_delta_editor(VALUE target, VALUE baton)
+{
+  if (RTEST(rb_obj_is_kind_of(target, svn_swig_rb_svn_delta_editor()))) {
+    add_baton(target, baton);
+  }
+
+  return Qnil;
+}
+
+void
+svn_swig_rb_set_baton(VALUE target, VALUE baton)
+{
+  if (NIL_P(baton)) {
+    return;
+  }
+
+  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    target = rb_ary_new3(1, target);
+  }
+
+  rb_iterate(rb_each, target, add_baton_if_delta_editor, baton);
 }
 
 

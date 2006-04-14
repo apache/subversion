@@ -167,4 +167,56 @@ class SvnRaTest < Test::Unit::TestCase
     reporter = session.update(rev2, "/", editor, editor_baton)
     reporter.abort_report
   end
+
+  def test_commit_editor
+    log = "sample log"
+    dir_uri = "/test"
+    config = {}
+    ctx = make_context(log)
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+    result = nil
+
+    expect = [1, Time.now.to_s, @author]
+    gc_disable do
+      editor, baton = session.commit_editor(log) do |rev, date, author|
+        result = [rev, date.to_s, author]
+      end
+      editor.baton = baton
+
+      root = editor.open_root(-1)
+      editor.add_directory(dir_uri, root, nil, -1)
+      gc_enable do
+        GC.start
+        editor.close_edit
+      end
+      assert_equal(expect, result)
+    end
+  end
+
+  def test_commit_editor2
+    log = "sample log"
+    dir_uri = "/test"
+    config = {}
+    ctx = make_context(log)
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+    result = nil
+
+    expect = [1, Time.now.to_s, @author]
+    gc_disable do
+      editor, baton = session.commit_editor2(log) do |info|
+        result = [info.revision, info.date.to_s, info.author]
+      end
+      editor.baton = baton
+
+      root = editor.open_root(-1)
+      editor.add_directory(dir_uri, root, nil, -1)
+      gc_enable do
+        GC.start
+        editor.close_edit
+      end
+      assert_equal(expect, result)
+    end
+  end
 end
