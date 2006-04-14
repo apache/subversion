@@ -192,6 +192,12 @@ def dir_prop_change(sbox):
   "directory property changes"
   run_test(sbox, "dir_prop_change.dump")
 
+#----------------------------------------------------------------------
+
+def file_dir_file(sbox):
+  "files and dirs mixed together"
+  run_test(sbox, "file-dir-file.dump")
+
 
 ########################################################################
 # Run the tests
@@ -209,6 +215,7 @@ test_list = [ None,
               tag_trunk_with_file,
               tag_with_modified_file,
               dir_prop_change,
+              file_dir_file,
              ]
 
 if __name__ == '__main__':
