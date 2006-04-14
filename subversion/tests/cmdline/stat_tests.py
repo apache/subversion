@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path, re, time, shutil
+import string, sys, os.path, re, time
 
 # Our testing module
 import svntest
@@ -851,7 +851,7 @@ def status_dash_u_missing_dir(sbox):
   a_d_g = os.path.join(wc_dir, "A", "D", "G")
 
   # ok, blow away the A/D/G directory
-  shutil.rmtree(a_d_g)
+  svntest.main.safe_rmtree(a_d_g)
 
   xout = ["       *            " + os.path.join(a_d_g, "pi") + "\n",
           "       *            " + os.path.join(a_d_g, "rho") + "\n",
