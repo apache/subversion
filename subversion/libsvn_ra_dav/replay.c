@@ -190,12 +190,11 @@ start_element(void *baton, int parent_state, const char *nspace,
         const char *crev = svn_xml_get_attr_value("rev", atts);
         const char *path = svn_xml_get_attr_value("path", atts);
 
-        /* If a file pool is in use, destroy it and NULL it out, since it
-         * applies to the previous directory's files, not this one.  If we
-         * need one for this directory we'll create one later on. */
+        /* If a file pool is in use NULL it out since it applies to the
+         * previous directory's files, not this one.  If we need one for
+         * this directory we'll create one later on. */
         if (rb->file_pool)
           {
-            svn_pool_destroy(rb->file_pool);
             rb->file_pool = NULL;
           }
 
