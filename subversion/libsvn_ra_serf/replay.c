@@ -518,7 +518,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   serf_bucket_t *buckets, *tmp;
   apr_hash_t *props;
   svn_revnum_t peg_rev;
-  const char *vcc_url;
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->pool = pool;
@@ -563,14 +562,10 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
-
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = vcc_url;
+  handler->path = session->repos_url_str;
   handler->body_buckets = buckets;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
