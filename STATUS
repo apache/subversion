@@ -9,7 +9,7 @@ Status of 1.3.2:
 
 Candidate changes:
 
-  * r19348
+  * r19348, r19373
     Fix crash in 'svn status -u' when there are missing subdirectories.
     Justification:
       Crash bad!
