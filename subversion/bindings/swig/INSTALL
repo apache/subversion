@@ -178,6 +178,10 @@ Step 3:  Install Specific Language Bindings
 
    5.  Run `make install'
 
+   To install the perl bindings in a location other than the system
+   perl directory, use the above instructions with the extra option
+   PREFIX=/your/prefix/here.
+
 
 * Ruby
   
