@@ -579,6 +579,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("avail -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
+        self.svnmerge("integrated", match=r"^3-6,8-9$")
 
     def testMergeRecordOnly(self):
         """Check that flagging revisions as manually merged works."""
@@ -616,6 +617,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn commit -m \"Change to test1 on trunk\"",
                     match=r"Committed revision 16")
 
+        self.svnmerge("integrated", match=r"^13-14$")
+
         os.chdir("..")
         os.chdir("test-branch")
 
@@ -626,6 +629,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -vv --bidirectional", match=r"merge -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
+        self.svnmerge("integrated", match=r"^3-16$")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")
@@ -651,6 +655,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
+
+        self.svnmerge("integrated", match=r"^13-18$")
 
     def testBidirectionalMergesMultiBranch(self):
         """Check that merges from a second branch are not considered reflected for other branches."""
@@ -712,6 +718,9 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
 
+        self.svnmerge("integrated --head ../test-branch2", match=r"^14-19$")
+        self.svnmerge("integrated --head ../test-branch", match=r"^13-16$")
+
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 20")
         os.remove("svnmerge-commit-message.txt")
@@ -729,6 +738,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
+
+        self.svnmerge("integrated", match=r"^3-20$")
 
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing
