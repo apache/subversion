@@ -87,6 +87,7 @@ void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
                                    apr_pool_t *pool);
 
 VALUE svn_swig_rb_make_baton(VALUE proc, VALUE pool);
+void svn_swig_rb_set_baton(VALUE target, VALUE baton);
 
 svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
