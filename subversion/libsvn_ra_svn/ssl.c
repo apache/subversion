@@ -97,7 +97,7 @@ network_biopair_interop(ssl_baton_t *conn)
       write_pos = 0;
       do {
           apr_size_t num_write = from_bio - write_pos;
-          SVN_ERR(svn_stream_write(conn->out->stream, buffer + write_pos,
+          SVN_ERR(svn_ra_svn__stream_write(conn->out, buffer + write_pos,
                                            &num_write));
           write_pos += num_write;
       } while (write_pos < from_bio);
@@ -110,7 +110,7 @@ network_biopair_interop(ssl_baton_t *conn)
 
       apr_size_t num_read = want_read;
 
-      SVN_ERR(svn_stream_read(conn->in->stream, buffer, &num_read));
+      SVN_ERR(svn_ra_svn__stream_read(conn->in, buffer, &num_read));
 
       if (num_read == 0)
         return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
@@ -495,7 +495,6 @@ static svn_error_t *
 wrap_conn(svn_ra_svn_conn_t *conn, SSL_CTX *ctx, ssl_baton_t **result,
           apr_pool_t *pool)
 {
-  svn_ra_svn_stream_t *s;
   ssl_baton_t *ssl_baton = apr_palloc(pool, sizeof(*ssl_baton));
 
   ssl_baton->in = conn->in_stream;
@@ -522,16 +521,10 @@ wrap_conn(svn_ra_svn_conn_t *conn, SSL_CTX *ctx, ssl_baton_t **result,
                             apr_pool_cleanup_null);
 
 
-  s = apr_palloc(pool, sizeof(*s));
-  s->stream = svn_stream_empty(pool);
-  conn->out_stream = conn->in_stream = s;
-
-  svn_stream_set_baton(s->stream, ssl_baton);
-  svn_stream_set_read(s->stream, ssl_read_cb);
-  svn_stream_set_write(s->stream, ssl_write_cb);
-  s->pending_fn = ssl_pending_cb;
-  s->timeout_fn = ssl_timeout_cb;
-
+  conn->in_stream = svn_ra_svn__stream_create(ssl_baton, ssl_read_cb,
+                                              ssl_write_cb, ssl_timeout_cb,
+                                              ssl_pending_cb, pool);
+  conn->out_stream = conn->in_stream;
   *result = ssl_baton;
   return SVN_NO_ERROR;
 }

@@ -36,12 +36,7 @@ typedef svn_boolean_t (*pending_fn_t)(void *baton);
 
 typedef void (*timeout_fn_t)(void *baton, apr_interval_time_t timeout);
 
-typedef struct svn_ra_svn_stream {
-  svn_stream_t *stream;
-  void *baton;
-  pending_fn_t pending_fn;
-  timeout_fn_t timeout_fn;
-} svn_ra_svn_stream_t;
+typedef struct svn_ra_svn_stream svn_ra_svn_stream_t;
 
 
 /* Handler for blocked writes. */
@@ -133,6 +128,19 @@ svn_error_t *svn_ra_svn__conn_ssl_client(svn_ra_svn_conn_t *conn,
                                          const char *hostname,
                                          const char *realm,
                                          apr_pool_t *pool);
+
+svn_ra_svn_stream_t *svn_ra_svn__stream_create(void *baton,
+                                               svn_read_fn_t read_cb,
+                                               svn_write_fn_t write_cb,
+                                               timeout_fn_t timeout_cb,
+                                               pending_fn_t pending_cb,
+                                               apr_pool_t *pool);
+
+svn_error_t *svn_ra_svn__stream_write(svn_ra_svn_stream_t *stream,
+                                      const char *data, apr_size_t *len);
+
+svn_error_t *svn_ra_svn__stream_read(svn_ra_svn_stream_t *stream,
+                                     char *data, apr_size_t *len);
 
 /* Set the timeout for operations on STREAM to INTERVAL. */
 void svn_ra_svn__stream_timeout(svn_ra_svn_stream_t *stream,
