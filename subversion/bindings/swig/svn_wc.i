@@ -208,7 +208,7 @@
 %typemap(ruby, in) apr_array_header_t *merge_options
 {
   if (NIL_P($input)) {
-    $1 == NULL;
+    $1 = NULL;
   } else {
     VALUE rb_pool;
     apr_pool_t *pool;
