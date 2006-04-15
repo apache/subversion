@@ -31,6 +31,14 @@
 #include "ra_serf.h"
 
 
+/* Fix for older expat 1.95.x's that do not define
+ * XML_STATUS_OK/XML_STATUS_ERROR
+ */
+#ifndef XML_STATUS_OK
+#define XML_STATUS_OK    1
+#define XML_STATUS_ERROR 0
+#endif
+
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
            void *baton,
@@ -535,7 +543,7 @@ handle_auth(svn_ra_serf__session_t *session,
   return APR_SUCCESS;
 }
 
-static void XMLCALL
+static void
 start_xml(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -554,7 +562,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
   parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
 
-static void XMLCALL
+static void
 end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -568,7 +576,7 @@ end_xml(void *userData, const char *raw_name)
   parser->error = parser->end(parser, parser->user_data, name);
 }
 
-static void XMLCALL
+static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
