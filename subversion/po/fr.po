@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-04-14 09:44+0200\n"
-"PO-Revision-Date: 2006-04-14 13:32+0200\n"
+"POT-Creation-Date: 2006-04-15 15:30+0200\n"
+"PO-Revision-Date: 2006-04-15 16:08+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2838,50 +2838,50 @@ msgstr ""
 msgid "At least one property change failed; repository is unchanged"
 msgstr "Échec d'au moins une modification de propriété ; dépôt inchangé"
 
-#: libsvn_ra_dav/replay.c:137 libsvn_ra_serf/replay.c:161
+#: libsvn_ra_dav/replay.c:136 libsvn_ra_serf/replay.c:161
 msgid "Missing revision attr in target-revision element"
 msgstr "Attribut révision 'rev' manquant dans un élément 'target-revision'"
 
-#: libsvn_ra_dav/replay.c:154 libsvn_ra_serf/replay.c:179
+#: libsvn_ra_dav/replay.c:153 libsvn_ra_serf/replay.c:179
 msgid "Missing revision attr in open-root element"
 msgstr "Attribut révision 'rev' manquant dans un élément 'open-root'"
 
-#: libsvn_ra_dav/replay.c:172 libsvn_ra_serf/replay.c:198
+#: libsvn_ra_dav/replay.c:171 libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
 msgstr "Attribut nom 'name' manquant dans un élément 'delete-entry'"
 
-#: libsvn_ra_dav/replay.c:176
+#: libsvn_ra_dav/replay.c:175
 msgid "Missing rev attr in delete-entry element"
 msgstr "Attribut révision 'rev' manquant dans un élément 'delete-entry'"
 
-#: libsvn_ra_dav/replay.c:205
+#: libsvn_ra_dav/replay.c:195
 msgid "Missing name attr in open-directory element"
 msgstr "Attribut nom 'name' manquant dans un élément 'open-directory'"
 
-#: libsvn_ra_dav/replay.c:257 libsvn_ra_dav/replay.c:366
+#: libsvn_ra_dav/replay.c:247 libsvn_ra_dav/replay.c:350
 #: libsvn_ra_serf/replay.c:371
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "Attribut nom 'name' manquant dans un élément %s"
 
-#: libsvn_ra_dav/replay.c:303
+#: libsvn_ra_dav/replay.c:287
 msgid "Got apply-textdelta element without preceding add-file or open-file"
 msgstr "Élément 'apply-textdelta' non précédé d'un 'add-file' ou 'open-file'"
 
-#: libsvn_ra_dav/replay.c:329
+#: libsvn_ra_dav/replay.c:313
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr "Élément 'close-file' non précédé d'un 'add-file' ou 'open-file'"
 
-#: libsvn_ra_dav/replay.c:344
+#: libsvn_ra_dav/replay.c:328
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Élément 'close-directory' sans avoir jamais ouvert un répertoire"
 
-#: libsvn_ra_dav/replay.c:471 libsvn_ra_serf/replay.c:492
+#: libsvn_ra_dav/replay.c:455 libsvn_ra_serf/replay.c:492
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "Erreur d'écriture de flux : fin de fichier (EOF) inattendue"
 
-#: libsvn_ra_dav/replay.c:478
+#: libsvn_ra_dav/replay.c:462
 #, c-format
 msgid "Got cdata content for a prop delete"
 msgstr "Contenu 'cdata' précisé pour l'effacement d'une propriété"
@@ -3078,7 +3078,7 @@ msgstr "Le chemin '%s' n'existe pas"
 msgid "Failed writing updated file"
 msgstr "Échec en écrivant un fichier modifié"
 
-#: libsvn_ra_serf/getloc.c:289
+#: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
 msgstr "Le fichier n'existe pas à la révision de tête (HEAD)"
 
@@ -3139,7 +3139,7 @@ msgstr "Version %d du chargeur RA (accès dépôt) non supportée pour ra_serf"
 msgid "Error retrieving REPORT (%d)"
 msgstr "Erreur à la récupération du REPORT (%d)"
 
-#: libsvn_ra_serf/util.c:735
+#: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
 msgstr "Fin de fichier (EOF) prématurée rencontrée sur le serveur"
 
@@ -3160,11 +3160,11 @@ msgstr "Impossible de se connecter à l'hôte '%s'"
 
 #: libsvn_ra_svn/client.c:164
 msgid "Proplist element not a list"
-msgstr ""
+msgstr "L'élément 'proplist' n'est pas une liste"
 
 #: libsvn_ra_svn/client.c:188
 msgid "Prop diffs element not a list"
-msgstr ""
+msgstr "L'élément 'prop diffs' n'est pas une liste"
 
 #: libsvn_ra_svn/client.c:226
 #, c-format
@@ -3239,19 +3239,19 @@ msgstr "Le serveur n'a pas envoyé la racine du dépôt"
 
 #: libsvn_ra_svn/client.c:980
 msgid "Non-string as part of file contents"
-msgstr ""
+msgstr "Partie non chaîne comme contenu de fichier"
 
 #: libsvn_ra_svn/client.c:1078
 msgid "Dirlist element not a list"
-msgstr ""
+msgstr "L'élément 'dirlist' n'est pas une liste"
 
 #: libsvn_ra_svn/client.c:1235
 msgid "Log entry not a list"
-msgstr ""
+msgstr "L'entrée 'log' n'est pas une liste"
 
 #: libsvn_ra_svn/client.c:1248
 msgid "Changed-path entry not a list"
-msgstr ""
+msgstr "L'entrée 'changed-path' n'est pas une liste"
 
 #: libsvn_ra_svn/client.c:1327
 msgid "'stat' not implemented"
@@ -3319,7 +3319,7 @@ msgstr "Le serveur ne supporte pas la commande 'get-lock'"
 
 #: libsvn_ra_svn/client.c:1941
 msgid "Lock element not a list"
-msgstr ""
+msgstr "L'élément 'lock' n'est pas une liste"
 
 #: libsvn_ra_svn/client.c:1964
 msgid "Server doesn't support the replay command"
@@ -3336,7 +3336,7 @@ msgstr "Élément fichier ou répertoire invalide durant une édition"
 
 #: libsvn_ra_svn/editor.c:619
 msgid "Non-string as part of text delta"
-msgstr ""
+msgstr "Partie non chaîne dans une différence de texte"
 
 #: libsvn_ra_svn/editorp.c:128
 msgid "Successful edit status returned too soon"
@@ -3357,7 +3357,7 @@ msgstr "Commande '%s' inconnue"
 
 #: libsvn_ra_svn/marshal.c:78
 msgid "Capability entry is not a word"
-msgstr ""
+msgstr "L'entrée 'capability' (capacité) n'est pas un mot"
 
 #: libsvn_ra_svn/marshal.c:166
 #, c-format
@@ -3727,11 +3727,11 @@ msgstr "On ne peut remplacer un répertoire de l'intérieur de ce répertoire"
 
 #: libsvn_repos/reporter.c:893
 msgid "Invalid report for top level of working copy"
-msgstr ""
+msgstr "Rapport invalide pour le sommet de la copie de travail"
 
 #: libsvn_repos/reporter.c:908
 msgid "Two top-level reports with no target"
-msgstr ""
+msgstr "Deux rapports au sommet sans aucune cible"
 
 #: libsvn_repos/repos.c:176
 #, c-format
@@ -3869,7 +3869,7 @@ msgstr "Impossible d'ouvrir le fichier d'authentification en écriture"
 #: libsvn_subr/config_auth.c:137
 #, c-format
 msgid "Error writing hash to '%s'"
-msgstr ""
+msgstr "Erreur à l'écriture le hash dans '%s'"
 
 #: libsvn_subr/date.c:204
 #, c-format
@@ -3884,11 +3884,11 @@ msgstr "Impossible de calculer la date demandée"
 #: libsvn_subr/date.c:281
 #, c-format
 msgid "Can't expand time"
-msgstr ""
+msgstr "Impossible de dilater le temps"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
-msgstr ""
+msgstr "Impossible de recoder le message d'erreur de APR"
 
 #: libsvn_subr/error.c:417
 #, c-format
@@ -4635,7 +4635,7 @@ msgstr "'%s' n'est pas une copie de travail"
 #: libsvn_wc/adm_files.c:694 libsvn_wc/adm_files.c:762
 #: libsvn_wc/adm_files.c:824
 msgid "No such thing as 'base' working copy properties!"
-msgstr ""
+msgstr "Il n'existe pas de propriété 'base' dans les copies de travail"
 
 #: libsvn_wc/adm_files.c:893 libsvn_wc/util.c:51
 #, c-format
@@ -4792,7 +4792,7 @@ msgstr "Copie de '%s' impossible car il doit être supprimé"
 #: libsvn_wc/entries.c:132
 #, c-format
 msgid "Error writing entries file for '%s'"
-msgstr ""
+msgstr "Erreur à l'écriture du fichier d'entrées pour '%s'"
 
 #: libsvn_wc/entries.c:199 libsvn_wc/entries.c:310 libsvn_wc/entries.c:558
 #, c-format
@@ -4932,7 +4932,7 @@ msgstr "'%s' possède un type de noeud non reconnu"
 #: libsvn_wc/entries.c:2165
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
-msgstr ""
+msgstr "Découverte inattendue de '%s' : chemin marqué comme manquant"
 
 #: libsvn_wc/lock.c:246 libsvn_wc/lock.c:450
 #, c-format
@@ -5050,7 +5050,7 @@ msgstr "Attribut 'revision' manquant pour '%s'"
 #: libsvn_wc/log.c:936
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
-msgstr ""
+msgstr "Commande du journal du répertoire '%s' mal placée"
 
 #: libsvn_wc/log.c:1111 libsvn_wc/log.c:1187
 #, c-format
@@ -5070,7 +5070,7 @@ msgstr "Erreur en comparant '%s' et '%s'"
 #: libsvn_wc/log.c:1247
 #, c-format
 msgid "Error replacing text-base of '%s'"
-msgstr ""
+msgstr "Erreur au remplacement du texte référence (text-base) de '%s'"
 
 #: libsvn_wc/log.c:1256
 #, c-format
@@ -5085,12 +5085,12 @@ msgstr "Erreur en modifiant l'entrée de '%s'"
 #: libsvn_wc/log.c:1420
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
-msgstr ""
+msgstr "Entrée du journal sans attribut nom (entrée '%s' pour le répertoire '%s')"
 
 #: libsvn_wc/log.c:1482
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
-msgstr ""
+msgstr "Élément de journal non reconnu '%s' dans '%s'"
 
 #: libsvn_wc/log.c:1493
 #, c-format
@@ -5104,12 +5104,12 @@ msgstr "Impossible d'ouvrir le journal"
 #: libsvn_wc/log.c:1634
 #, c-format
 msgid "Error reading administrative log file in '%s'"
-msgstr ""
+msgstr "Erreur à la lecture du journal d'administration dans '%s'"
 
 #: libsvn_wc/log.c:2208
 #, c-format
 msgid "Error writing log for '%s'"
-msgstr ""
+msgstr "Erreur à l'écriture dans le journal pour '%s'"
 
 #: libsvn_wc/log.c:2256
 #, c-format
@@ -5124,12 +5124,12 @@ msgstr "Impossible d'analyser '%s'"
 #: libsvn_wc/props.c:120
 #, c-format
 msgid "Can't write property hash to '%s'"
-msgstr ""
+msgstr "Impossible d'écrire le hash de la propriété dans '%s'"
 
 #: libsvn_wc/props.c:213
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
-msgstr ""
+msgstr "Impossible de trouver l'entrée '%s' dans '%s'"
 
 #: libsvn_wc/props.c:628
 #, c-format
@@ -5173,12 +5173,12 @@ msgstr "Échec au chargement des propriétés à partir du disque"
 #: libsvn_wc/props.c:909
 #, c-format
 msgid "Cannot write property hash for '%s'"
-msgstr ""
+msgstr "Impossible d'écrire le hash de la propriété pour '%s'"
 
 #: libsvn_wc/props.c:1057 libsvn_wc/props.c:1193
 #, c-format
 msgid "Property '%s' is an entry property"
-msgstr ""
+msgstr "La propriété '%s' n'est pas une propriété d'entrée"
 
 #: libsvn_wc/props.c:1102
 #, c-format
@@ -5700,6 +5700,8 @@ msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
+"Le changement apporté par la révision ARG (comme -r ARG-1:ARG)\n"
+"                             Si ARG est négatif, c'est comme -r ARG:ARG-1"
 
 #: svn/main.c:74
 msgid ""
@@ -6055,13 +6057,17 @@ msgid ""
 msgstr ""
 "Affiche les différences entre deux révisions ou chemins.\n"
 "usage : 1. diff [-c M |-r N[:M]] [CIBLE[@REV]...]\n"
-"        2. diff [-r N[:M]] --old=VCIBLE[@VREV] [--new=NCIBLE[@NREV]] [CHEMIN...]\n"
+"        2. diff [-r N[:M]] --old=VCIBLE[@VREV] [--new=NCIBLE[@NREV]] "
+"[CHEMIN...]\n"
 "        3. diff VURL[@VREV] NURL[@NREV]\n"
 "\n"
 "  1. Affiche les modifications effectuées entre deux révisions sur CIBLE\n"
-"     vue en REV. Les CIBLEs peut être toutes des chemins ou toutes des URLs.\n"
-"     Si ce sont des chemins dans la copie de travail, la révision N vaut par \n"
-"     défaut BASE et M la révision de la copie de travail. Si ce sont des URLs,\n"
+"     vue en REV. Les CIBLEs peut être toutes des chemins ou toutes des "
+"URLs.\n"
+"     Si ce sont des chemins dans la copie de travail, la révision N vaut "
+"par \n"
+"     défaut BASE et M la révision de la copie de travail. Si ce sont des "
+"URLs,\n"
 "     N doit être précisée et M vaut HEAD par défaut.\n"
 "     L'option '-c M' est équivalente à l'option '-r N:M' avec N = M-1.\n"
 "     Utiliser '-c -M' fait l'inverse : '-r M:N' avec N = M-1.\n"
@@ -6070,10 +6076,12 @@ msgstr ""
 "     doit être précisée. M vaut la version courante de travail si une CIBLE\n"
 "     est un chemin local, sinon elle vaut HEAD par défaut.\n"
 "\n"
-"  2. Affiche les différences entre VCIBLE vue en VREV et NCIBLE vue en NREV.\n"
+"  2. Affiche les différences entre VCIBLE vue en VREV et NCIBLE vue en "
+"NREV.\n"
 "     Le CHEMIN, si spécifié, est relatif à VCIBLE et NCIBLE : il restreint\n"
 "     les différences affichées. Si ils sont précisés, les CHEMINs sont\n"
-"     relatifs à VCIBLE et NCIBLE et restreignent l'affichage des différences\n"
+"     relatifs à VCIBLE et NCIBLE et restreignent l'affichage des "
+"différences\n"
 "     pour ces chemins. Les CIBLEs peuvent être des chemins locaux\n"
 "     ou des URLs. La valeur par défaut de NCIBLE est VCIBLE.\n"
 "     -r N définit la valeur par défaut de VREV.\n"
@@ -8397,7 +8405,7 @@ msgstr "L'option --tunnel-user n'est valide qu'en mode tunnel.\n"
 msgid ""
 "svnserve: The --service flag is only valid if the process is started by the "
 "Service Control Manager.\n"
-msgstr ""
+msgstr "svnserve : L'option --service n'est valide que si le processus est lancé par le contrôleur de service (SCM)\n"
 
 #: svnserve/main.c:568
 #, c-format
@@ -8437,24 +8445,24 @@ msgstr "Impossible de créer une thread"
 #: svnserve/winservice.c:341
 #, c-format
 msgid "Failed to create winservice_start_event"
-msgstr ""
+msgstr "Échec de la création du 'winservice_start_event'"
 
 #: svnserve/winservice.c:352
 #, c-format
 msgid "The service failed to start"
-msgstr ""
+msgstr "Le service n'a pas voulu démarrer"
 
 #: svnserve/winservice.c:400
 #, c-format
 msgid "Failed to connect to Service Control Manager"
-msgstr ""
+msgstr "Échec de la connexion au contrôleur de service (SCM)"
 
 #: svnserve/winservice.c:411
 #, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service"
-msgstr ""
+msgstr "Échec au démarrage du service ; une erreur interne est intervenue"
 
 #: svnsync/main.c:65
 msgid ""
@@ -8653,4 +8661,3 @@ msgstr "exporté%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
-
