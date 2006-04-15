@@ -143,7 +143,41 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 #endif
 %}
 
+/* -----------------------------------------------------------------------
+   handle svn_txdelta_window_t::ops
+*/
+#ifdef SWIGRUBY
+%ignore svn_txdelta_window_t::ops;
+%inline %{
+static VALUE
+svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
+{
+  return svn_swig_rb_txdelta_window_t_ops_get(window);
+}
+%}
+#endif
+
 %include svn_delta_h.swg
+
+/* -----------------------------------------------------------------------
+   handle svn_txdelta_apply_instructions()
+*/
+#ifdef SWIGRUBY
+%inline %{
+static VALUE
+svn_swig_rb_txdelta_apply_instructions(svn_txdelta_window_t *window,
+                                       const char *sbuf)
+{
+  char *tbuf;
+  apr_size_t tlen;
+
+  tbuf = ALLOCA_N(char, (window->tview_len + 1));
+  svn_txdelta_apply_instructions(window, sbuf, tbuf, &tlen);
+
+  return rb_str_new(tbuf, tlen);
+}
+%}
+#endif
 
 /* -----------------------------------------------------------------------
    handle svn_txdelta_to_svndiff().
@@ -164,12 +198,13 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
 }
  
 static void
-svn_txdelta_to_svndiff_wrapper(svn_stream_t *output,
-                               svn_txdelta_window_handler_t *handler,
-                               void **handler_baton,
-                               apr_pool_t *pool)
+svn_txdelta_to_svndiff2_wrapper(svn_stream_t *output,
+                                svn_txdelta_window_handler_t *handler,
+                                void **handler_baton,
+                                int version,
+                                apr_pool_t *pool)
 {
-  svn_txdelta_to_svndiff(output, pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(output, pool, handler, handler_baton, version);
 }
  
 static svn_error_t *

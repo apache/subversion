@@ -496,8 +496,8 @@ svn_swig_rb_handle_svn_error(svn_error_t *error)
 
 static VALUE inited = Qnil;
 /* C -> Ruby */
-static VALUE
-c2r_swig_type(void *value, void *ctx)
+VALUE
+svn_swig_rb_from_swig_type(void *value, void *ctx)
 {
   swig_type_info *info;
 
@@ -513,6 +513,7 @@ c2r_swig_type(void *value, void *ctx)
     rb_raise(rb_eArgError, "invalid SWIG type: %s", (char *)ctx);
   }
 }
+#define c2r_swig_type svn_swig_rb_from_swig_type
 
 static VALUE
 c2r_string(void *value, void *ctx)
@@ -2956,4 +2957,21 @@ svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                  "void *", &handler_baton);
 
   return handler(window, handler_baton);
+}
+
+VALUE
+svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
+{
+  VALUE ops;
+  svn_txdelta_op_t *op;
+  int i;
+
+  ops = rb_ary_new2(window->num_ops);
+
+  for (i = 0; i < window->num_ops; i++) {
+    op = window->ops + i;
+    rb_ary_push(ops, c2r_swig_type((void *)op, (void *)"svn_txdelta_op_t *"));
+  }
+
+  return ops;
 }
