@@ -40,6 +40,7 @@ VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
 void svn_swig_rb_handle_svn_error(svn_error_t *error);
 
 void *svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool);
+VALUE svn_swig_rb_from_swig_type(void *value, void *ctx);
 
 VALUE svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
@@ -280,6 +281,7 @@ svn_error_t *svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
 svn_error_t *svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                                                                svn_txdelta_window_t *window,
                                                                apr_pool_t *pool);
+VALUE svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window);
 
 #ifdef __cplusplus
 }
