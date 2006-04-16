@@ -2184,8 +2184,15 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   svn_config_get(b->cfg, &b->cert_file, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_SSL_SERVER_CERT_FILE, NULL);
+  if (b->cert_file)
+    b->cert_file = svn_path_join(svn_repos_conf_dir(b->repos, pool),
+                                 b->cert_file, pool);
+
   svn_config_get(b->cfg, &b->key_file, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_SSL_SERVER_KEY_FILE, NULL);
+  if (b->key_file)
+    b->key_file = svn_path_join(svn_repos_conf_dir(b->repos, pool),
+                                 b->key_file, pool);
   
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
