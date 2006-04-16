@@ -39,6 +39,7 @@ class WinGeneratorBase(GeneratorBase):
     self.apr_path = 'apr'
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
+    self.serf_path = None
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
     self.neon_ver = 24007
@@ -71,6 +72,8 @@ class WinGeneratorBase(GeneratorBase):
         self.apr_util_path = val
       elif opt == '--with-apr-iconv':
         self.apr_iconv_path = val
+      elif opt == '--with-serf':
+        self.serf_path = val
       elif opt == '--with-neon':
         self.neon_path = val
       elif opt == '--with-httpd':
@@ -436,6 +439,8 @@ class WinGeneratorBase(GeneratorBase):
       path = self.apr_path + target.external_project[3:]
     elif target.external_project[:5] == 'neon/':
       path = self.neon_path + target.external_project[4:]
+    elif target.external_project[:5] == 'serf/' and self.serf_path:
+      path = self.serf_path + target.external_project[4:]
     else:
       path = target.external_project
 
@@ -619,6 +624,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
+    
+    if self.serf_path:
+       fakeincludes.append(self.apath(self.serf_path, ""))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -766,6 +774,29 @@ class WinGeneratorBase(GeneratorBase):
                          ('openssl_path',
                           self.openssl_path
                             and os.path.abspath(self.openssl_path)),
+                        ))
+
+  def write_serf_project_file(self, name):
+    if not self.serf_path:
+      return
+
+    serf_path = os.path.abspath(self.serf_path)
+    self.move_proj_file(self.serf_path, name,
+                        (('serf_sources',
+                          glob.glob(os.path.join(serf_path, '*.c'))
+                          + glob.glob(os.path.join(serf_path, 'buckets',
+                                                   '*.c'))),
+                         ('serf_headers',
+                          glob.glob(os.path.join(serf_path, '*.h'))
+                          + glob.glob(os.path.join(serf_path, 'buckets',
+                                                   '*.h'))),
+                         ('zlib_path', self.zlib_path 
+                                       and os.path.abspath(self.zlib_path)),
+                         ('openssl_path',
+                          self.openssl_path
+                            and os.path.abspath(self.openssl_path)),
+                         ('apr_path', os.path.abspath(self.apr_path)),
+                         ('apr_util_path', os.path.abspath(self.apr_util_path)),
                         ))
 
   def move_proj_file(self, path, name, params=()):
