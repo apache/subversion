@@ -42,6 +42,7 @@
 #include "svn_props.h"
 
 #include "ra_svn.h"
+#include "ra_svn_endpoint.h"
 
 typedef struct {
   apr_pool_t *pool;

@@ -48,6 +48,7 @@
 
 
 #include "server.h"
+#include "../libsvn_ra_svn/ra_svn_endpoint.h"
 
 typedef struct {
   svn_repos_t *repos;
@@ -345,8 +346,8 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 #if SVN_HAVE_SSL
   if (dotls)
-    SVN_ERR(svn_ra_svn_conn_ssl_server(conn, b->cert_file, b->key_file,
-                                       pool));
+    SVN_ERR(svn_ra_svn__conn_ssl_server(conn, b->cert_file, b->key_file,
+                                        pool));
 #endif
 
   do

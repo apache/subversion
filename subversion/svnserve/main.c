@@ -49,6 +49,7 @@
 #endif
 
 #include "server.h"
+#include "../libsvn_ra_svn/ra_svn_endpoint.h"
 
 /* The strategy for handling incoming connections.  Some of these may be
    unavailable due to platform limitations. */

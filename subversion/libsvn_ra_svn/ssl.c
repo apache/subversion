@@ -37,6 +37,7 @@
 #include "svn_private_config.h"
 
 #include "ra_svn.h"
+#include "ra_svn_endpoint.h"
 
 #ifndef CIPHER_LIST
 #define CIPHER_LIST "ALL:!LOW"
@@ -635,8 +636,8 @@ ssl_last_error(apr_pool_t *pool)
 
 
 svn_error_t *
-svn_ra_svn_conn_ssl_server(svn_ra_svn_conn_t *conn, const char *cert,
-                           const char *key, apr_pool_t *pool)
+svn_ra_svn__conn_ssl_server(svn_ra_svn_conn_t *conn, const char *cert,
+                            const char *key, apr_pool_t *pool)
 {
   SSL_CTX *ctx;
   ssl_baton_t *baton;
