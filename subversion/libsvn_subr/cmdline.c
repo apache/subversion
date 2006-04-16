@@ -182,7 +182,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
         return EXIT_FAILURE;
       }
   }
- 
+  
   return EXIT_SUCCESS;
 }
 
