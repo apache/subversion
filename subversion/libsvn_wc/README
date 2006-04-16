@@ -346,17 +346,17 @@ field.  The escaping uses the syntax "\xHH", where "HH" are the two
 hexadecimal digits (either upper- or lowercase) representing the
 escaped byte.  No other bytes may be escaped.  NUL bytes are not allowed.
 
-A field may be boolean, in which case it can have one of the values
-`t', meaning true or `f', meaning false.  Unless otherwise specified,
-boolean fields default to `f' if emtpy.  Timestamps are stored in
-the format produced by svn_time_to_cstring().
+A field may be boolean, in which case it can have either a value equal
+to the field name, meaning true or no value meaning false.  Timestamps
+are stored in the format produced by svn_time_to_cstring().
 
 The first entry has an empty name field and is the entry for this directory,
 that is, the directory containing this administrative area.  This is
 known as the "this_dir" entry.
 
 The following fields are allowed; they are present in the order in
-which they are described.  The field names are given for reference only.
+which they are described.  Except for boolean fields, the field names
+are not present in the file.
 
 name:
    The basename of this entry, or the empty string for the this_dir

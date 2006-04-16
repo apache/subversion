@@ -175,37 +175,6 @@ read_str(const char **result,
   return SVN_NO_ERROR;
 }
 
-/* Read a boolean field from [*BUF, END), placing the result
-   in *RESULT.  If there is no boolean value (just a terminating |),
-   it defaults to false.  Advance *BUF to point after the terminator. */
-static svn_error_t *
-read_bool(svn_boolean_t *result,
-          char **buf, const char *end)
-{
-  if (*buf == end)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Unexpected end of entry"));
-  if (**buf == '|')
-    {
-      *result = FALSE;
-      (*buf)++;
-      return SVN_NO_ERROR;
-    }
-  if (**buf == 't')
-    *result = TRUE;
-  else if (**buf == 'f')
-    *result = FALSE;
-  else
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid boolean field"));
-  (*buf)++;
-  if (*buf == end || **buf != '|')
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Unexpected end of entry"));
-  (*buf)++;
-  return SVN_NO_ERROR;
-}
-
 /* Read a field from [*BUF, END), terminated by a | character.
    The field may not contain escape sequences.  The field is not
    copyed and the buffer is modified in place, by replacing the
@@ -238,6 +207,30 @@ read_val(const char **result,
   return SVN_NO_ERROR;
 }
   
+/* Read a boolean field from [*BUF, END), placing the result in
+   *RESULT.  If there is no boolean value (just a terminating |), it
+   defaults to false.  Else, the value must match FIELD_NAME, in which
+   case *RESULT will be set to true.  Advance *BUF to point after the
+   terminator. */
+static svn_error_t *
+read_bool(svn_boolean_t *result, const char *field_name,
+          char **buf, const char *end)
+{
+  const char *val;
+  SVN_ERR(read_val(&val, buf, end));
+  if (val)
+    {
+      if (strcmp(val, field_name) != 0)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Invalid value for field '%s'"),
+                                 field_name);
+      *result = TRUE;
+    }
+  else
+    *result = FALSE;
+  return SVN_NO_ERROR;
+}
+
 /* Read a revision number from [*BUF, END) stopping at the |
    terminator.  Set *RESULT to the revision number, or
    SVN_INVALID_REVNUM if there is none.  Use POOL for temporary
@@ -379,11 +372,13 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* has-props flag. */
-  SVN_ERR(read_bool(&entry->has_props, buf, end));
+  SVN_ERR(read_bool(&entry->has_props, SVN_WC__ENTRY_ATTR_HAS_PROPS,
+                    buf, end));
   MAYBE_DONE;
 
   /* has-prop-mods flag. */
-  SVN_ERR(read_bool(&entry->has_prop_mods, buf, end));
+  SVN_ERR(read_bool(&entry->has_prop_mods, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                    buf, end));
   MAYBE_DONE;
 
   /* cachable-props string. */
@@ -411,7 +406,7 @@ read_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry copied? */
-  SVN_ERR(read_bool(&entry->copied, buf, end));
+  SVN_ERR(read_bool(&entry->copied, SVN_WC__ENTRY_ATTR_COPIED, buf, end));
   MAYBE_DONE;
 
   SVN_ERR(read_str(&entry->copyfrom_url, buf, end, pool));
@@ -420,15 +415,16 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* Is this entry deleted? */
-  SVN_ERR(read_bool(&entry->deleted, buf, end));
+  SVN_ERR(read_bool(&entry->deleted, SVN_WC__ENTRY_ATTR_DELETED, buf, end));
   MAYBE_DONE;
 
   /* Is this entry absent? */
-  SVN_ERR(read_bool(&entry->absent, buf, end));
+  SVN_ERR(read_bool(&entry->absent, SVN_WC__ENTRY_ATTR_ABSENT, buf, end));
   MAYBE_DONE;
 
   /* Is this entry incomplete? */
-  SVN_ERR(read_bool(&entry->incomplete, buf, end));
+  SVN_ERR(read_bool(&entry->incomplete, SVN_WC__ENTRY_ATTR_INCOMPLETE,
+                    buf, end));
   MAYBE_DONE;
 
   /* UUID. */
@@ -1327,12 +1323,22 @@ write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
   svn_stringbuf_appendbytes(buf, "|", 1);
 }
 
-/* Append VAL and a terminator to BUF. */
+/* Append the string VAL of length LEN to BUF, without escaping any
+   bytes. */
 static void
-write_bool(svn_stringbuf_t *buf, svn_boolean_t val)
+write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
 {
-  svn_stringbuf_appendcstr(buf,
-                           val ? "t|" : "|");
+  if (val)
+    svn_stringbuf_appendbytes(buf, val, len);
+  svn_stringbuf_appendbytes(buf, "|", 1);
+}
+
+/* If VAL is true, append FIELD_NAME followede by a terminator to BUF.
+   Else, just append the terminator. */
+static void
+write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
+{
+  write_val(buf, val ? field_name : NULL, val ? strlen(field_name) : 0);
 }
 
 /* Append the representation of REVNUM to BUF and a terminator, using
@@ -1355,17 +1361,6 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
     svn_stringbuf_appendcstr(buf, svn_time_to_cstring(val, pool));
   svn_stringbuf_appendbytes(buf, "|", 1);
 }
-
-/* Append the string VAL of length LEN to BUF, without escaping any
-   bytes. */
-static void
-write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
-{
-  if (val)
-    svn_stringbuf_appendbytes(buf, val, len);
-  svn_stringbuf_appendbytes(buf, "|", 1);
-}
-
 
 /* Append a single entry ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
@@ -1472,10 +1467,10 @@ write_entry(svn_stringbuf_t *buf,
   write_str(buf, entry->cmt_author, pool);
 
   /* has-props flag. */
-  write_bool(buf, entry->has_props);
+  write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROPS, entry->has_props);
 
   /* has-prop-mods flag. */
-  write_bool(buf, entry->has_prop_mods);
+  write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS, entry->has_prop_mods);
 
   /* cachable-props string. */
   if (is_this_dir
@@ -1496,20 +1491,20 @@ write_entry(svn_stringbuf_t *buf,
   write_str(buf, entry->conflict_new, pool);
   write_str(buf, entry->conflict_wrk, pool);
 
-  write_bool(buf, entry->copied);
+  write_bool(buf, SVN_WC__ENTRY_ATTR_COPIED, entry->copied);
 
   /* Copy-related Stuff */
   write_str(buf, entry->copyfrom_url, pool);
   write_revnum(buf, entry->copyfrom_rev, pool);
 
   /* Deleted state */
-  write_bool(buf, entry->deleted);
+  write_bool(buf, SVN_WC__ENTRY_ATTR_DELETED, entry->deleted);
 
   /* Absent state */
-  write_bool(buf, entry->absent);
+  write_bool(buf, SVN_WC__ENTRY_ATTR_ABSENT, entry->absent);
 
   /* Incomplete state */
-  write_bool(buf, entry->incomplete);
+  write_bool(buf, SVN_WC__ENTRY_ATTR_INCOMPLETE, entry->incomplete);
 
   /* UUID. */
   if (is_this_dir || ! this_dir->uuid || ! entry->uuid
