@@ -75,7 +75,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
-%typemap(ruby, in) (const svn_delta_editor_t *editor, void *edit_baton)
+%typemap(ruby, in) (const svn_delta_editor_t *EDITOR, void *BATON)
 {
   if (RTEST(rb_obj_is_kind_of($input,
                               svn_swig_rb_svn_delta_editor()))) {
@@ -87,6 +87,11 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   } else {
     svn_swig_rb_make_delta_editor(&$1, &$2, $input, _global_pool);
   }
+}
+
+%apply (const svn_delta_editor_t *EDITOR, void *BATON)
+{
+  (const svn_delta_editor_t *editor, void *edit_baton)
 }
 
 /* -----------------------------------------------------------------------

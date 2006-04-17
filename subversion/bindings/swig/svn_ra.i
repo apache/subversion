@@ -102,6 +102,12 @@
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
+%apply (const svn_delta_editor_t *EDITOR, void *BATON)
+{
+  (const svn_delta_editor_t *update_editor, void *update_baton),
+  (const svn_delta_editor_t *diff_editor, void *diff_baton)
+}
+
 %typemap(perl5, in) (const svn_ra_callbacks_t *callbacks,
 		     void *callback_baton) {
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);

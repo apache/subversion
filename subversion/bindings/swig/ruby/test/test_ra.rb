@@ -59,7 +59,11 @@ class SvnRaTest < Test::Unit::TestCase
                  ].sort,
                  props.keys.sort)
 
-    
+    entries, props = session.dir("/", info.revision, Svn::Core::DIRENT_KIND)
+    assert_equal(Svn::Core::NODE_FILE, entries[file].kind)
+    entries, props = session.dir("/", info.revision, 0)
+    assert_equal(Svn::Core::NODE_NONE, entries[file].kind)
+
     ctx = make_context(log2)
     File.open(path, "w") {|f| f.print(src * 2)}
     info = ctx.ci(@wc_path)
@@ -166,6 +170,37 @@ class SvnRaTest < Test::Unit::TestCase
     editor, editor_baton = session.commit_editor(log) {}
     reporter = session.update(rev2, "/", editor, editor_baton)
     reporter.abort_report
+
+    editor, editor_baton = session.commit_editor(log) {}
+    reporter = session.update2(rev2, "/", editor)
+    reporter.abort_report
+  end
+
+  def test_diff
+    log = "sample log"
+    file = "sample.txt"
+    src1 = "a\nb\nc\nd\ne\n"
+    src2 = "a\nb\nC\nd\ne\n"
+    path = File.join(@wc_path, file)
+    path_in_repos = "/#{file}"
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    File.open(path, "w") {|f| f.print(src1)}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "w") {|f| f.print(src2)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    ctx.up(@wc_path)
+
+    editor = Svn::Delta::BaseEditor.new # dummy
+    reporter = session.diff(rev2, "", @repos_uri, editor)
+    reporter.set_path("", rev1, false, nil)
+    reporter.finish_report
   end
 
   def test_commit_editor
@@ -205,10 +240,9 @@ class SvnRaTest < Test::Unit::TestCase
 
     expect = [1, Time.now.to_s, @author]
     gc_disable do
-      editor, baton = session.commit_editor2(log) do |info|
+      editor = session.commit_editor2(log) do |info|
         result = [info.revision, info.date.to_s, info.author]
       end
-      editor.baton = baton
 
       root = editor.open_root(-1)
       editor.add_directory(dir_uri, root, nil, -1)
@@ -217,6 +251,42 @@ class SvnRaTest < Test::Unit::TestCase
         editor.close_edit
       end
       assert_equal(expect, result)
+    end
+  end
+
+  def test_reparent
+    log = "sample log"
+    dir = "dir"
+    deep_dir = "deep"
+    dir_path = File.join(@wc_path, dir)
+    deep_dir_path = File.join(dir_path, deep_dir)
+    config = {}
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    ctx.ci(@wc_path)
+
+    ctx.mkdir(deep_dir_path)
+    ctx.ci(@wc_path)
+
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
+
+    entries, props = session.dir(dir, nil)
+    assert_equal([deep_dir], entries.keys)
+    assert_raise(Svn::Error::FS_NOT_FOUND) do
+      session.dir(deep_dir)
+    end
+
+    session.reparent("#{@repos_uri}/#{dir}")
+    assert_raise(Svn::Error::FS_NOT_FOUND) do
+      session.dir(dir)
+    end
+    entries, props = session.dir(deep_dir)
+    assert_equal([], entries.keys)
+
+    assert_raise(Svn::Error::RA_ILLEGAL_URL) do
+      session.reparent("file:///tmp/xxx")
     end
   end
 end

@@ -56,11 +56,15 @@ module Svn
         end
         editor, editor_baton = Ra.get_commit_editor(self, log_msg, callback,
                                                     lock_tokens, keep_lock)
+        editor.baton = editor_baton
+        [editor, editor_baton]
       end
 
       def commit_editor2(log_msg, lock_tokens={}, keep_lock=false, &callback)
         editor, editor_baton = Ra.get_commit_editor2(self, log_msg, callback,
                                                      lock_tokens, keep_lock)
+        editor.baton = editor_baton
+        editor
       end
 
       def file(path, rev=nil)
@@ -72,18 +76,25 @@ module Svn
         [output.read, props]
       end
 
-      def dir(path, rev=nil)
+      def dir(path, rev=nil, fields=nil)
         rev ||= latest_revnum
-        entries, fetched_rev, props = Ra.get_dir(self, path, rev)
+        fields ||= Core::DIRENT_ALL
+        entries, fetched_rev, props = Ra.get_dir2(self, path, rev, fields)
         props_filter(props)
         [entries, props]
       end
 
-      def update(revision_to_update_to,	update_target,
-                 editor, editor_baton, recurse=true)
+      def update(revision_to_update_to, update_target,
+                 editor, editor_baton, recurse=true, &block)
+        editor.baton = editor_baton
+        update2(revision_to_update_to, update_target,
+                editor, recurse, &block)
+      end
+
+      def update2(revision_to_update_to, update_target, editor, recurse=true)
         reporter, reporter_baton = Ra.do_update(self, revision_to_update_to,
                                                 update_target, recurse,
-                                                editor, editor_baton)
+                                                editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -94,12 +105,18 @@ module Svn
         end
       end
 
-      def switch(revision_to_switch_to,	switch_target, switch_url,
-                 editor, editor_baton, recurse=true)
+      def switch(revision_to_switch_to, switch_target, switch_url,
+                 editor, editor_baton, recurse=true, &block)
+        editor.baton = editor_baton
+        switch2(revision_to_switch_to, switch_target, switch_url,
+                editor, recurse, &block)
+      end
+
+      def switch2(revision_to_switch_to, switch_target, switch_url,
+                  editor, recurse=true)
         reporter, reporter_baton = Ra.do_switch(self, revision_to_switch_to,
                                                 switch_target, recurse,
-                                                switch_url, editor,
-                                                editor_baton)
+                                                switch_url, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -110,11 +127,15 @@ module Svn
         end
       end
 
-      def status(revision, status_target, editor, editor_baton, recurse=true)
+      def status(revision, status_target, editor, editor_baton,
+                 recurse=true, &block)
+        editor.baton = editor_baton
+        status2(revision, status_target, editor, recurse, &block)
+      end
+
+      def status2(revision, status_target, editor, recurse=true)
         reporter, reporter_baton = Ra.do_status(self, status_target,
-                                                revision, recurse, editor,
-                                                editor_baton)
-        
+                                                revision, recurse, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -123,6 +144,15 @@ module Svn
         else
           reporter
         end
+      end
+
+      def diff(rev, target, versus_url, editor,
+               recurse=true, ignore_ancestry=true, text_deltas=true)
+        args = [self, rev, target, recurse, ignore_ancestry,
+                text_deltas, versus_url, editor]
+        reporter, baton = Ra.do_diff2(*args)
+        reporter.baton = baton
+        reporter
       end
 
       def log(paths, start_rev, end_rev, limit,
@@ -187,6 +217,14 @@ module Svn
 
       def get_locks(path)
         Ra.get_locks(self, path)
+      end
+
+      def replay(rev, low_water_mark, editor, send_deltas=true)
+        Ra.replay(self, rev, low_water_mark, send_deltas, editor)
+      end
+
+      def reparent(url)
+        Ra.reparent(self, url)
       end
 
       private
