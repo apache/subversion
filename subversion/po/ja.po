@@ -159,8 +159,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-04-14 02:15+0900\n"
-"PO-Revision-Date: 2006-04-14 02:15+0900\n"
+"POT-Creation-Date: 2006-04-18 03:03+0900\n"
+"PO-Revision-Date: 2006-04-18 03:03+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1142,7 +1142,7 @@ msgstr ""
 #: libsvn_client/diff.c:2690 libsvn_client/diff.c:2818
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:126
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
-#: libsvn_client/prop_commands.c:602 libsvn_client/prop_commands.c:951
+#: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:958
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:106
 #: libsvn_wc/adm_crawler.c:471 libsvn_wc/adm_crawler.c:764
@@ -1496,7 +1496,12 @@ msgstr "不正な属性名: '%s'"
 msgid "Value will not be set unless forced"
 msgstr "強制されないときは値は設定されません"
 
-#: libsvn_client/prop_commands.c:499 libsvn_client/prop_commands.c:758
+#: libsvn_client/prop_commands.c:499
+#, c-format
+msgid "'%s' does not exist in revision '%ld'"
+msgstr "'%s' がリビジョン %ld に存在しません"
+
+#: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:765
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "'%s' のノード種別が不明です"
@@ -2677,8 +2682,8 @@ msgstr ""
 msgid "Could not create a CHECKOUT request (%s)"
 msgstr "CHECKOUT リクエストを作成できませんでした (%s)"
 
-#: libsvn_ra_dav/commit.c:574 libsvn_ra_serf/commit.c:363
-#: libsvn_ra_serf/commit.c:424
+#: libsvn_ra_dav/commit.c:574 libsvn_ra_serf/commit.c:375
+#: libsvn_ra_serf/commit.c:436
 #, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
 msgstr ""
@@ -2694,7 +2699,7 @@ msgstr "CHECKOUT レスポンスに 'Location:' ヘッダが含まれていま�
 msgid "Could not create a DELETE request (%s)"
 msgstr "DELETE リクエストを作成できませんでした (%s)"
 
-#: libsvn_ra_dav/commit.c:1169 libsvn_ra_serf/commit.c:1306
+#: libsvn_ra_dav/commit.c:1169 libsvn_ra_serf/commit.c:1395
 #, c-format
 msgid "File '%s' already exists"
 msgstr "ファイル '%s' は既に存在しています"
@@ -2889,59 +2894,59 @@ msgstr "'DAV:baseline-collection' はベースラインのリソースには存�
 msgid "'DAV:version-name' was not present on the baseline resource"
 msgstr "'DAV:version-name' はベースラインのリソースには存在しません"
 
-#: libsvn_ra_dav/props.c:1106
+#: libsvn_ra_dav/props.c:1106 libsvn_ra_serf/commit.c:719
 msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "1 つ以上の属性を変更できませんでした。リポジトリに変更は加えられていません"
 
-#: libsvn_ra_dav/replay.c:137 libsvn_ra_serf/replay.c:161
+#: libsvn_ra_dav/replay.c:136 libsvn_ra_serf/replay.c:161
 msgid "Missing revision attr in target-revision element"
 msgstr "target-revision 要素に rev 属性がありません"
 
-#: libsvn_ra_dav/replay.c:154 libsvn_ra_serf/replay.c:179
+#: libsvn_ra_dav/replay.c:153 libsvn_ra_serf/replay.c:179
 msgid "Missing revision attr in open-root element"
 msgstr "open-root 要素に rev 属性がありません"
 
-#: libsvn_ra_dav/replay.c:172 libsvn_ra_serf/replay.c:198
+#: libsvn_ra_dav/replay.c:171 libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
 msgstr "delete-entry 要素に name 属性がありません"
 
-#: libsvn_ra_dav/replay.c:176
+#: libsvn_ra_dav/replay.c:175
 msgid "Missing rev attr in delete-entry element"
 msgstr "delete-entry 要素に rev 属性がありません"
 
-#: libsvn_ra_dav/replay.c:205
+#: libsvn_ra_dav/replay.c:195
 msgid "Missing name attr in open-directory element"
 msgstr "open-directory 要素に name 属性がありません"
 
-#: libsvn_ra_dav/replay.c:257 libsvn_ra_dav/replay.c:366
+#: libsvn_ra_dav/replay.c:247 libsvn_ra_dav/replay.c:350
 #: libsvn_ra_serf/replay.c:371
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "%s 要素に name 属性がありません"
 
-#: libsvn_ra_dav/replay.c:303
+#: libsvn_ra_dav/replay.c:287
 msgid "Got apply-textdelta element without preceding add-file or open-file"
 msgstr ""
 "add-file 要素や open-file 要素を先に使っていないのに apply-textdelta 要素を"
 "使っています"
 
-#: libsvn_ra_dav/replay.c:329
+#: libsvn_ra_dav/replay.c:313
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr ""
 "add-file 要素や open-file 要素を先に使っていないのに close-file 要素を使って"
 "います"
 
-#: libsvn_ra_dav/replay.c:344
+#: libsvn_ra_dav/replay.c:328
 msgid "Got close-directory element without ever opening a directory"
 msgstr "ディレクトリを開かずに close-directory 要素を使っています"
 
-#: libsvn_ra_dav/replay.c:471 libsvn_ra_serf/replay.c:492
+#: libsvn_ra_dav/replay.c:455 libsvn_ra_serf/replay.c:492
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "ストリームへの書き込み中にエラーが発生しました: 予想外の EOF です"
 
-#: libsvn_ra_dav/replay.c:478
+#: libsvn_ra_dav/replay.c:462
 #, c-format
 msgid "Got cdata content for a prop delete"
 msgstr "属性削除用の cdata の内容があります"
@@ -3131,18 +3136,18 @@ msgstr "ローカルの URL '%s' に含まれているホスト名はサポー�
 msgid "Unable to open repository '%s'"
 msgstr "リポジトリ '%s' を開けませんでした"
 
-#: libsvn_ra_serf/commit.c:356 libsvn_ra_serf/commit.c:417
+#: libsvn_ra_serf/commit.c:368 libsvn_ra_serf/commit.c:429
 #: libsvn_repos/commit.c:393
 #, c-format
 msgid "Path '%s' not present"
 msgstr "パス '%s' は存在しません"
 
-#: libsvn_ra_serf/commit.c:852
+#: libsvn_ra_serf/commit.c:910
 #, c-format
 msgid "Failed writing updated file"
 msgstr "更新されたファイルを書き込めませんでした"
 
-#: libsvn_ra_serf/getloc.c:289
+#: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
 msgstr "ファイルが HEAD に存在しません"
 
@@ -3199,12 +3204,12 @@ msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr ""
 "ra_serf 用のリポジトリアクセスローダバージョン (%d) はサポートされていません"
 
-#: libsvn_ra_serf/update.c:2082
+#: libsvn_ra_serf/update.c:2084
 #, c-format
 msgid "Error retrieving REPORT (%d)"
 msgstr "REPORT の取得中にエラー (%d) が発生しました"
 
-#: libsvn_ra_serf/util.c:735
+#: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
 msgstr "サーバからの送信内容において EOF が現れるのが早すぎます"
 
