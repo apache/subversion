@@ -135,9 +135,14 @@ class Skip(TestCase):
       self._list_mode_text = 'SKIP'
     # Delegate most methods to self.test_case:
     self.get_description = self.test_case.get_description
-    self.need_sandbox = self.test_case.need_sandbox
     self.get_sandbox_name = self.test_case.get_sandbox_name
     self.convert_result = self.test_case.convert_result
+
+  def need_sandbox(self):
+    if self.cond:
+      return 0
+    else:
+      return self.test_case.need_sandbox()
 
   def run(self, args):
     if self.cond:
