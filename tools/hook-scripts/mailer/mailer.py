@@ -666,6 +666,8 @@ class DiffGenerator:
     self.diffurls = diffurls
     self.pool = pool
 
+    self.diff = self.diff_url = None
+
     self.idx = 0
 
   def __nonzero__(self):
