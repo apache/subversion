@@ -492,6 +492,13 @@ remote_propget(apr_hash_t *props,
       SVN_ERR(svn_ra_get_file(ra_session, target_relative, revnum,
                               NULL, NULL, &prop_hash, pool));
     }
+  else if (kind == svn_node_none)
+    {
+      return svn_error_createf
+        (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+         _("'%s' does not exist in revision '%ld'"),
+         svn_path_join(target_prefix, target_relative, pool), revnum);
+    }
   else
     {
       return svn_error_createf
