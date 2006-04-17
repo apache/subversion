@@ -27,6 +27,138 @@ the most important things you can do is point out a need we hadn't
 recognized before&nbsp;&mdash;&nbsp;and then fill it.</p>
 
 <!-- ============================================================= -->
+<div class="h2" id="summer-of-code" title="summer-of-code">
+<h2>Summer of Code Tasks</h2>
+
+<p>These are the ideas that the Subversion developers have for Summer
+of Code applicants.  As the above states, don't take these as
+gospel!  We welcome discussion on creative proposals.</p>
+
+<p>However, please don't select tasks in the other sections of this
+page as your proposal, as these are either not the right size for the
+Summer of Code, or are downright not coding tasks, and therefore not
+eligible in any case.</p>
+
+<p>You should also read the <a href="hacking.html">Hacker's Guide to
+Subversion</a> before starting out on a proposal. Don't hesitate to
+ask for details or start discussing one of these tasks on the <a
+href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
+mailing list (see <a
+href="http://subversion.tigris.org/servlets/ProjectMailingListList"
+>here</a> for subscription information).</p>
+
+<div class="h3" id="ra_svn_authn" title="ra_svn_authn">
+<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1144"
+>Issue&nbsp;#1144</a>: Add full SASL authentication support to ra_svn
+(svn://)</h3>
+
+<p>Right now ra_svn only supports the ANONYMOUS, CRAM-MD5 and EXTERNAL
+authentication mechanisms.  This is enough to be useful, but
+integrating a full-featured SASL library would give users a multitude
+of other options: passwords at various levels of security, Kerberos,
+one-time passwords, etc..  The protocol is already designed to support
+SASL, so the task requires selecting a SASL library and implementing
+support for it on both the client and server side.</p> </div>
+
+<div class="h3" id="text-bases" title="text-bases">
+<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=525"
+>Issue&nbsp;#525</a>
+and <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=908"
+>Issue&nbsp;#908</a>: Optional or compressed text base storage</h3>
+
+<p>Subversion stores locally a pristine copy of the base revision
+(i.e., the unmodified checked-out revision) of each file in the
+working copy.  These pristine copies are known as "text bases".  This
+is great for doing offline diffs, and for transmitting deltas back to
+the server when committing.  But it's a bit of a space penalty on the
+client side, and it would be nice to offer users the option to turn it
+off sometimes, or failing that, to compress the text bases.</p>
+
+</div>
+
+<div class="h3" id="python-bindings" title="python-bindings">
+<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2342"
+>Issue&nbsp;#2342</a>: Improving the Python bindings</h3>
+
+<p>The Subversion Python bindings are currently incomplete in the
+functionality that they expose (for one example see the above issue).
+Furthermore, the Python bindings are currently extremely unpythonic in
+their structure, and could do with a layer of python code to make them
+so.  The bindings should first be brought up to date and all
+functionnalities completely implemented, and second be wrapped in a
+set of Python classes implementing an interface more friendly to
+python developers.</p>
+
+</div>
+
+<div class="h3" id="perl-bindings" title="perl-bindings">
+<h3>Improving the Perl bindings</h3>
+
+<p>The Perl bindings are currently built using Makefile.PL, a build
+system that differs significantly from the rest of the Subversion code
+and bindings.  Additionally, the bindings are not in sync with the
+latest C API.  The bindings need to be updated to reflect the current
+C API, and the build system needs to be rewritten to integrate with
+the system used everywhere else in Subversion.</p>
+
+</div>
+
+<div class="h3" id="svnserve-logging" title="svnserve-logging">
+<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
+>Issue&nbsp;#2409</a>: Operation and error logging for svnserve</h3>
+
+<p>Subversion 1.3.0 added support for operational logging in
+mod_dav_svn.  That is, logging what actual client-side operations are
+performed on a repository, rather than just logging the endless flow
+of WebDAV requests.  Support for this kind of logging, as well as
+error logging, needs to be added to the standalone svnserve daemon.
+This requires some work in the APR library, which would provide the
+actual logging facility.</p>
+
+</div>
+
+<div class="h3" id="nonrecursive-checkouts" title="nonrecursive-checkouts">
+<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=695"
+>Issue&nbsp;#695</a>: Fix nonrecursive checkouts</h3>
+
+<p>It is possible to do a nonrecursive checkout in Subversion, using
+the -N option to the checkout command.  However, the working copy has
+no proper knowledge of "I don't want this particular item", so many
+operations behave extremely strangely in the presence of a
+nonrecursive working copy.  The working copy should be taught about
+nonrecursive checkouts, so that it is possible to work with them on a
+day-to-day basis.</p>
+
+<p>This task is somewhat larger than the others (though still
+perfectly feasibly), and should ideally be taken on by someone with
+previous experience in Subversion development.</p>
+
+</div>
+
+
+<div class="h3" id="dav-performance-analysis" title="dav-performance-analysis">
+<h3>Performance analysis tool for mod_dav_svn</h3>
+
+<p>In order to drive future development, we would like to know just
+how much a Subversion mod_dav_svn server can be pushed, and why it
+can't be pushed any further.  The <a
+href="http://httpd.apache.org/test/flood/">Apache Flood</a> tool needs
+to be adapted to do load testing for Subversion and test profiles need
+to be written to simulate usual repository use.  Then, load testing
+needs to be done with the help of various profiling tools (oprofile,
+dtrace...) to identify the limits and bottlenecks of mod_dav_svn.</p>
+
+<p>The final output of this task should be pretty graphs, and
+proposals to improve the performance of mod_dav_svn.  Time permitting,
+some or all of these proposals would be fleshed out and
+implemented.</p>
+
+</div>
+
+
+</div>
+
+<!-- ============================================================= -->
 <div class="h2" id="information-management" title="information-management">
 <h2>Information Management Tasks</h2>
 
@@ -164,38 +296,6 @@ specific releases</a>, peruse the <a href="project_status.html">status
 page</a>.  For a longer-term view of Subversion's vision, see the <a
 href="roadmap.html">road map</a>.</p>
 
-<div class="h3" id="ra_svn_authn" title="ra_svn_authn">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1144"
->Issue&nbsp;#1144</a>: Add Cyrus/SASL authentication support to
-ra_svn (svn://)</h3>
-
-<p>Right now ra_svn only supports the ANONYMOUS and EXTERNAL
-authentication mechanisms.  This is enough to be useful (you can use
-ssh for developers and daemon mode for anonymous read access), but
-integrating Cyrus SASL would give users a multitude of other options:
-passwords at various levels of security, Kerberos, one-time passwords,
-etc..  The protocol is already designed to support SASL; this would
-just be implementation work.</p>
-
-</div>
-
-<div class="h3" id="ntlm-sspi" title="ntlm-sspi">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1844"
->Issue&nbsp;#1844</a>: Subversion clients should be able to
-authenticate using NTLM/SSPI</h3>
-
-<p>We have a subversion/apache server configured to use sspi to
-authenticate users.  Currently the svn client can't authenticate using
-ntlm/sspi and uses basic authentication to connect to the server.
-Users have to either store the credentials or enter them each time it
-is needed.  It would be very convenient/secure if the subversion
-client could use the current user's windows credentials to login to
-subversion automatically without prompting the user.
-The <a href="http://www.webdav.org/neon/">neon</a> lib has added sspi
-support in revision 457 (2005-01-27).</p>
-
-</div>
-
 <div class="h3" id="error-messages" title="error-messages">
 <h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1254"
 >Issue&nbsp;#1254</a>, etc: Improve error messages</h3>
@@ -210,26 +310,6 @@ Many instances are recorded in
 >#2295</a>, and
 <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2275"
 >#2275</a>.</p>
-
-</div>
-
-<div class="h3" id="text-bases" title="text-bases">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=525"
->Issue&nbsp;#525</a>
-and <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=908"
->Issue&nbsp;#908</a>: Optional or compressed text base storage</h3>
-
-<p>Subversion stores locally a pristine copy of the base revision
-(i.e., the unmodified checked-out revision) of each file in the
-working copy.  These pristine copies are known as "text bases".  This
-is great for doing offline diffs, and for transmitting deltas back to
-the server when committing.  But it's a bit of a space penalty on the
-client side, and it would be nice to offer users the option to turn it
-off sometimes, or failing that, to compress the text bases.  Doing
-either or both would be a lot of work, but mostly straightforward
-coding work.</p>
-
-</div>
 
 </div>
 
