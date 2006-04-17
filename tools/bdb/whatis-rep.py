@@ -1,4 +1,9 @@
 #!/usr/bin/python
+#
+# Print a description (including data, path, and revision) of the
+# specified node reps in a Subversion filesystem.  Walks as much of
+# the reps table as necessary to locate the data (e.g. does a table
+# scan).
 
 # Standard modules
 import sys, os, re, codecs
@@ -16,7 +21,7 @@ def main():
       sys.exit(1)
     rep_ids = sys.argv[2:]
   else:
-    sys.stderr.write("Usage: %s <svn-repository> <rep-id>...\n" % progname)
+    print >> sys.stderr, "Usage: %s <svn-repository> <rep-id>..." % progname
     sys.exit(1)
 
   print "%s running on repository '%s'" % (progname, dbhome)
