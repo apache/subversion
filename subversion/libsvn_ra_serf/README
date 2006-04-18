@@ -82,4 +82,8 @@ Nice to haves
   lock is broken and send-all is false.
   (See upd_change_xxx_prop in mod_dav_svn/update.c)
 
+- Fix bug in mod_dav_svn/mod_deflate that causes it to hold onto the entire
+  REPORT response until it is completed.  (This is why ra_serf doesn't request
+  gzip compression on the REPORT requests.)
+
 - Remove remaining abort()s - ;-) aka add better debug logging
