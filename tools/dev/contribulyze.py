@@ -243,8 +243,7 @@ class Contributor:
     email     = None
     name_components = name.split()
     if len(name_components) == 1:
-      if name_components[0] != name:
-        complain("Python couldn't have done that, could it?", True)
+      name = name_components[0] # Effectively, name = name.strip()
       if name[0] == '<' and name[-1] == '>':
         email = name[1:-1]
       elif name.find('@') != -1:

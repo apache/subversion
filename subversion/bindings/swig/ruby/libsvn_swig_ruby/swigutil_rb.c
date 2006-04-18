@@ -496,8 +496,8 @@ svn_swig_rb_handle_svn_error(svn_error_t *error)
 
 static VALUE inited = Qnil;
 /* C -> Ruby */
-static VALUE
-c2r_swig_type(void *value, void *ctx)
+VALUE
+svn_swig_rb_from_swig_type(void *value, void *ctx)
 {
   swig_type_info *info;
 
@@ -513,6 +513,7 @@ c2r_swig_type(void *value, void *ctx)
     rb_raise(rb_eArgError, "invalid SWIG type: %s", (char *)ctx);
   }
 }
+#define c2r_swig_type svn_swig_rb_from_swig_type
 
 static VALUE
 c2r_string(void *value, void *ctx)
@@ -994,6 +995,16 @@ typedef struct {
   VALUE baton;
 } item_baton;
 
+static void
+add_baton(VALUE editor, VALUE baton)
+{
+  if (NIL_P((rb_ivar_get(editor, rb_id_baton())))) {
+    rb_ivar_set(editor, rb_id_baton(), rb_ary_new());
+  }
+  
+  rb_ary_push(rb_ivar_get(editor, rb_id_baton()), baton);
+}
+
 static item_baton *
 make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 {
@@ -1001,9 +1012,33 @@ make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 
   newb->editor = editor;
   newb->baton = baton;
-  rb_ary_push(rb_ivar_get(editor, rb_id_baton()), baton);
+  add_baton(editor, baton);
 
   return newb;
+}
+
+static VALUE
+add_baton_if_delta_editor(VALUE target, VALUE baton)
+{
+  if (RTEST(rb_obj_is_kind_of(target, svn_swig_rb_svn_delta_editor()))) {
+    add_baton(target, baton);
+  }
+
+  return Qnil;
+}
+
+void
+svn_swig_rb_set_baton(VALUE target, VALUE baton)
+{
+  if (NIL_P(baton)) {
+    return;
+  }
+
+  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    target = rb_ary_new3(1, target);
+  }
+
+  rb_iterate(rb_each, target, add_baton_if_delta_editor, baton);
 }
 
 
@@ -1851,7 +1886,11 @@ ra_callbacks_get_wc_prop(void *baton,
                        c2r_string2(name));
     
     result = invoke_callback_handle_error(args, Qnil, &err);
-    *value = r2c_svn_string(result, NULL, pool);
+    if (NIL_P(result)) {
+      *value = NULL;
+    } else {
+      *value = r2c_svn_string(result, NULL, pool);
+    }
   }
   
   return err;
@@ -1896,12 +1935,12 @@ ra_callbacks_push_wc_prop(void *baton,
   if (!NIL_P(callbacks)) {
     VALUE args;
 
-    args = rb_ary_new3(4,
+    args = rb_ary_new3(5,
                        callbacks,
                        rb_id_push_wc_prop(),
                        c2r_string2(path),
                        c2r_string2(name),
-                       c2r_svn_string((void *)name, NULL));
+                       c2r_svn_string((void *)value, NULL));
     
     invoke_callback_handle_error(args, Qnil, &err);
   }
@@ -2129,9 +2168,11 @@ svn_swig_rb_repos_file_rev_handler(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_wc_relocation_validator(void *baton,
-                                    const char *uuid,
-                                    const char *url)
+svn_swig_rb_wc_relocation_validator2(void *baton,
+                                     const char *uuid,
+                                     const char *url,
+                                     svn_boolean_t root,
+                                     apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
@@ -2141,15 +2182,16 @@ svn_swig_rb_wc_relocation_validator(void *baton,
   if (!NIL_P(proc)) {
     VALUE args;
 
-    args = rb_ary_new3(4,
+    args = rb_ary_new3(5,
                        proc,
                        rb_id_call(),
                        c2r_string2(uuid),
-                       c2r_string2(url));
-    
+                       c2r_string2(url),
+                       root ? Qtrue : Qfalse);
+
     invoke_callback_handle_error(args, rb_pool, &err);
   }
-  
+
   return err;
 }
 
@@ -2915,4 +2957,21 @@ svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                  "void *", &handler_baton);
 
   return handler(window, handler_baton);
+}
+
+VALUE
+svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
+{
+  VALUE ops;
+  svn_txdelta_op_t *op;
+  int i;
+
+  ops = rb_ary_new2(window->num_ops);
+
+  for (i = 0; i < window->num_ops; i++) {
+    op = window->ops + i;
+    rb_ary_push(ops, c2r_swig_type((void *)op, (void *)"svn_txdelta_op_t *"));
+  }
+
+  return ops;
 }

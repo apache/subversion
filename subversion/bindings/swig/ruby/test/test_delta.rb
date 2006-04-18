@@ -20,16 +20,75 @@ class SvnDeltaTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Delta.version)
   end
 
-  def test_delta
-    source = StringIO.new("abcde")
-    target = StringIO.new("abXde")
+  def test_txdelta_window
+    s = ("a\nb\nc\nd\ne" + "\n" * 100) * 1000
+    t = ("a\nb\nX\nd\ne" + "\n" * 100) * 1000
+    source = StringIO.new(s)
+    target = StringIO.new(t)
     stream = Svn::Delta::TextDeltaStream.new(source, target)
     assert_nil(stream.md5_digest)
-    md5 = MD5.new("")
     stream.each do |window|
-      md5.update(window.new_data)
+      window.ops.each do |op|
+        op_size = op.offset + op.length
+        case op.action_code
+        when Svn::Delta::TXDELTA_SOURCE
+          assert_operator(op_size, :<=, window.sview_len)
+        when Svn::Delta::TXDELTA_NEW
+          assert_operator(op_size, :<=, window.new_data.length)
+        when Svn::Delta::TXDELTA_TARGET
+          assert_operator(op_size, :<=, window.tview_len)
+        else
+          flunk
+        end
+      end
     end
-    assert_equal(md5.hexdigest, stream.md5_digest)
+    assert_equal(MD5.new(t).hexdigest, stream.md5_digest)
+  end
+
+  def test_txdelta_window_compose
+    s = ("a\nb\nc\nd\ne" + "\n" * 100) * 1000
+    t = ("a\nb\nX\nd\ne" + "\n" * 100) * 1000
+    source = StringIO.new(s)
+    target = StringIO.new(t)
+    stream = Svn::Delta::TextDeltaStream.new(source, target)
+    composed_window = nil
+    stream.each do |window|
+      if composed_window.nil?
+        composed_window = window
+      else
+        composed_window = composed_window.compose(window)
+      end
+    end
+
+    composed_window.ops.each do |op|
+      op_size = op.offset + op.length
+      case op.action_code
+      when Svn::Delta::TXDELTA_SOURCE
+        assert_operator(op_size, :<=, composed_window.sview_len)
+      when Svn::Delta::TXDELTA_NEW
+        assert_operator(op_size, :<=, composed_window.new_data.length)
+      when Svn::Delta::TXDELTA_TARGET
+        assert_operator(op_size, :<=, composed_window.tview_len)
+      else
+        flunk
+      end
+    end
+  end
+
+  def test_txdelta_apply_instructions
+    s = ("a\nb\nc\nd\ne" + "\n" * 100) * 1000
+    t = ("a\nb\nX\nd\ne" + "\n" * 100) * 1000
+    source = StringIO.new(s)
+    target = StringIO.new(t)
+    stream = Svn::Delta::TextDeltaStream.new(source, target)
+
+    result = ""
+    offset = 0
+    stream.each do |window|
+      result << window.apply_instructions(s[offset, window.sview_len])
+      offset += window.sview_len
+    end
+    assert_equal(t, result)
   end
 
   def test_push_target

@@ -31,6 +31,14 @@
 #include "ra_serf.h"
 
 
+/* Fix for older expat 1.95.x's that do not define
+ * XML_STATUS_OK/XML_STATUS_ERROR
+ */
+#ifndef XML_STATUS_OK
+#define XML_STATUS_OK    1
+#define XML_STATUS_ERROR 0
+#endif
+
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
            void *baton,
@@ -369,6 +377,34 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
     }
 }
 
+apr_status_t
+svn_ra_serf__handle_status_only(serf_request_t *request,
+                                serf_bucket_t *response,
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_ra_serf__simple_request_context_t *ctx = baton;
+
+  status = svn_ra_serf__handler_discard_body(request, response,
+                                             &ctx->server_error, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      serf_status_line sl;
+      apr_status_t rv;
+
+      rv = serf_bucket_response_status(response, &sl);
+      
+      ctx->status = sl.code;
+      ctx->reason = sl.reason;
+
+      ctx->done = TRUE;
+    }
+
+  return status;
+}
+
 static apr_status_t
 handle_auth(svn_ra_serf__session_t *session,
             svn_ra_serf__connection_t *conn,
@@ -507,7 +543,7 @@ handle_auth(svn_ra_serf__session_t *session,
   return APR_SUCCESS;
 }
 
-static void XMLCALL
+static void
 start_xml(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -526,7 +562,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
   parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
 
-static void XMLCALL
+static void
 end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -540,7 +576,7 @@ end_xml(void *userData, const char *raw_name)
   parser->error = parser->end(parser, parser->user_data, name);
 }
 
-static void XMLCALL
+static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -733,10 +769,20 @@ handler_default(serf_request_t *request,
   else if (sl.code >= 500)
     {
       svn_ra_serf__server_error_t server_err;
+      apr_status_t status;
 
       memset(&server_err, 0, sizeof(server_err));
       status = svn_ra_serf__handler_discard_body(request, response,
                                                  &server_err, pool);
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          status = svn_ra_serf__is_conn_closing(response);
+          if (status == SERF_ERROR_CLOSING)
+            {
+              serf_connection_reset(ctx->conn->conn);
+            }
+        }
 
       if (server_err.error)
         {

@@ -100,11 +100,11 @@ def run_test(sbox, dump_file_name):
     "synchronize", dest_sbox.repo_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
+  if errput:
+    raise svntest.actions.SVNUnexpectedStderr(errput)
   if not output:
     # should be: ['Committing rev 1\n', 'Committing rev 2\n']
     raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
-  if errput:
-    raise svntest.actions.SVNUnexpectedStderr(errput)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -192,6 +192,12 @@ def dir_prop_change(sbox):
   "directory property changes"
   run_test(sbox, "dir_prop_change.dump")
 
+#----------------------------------------------------------------------
+
+def file_dir_file(sbox):
+  "files and dirs mixed together"
+  run_test(sbox, "file-dir-file.dump")
+
 
 ########################################################################
 # Run the tests
@@ -209,6 +215,7 @@ test_list = [ None,
               tag_trunk_with_file,
               tag_with_modified_file,
               dir_prop_change,
+              file_dir_file,
              ]
 
 if __name__ == '__main__':

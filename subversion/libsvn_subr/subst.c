@@ -1694,8 +1694,8 @@ svn_subst_translate_string(svn_string_t **new_value,
 
   if (encoding)
     {
-      SVN_ERR(svn_utf_cstring_to_utf8_ex(&val_utf8, value->data,
-                                         encoding, NULL, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8_ex2(&val_utf8, value->data,
+                                          encoding, pool));
     }
   else
     {

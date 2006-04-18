@@ -422,6 +422,11 @@
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
+%typemap(ruby, argout) (svn_commit_callback_t callback, void *callback_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback2_t
    svn_ra get_commit_editor2()
@@ -432,6 +437,11 @@
 {
   $1 = svn_swig_rb_commit_callback2;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+};
+
+%typemap(ruby, argout) (svn_commit_callback2_t callback, void *callback_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
 };
 
 /* -----------------------------------------------------------------------
@@ -448,6 +458,12 @@
   $1 = svn_swig_rb_cancel_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
+
+%typemap(ruby, argout) (svn_cancel_func_t cancel_func, void *cancel_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+
 
 /* -----------------------------------------------------------------------
    Callback: svn_info_receiver_t
@@ -534,6 +550,19 @@
     SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
 }
 %typemap(perl5, argout) const unsigned char digest[] {}
+
+%typemap(ruby, in) const unsigned char *digest
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else if (RSTRING($input)->len != APR_MD5_DIGESTSIZE) {
+    rb_raise(rb_eArgError, "digest size (%d) must be %d",
+             RSTRING($input)->len, APR_MD5_DIGESTSIZE);
+  } else {
+    $1 = ($1_ltype)StringValuePtr($input);
+  }
+}
+%typemap(ruby, argout) const unsigned char *digest {}
 
 /*
    svn_txdelta_send_stream() uses *digest not digest[] .

@@ -406,7 +406,7 @@ harvest_committables(apr_hash_t *committables,
           else /* ### See issue #830 */
             return svn_error_createf 
               (SVN_ERR_BAD_URL, NULL,
-               _("Commit item '%s' has copy flag but no copyfrom URL\n"),
+               _("Commit item '%s' has copy flag but no copyfrom URL"),
                svn_path_local_style(path, pool));
         }
     }
@@ -432,9 +432,9 @@ harvest_committables(apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p2(&text_mod, path,
-                                            eol_prop_changed, adm_access,
-                                            TRUE, pool));
+            SVN_ERR(svn_wc_text_modified_p(&text_mod, path,
+                                           eol_prop_changed, adm_access,
+                                           pool));
           else
             text_mod = TRUE;
         }
@@ -458,8 +458,8 @@ harvest_committables(apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p2(&text_mod, path, eol_prop_changed,
-                                        adm_access, TRUE, pool));
+        SVN_ERR(svn_wc_text_modified_p(&text_mod, path, eol_prop_changed,
+                                       adm_access, pool));
     }
 
   /* Set text/prop modification flags accordingly. */

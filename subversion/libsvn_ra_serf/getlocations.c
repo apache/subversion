@@ -1,5 +1,5 @@
 /*
- * getloc.c :  entry point for get_locations RA functions for ra_serf
+ * getlocations.c :  entry point for get_locations RA functions for ra_serf
  *
  * ====================================================================
  * Copyright (c) 2006 CollabNet.  All rights reserved.

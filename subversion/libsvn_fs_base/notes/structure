@@ -617,7 +617,7 @@ the directory path, and see if any results come back.  If they do,
 then at least one of the directory's children is locked, and thus the
 directory cannot be deleted without further investigation.
 
-Locks are epheremal things, not historied in any way.  They are
+Locks are ephemeral things, not historied in any way.  They are
 potentially created and deleted quite often.  When a lock is
 destroyed, the appropriate row is removed from the `locks' table.
 Additionally, the locked-path is removed from the `lock-tokens' table.

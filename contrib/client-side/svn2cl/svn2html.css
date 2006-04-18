@@ -1,5 +1,6 @@
 body {
   background-color: white;
+  color: black;
   margin-left: 1.5em;
   margin-right: 1.5em;
   margin-top: 1.5em;
@@ -44,6 +45,10 @@ span.changelog_author {
   background: #fff4f4;
 }
 
+.changelog_revision a {
+  color: inherit;
+}
+
 .changelog_files {
   font-size: 80%;
   font-family: monospace;
@@ -65,9 +70,10 @@ p.changelog_footer {
   font-style: italic;
   line-height: 90%;
   color: gray;
+  font-family: Helvetica, Arial, sans-serif;
 }
 
 p.changelog_footer a {
   text-decoration: none;
-  color: gray;
+  color: inherit;
 }

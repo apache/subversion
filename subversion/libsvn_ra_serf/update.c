@@ -155,6 +155,9 @@ typedef struct report_info_t
   /* the canonical url for this file. */
   const char *url;
 
+  /* lock token, if we had one to start off with. */
+  const char *lock_token;
+
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this file. */
   svn_revnum_t base_rev;
 
@@ -263,6 +266,8 @@ typedef struct {
   svn_boolean_t recurse;
   svn_boolean_t text_deltas;
 
+  apr_hash_t *lock_path_tokens;
+
   /* Our master update editor and baton. */
   const svn_delta_editor_t *update_editor;
   void *update_baton;
@@ -325,6 +330,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
+      new_info->lock_token = NULL;
 
       new_info->dir = apr_pcalloc(new_info->pool, sizeof(*new_info->dir));
       new_info->dir->pool = new_info->pool;
@@ -366,6 +372,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       new_info = apr_palloc(info_parent_pool, sizeof(*new_info));
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->file_baton = NULL;
+      new_info->lock_token = NULL;
 
       /* Point at our parent's directory state. */
       new_info->dir = info->dir;
@@ -550,6 +557,43 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
   SVN_ERR(open_dir(dir));
 
   return close_dir(dir);
+}
+
+/* This function works around a bug in mod_dav_svn in that it will not
+ * send remove-prop in the update report when a lock property disappears
+ * when send-all is false.
+ *
+ * Therefore, we'll try to look at our properties and see if there's
+ * an active lock.  If not, then we'll assume there isn't a lock
+ * anymore.
+ */
+static void
+check_lock(report_info_t *info)
+{
+  const char *lock_val;
+      
+  lock_val = svn_ra_serf__get_ver_prop(info->props, info->url,
+                                       info->target_rev,
+                                       "DAV:", "lockdiscovery");
+
+  if (lock_val)
+    {
+      char *new_lock;
+      new_lock = apr_pstrdup(info->editor_pool, lock_val);
+      apr_collapse_spaces(new_lock, new_lock);
+      lock_val = new_lock;
+    }
+
+  if (!lock_val || lock_val[0] == '\0')
+    {
+      svn_string_t *str;
+
+      str = svn_string_ncreate("", 1, info->editor_pool);
+
+      svn_ra_serf__set_ver_prop(info->dir->removed_props, info->base_name,
+                                info->base_rev, "DAV:", "lock-token",
+                                str, info->dir->pool);
+    }
 }
 
 static apr_status_t
@@ -800,6 +844,9 @@ handle_fetch(serf_request_t *request,
               return error_fetch(request, fetch_ctx, err);
             }
 
+          if (info->lock_token)
+            check_lock(info);
+
           /* set all of the properties we received */
           svn_ra_serf__walk_all_props(info->props,
                                       info->base_name,
@@ -972,6 +1019,9 @@ handle_propchange_only(report_info_t *info)
                                                     &info->textdelta,
                                                     &info->textdelta_baton));
     }
+
+  if (info->lock_token)
+    check_lock(info);
 
   /* set all of the properties we received */
   svn_ra_serf__walk_all_props(info->props,
@@ -1336,16 +1386,21 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                strcmp(name.name, "remove-prop") == 0)
         {
           const char *full_prop_name;
-          svn_ra_serf__dav_props_t new_prop_name;
-
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
-          new_prop_name = svn_ra_serf__expand_ns(parser->state->ns_list,
-                                                 full_prop_name);
+          const char *colon;
 
           info = push_state(parser, ctx, PROP);
-          info->prop_ns = new_prop_name.namespace;
-          info->prop_name = apr_pstrdup(parser->state->pool,
-                                        new_prop_name.name);
+
+          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          colon = strchr(full_prop_name, ':');
+
+          if (colon)
+            colon++;
+          else
+            colon = full_prop_name;
+
+          info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
+                                         colon - full_prop_name);
+          info->prop_name = apr_pstrdup(parser->state->pool, colon);
           info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1401,16 +1456,21 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                strcmp(name.name, "remove-prop") == 0)
         {
           const char *full_prop_name;
-          svn_ra_serf__dav_props_t new_prop_name;
-
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
-          new_prop_name = svn_ra_serf__expand_ns(parser->state->ns_list,
-                                                 full_prop_name);
+          const char *colon;
 
           info = push_state(parser, ctx, PROP);
-          info->prop_ns = new_prop_name.namespace;
-          info->prop_name = apr_pstrdup(parser->state->pool,
-                                        new_prop_name.name);
+
+          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          colon = strchr(full_prop_name, ':');
+
+          if (colon)
+            colon++;
+          else
+            colon = full_prop_name;
+
+          info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
+                                         colon - full_prop_name);
+          info->prop_name = apr_pstrdup(parser->state->pool, colon);
           info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
           info->prop_val = NULL;
           info->prop_val_len = 0;
@@ -1520,6 +1580,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           svn_path_add_component(info->name_buf, info->base_name);
           info->name = info->name_buf->data;
         }
+      
+      info->lock_token = apr_hash_get(ctx->lock_path_tokens, info->name,
+                                      APR_HASH_KEY_STRING);
+      
+      if (info->lock_token && info->fetch_props == FALSE)
+        info->fetch_props = TRUE;
 
       /* If we have a WC, we can dive all the way into the WC to get the
        * previous URL so we can do an differential GET with the base URL.
@@ -1613,6 +1679,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       apr_hash_t *props;
       const char *set_val;
       svn_string_t *set_val_str;
+      apr_pool_t *pool;
 
       info = parser->state->private;
       dir = info->dir;
@@ -1655,10 +1722,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (strcmp(name.name, "remove-prop") != 0)
         {
           props = info->props;
+          pool = info->pool;
         }
       else
         {
           props = dir->removed_props;
+          pool = dir->pool;
           info->prop_val = "";
           info->prop_val_len = 1;
         }
@@ -1685,12 +1754,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
         }
 
-      set_val = apr_pmemdup(info->pool, info->prop_val, info->prop_val_len);
-      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, info->pool);
+      set_val = apr_pmemdup(pool, info->prop_val, info->prop_val_len);
+      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, pool);
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
-                                ns->namespace, ns->url, set_val_str,
-                                info->pool);
+                                ns->namespace, ns->url, set_val_str, pool);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if ((state == IGNORE_PROP_NAME || state == NEED_PROP_NAME))
@@ -1746,6 +1814,14 @@ set_path(void *report_baton,
 
   if (lock_token)
     {
+      const char *path_copy, *token_copy;
+
+      path_copy = apr_pstrdup(report->pool, path);
+      token_copy = apr_pstrdup(report->pool, lock_token);
+
+      apr_hash_set(report->lock_path_tokens, path_copy, APR_HASH_KEY_STRING,
+                   token_copy);
+
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
                                           sizeof(" lock-token=\"")-1,
                                           report->sess->bkt_alloc);
@@ -1843,6 +1919,14 @@ link_path(void *report_baton,
 
   if (lock_token)
     {
+      const char *path_copy, *token_copy;
+
+      path_copy = apr_pstrdup(report->pool, path);
+      token_copy = apr_pstrdup(report->pool, lock_token);
+
+      apr_hash_set(report->lock_path_tokens, path_copy, APR_HASH_KEY_STRING,
+                   token_copy);
+
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
                                           sizeof(" lock-token=\"")-1,
                                           report->sess->bkt_alloc);
@@ -2171,6 +2255,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->recurse = recurse;
   report->ignore_ancestry = ignore_ancestry;
   report->text_deltas = text_deltas;
+  report->lock_path_tokens = apr_hash_make(pool);
 
   if (src_path)
     {

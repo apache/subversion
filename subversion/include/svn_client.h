@@ -1626,7 +1626,7 @@ svn_client_merge2(const char *source1,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/** Similar to svn_wc_merge2(), but with @a merge_options set to @c NULL.
+/** Similar to svn_client_merge2(), but with @a merge_options set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
@@ -1667,7 +1667,8 @@ svn_client_merge_peg2(const char *source,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 
-/** Similar to svn_wc_merge_peg2(), but with @a merge_options set to @c NULL.
+/** Similar to svn_client_merge_peg2(), but with @a merge_options set to
+ * @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *

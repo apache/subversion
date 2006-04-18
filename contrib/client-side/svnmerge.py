@@ -765,8 +765,13 @@ def get_default_head(branch_dir, branch_props):
         del props[directory]
 
     if len(props) > 1:
-        error('multiple heads found. '
-              'Explicit head argument (-S/--head) required.')
+        err_msg = "multiple heads found. "
+        err_msg += "Explicit head argument (-S/--head) required.\n"
+        err_msg += "The head values available are:"
+        repo_root = get_repo_root(branch_dir)
+        for prop in props:
+          err_msg += "\n  " + repo_root + prop
+        error(err_msg)
 
     return props.keys()[0]
 
@@ -942,6 +947,11 @@ def action_init(branch_dir, branch_props):
            (branch_dir, revs, opts["head-url"]))
 
     revs = str(revs)
+    # If the head-path already has an entry in the svnmerge-integrated
+    # property, simply error out.
+    if not opts["force"] and branch_props.has_key(opts["head-path"]):
+        error('%s has already been initialized at %s\n'
+              'Use --force to re-initialize' % (opts["head-path"], branch_dir))
     branch_props[opts["head-path"]] = revs
 
     # Set property
@@ -995,25 +1005,27 @@ def action_integrated(branch_dir, branch_props):
 
     # Lookup the oldest revision on the branch path.
     ### TODO: Refactor this to use a modified RevisionLog class.
-    oldest_branch_rev = -1
+    oldest_src_rev = -1
     lines = None
+    src_url = opts["head-url"]
+    cmd = "log -r1:HEAD --stop-on-copy -q " + src_url
     try:
-        lines = launchsvn("log -r 1:HEAD --limit=1 -q " + branch_dir)
+        lines = launchsvn(cmd + " --limit=1")
     except LaunchError:
         # Assume that --limit isn't supported by the installed 'svn'.
-        lines = launchsvn("log -r 1:HEAD -q " + branch_dir)
-    report('determining oldest branch revision for "%s"' % branch_dir)
+        lines = launchsvn(cmd)
+    report('determining oldest source URL revision for "%s"' % src_url)
     if lines and len(lines) > 1:
         i = lines[1].find(" ")
         if i != -1:
-            oldest_branch_rev = int(lines[1][1:i])
-    if oldest_branch_rev == -1:
-        error("unable to determine oldest branch revision")
+            oldest_src_rev = int(lines[1][1:i])
+    if oldest_src_rev == -1:
+        error("unable to determine oldest source revision")
 
     # Subtract any revisions which pre-date the branch.
-    report("subtracting revisions which pre-date the branch (%d)" %
-           oldest_branch_rev)
-    revs = revs - range(1, oldest_branch_rev)
+    report("subtracting revisions which pre-date the source URL (%d)" %
+           oldest_src_rev)
+    revs = revs - RevisionSet(range(1, oldest_src_rev))
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
@@ -1650,7 +1662,7 @@ def main(args):
             head = args[0]
         elif len(args) > 1:
             optsparser.error("wrong number of parameters", cmd)
-    elif str(cmd) in ["avail", "integrated", "merge", "block", "unblock"]:
+    elif str(cmd) in command_table.keys():
         if len(args) == 1:
             branch_dir = args[0]
         elif len(args) > 1:

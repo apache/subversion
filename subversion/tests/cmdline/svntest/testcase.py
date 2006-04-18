@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os, sys, string
+import os, sys, string, types
 
 import svntest
 
@@ -77,7 +77,7 @@ class FunctionTestCase(TestCase):
   def __init__(self, func):
     TestCase.__init__(self)
     self.func = func
-    assert type(self.func) is type(lambda x: 0)
+    assert type(self.func) is types.FunctionType
 
   def get_description(self):
     """Use the function's docstring as a description."""
@@ -120,14 +120,14 @@ class XFail(TestCase):
 
   def convert_result(self, result):
     # Conditions are reversed here: a failure is expected, therefore
-    # it isn't an error; a pass is an error.
-    return not self.test_case.convert_result(result)
+    # it isn't an error; a pass is an error; but a skip remains a skip.
+    return {0:1, 1:0, 2:2}[self.test_case.convert_result(result)]
 
 
 class Skip(TestCase):
-  "A test that will be skipped when a condition is true."
+  """A test that will be skipped if condition COND is true."""
 
-  def __init__(self, test_case, cond):
+  def __init__(self, test_case, cond=1):
     TestCase.__init__(self)
     self.test_case = create_test_case(test_case)
     self.cond = cond
@@ -135,9 +135,14 @@ class Skip(TestCase):
       self._list_mode_text = 'SKIP'
     # Delegate most methods to self.test_case:
     self.get_description = self.test_case.get_description
-    self.need_sandbox = self.test_case.need_sandbox
     self.get_sandbox_name = self.test_case.get_sandbox_name
     self.convert_result = self.test_case.convert_result
+
+  def need_sandbox(self):
+    if self.cond:
+      return 0
+    else:
+      return self.test_case.need_sandbox()
 
   def run(self, args):
     if self.cond:

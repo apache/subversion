@@ -1013,12 +1013,12 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
           && ! had_cr)
         {
           const char *out_str;
-          SVN_ERR(svn_utf_cstring_from_utf8_ex
+          SVN_ERR(svn_utf_cstring_from_utf8_ex2
                   (&out_str,
                    apr_psprintf(baton->pool,
                                 _("%s\\ No newline at end of file%s"),
                                 APR_EOL_STR, APR_EOL_STR),
-                   baton->header_encoding, NULL, baton->pool));
+                   baton->header_encoding, baton->pool));
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }
 
@@ -1230,12 +1230,12 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
       baton.path[1] = modified_path;
       baton.hunk = svn_stringbuf_create("", pool);
 
-      SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.context_str, " ",
-                                           header_encoding, NULL, pool));
-      SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.delete_str, "-",
-                                           header_encoding, NULL, pool));
-      SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.insert_str, "+",
-                                           header_encoding, NULL, pool));
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.context_str, " ",
+                                            header_encoding, pool));
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.delete_str, "-",
+                                            header_encoding, pool));
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.insert_str, "+",
+                                            header_encoding, pool));
       
       for (i = 0; i < 2; i++)
         {

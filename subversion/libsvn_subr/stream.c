@@ -151,8 +151,8 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   message = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
 
-  SVN_ERR(svn_utf_cstring_from_utf8_ex(&translated, message, encoding,
-                                       NULL, pool));
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated, message, encoding,
+                                        pool));
   
   len = strlen(translated);
 

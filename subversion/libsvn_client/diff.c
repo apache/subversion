@@ -73,8 +73,8 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
   buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap); 
   va_end(ap);
 
-  SVN_ERR(svn_utf_cstring_from_utf8_ex(&buf_apr, buf, encoding, NULL,
-                                       apr_file_pool_get(fptr)));
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&buf_apr, buf, encoding,
+                                        apr_file_pool_get(fptr)));
 
   return svn_io_file_write_full(fptr, buf_apr, strlen(buf_apr), 
                                 NULL, apr_file_pool_get(fptr));
@@ -822,8 +822,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
   if (older)
     {
-      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, mine, FALSE,
-                                      adm_access, TRUE, subpool));
+      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
+                                     adm_access, subpool));
 
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
