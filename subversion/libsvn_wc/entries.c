@@ -134,7 +134,7 @@ read_str(const char **result,
   if (*buf == end)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                             _("Unexpected end of entry"));
-  if (**buf == '|')
+  if (**buf == '\n')
     {
       *result = NULL;
       (*buf)++;
@@ -142,7 +142,7 @@ read_str(const char **result,
     }
 
   start = *buf;
-  while (*buf != end && **buf != '|')
+  while (*buf != end && **buf != '\n')
     {
       if (**buf == '\\')
         {
@@ -189,14 +189,14 @@ read_val(const char **result,
   if (*buf == end)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                             _("Unexpected end of entry"));
-  if (**buf == '|')
+  if (**buf == '\n')
     {
       (*buf)++;
       *result = NULL;
       return SVN_NO_ERROR;
     }
 
-  while (*buf != end && **buf != '|')
+  while (*buf != end && **buf != '\n')
     (*buf)++;
   if (*buf == end)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -285,7 +285,7 @@ read_entry(svn_wc_entry_t **new_entry,
   svn_wc_entry_t *entry = alloc_entry(pool);
   const char *name;
   
-#define MAYBE_DONE if (**buf == '\n') goto done
+#define MAYBE_DONE if (**buf == '\f') goto done
 
   /* Find the name and set up the entry under that name. */
   SVN_ERR(read_str(&name, buf, end, pool));
@@ -854,7 +854,7 @@ struct entries_accumulator
   apr_pool_t *scratch_pool;
 };
 
-                       
+
 /* Called whenever we find an <open> tag of some kind. */
 static void
 handle_start_tag(void *userData, const char *tagname, const char **atts)
@@ -1050,7 +1050,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries = apr_hash_make(svn_wc_adm_access_pool(adm_access));
   char *curp, *endp;
   svn_wc_entry_t *entry;
-  int lineno;
+  int entryno;
 
   /* Open the entries file. */
   SVN_ERR(svn_wc__open_adm_file(&infile, path,
@@ -1077,7 +1077,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                    "of '%s'"),
                                  svn_path_local_style(path, pool));
       ++curp;
-      lineno = 2;
+      entryno = 1;
 
       while (curp != endp)
         {
@@ -1087,19 +1087,22 @@ read_entries(svn_wc_adm_access_t *adm_access,
             {
               /* We allow extra fields at the end of the line, for
                  extensibility. */
-              curp = memchr(curp, '\n', endp - curp);
+              curp = memchr(curp, '\f', endp - curp);
               if (! curp)
                 err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                                       _("Missing newline at end of entry"));
+                                       _("Missing entry terminator"));
+              if (! err && (curp == endp || *(++curp) != '\n'))
+                err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                       _("Invalid entry terminator"));
             }
           if (err)
             return svn_error_createf(err->apr_err, err,
-                                     _("Error on line %d in entries file for "
+                                     _("Error at entry %d in entries file for "
                                        "'%s':"),
-                                     lineno, svn_path_local_style(path, pool));
+                                     entryno, svn_path_local_style(path, pool));
       
           ++curp;
-          ++lineno;
+          ++entryno;
           if ((entry->deleted || entry->absent)
               && (entry->schedule != svn_wc_schedule_add)
               && (entry->schedule != svn_wc_schedule_replace)
@@ -1309,7 +1312,7 @@ write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
       while (*str)
         {
           /* Escape control characters and | and \. */
-          if (svn_ctype_iscntrl(*str) || *str == '|' || *str == '\\')
+          if (svn_ctype_iscntrl(*str) || *str == '\\')
             {
               svn_stringbuf_appendbytes(buf, start, str - start);
               svn_stringbuf_appendcstr(buf,
@@ -1320,7 +1323,7 @@ write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
         }
       svn_stringbuf_appendbytes(buf, start, str - start);
     }
-  svn_stringbuf_appendbytes(buf, "|", 1);
+  svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
 /* Append the string VAL of length LEN to BUF, without escaping any
@@ -1330,7 +1333,7 @@ write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
 {
   if (val)
     svn_stringbuf_appendbytes(buf, val, len);
-  svn_stringbuf_appendbytes(buf, "|", 1);
+  svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
 /* If VAL is true, append FIELD_NAME followede by a terminator to BUF.
@@ -1348,7 +1351,7 @@ write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(revnum))
     svn_stringbuf_appendcstr(buf, apr_ltoa(pool, revnum));
-  svn_stringbuf_appendbytes(buf, "|", 1);
+  svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
 /* Append the timestamp VAL to BUF (or the empty string if VAL is 0),
@@ -1359,7 +1362,7 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
 {
   if (val)
     svn_stringbuf_appendcstr(buf, svn_time_to_cstring(val, pool));
-  svn_stringbuf_appendbytes(buf, "|", 1);
+  svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
 /* Append a single entry ENTRY to the string OUTPUT, using the
@@ -1527,10 +1530,10 @@ write_entry(svn_stringbuf_t *buf,
   write_time(buf, entry->lock_creation_date, pool);
   
   /* Remove redundant separators at the end of the entry. */
-  while (buf->len > 1 && buf->data[buf->len - 2] == '|')
+  while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
 
-  svn_stringbuf_appendbytes(buf, "\n", 1);
+  svn_stringbuf_appendbytes(buf, "\f\n", 2);
 }
 
 /* Append a single entry ENTRY as an XML element to the string OUTPUT,

@@ -325,30 +325,33 @@ The entries file
 This section describes the entries file as of format 7 and beyond.  See below
 for the older XML-based format.
 
-The entries file is a series of lines, separated by line feed (0x0a)
-characters.  All whitespace is significant.  The character encoding of
-the file is UTF-8 with no BOM (byte order mark) allowed at the beginning.
+The entries file is a text file.  The character encoding of the file
+is UTF-8 with no BOM (byte order mark) allowed at the beginning.  All
+whitespace is significant.
 
-The first line contains the format version for this working copy
-directory.  No whitespace is allowed before or after the number
-(except for the terminating newline).  The changes in each format are
-listed in wc.h.
+The file starts with a decimal number which is the format version of
+this working copy directory, followed by a line feed (0x0a) character.
+No whitespace (except for the terminating line feed) is allowed before
+or after the number.  The changes in each format are listed in wc.h.
 
-The rest of the file contains one line for each directory entry.  Each
-line contains a number of ordered fields as described below.  The
-fields are terminated by a vertical line ("|") character.  Empty
+The rest of the file contains one record for each directory entry.
+Each record contains a number of ordered fields as described below.
+The fields are terminated by a line feed (0x0a) character.  Empty
 fields are represented by just the terminator.  Empty fields that are
-only followed by empty fields may be omited from the line.
+only followed by empty fields may be omited from the record.  Records
+are terminated by a form feed (0x0c) and a cosmetic line feed (0x0a).
 
-The bytes representing the characters "|", "\" and ASCII control
-characters (0x01 - 0x1f and 0x7f) must be escaped when they occur in a
-field.  The escaping uses the syntax "\xHH", where "HH" are the two
+The bytes representing the characters "\" and ASCII control characters
+(0x01 - 0x1f and 0x7f) must be escaped when they occur in a field.
+The escaping uses the syntax "\xHH", where "HH" are the two
 hexadecimal digits (either upper- or lowercase) representing the
-escaped byte.  No other bytes may be escaped.  NUL bytes are not allowed.
+escaped byte.  No other bytes may be escaped.  NUL bytes are not
+allowed.
 
 A field may be boolean, in which case it can have either a value equal
-to the field name, meaning true or no value meaning false.  Timestamps
-are stored in the format produced by svn_time_to_cstring().
+to the field name, meaning true, or no value, meaning false.  Timestamps
+are stored in the format produced by svn_time_to_cstring().  Revision
+numbers are stored as decimal numbers.
 
 The first entry has an empty name field and is the entry for this directory,
 that is, the directory containing this administrative area.  This is
@@ -503,20 +506,20 @@ elements, one for each directory entry.  All XML elements in the
 entries file are in the XML namespace "svn:".
 
 All `entry' elements are empty, and can have the attributes
-corresponding to fields of the line based format.
+corresponding to fields of the non-XML format.
 
 An attribute may be boolean, in which case it can have one of the
 values `true' or `false'.  Boolean attributes default to `false' if
-not present.  Timestamps are stored in the same format as in the line
-based format.  Inheritence of values from the this_dir entry works in
-the same way as in the line based format.
+not present.  Timestamps are stored in the same format as in the
+non-XML format.  Inheritence of values from the this_dir entry works
+in the same way as in the non-XML format.
 
 Fields added in format 7 and later are not allowed in the XML-based
 format.  The attributes `has-props', `has-prop-mods', `cachable-props', 
 and `present-props' are only valid in format 6.
 
 In addition, the following attribute is allowed, which has no
-corresponding field in the line based format:
+corresponding field in the non-XML format:
 
 `prop-time':
    Obsolete.  In format 5 and earlier this was similar to `text-time',
