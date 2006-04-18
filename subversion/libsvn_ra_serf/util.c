@@ -600,7 +600,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   apr_size_t len;
   serf_status_line sl;
   apr_status_t status;
-  enum XML_Status xml_status;
+  int xml_status;
   svn_ra_serf__xml_parser_t *ctx = baton;
 
   serf_bucket_response_status(response, &sl);

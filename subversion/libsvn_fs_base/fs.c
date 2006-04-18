@@ -969,7 +969,7 @@ copy_db_file_safely(const char *src_dir,
     
       /* Write 'em. */
       if ((write_err = svn_io_file_write_full(d, buf, bytes_this_time, NULL,
-                                              pool)));
+                                              pool)))
         {
           svn_error_clear(svn_io_file_close(s, pool));
           svn_error_clear(svn_io_file_close(d, pool));

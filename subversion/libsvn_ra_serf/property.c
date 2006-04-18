@@ -204,8 +204,8 @@ svn_ra_serf__set_prop(apr_hash_t *props,
                       const char *ns, const char *name,
                       const svn_string_t *val, apr_pool_t *pool)
 {
-  return svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
-                                   val, pool);
+  svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
+                            val, pool);
 }
 
 static prop_info_t *
