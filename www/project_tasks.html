@@ -129,18 +129,24 @@ previous experience in Subversion development.</p>
 <h3>Performance analysis tool for mod_dav_svn</h3>
 
 <p>In order to drive future development, we would like to know just
-how much a Subversion mod_dav_svn server can be pushed, and why it
-can't be pushed any further.  The <a
-href="http://httpd.apache.org/test/flood/">Apache Flood</a> tool needs
-to be adapted to do load testing for Subversion and test profiles need
-to be written to simulate usual repository use.  Then, load testing
-needs to be done with the help of various profiling tools (oprofile,
-dtrace...) to identify the limits and bottlenecks of mod_dav_svn.</p>
+how much a Subversion mod_dav_svn server can be pushed, and what
+capacity administrators can expect when deploying their Subversion servers.
+One option is to use the <a href="http://httpd.apache.org/test/flood/"
+>Apache Flood</a> load tester.  Test profiles will need to be written to
+simulate usual repository use across multiple users.  Then, load testing
+needs to be conducted with the help of various profiling tools
+(<a href="http://oprofile.sourceforge.net/">oprofile</a>,
+<a href="http://www.opensolaris.org/os/community/dtrace/">dtrace</a>...)
+to identify the current limits and bottlenecks of Subversion.  Bottlenecks
+may be in <a href="http://httpd.apache.org/">Apache HTTP Server</a>,
+<a href="http://apr.apache.org/">APR</a>, mod_dav_svn (Subversion's Apache
+module), our repository backends (FSFS or BDB), or even the underlying
+operating system.</p>
 
-<p>The final output of this task should be pretty graphs, and
-proposals to improve the performance of mod_dav_svn.  Time permitting,
-some or all of these proposals would be fleshed out and
-implemented.</p>
+<p>The final output of this task should be pretty graphs, explanations
+behind the graphs, tuning recommendations, and proposals to improve the
+performance of Subversion.  Time permitting, some or all of these proposals
+would be fleshed out and implemented.</p>
 
 </div>
 
