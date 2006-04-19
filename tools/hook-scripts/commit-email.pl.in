@@ -38,12 +38,17 @@ BEGIN {
 
 use strict;
 use Carp;
+my ($sendmail, $smtp_server);
 
 ######################################################################
 # Configuration section.
 
-# Sendmail path.
-my $sendmail = "/usr/sbin/sendmail";
+# Sendmail path, or SMTP server address.
+# You should define exactly one of these two configuration variables,
+# leaving the other commented out, to select which method of sending
+# email should be used.
+#$sendmail = "/usr/sbin/sendmail";
+$smtp_server = "127.0.0.1";
 
 # Svnlook path.
 my $svnlook = "@SVN_BINDIR@/svnlook";
@@ -62,12 +67,14 @@ my $no_diff_added = 0;
 # End of Configuration section.
 ######################################################################
 
-# Check that the required programs exist to ensure that the
-# administrator has set up the script properly.
+# Check that the required programs exist, and the email sending method
+# configuration is sane, to ensure that the administrator has set up
+# the script properly.
 {
   my $ok = 1;
   foreach my $program ($sendmail, $svnlook)
     {
+      next if not defined $program;
       if (-e $program)
         {
           unless (-x $program)
@@ -83,9 +90,16 @@ my $no_diff_added = 0;
           $ok = 0;
         }
     }
+  if (not (defined $sendmail xor defined $smtp_server))
+    {
+      warn "$0: exactly one of \$sendmail or \$smtp_server must be ",
+           "set, edit $0.\n";
+      $ok = 0;
+    }
   exit 1 unless $ok;
 }
 
+require Net::SMTP if defined $smtp_server;
 
 ######################################################################
 # Initial setup/command-line handling.
@@ -516,6 +530,11 @@ foreach my $project (@project_settings_list)
       {
         $mail_from = "$mail_from\@$hostname";
       }
+    elsif (defined $smtp_server)
+      {
+        die "$0: use of either `-h' or `--from' is mandatory when ",
+            "sending email using direct SMTP.\n";
+      }
 
     my @head;
     push(@head, "To: $to\n");
@@ -564,7 +583,7 @@ foreach my $project (@project_settings_list)
         @difflines = map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines;
       }
 
-    if ($sendmail =~ /\w/ and @email_addresses)
+    if (defined $sendmail and @email_addresses)
       {
         # Open a pipe to sendmail.
         my $command = "$sendmail -f'$mail_from' $userlist";
@@ -579,6 +598,20 @@ foreach my $project (@project_settings_list)
           {
             warn "$0: cannot open `| $command' for writing: $!\n";
           }
+      }
+    elsif (defined $smtp_server and @email_addresses)
+      {
+        my $smtp = Net::SMTP->new($smtp_server);
+        handle_smtp_error($smtp, $smtp->mail($mail_from));
+        handle_smtp_error($smtp, $smtp->recipient(@email_addresses));
+        handle_smtp_error($smtp, $smtp->data());
+        handle_smtp_error($smtp, $smtp->datasend(@head, @body));
+        if ($diff_wanted)
+          {
+            handle_smtp_error($smtp, $smtp->datasend(@difflines));
+          }
+        handle_smtp_error($smtp, $smtp->dataend());
+        handle_smtp_error($smtp, $smtp->quit());
       }
 
     # Dump the output to logfile (if its name is not empty).
@@ -599,6 +632,15 @@ foreach my $project (@project_settings_list)
   }
 
 exit 0;
+
+sub handle_smtp_error
+{
+  my ($smtp, $retval) = @_;
+  if (not $retval)
+    {
+      die "$0: SMTP Error: " . $smtp->message() . "\n";
+    }
+}
 
 sub usage
 {
