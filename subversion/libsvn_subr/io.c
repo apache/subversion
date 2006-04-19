@@ -3151,6 +3151,9 @@ svn_io_read_version_file(int *version,
   len = sizeof(buf);
   SVN_ERR(svn_io_file_read(format_file, buf, &len, pool));
 
+  /* Close the file. */
+  SVN_ERR(svn_io_file_close(format_file, pool));
+
   /* If there was no data in PATH, return an error. */
   if (len == 0)
     return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
@@ -3177,9 +3180,6 @@ svn_io_read_version_file(int *version,
 
   /* Convert to integer. */
   *version = atoi(buf);
-
-  /* And finally, close the file. */
-  SVN_ERR(svn_io_file_close(format_file, pool));
 
   return SVN_NO_ERROR;
 }

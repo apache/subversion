@@ -170,43 +170,25 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
      svn_wc__check_format. */
   if (adm_access->wc_format != SVN_WC__VERSION)
     {
-      const char *path = svn_wc__adm_path(adm_access->path, FALSE, pool,
-                                          SVN_WC__ADM_FORMAT, NULL);
-      svn_boolean_t convert_to_propcaching =
-        (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION);
+      svn_boolean_t cleanup_required;
+      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
-      /* Convert an old WC that doesn't use propcaching. */
-      if (convert_to_propcaching)
-        {
-          svn_boolean_t cleanup_required;
-          svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-          const char *tmp_path;
+      /* Don't try to mess with the WC if there are old log files left. */
+      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
+                                              adm_access, pool));
+      if (cleanup_required)
+        return SVN_NO_ERROR;
 
-          /* Don't try to mess with the WC if there are old log files left. */
-          SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                                  adm_access, pool));
-          if (cleanup_required)
-            return SVN_NO_ERROR;
+      /* First, loggily upgrade the format file. */
+      SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, adm_access,
+                                           SVN_WC__VERSION, pool));
 
-          /* First, loggily upgrade the format file. */
-          SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_path, path, ".tmp",
-                                           svn_io_file_del_none, pool));
-          SVN_ERR(svn_io_write_version_file(tmp_path, SVN_WC__VERSION,
-                                            pool));
-          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
-                                     svn_path_is_child(adm_access->path,
-                                                       tmp_path, pool),
-                                     svn_path_is_child(adm_access->path,
-                                                       path, pool),
-                                     FALSE, pool));
-          SVN_ERR(introduce_propcaching(log_accum, adm_access, pool));
-          SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-          SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-        }
-      else
-        SVN_ERR(svn_io_write_version_file(path, SVN_WC__VERSION, pool));
+      /* Possibly convert an old WC that doesn't use propcaching. */
+      if (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
+        SVN_ERR(introduce_propcaching(log_accum, adm_access, pool));
 
-      adm_access->wc_format = SVN_WC__VERSION;
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -488,11 +470,25 @@ do_open(svn_wc_adm_access_t **adm_access,
     {
       /* By reading the format file we check both that PATH is a directory
          and that it is a working copy. */
+      /* ### We will read the entries file later.  Maybe read the whole
+         file here instead to avoid reopening it. */
       err = svn_io_read_version_file(&wc_format,
                                      svn_wc__adm_path(path, FALSE, pool,
-                                                      SVN_WC__ADM_FORMAT,
+                                                      SVN_WC__ADM_ENTRIES,
                                                       NULL),
                                      pool);
+      /* If the entries file doesn't start with a version number, we're dealing
+         with a pre-format 7 working copy, so we need to get the format from
+         the format file instead. */
+      if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
+        {
+          svn_error_clear(err);
+          err = svn_io_read_version_file(&wc_format,
+                                         svn_wc__adm_path(path, FALSE, pool,
+                                                          SVN_WC__ADM_FORMAT,
+                                                          NULL),
+                                         pool);
+        }
       if (err)
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
@@ -1439,6 +1435,13 @@ int
 svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access)
 {
   return adm_access->wc_format;
+}
+
+void
+svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
+                          int format)
+{
+  adm_access->wc_format = format;
 }
 
 

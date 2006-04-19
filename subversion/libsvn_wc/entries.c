@@ -28,6 +28,7 @@
 #include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_ctype.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -51,116 +52,7 @@
 /*--------------------------------------------------------------- */
 
 
-/*** Initialization of the entries file. ***/
-
-svn_error_t *
-svn_wc__entries_init(const char *path,
-                     const char *uuid,
-                     const char *url,
-                     const char *repos,
-                     svn_revnum_t initial_rev,
-                     apr_pool_t *pool)
-{
-  apr_file_t *f = NULL;
-  svn_stringbuf_t *accum = NULL;
-  apr_hash_t *atts = apr_hash_make(pool);
-  char *initial_revstr =  apr_psprintf(pool, "%ld",
-                                       initial_rev);
-
-  /* Sanity check. */
-  assert(! repos || svn_path_is_ancestor(repos, url));
-
-  /* Create the entries file, which must not exist prior to this. */
-  SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,
-                                (APR_WRITE | APR_CREATE | APR_EXCL), pool));
-
-  /* Make the XML standard header, to satisfy bureacracy. */
-  svn_xml_make_header(&accum, pool);
-
-  /* Open the file's top-level form. */
-  svn_xml_make_open_tag(&accum,
-                        pool,
-                        svn_xml_normal,
-                        SVN_WC__ENTRIES_TOPLEVEL,
-                        "xmlns",
-                        SVN_XML_NAMESPACE,
-                        NULL);
-
-  /* Add an entry for the dir itself.  The directory has no name.  It
-     might have a UUID, but otherwise only the revision and default
-     ancestry are present as XML attributes, and possibly an
-     'incomplete' flag if the revnum is > 0. */
-
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KIND, 
-               sizeof(SVN_WC__ENTRY_ATTR_KIND) - 1,
-               SVN_WC__ENTRIES_ATTR_DIR_STR);
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_URL,
-               sizeof(SVN_WC__ENTRY_ATTR_URL) - 1,
-               url);
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REVISION,
-               sizeof(SVN_WC__ENTRY_ATTR_REVISION) - 1,
-               initial_revstr);
-
-  if (uuid)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_UUID,
-                 sizeof(SVN_WC__ENTRY_ATTR_UUID) - 1,
-                 uuid);
-    
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_REPOS,
-               sizeof(SVN_WC__ENTRY_ATTR_REPOS) - 1, repos);
-
-  if (initial_rev > 0)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE,
-                 sizeof(SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
-                 "true");
-  
-  /* Add cachable-props here so that it can be inherited by other entries.
-   */
-  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CACHABLE_PROPS,
-               APR_HASH_KEY_STRING, SVN_WC__CACHABLE_PROPS);
-
-  svn_xml_make_open_tag_hash(&accum, pool, svn_xml_self_closing,
-                             SVN_WC__ENTRIES_ENTRY, atts);
-
-  /* Close the top-level form. */
-  svn_xml_make_close_tag(&accum,
-                         pool,
-                         SVN_WC__ENTRIES_TOPLEVEL);
-
-  SVN_ERR_W(svn_io_file_write_full(f, accum->data, accum->len, NULL, pool),
-            apr_psprintf(pool, 
-                         _("Error writing entries file for '%s'"),
-                         svn_path_local_style(path, pool)));
-
-  /* Now we have a `entries' file with exactly one entry, an entry
-     for this dir.  Close the file and sync it up. */
-  SVN_ERR(svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/*--------------------------------------------------------------- */
-
 /*** reading and writing the entries file ***/
-
-struct entries_accumulator
-{
-  /* Keys are entry names, vals are (struct svn_wc_entry_t *)'s. */
-  apr_hash_t *entries; 
-
-  /* The parser that's parsing it, for signal_expat_bailout(). */
-  svn_xml_parser_t *parser;
-
-  /* Should we include 'deleted' entries in the hash? */
-  svn_boolean_t show_hidden;
-
-  /* Don't leave home without one. */
-  apr_pool_t *pool;
-
-  /* Cleared before handling each entry. */
-  apr_pool_t *scratch_pool;
-};
 
 
 static svn_wc_entry_t *
@@ -203,6 +95,362 @@ do_bool_attr(svn_boolean_t *entry_flag,
     }
   return SVN_NO_ERROR;
 }
+
+/* Read an escaped byte on the form 'xHH' from [*BUF, END), placing
+   the byte in *RESULT.  Advance *BUF to point after the escape
+   sequence. */
+static svn_error_t *
+read_escaped(char *result, char **buf, const char *end)
+{
+  apr_uint64_t val;
+  char digits[3];
+
+  if (end - *buf < 3 || **buf != 'x' || ! svn_ctype_isxdigit((*buf)[1])
+      || ! svn_ctype_isxdigit((*buf)[2]))
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Invalid escape sequence"));
+  (*buf)++;
+  digits[0] = *((*buf)++);
+  digits[1] = *((*buf)++);
+  digits[2] = 0;
+  if ((val = apr_strtoi64(digits, NULL, 16)) == 0)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Invalid escaped character"));
+  *result = val;
+  return SVN_NO_ERROR;
+}
+
+/* Read a field, possibly with escaped bytes, from [*BUF, END),
+   stopping at the | terminator.  Place the read string in *RESULT, or set
+   *RESULT to NULL if it is the empty string.  Allocate the returned string
+   in POOL.  Advance *BUF to point after the terminator. */
+static svn_error_t *
+read_str(const char **result,
+         char **buf, const char *end,
+         apr_pool_t *pool)
+{
+  svn_stringbuf_t *s = NULL;
+  const char *start;
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
+  if (**buf == '\n')
+    {
+      *result = NULL;
+      (*buf)++;
+      return SVN_NO_ERROR;
+    }
+
+  start = *buf;
+  while (*buf != end && **buf != '\n')
+    {
+      if (**buf == '\\')
+        {
+          char c;
+          if (! s)
+            s = svn_stringbuf_ncreate(start, *buf - start, pool);
+          else
+            svn_stringbuf_appendbytes(s, start, *buf - start);
+          (*buf)++;
+          SVN_ERR(read_escaped(&c, buf, end));
+          svn_stringbuf_appendbytes(s, &c, 1);
+          start = *buf;
+        }
+      else
+        (*buf)++;
+    }
+
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
+
+  if (s)
+    {
+      svn_stringbuf_appendbytes(s, start, *buf - start);
+      *result = s->data;
+    }
+  else
+    *result = apr_pstrndup(pool, start, *buf - start);
+  (*buf)++;
+  return SVN_NO_ERROR;
+}
+
+/* Read a field from [*BUF, END), terminated by a | character.
+   The field may not contain escape sequences.  The field is not
+   copyed and the buffer is modified in place, by replacing the
+   terminator with a NUL byte.  Make *BUF point after the original
+   terminator. */
+static svn_error_t *
+read_val(const char **result,
+          char **buf, const char *end)
+{
+  const char *start = *buf;
+
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
+  if (**buf == '\n')
+    {
+      (*buf)++;
+      *result = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  while (*buf != end && **buf != '\n')
+    (*buf)++;
+  if (*buf == end)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Unexpected end of entry"));
+  **buf = '\0';
+  *result = start;
+  (*buf)++;
+  return SVN_NO_ERROR;
+}
+  
+/* Read a boolean field from [*BUF, END), placing the result in
+   *RESULT.  If there is no boolean value (just a terminating |), it
+   defaults to false.  Else, the value must match FIELD_NAME, in which
+   case *RESULT will be set to true.  Advance *BUF to point after the
+   terminator. */
+static svn_error_t *
+read_bool(svn_boolean_t *result, const char *field_name,
+          char **buf, const char *end)
+{
+  const char *val;
+  SVN_ERR(read_val(&val, buf, end));
+  if (val)
+    {
+      if (strcmp(val, field_name) != 0)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Invalid value for field '%s'"),
+                                 field_name);
+      *result = TRUE;
+    }
+  else
+    *result = FALSE;
+  return SVN_NO_ERROR;
+}
+
+/* Read a revision number from [*BUF, END) stopping at the |
+   terminator.  Set *RESULT to the revision number, or
+   SVN_INVALID_REVNUM if there is none.  Use POOL for temporary
+   allocations.  Make *BUF point after the terminator.  */
+static svn_error_t *
+read_revnum(svn_revnum_t *result,
+            char **buf,
+            const char *end,
+            apr_pool_t *pool)
+{
+  const char *val;
+
+  SVN_ERR(read_val(&val, buf, end));
+
+  if (val)
+    *result = SVN_STR_TO_REV(val);
+  else
+    *result = SVN_INVALID_REVNUM;
+
+  return SVN_NO_ERROR;
+}
+
+/* Read a timestamp from [*BUF, END) stopping at the | terminator.
+   Set *RESULT to the resulting timestamp, or 0 if there is none.  Use
+   POOL for temporary allocations.  Make *BUF point after the
+   terminator. */
+static svn_error_t *
+read_time(apr_time_t *result,
+          char **buf, const char *end,
+          apr_pool_t *pool)
+{
+  const char *val;
+
+  SVN_ERR(read_val(&val, buf, end));
+  if (val)
+    SVN_ERR(svn_time_from_cstring(result, val, pool));
+  else
+    *result = 0;
+
+  return SVN_NO_ERROR;
+}
+
+/* Allocate an entry from POOL and read it from [*BUF, END).  The
+   buffer may be modified in place while parsing.  Return the new
+   entry in *NEW_ENTRY.  Advance *BUF to point at the end of the entry
+   line. */
+static svn_error_t *
+read_entry(svn_wc_entry_t **new_entry,
+           char **buf, const char *end,
+           apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry = alloc_entry(pool);
+  const char *name;
+  
+#define MAYBE_DONE if (**buf == '\f') goto done
+
+  /* Find the name and set up the entry under that name. */
+  SVN_ERR(read_str(&name, buf, end, pool));
+  entry->name = name ? name : SVN_WC_ENTRY_THIS_DIR;
+
+  /* Set up kind. */
+  {
+    const char *kindstr;
+    SVN_ERR(read_val(&kindstr, buf, end));
+    if (kindstr)
+      {
+        if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR))
+          entry->kind = svn_node_file;
+        else if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR))
+          entry->kind = svn_node_dir;
+        else
+          return svn_error_createf 
+            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+             _("Entry '%s' has invalid node kind"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR));
+      }
+    else
+      entry->kind = svn_node_none;
+  }
+  MAYBE_DONE;
+
+  /* Attempt to set revision (resolve_to_defaults may do it later, too) */
+  SVN_ERR(read_revnum(&entry->revision, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Attempt to set up url path (again, see resolve_to_defaults). */
+  SVN_ERR(read_str(&entry->url, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Set up repository root.  Make sure it is a prefix of url. */
+  SVN_ERR(read_str(&entry->repos, buf, end, pool));
+  if (entry->repos && entry->url
+      && ! svn_path_is_ancestor(entry->repos, entry->url))
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Entry for '%s' has invalid repository "
+                               "root"),
+                             name ? name : SVN_WC_ENTRY_THIS_DIR);
+  MAYBE_DONE;
+
+  /* Look for a schedule attribute on this entry. */
+  {
+    const char *schedulestr;
+    SVN_ERR(read_val(&schedulestr, buf, end));
+    entry->schedule = svn_wc_schedule_normal;
+    if (schedulestr)
+      {
+        if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD))
+          entry->schedule = svn_wc_schedule_add;
+        else if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE))
+          entry->schedule = svn_wc_schedule_delete;
+        else if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE))
+          entry->schedule = svn_wc_schedule_replace;
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid '%s' value"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_SCHEDULE);
+      }
+  }   
+  MAYBE_DONE;
+  
+  /* Attempt to set up text timestamp. */
+  SVN_ERR(read_time(&entry->text_time, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Checksum. */
+  SVN_ERR(read_str(&entry->checksum, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Setup last-committed values. */
+  SVN_ERR(read_time(&entry->cmt_date, buf, end, pool));
+  MAYBE_DONE;
+
+  SVN_ERR(read_revnum(&entry->cmt_rev, buf, end, pool));
+  MAYBE_DONE;
+
+  SVN_ERR(read_str(&entry->cmt_author, buf, end, pool));
+  MAYBE_DONE;
+
+  /* has-props flag. */
+  SVN_ERR(read_bool(&entry->has_props, SVN_WC__ENTRY_ATTR_HAS_PROPS,
+                    buf, end));
+  MAYBE_DONE;
+
+  /* has-prop-mods flag. */
+  SVN_ERR(read_bool(&entry->has_prop_mods, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS,
+                    buf, end));
+  MAYBE_DONE;
+
+  /* cachable-props string. */
+  SVN_ERR(read_val(&entry->cachable_props, buf, end));
+  if (entry->cachable_props)
+    entry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
+  MAYBE_DONE;
+
+  /* present-props string. */
+  SVN_ERR(read_val(&entry->present_props, buf, end));
+  if (entry->present_props)
+    entry->present_props = apr_pstrdup(pool, entry->present_props);
+  MAYBE_DONE;
+
+  /* Is this entry in a state of mental torment (conflict)? */
+  {
+    SVN_ERR(read_str(&entry->prejfile, buf, end, pool));
+    MAYBE_DONE;
+    SVN_ERR(read_str(&entry->conflict_old, buf, end, pool));
+    MAYBE_DONE;
+    SVN_ERR(read_str(&entry->conflict_new, buf, end, pool));
+    MAYBE_DONE;
+    SVN_ERR(read_str(&entry->conflict_wrk, buf, end, pool));
+    MAYBE_DONE;
+  }
+
+  /* Is this entry copied? */
+  SVN_ERR(read_bool(&entry->copied, SVN_WC__ENTRY_ATTR_COPIED, buf, end));
+  MAYBE_DONE;
+
+  SVN_ERR(read_str(&entry->copyfrom_url, buf, end, pool));
+  MAYBE_DONE;
+  SVN_ERR(read_revnum(&entry->copyfrom_rev, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Is this entry deleted? */
+  SVN_ERR(read_bool(&entry->deleted, SVN_WC__ENTRY_ATTR_DELETED, buf, end));
+  MAYBE_DONE;
+
+  /* Is this entry absent? */
+  SVN_ERR(read_bool(&entry->absent, SVN_WC__ENTRY_ATTR_ABSENT, buf, end));
+  MAYBE_DONE;
+
+  /* Is this entry incomplete? */
+  SVN_ERR(read_bool(&entry->incomplete, SVN_WC__ENTRY_ATTR_INCOMPLETE,
+                    buf, end));
+  MAYBE_DONE;
+
+  /* UUID. */
+  SVN_ERR(read_str(&entry->uuid, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Lock token. */
+  SVN_ERR(read_str(&entry->lock_token, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Lock owner. */
+  SVN_ERR(read_str(&entry->lock_owner, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Lock comment. */
+  SVN_ERR(read_str(&entry->lock_comment, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Lock creation date. */
+  SVN_ERR(read_time(&entry->lock_creation_date, buf, end, pool));
+  
+ done:;
+  *new_entry = entry;
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
@@ -587,7 +835,25 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   return SVN_NO_ERROR;
 }
 
-                       
+/* Used when reading an entries file in XML format. */
+struct entries_accumulator
+{
+  /* Keys are entry names, vals are (struct svn_wc_entry_t *)'s. */
+  apr_hash_t *entries; 
+
+  /* The parser that's parsing it, for signal_expat_bailout(). */
+  svn_xml_parser_t *parser;
+
+  /* Should we include 'deleted' entries in the hash? */
+  svn_boolean_t show_hidden;
+
+  /* Don't leave home without one. */
+  apr_pool_t *pool;
+
+  /* Cleared before handling each entry. */
+  apr_pool_t *scratch_pool;
+};
+
 
 /* Called whenever we find an <open> tag of some kind. */
 static void
@@ -627,6 +893,53 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   else
     apr_hash_set(accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
 }
+
+/* Parse BUF of size SIZE as an entries file in XML format, storing the parsed
+   entries in ENTRIES.  Use pool for temporary allocations and the pool of
+   ADM_ACCESS for the returned entries. */
+static svn_error_t *
+parse_entries_xml(svn_wc_adm_access_t *adm_access,
+                  apr_hash_t *entries,
+                  svn_boolean_t show_hidden,
+                  const char *buf,
+                  apr_size_t size,
+                  apr_pool_t *pool)
+{
+  svn_xml_parser_t *svn_parser;
+  struct entries_accumulator accum;
+
+  /* Set up userData for the XML parser. */
+  accum.entries = entries;
+  accum.show_hidden = show_hidden;
+  accum.pool = svn_wc_adm_access_pool(adm_access);
+  accum.scratch_pool = svn_pool_create(pool);
+
+  /* Create the XML parser */
+  svn_parser = svn_xml_make_parser(&accum,
+                                   handle_start_tag,
+                                   NULL,
+                                   NULL,
+                                   pool);
+
+  /* Store parser in its own userdata, so callbacks can call
+     svn_xml_signal_bailout() */
+  accum.parser = svn_parser;
+
+  /* Parse. */
+  SVN_ERR_W(svn_xml_parse(svn_parser, buf, size, TRUE),
+            apr_psprintf(pool,
+                         _("XML parser failed in '%s'"),
+                         svn_path_local_style
+                         (svn_wc_adm_access_path(adm_access), pool)));
+
+  svn_pool_destroy(accum.scratch_pool);
+
+  /* Clean up the XML parser */
+  svn_xml_free_parser(svn_parser);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Use entry SRC to fill in blank portions of entry DST.  SRC itself
@@ -731,62 +1044,78 @@ read_entries(svn_wc_adm_access_t *adm_access,
              svn_boolean_t show_hidden,
              apr_pool_t *pool)
 {
-  svn_error_t *err;
-  svn_boolean_t is_final;
+  const char *path = svn_wc_adm_access_path(adm_access);
   apr_file_t *infile = NULL;
-  svn_xml_parser_t *svn_parser;
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_size_t bytes_read;
-  struct entries_accumulator accum;
+  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
   apr_hash_t *entries = apr_hash_make(svn_wc_adm_access_pool(adm_access));
+  char *curp, *endp;
+  svn_wc_entry_t *entry;
+  int entryno;
 
   /* Open the entries file. */
-  SVN_ERR(svn_wc__open_adm_file(&infile,
-                                svn_wc_adm_access_path(adm_access),
+  SVN_ERR(svn_wc__open_adm_file(&infile, path,
                                 SVN_WC__ADM_ENTRIES, APR_READ, pool));
 
-  /* Set up userData for the XML parser. */
-  accum.entries = entries;
-  accum.show_hidden = show_hidden;
-  accum.pool = svn_wc_adm_access_pool(adm_access);
-  accum.scratch_pool = svn_pool_create(pool);
+  SVN_ERR(svn_stringbuf_from_aprfile(&buf, infile, pool));
 
-  /* Create the XML parser */
-  svn_parser = svn_xml_make_parser(&accum,
-                                   handle_start_tag,
-                                   NULL,
-                                   NULL,
-                                   pool);
+  curp = buf->data;
+  endp = buf->data + buf->len;
 
-  /* Store parser in its own userdata, so callbacks can call
-     svn_xml_signal_bailout() */
-  accum.parser = svn_parser;
+  /* If the first byte of the file is not a digit, then it is probably in XML
+     format. */
+  if (curp != endp && !svn_ctype_isdigit(*curp))
+    SVN_ERR(parse_entries_xml(adm_access, entries, show_hidden,
+                              buf->data, buf->len, pool));
+  else
+    {
+      /* Skip format line. */
+      /* ### Could read it here and report it to caller if it wants it. */
+      curp = memchr(curp, '\n', buf->len);
+      if (! curp)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Invalid version line in entries file "
+                                   "of '%s'"),
+                                 svn_path_local_style(path, pool));
+      ++curp;
+      entryno = 1;
 
-  /* Parse. */
-  do {
-    err = svn_io_file_read_full(infile, buf, SVN__STREAM_CHUNK_SIZE,
-                                &bytes_read, pool);
-    if (err && !APR_STATUS_IS_EOF(err->apr_err))
-      return err;
-
-    is_final = (err != NULL); /* EOF is only possible error */
-    svn_error_clear(err);
-    
-    SVN_ERR_W(svn_xml_parse(svn_parser, buf, bytes_read, is_final),
-              apr_psprintf(pool,
-                           _("XML parser failed in '%s'"),
-                           svn_path_local_style
-                           (svn_wc_adm_access_path(adm_access), pool)));
-  } while (! is_final);
-
-  svn_pool_destroy(accum.scratch_pool);
+      while (curp != endp)
+        {
+          svn_error_t *err = read_entry(&entry, &curp, endp,
+                                        svn_wc_adm_access_pool(adm_access));
+          if (! err)
+            {
+              /* We allow extra fields at the end of the line, for
+                 extensibility. */
+              curp = memchr(curp, '\f', endp - curp);
+              if (! curp)
+                err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                       _("Missing entry terminator"));
+              if (! err && (curp == endp || *(++curp) != '\n'))
+                err = svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                       _("Invalid entry terminator"));
+            }
+          if (err)
+            return svn_error_createf(err->apr_err, err,
+                                     _("Error at entry %d in entries file for "
+                                       "'%s':"),
+                                     entryno, svn_path_local_style(path, pool));
+      
+          ++curp;
+          ++entryno;
+          if ((entry->deleted || entry->absent)
+              && (entry->schedule != svn_wc_schedule_add)
+              && (entry->schedule != svn_wc_schedule_replace)
+              && (! show_hidden))
+            ;
+          else
+            apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
+        }
+    }
 
   /* Close the entries file. */
   SVN_ERR(svn_wc__close_adm_file(infile, svn_wc_adm_access_path(adm_access),
                                  SVN_WC__ADM_ENTRIES, 0, pool));
-
-  /* Clean up the XML parser */
-  svn_xml_free_parser(svn_parser);
 
   /* Fill in any implied fields. */
   SVN_ERR(resolve_to_defaults(entries, svn_wc_adm_access_pool(adm_access)));
@@ -972,16 +1301,250 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
+/* Append STR to BUF, terminating it with a | byte.  Escape bytes that
+   needs escaping.  Use POOL for temporary allocations. */
+static void
+write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
+{
+  const char *start = str;
+  if (str)
+    {
+      while (*str)
+        {
+          /* Escape control characters and | and \. */
+          if (svn_ctype_iscntrl(*str) || *str == '\\')
+            {
+              svn_stringbuf_appendbytes(buf, start, str - start);
+              svn_stringbuf_appendcstr(buf,
+                                       apr_psprintf(pool, "\\x%02x", *str));
+              start = str + 1;
+            }
+          ++str;
+        }
+      svn_stringbuf_appendbytes(buf, start, str - start);
+    }
+  svn_stringbuf_appendbytes(buf, "\n", 1);
+}
+
+/* Append the string VAL of length LEN to BUF, without escaping any
+   bytes. */
+static void
+write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
+{
+  if (val)
+    svn_stringbuf_appendbytes(buf, val, len);
+  svn_stringbuf_appendbytes(buf, "\n", 1);
+}
+
+/* If VAL is true, append FIELD_NAME followede by a terminator to BUF.
+   Else, just append the terminator. */
+static void
+write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
+{
+  write_val(buf, val ? field_name : NULL, val ? strlen(field_name) : 0);
+}
+
+/* Append the representation of REVNUM to BUF and a terminator, using
+   POOL for temporary allocations. */
+static void
+write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
+{
+  if (SVN_IS_VALID_REVNUM(revnum))
+    svn_stringbuf_appendcstr(buf, apr_ltoa(pool, revnum));
+  svn_stringbuf_appendbytes(buf, "\n", 1);
+}
+
+/* Append the timestamp VAL to BUF (or the empty string if VAL is 0),
+   terminating it with a | character.  Use POOL for temporary
+   allocations. */
+static void
+write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
+{
+  if (val)
+    svn_stringbuf_appendcstr(buf, svn_time_to_cstring(val, pool));
+  svn_stringbuf_appendbytes(buf, "\n", 1);
+}
 
 /* Append a single entry ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
 static void
-write_entry(svn_stringbuf_t **output,
+write_entry(svn_stringbuf_t *buf,
             svn_wc_entry_t *entry,
             const char *name,
             svn_wc_entry_t *this_dir,
             apr_pool_t *pool)
+{
+  const char *valuestr;
+  svn_revnum_t valuerev;
+  svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
+  svn_boolean_t is_subdir = ! is_this_dir && (entry->kind == svn_node_dir);
+
+  assert(name);
+
+  /* Name. */
+  write_str(buf, name, pool);
+
+  /* Kind. */
+  switch (entry->kind)
+    {
+    case svn_node_dir:
+      write_val(buf, SVN_WC__ENTRIES_ATTR_DIR_STR,
+                 sizeof(SVN_WC__ENTRIES_ATTR_DIR_STR) - 1);
+      break;
+
+    case svn_node_none:
+      write_val(buf, NULL, 0);
+      break;
+
+    case svn_node_file:
+    case svn_node_unknown:
+    default:
+      write_val(buf, SVN_WC__ENTRIES_ATTR_FILE_STR,
+                 sizeof(SVN_WC__ENTRIES_ATTR_FILE_STR) - 1);
+      break;
+    }
+
+  /* Revision. */
+  if (is_this_dir || (! is_subdir && entry->revision != this_dir->revision))
+    valuerev = entry->revision;
+  else
+    valuerev = SVN_INVALID_REVNUM;
+  write_revnum(buf, valuerev, pool);
+
+  /* URL. */
+  if (is_this_dir ||
+      (! is_subdir && strcmp(svn_path_url_add_component(this_dir->url, name,
+                                                        pool),
+                             entry->url) != 0))
+    valuestr = entry->url;
+  else
+    valuestr = NULL;
+  write_str(buf, valuestr, pool);
+
+  /* Repository root. */
+  if (! is_subdir
+      && (is_this_dir
+          || (this_dir->repos == NULL
+              || (entry->repos
+                  && strcmp(this_dir->repos, entry->repos) != 0))))
+    valuestr = entry->repos;
+  else
+    valuestr = NULL;
+  write_str(buf, valuestr, pool);
+
+  /* Schedule. */
+  switch (entry->schedule)
+    {
+    case svn_wc_schedule_add:
+      write_val(buf, SVN_WC__ENTRY_VALUE_ADD,
+                 sizeof(SVN_WC__ENTRY_VALUE_ADD) - 1);
+      break;
+
+    case svn_wc_schedule_delete:
+      write_val(buf, SVN_WC__ENTRY_VALUE_DELETE,
+                 sizeof(SVN_WC__ENTRY_VALUE_DELETE) - 1);
+      break;
+
+    case svn_wc_schedule_replace:
+      write_val(buf, SVN_WC__ENTRY_VALUE_REPLACE,
+                 sizeof(SVN_WC__ENTRY_VALUE_REPLACE) - 1);
+      break;
+
+    case svn_wc_schedule_normal:
+    default:
+      write_val(buf, NULL, 0);
+      break;
+    }
+  
+  /* Text time. */
+  write_time(buf, entry->text_time, pool);
+
+  /* Checksum. */
+  write_val(buf, entry->checksum,
+             entry->checksum ? strlen(entry->checksum) : 0);
+
+  /* Last-commit stuff */
+  write_time(buf, entry->cmt_date, pool);
+  write_revnum(buf, entry->cmt_rev, pool);
+  write_str(buf, entry->cmt_author, pool);
+
+  /* has-props flag. */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROPS, entry->has_props);
+
+  /* has-prop-mods flag. */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_HAS_PROP_MODS, entry->has_prop_mods);
+
+  /* cachable-props string. */
+  if (is_this_dir
+      || ! this_dir->cachable_props || ! entry->cachable_props
+      || strcmp(this_dir->cachable_props, entry->cachable_props) != 0)
+    valuestr = entry->cachable_props;
+  else
+    valuestr = NULL;
+  write_val(buf, valuestr, valuestr ? strlen(valuestr) : 0);
+
+  /* present-props string. */
+  write_val(buf, entry->present_props,
+             entry->present_props ? strlen(entry->present_props) : 0);
+
+  /* Conflict. */
+  write_str(buf, entry->prejfile, pool);
+  write_str(buf, entry->conflict_old, pool);
+  write_str(buf, entry->conflict_new, pool);
+  write_str(buf, entry->conflict_wrk, pool);
+
+  write_bool(buf, SVN_WC__ENTRY_ATTR_COPIED, entry->copied);
+
+  /* Copy-related Stuff */
+  write_str(buf, entry->copyfrom_url, pool);
+  write_revnum(buf, entry->copyfrom_rev, pool);
+
+  /* Deleted state */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_DELETED, entry->deleted);
+
+  /* Absent state */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_ABSENT, entry->absent);
+
+  /* Incomplete state */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_INCOMPLETE, entry->incomplete);
+
+  /* UUID. */
+  if (is_this_dir || ! this_dir->uuid || ! entry->uuid
+      || strcmp(this_dir->uuid, entry->uuid) != 0)
+    valuestr = entry->uuid;
+  else
+    valuestr = NULL;
+  write_val(buf, valuestr, valuestr ? strlen(valuestr) : 0);
+
+  /* Lock token. */
+  write_str(buf, entry->lock_token, pool);
+
+  /* Lock owner. */
+  write_str(buf, entry->lock_owner, pool);
+
+  /* Lock comment. */
+  write_str(buf, entry->lock_comment, pool);
+
+  /* Lock creation date. */
+  write_time(buf, entry->lock_creation_date, pool);
+  
+  /* Remove redundant separators at the end of the entry. */
+  while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
+    buf->len--;
+
+  svn_stringbuf_appendbytes(buf, "\f\n", 2);
+}
+
+/* Append a single entry ENTRY as an XML element to the string OUTPUT,
+   using the entry for "this dir" THIS_DIR for
+   comparison/optimization.  Allocations are done in POOL.  */
+static void
+write_entry_xml(svn_stringbuf_t **output,
+                svn_wc_entry_t *entry,
+                const char *name,
+                svn_wc_entry_t *this_dir,
+                apr_pool_t *pool)
 {
   apr_hash_t *atts = apr_hash_make(pool);
   const char *valuestr;
@@ -1258,7 +1821,53 @@ write_entry(svn_stringbuf_t **output,
                              atts);
 }
 
+/* Construct an entries file from the ENTRIES hash in XML format in a
+   newly allocated stringbuf and return it in *OUTPUT.  Allocate the
+   result in POOL.  THIS_DIR is the this_dir entry in ENTRIES.  */
+static void
+write_entries_xml(svn_stringbuf_t **output,
+                  apr_hash_t *entries,
+                  svn_wc_entry_t *this_dir,
+                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
+  svn_xml_make_header(output, pool);
+  svn_xml_make_open_tag(output, pool, svn_xml_normal,
+                        SVN_WC__ENTRIES_TOPLEVEL,
+                        "xmlns",
+                        SVN_XML_NAMESPACE,
+                        NULL);
+
+  /* Write out "this dir" */
+  write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
+
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      svn_wc_entry_t *this_entry;
+
+      svn_pool_clear(subpool);
+
+      /* Get the entry and make sure its attributes are up-to-date. */
+      apr_hash_this(hi, &key, NULL, &val);
+      this_entry = val;
+
+      /* Don't rewrite the "this dir" entry! */
+      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
+        continue;
+
+      /* Append the entry to output */
+      write_entry_xml(output, this_entry, key, this_dir, subpool);
+    }
+
+  svn_xml_make_close_tag(output, pool, SVN_WC__ENTRIES_TOPLEVEL);
+
+  svn_pool_destroy(subpool);
+}
+                  
 svn_error_t *
 svn_wc__entries_write(apr_hash_t *entries,
                       svn_wc_adm_access_t *adm_access,
@@ -1269,7 +1878,6 @@ svn_wc__entries_write(apr_hash_t *entries,
   apr_file_t *outfile = NULL;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
 
@@ -1298,38 +1906,39 @@ svn_wc__entries_write(apr_hash_t *entries,
                                 (APR_WRITE | APR_CREATE),
                                 pool));
 
-  svn_xml_make_header(&bigstr, pool);
-  svn_xml_make_open_tag(&bigstr, pool, svn_xml_normal,
-                        SVN_WC__ENTRIES_TOPLEVEL,
-                        "xmlns",
-                        SVN_XML_NAMESPACE,
-                        NULL);
-
-  /* Write out "this dir" */
-  write_entry(&bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
-      const void *key;
-      void *val;
-      svn_wc_entry_t *this_entry;
+      apr_pool_t *subpool = svn_pool_create(pool);
+      bigstr = svn_stringbuf_createf(pool, "%d\n",
+                                     svn_wc__adm_wc_format(adm_access));
+      /* Write out "this dir" */
+      write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
 
-      svn_pool_clear(subpool);
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          svn_wc_entry_t *this_entry;
 
-      /* Get the entry and make sure its attributes are up-to-date. */
-      apr_hash_this(hi, &key, NULL, &val);
-      this_entry = val;
+          svn_pool_clear(subpool);
 
-      /* Don't rewrite the "this dir" entry! */
-      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
-        continue;
+          /* Get the entry and make sure its attributes are up-to-date. */
+          apr_hash_this(hi, &key, NULL, &val);
+          this_entry = val;
 
-      /* Append the entry to BIGSTR */
-      write_entry(&bigstr, this_entry, key, this_dir, subpool);
+          /* Don't rewrite the "this dir" entry! */
+          if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
+            continue;
+
+          /* Append the entry to BIGSTR */
+          write_entry(bigstr, this_entry, key, this_dir, subpool);
+        }
+
+      svn_pool_destroy(subpool);
     }
-
-  svn_pool_destroy(subpool);
-  svn_xml_make_close_tag(&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
+  else
+    /* This is needed during cleanup of a not yet upgraded WC. */
+    write_entries_xml(&bigstr, entries, this_dir, pool);
 
   SVN_ERR_W(svn_io_file_write_full(outfile, bigstr->data, 
                                    bigstr->len, NULL, pool),
@@ -2010,6 +2619,61 @@ svn_wc__tweak_entry(apr_hash_t *entries,
 
 
 
+
+/*** Initialization of the entries file. ***/
+
+svn_error_t *
+svn_wc__entries_init(const char *path,
+                     const char *uuid,
+                     const char *url,
+                     const char *repos,
+                     svn_revnum_t initial_rev,
+                     apr_pool_t *pool)
+{
+  apr_file_t *f = NULL;
+  svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
+                                                 SVN_WC__VERSION);
+  svn_wc_entry_t *entry = alloc_entry(pool);
+
+  /* Sanity check. */
+  assert(! repos || svn_path_is_ancestor(repos, url));
+
+  /* Create the entries file, which must not exist prior to this. */
+  SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,
+                                (APR_WRITE | APR_CREATE | APR_EXCL), pool));
+
+  /* Add an entry for the dir itself.  The directory has no name.  It
+     might have a UUID, but otherwise only the revision and default
+     ancestry are present as XML attributes, and possibly an
+     'incomplete' flag if the revnum is > 0. */
+
+  entry->kind = svn_node_dir;
+  entry->url = url;
+  entry->revision = initial_rev;
+  entry->uuid = uuid;
+  entry->repos = repos;
+  if (initial_rev > 0)
+    entry->incomplete = TRUE;
+  /* Add cachable-props here so that it can be inherited by other entries.
+   */
+  entry->cachable_props = SVN_WC__CACHABLE_PROPS;
+
+  write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool);
+
+  SVN_ERR_W(svn_io_file_write_full(f, accum->data, accum->len, NULL, pool),
+            apr_psprintf(pool, 
+                         _("Error writing entries file for '%s'"),
+                         svn_path_local_style(path, pool)));
+
+  /* Now we have a `entries' file with exactly one entry, an entry
+     for this dir.  Close the file and sync it up. */
+  SVN_ERR(svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/*--------------------------------------------------------------- */
 
 /*** Generic Entry Walker */
 

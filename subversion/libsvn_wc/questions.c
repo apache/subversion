@@ -55,9 +55,25 @@ svn_wc_check_wc(const char *path,
   svn_error_t *err = SVN_NO_ERROR;
 
   const char *format_file_path
-    = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
+    = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_ENTRIES, NULL);
 
+  /* First try to read the format number from the entries file. */
   err = svn_io_read_version_file(wc_format, format_file_path, pool);
+
+  /* If that didn't work and the first line of the entries file contains
+     something other than a number, then it is probably in XML format. */
+  if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
+    {
+      svn_error_clear(err);
+      /* Fall back on reading the format file instead.
+         Note that the format file might not exist in newer working copies
+         (format 7 and higher), but in that case, the entries file should
+         have contained the format number. */
+      format_file_path
+        = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
+
+      err = svn_io_read_version_file(wc_format, format_file_path, pool);
+    }      
 
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
               || APR_STATUS_IS_ENOTDIR(err->apr_err)))

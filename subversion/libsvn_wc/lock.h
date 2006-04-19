@@ -2,7 +2,7 @@
  * lock.h:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -96,6 +96,10 @@ svn_error_t * svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
 
 /* Return the working copy format version number for ADM_ACCESS. */
 int svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access);
+
+/* Set the WC FORMAT of this access baton. */
+void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
+                               int format);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
  * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to

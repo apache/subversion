@@ -137,6 +137,10 @@
  */
 #define SVN_WC__LOG_MERGE        "merge"
 
+/* Upgrade the WC format, both .svn/format and the format number in the
+   entries file to SVN_WC__LOG_ATTR_FORMAT. */
+#define SVN_WC__LOG_UPGRADE_FORMAT "upgrade-format"
+
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
@@ -155,6 +159,8 @@
 #define SVN_WC__LOG_ATTR_ARG_3          "arg3"
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
+/* For upgrade-format. */
+#define SVN_WC__LOG_ATTR_FORMAT         "format"
 
 
 
@@ -1397,6 +1403,33 @@ log_do_modify_wcprop(struct log_runner *loggy,
                             path, loggy->adm_access, loggy->pool);
 }
 
+static svn_error_t *
+log_do_upgrade_format(struct log_runner *loggy,
+                      const char **atts)
+{
+  const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
+  int fmt;
+  const char *path = svn_wc__adm_path(svn_wc_adm_access_path(loggy->adm_access),
+                                      FALSE, loggy->pool,
+                                      SVN_WC__ADM_FORMAT, NULL);
+
+  if (! fmtstr || (fmt = atoi(fmtstr)) == 0)
+    return svn_error_create(pick_error_code(loggy), NULL,
+                            _("Invalid 'format' attribute"));
+
+  /* Update the .svn/format file right away. */
+  SVN_ERR(svn_io_write_version_file(path, fmt, loggy->pool));
+
+  /* The nice thing is that, just by setting this flag, the entries file will
+     be rewritten in the desired format. */
+  loggy->entries_modified = TRUE;
+  /* Reading the entries file will support old formats, even if this number
+     is updated. */
+  svn_wc__adm_set_wc_format(loggy->adm_access, fmt);
+
+  return SVN_NO_ERROR;
+}
+
 
 static void
 start_handler(void *userData, const char *eltname, const char **atts)
@@ -1404,7 +1437,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
   svn_error_t *err = SVN_NO_ERROR;
   struct log_runner *loggy = userData;
 
-  /* All elements use the `name' attribute, so grab it now. */
+  /* Most elements use the `name' attribute, so grab it now. */
   const char *name = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_NAME, atts);
 
   /* Clear the per-log-item pool. */
@@ -1412,7 +1445,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
 
   if (strcmp(eltname, "wc-log") == 0)   /* ignore expat pacifier */
     return;
-  else if (! name)
+  else if (! name && strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) != 0)
     {
       signal_error
         (loggy, svn_error_createf 
@@ -1473,6 +1506,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
+  }
+  else if (strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) == 0) {
+    err = log_do_upgrade_format(loggy, atts);
   }
   else
     {
@@ -2182,6 +2218,22 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_RM,
                         SVN_WC__LOG_ATTR_NAME,
                         base_name,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             int format,
+                             apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_UPGRADE_FORMAT,
+                        SVN_WC__LOG_ATTR_FORMAT,
+                        apr_itoa(pool, format),
                         NULL);
 
   return SVN_NO_ERROR;

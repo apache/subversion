@@ -77,7 +77,7 @@ Structure of the Working Copy
 Working copy meta-information is stored in .svn/ subdirectories,
 analogous to CVS/ subdirs.  See the separate sections below for more details.
 
-  .svn/format                   /* Contains wc adm format version */
+  .svn/format                   /* Deprecated in post 1.3 working copies. */
        entries                  /* Various adm info for each directory entry */
        dir-props                /* Working properties for this directory */
        dir-prop-base            /* Pristine properties for this directory */
@@ -110,19 +110,24 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
 `format':
    Says what version of the working copy adm format this is (so future
    clients can be backwards compatible easily).
-   The changes in each format are listed in wc.h.
 
-   Also, the presence of this file means that the entire process of
-   creating the adm area was completed, because this is always the
-   last file created.  Of course, that's no guarantee that someone
-   didn't muck things up afterwards, but it's good enough for
-   existence-checking.
+   This file is deprecated and present for backwards compatibility.
+   It may be removed in the future.
 
 `entries':
    This file holds revision numbers and other information for this
    directory and its files, and records the presence of subdirs (but
    does not record much other information about them, as the subdirs
    do that themselves).  See below for more information.
+
+   Since format 7, this file also contains the format number of this
+   working copy directory.
+
+   Also, the presence of this file means that the entire process of
+   creating the adm area was completed, because this is always the
+   last file created.  Of course, that's no guarantee that someone
+   didn't muck things up afterwards, but it's good enough for
+   existence-checking.
 
 `dir-props':
    Properties for this directory.  These are the "working" properties
@@ -306,68 +311,132 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
 The entries file
 ----------------
 
-The entries file contains an XML document with a top-level element
-named `wc-entries'.  This element contains one or more `entries'
-elements, one for each directory entry.  The `entry' element whose
-name attribute is the empty string is the entry for this directory,
+This section describes the entries file as of format 7 and beyond.  See below
+for the older XML-based format.
+
+The entries file is a text file.  The character encoding of the file
+is UTF-8 with no BOM (byte order mark) allowed at the beginning.  All
+whitespace is significant.
+
+The file starts with a decimal number which is the format version of
+this working copy directory, followed by a line feed (0x0a) character.
+No whitespace (except for the terminating line feed) is allowed before
+or after the number.  The changes in each format are listed in wc.h.
+
+The rest of the file contains one record for each directory entry.
+Each record contains a number of ordered fields as described below.
+The fields are terminated by a line feed (0x0a) character.  Empty
+fields are represented by just the terminator.  Empty fields that are
+only followed by empty fields may be omited from the record.  Records
+are terminated by a form feed (0x0c) and a cosmetic line feed (0x0a).
+
+The bytes representing the characters "\" and ASCII control characters
+(0x01 - 0x1f and 0x7f) must be escaped when they occur in a field.
+The escaping uses the syntax "\xHH", where "HH" are the two
+hexadecimal digits (either upper- or lowercase) representing the
+escaped byte.  No other bytes may be escaped.  NUL bytes are not
+allowed.
+
+A field may be boolean, in which case it can have either a value equal
+to the field name, meaning true, or no value, meaning false.  Timestamps
+are stored in the format produced by svn_time_to_cstring().  Revision
+numbers are stored as decimal numbers.
+
+The first entry has an empty name field and is the entry for this directory,
 that is, the directory containing this administrative area.  This is
-known as the "this_dir" entry.  All XML elements in the entries file are in the
-XML namespace "svn:".
+known as the "this_dir" entry.
 
-All `entry' elements are empty, and can have the attributes described
-below.
+The following fields are allowed; they are present in the order in
+which they are described.  Except for boolean fields, the field names
+are not present in the file.
 
-An attribute may be boolean, in which case it can have one of the
-values `true' or `false'.  Boolean attributes default to `false' if
-not present.  Timestamps are stored in the format produced by
-svn_time_to_cstring().
-
-`name':
+name:
    The basename of this entry, or the empty string for the this_dir
    entry.  Required for all entries.
 
-`revision':
+kind:
+   The kind of this entry: `file' or `dir'.  Required for all entries. 
+
+revision:
    The revision that the pristine text and properties of this entry
    represent.  Defaults to the revision of the this_dir entry, for
    which it is required.  Set to 0 for entries not yet in the
    repository.
 
-`url':
-   The URL of the corresponding entry in the repository.  Required for
-   the this_dir entry; for all other entries, the default is to append
-   the URI-encoded entry name to the the URL of the this_dir entry, as
-   a path segment.
+url:
+   The URL of the corresponding entry in the repository.  Required
+   for the this_dir entry; for all other entries, the default is to
+   append the URI-encoded entry name to the URL of the this_dir entry,
+   as a path segment.
 
-`repos':
+repos:
    The prefix of the URL which represents the repository root of this
    entry.  Defaults to the repository root of the this_dir entry.
    Optional for the this_dir entry, for compatibility.
 
-`kind':
-   The kind of this entry: `file' or `dir'.  Required for all entries. 
-
-`text-time':
-   For file entries, the timestamp of the working file when it was
-   last known to be identical to the text base file.  Optional, no default.
-
-`prop-time':
-   Obsolete.  In format 5 and earlier this was similar to `text-time',
-   but for the working props file.
-
-`checksum':
-   For file entries, base-64-encoded MD5 checksum of the text-base
-   file.  Optional, for backwards compatibility.
-
-`schedule':
+schedule:
    The current scheduling for this entry: `add', `delete' or
    `replace'.  Defaults to normal scheduling.
 
-`copied':
+text-time:
+   For file entries, the timestamp of the working file when it was
+   last known to be identical to the text base file.  Optional, no default.
+
+checksum:
+   For file entries, base-64-encoded MD5 checksum of the text-base
+   file.  Optional, for backwards compatibility.
+
+committed-date:
+   The date of the committed-rev if available.  Optional, no default.
+
+committed-rev:
+   The last committed revision for this entry if this entry is in the
+   repository.  Optional, no default.
+
+last-author:
+   The author of the `committed-rev' if available.  Optional, no default.
+
+has-props:
+   A boolean: true if there are any working properties for this entry.
+
+has-prop-mods:
+   A boolean: true if this entry has any property modifications.
+
+cachable-props:
+   A space-separated list of property names whose presence is cached
+   in present-props.  Defaults to the value of the this_dir entry.
+   For the this_dir entry, defaults to the empty list. 
+
+present-props:
+   A space-separated list of property names.  If a property name n is
+   in this list, then the working props of this entry contains this
+   property.  If cachable-props contains a property name n' but n' is
+   absent from present-props, then the working props don't contain
+   this property.  Defaults to the empty list.
+
+conflict-old, conflict-new and conflict-wrk:
+   Present if there is a text conflict, in which case these three
+   fields specify the relative filenames of the three saved
+   conflict files.
+
+prop-reject-file:
+   In case of a property conflict, this field is present and
+   specifies the relative filename of the property reject file.
+
+copied:
    A boolean: true if this entry was added with history; only allowed
    when schedule is add.  (### Why aren't the copyfrom attributes
    enough for this?)
 
-`deleted':
+copyfrom-url:
+   If this entry is added with history, the URL of the copy source.
+   Present iff copyfrom-rev is present.
+
+copyfrom-rev:
+   If this entry is added with history, the revision of the copy
+   source.  Present iff copyfrom-url is present.
+
+deleted:
    A boolean: true if this entry is deleted in its revision but exists
    in its parent's revision.  This is necessary because updates are
    not atomic: different bits of a working copy can be updated to
@@ -379,43 +448,11 @@ svn_time_to_cstring().
    must also indicate that this particular entry is deleted because it
    is at R.
 
-`absent':
+absent:
    A boolean: true if is an entry by this name in the repository but
    we don't know anything about it except its kind.
 
-`copyfrom-url':
-   If this entry is added with history, the URL of the copy source.
-   Present iff `copyfrom-rev' is present.
-
-`copyfrom-rev':
-   If this entry is added with history, the revision of the copy
-   source.  Present iff `copyfrom-url' is present.
-
-`conflict-old', `conflict-new' and `conflict-wrk':
-   Present if there is a text conflict, in which case these three
-   attributes specify the relative filenames of the three saved
-   conflict files.
-
-`prop-reject-file':
-   In case of a property conflict, this attribute is present and
-   specifies the relative filename of the property reject file.
-
-`committed-rev':
-   The last committed revision for this entry if this entry is in the
-   repository.  Optional, no default.
-
-`committed-date':
-   The date of the `committed-rev' if available.  Optional, no default.
-
-`last-author':
-   The author of the `committed-rev' if available.  Optional, no default.
-
-`uuid':
-   The repository UUID of this entry.  Defaults to the UUID of the
-   this_dir entry.  Optional, even for the this_dir entry, for
-   backwards compatibility.
-
-`incomplete':
+incomplete:
    A boolean: true if this entries file is not complete yet.  Used
    when updating.  This is only allowed on the this_dir entry; it
    allows update operations to be non-atomic, by marking the directory
@@ -423,47 +460,60 @@ svn_time_to_cstring().
    interrupted for some reason, a later update will see that this
    directory is incomplete and Do The Right Thing.
 
-`lock-token':
+uuid:
+   The repository UUID of this entry.  Defaults to the UUID of the
+   this_dir entry.  Optional, even for the this_dir entry, for
+   backwards compatibility.
+
+lock-token:
    The lock token URL if this entry is locked in the repository;
    absent otherwise.
 
-`lock-owner':
+lock-owner:
    The lock owner, iff there is a lock token.
 
-`lock-comment':
+lock-comment:
    The lock comment iff there is a lock token and the lock has a
    comment.
 
-`lock-creation-date':
+lock-creation-date:
    The lock creation date iff there is a lock token.
 
-`has-props':
-   A boolean: for format 6 and later, true if there are any working
-   properties for this entry.
+The only fields allowed in an entry for a directory (other than the
+this_dir entry) are name, absent, deleted, schedule, copied,
+copyfrom-url, copyfrom-rev and kind.  The other fields are only stored
+in the this_dir entry for the directory in question.
 
-`has-prop-mods':
-   A boolean: for format 6 and later, true if this entry has any
-   property modifications.
 
-`cachable-props':
-   For format 6 and later, a space-separated list of property names
-   whose presence is cached in `present-props'.  Defaults to the value
-   of the this_dir entry.  For the this_dir entry, defaults to the
-   empty list.
+XML-based entries format
+------------------------
 
-`present-props':
-   For format 6 and later, a space-separated list of property names.
-   If a property name n is in this list, then the working props of
-   this entry contains this property.  If `cachable-props' contains a
-   property name n' but n' is absent from `present-props', then the
-   working props don't contain this property.  Defaults to the empty
-   list.
+In format 6 and earlier, the entries file is stored in an XML based
+format.  The entries file is an XML document with a top-level element
+named `wc-entries'.  This element contains one or more `entries'
+elements, one for each directory entry.  All XML elements in the
+entries file are in the XML namespace "svn:".
 
-The only attributes allowed in an entry for a directory (other than
-the this_dir entry) are `name', `absent', `deleted', `schedule',
-`copied', `copyfrom-url', `copyfrom-rev' and `kind'.  The other
-attributes are only stored in the this_dir entry for the directory in
-question.
+All `entry' elements are empty, and can have the attributes
+corresponding to fields of the non-XML format.
+
+An attribute may be boolean, in which case it can have one of the
+values `true' or `false'.  Boolean attributes default to `false' if
+not present.  Timestamps are stored in the same format as in the
+non-XML format.  Inheritence of values from the this_dir entry works
+in the same way as in the non-XML format.
+
+Fields added in format 7 and later are not allowed in the XML-based
+format.  The attributes `has-props', `has-prop-mods', `cachable-props', 
+and `present-props' are only valid in format 6.
+
+In addition, the following attribute is allowed, which has no
+corresponding field in the non-XML format:
+
+`prop-time':
+   Obsolete.  In format 5 and earlier this was similar to `text-time',
+   but for the working props file.
+
 
 
 Property storage
@@ -480,8 +530,8 @@ stored changed in format 6; that way is described first.
 
 In format 6 and later, the base-props file is present only if there
 are any base properties.  The working props file is present only if
-the entry has property modifications (i.e. its `has-prop-mods'
-attribute is true).  Note that an existing, but empty working props
+the entry has property modifications (i.e. its has-prop-mods
+field is true).  Note that an existing, but empty working props
 file means that there are property modifications, but no working
 properties.
 

@@ -911,13 +911,21 @@ check_adm_exists(svn_boolean_t *exists,
     }
 
   /** The directory exists, but is it a valid working copy yet?
-      Try step 2: checking that SVN_WC__ADM_FORMAT exists and that
-      it's not too high a format version for this code.  **/
+      Try step 2: checking that we can read the format number. */
   {
     int wc_format;
 
     err = svn_io_read_version_file
-      (&wc_format, svn_path_join(tmp_path, SVN_WC__ADM_FORMAT, pool), pool);
+      (&wc_format, svn_path_join(tmp_path, SVN_WC__ADM_ENTRIES, pool), pool);
+
+    /* Fall back on the format file for WCs before format 7. */
+    if (err)
+      {
+        svn_error_clear(err);
+        err = svn_io_read_version_file
+          (&wc_format, svn_path_join(tmp_path, SVN_WC__ADM_FORMAT, pool),
+           pool);
+      }
 
     if (err)
       {
@@ -1065,10 +1073,14 @@ init_adm(const char *path,
   /** Initialize each administrative file. */
 
   /* SVN_WC__ADM_ENTRIES */
-  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos, initial_rev, pool));
-
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
+  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos, initial_rev, pool));
+
+  /* We provide this for backwards compatibilty.  Clients that don't understand
+     format version 7 or higher will display a nicer error message if this
+     file exists.
+     ### Consider removing this in svn 1.5 or 1.6. */
   SVN_ERR(svn_io_write_version_file 
           (extend_with_adm_name(path, NULL, FALSE, pool,
                                 SVN_WC__ADM_FORMAT, NULL),
