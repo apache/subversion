@@ -385,7 +385,7 @@ handle_lock(serf_request_t *request,
   /* Forbidden when a lock doesn't exist. */
   if (ctx->status_code == 403)
     {
-      status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
       if (APR_STATUS_IS_EOF(status))
         {
           ctx->done = TRUE;

@@ -285,54 +285,69 @@ typedef apr_status_t
  * execution of the request through its lifecycle.
  */
 typedef struct {
+  /* The HTTP method string of the request */
   const char *method;
+
+  /* The resource to the execute the method on. */
   const char *path;
 
+  /* The request's body buckets.
+   *
+   * May be NULL if there is no body to send or ->body_delegate is set.
+   *
+   * Using the body_delegate function is preferred as it delays the
+   * creation of the body until we're about to deliver the request
+   * instead of creating it earlier.
+   *
+   * @see svn_ra_serf__request_body_delegate_t
+   */
   serf_bucket_t *body_buckets;
+
+  /* The content-type of the request body. */
   const char *body_type;
 
+  /* The handler and baton pair for our handler. */
   serf_response_handler_t response_handler;
   void *response_baton;
 
+  /* The handler and baton pair to be executed when a non-recoverable error
+   * is detected.  If it is NULL in the presence of an error, an abort() may
+   * be triggered.
+   */
   svn_ra_serf__response_error_t response_error;
   void *response_error_baton;
 
+  /* This function and baton will be executed when the request is about
+   * to be delivered by serf.
+   *
+   * This just passes through serf's raw request creation parameters.
+   * None of the other parameters will be utilized if this field is set.
+   */
   serf_request_setup_t delegate;
   void *delegate_baton;
 
+  /* This function and baton pair allows for custom request headers to
+   * be set.
+   *
+   * It will be executed after the request has been set up but before it is
+   * delivered.
+   */
   svn_ra_serf__request_header_delegate_t header_delegate;
   void *header_delegate_baton;
 
+  /* This function and baton pair allows a body to be created right before
+   * delivery.
+   *
+   * It will be executed after the request has been set up but before it is
+   * delivered.
+   */
   svn_ra_serf__request_body_delegate_t body_delegate;
   void *body_delegate_baton;
 
+  /* The connection and session to be used for this request. */
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__session_t *session;
 } svn_ra_serf__handler_t;
-
-/* 
- * Default handler that does dispatching.
- */
-apr_status_t
-svn_ra_serf__handler_default(serf_request_t *request,
-                             serf_bucket_t *response,
-                             void *baton,
-                             apr_pool_t *pool);
-
-/*
- * Handler that discards the entire @a response body associated with a
- * @a request.
- *
- * If @a baton is a svn_ra_serf__server_error_t (i.e. non-NULL) and an
- * error is detected, it will be populated for later detection.
- *
- * All temporary allocations will be made in a @a pool.
- */
-apr_status_t
-svn_ra_serf__handler_discard_body(serf_request_t *request,
-                                  serf_bucket_t *response,
-                                  void *baton,
-                                  apr_pool_t *pool);
 
 /*
  * Helper function to queue a request in the @a handler's connection.
@@ -364,19 +379,33 @@ typedef struct svn_ra_serf__xml_state_t {
   struct svn_ra_serf__xml_state_t *prev;
 } svn_ra_serf__xml_state_t;
 
+/* Forward declaration of the XML parser structure. */
 typedef struct svn_ra_serf__xml_parser_t svn_ra_serf__xml_parser_t;
 
+/* Callback invoked with @a baton by our XML @a parser when an element with
+ * the @a name containing @a attrs is opened.
+ */
 typedef svn_error_t *
 (*svn_ra_serf__xml_start_element_t)(svn_ra_serf__xml_parser_t *parser,
                                     void *baton,
                                     svn_ra_serf__dav_props_t name,
                                     const char **attrs);
 
+/* Callback invoked with @a baton by our XML @a parser when an element with
+ * the @a name is closed.
+ */
 typedef svn_error_t *
 (*svn_ra_serf__xml_end_element_t)(svn_ra_serf__xml_parser_t *parser,
                                   void *baton,
                                   svn_ra_serf__dav_props_t name);
 
+/* Callback invoked with @a baton by our XML @a parser when a CDATA portion
+ * of @a data with size @a len is encountered.
+ *
+ * This may be invoked multiple times for the same tag.
+ *
+ * @see svn_ra_serf__expand_string
+ */
 typedef svn_error_t *
 (*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
                                           void *baton,
@@ -403,7 +432,7 @@ struct svn_ra_serf__xml_parser_t {
   /* Callback invoked when a cdata chunk is received. */
   svn_ra_serf__xml_cdata_chunk_handler_t cdata;
 
-  /* Our associated XML parser. */
+  /* Our associated expat-based XML parser. */
   XML_Parser xmlp;
 
   /* Our current state. */
@@ -499,6 +528,21 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
                                 serf_bucket_t *response,
                                 void *baton,
                                 apr_pool_t *pool);
+
+/*
+ * Handler that discards the entire @a response body associated with a
+ * @a request.
+ *
+ * If @a baton is a svn_ra_serf__server_error_t (i.e. non-NULL) and an
+ * error is detected, it will be populated for later detection.
+ *
+ * All temporary allocations will be made in a @a pool.
+ */
+apr_status_t
+svn_ra_serf__handle_discard_body(serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 void *baton,
+                                 apr_pool_t *pool);
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is

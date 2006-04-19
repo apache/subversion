@@ -308,7 +308,7 @@ cdata_error(svn_ra_serf__xml_parser_t *parser,
 }
 
 apr_status_t
-svn_ra_serf__handler_discard_body(serf_request_t *request,
+svn_ra_serf__handle_discard_body(serf_request_t *request,
                                   serf_bucket_t *response,
                                   void *baton,
                                   apr_pool_t *pool)
@@ -386,8 +386,8 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   apr_status_t status;
   svn_ra_serf__simple_request_context_t *ctx = baton;
 
-  status = svn_ra_serf__handler_discard_body(request, response,
-                                             &ctx->server_error, pool);
+  status = svn_ra_serf__handle_discard_body(request, response,
+                                            &ctx->server_error, pool);
 
   if (APR_STATUS_IS_EOF(status))
     {
@@ -628,7 +628,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               *ctx->done_list = ctx->done_item;
             }
         }
-      return svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
   if (!ctx->xmlp)
@@ -764,7 +764,7 @@ handler_default(serf_request_t *request,
     {
       handle_auth(ctx->session, ctx->conn, request, response, pool);
       svn_ra_serf__request_create(ctx);
-      status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
   else if (sl.code >= 500)
     {
@@ -772,8 +772,8 @@ handler_default(serf_request_t *request,
       apr_status_t status;
 
       memset(&server_err, 0, sizeof(server_err));
-      status = svn_ra_serf__handler_discard_body(request, response,
-                                                 &server_err, pool);
+      status = svn_ra_serf__handle_discard_body(request, response,
+                                                &server_err, pool);
 
       if (APR_STATUS_IS_EOF(status))
         {
