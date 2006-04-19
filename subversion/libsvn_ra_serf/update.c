@@ -669,7 +669,7 @@ error_fetch(serf_request_t *request,
   fetch_ctx->done_item.next = *fetch_ctx->done_list;
   *fetch_ctx->done_list = &fetch_ctx->done_item;
 
-  serf_request_set_handler(request, svn_ra_serf__handler_discard_body, NULL);
+  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
 
   return APR_SUCCESS;
 }
@@ -911,7 +911,7 @@ handle_stream(serf_request_t *request,
   if (sl.code == 404)
     {
       fetch_ctx->done = TRUE;
-      return svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
   while (1)
