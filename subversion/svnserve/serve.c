@@ -2,7 +2,7 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1959,6 +1959,7 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_fs_root_t *root;
   void *edit_baton;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
                                  &send_deltas));
@@ -1967,13 +1968,18 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
 
-  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  err = svn_fs_revision_root(&root, b->fs, rev, pool);
 
-  SVN_CMD_ERR(svn_repos_replay2(root, b->fs_path->data, low_water_mark,
-                                send_deltas, editor, edit_baton,
-                                authz_check_access_cb_func(b), b, pool));
+  if (! err)
+    err = svn_repos_replay2(root, b->fs_path->data, low_water_mark,
+                            send_deltas, editor, edit_baton,
+                            authz_check_access_cb_func(b), b, pool);
+  if (! err)
+    SVN_CMD_ERR(editor->close_edit(edit_baton, pool));
 
-  SVN_CMD_ERR(editor->close_edit(edit_baton, pool));
+  if (err)
+    svn_error_clear(editor->abort_edit(edit_baton, pool));
+  SVN_CMD_ERR(err);
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 
