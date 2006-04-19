@@ -205,6 +205,18 @@
 }
 
 /* -----------------------------------------------------------------------
+   Callback: svn_info_receiver_t
+   svn_client_info()
+*/
+
+%typemap(python, in) (svn_info_receiver_t receiver, 
+                      void *receiver_baton) {
+    $1 = svn_swig_py_info_receiver_func;
+    $2 = (void *)$input;
+}
+
+
+/* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
    adding a simple declaration here, SWIG will insert a name for it.

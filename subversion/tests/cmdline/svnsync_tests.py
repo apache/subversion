@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2005 CollabNet.  All rights reserved.
+# Copyright (c) 2005, 2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -198,6 +198,12 @@ def file_dir_file(sbox):
   "files and dirs mixed together"
   run_test(sbox, "file-dir-file.dump")
 
+#----------------------------------------------------------------------
+
+def copy_parent_modify_prop(sbox):
+  "copy parent and modify prop"
+  run_test(sbox, "copy-parent-modify-prop.dump")
+
 
 ########################################################################
 # Run the tests
@@ -216,6 +222,7 @@ test_list = [ None,
               tag_with_modified_file,
               dir_prop_change,
               file_dir_file,
+              XFail(copy_parent_modify_prop),
              ]
 
 if __name__ == '__main__':

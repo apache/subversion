@@ -30,6 +30,7 @@
 #include <apr_portable.h>
 #include <apr_thread_proc.h>
 
+#include "svn_client.h"
 #include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_delta.h"
@@ -550,6 +551,7 @@ DECLARE_SWIG_CONSTRUCTOR(wc_status, svn_wc_dup_status)
 DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
 DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
     svn_auth_ssl_server_cert_info_dup)
+DECLARE_SWIG_CONSTRUCTOR(info, svn_info_dup)
 
 static PyObject *convert_log_changed_path(void *value, void *ctx,
                                           PyObject *py_pool)
@@ -1814,6 +1816,38 @@ finished:
   return err;
 }
 
+svn_error_t *svn_swig_py_info_receiver_func(void *baton,
+                                            const char *path,
+                                            const svn_info_t *info,
+                                            apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+ 
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)"sO&O&", 
+                                      path, make_ob_info, info,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
 
 svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
                                                     apr_int64_t line_no,
