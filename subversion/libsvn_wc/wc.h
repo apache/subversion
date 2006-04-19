@@ -2,7 +2,7 @@
  * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -63,12 +63,17 @@ extern "C" {
  * The change from 5 to 6 was the introduction of caching of property
  * modification state and certain properties in the entries file.
  *
+ * The change from 6 to 7 was changing the entries file format from XML.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       6
+#define SVN_WC__VERSION       7
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
+
+/* A version <= this has the entries file in XML format. */
+#define SVN_WC__XML_ENTRIES_VERSION 6
 
 /*** Update traversals. ***/
 
