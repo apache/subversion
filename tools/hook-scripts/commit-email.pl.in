@@ -504,7 +504,7 @@ foreach my $project (@project_settings_list)
     my $reply_to        = $project->{reply_to};
     my $subject_prefix  = $project->{subject_prefix};
     my $subject         = $subject_base;
-    my $diff_wanted     = $project->{show_diff} and $mode eq 'commit';
+    my $diff_wanted     = ($project->{show_diff} and $mode eq 'commit');
 
     if ($subject_prefix =~ /\w/)
       {
