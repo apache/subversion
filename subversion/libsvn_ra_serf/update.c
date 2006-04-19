@@ -373,6 +373,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
+      new_info->fetch_file = FALSE;
 
       /* Point at our parent's directory state. */
       new_info->dir = info->dir;
