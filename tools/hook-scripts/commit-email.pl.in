@@ -330,6 +330,8 @@ foreach my $line (@svnlooklines)
 # the conditional blocks below.
 my $subject_base;
 my @body;
+# $author - declared above for use as a command line parameter in
+#   revprop-change mode.  In commit mode, gets filled in below.
 
 if ($mode eq 'commit')
   {
@@ -338,7 +340,7 @@ if ($mode eq 'commit')
 
     # Get the author, date, and log from svnlook.
     my @infolines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
-    my $author = shift @infolines;
+    $author = shift @infolines;
     my $date = shift @infolines;
     shift @infolines;
     my @log = map { "$_\n" } @infolines;
@@ -450,12 +452,6 @@ elsif ($mode eq 'revprop-change')
         @svnlines = &read_from_process($svnlook, 'propget', '--revprop', '-r',
                                        $rev, $repos, $propname);
       }
-
-    # Figure out what directories have changed using svnlook.  This is
-    # merely so we can determine what project might care about receiving
-    # this log.
-    my @dirschanged = &read_from_process($svnlook, 'dirs-changed', $repos,
-                                         '-r', $rev);
 
     ######################################################################
     # Assembly of log message.
