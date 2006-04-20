@@ -2287,12 +2287,12 @@ svn_client_export(svn_revnum_t *result_rev,
  *
  * @since New in 1.4.
  */
-typedef svn_error_t *(svn_client_list_func_t)(void *baton,
-                                              const char *path,
-                                              const svn_dirent_t *dirent,
-                                              const svn_lock_t *lock,
-                                              const char *abs_path,
-                                              apr_pool_t *pool);
+typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
+                                               const char *path,
+                                               const svn_dirent_t *dirent,
+                                               const svn_lock_t *lock,
+                                               const char *abs_path,
+                                               apr_pool_t *pool);
 
 /**
  * Report the directory entry, and possibly children, for @a
