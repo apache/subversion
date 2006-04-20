@@ -320,12 +320,20 @@ module Svn
     end
 
     class Dirent
+      def none?
+        kind == NODE_NONE
+      end
+
       def directory?
         kind == NODE_DIR
       end
 
       def file?
         kind == NODE_FILE
+      end
+
+      def unknown?
+        kind == NODE_UNKNOWN
       end
     end
 

@@ -668,6 +668,94 @@ class SvnClientTest < Test::Unit::TestCase
     assert_match(/-#{before}\+#{after}\z/, out_file.read)
   end
 
+  def test_diff_summarize
+    log = "sample log"
+    before = "before\n"
+    after = "after\n"
+    file = "hello.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(before)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    commit_info = ctx.commit(@wc_path)
+    rev1 = commit_info.revision
+
+    File.open(path, "w") {|f| f.print(after)}
+
+    commit_info = ctx.commit(@wc_path)
+    rev2 = commit_info.revision
+
+    diffs = []
+    ctx.diff_summarize(path, rev1, path, rev2) do |diff|
+      diffs << diff
+    end
+    assert_equal([file], diffs.collect {|d| d.path})
+    kinds = diffs.collect do |d|
+      [d.kind_normal?, d.kind_added?, d.kind_modified?, d.kind_deleted?]
+    end
+    assert_equal([[false, false, true, false]], kinds)
+    assert_equal([false], diffs.collect {|d| d.prop_changed?})
+    node_kinds = diffs.collect do |d|
+      [d.node_kind_none?, d.node_kind_file?,
+       d.node_kind_dir?, d.node_kind_unknown?]
+    end
+    assert_equal([[false, true, false, false]], node_kinds)
+  end
+
+  def test_diff_summarize_peg
+    log = "sample log"
+    before = "before\n"
+    after = "after\n"
+    before_file = "before.txt"
+    after_file = "after.txt"
+    moved_file = "moved.txt"
+    before_path = File.join(@wc_path, before_file)
+    after_path = File.join(@wc_path, after_file)
+    moved_path = File.join(@wc_path, moved_file)
+    after_uri = "#{@repos_uri}/#{after_file}"
+
+    File.open(before_path, "w") {|f| f.print(before)}
+
+    ctx = make_context(log)
+    ctx.add(before_path)
+    commit_info = ctx.commit(@wc_path)
+    rev1 = commit_info.revision
+
+    ctx.mv(before_path, after_path)
+    commit_info = ctx.commit(@wc_path)
+    rev2 = commit_info.revision
+
+    File.open(after_path, "w") {|f| f.print(after)}
+    commit_info = ctx.commit(@wc_path)
+    rev3 = commit_info.revision
+
+    File.open(after_path, "w") {|f| f.print(before)}
+    commit_info = ctx.commit(@wc_path)
+    rev4 = commit_info.revision
+
+    ctx.mv(after_path, moved_path)
+    commit_info = ctx.commit(@wc_path)
+    rev5 = commit_info.revision
+
+    diffs = []
+    ctx.diff_summarize_peg(after_uri, rev3, rev4, rev3) do |diff|
+      diffs << diff
+    end
+    assert_equal([after_file], diffs.collect {|d| d.path})
+    kinds = diffs.collect do |d|
+      [d.kind_normal?, d.kind_added?, d.kind_modified?, d.kind_deleted?]
+    end
+    assert_equal([[false, false, true, false]], kinds)
+    assert_equal([false], diffs.collect {|d| d.prop_changed?})
+    node_kinds = diffs.collect do |d|
+      [d.node_kind_none?, d.node_kind_file?,
+       d.node_kind_dir?, d.node_kind_unknown?]
+    end
+    assert_equal([[false, true, false, false]], node_kinds)
+  end
+
   def test_merge
     log = "sample log"
     file = "sample.txt"
@@ -1353,7 +1441,42 @@ class SvnClientTest < Test::Unit::TestCase
     file_dirent = dirents[file]
     assert(file_dirent.file?)
   end
-  
+
+  def test_list
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    entries = []
+    ctx.list(@wc_path, rev) do |path, dirent, lock, abs_path|
+      entries << [path, dirent, lock, abs_path]
+    end
+    paths = entries.collect do |path, dirent, lock, abs_path|
+      [path, abs_path]
+    end
+    assert_equal([["", "/"], [dir, "/"], [file, "/"]].sort, paths.sort)
+    entries.each do |path, dirent, lock, abs_path|
+      case path
+      when dir, ""
+        assert(dirent.directory?)
+      when file
+        assert(dirent.file?)
+      else
+        flunk
+      end
+    end
+  end
+
   def test_switch
     log = "sample log"
     trunk_src = "trunk source\n"
