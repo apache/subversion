@@ -121,7 +121,7 @@ read_escaped(char *result, char **buf, const char *end)
 }
 
 /* Read a field, possibly with escaped bytes, from [*BUF, END),
-   stopping at the | terminator.  Place the read string in *RESULT, or set
+   stopping at the terminator.  Place the read string in *RESULT, or set
    *RESULT to NULL if it is the empty string.  Allocate the returned string
    in POOL.  Advance *BUF to point after the terminator. */
 static svn_error_t *
@@ -175,7 +175,7 @@ read_str(const char **result,
   return SVN_NO_ERROR;
 }
 
-/* Read a field from [*BUF, END), terminated by a | character.
+/* Read a field from [*BUF, END), terminated by a newline character.
    The field may not contain escape sequences.  The field is not
    copyed and the buffer is modified in place, by replacing the
    terminator with a NUL byte.  Make *BUF point after the original
@@ -208,7 +208,7 @@ read_val(const char **result,
 }
   
 /* Read a boolean field from [*BUF, END), placing the result in
-   *RESULT.  If there is no boolean value (just a terminating |), it
+   *RESULT.  If there is no boolean value (just a terminator), it
    defaults to false.  Else, the value must match FIELD_NAME, in which
    case *RESULT will be set to true.  Advance *BUF to point after the
    terminator. */
@@ -231,7 +231,7 @@ read_bool(svn_boolean_t *result, const char *field_name,
   return SVN_NO_ERROR;
 }
 
-/* Read a revision number from [*BUF, END) stopping at the |
+/* Read a revision number from [*BUF, END) stopping at the
    terminator.  Set *RESULT to the revision number, or
    SVN_INVALID_REVNUM if there is none.  Use POOL for temporary
    allocations.  Make *BUF point after the terminator.  */
@@ -253,7 +253,7 @@ read_revnum(svn_revnum_t *result,
   return SVN_NO_ERROR;
 }
 
-/* Read a timestamp from [*BUF, END) stopping at the | terminator.
+/* Read a timestamp from [*BUF, END) stopping at the terminator.
    Set *RESULT to the resulting timestamp, or 0 if there is none.  Use
    POOL for temporary allocations.  Make *BUF point after the
    terminator. */
@@ -276,7 +276,7 @@ read_time(apr_time_t *result,
 /* Allocate an entry from POOL and read it from [*BUF, END).  The
    buffer may be modified in place while parsing.  Return the new
    entry in *NEW_ENTRY.  Advance *BUF to point at the end of the entry
-   line. */
+   record. */
 static svn_error_t *
 read_entry(svn_wc_entry_t **new_entry,
            char **buf, const char *end,
@@ -1301,7 +1301,7 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
-/* Append STR to BUF, terminating it with a | byte.  Escape bytes that
+/* Append STR to BUF, terminating it with a newline.  Escape bytes that
    needs escaping.  Use POOL for temporary allocations. */
 static void
 write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
@@ -1355,8 +1355,7 @@ write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
 }
 
 /* Append the timestamp VAL to BUF (or the empty string if VAL is 0),
-   terminating it with a | character.  Use POOL for temporary
-   allocations. */
+   followed by a terminator.  Use POOL for temporary allocations. */
 static void
 write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
 {
