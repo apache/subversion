@@ -2,7 +2,7 @@
  * relocate.c: do wc repos relocation
  *
  * ====================================================================
- * Copyright (c) 2002-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -176,7 +176,7 @@ svn_wc_relocate2(const char *path,
                              validator, validator_baton, FALSE, pool));
     }
 
-  SVN_ERR(svn_wc__remove_wcprops(adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
   SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
   return SVN_NO_ERROR;
 }

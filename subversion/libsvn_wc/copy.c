@@ -2,7 +2,7 @@
  * copy.c:  wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -38,75 +38,6 @@
 
 
 /*** Code. ***/
-
-svn_error_t *
-svn_wc__remove_wcprops(svn_wc_adm_access_t *adm_access,
-                       svn_boolean_t recurse,
-                       apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  const char *wcprop_path;
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Read PATH's entries. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, subpool));
-
-  /* Remove this_dir's wcprops */
-  SVN_ERR(svn_wc__wcprop_path(&wcprop_path,
-                              svn_wc_adm_access_path(adm_access),
-                              svn_node_dir, FALSE, subpool));
-  svn_error_clear(svn_io_remove_file(wcprop_path, subpool));
-
-  /* Recursively loop over all children. */
-  for (hi = apr_hash_first(subpool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const char *name;
-      const svn_wc_entry_t *current_entry;
-      const char *child_path;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      current_entry = val;
-
-      /* Ignore the "this dir" entry. */
-      if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
-        continue;
-
-      child_path = svn_path_join(svn_wc_adm_access_path(adm_access), name,
-                                 subpool);
-
-      /* If a file, remove it from wcprops. */
-      if (current_entry->kind == svn_node_file)
-        {
-          SVN_ERR(svn_wc__wcprop_path(&wcprop_path, child_path,
-                                      svn_node_file, FALSE, subpool));
-          svn_error_clear(svn_io_remove_file(wcprop_path, subpool));
-          /* ignoring any error value from the removal; most likely,
-             apr_file_remove will complain about trying to a remove a
-             file that's not there.  But this more efficient than
-             doing an independant stat for each file's existence
-             before trying to remove it, no? */
-        }        
-
-      /* If a dir, recurse. */
-      else if (recurse && current_entry->kind == svn_node_dir)
-        {
-          svn_wc_adm_access_t *child_access;
-          SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access, child_path,
-                                      subpool));
-          SVN_ERR(svn_wc__remove_wcprops(child_access, recurse, subpool));
-        }
-    }
-
-  /* Cleanup */
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
 
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
@@ -251,7 +182,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
   const char *path = svn_wc_adm_access_path(adm_access);
   
   /* Remove wcprops. */
-  SVN_ERR(svn_wc__remove_wcprops(adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
 
   /* Read this directory's entries file. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));

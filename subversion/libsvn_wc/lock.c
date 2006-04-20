@@ -77,6 +77,13 @@ struct svn_wc_adm_access_t
   apr_hash_t *entries;
   apr_hash_t *entries_hidden;
 
+  /* A hash mapping const char * entry names to hashes of wcprops.
+     These hashes map const char * names to svn_string_t * values.
+     NULL of the wcprops hasn't been read into memory.
+     ### Since there are typically just one or two wcprops per entry,
+     ### we could use a more compact way of storing them. */
+  apr_hash_t *wcprops;
+
   /* POOL is used to allocate cached items, they need to persist for the
      lifetime of this access baton */
   apr_pool_t *pool;
@@ -149,6 +156,66 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
+/* Write, to LOG_ACCUM, commands to convert a WC that has wcprops in individual
+   files to use one wcprops file per directory.
+   Do this for ADM_ACCESS and its file children, using POOL for temporary
+   allocations. */
+static svn_error_t *
+convert_wcprops(svn_stringbuf_t *log_accum,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+
+  /* Walk over the entries, adding a modify-wcprop command for each wcprop.
+     Note that the modifications happen in memory and are just written once
+     at the end of the log execution, so this isn't as inefficient as it
+     might sound. */
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      const svn_wc_entry_t *entry;
+      apr_hash_t *wcprops;
+      apr_hash_index_t *hj;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+
+      if (entry->kind != svn_node_file
+          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+        continue;
+
+      svn_pool_clear(subpool);
+      
+      SVN_ERR(svn_wc__wcprop_list(&wcprops, entry->name, adm_access, subpool));
+
+      /* Create a subsubpool for the inner loop...
+         No, just kidding.  There are typically just one or two wcprops
+         per entry... */
+      for (hj = apr_hash_first(subpool, wcprops); hj; hj = apr_hash_next(hj))
+        {
+          const void *key2;
+          void *val2;
+          const char *propname;
+          svn_string_t *propval;
+
+          apr_hash_this(hj, &key2, NULL, &val2);
+          propname = key2;
+          propval = val2;
+          SVN_ERR(svn_wc__loggy_modify_wcprop(&log_accum, adm_access,
+                                              entry->name, propname,
+                                              propval->data,
+                                              subpool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Maybe upgrade the working copy directory represented by ADM_ACCESS
    to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
    lock.  Use POOL for all temporary allocation.
@@ -186,6 +253,11 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       /* Possibly convert an old WC that doesn't use propcaching. */
       if (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
         SVN_ERR(introduce_propcaching(log_accum, adm_access, pool));
+
+      /* If the WC uses one file per entry for wcprops, give back some inodes
+         to the poor user. */
+      if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+        SVN_ERR(convert_wcprops(log_accum, adm_access, pool));
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
       SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
@@ -331,6 +403,7 @@ adm_access_alloc(enum svn_wc__adm_access_type type,
   lock->type = type;
   lock->entries = NULL;
   lock->entries_hidden = NULL;
+  lock->wcprops = NULL;
   lock->wc_format = 0;
   lock->set = NULL;
   lock->lock_exists = FALSE;
@@ -1428,6 +1501,19 @@ svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
     }
   else
     return adm_access->entries_hidden;
+}
+
+void
+svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
+                        apr_hash_t *wcprops)
+{
+  adm_access->wcprops = wcprops;
+}
+
+apr_hash_t *
+svn_wc__adm_access_wcprops(svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->wcprops;
 }
 
 

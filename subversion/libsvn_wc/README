@@ -96,9 +96,10 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
        prop-base/               /* Pristine properties for files in this dir */
             foo.c.svn-base      /* Stores foo.c's pristine props */
             foo.c.svn-revert       /* Props base when reverting, if any */
-       wcprops/                 /* Special 'wc' props for files in this dir */
-            foo.c.svn-work          /* wcprops for foo.c, if any */
-       dir-wcprops              /* wcprops for this directory, if any */
+       wcprops/                 /* Obsolete in format 7 and beyond. */
+            foo.c.svn-work
+       dir-wcprops              /* Obsolete in format 7 and beyond.
+       all-wcprops              /* Special 'wc' props for files in this dir */
        tmp/                     /* Local tmp area */
             ./                  /* Adm files are written directly here */
             text-base/          /* tmp area for base files */
@@ -282,7 +283,7 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
    like ACLs, permissions, ownership, and notes; but users shouldn't
    be trying to store 30 meg PNG files.  :)
 
-'wcprops/' and 'dir-wcprops':
+'all-wcprops/':
    Some properties are never seen or set by the user, and are never
    stored in the repository filesystem.  They are created by the
    networking layer (DAV right now) and need to be secretly saved and
@@ -291,12 +292,7 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
    properties.  
 
    Note that because these properties aren't being versioned, we don't
-   bother to keep pristine forms of them in a 'base' area.  Nor do we
-   paranoid-ly move them through .svn/tmp/ when changing them.  These
-   sorts of behaviors are meant for preserving sacred user data,
-   especially local modifications.  wcprops, on the other hand, are
-   just internal tracking data used by the system, like the 'entries'
-   file.
+   bother to keep pristine forms of them in a 'base' area.
 
 `empty-file':
    This file was added in format 4 and earlier.  This was used to
@@ -541,9 +537,16 @@ working props file always contains the working properties.  The
 `prop-time' attribute can be used to optimize detection of property
 modifications.
 
-wcprops are stored in a similar fashion to how base-props are stored,
-but they use .svn/dir-wcprops and .svn/wcprops/foo.svn-work names for
-directory and file properties, respectively.
+In format 8 and beyond, wcprops are stored in a file called all-wcprops.
+This file need not exist if no entry in the directory has any wcprops.
+The file starts with all wcprops for the this_dir entry in hashdump format.
+Then comes, for each entry that has wcprops, a line containing the basename
+of the entry followed by the wcprops for that entry in hashdump format.
+
+In format 7 and earlier, wcprops are stored in a similar fashion to
+how base-props are stored, but they use .svn/dir-wcprops and
+.svn/wcprops/foo.svn-work names for directory and file properties,
+respectively.
 
 
 How the client applies an update delta

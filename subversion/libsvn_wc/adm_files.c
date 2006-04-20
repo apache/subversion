@@ -1016,10 +1016,6 @@ init_adm_tmp_area(svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROPS,
                                  svn_node_dir, perms, 1, pool));
 
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_WCPROPS */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_WCPROPS,
-                                 svn_node_dir, perms, 1, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1061,10 +1057,6 @@ init_adm(const char *path,
 
   /* SVN_WC__ADM_PROPS */
   SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROPS,
-                                 svn_node_dir, perms, 0, pool));
-
-  /* SVN_WC__ADM_WCPROPS */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_WCPROPS,
                                  svn_node_dir, perms, 0, pool));
 
   /** Init the tmp area. ***/
