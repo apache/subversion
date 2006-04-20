@@ -2114,6 +2114,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (custom-hide-count 0)   ;how many files are hidden via svn-status-custom-hide-function
         (marked-count 0)        ;how many files are elided
         (user-elide-count 0)
+        (first-line t)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
         (header-line-string)
@@ -2123,9 +2124,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     ;; Insert all files and directories
     (while st-info
       (setq start-pos (point))
-      (cond ((svn-status-line-info->has-usermark (car st-info))
-             ;; Show a marked file always
-             (svn-insert-line-in-status-buffer (car st-info)))
+      (cond ((or (svn-status-line-info->has-usermark (car st-info)) first-line)
+             ;; Show a marked file and the "." always
+             (svn-insert-line-in-status-buffer (car st-info))
+             (setq first-line nil))
             ((svn-status-line-info->update-available (car st-info))
              (svn-insert-line-in-status-buffer (car st-info)))
             ((and svn-status-custom-hide-function
