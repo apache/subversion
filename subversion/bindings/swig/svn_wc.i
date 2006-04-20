@@ -97,6 +97,14 @@
     const char *trail_url
 }
 
+/* svn_wc_transmit_text_deltas2() */
+%apply (const svn_delta_editor_t *EDITOR, void *BATON)
+{
+  (const svn_delta_editor_t *editor, void *file_baton),
+  (const svn_delta_editor_t *editor, void *baton)
+}
+
+
 %apply const char **OUTPUT { char **url };
 
 
