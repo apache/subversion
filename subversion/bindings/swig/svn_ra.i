@@ -55,7 +55,8 @@
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
 %apply const char *MAY_BE_NULL {
-    const char *comment
+    const char *comment,
+    const char *lock_token
 };
 
 %apply apr_hash_t *STRING_TO_STRING {
