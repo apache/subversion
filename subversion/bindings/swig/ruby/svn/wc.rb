@@ -347,16 +347,17 @@ module Svn
       end
 
       def transmit_text_deltas(path, editor, file_baton, fulltext=false)
-        Wc.transmit_text_deltas(path, self, fulltext,
-                                editor, file_baton)
+        editor.baton = file_baton
+        Wc.transmit_text_deltas(path, self, fulltext, editor)
       end
 
-      def transmit_text_deltas2(path, editor, file_baton, fulltext=false)
-        Wc.transmit_text_deltas2(path, self, fulltext, editor, file_baton)
+      def transmit_text_deltas2(path, editor, fulltext=false)
+        Wc.transmit_text_deltas2(path, self, fulltext, editor)
       end
 
-      def transmit_prop_deltas(path, entry, editor, baton)
-        Wc.transmit_prop_deltas(path, self, entry, editor, baton)
+      def transmit_prop_deltas(path, entry, editor, baton=nil)
+        editor.baton = baton if baton
+        Wc.transmit_prop_deltas(path, self, entry, editor)
       end
 
       def ignores(config)
