@@ -281,7 +281,19 @@ svn_error_t *svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
 svn_error_t *svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                                                                svn_txdelta_window_t *window,
                                                                apr_pool_t *pool);
+
 VALUE svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window);
+
+
+svn_error_t *svn_swig_rb_client_diff_summarize_func(const svn_client_diff_summarize_t *diff,
+                                                    void *baton,
+                                                    apr_pool_t *pool);
+svn_error_t *svn_swig_rb_client_list_func(void *baton,
+                                          const char *path,
+                                          const svn_dirent_t *dirent,
+                                          const svn_lock_t *lock,
+                                          const char *abs_path,
+                                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

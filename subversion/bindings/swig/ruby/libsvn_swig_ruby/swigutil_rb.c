@@ -601,6 +601,8 @@ DEFINE_DUP2(commit_info)
 DEFINE_DUP2(lock)
 DEFINE_DUP2(auth_ssl_server_cert_info)
 DEFINE_DUP2(wc_entry)
+DEFINE_DUP2(client_diff_summarize)
+DEFINE_DUP2(dirent)
 DEFINE_DUP_NO_CONVENIENCE2(prop)
 DEFINE_DUP_NO_CONVENIENCE2(client_commit_item2)
 DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
@@ -2959,6 +2961,7 @@ svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
   return handler(window, handler_baton);
 }
 
+
 VALUE
 svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 {
@@ -2975,3 +2978,59 @@ svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 
   return ops;
 }
+
+
+svn_error_t *
+svn_swig_rb_client_diff_summarize_func(const svn_client_diff_summarize_t *diff,
+                                       void *baton,
+                                       apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(3,
+                       proc,
+                       rb_id_call(),
+                       c2r_client_diff_summarize__dup(diff));
+
+    invoke_callback_handle_error(args, rb_pool, &err);
+  }
+
+  return err;
+}
+
+svn_error_t *
+svn_swig_rb_client_list_func(void *baton,
+                             const char *path,
+                             const svn_dirent_t *dirent,
+                             const svn_lock_t *lock,
+                             const char *abs_path,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(6,
+                       proc,
+                       rb_id_call(),
+                       c2r_string2(path),
+                       c2r_dirent__dup(dirent),
+                       c2r_lock__dup(lock),
+                       c2r_string2(abs_path));
+
+    invoke_callback_handle_error(args, rb_pool, &err);
+  }
+
+  return err;
+}
+

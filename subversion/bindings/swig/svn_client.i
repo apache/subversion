@@ -215,6 +215,29 @@
     $2 = (void *)$input;
 }
 
+/* -----------------------------------------------------------------------
+   Callback: svn_client_diff_summarize_func_t
+   svn_client_diff_summarize()
+   svn_client_diff_summarize_peg()
+*/
+
+%typemap(ruby, in) (svn_client_diff_summarize_func_t summarize_func,
+                    void *summarize_baton)
+{
+  $1 = svn_swig_rb_client_diff_summarize_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_client_list_func_t
+   svn_client_list()
+*/
+
+%typemap(ruby, in) (svn_client_list_func_t list_func, void *baton)
+{
+  $1 = svn_swig_rb_client_list_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the

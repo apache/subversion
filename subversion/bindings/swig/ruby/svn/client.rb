@@ -177,12 +177,12 @@ module Svn
       alias pl proplist
       
       def copy(src_path, dst_path, rev=nil)
-        Client.copy2(src_path, rev || "HEAD", dst_path, self)
+        Client.copy3(src_path, rev || "HEAD", dst_path, self)
       end
       alias cp copy
       
       def move(src_path, dst_path, force=false)
-        Client.move3(src_path, dst_path, force, self)
+        Client.move4(src_path, dst_path, force, self)
       end
       alias mv move
 
@@ -207,7 +207,6 @@ module Svn
                    recurse=true, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
                    header_encoding=nil)
-        peg_rev ||= URI(path).scheme ? "HEAD" : "BASE"
         header_encoding ||= Core::LOCALE_CHARSET
         Client.diff_peg3(options, path, peg_rev, start_rev, end_rev,
                          recurse, ignore_ancestry,
@@ -215,22 +214,35 @@ module Svn
                          out_file, err_file, self)
       end
 
+      def diff_summarize(path1, rev1, path2, rev2,
+                         recurse=true, ignore_ancestry=true,
+                         &block)
+        Client.diff_summarize(path1, rev1, path2, rev2,
+                              recurse, ignore_ancestry, block, self)
+      end
+
+      def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
+                             recurse=true, ignore_ancestry=true,
+                             &block)
+        Client.diff_summarize_peg(path1, rev1, rev2, peg_rev,
+                                  recurse, ignore_ancestry, block, self)
+      end
+
       def merge(src1, rev1, src2, rev2, target_wcpath,
                 recurse=true, ignore_ancestry=false,
-                force=false, dry_run=false)
-        Client.merge(src1, rev1, src2, rev2, target_wcpath,
-                     recurse, ignore_ancestry, force,
-                     dry_run, self)
+                force=false, dry_run=false, options=nil)
+        Client.merge2(src1, rev1, src2, rev2, target_wcpath,
+                      recurse, ignore_ancestry, force,
+                      dry_run, options, self)
       end
 
       def merge_peg(src, rev1, rev2, target_wcpath,
                     peg_rev=nil, recurse=true,
                     ignore_ancestry=false, force=false,
-                    dry_run=false)
-        peg_rev ||= URI(src).scheme ? "HEAD" : "BASE"
-        Client.merge_peg(src, rev1, rev2, peg_rev,
-                         target_wcpath, recurse, ignore_ancestry,
-                         force, dry_run, self)
+                    dry_run=false, options=nil)
+        Client.merge_peg2(src, rev1, rev2, peg_rev,
+                          target_wcpath, recurse, ignore_ancestry,
+                          force, dry_run, options, self)
       end
       
       def cat(path, rev="HEAD", peg_rev=nil, output=nil)
@@ -281,18 +293,19 @@ module Svn
       end
       
       def log(paths, start_rev, end_rev, limit,
-              discover_changed_paths, strict_node_history)
+              discover_changed_paths, strict_node_history,
+              peg_rev=nil)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, rev, author, date, message|
           date = Time.from_svn_format(date) if date
           yield(changed_paths, rev, author, date, message)
         end
-        Client.log2(paths, start_rev, end_rev, limit,
+        Client.log3(paths, peg_rev, start_rev, end_rev, limit,
                     discover_changed_paths,
                     strict_node_history,
                     receiver, self)
       end
-      
+
       def log_message(paths, start_rev=nil, end_rev=nil)
         start_rev ||= "HEAD"
         end_rev ||= start_rev
@@ -310,16 +323,19 @@ module Svn
         end
       end
 
-      def blame(path_or_uri, start_rev=nil, end_rev=nil, peg_rev=nil)
+      def blame(path_or_uri, start_rev=nil, end_rev=nil, peg_rev=nil,
+                diff_options=nil, ignore_mime_type=false)
         start_rev ||= 1
         end_rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         peg_rev ||= end_rev
+        diff_options ||= Svn::Core::DiffFileOptions.new
         receiver = Proc.new do |line_no, revision, author, date, line|
           date = Time.from_svn_format(date) if date
           yield(line_no, revision, author, date, line)
         end
-        Client.blame2(path_or_uri, peg_rev, start_rev,
-                      end_rev, receiver, self)
+        Client.blame3(path_or_uri, peg_rev, start_rev,
+                      end_rev, diff_options, ignore_mime_type,
+                      receiver, self)
       end
       alias praise blame
       alias annotate blame
@@ -377,7 +393,14 @@ module Svn
         peg_rev ||= rev
         Client.ls3(path_or_uri, rev, peg_rev, recurse, self)
       end
-      
+
+      def list(path_or_uri, rev, peg_rev=nil, recurse=false,
+               dirent_fields=nil, fetch_locks=true, &block)
+        dirent_fields ||= Core::DIRENT_ALL
+        Client.list(path_or_uri, peg_rev, rev, recurse, dirent_fields,
+                    fetch_locks, self, block)
+      end
+
       def switch(path, uri, rev=nil, recurse=true)
         Client.switch(path, uri, rev, recurse, self)
       end
@@ -487,6 +510,42 @@ module Svn
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
         end
+      end
+    end
+
+    class DiffSummarize
+      alias prop_changed? prop_changed
+
+      def kind_normal?
+        summarize_kind == DIFF_SUMMARIZE_KIND_NORMAL
+      end
+
+      def kind_added?
+        summarize_kind == DIFF_SUMMARIZE_KIND_ADDED
+      end
+
+      def kind_modified?
+        summarize_kind == DIFF_SUMMARIZE_KIND_MODIFIED
+      end
+
+      def kind_deleted?
+        summarize_kind == DIFF_SUMMARIZE_KIND_DELETED
+      end
+
+      def node_kind_none?
+        node_kind == Core::NODE_NONE
+      end
+
+      def node_kind_file?
+        node_kind == Core::NODE_FILE
+      end
+
+      def node_kind_dir?
+        node_kind == Core::NODE_DIR
+      end
+
+      def node_kind_unknown?
+        node_kind == Core::NODE_UNKNOWN
       end
     end
   end
