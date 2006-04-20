@@ -545,6 +545,18 @@
   $result = output_helper($result, rb_str_new2(digest_string));
 }
 
+
+%typemap(ruby, in, numinputs=0) unsigned char **digest ($*1_type temp)
+{
+    $1 = &temp;
+}
+
+%typemap(ruby, argout, fragment="output_helper") unsigned char **digest
+{
+  char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);
+  $result = output_helper($result, rb_str_new2(digest_string));
+}
+
 /* svn_md5_* functions takes const ones as input */
 %typemap(perl5, in) const unsigned char digest[] {
     SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
