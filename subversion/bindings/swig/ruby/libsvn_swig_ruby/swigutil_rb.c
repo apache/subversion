@@ -2963,7 +2963,7 @@ VALUE
 svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 {
   VALUE ops;
-  svn_txdelta_op_t *op;
+  const svn_txdelta_op_t *op;
   int i;
 
   ops = rb_ary_new2(window->num_ops);
