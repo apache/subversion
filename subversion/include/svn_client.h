@@ -535,6 +535,16 @@ typedef struct svn_client_diff_summarize_t
   svn_node_kind_t node_kind;
 } svn_client_diff_summarize_t;  
 
+/**
+ * Return a duplicate of @a diff, allocated in @a pool. No part of the new
+ * structure will be shared with @a diff.
+ *
+ * @since New in 1.4.
+ */
+svn_client_diff_summarize_t *
+svn_client_diff_summarize_dup(const svn_client_diff_summarize_t *diff,
+                              apr_pool_t *pool);
+
 
 /** A callback used in svn_client_diff_summarize() and
  * svn_client_diff_summarize_peg() for reporting a @a diff summary.

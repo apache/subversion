@@ -2324,6 +2324,21 @@ do_diff_summarize(const struct diff_parameters *diff_param,
   return SVN_NO_ERROR;
 }
 
+svn_client_diff_summarize_t *
+svn_client_diff_summarize_dup(const svn_client_diff_summarize_t *diff,
+                              apr_pool_t *pool)
+{
+  svn_client_diff_summarize_t *dup_diff = apr_palloc(pool, sizeof(*dup_diff));
+
+  *dup_diff = *diff;
+
+  if (diff->path)
+    dup_diff->path = apr_pstrdup(pool, diff->path);
+
+  return dup_diff;
+}
+
+
 /*----------------------------------------------------------------------- */
 
 /*** Public Interfaces. ***/
