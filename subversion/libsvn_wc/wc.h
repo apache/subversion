@@ -65,15 +65,20 @@ extern "C" {
  *
  * The change from 6 to 7 was changing the entries file format from XML.
  *
+ * The change from 7 to 8 was putting wcprops in one file per directory.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       7
+#define SVN_WC__VERSION       8
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
 
 /* A version <= this has the entries file in XML format. */
 #define SVN_WC__XML_ENTRIES_VERSION 6
+
+/* A version <= this has wcprops stored in one file per entry. */
+#define SVN_WC__WCPROPS_MANY_FILES_VERSION 7
 
 /*** Update traversals. ***/
 
@@ -122,6 +127,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_WCPROPS             "wcprops"
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
+#define SVN_WC__ADM_ALL_WCPROPS         "all-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
 

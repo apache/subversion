@@ -2,7 +2,7 @@
  * props.h :  properties
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -87,28 +87,46 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  svn_stringbuf_t **entry_accum);
 
 
-/* Get a single 'wcprop' NAME for versioned object PATH, return in
-   *VALUE.  ADM_ACCESS is an access baton set that contains PATH. */
-svn_error_t *svn_wc__wcprop_get(const svn_string_t **value,
-                                const char *name,
-                                const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
+/* Return a list of wc props for ENTRYNAME in ADM_ACCESS.
+   ENTRYNAME must be the name of a file or SVN_WC_ENTRY_THIS_DIR.
+   
+   The returned WCPROPS may be allocated in POOL, or may be the props
+   cached in ADM_ACCESS.  */
+svn_error_t *
+svn_wc__wcprop_list(apr_hash_t **wcprops,
+                    const char *entryname,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH. 
    If VALUE is null, remove property NAME.  ADM_ACCESS is an access
-   baton set that contains PATH. */
+   baton set that contains PATH.
+
+   If FORCE_WRITE is true, then the change will be written to disk
+   immediately.  Else, only the in-memory cache (if that is used) will
+   be updated and the caller is expected to use
+   svn_wc__wcprops_write() later, on the correct access baton, to store
+   the change persistently. */
 svn_error_t *svn_wc__wcprop_set(const char *name,
                                 const svn_string_t *value,
                                 const char *path,
                                 svn_wc_adm_access_t *adm_access,
+                                svn_boolean_t force_write,
                                 apr_pool_t *pool);
 
-/* Remove all wc properties under ADM_ACCESS, recursively.  Do any
-   temporary allocation in POOL.  */
+/* Remove wcprops for entry NAME under ADM_ACCESS, or for all files
+   and this_dir if NAME is null.  Recurse into subdirectories if
+   RECURSE is true.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__remove_wcprops(svn_wc_adm_access_t *adm_access,
+                                    const char *name,
                                     svn_boolean_t recurse,
                                     apr_pool_t *pool);
+
+/* Write the wcprops cached in ADM_ACCESS, if any, to disk using POOL for
+   temporary allocations. */
+svn_error_t *
+svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool);
+
 
 /* Returns TRUE if PROPS contains the svn:special property */
 svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
