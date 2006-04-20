@@ -44,6 +44,15 @@
 
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
+ *
+ * A little explanation of how the parsing works.  Every time we see
+ * an open-directory tag, we enter the OPEN_DIR state.  Likewise, for
+ * add-directory, open-file, etc.  When we see the closing variant of the
+ * open-directory tag, we'll 'pop' out of that state.
+ *
+ * Each state has a pool associated with it that can have temporary
+ * allocations that will live as long as the tag is opened.  Once
+ * the tag is 'closed', the pool will be reused.
  */
 typedef enum {
     NONE = 0,
@@ -302,6 +311,8 @@ typedef struct {
 } report_context_t;
 
 
+/** Report state management helper **/
+
 static report_info_t *
 push_state(svn_ra_serf__xml_parser_t *parser,
            report_context_t *ctx,
@@ -387,6 +398,9 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   return parser->state->private;
 }
 
+
+/** Wrappers around our various property walkers **/
+
 static svn_error_t *
 set_file_props(void *baton,
                const char *ns, apr_ssize_t ns_len,
@@ -442,6 +456,9 @@ remove_dir_props(void *baton,
                                       dir->dir_baton,
                                       ns, ns_len, name, name_len, NULL, pool);
 }
+
+
+/** Helpers to open and close directories */
 
 static svn_error_t*
 open_dir(report_dir_t *dir)
@@ -559,6 +576,9 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 
   return close_dir(dir);
 }
+
+
+/** Routines called when we are fetching a file */
 
 /* This function works around a bug in mod_dav_svn in that it will not
  * send remove-prop in the update report when a lock property disappears
@@ -1140,6 +1160,9 @@ static void fetch_file(report_context_t *ctx, report_info_t *info)
         }
     }
 }
+
+
+/** XML callbacks for our update-report response parsing */
 
 static svn_error_t *
 start_report(svn_ra_serf__xml_parser_t *parser,
@@ -1788,6 +1811,9 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+
+/** Editor callbacks given to callers to create request body */
+
 static svn_error_t *
 set_path(void *report_baton,
          const char *path,
@@ -2228,6 +2254,9 @@ static const svn_ra_reporter2_t ra_serf_reporter = {
   finish_report,
   abort_report
 };
+
+
+/** RA function implementations and body */
 
 static svn_error_t *
 make_update_reporter(svn_ra_session_t *ra_session,
