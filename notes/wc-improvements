@@ -92,12 +92,7 @@ implement, some of them may not work at all.
   file for example.  The overhead may not matter to a command line
   client, but it can matter to a GUI that makes many such calls.
 
-- Get rid of .svn/format.  Put the version information into
-  .svn/entries instead, either in the xml or just as text on the first
-  line.  Reading one file rather then two will put less load on the
-  physical filesystem.  Consider supporting out of tree .svn
-  directories.  Is the size of .svn/entries critical?  Would a custom,
-  less verbose, format be better than XML?
+- Consider supporting out of tree .svn directories.
 
 - In the present code most operations are IO bound and have CPU to
   spare.  Perhaps compressed text-bases would make things faster
@@ -130,16 +125,13 @@ implement, some of them may not work at all.
   It would reduce the memory used to cache the entries, an ABI change
   to svn_wc_entry_t might reduce it further.
 
-- Optimise property handling
-  http://svn.haxx.se/dev/archive-2004-11/0318.shtml
-
-  * Look at calls to svn_wc__get_keywords and svn_wc__get_eol_style
-    Each of those reads the properties file.  If they occur together
-    then consider replacing them with a single call to svn_wc_prop_list,
-    and perhaps write some functions that accept the properties hash
-    as an argument.  Alternatively, consider caching the existence of
-    these two properties in the entries file to avoid reading the props
-    file at all in some cases.
+- Look at calls to svn_wc__get_keywords and svn_wc__get_eol_style
+  Each of those reads the properties file.  If they occur together
+  then consider replacing them with a single call to svn_wc_prop_list,
+  and perhaps write some functions that accept the properties hash
+  as an argument.  Alternatively, consider caching the existence of
+  these two properties in the entries file to avoid reading the props
+  file at all in some cases.
 
 - Optimise update/incomplete handling to reduce the number of times
   the entry file gets written.
