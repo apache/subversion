@@ -904,10 +904,40 @@ svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   apr_hash_t *proplist;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t any_props = FALSE;
 
   /* If there are no cached wcprops, there is nothing to do. */
   if (! wcprops)
     return SVN_NO_ERROR;
+
+  /* Check if there are any properties at all. */
+  for (hi = apr_hash_first(pool, wcprops); hi && ! any_props;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      proplist = val;
+      if (apr_hash_count(proplist) > 0)
+        any_props = TRUE;
+    }
+
+  /* If there are no props, remove the file. */
+  if (! any_props)
+    {
+      svn_error_t *err;
+
+      err = svn_wc__remove_adm_file(svn_wc_adm_access_path(adm_access), pool,
+                                    SVN_WC__ADM_ALL_WCPROPS, NULL);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
 
   SVN_ERR(svn_wc__open_adm_file(&file, svn_wc_adm_access_path(adm_access),
                                 SVN_WC__ADM_ALL_WCPROPS,
@@ -931,8 +961,10 @@ svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       name = key;
       proplist = val;
 
-      /* We already wrote this_dir. */
-      if (strcmp(SVN_WC_ENTRY_THIS_DIR, name) == 0)
+      /* We already wrote this_dir, and writing empty hashes makes me
+         feel silly... */
+      if (strcmp(SVN_WC_ENTRY_THIS_DIR, name) == 0
+          || apr_hash_count(proplist) == 0)
         continue;
 
       svn_pool_clear(subpool);
