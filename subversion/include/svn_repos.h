@@ -620,10 +620,10 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
  * entirety, not as simple copies or deltas against a previous version.
  *
  * The @a editor passed to this function should be aware of the fact
- * that calls to its change_dir_prop(), change_file_prop(), and
- * apply_textdelta() functions will not contain meaningful data, and
- * merely serve as indications that properties or textual contents
- * were changed. 
+ * that, if @a send_deltas is false, calls to its change_dir_prop(),
+ * change_file_prop(), and apply_textdelta() functions will not
+ * contain meaningful data, and merely serve as indications that
+ * properties or textual contents were changed.
  *
  * If @a send_deltas is @c TRUE, the text and property deltas for changes
  * will be sent, otherwise null text deltas and empty prop changes will be
