@@ -576,6 +576,20 @@ static svn_error_t *recode_write(void *baton,
   return svn_cmdline_fputs(data, rwb->out, rwb->pool);
 }
 
+/* Create a stream, to write to STD_STREAM, that uses recode_write()
+   to perform UTF-8 to console encoding translation. */
+static svn_stream_t *
+recode_stream_create(FILE *std_stream, apr_pool_t *pool)
+{
+  struct recode_write_baton *std_stream_rwb =
+    apr_palloc(pool, sizeof(struct recode_write_baton));
+  
+  svn_stream_t *rw_stream = svn_stream_create(std_stream_rwb, pool);
+  std_stream_rwb->pool = svn_pool_create(pool);
+  std_stream_rwb->out = std_stream;
+  svn_stream_set_write(rw_stream, recode_write);
+  return rw_stream;
+}
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -585,7 +599,6 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_stream_t *stdout_stream, *stderr_stream = NULL;
-  struct recode_write_baton stderr_stream_rwb = { 0 };
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
 
@@ -619,15 +632,9 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
      a file if they want.  :-)  */
   SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
 
-  /* Progress feedback goes to stderr, unless they asked to suppress
-     it. */
+  /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    {
-      stderr_stream = svn_stream_create(&stderr_stream_rwb, pool);
-      stderr_stream_rwb.pool = svn_pool_create(pool);
-      stderr_stream_rwb.out = stderr;
-      svn_stream_set_write(stderr_stream, recode_write);
-    }
+    stderr_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
                              lower, upper, opt_state->incremental,
@@ -674,7 +681,6 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_stream_t *stdin_stream, *stdout_stream = NULL;
-  struct recode_write_baton stdout_stream_rwb = { 0 };
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   
@@ -682,14 +688,9 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(create_stdio_stream(&stdin_stream,
                               apr_file_open_stdin, pool));
   
-  /* Have the parser dump feedback to STDOUT. */
+  /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    {
-      stdout_stream = svn_stream_create(&stdout_stream_rwb, pool);
-      stdout_stream_rwb.pool = svn_pool_create(pool);
-      stdout_stream_rwb.out = stdout;
-      svn_stream_set_write(stdout_stream, recode_write);
-    }
+    stdout_stream = recode_stream_create(stdout, pool);
   
   SVN_ERR(svn_repos_load_fs2(repos, stdin_stream, stdout_stream,
                              opt_state->uuid_action, opt_state->parent_dir,
@@ -980,7 +981,10 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
      with no interest in the output. */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   SVN_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs(repos), pool));
-  SVN_ERR(create_stdio_stream(&stderr_stream, apr_file_open_stderr, pool));
+
+  /* Progress feedback goes to STDERR. */
+  stderr_stream = recode_stream_create(stderr, pool);
+        
   SVN_ERR(svn_repos_dump_fs2(repos, NULL, stderr_stream, 
                              0, youngest, FALSE, FALSE, check_cancel, NULL,
                              pool));
