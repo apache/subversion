@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -104,7 +104,8 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* C programs default to the "C" locale. But because svn is supposed
      to be i18n-aware, it should inherit the default locale of its
      environment.  */
-  if (!setlocale(LC_ALL, ""))
+  if (!setlocale(LC_ALL, "")
+      && !setlocale(LC_CTYPE, ""))
     {
       if (error_stream)
         {
@@ -126,12 +127,11 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
             }
 
           fprintf(error_stream,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is correct\n",
+                  "%s: warning: cannot set LC_CTYPE locale\n"
+                  "%s: warning: environment variable %s is %s\n"
+                  "%s: warning: please check that your locale name is correct\n",
                   progname, progname, *env_var, env_val, progname);
         }
-      return EXIT_FAILURE;
     }
 
   /* Initialize the APR subsystem, and register an atexit() function
