@@ -3,7 +3,7 @@
  *             or transaction
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -99,6 +99,18 @@
 /*** Helper functions. ***/
 
 
+/* Information for an active copy, that is a directory which we are currently
+   working on and which was added with history. */
+struct copy_info
+{
+  /* Destination path. */
+  const char *path;
+  /* Copy source.  NULL/invalid if this is an add without history,
+     nested inside an add with history. */
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+};
+
 struct path_driver_cb_baton
 {
   const svn_delta_editor_t *editor;
@@ -120,6 +132,11 @@ struct path_driver_cb_baton
   int base_path_len;
 
   svn_revnum_t low_water_mark;
+  /* Stack of active copy operations. */
+  apr_array_header_t *copies;
+
+  /* The global pool for this replay operation. */
+  apr_pool_t *pool;
 };
 
 /* Recursively traverse PATH (as it exists under SOURCE_ROOT) emitting
@@ -250,13 +267,23 @@ path_driver_cb_func(void **dir_baton,
   svn_node_kind_t kind;
   void *file_baton = NULL;
   const char *copyfrom_path = NULL;
+  const char *real_copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev;
   svn_boolean_t src_readable = TRUE;
   svn_fs_root_t *source_root = cb->compare_root;
+  const char *source_path = source_root ? path : NULL;
   const char *base_path = cb->base_path;
   int base_path_len = cb->base_path_len;
 
   *dir_baton = NULL;
+
+  /* First, flush the copies stack so it only contains ancestors of path. */
+  while (cb->copies->nelts > 0
+         && ! svn_path_is_ancestor(APR_ARRAY_IDX(cb->copies,
+                                               cb->copies->nelts - 1,
+                                               struct copy_info).path,
+                                 path))
+    cb->copies->nelts--;
 
   change = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
   switch (change->change_kind)
@@ -298,43 +325,51 @@ path_driver_cb_func(void **dir_baton,
   /* Handle any adds/opens. */
   if (do_add)
     {
+      svn_fs_root_t *copyfrom_root = NULL;
       /* Was this node copied? */
       SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
                                  root, path, pool));
 
       if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
         {
-          /* Save the source_root so that we can use it later, when we
-             need to generate text deltas. */
-
-          SVN_ERR(svn_fs_revision_root(&source_root,
+          SVN_ERR(svn_fs_revision_root(&copyfrom_root,
                                        svn_fs_root_fs(root),
                                        copyfrom_rev, pool));
 
           if (cb->authz_read_func)
             {
-              SVN_ERR(cb->authz_read_func(&src_readable, source_root,
+              SVN_ERR(cb->authz_read_func(&src_readable, copyfrom_root,
                                           copyfrom_path,
                                           cb->authz_read_baton, pool));
             }
         }
 
+      /* Save away the copyfrom path in case we null it out below. */
+      real_copyfrom_path = copyfrom_path;
+      /* If we have a copyfrom path, and we can't read it or we're just
+         ignoring it, or the copyfrom rev is prior to the low water mark
+         then we just null them out and do a raw add with no history at
+         all. */
+      if (copyfrom_path
+          && (! src_readable
+              || ! is_within_base_path(copyfrom_path + 1, base_path,
+                                       base_path_len)
+              || cb->low_water_mark > copyfrom_rev))
+        {
+          copyfrom_path = NULL;
+          copyfrom_rev = SVN_INVALID_REVNUM;
+        }
+
       /* Do the right thing based on the path KIND. */
       if (kind == svn_node_dir)
         {
-          /* If there is a copyfrom path, and we're either not allowed to see
-             it or we're explicitly ignoring (i.e. the base_path doesn't match
-             the copyfrom path) or the copyfrom rev is prior to the low water
-             mark then we just do a recursive add of the source path contents.
-           */
-          if (copyfrom_path
-              && (! src_readable 
-                  || ! is_within_base_path(copyfrom_path+1, base_path,
-                                           base_path_len)
-                  || cb->low_water_mark > copyfrom_rev))
+          /* If this is a copy, but we can't represent it as such,
+             then we just do a recursive add of the source path
+             contents. */
+          if (real_copyfrom_path && ! copyfrom_path)
             {
-              SVN_ERR(add_subdir(source_root, root, editor, edit_baton,
-                                 path, parent_baton, copyfrom_path,
+              SVN_ERR(add_subdir(copyfrom_root, root, editor, edit_baton,
+                                 path, parent_baton, real_copyfrom_path,
                                  cb->authz_read_func, cb->authz_read_baton,
                                  pool, dir_baton));
             }
@@ -347,22 +382,46 @@ path_driver_cb_func(void **dir_baton,
         }
       else
         {
-          /* If we have a copyfrom path, and we can't read it or we're just
-             ignoring it, or the copyfrom rev is prior to the low water mark
-             then we just null them out and do a raw add with no history at
-             all. */
-          if (copyfrom_path
-              && (! src_readable
-                  || ! is_within_base_path(copyfrom_path+1, base_path,
-                                           base_path_len)
-                  || cb->low_water_mark > copyfrom_rev))
-            {
-              copyfrom_path = NULL;
-              copyfrom_rev = SVN_INVALID_REVNUM;
-            }
-
           SVN_ERR(editor->add_file(path, parent_baton, copyfrom_path,
                                    copyfrom_rev, pool, &file_baton));
+        }
+
+      /* If we represent this as a copy... */
+      if (copyfrom_path)
+        {
+          /* If it is a directory, make sure descendants get the correct
+             delta source by remembering that we are operating inside a
+             (possibly nested) copy operation. */
+          if (kind == svn_node_dir)
+            {
+              struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
+                                                       struct copy_info);
+              info->path = apr_pstrdup(cb->pool, path);
+              info->copyfrom_path = apr_pstrdup(cb->pool, copyfrom_path);
+              info->copyfrom_rev = copyfrom_rev;
+            }
+
+          /* Save the source so that we can use it later, when we
+             need to generate text and prop deltas. */
+          source_root = copyfrom_root;
+          source_path = copyfrom_path;
+        }
+      else
+        /* Else, we are an add without history... */
+        {
+          /* If an ancestor is added with history, we need to forget about
+             that here, go on with life and repeat all the mistakes of our
+             past... */
+          if (kind == svn_node_dir && cb->copies->nelts > 0)
+            {
+              struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
+                                                       struct copy_info);
+              info->path = apr_pstrdup(cb->pool, path);
+              info->copyfrom_path = NULL;
+              info->copyfrom_rev = SVN_INVALID_REVNUM;
+            }
+          source_root = NULL;
+          source_path = NULL;
         }
     }
   else if (! do_delete)
@@ -388,6 +447,30 @@ path_driver_cb_func(void **dir_baton,
           SVN_ERR(editor->open_file(path, parent_baton, SVN_INVALID_REVNUM,
                                     pool, &file_baton));
         }
+      /* If we are inside an add with history, we need to adjust the
+         delta source. */
+      if (cb->copies->nelts > 0)
+        {
+          struct copy_info *info = &APR_ARRAY_IDX(cb->copies,
+                                                  cb->copies->nelts - 1,
+                                                  struct copy_info);
+          if (info->copyfrom_path)
+            {
+              SVN_ERR(svn_fs_revision_root(&source_root,
+                                           svn_fs_root_fs(root),
+                                           info->copyfrom_rev, pool));
+              source_path = svn_path_join(info->copyfrom_path,
+                                          svn_path_is_child(info->path, path,
+                                                            pool), pool);
+            }
+          else
+            {
+              /* This is an add without history, nested inside an
+                 add with history.  We have no delta source in this case. */
+              source_root = NULL;
+              source_path = NULL;
+            }
+        }
     }
 
   /* Handle property modifications. */
@@ -402,10 +485,9 @@ path_driver_cb_func(void **dir_baton,
               apr_hash_t *new_props;
               int i;
 
-              if (change->change_kind != svn_fs_path_change_add)
+              if (source_root)
                 SVN_ERR(svn_fs_node_proplist
-                        (&old_props, cb->compare_root,
-                         copyfrom_path ? copyfrom_path : path, pool));
+                        (&old_props, source_root, source_path, pool));
               else
                 old_props = apr_hash_make(pool);
 
@@ -427,6 +509,8 @@ path_driver_cb_func(void **dir_baton,
             }
           else
             {
+              /* Just do a dummy prop change to signal that there are *any*
+                 propmods. */
               if (kind == svn_node_dir)
                 SVN_ERR(editor->change_dir_prop(*dir_baton, "", NULL,
                                                 pool));
@@ -442,10 +526,11 @@ path_driver_cb_func(void **dir_baton,
          aren't allowed to see" case since otherwise the caller will
          have no way to actually get the new file's contents, which
          they are apparently allowed to see. */
-      if (change->text_mod || (copyfrom_path && ! src_readable))
+      if (change->text_mod || (real_copyfrom_path && ! copyfrom_path))
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
+          /* ### Provide checksum if sending deltas. */
           SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
                                           &delta_handler, 
                                           &delta_handler_baton));
@@ -454,11 +539,7 @@ path_driver_cb_func(void **dir_baton,
               svn_txdelta_stream_t *delta_stream;
 
               SVN_ERR(svn_fs_get_file_delta_stream
-                      (&delta_stream,
-                       (copyfrom_path && src_readable) ? source_root
-                       : NULL,
-                       (copyfrom_path && src_readable) ? copyfrom_path
-                       : path,
+                      (&delta_stream, source_root, source_path,
                        root, path, pool));
 
               SVN_ERR(svn_txdelta_send_txstream(delta_stream,
@@ -473,6 +554,7 @@ path_driver_cb_func(void **dir_baton,
 
   /* Close the file baton if we opened it. */
   if (file_baton)
+    /* ### Provide checksum if we sent a text delta. */
     SVN_ERR(editor->close_file(file_baton, NULL, pool));
 
   return SVN_NO_ERROR;
@@ -549,7 +631,7 @@ svn_repos_replay2(svn_fs_root_t *root,
         }
     }
 
-  /* If we were not give a low water mark, assume that everything is there,
+  /* If we were not given a low water mark, assume that everything is there,
      all the way back to revision 0. */ 
   if (! SVN_IS_VALID_REVNUM(low_water_mark))
     low_water_mark = 0;
@@ -572,6 +654,9 @@ svn_repos_replay2(svn_fs_root_t *root,
                                  pool));
   else
     cb_baton.compare_root = NULL;
+
+  cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info));
+  cb_baton.pool = pool;
 
   /* Determine the revision to use throughout the edit, and call
      EDITOR's set_target_revision() function.  */

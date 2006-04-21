@@ -222,7 +222,7 @@ test_list = [ None,
               tag_with_modified_file,
               dir_prop_change,
               file_dir_file,
-              XFail(copy_parent_modify_prop),
+              copy_parent_modify_prop,
              ]
 
 if __name__ == '__main__':
