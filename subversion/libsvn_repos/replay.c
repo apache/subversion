@@ -526,7 +526,8 @@ path_driver_cb_func(void **dir_baton,
          aren't allowed to see" case since otherwise the caller will
          have no way to actually get the new file's contents, which
          they are apparently allowed to see. */
-      if (change->text_mod || (real_copyfrom_path && ! copyfrom_path))
+      if (kind == svn_node_file
+          && (change->text_mod || (real_copyfrom_path && ! copyfrom_path)))
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
