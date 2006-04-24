@@ -22,6 +22,8 @@ import string, sys, re, os.path
 # Our testing module
 import svntest
 
+from authz_tests import write_restrictive_svnserve_conf, \
+                        skip_test_when_no_authz_available
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -57,6 +59,30 @@ def run_and_verify_load(repo_dir, dump_file_content):
       "Standard error output", "STDERR", expected_stderr, errput)
 
 
+def run_sync(url):
+  "Synchronize the mirror repository with the master"
+  output, errput = svntest.main.run_svnsync(
+    "synchronize", url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+    raise svntest.actions.SVNUnexpectedStderr(errput)
+  if not output:
+    # should be: ['Committing rev 1\n', 'Committing rev 2\n']
+    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+
+def run_init(dst_url, src_url):
+  "Initialize the mirror repository from the master"
+  output, errput = svntest.main.run_svnsync(
+    "initialize", dst_url, "--source-url", src_url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if output:
+    raise svntest.actions.SVNUnexpectedStdout(output)
+  if errput:
+    raise svntest.actions.SVNUnexpectedStderr(errput)
+
+
 def run_test(sbox, dump_file_name):
   "Load a dump file, sync repositories, and compare contents."
 
@@ -85,26 +111,9 @@ def run_test(sbox, dump_file_name):
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
 
-  # Initialize the mirror repository from the master.
-  output, errput = svntest.main.run_svnsync(
-    "initialize", dest_sbox.repo_url, "--source-url", sbox.repo_url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
-  if output:
-    raise svntest.actions.SVNUnexpectedStdout(output)
-  if errput:
-    raise svntest.actions.SVNUnexpectedStderr(errput)
+  run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  # Synchronize the mirror repository with the master.
-  output, errput = svntest.main.run_svnsync(
-    "synchronize", dest_sbox.repo_url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
-  if errput:
-    raise svntest.actions.SVNUnexpectedStderr(errput)
-  if not output:
-    # should be: ['Committing rev 1\n', 'Committing rev 2\n']
-    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+  run_sync(dest_sbox.repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -205,6 +214,41 @@ def copy_parent_modify_prop(sbox):
   run_test(sbox, "copy-parent-modify-prop.dump")
 
 
+def basic_authz(sbox):
+  "verify that unreadable content is not synced"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build()
+
+  fp = open(svntest.main.get_authz_file_path(svntest.main.current_repo_dir),
+            'w')
+  fp.write("[/]\n* = r\n\n[/A/B]\n* = \n")
+  fp.close()
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  run_sync(dest_sbox.repo_url)
+
+  lambda_url = dest_sbox.repo_url + '/A/B/lambda'
+
+  # this file should have been blocked by authz
+  svntest.actions.run_and_verify_svn(None,
+                                     [],
+                                     svntest.SVNAnyOutput,
+                                     'cat',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     lambda_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -223,6 +267,7 @@ test_list = [ None,
               dir_prop_change,
               file_dir_file,
               copy_parent_modify_prop,
+              basic_authz,
              ]
 
 if __name__ == '__main__':
