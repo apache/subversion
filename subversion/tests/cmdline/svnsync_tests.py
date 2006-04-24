@@ -248,6 +248,71 @@ def basic_authz(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      lambda_url)
 
+def copy_from_unreadable_dir(sbox):
+  "verify that copies from unreadable dirs work"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build()
+
+  B_url = sbox.repo_url + '/A/B'
+  P_url = sbox.repo_url + '/A/P'
+
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     B_url,
+                                     P_url,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'Copy B to P')
+
+  fp = open(svntest.main.get_authz_file_path(svntest.main.current_repo_dir),
+            'w')
+  fp.write("[/]\n* = r\n\n[/A/B]\n* = \n")
+  fp.close()
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  run_sync(dest_sbox.repo_url)
+
+  lambda_url = dest_sbox.repo_url + '/A/B/lambda'
+
+  expected_out = [
+    'Changed paths:\n',
+    '   A /A/P\n',
+    '   A /A/P/E\n',
+    '   A /A/P/E/alpha\n',
+    '   A /A/P/E/beta\n',
+    '   A /A/P/F\n',
+    '   A /A/P/lambda\n',
+    '\n',
+    'Copy B to P\n',
+  ]
+
+  out, err = svntest.main.run_svn(None,
+                                  'log',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  '-r', '2',
+                                  '-v',
+                                  dest_sbox.repo_url)
+
+  if err:
+    raise svntest.actions.SVNUnexpectedStderr(err)
+
+  svntest.actions.compare_and_display_lines(None,
+                                            'LOG',
+                                            expected_out,
+                                            out[2:11])
 
 ########################################################################
 # Run the tests
@@ -268,6 +333,7 @@ test_list = [ None,
               file_dir_file,
               copy_parent_modify_prop,
               basic_authz,
+              copy_from_unreadable_dir,
              ]
 
 if __name__ == '__main__':
