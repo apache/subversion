@@ -39,8 +39,8 @@ def write_restrictive_svnserve_conf(repo_dir):
   fp.close()
 
 def skip_test_when_no_authz_available():
-  "skip this test on local repository"
-  if svntest.main.test_area_url.startswith('file://'):
+  "skip this test when authz is not available"
+  if not svntest.main.test_area_url.startswith('svn://'):
     raise svntest.Skip
     
 ######################################################################
