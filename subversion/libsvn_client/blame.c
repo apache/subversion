@@ -625,7 +625,7 @@ svn_client_blame3(const char *target,
   iterpool = svn_pool_create(pool);
 
   /* Open the last file and get a stream. */
-  SVN_ERR(svn_io_file_open(&file, frb.last_filename, APR_READ,
+  SVN_ERR(svn_io_file_open(&file, frb.last_filename, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
   stream = svn_stream_from_aprfile(file, pool);
 
