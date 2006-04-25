@@ -155,6 +155,39 @@ would be fleshed out and implemented.</p>
 </div>
 
 
+<div class="h3" id="svn-augmented-diff" title="svn-augmented-diff">
+<h3>An augmented diff representation</h3>
+
+<p>Currently, 'svn diff' outputs a patch in the so-called "Unified
+diff" format.  The problem is, this format is fairly old, and as such
+can represent only textual differences between files.  It does not
+represent structural changes to the directory tree, nor can it
+encompass changes to various metadata, the kind used extremely
+frequently by Subversion.</p>
+
+<p>Propose a solution for augmenting the standard unified diff format
+with extra "garbage" chunks of data, that will be ignored by a unified
+diff parser, but that can carry extra information about whatever we
+want.  Then, implement that solution in 'svn diff', and a new
+subcommand ('svn patch' ?) that would do the opposite of 'svn diff'
+with rich diff data.</p>
+
+<p>Note that <a href="http://svk.elixus.org">Svk</a> posesses such a
+rich unified diff format.  It may or may not be desirable to reuse the
+same kind of representation; that decision is part of the task!</p>
+
+<p>Also, note that recently <a
+href="http://svn.red-bean.com/repos/sussman/software/subversion/svnpatch/trunk/">some
+code from the Dawn of Days</a> of the Subversion project has been
+revived.  It implements an XML [de]serializer for editor drive data,
+which means it can spit out an XML representation of a set of changes,
+and can take that XML representation and use it to "patch" a pristing
+set of files.  This is another possible solution that you will have to
+take into account during the analysis and design phase.</p>
+
+</div>
+
+
 </div>
 
 <!-- ============================================================= -->
