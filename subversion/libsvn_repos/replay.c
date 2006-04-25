@@ -160,11 +160,29 @@ add_subdir(svn_fs_root_t *source_root,
            void **dir_baton)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_index_t *hi;
+  apr_hash_index_t *hi, *phi;
   apr_hash_t *dirents;
+  apr_hash_t *props;
 
   SVN_ERR(editor->add_directory(path, parent_baton, NULL,
                                 SVN_INVALID_REVNUM, pool, dir_baton));
+
+  SVN_ERR(svn_fs_node_proplist(&props, source_root, source_path, pool));
+
+  for (phi = apr_hash_first(pool, props); phi; phi = apr_hash_next(phi))
+    {
+      const void *key;
+      void *val;
+
+      svn_pool_clear(subpool);
+
+      apr_hash_this(phi, &key, NULL, &val);
+
+      SVN_ERR(editor->change_dir_prop(*dir_baton,
+                                      key,
+                                      val,
+                                      subpool));
+    }
 
   SVN_ERR(svn_fs_dir_entries(&dirents, source_root, source_path, pool));
 
@@ -208,18 +226,37 @@ add_subdir(svn_fs_root_t *source_root,
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton, *file_baton;
           svn_txdelta_stream_t *delta_stream;
+          const char *new_src_path;
 
           SVN_ERR(editor->add_file(svn_path_join(path, dent->name, subpool),
                                    *dir_baton, NULL, SVN_INVALID_REVNUM,
                                    pool, &file_baton));
+
+          new_src_path = svn_path_join(source_path, dent->name, subpool);
+
+          SVN_ERR(svn_fs_node_proplist(&props, source_root, new_src_path,
+                                       subpool));
+
+          for (phi = apr_hash_first(pool, props);
+               phi;
+               phi = apr_hash_next(phi))
+            {
+              const void *key;
+
+              apr_hash_this(phi, &key, NULL, &val);
+
+              SVN_ERR(editor->change_file_prop(file_baton,
+                                               key,
+                                               val,
+                                               subpool));
+            }
 
           SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
                                           &delta_handler, 
                                           &delta_handler_baton));
 
           SVN_ERR(svn_fs_get_file_delta_stream
-                  (&delta_stream, NULL, NULL, source_root,
-                   svn_path_join(source_path, dent->name, subpool),
+                  (&delta_stream, NULL, NULL, source_root, new_src_path,
                    pool));
 
           SVN_ERR(svn_txdelta_send_txstream(delta_stream,
