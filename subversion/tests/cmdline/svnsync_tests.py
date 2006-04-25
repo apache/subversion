@@ -258,6 +258,32 @@ def copy_from_unreadable_dir(sbox):
   B_url = sbox.repo_url + '/A/B'
   P_url = sbox.repo_url + '/A/P'
 
+  # Set a property on the directory we're going to copy, and a file in it, to
+  # confirm that they're transmitted when we later sync the copied directory
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'pset',
+                                     'foo',
+                                     'bar',
+                                     sbox.wc_dir + '/A/B/lambda')
+
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'pset',
+                                     'baz',
+                                     'zot',
+                                     sbox.wc_dir + '/A/B')
+
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'ci',
+                                     sbox.wc_dir + '/A/B',
+                                     '-m', 'log_msg')
+
+  # Now copy that directory so we'll see it in our synced copy
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
@@ -302,7 +328,7 @@ def copy_from_unreadable_dir(sbox):
                                   'log',
                                   '--username', svntest.main.wc_author,
                                   '--password', svntest.main.wc_passwd,
-                                  '-r', '2',
+                                  '-r', '3',
                                   '-v',
                                   dest_sbox.repo_url)
 
@@ -313,6 +339,21 @@ def copy_from_unreadable_dir(sbox):
                                             'LOG',
                                             expected_out,
                                             out[2:11])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['bar\n'],
+                                     [],
+                                     'pget',
+                                     'foo',
+                                     dest_sbox.repo_url + '/A/P/lambda')
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['zot\n'],
+                                     [],
+                                     'pget',
+                                     'baz',
+                                     dest_sbox.repo_url + '/A/P')
+
 
 ########################################################################
 # Run the tests
