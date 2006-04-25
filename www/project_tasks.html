@@ -172,18 +172,20 @@ want.  Then, implement that solution in 'svn diff', and a new
 subcommand ('svn patch' ?) that would do the opposite of 'svn diff'
 with rich diff data.</p>
 
-<p>Note that <a href="http://svk.elixus.org">Svk</a> posesses such a
+<p>Note that <a href="http://svk.elixus.org">SVK</a> posesses such a
 rich unified diff format.  It may or may not be desirable to reuse the
 same kind of representation; that decision is part of the task!</p>
 
 <p>Also, note that recently <a
 href="http://svn.red-bean.com/repos/sussman/software/subversion/svnpatch/trunk/">some
 code from the Dawn of Days</a> of the Subversion project has been
-revived.  It implements an XML [de]serializer for editor drive data,
+revived.  It implements an XML (de)serializer for editor drive data,
 which means it can spit out an XML representation of a set of changes,
 and can take that XML representation and use it to "patch" a pristing
-set of files.  This is another possible solution that you will have to
-take into account during the analysis and design phase.</p>
+set of files.  The other existing (de)serializer today is the one that
+is commonly known as the "dumpfile" format. These two existing
+implementations need to be taken into account during the analysis and
+design phase.</p>
 
 </div>
 
