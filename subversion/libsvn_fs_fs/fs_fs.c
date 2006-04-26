@@ -1651,7 +1651,8 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
 }
 
 /* Baton used when reading delta windows. */
-struct delta_read_baton {
+struct delta_read_baton
+{
   struct rep_state *rs;
   unsigned char checksum[APR_MD5_DIGESTSIZE];
 };
@@ -1675,7 +1676,7 @@ delta_read_next_window(svn_txdelta_window_t **window, void *baton,
 }
 
 /* This implements the svn_txdelta_md5_digest_fn_t interface. */
-static const unsigned char*
+static const unsigned char *
 delta_read_md5_digest(void *baton)
 {
   struct delta_read_baton *drb = baton;
