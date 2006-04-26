@@ -221,8 +221,7 @@ def basic_authz(sbox):
 
   sbox.build()
 
-  fp = open(svntest.main.get_authz_file_path(svntest.main.current_repo_dir),
-            'w')
+  fp = open(sbox.authz_file, 'w')
   fp.write("[/]\n* = r\n\n[/A/B]\n* = \n")
   fp.close()
 
@@ -294,8 +293,7 @@ def copy_from_unreadable_dir(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Copy B to P')
 
-  fp = open(svntest.main.get_authz_file_path(svntest.main.current_repo_dir),
-            'w')
+  fp = open(sbox.authz_file, 'w')
   fp.write("[/]\n* = r\n\n[/A/B]\n* = \n")
   fp.close()
 
