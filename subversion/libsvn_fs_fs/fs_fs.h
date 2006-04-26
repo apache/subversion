@@ -1,7 +1,7 @@
 /* fs_fs.h : interface to the native filesystem layer
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -84,6 +84,15 @@ svn_error_t *svn_fs_fs__get_contents(svn_stream_t **contents,
                                      svn_fs_t *fs,
                                      node_revision_t *noderev,
                                      apr_pool_t *pool);
+
+/* Set *STREAM_P to a delta stream turning the contents of the file SOURCE into
+   the contents of the FILE target, allocated in POOL.
+   If SOURCE is null, the empty string will be used. */
+svn_error_t *svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
+                                              svn_fs_t *fs,
+                                              node_revision_t *source,
+                                              node_revision_t *target,
+                                              apr_pool_t *pool);
 
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
    node-revision NODEREV as seen in filesystem FS.  Use POOL for
