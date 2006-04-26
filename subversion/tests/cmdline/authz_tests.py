@@ -59,8 +59,7 @@ def authz_open_root(sbox):
   
   skip_test_when_no_authz_available()
   
-  fp = open(svntest.main.get_authz_file_path(svntest.main.current_repo_dir),
-            'w')
+  fp = open(sbox.authz_file, 'w')
   fp.write("[/]\n\n[/A]\njrandom = rw\n")
   fp.close()
   
@@ -97,8 +96,7 @@ def authz_open_directory(sbox):
   
   skip_test_when_no_authz_available()
   
-  fp = open(svntest.main.get_authz_file_path(svntest.main.current_repo_dir),
-            'w')
+  fp = open(sbox.authz_file, 'w')
   fp.write("[/]\n*=rw\n[/A/B]\n*=\n[/A/B/E]\njrandom = rw\n")
   fp.close()
   

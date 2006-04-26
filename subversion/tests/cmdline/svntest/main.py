@@ -228,11 +228,6 @@ def get_pre_revprop_change_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "pre-revprop-change")
 
-def get_authz_file_path(repo_dir):
-  "Return the path of the authz file in REPO_DIR."
-
-  return os.path.join(repo_dir, "conf", "authz")
-
 def get_svnserve_conf_file_path(repo_dir):
   "Return the path of the svnserve.conf file in REPO_DIR."
 
@@ -567,6 +562,7 @@ class Sandbox:
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
+    self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
     if windows == 1:
       self.repo_url = string.replace(self.repo_url, '\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
