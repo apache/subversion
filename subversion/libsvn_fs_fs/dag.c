@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -785,6 +785,37 @@ svn_fs_fs__dag_get_contents(svn_stream_t **contents_p,
                                   noderev, pool));
 
   *contents_p = contents;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
+                                     dag_node_t *source,
+                                     dag_node_t *target,
+                                     apr_pool_t *pool)
+{
+  node_revision_t *src_noderev;
+  node_revision_t *tgt_noderev;
+
+  /* Make sure our nodes are files. */
+  if ((source && source->kind != svn_node_file)
+      || target->kind != svn_node_file)
+    return svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, NULL,
+       "Attempted to get textual contents of a *non*-file node");
+  
+  /* Go get fresh node-revisions for the nodes. */
+  if (source)
+    SVN_ERR(get_node_revision(&src_noderev, source, pool));
+  else
+    src_noderev = NULL;
+  SVN_ERR(get_node_revision(&tgt_noderev, target, pool));
+
+  /* Get the delta stream. */
+  SVN_ERR(svn_fs_fs__get_file_delta_stream(stream_p, target->fs,
+                                           src_noderev, tgt_noderev, pool));
 
   return SVN_NO_ERROR;
 }

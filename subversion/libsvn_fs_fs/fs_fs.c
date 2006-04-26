@@ -1182,6 +1182,45 @@ struct rep_state
   int chunk_index;
 };
 
+/* Read the rep args for REP in filesystem FS and create a rep_state
+   for reading the representation.  Return the rep_state in *REP_STATE
+   and the rep args in *REP_ARGS, both allocated in POOL. */
+static svn_error_t *
+create_rep_state(struct rep_state **rep_state,
+                 struct rep_args **rep_args,
+                 representation_t *rep,
+                 svn_fs_t *fs,
+                 apr_pool_t *pool)
+{
+  struct rep_state *rs = apr_pcalloc(pool, sizeof(*rs));
+  struct rep_args *ra;
+  unsigned char buf[4];
+
+  SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
+  SVN_ERR(read_rep_line(&ra, rs->file, pool));
+  SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
+  rs->off = rs->start;
+  rs->end = rs->start + rep->size;
+  *rep_state = rs;
+  *rep_args = ra;
+
+  if (ra->is_delta == FALSE)
+    /* This is a plaintext, so just return the current rep_state. */
+    return SVN_NO_ERROR;
+
+  /* We are dealing with a delta, find out what version. */
+  SVN_ERR(svn_io_file_read_full(rs->file, buf, sizeof(buf), NULL, pool));
+  if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
+    return svn_error_create
+      (SVN_ERR_FS_CORRUPT, NULL,
+       _("Malformed svndiff data in representation"));
+  rs->ver = buf[3];
+  rs->chunk_index = 0;
+  rs->off += 4;
+
+  return SVN_NO_ERROR;
+}
+
 /* Build an array of rep_state structures in *LIST giving the delta
    reps from first_rep to a plain-text or self-compressed rep.  Set
    *SRC_STATE to the plain-text rep we find at the end of the chain,
@@ -1198,40 +1237,19 @@ build_rep_list(apr_array_header_t **list,
   representation_t rep;
   struct rep_state *rs;
   struct rep_args *rep_args;
-  apr_file_t *file;
-  unsigned char buf[4];
 
   *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
   rep = *first_rep;
 
   while (1)
     {
-      SVN_ERR(open_and_seek_representation(&file, fs, &rep, pool));
-      SVN_ERR(read_rep_line(&rep_args, file, pool));
-
-      /* Create the rep_state for this representation. */
-      rs = apr_pcalloc(pool, sizeof(*rs));
-      rs->file = file;
-      SVN_ERR(get_file_offset(&rs->start, file, pool));
-      rs->off = rs->start;
-      rs->end = rs->start + rep.size;
-      
+      SVN_ERR(create_rep_state(&rs, &rep_args, &rep, fs, pool));
       if (rep_args->is_delta == FALSE)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;
           return SVN_NO_ERROR;
         }
-
-      /* We are dealing with a delta, find out what version. */
-      SVN_ERR(svn_io_file_read_full(file, buf, 4, NULL, pool));
-      if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
-        return svn_error_create
-          (SVN_ERR_FS_CORRUPT, NULL,
-           _("Malformed svndiff data in representation"));
-      rs->ver = buf[3];
-      rs->chunk_index = 0;
-      rs->off += 4;
 
       /* Push this rep onto the list.  If it's self-compressed, we're done. */
       APR_ARRAY_PUSH(*list, struct rep_state *) = rs;
@@ -1631,6 +1649,88 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
 {
   return read_representation(contents_p, fs, noderev->data_rep, pool);
 }
+
+/* Baton used when reading delta windows. */
+struct delta_read_baton {
+  struct rep_state *rs;
+  unsigned char checksum[APR_MD5_DIGESTSIZE];
+};
+
+/* This implements the svn_txdelta_next_window_fn_t interface. */
+static svn_error_t *
+delta_read_next_window(svn_txdelta_window_t **window, void *baton,
+                       apr_pool_t *pool)
+{
+  struct delta_read_baton *drb = baton;
+
+  if (drb->rs->off == drb->rs->end)
+    {
+      *window = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(read_window(window, drb->rs->chunk_index, drb->rs, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements the svn_txdelta_md5_digest_fn_t interface. */
+static const unsigned char*
+delta_read_md5_digest(void *baton)
+{
+  struct delta_read_baton *drb = baton;
+
+  return drb->checksum;
+}
+
+svn_error_t *
+svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
+                                 svn_fs_t *fs,
+                                 node_revision_t *source,
+                                 node_revision_t *target,
+                                 apr_pool_t *pool)
+{
+  svn_stream_t *source_stream, *target_stream;
+
+  /* Try a shortcut: if the target is stored as a delta against the source,
+     then just use that delta. */
+  if (source && source->data_rep && target->data_rep)
+    {
+      struct rep_state *rep_state;
+      struct rep_args *rep_args;
+      /* Read target's base rep if any. */
+      SVN_ERR(create_rep_state(&rep_state, &rep_args, target->data_rep,
+                               fs, pool));
+      /* If that matches source, then use this delta as is. */
+      if (rep_args->is_delta
+          && (rep_args->is_delta_vs_empty
+              || (rep_args->base_revision == source->data_rep->revision
+                  && rep_args->base_offset == source->data_rep->offset)))
+        {
+          /* Create the delta read baton. */
+          struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
+          drb->rs = rep_state;
+          memcpy(drb->checksum, target->data_rep->checksum,
+                 sizeof(drb->checksum));
+          *stream_p = svn_txdelta_stream_create(drb, delta_read_next_window,
+                                                delta_read_md5_digest, pool);
+          return SVN_NO_ERROR;
+        }
+      else
+        SVN_ERR(svn_io_file_close(rep_state->file, pool));
+    }
+
+  /* Read both fulltexts and construct a delta. */
+  if (source)
+    SVN_ERR(read_representation(&source_stream, fs, source->data_rep, pool));
+  else
+    source_stream = svn_stream_empty(pool);
+  SVN_ERR(read_representation(&target_stream, fs, target->data_rep, pool));
+  svn_txdelta(stream_p, source_stream, target_stream, pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Fetch the contents of a directory into ENTRIES.  Values are stored
    as filename to string mappings; further conversion is necessary to

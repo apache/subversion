@@ -1,7 +1,7 @@
 /* dag.h : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,6 +19,7 @@
 #define SVN_LIBSVN_FS_DAG_H
 
 #include "svn_fs.h"
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -316,6 +317,15 @@ svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
                                          dag_node_t *file,
                                          apr_pool_t *pool);
 
+
+/* Set *STREAM_P to a delta stream that will turn the contents of SOURCE into
+   the contents of TARGET, allocated in POOL.  If SOURCE is null, the empty
+   string will be used. */
+svn_error_t *
+svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
+                                     dag_node_t *source,
+                                     dag_node_t *target,
+                                     apr_pool_t *pool);
 
 /* Return a generic writable stream in *CONTENTS with which to set the
    contents of FILE.  Allocate the stream in POOL.  TXN_ID is the
