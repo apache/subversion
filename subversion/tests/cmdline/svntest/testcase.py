@@ -108,6 +108,10 @@ class XFail(TestCase):
   "A test that is expected to fail."
 
   def __init__(self, test_case, cond_func=lambda:1):
+    # We evaluate cond_func later because if we do it in __init__ it
+    # turns out that useful bits of information (like the fact that
+    # we're running over a particular RA layer) are not available.
+
     TestCase.__init__(self)
     self.test_case = create_test_case(test_case)
     self._list_mode_text = self.test_case.list_mode() or 'XFAIL'
@@ -119,17 +123,18 @@ class XFail(TestCase):
     self.cond_func = cond_func
 
   def convert_result(self, result):
-    # We delay the setting of _result_text to this point because if we do
-    # it in __init__ it turns out that useful bits of information (like the
-    # fact that we're running over a particular RA layer) are not available.
     if self.cond_func():
       # Conditions are reversed here: a failure is expected, therefore
       # it isn't an error; a pass is an error; but a skip remains a skip.
-      self._result_text = ['XFAIL:', 'XPASS:', self.test_case.run_text(2)]
       return {0:1, 1:0, 2:2}[self.test_case.convert_result(result)]
     else:
-      self._result_text = ['PASS:', 'FAIL:', self.test_case.run_text(2)]
       return self.test_case.convert_result(result)
+
+  def run_text(self, result=0):
+    if self.cond_func():
+      return ['XFAIL:', 'XPASS:', self.test_case.run_text(2)][result]
+    else:
+      return self.test_case.run_text(result)
 
 
 class Skip(TestCase):
