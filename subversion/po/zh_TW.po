@@ -2676,42 +2676,47 @@ msgstr "Missing revision attr in open-root element"
 msgid "Missing name attr in delete-entry element"
 msgstr "Missing name attr in delete-entry element"
 
+# as-is
 #: libsvn_ra_dav/replay.c:175
 msgid "Missing rev attr in delete-entry element"
-msgstr ""
+msgstr "Missing rev attr in delete-entry element"
 
+# as-is
 #: libsvn_ra_dav/replay.c:195
-#, fuzzy
 msgid "Missing name attr in open-directory element"
-msgstr "未提供性質名稱與檔案庫路徑引數"
+msgstr "Missing name attr in open-directory element"
 
+# as-is
 #: libsvn_ra_dav/replay.c:247 libsvn_ra_dav/replay.c:350
 #: libsvn_ra_serf/replay.c:371
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in %s element"
-msgstr "未提供性質名稱引數"
+msgstr "Missing name attr in %s element"
 
+# as-is
 #: libsvn_ra_dav/replay.c:287
 msgid "Got apply-textdelta element without preceding add-file or open-file"
-msgstr ""
+msgstr "Got apply-textdelta element without preceding add-file or open-file"
 
+# as-is
 #: libsvn_ra_dav/replay.c:313
 msgid "Got close-file element without preceding add-file or open-file"
-msgstr ""
+msgstr "Got close-file element without preceding add-file or open-file"
 
+# as-is
 #: libsvn_ra_dav/replay.c:328
 msgid "Got close-directory element without ever opening a directory"
-msgstr ""
+msgstr "Got close-directory element without ever opening a directory"
 
 #: libsvn_ra_dav/replay.c:455 libsvn_ra_serf/replay.c:492
-#, fuzzy, c-format
+#, c-format
 msgid "Error writing stream: unexpected EOF"
-msgstr "寫入串流時發生錯誤: 不預期的 EOF"
+msgstr "寫入串流時發生錯誤: 無預期的 EOF"
 
 #: libsvn_ra_dav/replay.c:462
 #, c-format
 msgid "Got cdata content for a prop delete"
-msgstr ""
+msgstr "性質刪除得到 cdata 內容"
 
 #: libsvn_ra_dav/session.c:444
 msgid "Invalid URL: illegal character in proxy port number"
@@ -2906,71 +2911,69 @@ msgid "Failed writing updated file"
 msgstr ""
 
 #: libsvn_ra_serf/getlocations.c:289
-#, fuzzy
 msgid "File doesn't exist on HEAD"
-msgstr "路徑 '%s' 不存在於 HEAD 修訂版中"
+msgstr "檔案不存在於 HEAD 修訂版中"
 
 #: libsvn_ra_serf/locks.c:354
-#, fuzzy, c-format
+#, c-format
 msgid "Lock request failed: %d %s"
-msgstr "鎖定要求失敗"
+msgstr "鎖定要求失敗: %d %s"
 
 #: libsvn_ra_serf/locks.c:703
-#, fuzzy, c-format
+#, c-format
 msgid "Unlock request failed: %d %s"
-msgstr "解除鎖定要求失敗"
+msgstr "解除鎖定要求失敗: %d %s"
 
+# as-is
 #: libsvn_ra_serf/replay.c:204
-#, fuzzy
 msgid "Missing revision attr in delete-entry element"
-msgstr "'%s' 遺漏了 'revision' 屬性"
+msgstr "Missing revision attr in delete-entry element"
 
+# as-is
 #: libsvn_ra_serf/replay.c:224
-#, fuzzy
 msgid "Missing path attr in open-directory element"
-msgstr "node-rev 中沒有 cpath"
+msgstr "Missing path attr in open-directory element"
 
+# as-is
 #: libsvn_ra_serf/replay.c:230
-#, fuzzy
 msgid "Missing revision attr in open-directory element"
-msgstr "'%s' 遺漏了 'revision' 屬性"
+msgstr "Missing revision attr in open-directory element"
 
+# as-is
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing path attr in add-directory element"
-msgstr "未提供路徑引數"
+msgstr "Missing path attr in add-directory element"
 
+# as-is
 #: libsvn_ra_serf/replay.c:285
-#, fuzzy
 msgid "Missing name attr in open-file element"
-msgstr "未提供性質名稱引數"
+msgstr "Missing name attr in open-file element"
 
+# as-is
 #: libsvn_ra_serf/replay.c:291
-#, fuzzy
 msgid "Missing revision attr in open-file element"
-msgstr "'%s' 遺漏了 'revision' 屬性"
+msgstr "Missing revision attr in open-file element"
 
+# as-is
 #: libsvn_ra_serf/replay.c:311
-#, fuzzy
 msgid "Missing name attr in add-file element"
-msgstr "未提供性質名稱引數"
+msgstr "Missing name attr in add-file element"
 
 # as-is
 #: libsvn_ra_serf/serf.c:52
-#, fuzzy
 msgid "Access repository via WebDAV protocol through serf."
-msgstr "Module for accessing a repository via WebDAV (DeltaV) protocol."
+msgstr "Access repository via WebDAV protocol through serf."
 
 #: libsvn_ra_serf/serf.c:155
 #, c-format
 msgid "Could not lookup hostname: %s://%s"
-msgstr ""
+msgstr "無法查得主機名稱: %s://%s"
 
 # as-is
 #: libsvn_ra_serf/serf.c:741
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
-msgstr "Unsupported RA loader version (%d) for ra_svn"
+msgstr "Unsupported RA loader version (%d) for ra_serf"
 
 #: libsvn_ra_serf/update.c:2111
 #, c-format
@@ -3175,9 +3178,8 @@ msgid "Lock element not a list"
 msgstr "Lock element not a list"
 
 #: libsvn_ra_svn/client.c:1964
-#, fuzzy
 msgid "Server doesn't support the replay command"
-msgstr "伺服器不支援 lock 命令"
+msgstr "伺服器不支援 replay 命令"
 
 # as-is
 #: libsvn_ra_svn/client.c:2028
@@ -3372,14 +3374,14 @@ msgid "Can't create pipe for hook '%s'"
 msgstr "無法為掛勾 '%s' 建立管道"
 
 #: libsvn_repos/hooks.c:83
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
-msgstr "無法為掛勾 '%s' 建立管道"
+msgstr "無法為掛勾 '%s' 建立非繼承式的讀取管道代號"
 
 #: libsvn_repos/hooks.c:89
 #, fuzzy, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
-msgstr "無法為掛勾 '%s' 建立管道"
+msgstr "無法為掛勾 '%s' 建立非繼承式的寫入管道代號"
 
 #: libsvn_repos/hooks.c:98
 #, c-format
@@ -4203,7 +4205,6 @@ msgstr ""
 
 # as-is
 #: libsvn_subr/opt.c:957
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -4211,7 +4212,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2005 CollabNet.\n"
+"Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
@@ -4328,9 +4329,9 @@ msgid "Passphrase for '%s': "
 msgstr "'%s' 的密碼: "
 
 #: libsvn_subr/subst.c:1559
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' has unsupported special file type '%s'"
-msgstr "'%s' 不是檔案系統 '%s' 裡的檔案"
+msgstr "'%s' 為不支援的特殊檔案格式 '%s'"
 
 #: libsvn_subr/subst.c:1660 libsvn_wc/props.c:1467
 #, c-format
@@ -4361,9 +4362,9 @@ msgid "Can't create a character converter from '%s' to '%s'"
 msgstr "無法建立自 '%s' 至 '%s' 的字元轉換器"
 
 #: libsvn_subr/utf.c:285
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create a character converter from '%i' to '%i'"
-msgstr "無法建立自 '%s' 至 '%s' 的字元轉換器"
+msgstr "無法建立自 '%i' 至 '%i' 的字元轉換器"
 
 #: libsvn_subr/utf.c:513
 #, c-format
@@ -4381,9 +4382,9 @@ msgid "Can't convert string from '%s' to '%s':"
 msgstr "無法將字串自 '%s' 轉換至 '%s'"
 
 #: libsvn_subr/utf.c:527
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
-msgstr "無法將字串自 '%s' 轉換至 '%s'"
+msgstr "無法將字串自 CCSID '%i' 轉換至 CCSID '%i'"
 
 #: libsvn_subr/utf.c:572
 #, c-format
@@ -4623,26 +4624,23 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "項目 '%s' 有無效的 '%s' 值"
 
 #: libsvn_wc/entries.c:111
-#, fuzzy
 msgid "Invalid escape sequence"
-msgstr "無效的排程"
+msgstr "無效的逸出序列"
 
 #: libsvn_wc/entries.c:118
-#, fuzzy
 msgid "Invalid escaped character"
-msgstr "無效的更動類型"
+msgstr "無效的逸出字元"
 
 # as-is
 #: libsvn_wc/entries.c:136 libsvn_wc/entries.c:165 libsvn_wc/entries.c:191
 #: libsvn_wc/entries.c:203
-#, fuzzy
 msgid "Unexpected end of entry"
-msgstr "Unexpected end of svndiff input"
+msgstr "Unexpected end of entry"
 
 #: libsvn_wc/entries.c:225
 #, c-format
 msgid "Invalid value for field '%s'"
-msgstr ""
+msgstr "給欄位 '%s' 的無效數值"
 
 #: libsvn_wc/entries.c:307 libsvn_wc/entries.c:533
 #, c-format
@@ -4672,25 +4670,22 @@ msgid "Default entry is missing URL"
 msgstr "預設項目沒有 URL"
 
 #: libsvn_wc/entries.c:1076
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "寫入 '%s' 的項目檔案時發生錯誤"
+msgstr "項目檔案 '%s' 中有無效的版本列"
 
 #: libsvn_wc/entries.c:1093
-#, fuzzy
 msgid "Missing entry terminator"
-msgstr "遺漏預設項目"
+msgstr "遺漏項目終止符"
 
-# as-is
 #: libsvn_wc/entries.c:1096
-#, fuzzy
 msgid "Invalid entry terminator"
-msgstr "Invalid relocation"
+msgstr "無效的項目終止符"
 
 #: libsvn_wc/entries.c:1100
-#, fuzzy, c-format
+#, c-format
 msgid "Error at entry %d in entries file for '%s':"
-msgstr "寫入 '%s' 的項目檔案時發生錯誤"
+msgstr "項目 %d 於 '%s' 項目檔案中發生錯誤"
 
 #: libsvn_wc/entries.c:1196
 #, c-format
@@ -4805,19 +4800,19 @@ msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路徑 '%s' 以 '%s' 結束, 本動作不支援"
 
 #: libsvn_wc/lock.c:902 libsvn_wc/lock.c:932
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to check path existence for '%s'"
 msgstr "無法檢查路徑 '%s' 是否存在"
 
 #: libsvn_wc/lock.c:912
-#, fuzzy, c-format
+#, c-format
 msgid "Expected '%s' to be a directory but found a file"
-msgstr "%s 預期為檔案, 但是結果為目錄"
+msgstr "'%s' 預期為目錄, 但是結果為檔案"
 
 #: libsvn_wc/lock.c:919
-#, fuzzy, c-format
+#, c-format
 msgid "Expected '%s' to be a file but found a directory"
-msgstr "%s 預期為檔案, 但是結果為目錄"
+msgstr "'%s' 預期為檔案, 但是結果為目錄"
 
 #: libsvn_wc/lock.c:938
 #, c-format
@@ -4830,9 +4825,9 @@ msgid "Directory '%s' containing working copy admin area is missing"
 msgstr ""
 
 #: libsvn_wc/lock.c:948
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to lock '%s'"
-msgstr "無法鎖定 %s"
+msgstr "無法鎖定 '%s'"
 
 #: libsvn_wc/lock.c:953
 #, c-format
@@ -4939,9 +4934,8 @@ msgid "Error modifying entry of '%s'"
 msgstr "修改 '%s' 的項目時發生錯誤"
 
 #: libsvn_wc/log.c:1423
-#, fuzzy
 msgid "Invalid 'format' attribute"
-msgstr "無效的配置值"
+msgstr "無效的 'format' 屬性"
 
 #: libsvn_wc/log.c:1458
 #, c-format
