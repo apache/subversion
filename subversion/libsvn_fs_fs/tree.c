@@ -2654,7 +2654,6 @@ fs_contents_changed(svn_boolean_t *changed_p,
 /* Public interface to computing file text deltas.  */
 
 static svn_error_t *
-
 fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                          svn_fs_root_t *source_root,
                          const char *source_path,
