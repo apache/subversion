@@ -260,6 +260,29 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
         SVN_ERR(convert_wcprops(log_accum, adm_access, pool));
 
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+
+      if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+        {
+          const char *access_path = svn_wc_adm_access_path(adm_access);
+          /* Remove wcprops directory, dir-props, README.txt and empty-file
+             files.
+             We just silently ignore errors, because keeping these files is
+             not catastrophic. */
+
+          svn_error_clear(svn_io_remove_dir
+            (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
+                              NULL), pool));
+          svn_error_clear(svn_io_remove_file
+            (svn_wc__adm_path(access_path, FALSE, pool,
+                              SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
+          svn_error_clear(svn_io_remove_file
+            (svn_wc__adm_path(access_path, FALSE, pool,
+                              SVN_WC__ADM_EMPTY_FILE, NULL), pool));
+          svn_error_clear(svn_io_remove_file
+            (svn_wc__adm_path(access_path, FALSE, pool,
+                              SVN_WC__ADM_README, NULL), pool));
+        }
+
       SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
     }
 
