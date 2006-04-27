@@ -219,11 +219,7 @@ def basic_authz(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build()
-
-  fp = open(sbox.authz_file, 'w')
-  fp.write("[/]\n* = r\n\n[/A/B]\n* = \n")
-  fp.close()
+  sbox.build("svnsync-basic-authz")
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -233,6 +229,17 @@ def basic_authz(sbox):
   svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  fp = open(sbox.authz_file, 'w')
+  fp.write("[svnsync-basic-authz:/]\n" +
+           "* = r\n" +
+           "\n" +
+           "[svnsync-basic-authz:/A/B]\n" +
+           "* = \n" +
+           "\n" +
+           "[svnsync-basic-authz-1:/]\n" +
+           "* = rw\n")
+  fp.close()
 
   run_sync(dest_sbox.repo_url)
 
@@ -252,7 +259,7 @@ def copy_from_unreadable_dir(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build()
+  sbox.build("svnsync-copy-from-unreadable-dir")
 
   B_url = sbox.repo_url + '/A/B'
   P_url = sbox.repo_url + '/A/P'
@@ -293,16 +300,36 @@ def copy_from_unreadable_dir(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Copy B to P')
 
-  fp = open(sbox.authz_file, 'w')
-  fp.write("[/]\n* = r\n\n[/A/B]\n* = \n")
-  fp.close()
-
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
 
   svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+
+  fp = open(sbox.authz_file, 'w')
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[svnsync-copy-from-unreadable-dir:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[svnsync-copy-from-unreadable-dir:/A/B]\n" +
+             "* = \n" +
+             "\n" +
+             "[svnsync-copy-from-unreadable-dir-1:/]\n" +
+             "* = rw")
+
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[/A/B]\n" +
+             "* =\n")
+  fp.close()
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 

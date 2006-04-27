@@ -25,6 +25,7 @@ import svntest
 
 # (abbreviation)
 Item = svntest.wc.StateItem
+XFail = svntest.testcase.XFail
 
 ######################################################################
 # Utilities
@@ -40,7 +41,7 @@ def write_restrictive_svnserve_conf(repo_dir):
 
 def skip_test_when_no_authz_available():
   "skip this test when authz is not available"
-  if not svntest.main.test_area_url.startswith('svn://'):
+  if svntest.main.test_area_url.startswith('file://'):
     raise svntest.Skip
     
 ######################################################################
@@ -130,11 +131,13 @@ def authz_open_directory(sbox):
 ########################################################################
 # Run the tests
 
+def is_this_dav():
+  return svntest.main.test_area_url.startswith('http')
 
 # list all tests here, starting with None:
 test_list = [ None,
               authz_open_root,
-              authz_open_directory,
+              XFail(authz_open_directory, is_this_dav),
              ]
 
 if __name__ == '__main__':

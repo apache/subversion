@@ -120,6 +120,7 @@ else
 fi
 
 MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
+MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
 
 [ -r "$MOD_DAV_SVN" ] \
   || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
@@ -192,6 +193,7 @@ touch $HTTPD_MIME_TYPES
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_DAV
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
+LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_AUTH
@@ -230,6 +232,7 @@ CustomLog           "$HTTPD_ROOT/req" format
 <Location /svn-test-work/repositories>
   DAV               svn
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
@@ -238,6 +241,7 @@ CustomLog           "$HTTPD_ROOT/req" format
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
   SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/repos"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
