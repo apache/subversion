@@ -62,6 +62,7 @@ paths adjusted appropriately:
    <Location /svn-test-work/repositories>
      DAV svn
      SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/repositories
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
      AuthType Basic
      AuthName "Subversion Repository"
      AuthUserFile /usr/local/apache2/conf/users
@@ -71,6 +72,7 @@ paths adjusted appropriately:
    <Location /svn-test-work/local_tmp/repos>
      DAV svn
      SVNPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp/repos
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
      AuthType Basic
      AuthName "Subversion Repository"
      AuthUserFile /usr/local/apache2/conf/users

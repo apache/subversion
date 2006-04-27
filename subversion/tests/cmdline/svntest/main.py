@@ -562,7 +562,22 @@ class Sandbox:
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
-    self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
+
+    # For dav tests we need a single authz file which must be present,
+    # so we recreate it each time a sandbox is created with some default
+    # contents.
+    if self.repo_url.startswith("http"):
+      self.authz_file = os.path.join(work_dir, "authz")
+      fp = open(self.authz_file, "w")
+      fp.write("[/]\n* = rw\n")
+      fp.close()
+
+    # For svnserve tests we have a per-repository authz file, and it
+    # doesn't need to be there in order for things to work, so we don't
+    # have any default contents.
+    elif self.repo_url.startswith("svn"):
+      self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
+
     if windows == 1:
       self.repo_url = string.replace(self.repo_url, '\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
@@ -578,7 +593,9 @@ class Sandbox:
     self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
     return self.dependents[-1]
 
-  def build(self):
+  def build(self, name = None):
+    if name != None:
+      self._set_name(name)
     if actions.make_repo_and_wc(self):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
@@ -697,8 +714,8 @@ class TestRunner:
       result = 1
       print 'UNEXPECTED EXCEPTION:'
       traceback.print_exc(file=sys.stdout)
-    print self.pred.run_text(result),
     result = self.pred.convert_result(result)
+    print self.pred.run_text(result),
     self._print_name()
     sys.stdout.flush()
     if sandbox is not None and result != 1 and cleanup_mode:
