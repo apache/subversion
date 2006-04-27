@@ -107,7 +107,7 @@ class FunctionTestCase(TestCase):
 class XFail(TestCase):
   "A test that is expected to fail."
 
-  def __init__(self, test_case, cond_func=None):
+  def __init__(self, test_case, cond_func=lambda:1):
     TestCase.__init__(self)
     self.test_case = create_test_case(test_case)
     self._list_mode_text = self.test_case.list_mode() or 'XFAIL'
@@ -122,7 +122,7 @@ class XFail(TestCase):
     # We delay the setting of _result_text to this point because if we do
     # it in __init__ it turns out that useful bits of information (like the
     # fact that we're running over a particular RA layer) are not available.
-    if self.cond_func is None or self.cond_func():
+    if self.cond_func():
       self._result_text = ['XFAIL:', 'XPASS:', self.test_case.run_text(2)]
     else:
       self._result_text = ['FAIL:', 'PASS:', self.test_case.run_text(2)]
