@@ -1699,6 +1699,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
     {
       struct rep_state *rep_state;
       struct rep_args *rep_args;
+
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_args, target->data_rep,
                                fs, pool));
