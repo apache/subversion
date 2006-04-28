@@ -108,9 +108,14 @@ class XFail(TestCase):
   "A test that is expected to fail."
 
   def __init__(self, test_case, cond_func=lambda:1):
-    # We evaluate cond_func later because if we do it in __init__ it
-    # turns out that useful bits of information (like the fact that
-    # we're running over a particular RA layer) are not available.
+    """Create an XFail instance based on TEST_CASE.  COND_FUNC is a
+    callable that is evaluated at test run time and should return a
+    boolean value.  If COND_FUNC returns true, then TEST_CASE is
+    expected to fail (and a pass is considered an error); otherwise,
+    TEST_CASE is run normally.  The evaluation of COND_FUNC is
+    deferred so that it can base its decision on useful bits of
+    information that are not available at __init__ time (like the fact
+    that we're running over a particular RA layer)."""
 
     TestCase.__init__(self)
     self.test_case = create_test_case(test_case)
