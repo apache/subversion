@@ -300,6 +300,12 @@ int svn_config_enumerate2(svn_config_t *cfg, const char *section,
                           svn_config_enumerator2_t callback, void *baton,
                           apr_pool_t *pool);
 
+/**
+ * Return @c TRUE if @a section exists in @a config, @c FALSE otherwise.
+ *
+ * @since New in 1.4.
+ */
+svn_boolean_t svn_config_has_section(svn_config_t *cfg, const char *section);
 
 /** Enumerate the group @a master_section in @a cfg.  Each variable
  * value is interpreted as a list of glob patterns (separated by comma
