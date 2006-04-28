@@ -885,3 +885,8 @@ svn_config_get_server_setting_int(svn_config_t *cfg,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_config_has_section(svn_config_t *cfg, const char *section)
+{
+  return apr_hash_get(cfg->sections, section, APR_HASH_KEY_STRING) != NULL;
+}
