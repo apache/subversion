@@ -3379,7 +3379,7 @@ msgid "Can't make pipe read handle non-inherited for hook '%s'"
 msgstr "無法為掛勾 '%s' 建立非繼承式的讀取管道代號"
 
 #: libsvn_repos/hooks.c:89
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
 msgstr "無法為掛勾 '%s' 建立非繼承式的寫入管道代號"
 
@@ -5012,11 +5012,13 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
+"預計將性質 '%s' 自 '%s' 變更為 '%s',\n"
+"但是該性質已存在, 其值為 '%s'."
 
 #: libsvn_wc/props.c:880
-#, fuzzy, c-format
+#, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "'%s' 遺漏了 'revision' 屬性"
+msgstr "'%s' 的 wcprops 檔案缺少換列符號"
 
 #: libsvn_wc/props.c:1064 libsvn_wc/props.c:1100 libsvn_wc/props.c:1370
 #: libsvn_wc/props.c:1627
@@ -5215,9 +5217,8 @@ msgid "Can't open stderr"
 msgstr "無法開啟標準錯誤 (stderr)"
 
 #: svn/diff-cmd.c:182
-#, fuzzy
 msgid "'--new' option only valid with '--old' option"
-msgstr "'incremental' 選項僅於 XML 模式中有效"
+msgstr "'--new' 選項只有與 '--old' 選項併用才有效"
 
 #: svn/diff-cmd.c:212
 #, c-format
@@ -5520,7 +5521,6 @@ msgid "show help on a subcommand"
 msgstr "顯示子命令的輔助說明"
 
 #: svn/main.c:65
-#, fuzzy
 msgid "specify log message ARG"
 msgstr "指定送交訊息 ARG"
 
@@ -5543,7 +5543,6 @@ msgid ""
 msgstr ""
 
 #: svn/main.c:74
-#, fuzzy
 msgid ""
 "ARG (some commands also take ARG1:ARG2 range)\n"
 "                             A revision argument can be one of:\n"
@@ -5558,16 +5557,15 @@ msgstr ""
 "ARG (某些命令也可接受 ARG1:ARG2 範圍)\n"
 "                             修訂版的引數可用以下其一:\n"
 "                                NUMBER       修訂版號\n"
-"                                \"{\" DATE \"}\" 該日開始的修訂版\n"
-"                                \"HEAD\"       檔案庫最新版本\n"
-"                                \"BASE\"       該項目工作複本的基礎修訂版\n"
-"                                \"COMMITED\"  位於或早於 BASE 的最後送交\n"
-"                                \"PREV\"      COMMITTED 之前的修訂版"
+"                                '{' DATE '}' 該日開始的修訂版\n"
+"                                'HEAD'       檔案庫最新版本\n"
+"                                'BASE'       該項目工作複本的基礎修訂版\n"
+"                                'COMMITED'   位於或早於 BASE 的最後送交\n"
+"                                'PREV'       COMMITTED 之前的修訂版"
 
 #: svn/main.c:84
-#, fuzzy
 msgid "read log message from file ARG"
-msgstr "從檔案 ARG 讀取資料"
+msgstr "從檔案 ARG 讀取紀錄訊息"
 
 #: svn/main.c:86
 msgid "give output suitable for concatenation"
@@ -5799,7 +5797,6 @@ msgstr ""
 "  鎖定項目, 那麼在送交成功之後, 就會解除鎖定.\n"
 
 #: svn/main.c:253
-#, fuzzy
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -5813,8 +5810,8 @@ msgstr ""
 "從工作複本傳送更動至檔案庫.\n"
 "用法: commit [PATH...]\n"
 "\n"
-"  必須提供紀錄訊息, 但是可以為空內容. 如果不是以 --message 或 --file\n"
-"  選項來指定, 就會啟動你的文字編輯器. 如果任何目錄都是 (或是包括)\n"
+"  必須提供紀錄訊息, 但是可以為空內容. OS400 無法起動文字編輯器,\n"
+"  必須使用 --message 或 --file 如果任何目錄都是 (或是包括)\n"
 "  鎖定項目, 那麼在送交成功之後, 就會解除鎖定.\n"
 
 #: svn/main.c:266
@@ -6047,14 +6044,12 @@ msgstr ""
 "  用 --force, 從其它使用者或工作複本偷走鎖定.\n"
 
 #: svn/main.c:408
-#, fuzzy
 msgid "read lock comment from file ARG"
-msgstr "從檔案 ARG 讀取資料"
+msgstr "從檔案 ARG 讀取鎖定註解"
 
 #: svn/main.c:409
-#, fuzzy
 msgid "specify lock comment ARG"
-msgstr "指定送交訊息 ARG"
+msgstr "指定送交鎖定註解 ARG"
 
 #: svn/main.c:412
 msgid ""
@@ -6224,7 +6219,6 @@ msgstr ""
 "  2. 移除無版本控制的遠端檔案庫修訂版性質.\n"
 
 #: svn/main.c:512
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6236,10 +6230,11 @@ msgid ""
 msgstr ""
 "以外部編輯器編輯目標的性質 PROPNAME.\n"
 "用法: 1. propedit PROPNAME PATH...\n"
-"      2. propedit PROPNAME --revprop -r REV [URL]\n"
+"      2. propedit PROPNAME --revprop -r REV [TARGET]\n"
 "\n"
 "  1. 編輯納入版本控制的工作複本性質.\n"
 "  2. 編輯無版本控制的遠端檔案庫修訂版性質更動.\n"
+"     TARGET 只是用來決定要存取哪一個檔案庫.\n"
 
 #: svn/main.c:525
 #, fuzzy
@@ -6370,9 +6365,8 @@ msgstr ""
 "  遞迴式的設定只會對目錄的子檔案產生效果.\n"
 
 #: svn/main.c:598
-#, fuzzy
 msgid "read property value from file ARG"
-msgstr "從檔案 ARG 讀取資料"
+msgstr "從檔案 ARG 讀取性質內容"
 
 #: svn/main.c:601
 msgid ""
@@ -6973,9 +6967,9 @@ msgid "Unversioned properties on revision %ld:\n"
 msgstr "修訂版 %ld 上的未納入版本控制的性質:\n"
 
 #: svn/proplist-cmd.c:119
-#, fuzzy, c-format
+#, c-format
 msgid "Properties on '%s':\n"
-msgstr "性質 '%s' 設定於 '%s'\n"
+msgstr "'%s' 的性質:\n"
 
 #: svn/props.c:51
 msgid ""
@@ -7095,13 +7089,12 @@ msgid "--This line, and those below, will be ignored--"
 msgstr "--This line, and those below, will be ignored--"
 
 #: svn/util.c:510
-#, fuzzy
 msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
 msgstr ""
-"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用 --"
-"message (-m) 或 --file (-F) 選項"
+"OS400 無法使用外部編輯器來取得紀錄訊息; 請考慮使用 --message (-m)"
+"或 --file (-F) 選項"
 
 #: svn/util.c:592
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -7113,8 +7106,8 @@ msgid ""
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
 "options"
 msgstr ""
-"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用 --"
-"message (-m) 或 --file (-F) 選項"
+"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用"
+"--message (-m) 或 --file (-F) 選項"
 
 #: svn/util.c:641
 msgid ""
@@ -7194,11 +7187,12 @@ msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "關閉紀錄檔自動移除 [Berkeley DB]"
 
 #: svnadmin/main.c:272
-#, fuzzy
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
-msgstr "自來源檔案庫移除多餘的紀錄檔"
+msgstr ""
+"自來源檔案庫\n"
+"                             移除多餘的紀錄檔 [Berkeley DB]"
 
 #: svnadmin/main.c:276
 msgid "call pre-commit hook before committing revisions"
@@ -8132,9 +8126,8 @@ msgid "root of directory to serve"
 msgstr "服務的根目錄"
 
 #: svnserve/main.c:153
-#, fuzzy
 msgid "force read only, overriding repository config file"
-msgstr "已過時; 請使用檔案庫設定檔"
+msgstr "強制為唯讀, 略過檔案庫設定檔"
 
 #: svnserve/main.c:154
 msgid "tunnel mode"
@@ -8166,7 +8159,6 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "請使用 '%s --help' 以了解用法.\n"
 
 #: svnserve/main.c:186
-#, fuzzy
 msgid ""
 "usage: svnserve [options]\n"
 "\n"
@@ -8271,13 +8263,11 @@ msgid ""
 msgstr ""
 
 #: svnsync/main.c:79
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"用法: svnadmin help [SUBCOMMAND...]\n"
-"\n"
+"用法: svnadmin help [子命令...]\n"
 "顯示本程式或其子命令的用法.\n"
 
 #: svnsync/main.c:88
@@ -8285,9 +8275,9 @@ msgid "The url to synchronize from"
 msgstr ""
 
 #: svnsync/main.c:169
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get local hostname"
-msgstr "無法取得檔案名稱"
+msgstr "無法取得本機名稱"
 
 #: svnsync/main.c:192
 #, c-format
@@ -8309,11 +8299,9 @@ msgid "Destination repository is already synchronizing from '%s'"
 msgstr ""
 
 #: svnsync/main.c:426
-#, fuzzy, c-format
+#, c-format
 msgid "Committing rev %ld\n"
-msgstr ""
-"\n"
-"送交修訂版 %ld.\n"
+msgstr "送交修訂版 %ld\n"
 
 #: svnsync/main.c:855
 msgid "Destination repository has not been initialized"
