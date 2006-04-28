@@ -1,7 +1,7 @@
 /* authz.c : path-based access control
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -15,6 +15,9 @@
  * ====================================================================
  */
 
+
+/*** Includes. ***/
+
 #include <assert.h>
 
 #include <apr_pools.h>
@@ -27,6 +30,8 @@
 #include "svn_config.h"
 
 
+/*** Structures. ***/
+
 /* Information for the config enumerators called during authz
    lookup. */
 struct authz_lookup_baton {
@@ -36,9 +41,9 @@ struct authz_lookup_baton {
   /* The user to authorize. */
   const char *user;
 
-  /* Explicitely granted rights. */
+  /* Explicitly granted rights. */
   svn_repos_authz_access_t allow;
-  /* Explicitely denied rights. */
+  /* Explicitly denied rights. */
   svn_repos_authz_access_t deny;
 
   /* The rights required by the caller of the lookup. */
@@ -63,7 +68,6 @@ struct authz_validate_baton {
                            enumerator, if any. */
 };
 
-
 /* Currently this structure is just a wrapper around a
    svn_config_t. */
 struct svn_authz_t
@@ -73,12 +77,14 @@ struct svn_authz_t
 
 
 
+/*** Checking access. ***/
+
 /* Determine whether the REQUIRED access is granted given what authz
  * to ALLOW or DENY.  Return TRUE if the REQUIRED access is
  * granted.
  *
- * Access is granted either when no required access is explicitely
- * denied (implicit grant), or when the required access is explicitely
+ * Access is granted either when no required access is explicitly
+ * denied (implicit grant), or when the required access is explicitly
  * granted, overriding any denials.
  */
 static svn_boolean_t
@@ -98,7 +104,6 @@ authz_access_is_granted(svn_repos_authz_access_t allow,
 }
 
 
-
 /* Decide whether the REQUIRED access has been conclusively
  * determined.  Return TRUE if the given ALLOW/DENY authz are
  * conclusive regarding the REQUIRED authz.
@@ -117,7 +122,6 @@ authz_access_is_determined(svn_repos_authz_access_t allow,
     return FALSE;
 }
 
-
 /* Return TRUE if USER is in GROUP.  The group definitions are in the
    "groups" section of CFG.  Use POOL for temporary allocations during
    the lookup. */
@@ -156,7 +160,6 @@ authz_group_contains_user(svn_config_t *cfg,
 }
 
 
-
 /* Callback to parse one line of an authz file and update the
  * authz_baton accordingly.
  */
@@ -201,7 +204,6 @@ authz_parse_line(const char *name, const char *value,
 }
 
 
-
 /* Callback to parse a section and update the authz_baton if the
  * section denies access to the subtree the baton describes.
  */
@@ -223,7 +225,7 @@ authz_parse_section(const char *section_name, void *baton, apr_pool_t *pool)
   svn_config_enumerate2(b->config, section_name,
                         authz_parse_line, b, pool);
 
-  /* Has the section explicitely determined an access? */
+  /* Has the section explicitly determined an access? */
   conclusive = authz_access_is_determined(b->allow, b->deny,
                                           b->required_access);
 
@@ -237,7 +239,6 @@ authz_parse_section(const char *section_name, void *baton, apr_pool_t *pool)
 }
 
 
-
 /* Validate access to the given user for the given path.  This
  * function checks rules for exactly the given path, and first tries
  * to access a section specific to the given repository before falling
@@ -283,7 +284,6 @@ authz_get_path_access(svn_config_t *cfg, const char *repos_name,
 }
 
 
-
 /* Validate access to the given user for the subtree starting at the
  * given path.  This function walks the whole authz file in search of
  * rules applying to paths in the requested subtree which deny the
@@ -316,7 +316,6 @@ authz_get_tree_access(svn_config_t *cfg, const char *repos_name,
 }
 
 
-
 /* Callback to parse sections of the configuration file, looking for
    any kind of granted access.  Implements the
    svn_config_section_enumerator2_t interface. */
@@ -346,7 +345,6 @@ authz_global_parse_section(const char *section_name, void *baton,
 }
 
 
-
 /* Walk through the authz CFG to check if USER has the REQUIRED_ACCESS
  * to any path within the REPOSITORY.  Return TRUE if so.  Use POOL
  * for temporary allocations. */
@@ -372,6 +370,8 @@ authz_get_global_access(svn_config_t *cfg, const char *repos_name,
 
 
 
+/*** Validating the authz file. ***/
+
 /* Check for errors in GROUP's definition of CFG.  The errors
  * detected are references to non-existent groups and circular
  * dependencies between groups.  If an error is found, return
@@ -432,7 +432,6 @@ authz_group_walk(svn_config_t *cfg,
 }
 
 
-
 /* Callback to check whether GROUP is a group name, and if so, whether
    the group definition exists.  Return TRUE if the rule has no
    errors.  Use BATON for context and error reporting. */
@@ -465,7 +464,6 @@ static svn_boolean_t authz_validate_rule(const char *group,
 }
 
 
-
 /* Callback to check GROUP's definition for cyclic dependancies.  Use
    BATON for context and error reporting. */
 static svn_boolean_t authz_validate_group(const char *group,
@@ -483,7 +481,6 @@ static svn_boolean_t authz_validate_group(const char *group,
 }
 
 
-
 /* Callback to check the contents of the configuration section given
    by NAME.  Use BATON for context and error reporting. */
 static svn_boolean_t authz_validate_section(const char *name,
@@ -509,6 +506,8 @@ static svn_boolean_t authz_validate_section(const char *name,
 
 
 
+/*** Public functions. ***/
+
 svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
@@ -532,7 +531,6 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
 }
 
 
-
 svn_error_t *
 svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              const char *path, const char *user,
