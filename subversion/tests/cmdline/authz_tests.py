@@ -128,6 +128,29 @@ def authz_open_directory(sbox):
                                         None, None,
                                         wc_dir)
 
+def broken_authz_file(sbox):
+  "broken authz files cause errors"
+  sbox.build()
+  
+  skip_test_when_no_authz_available()
+  
+  fp = open(sbox.authz_file, 'w')
+  fp.write("[/]\njrandom = rw zot\n")
+  fp.close()
+  
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  out, err = svntest.main.run_svn(1,
+                                  "delete",
+                                  "--username", svntest.main.wc_author,
+                                  "--password", svntest.main.wc_passwd,
+                                  sbox.repo_url + "/A",
+                                  "-m", "a log message");
+  if out:
+    raise svntest.actions.SVNUnexpectedStdout(out)
+  if not err:
+    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
+
 ########################################################################
 # Run the tests
 
@@ -138,6 +161,7 @@ def is_this_dav():
 test_list = [ None,
               authz_open_root,
               XFail(authz_open_directory, is_this_dav),
+              broken_authz_file,
              ]
 
 if __name__ == '__main__':

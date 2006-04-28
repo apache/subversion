@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_config.h"
+#include "svn_ctype.h"
 
 
 /*** Structures. ***/
@@ -458,6 +459,18 @@ static svn_boolean_t authz_validate_rule(const char *group,
                                      group);
           return FALSE;
         }
+    }
+
+  val = value;
+
+  while (*val)
+    {
+      if (*val != 'r' && *val != 'w' && ! svn_ctype_isspace(*val))
+        b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                   "The character '%c' in rule '%s' is not "
+                                   "allowed in authz rules", *val, group);
+
+      ++val;
     }
 
   return TRUE;
