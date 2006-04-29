@@ -529,7 +529,7 @@ msgstr "有缺陷的網路資料"
 
 #: include/svn_error_codes.h:722
 msgid "Unable to extract data from response header"
-msgstr ""
+msgstr "無法自回應檔頭取得資料"
 
 #: include/svn_error_codes.h:728 include/svn_error_codes.h:757
 msgid "Couldn't find a repository"
@@ -785,7 +785,7 @@ msgstr "用戶端於剖析引數時發生錯誤"
 
 #: include/svn_error_codes.h:1015
 msgid "Not enough arguments provided; try 'svn help' for more info"
-msgstr ""
+msgstr "未提供足夠的引數; 請試用 'svn help' 以取得更多的資訊"
 
 #: include/svn_error_codes.h:1019
 msgid "Mutually exclusive arguments specified"
@@ -817,7 +817,7 @@ msgstr "紀錄訊息的內容有不妥的地方"
 
 #: include/svn_error_codes.h:1047
 msgid "A log message was given where none was necessary"
-msgstr ""
+msgstr "給了一個送交訊息, 但是根本不需要"
 
 #: libsvn_client/add.c:376
 #, c-format
@@ -1261,7 +1261,7 @@ msgstr "找不到共同的父路徑, 無法對不相交的引數進行處理"
 
 #: libsvn_client/locking_commands.c:287
 msgid "Unable to lock/unlock across multiple repositories"
-msgstr ""
+msgstr "無法在多個檔案庫之間進行鎖定/解鎖"
 
 #: libsvn_client/locking_commands.c:328
 #, c-format
@@ -1386,15 +1386,15 @@ msgstr "無法辨識要求的 '%s' 的修訂版類別"
 
 #: libsvn_delta/svndiff.c:144
 msgid "Compression of svndiff data failed"
-msgstr ""
+msgstr "svndiff 資料壓縮失敗"
 
 #: libsvn_delta/svndiff.c:407
 msgid "Decompression of svndiff data failed"
-msgstr ""
+msgstr "svndiff 資料解壓縮失敗"
 
 #: libsvn_delta/svndiff.c:414
 msgid "Size of uncompressed data does not match stored original length"
-msgstr ""
+msgstr "解壓縮後的資料大小與儲存的原始長度不符"
 
 # as-is
 #: libsvn_delta/svndiff.c:484
@@ -1467,7 +1467,7 @@ msgstr "Unexpected end of svndiff input"
 #: libsvn_diff/diff_file.c:593
 #, c-format
 msgid "The file '%s' changed unexpectedly during diff"
-msgstr ""
+msgstr "檔案 '%s' 在產生差異時發生無預期的變動"
 
 #: libsvn_diff/diff_file.c:714
 #, c-format
@@ -1985,19 +1985,23 @@ msgstr "表現不是 'delta' 類別"
 
 #: libsvn_fs_base/reps-strings.c:379
 msgid "Svndiff source length inconsistency"
-msgstr ""
+msgstr "Svndiff 的來源長度不相符"
 
 #: libsvn_fs_base/reps-strings.c:506
 #, c-format
 msgid "Diff version inconsistencies in representation '%s'"
 msgstr "差異版本與表現 '%s' 中不一致"
 
+# as-is
 #: libsvn_fs_base/reps-strings.c:532
 #, c-format
 msgid ""
 "Corruption detected whilst reading delta chain from representation '%s' to '%"
 "s'"
 msgstr ""
+"Corruption detected whilst reading delta chain from representation '%s' to '%"
+"s'"
+
 
 #: libsvn_fs_base/reps-strings.c:780
 #, c-format
@@ -2490,7 +2494,7 @@ msgstr "無法儲存版本資源的 URL"
 #: libsvn_ra_dav/fetch.c:406
 #, c-format
 msgid "Could not get content-type from response"
-msgstr ""
+msgstr "無法自回應取得 content-type"
 
 #: libsvn_ra_dav/fetch.c:451
 #, c-format
@@ -2519,7 +2523,7 @@ msgstr ""
 
 #: libsvn_ra_dav/fetch.c:1151
 msgid "Server response missing the expected deadprop-count property"
-msgstr ""
+msgstr "伺服器回應缺少預期的 deadprop-count 性質"
 
 #: libsvn_ra_dav/fetch.c:1324
 msgid "Server does not support date-based operations"
@@ -2908,7 +2912,7 @@ msgstr "路徑 '%s' 不存在"
 #: libsvn_ra_serf/commit.c:910
 #, c-format
 msgid "Failed writing updated file"
-msgstr ""
+msgstr "寫入更新檔案失敗"
 
 #: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
@@ -2975,14 +2979,16 @@ msgstr "無法查得主機名稱: %s://%s"
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Unsupported RA loader version (%d) for ra_serf"
 
+# as-is
 #: libsvn_ra_serf/update.c:2111
 #, c-format
 msgid "Error retrieving REPORT (%d)"
-msgstr ""
+msgstr "Error retrieving REPORT (%d)"
 
+# as-is
 #: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
-msgstr ""
+msgstr "Premature EOF seen from server"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -3448,12 +3454,12 @@ msgstr "Dumpstream data appears to be malformed"
 #: libsvn_repos/load.c:173
 #, c-format
 msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
-msgstr ""
+msgstr "傾印串流在 '%.20s' 處有一個缺陷檔頭 (沒有 ':')"
 
 #: libsvn_repos/load.c:186
 #, c-format
 msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
-msgstr ""
+msgstr "傾印串流在 '%.20s' 處有一個缺陷檔頭 (沒有值)"
 
 #: libsvn_repos/load.c:270
 msgid "Incomplete or unterminated property block"
@@ -3687,7 +3693,7 @@ msgstr "遇到無法讀取的路徑; 拒絕存取"
 #: libsvn_subr/cmdline.c:475
 #, c-format
 msgid "Error initializing command line arguments"
-msgstr ""
+msgstr "無法初始化命令列引數"
 
 #: libsvn_subr/config.c:630
 #, c-format
@@ -4822,7 +4828,7 @@ msgstr "找不到目錄 '%s'"
 #: libsvn_wc/lock.c:943
 #, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
-msgstr ""
+msgstr "找不到包含工作複本管理區塊的目錄 '%s'"
 
 #: libsvn_wc/lock.c:948
 #, c-format
@@ -4992,6 +4998,8 @@ msgid ""
 "Trying to add new property '%s' with value '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
+"預計新增性質 '%s', 其值為 '%s',\n"
+"但是該性質已存在, 其值為 '%s'."
 
 #: libsvn_wc/props.c:651
 #, c-format
@@ -4999,12 +5007,15 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property does not exist."
 msgstr ""
+"預計將性質 '%s' 自 '%s' 變更為 '%s',\n"
+"但是該性質不存在."
 
 #: libsvn_wc/props.c:679
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
 msgstr ""
+"預計刪除性質 '%s', 但是其值已自 '%s' 變更為 '%s'."
 
 #: libsvn_wc/props.c:697
 #, c-format
@@ -5095,7 +5106,7 @@ msgstr ""
 
 #: libsvn_wc/relocate.c:68
 msgid "Relocate can only change the repository part of an URL"
-msgstr ""
+msgstr "重新安置只能能變更一個 URL 的檔案庫部份"
 
 #: libsvn_wc/update_editor.c:387
 #, c-format
@@ -5204,7 +5215,7 @@ msgstr "'%s' 不像是 URL"
 
 #: svn/copy-cmd.c:108 svn/delete-cmd.c:64 svn/mkdir-cmd.c:66
 msgid "Local, non-commit operations do not take a log message"
-msgstr ""
+msgstr "本地非送交的動作不需要送交訊息"
 
 #: svn/diff-cmd.c:115 svnserve/main.c:484
 #, c-format
