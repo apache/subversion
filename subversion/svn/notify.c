@@ -344,7 +344,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
       if ((err = svn_cmdline_printf(pool, ".")))
         goto print_error;
-      fflush(stdout);
       break;
 
     case svn_wc_notify_locked:
@@ -369,6 +368,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     }
 
   return;
+
+  if ((err = svn_cmdline_fflush(stdout)))
+    goto print_error;
 
  print_error:
   /* If we had no errors before, print this error to stderr. Else, don't print
