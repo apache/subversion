@@ -83,6 +83,8 @@ summarize_func(const svn_client_diff_summarize_t *summary,
                              summary->prop_changed ? 'M' : ' ',
                              path));
 
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return SVN_NO_ERROR;
 }
 
