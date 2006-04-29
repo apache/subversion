@@ -5860,7 +5860,6 @@ msgstr ""
 "  2. 以 URL 指定的項目, 會透過立即送交自檔案庫中刪除.\n"
 
 #: svn/main.c:294
-#, fuzzy
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5890,25 +5889,22 @@ msgid ""
 msgstr ""
 "顯示兩個路徑之間的差異.\n"
 "用法: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
-"      2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT"
-"[@NEWREV]] \\\n"
+"      2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] "
+"\\\n"
 "              [PATH...]\n"
 "      3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
 "  1. 顯示在 REV 修訂版中存在的 TARGET, 它 (們) 在兩個不同的修訂版之間的\n"
-"     差異. TARGET 可以為工作複本路徑, 或是 URL.\n"
-"\n"
-"     如果任何的 TARGET 是工作複本的話, N 預設為 BASE, 否則就必須加以指定.\n"
-"     如果任何的 TARGET 是工作複本路徑, M 預設為目前的工作版本, 否則預設為\n"
-"     HEAD.\n"
-"     \"-c M\" 選項與 \"-r N:M\" 相同, 其中 N = M-1.\n"
+"     差異. TARGET 可以全為工作複本路徑, 或是全為 URL. 如果 TARGET 皆為\n"
+"     工作複本路徑, N 預設為 BASE, M 為工作複本; 如果皆為 URL, N 必須指定,\n"
+"     M 預設為 HEAD. '-c M' 選項與 '-r N:M' 相同, 其中 N = M-1.\n"
+"     使用 '-c -M' 則為相反: '-r M:N', 其中 N = M-1.\n"
 "\n"
 "  2. 顯示於 OLDREV 修訂版的 OLD-TGT 與於 NEWREV 修訂版的 NEW-TGT 之間的\n"
 "     差異. 如果有指定 PATH 的話, 它們是相對於 OLD-TGT 與 NEW-TGT, 而差異\n"
 "     的輸出會限制在這些路徑中. OLD-TGT 與 NEW-TGT 可為工作路徑或\n"
-"     URL[@REV]. 沒有指定 NEW-TGT 時, 預設為 OLD-TGT. -r N 使得 OLDREV \n"
+"     URL[@REV]. 沒有指定 NEW-TGT 時, 其預設為 OLD-TGT. -r N 使得 OLDREV \n"
 "     預設為 N, 而 -r N:M 讓 OLDREV 預設為 N, NEWREV 預設為 M,\n"
-"     -c M 使得 OLDREV 預設為 M-1, 並且 NEWREV 預設為 M.\n"
 "  3. 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]' 的便利寫法.\n"
 "\n"
 "  僅僅使用 'svn diff' 時, 會顯示工作複本中的本地修改.\n"
@@ -8305,12 +8301,12 @@ msgstr "送交修訂版 %ld\n"
 
 #: svnsync/main.c:855
 msgid "Destination repository has not been initialized"
-msgstr ""
+msgstr "目標檔案庫尚未被初始"
 
 #: svnsync/main.c:870
 #, c-format
 msgid "UUID of destination repository (%s) does not match expected UUID (%s)"
-msgstr ""
+msgstr "目標檔案庫的 UUID (%s) 不符合預期的 UUID (%s)"
 
 #: svnsync/main.c:931
 #, c-format
@@ -8318,37 +8314,37 @@ msgid ""
 "Currently copying rev %ld in source is less than latest rev in destination (%"
 "ld)"
 msgstr ""
+"目前來源的複製修訂版號 %ld 比目標的最新修訂版號 (%ld) 還小"
 
 #: svnsync/main.c:1003
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
-msgstr ""
+msgstr "送交產生修訂版 %ld, 但應該是 %ld"
 
 #: svnsync/main.c:1085
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
-msgstr ""
+msgstr "無法複製尚未同步的修訂版性質"
 
 #: svnsync/main.c:1135
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"請使用 'svnadmin help <subcommand>' 以取得特定子命令的求助資訊.\n"
+"一般用法: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+"請使用 'svnsync help <subcommand>' 以取得特定子命令的求助資訊.\n"
 "\n"
 "可用的子命令:\n"
 
 #: svnsync/main.c:1324
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnsync help %s' for usage.\n"
 msgstr ""
 "子命令 '%s' 不接受選項 '%s'\n"
-"請輸入 'svn help %s' 以取得用法.\n"
+"請輸入 'svnsync help %s' 以取得用法.\n"
 
 #: svnversion/main.c:39
 #, c-format
