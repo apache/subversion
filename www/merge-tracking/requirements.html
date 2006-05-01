@@ -77,10 +77,10 @@ users@ list and in other forums.</p>
     <ul>
       <li><a href="#dump-load">Consistent UI</a></li>
       <li><a href="#dump-load">Allow Dump/Load</a></li>
-      <li><a href="#compatibility">Compatibility with older Subversion clients</a></li>
+      <li><a href="#compatibility">Compatibility with older Subversion
+      clients</a></li>
       <li><a href="#versioning">Versioning</a></li>
-      <li><a href="#tweakability">Tweakability</a></li>
-      <li><a href="#permissions">Permissions</a></li>
+      <li><a href="#authz">Authorization</a></li>
     </ul>
   </li>
 </ul>
@@ -427,54 +427,28 @@ when a single change is ported from a branch's ancestor line.</p>
 <div class="h4" id="versioning">
 <h4>Versioning</h4>
 
-<ul>
+<p>Merge tracking information should be maintained for all versions of
+files in a repository. Thus, if you create a copy of an old version of
+a branch, the merge tracking information will still be accurate.</p>
 
-<li>Merge tracking information should be maintained for all versions
-    of files in a repository. Thus, if you create a 'copy' of an old version
-    of a branch, the merge tracking information will still be accurate.</li>
+<p>Changes to merge tracking information should be versioned,
+therefore allowing tracking and auditing of changes to merge
+tracking data.</p>
 
-<li>Changes to merge tracking information should be versioned, therefore
-    allowing tracking and auditing of changes to merge tracking data.</li>
+</div>  <!-- versioning -->
 
-</ul>
+<div class="h4" id="authz">
+<h4>Authorization</h4>
 
-</div>
+<p>Repository administrators should be able to control whether merge
+tracking information can be committed by specific users or to specific
+directories.</p>
 
-<div class="h4" id="tweakability">
-<h4>Tweakability</h4>
-
-<ul>
-
-<li>Users should be able to tweak or add merge-tracking information prior to a
-    commit. A user might manually apply a patch using diff / patch, and then
-    mark his working copy as containing manual merge of a particular
-    change.</li>
-
-<li>Users should be able to tweak merge tracking information after it has been
-    committed. Further, it should be possible to signify that a tweak to
-    merge-tracking information applies to a merge which was committed in an
-    earlier revision.</li>
-
-</ul>
-
-</div>  <!-- tweakability -->
-
-<div class="h4" id="permissions">
-<h4>Permissions</h4>
-
-<ul>
-
-<li>Repository administrators should be able to control whether merge tracking
-    information can be committed by specific users or to specific
-    directories.</li>
-
-<li>Repository administrators should be able to control whether changes can
-    be committed without associated merge-tracking information. Using this
-    feature, a repository administrator could enforce (for example) that all
-    changes must be committed to trunk before they are merged to a release
-    branch.</li>
-
-</ul>
+<p>Repository administrators should be able to control whether changes
+can be committed without associated merge-tracking information. Using
+this feature, a repository administrator could enforce (for example)
+that all changes must be committed to trunk before they are merged to
+a release branch.</p>
 
 </div>  <!-- permissions -->
 
