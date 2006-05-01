@@ -1,5 +1,0 @@
-NOTE: This content has been moved to:
-http://subversion.tigris.org/merge-tracking/
-
-Please record any thoughts you have there, and/or discuss them on the
-dev@ mailing list.
