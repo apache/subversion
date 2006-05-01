@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1639,6 +1639,42 @@ def update_xml_unsafe_dir(sbox):
   finally:
     os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+# Issue #2529.
+def checkout_broken_eol(sbox):
+  "checkout file with broken eol style"
+
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'update_tests_data')
+  dump_str = file(os.path.join(data_dir,
+                               "checkout_broken_eol.dump")).readlines()
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+  svntest.main.set_repos_paths(sbox.repo_dir)
+
+  URL = svntest.main.current_repo_url
+
+  # Load the dumpfile into the repos.
+  output, errput = \
+    svntest.main.run_command_stdin(
+    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
+    None, 1, dump_str)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'file': Item(status='A '),
+    })
+                                     
+  expected_wc = svntest.wc.State('', {
+    'file': Item(contents='line' + os.linesep + 'line2' + os.linesep),
+    })
+  svntest.actions.run_and_verify_checkout(URL,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc)
+
+
 ########################################################################
 # Run the tests
 
@@ -1671,6 +1707,7 @@ test_list = [ None,
               nested_in_read_only,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
+              checkout_broken_eol,
              ]
 
 if __name__ == '__main__':

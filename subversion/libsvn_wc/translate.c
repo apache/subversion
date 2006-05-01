@@ -93,7 +93,7 @@ svn_wc_translated_file2(const char **xlated_path,
       else /* from normal form */
         SVN_ERR(svn_subst_copy_and_translate3
                 (src, tmp_vfile,
-                 eol, repair_forced,
+                 eol, TRUE,
                  keywords, TRUE,
                  special,
                  pool));
