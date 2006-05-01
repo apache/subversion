@@ -169,26 +169,25 @@ void svn_wc__compat_call_notify_func(void *baton,
                                      const svn_wc_notify_t *notify,
                                      apr_pool_t *pool);
 
-/** Set @a *modified_p to non-zero if @a filename's text is modified
- * with regard to the base revision, else set @a *modified_p to zero.
- * @a filename is a path to the file, not just a basename. @a adm_access
- * must be an access baton for @a filename.
+/* Set *MODIFIED_P to non-zero if FILENAME's text is modified with
+ * regard to the base revision, else set *MODIFIED_P to zero.
+ * FILENAME is a path to the file, not just a basename. ADM_ACCESS
+ * must be an access baton for @a FILENAME.
  *
- * If @a force_comparison is @c TRUE, this function will not allow
- * early return mechanisms that avoid actual content comparison.
- * Instead, if there is a text base, a full byte-by-byte comparison
- * will be done, and the entry checksum verified as well.  (This means
- * that if the text base is much longer than the working file, every
- * byte of the text base will still be examined.)
+ * If FORCE_COMPARISON is true, this function will not allow early
+ * return mechanisms that avoid actual content comparison.  Instead,
+ * if there is a text base, a full byte-by-byte comparison will be
+ * done, and the entry checksum verified as well.  (This means that if
+ * the text base is much longer than the working file, every byte of
+ * the text base will still be examined.)
  *
- * If @a compare_textbases is @c TRUE, the comparison will be between
- * a detranslated version of @a *filename and the text base, otherwise,
- * a translated version of the text base and @a *filename will be compared.
+ * If COMPARE_TEXTBASES is true, the comparison will be between a
+ * detranslated version of *FILENAME and the text base, otherwise, a
+ * translated version of the text base and *FILENAME will be compared.
  *
- * If @a filename does not exist, consider it unmodified.  If it exists
+ * If FILENAME does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
- * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
- *
+ * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
 svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
