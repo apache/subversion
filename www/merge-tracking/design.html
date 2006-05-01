@@ -123,11 +123,11 @@ everywhere.</p>
 <p>As for what is stored:</p>
 
 <p>For the large number of people i have talked to and heard about
-from others, it seems the human editable *format* of how svnmerge
-stores merge information (IE pathname and list of revisions) is fine.
-Binary storage of such information would buy, on average, a 2-3 byte
-decrease per revision/range in size over ascii[1], while making it not
-directly human editable.</p>
+from others, it seems the human editable <em>format</em> of how
+svnmerge stores merge information (e.g. pathname and list of
+revisions) is fine.  Binary storage of such information would buy, on
+average, a 2-3 byte decrease per revision/range in size over ascii[1],
+while making it not directly human editable.</p>
 
 <p>As such, i have chosen to represent the revisions we have merged
 <em>into</em> something as a path, a colon, and then a comma separated
@@ -165,15 +165,15 @@ Revision range end and beginning points are separated by "-".</p>
 </div>  <!-- merged-revs-grammar -->
 
 
-This list will *not* be stored in a canonicalized minimal form for a
-path (IE it may contain single revision numbers that could be ranges).
-This is chiefly because the benefit of such a canonical format (slightly
-easier *comparison*, but not indexing) is heavily outweighed by the fact
-that generating a canonical form may require groveling through a lot of
-information to determine what that minimal canonical form is.  In
-particular, it may be that the revision list "5,7,9" is, in minimal
-canonical form, "5-9", because 6 and 8 do not have any affect on the
-pathname that 5 and 9 are from.
+This list will <em>not</em> be stored in a canonicalized minimal form
+for a path (e.g. it may contain single revision numbers that could be
+ranges).  This is chiefly because the benefit of such a canonical
+format (slightly easier for <em>comparison</em>, but not indexing) is
+outweighed by the fact that generating a canonical form may require
+groveling through a lot of information to determine what that minimal
+canonical form is.  In particular, it may be that the revision list
+"5,7,9" is, in minimal canonical form, "5-9", because 6 and 8 do not
+have any affect on the pathname that 5 and 9 are from.
 Canonicalization could be done as a server side post pass because the
 information is stored in properties.
 
@@ -320,8 +320,8 @@ They get the results specified by their merge info.</p>
 We copy it from revision to revision.</p>
 
 <p>What happens if a user manually edits a file and unmerges a
-revision (IE not using a "reverse merge" command), but doesn't update
-the merge info to match?
+revision (e.g. not using a "reverse merge" command), but doesn't
+update the merge info to match?
 
 The merge info will believe the change has still been merged.</p>
 
