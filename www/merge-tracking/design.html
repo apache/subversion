@@ -10,6 +10,11 @@
   href="tigris-branding/css/print.css"/>
 <script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
 <title>Merge Tracking Design</title>
+
+<style type="text/css">
+.question { color: grey; }
+.answer   { }
+</style>
 </head>
 
 <body>
@@ -88,7 +93,7 @@ clearer on what operations do below and how to proceed easier.  The
 question is whether it is efficient enough time wise when we go to
 retrieve merge info, and whether it complicates what merge has to do
 too much.  It also removes all of the listed <a
-href="#merge-history-pre-reqs">pre-requisites</a>.</p>
+href="#merge-history-prereqs">prerequisites</a>.</p>
 
 </div>  <!-- goals -->
 
@@ -96,8 +101,8 @@ href="#merge-history-pre-reqs">pre-requisites</a>.</p>
 <h3>Information Storage</h3>
 
 <p>The first question that many people ask is "where should we store
-the merge information" (what we store will be covered next).  A merge
-info property, named <code>SVN_MERGE_PROPERTY</code>
+the merge information?" (what we store will be covered next).  A merge
+history property, named <code>SVN_MERGE_PROPERTY</code>
 (e.g. <code>svn:merged-revs</code>) stored in the revision properties,
 directory properties, and file properties.  Each will store the
 <em>full</em>, <em>complete</em> list of current merged in changes, as
@@ -106,10 +111,10 @@ consumers do not have to walk back revisions in order to get the
 transitive closure of the revision list.</p>
 
 <p>The way we choose which of file, dir, revprop merge info to use in
-case of conflicts simple system of inheritance[1] where the "most
-specific" place wins.  This means that if the property is set on a
-file, that completely overrides the directory and revision level
-properties.</p>
+case of conflicts simple system of inheritance <a
+href="#merge-history-footnotes">[1]</a> where the "most specific"
+place wins.  This means that if the property is set on a file, that
+completely overrides the directory and revision level properties.</p>
 
 <p>The way we choose which to store to depends on how much and where
 you merge, and will be covered in the semantics.</p>
@@ -122,17 +127,18 @@ everywhere.</p>
 
 <p>As for what is stored:</p>
 
-<p>For the large number of people i have talked to and heard about
-from others, it seems the human editable <em>format</em> of how
-svnmerge stores merge information (e.g. pathname and list of
-revisions) is fine.  Binary storage of such information would buy, on
-average, a 2-3 byte decrease per revision/range in size over ascii[1],
-while making it not directly human editable.</p>
+<p>A survey of the community shows a slight preference for a human
+editable storage format along the lines of how svnmerge stores its
+merge info (e.g. path name and list of revisions).  Binary storage of
+such information would buy, on average, a 2-3 byte decrease per
+revision/range in size over ASCII <a
+href="merge-history-footnotes">[2]</a>, while making it not directly
+human readable/editable.</p>
 
-<p>As such, i have chosen to represent the revisions we have merged
-<em>into</em> something as a path, a colon, and then a comma separated
-revision list, containing one or more revision or revision ranges.
-Revision range end and beginning points are separated by "-".</p>
+<p>The revisions we have merged <em>into</em> something are
+represented as a path, a colon, and then a comma separated revision
+list, containing one or more revision or revision ranges.  Revision
+range end and beginning points are separated by "-".</p>
 
 <div class="h4" id="merged-revs-grammar">
 <h4>Grammar</h4>
@@ -164,25 +170,35 @@ Revision range end and beginning points are separated by "-".</p>
 </table>
 </div>  <!-- merged-revs-grammar -->
 
-
-This list will <em>not</em> be stored in a canonicalized minimal form
-for a path (e.g. it may contain single revision numbers that could be
-ranges).  This is chiefly because the benefit of such a canonical
-format (slightly easier for <em>comparison</em>, but not indexing) is
-outweighed by the fact that generating a canonical form may require
-groveling through a lot of information to determine what that minimal
-canonical form is.  In particular, it may be that the revision list
-"5,7,9" is, in minimal canonical form, "5-9", because 6 and 8 do not
-have any affect on the pathname that 5 and 9 are from.
+<p>This list will <em>not</em> be stored in a canonicalized minimal
+form for a path (e.g. it may contain single revision numbers that
+could fall into ranges).  This is chiefly because the benefit of such
+a canonical format (slightly easier for <em>comparison</em>, but not
+indexing) is outweighed by the fact that generating a canonical form
+may require groveling through a lot of information to determine what
+that minimal canonical form is.  In particular, it may be that the
+revision list "5,7,9" is, in minimal canonical form, "5-9", because 6
+and 8 do not have any affect on the path name that 5 and 9 are from.
 Canonicalization could be done as a server side post pass because the
-information is stored in properties.
+information is stored in properties.</p>
 
-Note that this revision format will not scale on its own if you have a
-list of million revisions.  None will easily.  However, because it is
-stored in properties, one can change the wc and fs backends to simply do
-something different with this single property if they wanted to.
-Given the rates of change of various very active repositories, this will
-not be a problem we need to solve for many many years.
+<p>Note that this revision format will not scale on its own if you
+have a list of million revisions.  None will easily.  However, because
+it is stored in properties, one can change the WC and FS backends to
+simply do something different with this single property if they wanted
+to.  Given the rates of change of various very active repositories,
+this will not be a problem we need to solve for many many years.</p>
+
+<p>The current thinking is that the payload of
+<code>SVN_MERGE_PROPERTY</code> will be stored in an index separate
+from the FS which is created during <code>svnadmin create</code>.
+This index will support fast querying, be populated during a merge or
+<code>svnadmin load</code>, and cough up its contents during a
+<code>svn propget SVN_MERGE_PROPERTY</code> or <code>svnadmin
+dump</code>.  The contents of <code>SVN_MERGE_PROPERTY</code> will not
+be stored redundantly in the FS (only in the index).  Dan Berlin is
+prototyping this index using sqlite3, and David James has a (generic)
+schema design underway.</p>
 
 </div>  <!-- storage -->
 
@@ -263,8 +279,8 @@ http://foo.bar.com/reposroot/trunk would produce "/trunk:1-9"</p>
 
 </div>  <!-- h3 -->
 
-<div class="h3" id="merge-history-pre-reqs">
-<h3>Pre-requisites</h3>
+<div class="h3" id="merge-history-prereqs">
+<h3>Prerequisites</h3>
 
 <ul>
   <li>Need to be able to set a revprop to be stored on commit (see <a
@@ -286,70 +302,81 @@ http://foo.bar.com/reposroot/trunk would produce "/trunk:1-9"</p>
 </div>  <!-- merge-history-pre-reqs -->
 
 
-<div class="h3" id="merge-history-q-and-a">
-<h3>Questions and Answers</h3>
+<div class="h3" id="merge-history-faq">
+<h3>FAQ</h3>
 
-<p>What happens if someone commits a merge with a non-merge tracking
-client?
+<p class="question">What happens if someone commits a merge with a
+non-merge tracking client?</p>
 
-It simply means the next time you merge, you may receive conflicts
-that you would have received if you were using a non-history-sensitive
-client.</p>
+<p class="answer">It simply means the next time you merge, you may
+receive conflicts that you would have received if you were using a
+non-history-sensitive client.</p>
 
-<p>Can we do without the revprop portion of this design?
+<p class="question">Can we do without the revprop portion of this
+design?</p>
 
-Technically yes, AFAIK, but it may require more crawling and querying
-at merge time.</p>
+<p class="answer">Technically yes, but it may require more crawling
+and querying at merge time.</p>
 
-<p>Can we do history sensitive WC-to-WC merges without contacting the
-server?
+<p class="question">Can we do history sensitive WC-to-WC merges
+without contacting the server?</p>
 
-No. But you probably couldn't anyway, even if the revprop not being
-stored locally issue were not here.</p>
+<p class="answer">No. But you probably couldn't anyway, even if the
+"revprop not being stored locally" issue were not here.</p>
 
-<p>What happens if the info is not there?
+<p class="question">What happens if the merge history is not there?</p>
 
-The same thing that happens if the info is not there now.</p>
+<p class="answer">The same thing that happens if the merge history is
+not there now.</p>
 
-<p>What happens if a user edits merge info incorrectly?
+<p class="question">What happens if a user edits merge history
+incorrectly?</p>
 
-They get the results specified by their merge info.</p>
+<p class="answer">They get the results specified by their merge
+history.</p>
 
-<p>How does the revprop stay up to date?
+<p class="question">How does the revprop stay up to date?</p>
 
-We copy it from revision to revision.</p>
+<p class="answer">We copy it from revision to revision.</p>
 
-<p>What happens if a user manually edits a file and unmerges a
-revision (e.g. not using a "reverse merge" command), but doesn't
-update the merge info to match?
+<p class="question">What happens if a user manually edits a file and
+unmerges a revision (e.g. not using a "reverse merge" command), but
+doesn't update the merge info to match?</p>
 
-The merge info will believe the change has still been merged.</p>
+<p class="answer">The merge info will believe the change has still
+been merged.  This is a similar effect to performing a <a
+href="requirements.html#manual-merge">manual merge</a>.</p>
 
-<p>What happens if i svn move/rename a directory, and then merge it
-somewhere?
+<p class="question">What happens if I <code>svn
+move</code>/<code>rename</code> a directory, and then merge it
+somewhere?</p>
 
-This doesn't change history, only the future, thus we will simply add
-the merge info for that directory as if it was a new directory.  We
-will not do something like attempt to modify all merge info to specify
-the new directory, as that would be wrong.</p>
+<p class="answer">This doesn't change history, only the future, thus
+we will simply add the merge info for that directory as if it was a
+new directory.  We will not do something like attempt to modify all
+merge info to specify the new directory, as that would be wrong.</p>
 
-<p>I don't think only that copying info on svn copy is correct, what
-if you copy a dir with merge info into a dir where the dir has merge
-info, won't it get the info wrong now?
+<p class="question">I don't think only that copying info on <code>svn
+copy</code> is correct.  What if you copy a dir with merge info into a
+dir where the dir has merge info -- won't it get the info wrong
+now?</p>
 
-No.  
+<div class="answer">
+<p>No.  Let's say you have:</p>
 
-Let's say you have
-
+<pre>
 a/foo (merge info: /trunk:5-9
 a/branches/bar (merge info: /trunk:1-4)
+</pre>
 
-If you copy a/foo into a/branches/bar, we now have
+<p>If you copy a/foo into a/branches/bar, we now have:</p>
 
+<pre>
 a/branches/bar (merge info: /trunk:1-4)
 a/branches/bar/foo (merge info: /trunk:5-9)
+</pre>
 
-This is strictly correct.  The only changes which have been merged
+<p>This is strictly correct.  The only changes which have been merged
 into a/branches/bar/foo, are still 5-9.  The only changes which have
 been merged into /branches/bar are 1-4.  No merges have been performed
 by your copy, only copies have been performed.  If you perform a merge
@@ -361,7 +388,9 @@ this.
 
 So if you want to argue svn copy has the wrong merge info semantics,
 it's not because of the above, AFAIK :)</p>
-</div>  <!-- merge-history-q-and-a -->
+</div>
+
+</div>  <!-- merge-history-faq -->
 
 <div class="h3" id="merge-history-footnotes">
 <h3>Footnotes</h3>
