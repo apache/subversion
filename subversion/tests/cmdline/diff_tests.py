@@ -2422,6 +2422,63 @@ def diff_added_subtree(sbox):
   finally:
     os.chdir(current_dir)
 
+#----------------------------------------------------------------------
+def basic_diff_summarize(sbox):
+  "basic diff summarize"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A content modification.
+  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
+
+  # A prop modification.
+  svntest.main.run_svn(None, "propset", "prop", "val",
+                          os.path.join(wc_dir, 'iota'))
+
+  # Both content and prop mods.
+  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
+  svntest.main.file_append(tau_path, "tautau")
+  svntest.main.run_svn(None, "propset", "prop", "val", tau_path)
+
+  # A file addition.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  svntest.main.file_append(newfile_path, 'newfile')
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # A file deletion.
+  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
+                                                    'lambda'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    'iota': Item(verb='Sending'),
+    'newfile': Item(verb='Adding'),
+    'A/D/G/tau': Item(verb='Sending'),
+    'A/B/lambda': Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile': Item(status='  ', wc_rev=2),
+    })
+  expected_status.tweak("A/mu", "iota", "A/D/G/tau", 'newfile', wc_rev=2)
+  expected_status.remove("A/B/lambda")
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/mu': Item(status='M '),
+    'iota': Item(status=' M'),
+    'A/D/G/tau': Item(status='MM'),
+    'newfile': Item(status='A '),
+    'A/B/lambda': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                wc_dir, '-r1:2')
 
 ########################################################################
 #Run the tests
@@ -2465,6 +2522,7 @@ test_list = [ None,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
               diff_added_subtree,
+              basic_diff_summarize,
               ]
 
 if __name__ == '__main__':

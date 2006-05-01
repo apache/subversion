@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2001 CollabNet.  All rights reserved.
+# Copyright (c) 2001, 2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -708,6 +708,19 @@ def build_tree_from_skipped(lines):
 
   return root
 
+def build_tree_from_diff_summarize(lines):
+  "Build a tree from output of diff --summarize"
+  root = SVNTreeNode(root_node_name)
+  rm = re.compile ("^([MAD ][M ])     (.+)\n")
+
+  for line in lines:
+    match = rm.search(line)
+    if match and match.groups():
+      new_branch = create_from_path(match.group(2),
+                                    atts={'status': match.group(1)})
+      root.add_child(new_branch)
+
+  return root
 
 ####################################################################
 # Build trees by looking at the working copy
