@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -687,6 +687,50 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
                         singleton_handler_b, b_baton)
   else:
     tree.compare_trees (mytree, output_tree)
+
+
+def run_and_verify_diff_summarize(output_tree, error_re_string = None,
+                                  singleton_handler_a = None,
+                                  a_baton = None,
+                                  singleton_handler_b = None,
+                                  b_baton = None,
+                                  *args):
+  """Run 'diff --summarize' with the arguments *ARGS.
+  If ERROR_RE_STRING, the command must exit with error, and the error
+  message must match regular expression ERROR_RE_STRING.
+
+  Else if ERROR_RE_STRING is None, the subcommand output will be
+  verified against OUTPUT_TREE.  SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
+  function's doc string for more details.  Returns on success, raises
+  on failure."""
+
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+
+  output, errput = main.run_svn (None, 'diff', '--summarize',
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
+                                 *args)
+
+  if (error_re_string):
+    rm = re.compile(error_re_string)
+    for line in errput:
+      match = rm.search(line)
+      if match:
+        return
+    raise main.SVNUnmatchedError
+
+  mytree = tree.build_tree_from_diff_summarize (output)
+
+  # Verify actual output against expected output.
+  try:
+    tree.compare_trees (mytree, output_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeError:
+    display_trees(None, 'DIFF OUTPUT TREE', output_tree, mytree)
+    raise
 
 
 ######################################################################
