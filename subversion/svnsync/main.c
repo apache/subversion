@@ -16,7 +16,6 @@
 
 #include "svn_cmdline.h"
 #include "svn_config.h"
-#include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_path.h"
