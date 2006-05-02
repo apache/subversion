@@ -2388,3 +2388,35 @@ svn_error_t *svn_wc_remove_lock(const char *path,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc_tweak_changelist(const char *path,
+                        const char *changelist_name,
+                        svn_boolean_t clear,
+                        apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
+                                 TRUE, /* get write lock */
+                                 0, /* depth */
+                                 NULL, NULL, pool));
+
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"), path);
+
+  newentry.changelist = clear ? NULL : changelist_name;
+
+  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
+                               SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                               TRUE, pool));
+  SVN_ERR(svn_wc_adm_close(adm_access));
+
+  return SVN_NO_ERROR;
+}

@@ -1253,6 +1253,11 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t lock_creation_date;
 
+  /** which changelist this item is part of, or NULL if not part of any.
+   * @since New in 1.5.
+   */
+  const char *changelist;
+
   /** Whether this entry has any working properties.
    * False if this information is not stored in the entry.
    *
@@ -3447,6 +3452,24 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool);
+
+
+/**
+ * Associate @a path with changelist @a changelist_name by setting the
+ * 'changelist' attribute in its entry.  If CLEAR is set, then ignore
+ * @a changelist_name and remove any 'changelist' attribute in @a
+ * path's entry.
+ *
+ * Note: this metadata is purely a client-side "bookkeeping"
+ * convenience, and is entirely managed by the working copy.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_tweak_changelist(const char *path,
+                        const char *changelist_name,
+                        svn_boolean_t clear,
+                        apr_pool_t *pool);
 
 
 #ifdef __cplusplus

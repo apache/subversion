@@ -157,6 +157,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't unlock the targets")},
   {"summarize",     svn_cl__summarize, 0,
                     N_("show a summary of the results")},
+  {"clear",         svn_cl__clear_opt, 0,
+                    N_("remove changelist association")},
   {0,               0, 0, 0}
 };
 
@@ -219,6 +221,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"),
     {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+
+  { "changelist", svn_cl__changelist, {"cl"}, N_
+    ("Associate working copy paths with a changelist CLNAME.\n"
+     "usage: changelist CLNAME TARGET...\n"),
+    { svn_cl__clear_opt } },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -1165,6 +1172,8 @@ main(int argc, const char *argv[])
       case svn_cl__summarize:
         opt_state.summarize = TRUE;
         break;
+      case svn_cl__clear_opt:
+        opt_state.clear = TRUE;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

@@ -417,6 +417,10 @@ print_info(const char *target,
         }
     }
 
+  if (info->changelist)
+    SVN_ERR(svn_cmdline_printf(pool, _("Changelist: %s\n"),
+                               info->changelist));
+
   /* Print extra newline separator. */
   SVN_ERR(svn_cmdline_printf(pool, "\n"));
 

@@ -2448,6 +2448,24 @@ svn_client_cat(svn_stream_t *out,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
 
+
+/**
+ * Associate @a path with changelist @a changelist_name.  If CLEAR is
+ * set, then ignore @a changelist_name and deassociate any existing
+ * changelist from @a path.
+ *
+ * Note: this metadata is purely a client-side "bookkeeping"
+ * convenience, and is entirely managed by the working copy.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_changelist(const char *path,
+                      const char *changelist_name,
+                      svn_boolean_t clear,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
 
 /** Locking commands
  *
@@ -2582,6 +2600,7 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
+  const char *changelist;
   /** @} */
 
 } svn_info_t;
