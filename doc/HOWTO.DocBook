@@ -44,7 +44,7 @@ II. COMPILING THE DOCS
       $ tar zxvf docbook-xsl-X.YY.Z.tar.gz
       $ mv docbook-xsl-X.YY.Z xsl
 
-   The default build process expects to the stylesheets to be in
+   The default build process expects the stylesheets to be in
    tools/xsl/.
 
 
@@ -72,7 +72,7 @@ II. COMPILING THE DOCS
 
    * From this directory, do
 
-        $ make misc-docs-html
+        $ make all-html
 
      This produces an HTML version for the Subversion DocBook docs in
      misc-docs/svn-misc-docs.html.
@@ -136,7 +136,7 @@ II. COMPILING THE DOCS
 
    * From this directory, do
 
-        $ make misc-docs-pdf
+        $ make pdf
 
      This produces PDF for the Subversion DocBook documents in
      misc-docs/svn-misc-docs.pdf.
