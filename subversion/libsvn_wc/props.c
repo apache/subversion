@@ -1823,7 +1823,7 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   if (! entry)
     {
       *modified_p = FALSE;
-      return SVN_NO_ERROR;
+      goto cleanup;
     }
 
   /* For newer WCs, if there is an entry for the path, we have a fast
@@ -1831,20 +1831,11 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
     {
       *modified_p = entry->has_prop_mods;
-      return SVN_NO_ERROR;
+      goto cleanup;
     }
       
 
   /* So, we have a WC in an older format... We... Have some work to do... */
-
-  /*### Maybe assert (entry); calling svn_wc_props_modified_p
-    for an unversioned path is bogus */
-  if (! entry)
-    {
-      /* There's no entry: the props cannot be modified! */
-      *modified_p = FALSE;
-      goto cleanup;
-    }
 
   /* First, get the paths of the working and 'base' prop files. */
   SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind, FALSE, subpool));
@@ -1858,7 +1849,7 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
   /* If something is scheduled for replacement, we do *not* want to
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
-  if (entry && (entry->schedule == svn_wc_schedule_replace))
+  if (entry->schedule == svn_wc_schedule_replace)
     {
       *modified_p = wempty ? FALSE : TRUE;
       goto cleanup;        
