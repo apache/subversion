@@ -1465,8 +1465,7 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
 
   /* Add new revision entry to `revisions' table. */
   revision.txn_id = txn_id;
-  if (new_rev)
-    *new_rev = SVN_INVALID_REVNUM;
+  *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
 
   /* Promote the unfinished transaction to a committed one. */
