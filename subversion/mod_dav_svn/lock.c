@@ -604,9 +604,9 @@ dav_svn_find_lock(dav_lockdb *lockdb,
     {
       /* Sanity check. */
       if (strcmp(locktoken->uuid_str, slock->token) != 0)
-        return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
-                               "Incoming token doesn't match existing lock.",
-                               resource->pool);
+        return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
+                             DAV_ERR_LOCK_SAVE_LOCK,
+                             "Incoming token doesn't match existing lock.");
 
       svn_lock_to_dav_lock(&dlock, slock, FALSE,
                            resource->exists, resource->pool);
