@@ -1200,11 +1200,8 @@ make_file_baton(struct dir_baton *parent_dir_baton,
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
   const char *full_path;
  
-  /* Construct the full path of this directory. */
-  if (pb)
-    full_path = svn_path_join(eb->anchor, path, pool);
-  else
-    full_path = apr_pstrdup(pool, eb->anchor);
+  /* Construct the full path of this file. */
+  full_path = svn_path_join(eb->anchor, path, pool);
 
   /* Finish populating the baton members. */
   f->path = full_path;
