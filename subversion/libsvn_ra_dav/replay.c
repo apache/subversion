@@ -144,19 +144,20 @@ start_element(void *baton, int parent_state, const char *nspace,
     case ELEM_open_root:
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
-        apr_pool_t *subpool = svn_pool_create(rb->pool);
-        void *dir_baton;
 
         if (! crev)
           rb->err = svn_error_create
                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                       _("Missing revision attr in open-root element"));
         else
-          rb->err = rb->editor->open_root(rb->edit_baton,
-                                          SVN_STR_TO_REV(crev), subpool,
-                                          &dir_baton);
-
-        push_dir(rb, dir_baton, "", subpool);
+          {
+            apr_pool_t *subpool = svn_pool_create(rb->pool);
+            void *dir_baton;
+            rb->err = rb->editor->open_root(rb->edit_baton,
+                                            SVN_STR_TO_REV(crev), subpool,
+                                            &dir_baton);
+            push_dir(rb, dir_baton, "", subpool);
+          }
       }
       break;
 
