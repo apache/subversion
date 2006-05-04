@@ -259,35 +259,36 @@ class Contributor:
   parse = staticmethod(parse)
 
   def canonical_name(self):
-    """Return a canonical name for this contributor, containing only
-    characters valid in an email address.  The canonical name may or
-    may not be based on the contributor's actual email address, but in
-    any case it will be restricted to email-safe characters, because
-    those are also likely to be filesystem-safe and HTML-safe.
+    """Return a canonical name for this contributor.  The canonical
+    name may or may not be based on the contributor's actual email
+    address.
+
+    The canonical name will not contain filename-unsafe characters.
 
     This method is guaranteed to return the same canonical name every
     time only if no further contributions are recorded from this
     contributor after the first call.  This is because a contribution
     may bring a new form of the contributor's name, one which affects
     the algorithm used to construct canonical names."""
+    retval = None
     if self.username:
-      return self.username
-    if self.email:
+      retval = self.username
+    elif self.email:
       # Take some rudimentary steps to shorten the email address, to
       # make it more manageable.  If this is ever discovered to result
       # in collisions, we can always just use to the full address.
-      at_posn = self.email.find('@')
-      if not at_posn:
-        return self.email
-      else:
-        first_dot_after_at = self.email.find('.', at_posn)
-        return self.email[0:first_dot_after_at]
-    if self.real_name:
+      try:
+        at_posn = self.email.index('@')
+        first_dot_after_at = self.email.index('.', at_posn)
+        retval = self.email[0:first_dot_after_at]
+      except ValueError:
+        retval = self.email
+    elif self.real_name:
       # Last resort: construct canonical name based on real name.  
-      # ### FIXME: Need to tweak to guarantee that it's made only of
-      # ### characters that would be safe in an email address.
-      return ''.join(self.real_name.lower().split(' '))
-    complain('Unable to construct a canonical name for Contributor.', True)
+      retval = ''.join(self.real_name.lower().split(' '))
+    if retval is None:
+      complain('Unable to construct a canonical name for Contributor.', True)
+    return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
 
   def big_name(self, html=False):
     """Return as complete a name as possible for this contributor."""
