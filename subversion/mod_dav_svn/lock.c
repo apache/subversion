@@ -2,7 +2,7 @@
  * lock.c: mod_dav_svn locking provider functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -499,11 +499,13 @@ dav_svn_get_locks(dav_lockdb *lockdb,
       return 0;
     }
 
-  /* The Big Lie: if the client ran 'svn lock --force', then we have
+  /* The Big Lie: if the client ran 'svn lock', then we have
      to pretend that there's no existing lock.  Otherwise mod_dav will
      throw '403 Locked' without even attempting to create a new
-     lock.  */
-  if (info->lock_steal)
+     lock.  For the --force case, this is required and for the non-force case,
+     we allow the filesystem to produce a better error for svn clients.
+  */
+  if (info->r->method_number == M_LOCK)
     {
       *locks = NULL;
       return 0;
@@ -653,11 +655,13 @@ dav_svn_has_locks(dav_lockdb *lockdb,
       return 0;
     }
 
-  /* The Big Lie: if the client ran 'svn lock --force', then we have
+  /* The Big Lie: if the client ran 'svn lock', then we have
      to pretend that there's no existing lock.  Otherwise mod_dav will
      throw '403 Locked' without even attempting to create a new
-     lock.  */
-  if (info->lock_steal)
+     lock.  For the --force case, this is required and for the non-force case,
+     we allow the filesystem to produce a better error for svn clients.
+  */
+  if (info->r->method_number == M_LOCK)
     {
       *locks_present = 0;
       return 0;
