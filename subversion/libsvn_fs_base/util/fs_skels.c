@@ -135,7 +135,7 @@ is_valid_rep_delta_chunk_skel(skel_t *skel)
          && (window->children->next->is_atom)
          && (window->children->next->next->is_atom)))
     return FALSE;
-  if ((len == 5)
+  if ((len == 4)
       && (! window->children->next->next->next->is_atom))
     return FALSE;
 
