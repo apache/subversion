@@ -1210,7 +1210,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
   if (dst_path) /* we're doing a 'switch' */
-    {      
+    {
       if (*target)
         {
           /* if the src is split into anchor/target, so must the
