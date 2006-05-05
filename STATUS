@@ -113,6 +113,13 @@ Candidate changes:
     Votes:
       +1: malcolm, dlr
 
+  * r19520
+    Fix crash in mod_dav_svn on valid request body.
+    Justification:
+      Server crash!
+    Votes:
+      +1: lundblad
+
 
 Approved changes:
 
