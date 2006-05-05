@@ -1687,7 +1687,8 @@ change_file_prop(void *file_baton,
   /* Special case: if the file is added during a checkout, cache the
      last-changed-date propval for future use. */
   if (eb->use_commit_times
-      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
+      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+      && value)
     fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
 
   return SVN_NO_ERROR;
