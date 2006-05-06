@@ -16,6 +16,15 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r19535, r19536
+    Plug memleak in switch --relocate.
+    Justification:
+      Annoying if you relocate large trees.
+    Notes:
+      r19536 reverts a part that should never have been committed.
+    Votes:
+      +1: lundblad
+
 Approved changes:
 
   No approved changes at the moment!
