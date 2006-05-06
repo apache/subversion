@@ -14,7 +14,7 @@ $ apxs -c \
 
 $ apxs -i -n dontdothat mod_dontdothat.la
 
-It is enabled vi a single httpd.conf directive, DontDoThatConfigFile:
+It is enabled via single httpd.conf directive, DontDoThatConfigFile:
 
 <Location /svn>
   DAV svn
