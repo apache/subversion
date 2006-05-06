@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-### Repository lock checker.  Gets and exclusive lock on the provided
+### Repository lock checker.  Gets an exclusive lock on the provided
 ### repository, then runs db_stat to see if the lock counts have been
 ### reset to 0.  If not, prints the timestamp of the run and a message
 ### about accumulation.
