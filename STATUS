@@ -25,6 +25,15 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r19538
+    Reduce memory used by WC access batons, especially when upgrading WC
+    format.
+    Justification:
+      Upgrading large WCs for 1.4 would require people to actually buy new
+      memory...
+    Votes:
+      +1: lundblad
+
 Approved changes:
 
   No approved changes at the moment!
