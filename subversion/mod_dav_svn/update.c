@@ -107,25 +107,73 @@ typedef struct item_baton_t {
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
 
 
-svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
-                                svn_fs_root_t *root,
+/* Convert incoming REV and PATH from request R into a version-resource URI
+   for REPOS and perform a GET subrequest on it.  This will invoke any authz
+   modules loaded into apache.  Return TRUE if the subrequest succeeds, FALSE
+   otherwise. If REV is SVN_INVALID_REVNUM, then we look at HEAD.
+*/
+static svn_boolean_t allow_read(request_rec *r,
+                                const dav_svn_repos *repos,
                                 const char *path,
-                                void *baton,
+                                svn_revnum_t rev,
                                 apr_pool_t *pool)
 {
-  dav_svn_authz_read_baton *arb = baton;
-  request_rec *subreq = NULL;
   const char *uri;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
-  const char *revpath = NULL;
+  request_rec *subreq;
+  enum dav_svn_build_what uri_type;
+  svn_boolean_t allowed = FALSE;
 
   /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
      then this whole callback does nothing. */
-  if (! dav_svn_get_pathauthz_flag(arb->r))
+  if (! dav_svn_get_pathauthz_flag(r))
     {
-      *allowed = TRUE;
-      return SVN_NO_ERROR;
+      return TRUE;
     }
+
+  /* If no revnum is specified, assume HEAD. */
+  if (SVN_IS_VALID_REVNUM(rev))
+    uri_type = DAV_SVN_BUILD_URI_VERSION;
+  else
+    uri_type = DAV_SVN_BUILD_URI_PUBLIC;
+
+  /* Build a Version Resource uri representing (rev, path). */
+  uri = dav_svn_build_uri(repos, uri_type, rev, path, FALSE, pool);
+
+  /* Check if GET would work against this uri. */
+  subreq = ap_sub_req_method_uri("GET", uri, r, r->output_filters);
+
+  if (subreq)
+    {
+      if (subreq->status == HTTP_OK)
+        allowed = TRUE;
+
+      ap_destroy_sub_req(subreq);
+    }
+
+  return allowed;
+}
+
+
+/* This function implements 'svn_repos_authz_func_t', specifically
+   for read authorization.
+
+   Convert incoming ROOT and PATH into a version-resource URI and
+   perform a GET subrequest on it.  This will invoke any authz modules
+   loaded into apache.  Set *ALLOWED to TRUE if the subrequest
+   succeeds, FALSE otherwise.
+
+   BATON must be a pointer to a dav_svn_authz_read_baton.
+   Use POOL for for any temporary allocation.
+*/
+static svn_error_t *authz_read(svn_boolean_t *allowed,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               void *baton,
+                               apr_pool_t *pool)
+{
+  dav_svn_authz_read_baton *arb = baton;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  const char *revpath = NULL;
 
   /* Our ultimate goal here is to create a Version Resource (VR) url,
      which is a url that represents a path within a revision.  We then
@@ -191,23 +239,8 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
     }
 
   /* We have a (rev, path) pair to check authorization on. */
-
-  /* Build a Version Resource uri representing (rev, path). */
-  uri = dav_svn_build_uri(arb->repos, DAV_SVN_BUILD_URI_VERSION,
-                          rev, revpath, FALSE, pool);
+  *allowed = allow_read(arb->r, arb->repos, revpath, rev, pool);
   
-  /* Check if GET would work against this uri. */
-  subreq = ap_sub_req_method_uri("GET", uri,
-                                 arb->r, arb->r->output_filters);
-  
-  if (subreq && (subreq->status == HTTP_OK))
-    *allowed = TRUE;
-  else
-    *allowed = FALSE;
-  
-  if (subreq)
-    ap_destroy_sub_req(subreq);
-
   return SVN_NO_ERROR;
 }
 
@@ -219,7 +252,15 @@ svn_repos_authz_func_t dav_svn_authz_read_func(dav_svn_authz_read_baton *baton)
   if (! dav_svn_get_pathauthz_flag(baton->r))
     return NULL;
 
-  return dav_svn_authz_read; 
+  return authz_read;
+}
+
+
+svn_boolean_t dav_svn_allow_read(const dav_resource *resource,
+                                 svn_revnum_t rev, apr_pool_t *pool)
+{
+  return allow_read(resource->info->r, resource->info->repos,
+                    resource->info->repos_path, rev, pool);
 }
 
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
