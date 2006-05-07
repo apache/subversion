@@ -127,6 +127,13 @@ Candidate changes:
     Votes:
       +1: lundblad, dlr
 
+  * r19493
+    Fix memory leak by not holding subpool.
+    Justification:
+      Memory leak is a critical bug.
+    Votes:
+      +1: kou
+
 
 Approved changes:
 
