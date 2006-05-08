@@ -18,6 +18,7 @@ import unittest
 import pool
 import repository
 import client
+import ra
 import trac.versioncontrol.tests
 
 # Run all tests
@@ -27,6 +28,7 @@ def suite():
   suite = unittest.TestSuite()
   suite.addTest(client.suite())
   suite.addTest(pool.suite())
+  suite.addTest(ra.suite())
   suite.addTest(repository.suite())
   suite.addTest(trac.versioncontrol.tests.suite());
   return suite
