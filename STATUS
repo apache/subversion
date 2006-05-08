@@ -128,15 +128,6 @@ Approved changes:
     Votes:
       +1: malcolm, dlr
 
-  * r19348, r19373
-    Fix crash in 'svn status -u' when there are missing subdirectories.
-    Justification:
-      Crash bad!
-    Branch: 1.3.x-r19348
-    Notes: Branch needed due to rename of test subdirectory.
-    Votes:
-      +1: rooneg, dlr, lundblad
-
   * r18983
     Allow the libsvn_swig_py library to link on OpenBSD.
     Justification:
