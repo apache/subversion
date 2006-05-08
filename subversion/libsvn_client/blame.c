@@ -560,6 +560,11 @@ svn_client_blame3(const char *target,
       || end->kind == svn_opt_revision_unspecified)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+  else if (start->kind == svn_opt_revision_working
+           || end->kind == svn_opt_revision_working)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("blame of the WORKING revision is not supported"));
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
