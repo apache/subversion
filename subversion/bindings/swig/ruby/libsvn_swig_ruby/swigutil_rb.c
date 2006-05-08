@@ -4,6 +4,8 @@
 #include <st.h>
 
 #include "svn_nls.h"
+#include "svn_pools.h"
+#include "svn_time.h"
 
 
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
@@ -526,6 +528,26 @@ c2r_string2(const char *cstr)
 {
   return c2r_string((void *)cstr, NULL);
 }
+
+VALUE
+svn_swig_rb_svn_date_string_to_time(const char *date)
+{
+  if (date) {
+    apr_time_t tm;
+    svn_error_t *error;
+    apr_pool_t *pool;
+
+    pool = svn_pool_create(NULL);
+    error = svn_time_from_cstring(&tm, date, pool);
+    svn_pool_destroy(pool);
+    if (error)
+      svn_swig_rb_handle_svn_error(error);
+    return rb_time_new(apr_time_sec(tm), apr_time_usec(tm));
+  } else {
+    return Qnil;
+  }
+}
+#define c2r_svn_date_string2 svn_swig_rb_svn_date_string_to_time
 
 static VALUE
 c2r_long(void *value, void *ctx)
@@ -1457,7 +1479,7 @@ svn_swig_rb_log_receiver(void *baton,
                        rb_changed_paths,
                        c2r_long(&revision, NULL),
                        c2r_string2(author),
-                       c2r_string2(date),
+                       c2r_svn_date_string2(date),
                        c2r_string2(message));
     invoke_callback_handle_error(args, rb_pool, &err);
   }
@@ -1607,7 +1629,7 @@ svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                        proc,
                        rb_id_call(),
                        INT2NUM(new_revision),
-                       c2r_string2(date),
+                       c2r_svn_date_string2(date),
                        c2r_string2(author));
     invoke_callback_handle_error(args, rb_pool, &err);
   }
@@ -2604,7 +2626,7 @@ svn_swig_rb_client_blame_receiver_func(void *baton,
                          LONG2NUM(line_no),
                        INT2NUM(revision),
                        c2r_string2(author),
-                       c2r_string2(date),
+                       c2r_svn_date_string2(date),
                        c2r_string2(line));
     
     invoke_callback_handle_error(args, rb_pool, &err);
