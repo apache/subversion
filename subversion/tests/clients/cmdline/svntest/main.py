@@ -208,6 +208,16 @@ def get_post_commit_hook_path(repo_dir):
   return os.path.join(repo_dir, "hooks", "post-commit")
 
 
+def get_authz_file_path(repo_dir):
+  "Return the path of the authz file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "authz")
+
+def get_svnserve_conf_file_path(repo_dir):
+  "Return the path of the svnserve.conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "svnserve.conf")
+
 # Run any binary, logging the command line (TODO: and return code)
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
