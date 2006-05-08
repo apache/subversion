@@ -452,7 +452,7 @@ end_element(void *baton, const char *name)
             if (ctx->path_failed)
               ctx->no_soup_for_you = TRUE;
             else
-              ctx->let_it_go;
+              ctx->let_it_go = TRUE;
           }
         else
           ; /* XXX Is there other stuff we care about? */
