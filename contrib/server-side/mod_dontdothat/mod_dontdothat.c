@@ -268,14 +268,6 @@ dontdothat_filter(ap_filter_t *f,
           ctx->no_soup_for_you = TRUE;
         }
 
-      /* Clean up our parser if we're done. */
-      if (last || ctx->let_it_go || ctx->no_soup_for_you)
-        {
-          XML_ParserFree(ctx->xmlp);
-
-          ctx->xmlp = NULL;
-        }
-
       /* If we found something that isn't allowed, set the correct status
        * and return an error so it'll bail out before it gets anywhere it
        * can do real damage. */
@@ -522,6 +514,16 @@ config_enumerator(const char *wildcard,
     return TRUE;
 }
 
+static apr_status_t
+clean_up_parser(void *baton)
+{
+  XML_Parser xmlp = baton;
+
+  XML_ParserFree(xmlp);
+
+  return APR_SUCCESS;
+}
+
 static void
 dontdothat_insert_filters(request_rec *r)
 {
@@ -588,6 +590,8 @@ dontdothat_insert_filters(request_rec *r)
       ctx->state = STATE_BEGINNING;
 
       ctx->xmlp = XML_ParserCreate(NULL);
+
+      apr_pool_cleanup_register(r->pool, ctx->xmlp, clean_up_parser, NULL);
 
       XML_SetUserData(ctx->xmlp, ctx);
       XML_SetElementHandler(ctx->xmlp, start_element, end_element);
