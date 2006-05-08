@@ -34,6 +34,13 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r19543
+    Fix the convert bug which is caused when converted target is NULL.
+    Justification:
+      The convert bug raises unnecessary exceptions.
+    Votes:
+      +1: kou
+
 Approved changes:
 
   No approved changes at the moment!
