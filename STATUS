@@ -128,9 +128,3 @@ Approved changes:
     Votes:
       +1: malcolm, dlr
 
-  * r18983
-    Allow the libsvn_swig_py library to link on OpenBSD.
-    Justification:
-      Would otherwise have to edit/override the Makefile.
-    Votes:
-      +1: dlr, djames, lundblad
