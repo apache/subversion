@@ -151,6 +151,264 @@ def broken_authz_file(sbox):
   if not err:
     raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
 
+# test whether read access is correctly granted and denied
+def authz_read_access(sbox):
+  "test authz for read operations"
+  
+  skip_test_when_no_authz_available()
+
+  sbox.build("authz_read_access")
+  wc_dir = sbox.wc_dir
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  fp = open(sbox.authz_file, 'w')
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_read_access:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[authz_read_access:/A/B]\n" +
+             "* = \n" +
+             "\n" +
+             "[authz_read_access:/A/D]\n" +
+             "* = rw")
+    expected_err = ".*403 Forbidden.*"
+    
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* =\n" +
+             "[/A/D]\n" +
+             "* = rw\n")
+    expected_err = ".*svn: Authorization failed.*"
+         
+  fp.close()
+
+  root_url = svntest.main.current_repo_url
+  A_url = root_url + '/A'
+  B_url = A_url + '/B'
+  C_url = A_url + '/C'
+  E_url = B_url + '/E'
+  mu_url = A_url + '/mu'
+  iota_url = root_url + '/iota'
+  lambda_url = B_url + '/lambda'
+  alpha_url = E_url + '/alpha'
+  D_url = A_url + '/D'
+
+  # read a remote file
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'iota'.\n"],
+                                     [], 'cat',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     iota_url)
+
+  # read a remote file, unreadable: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cat',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     lambda_url)
+
+  # read a remote file, unreadable through recursion: should fail
+  output, errput = svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cat',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     alpha_url)
+
+  # open a remote folder(ls)
+  svntest.actions.run_and_verify_svn("ls remote root folder",
+                                     ["A/\n", "iota\n"],
+                                     [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     root_url)
+
+  # open a remote folder(ls), unreadable: should fail
+  output, errput = svntest.actions.run_and_verify_svn("",
+                                     None, svntest.SVNAnyOutput, 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url)
+
+  # open a remote folder(ls), unreadable through recursion: should fail
+  output, errput = svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     E_url)
+
+  # copy a remote file
+  svntest.actions.run_and_verify_svn("", None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     iota_url, D_url,
+                                     '-m', 'logmsg')
+
+  # copy a remote file, source is unreadable: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     lambda_url, D_url)
+
+  # copy a remote folder
+  svntest.actions.run_and_verify_svn("", None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     C_url, D_url,
+                                     '-m', 'logmsg')
+
+  # copy a remote folder, source is unreadable: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     E_url, D_url)
+
+# test whether write access is correctly granted and denied
+def authz_write_access(sbox):
+  "test authz for write operations"
+  
+  skip_test_when_no_authz_available()
+  
+  sbox.build("authz_write_access")
+  wc_dir = sbox.wc_dir
+  
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  fp = open(sbox.authz_file, 'w')
+  
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_write_access:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[authz_write_access:/A/B]\n" +
+             "* = rw\n" +
+             "\n" +
+             "[authz_write_access:/A/C]\n" +
+             "* = rw")
+    expected_err = ".*403 Forbidden.*"
+
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* = rw\n" +
+             "[/A/C]\n" +
+             "* = rw\n")
+    expected_err = ".*svn: Access denied.*"
+
+  fp.close()
+  
+  root_url = svntest.main.current_repo_url
+  A_url = root_url + '/A'
+  B_url = A_url + '/B'
+  C_url = A_url + '/C'
+  E_url = B_url + '/E'
+  mu_url = A_url + '/mu'
+  iota_url = root_url + '/iota'
+  lambda_url = B_url + '/lambda'
+  D_url = A_url + '/D'
+  
+  # copy a remote file, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     lambda_url, D_url)
+
+  # copy a remote folder, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     E_url, D_url)
+
+  # delete a file, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'rm',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     iota_url)
+
+  # delete a folder, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'rm',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     D_url)
+
+  # create a folder, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'mkdir',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     A_url+'/newfolder')
+
+  # move a remote file, source is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'mv',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     mu_url, C_url)
+
+  # move a remote folder, source is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'mv',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     D_url, C_url)
+
+  # move a remote file, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'mv',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     lambda_url, D_url)
+
+  # move a remote folder, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'mv',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     B_url, D_url)
+
 ########################################################################
 # Run the tests
 
@@ -162,6 +420,8 @@ test_list = [ None,
               authz_open_root,
               XFail(authz_open_directory, is_this_dav),
               broken_authz_file,
+              authz_read_access,
+              authz_write_access
              ]
 
 if __name__ == '__main__':
