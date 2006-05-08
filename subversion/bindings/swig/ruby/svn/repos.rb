@@ -149,7 +149,6 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         infos = []
         receiver = Proc.new do |changed_paths, revision, author, date, message|
-          date = Time.parse_svn_format(date) if date
           if block_given?
             yield(changed_paths, revision, author, date, message)
           end

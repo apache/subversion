@@ -297,7 +297,6 @@ module Svn
               peg_rev=nil)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, rev, author, date, message|
-          date = Time.from_svn_format(date) if date
           yield(changed_paths, rev, author, date, message)
         end
         Client.log3(paths, peg_rev, start_rev, end_rev, limit,
@@ -330,7 +329,6 @@ module Svn
         peg_rev ||= end_rev
         diff_options ||= Svn::Core::DiffFileOptions.new
         receiver = Proc.new do |line_no, revision, author, date, line|
-          date = Time.from_svn_format(date) if date
           yield(line_no, revision, author, date, line)
         end
         Client.blame3(path_or_uri, peg_rev, start_rev,
