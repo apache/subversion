@@ -49,7 +49,7 @@ Candidate changes:
       Avoids unexpected and undocumented behavior where WORKING is
       silently converted to BASE by svn_client__get_revision_number().
     Votes:
-      +1: dlr
+      +1: dlr, lundblad
 
 Approved changes:
 
