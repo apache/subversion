@@ -2,6 +2,10 @@ import os
 import sys
 import shutil
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 import glob
 import traceback
 import ConfigParser
@@ -384,7 +388,7 @@ def _make_dist(cfg):
 
 
 if __name__ == '__main__':
-  opts, args = getopt.getopt(sys.argv[1:], '', ['readme='])
+  opts, args = my_getopt(sys.argv[1:], '', ['readme='])
   if len(args) != 2 or len(opts) > 1:
     _stderr.write('Usage: make_dist.py [--readme=<file>] <distname> <distdir>\n')
     _exit(2)
