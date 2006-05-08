@@ -568,7 +568,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     status_output_tree = status_output_tree.old_tree()
 
   # Commit.
-  output, errput = main.run_svn(error_re_string, 'ci', '-m', 'log msg', *args)
+  output, errput = main.run_svn(error_re_string, 'ci', 
+                                '--username', main.wc_author,
+                                '--password', main.wc_passwd, 
+                                '-m', 'log msg', 
+                                *args)
 
   if (error_re_string):
     rm = re.compile(error_re_string)
