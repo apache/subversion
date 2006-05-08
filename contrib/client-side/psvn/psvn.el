@@ -525,6 +525,7 @@ This is nil if the log entry is for a new commit.")
 ;; already implied by "-function" suffix
 (defvar svn-status-get-specific-revision-file-info)
 (defvar svn-status-last-output-buffer-name)
+(defvar svn-status-pre-run-svn-buffer nil)
 (defvar svn-transient-buffers)
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
@@ -732,8 +733,9 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
+  (define-key svn-global-keymap (kbd "b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
-  (define-key svn-global-keymap (kbd "b") 'svn-status-switch-to-status-buffer)
+  (define-key svn-global-keymap (kbd "S") 'svn-status-switch-to-status-buffer)
   (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
 
 (defvar svn-status-diff-mode-map ()
@@ -975,7 +977,8 @@ can edit ARGLIST before running svn."
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)))))
+              (svn-status-update-mode-line)))
+          (setq svn-status-pre-run-svn-buffer (current-buffer))))
     (error "You can only run one svn process at once!")))
 
 (defun svn-process-sentinel-fixup-path-seperators ()
@@ -1027,6 +1030,10 @@ can edit ARGLIST before running svn."
                   (svn-status-parse-info-result))
                  ((eq svn-process-cmd 'blame)
                   (svn-status-show-process-output 'blame t)
+                  (when svn-status-pre-run-svn-buffer
+                    (with-current-buffer svn-status-pre-run-svn-buffer
+                      (unless (eq major-mode 'svn-status-mode)
+                        (goto-line (line-number-at-pos) (get-buffer svn-status-last-output-buffer-name)))))
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-process-sentinel-fixup-path-seperators)
@@ -2311,6 +2318,17 @@ See `svn-status-marked-files' for what counts as selected."
 (defun svn-status-get-file-list-names (use-marked-files)
   (mapcar 'svn-status-line-info->filename (svn-status-get-file-list use-marked-files)))
 
+(defun svn-status-get-file-information ()
+  "Find out about the file under point.
+The result may be parsed with the various `svn-status-line-info->...' functions.
+When called from a *svn-status* buffer, do the same as `svn-status-get-file-information'.
+When called from a file buffer provide a structure that contains the filename."
+  (cond ((eq major-mode 'svn-status-mode)
+         (svn-status-get-file-information))
+        (t
+         ;; a fake strukture that contains the buffername for the current buffer
+         (list '(nil nil) 32 nil (buffer-file-name (current-buffer)) 0 0 "" nil nil nil nil))))
+
 (defun svn-status-select-line ()
     "Return information about the file under point.
 \(Only used for debugging\)"
@@ -2678,12 +2696,13 @@ See `svn-status-marked-files' for what counts as selected."
 
 (defun svn-status-blame (revision)
   "Run `svn blame' on the current file.
-When called with a prefix argument, ask the user for the REVISION to use."
+When called with a prefix argument, ask the user for the REVISION to use.
+When called from a file buffer, go to the current line in the resulting blame output."
   (interactive "P")
   (when current-prefix-arg
     (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
   (unless revision (setq revision "BASE"))
-  (svn-run t t 'blame "blame" "-r" revision (svn-status-line-info->filename (svn-status-get-line-information))))
+  (svn-run t t 'blame "blame" "-r" revision (svn-status-line-info->filename (svn-status-get-file-information))))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
