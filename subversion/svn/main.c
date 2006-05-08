@@ -225,7 +225,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate working copy paths with a changelist CLNAME.\n"
      "usage: changelist CLNAME TARGET...\n"),
-    { svn_cl__clear_opt } },
+    { svn_cl__clear_opt, svn_cl__targets_opt } },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"

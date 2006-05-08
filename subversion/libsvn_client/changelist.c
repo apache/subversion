@@ -35,7 +35,7 @@ svn_client_changelist(const char *path,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  SVN_ERR(svn_wc_tweak_changelist(path, changelist_name, clear, pool));
+  SVN_ERR(svn_wc_changelist(path, changelist_name, clear, pool));
 
   /* ### TODO(sussman): create new notification type, and send
          notification feedback.  See locking-commands.c. */

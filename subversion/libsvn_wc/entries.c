@@ -791,10 +791,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   /* changelist */
   entry->changelist = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHANGELIST,
                                    APR_HASH_KEY_STRING);
-  if (entry->lock_owner)
+  if (entry->changelist)
     {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
-      entry->lock_owner = apr_pstrdup(pool, entry->lock_owner);
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHANGELIST;
+      entry->changelist = apr_pstrdup(pool, entry->changelist);
     }
   
   /* has-props flag. */
@@ -2535,8 +2535,6 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_token = apr_pstrdup(pool, entry->lock_token);
   if (entry->lock_owner)
     dupentry->lock_owner = apr_pstrdup(pool, entry->lock_owner);
-  if (entry->lock_comment)
-    dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
   if (entry->lock_comment)
     dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
   if (entry->changelist)
