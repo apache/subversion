@@ -8,6 +8,10 @@
 import sys
 import os
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 import pprint
 
 from svn import fs, core, repos
@@ -48,7 +52,7 @@ def usage():
   sys.exit(1)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], 'r:')
+  opts, args = my_getopt(sys.argv[1:], 'r:')
   rev = None
   for name, value in opts:
     if name == '-r':

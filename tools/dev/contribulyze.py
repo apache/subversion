@@ -40,6 +40,10 @@ import sys
 import re
 import shutil
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 from urllib import quote as url_encode
 
 # Pretend we have true booleans on older python versions
@@ -684,7 +688,7 @@ def usage():
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
+    opts, args = my_getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
   except getopt.GetoptError, e:
     complain(str(e) + '\n\n')
     usage()

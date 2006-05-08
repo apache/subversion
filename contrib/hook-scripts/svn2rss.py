@@ -39,10 +39,10 @@ if len(sys.argv) == 1:
     sys.exit(2)
    
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"h", ["help", "svn-path=",
-                                                    "revision=",
-                                                    "repos-path=", "url=",
-                                                    "rss-file="])
+    opts, args = getopt.gnu_getopt(sys.argv[1:],"h", ["help", "svn-path=",
+                                                      "revision=",
+                                                      "repos-path=", "url=",
+                                                      "rss-file="])
 except getopt.GetoptError, msg:
     print msg
     sys.stderr.write(usage())
