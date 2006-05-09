@@ -1,12 +1,13 @@
 log: Show the log messages for a set of revision(s) and/or file(s).
 usage: 1. log [PATH]
-       2. log URL [PATH...]
+       2. log URL[@REV] [PATH...]
 
   1. Print the log messages for a local PATH (default: '.').
      The default revision range is BASE:1.
 
   2. Print the log messages for the PATHs (default: '.') under URL.
-     The default revision range is HEAD:1.
+     If specified, REV determines in which revision the URL is first
+     looked up.  The default revision range is HEAD:1.
 
   With -v, also print all affected paths with each log message.
   With -q, don't print the log message body itself (note that this is
