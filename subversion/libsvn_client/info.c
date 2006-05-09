@@ -399,7 +399,7 @@ svn_client_info(const char *path_or_url,
       the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision '%ld'"),
+                                 _("URL '%s' non-existent in revision %ld"),
                                  url, rev);
     }
   else if (err)
@@ -409,7 +409,7 @@ svn_client_info(const char *path_or_url,
   
   if (! the_ent)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             _("URL '%s' non-existent in revision '%ld'"),
+                             _("URL '%s' non-existent in revision %ld"),
                              url, rev);
 
   /* Check if the URL exists in HEAD and refers to the same resource.
