@@ -755,9 +755,12 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                            resource->pool);
 
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
-    return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
-                         DAV_ERR_LOCK_SAVE_LOCK,
-                         "Anonymous lock creation is not allowed.");    
+    {
+      svn_error_clear(serr);
+      return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                           DAV_ERR_LOCK_SAVE_LOCK,
+                           "Anonymous lock creation is not allowed.");
+    }
   else if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to create new lock.",
@@ -857,9 +860,12 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                                  resource->pool);
 
       if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
-        return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
-                             DAV_ERR_LOCK_SAVE_LOCK,
-                             "Anonymous lock removal is not allowed.");
+        {
+          svn_error_clear(serr);
+          return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                               DAV_ERR_LOCK_SAVE_LOCK,
+                               "Anonymous lock removal is not allowed.");
+        }
       else if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Failed to remove a lock.",
@@ -941,9 +947,12 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                            resource->pool);
 
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
-    return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
-                         DAV_ERR_LOCK_SAVE_LOCK,
-                         "Anonymous lock refreshing is not allowed.");    
+    {
+      svn_error_clear(serr);
+      return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                           DAV_ERR_LOCK_SAVE_LOCK,
+                           "Anonymous lock refreshing is not allowed.");
+    }
   else if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to refresh existing lock.",
