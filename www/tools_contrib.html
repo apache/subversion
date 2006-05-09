@@ -49,6 +49,9 @@
 <h2>Index by keyword</h2>
 
 <ul>
+  <li><strong>apache</strong><ul>
+    <li><a href="#mod_dontdothat_c">mod_dontdothat.c</a></li>
+  </ul></li>
   <li><strong>authz</strong><ul>
     <li><a href="#authz_svn_group_py">authz_svn_group.py</a></li>
     <li><a href="#svnauthz_validate_c">svnauthz-validate.c</a></li>
@@ -93,6 +96,10 @@
     <li><a href="#showchange_pl">showchange.pl</a></li>
     <li><a href="#svn2cl_sh">svn2cl.sh</a></li>
     <li><a href="#svn_all_diffs_pl">svn_all_diffs.pl</a></li>
+  </ul></li>
+  <li><strong>emacs</strong><ul>
+    <li><a href="#psvn_el">psvn.el</a></li>
+    <li><a href="#vc_svn_el">vc-svn.el</a></li>
   </ul></li>
   <li><strong>fsfs</strong><ul>
     <li><a href="#svn_fast_backup">svn-fast-backup</a></li>
@@ -324,6 +331,14 @@
   </p>
 
 
+  <h3><a name="psvn_el"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn/psvn.el">psvn.el</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn">contrib/client-side/psvn</a>)</h3>
+  <p>A Subversion interface for Emacs, providing a similar interface as
+     pcl-cvs for CVS.
+  </p>
+
+
   <h3><a name="search_svnlog_pl"
     href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/search-svnlog.pl">search-svnlog.pl</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
@@ -489,6 +504,20 @@
     href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge.sh">svnmerge.sh</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
   <p>Merge tracking script, predecessor of svnmerge.py.</p>
+
+
+  <h3><a name="vc_svn_el"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/vc-svn.el">vc-svn.el</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>A VC backend for Subversion.
+  </p>
+  <p>Note that this one included in the Subversion tree is not the master
+     version.  The canonical vc-svn.el now lives in the FSF Emacs tree, at
+     <a href="http://savannah.gnu.org/cgi-bin/viewcvs/emacs/emacs/lisp/vc-svn.el">http://savannah.gnu.org/cgi-bin/viewcvs/emacs/emacs/lisp/vc-svn.el</a>.
+     The version here is maintained only because it is compatible with
+     older releases of Emacs, since the one in the FSF tree hasn't made it
+     into an official release of Emacs yet.
+  </p>
 
 
   <h3><a name="wcgrep"
@@ -930,6 +959,15 @@
   <p>This shell script demonstrates a backup/restore recipe for live
      Subversion repositories, using a standard full+incrementals process.
   </p>
+
+
+  <h3><a name="mod_dontdothat_c"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/mod_dontdothat/mod_dontdothat.c">mod_dontdothat.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/mod_dontdothat">contrib/server-side/mod_dontdothat</a>)</h3>
+  <p>An Apache module that allows you to block expensive Subversion requests,
+     like checkouts of the root of a large repository.
+  </p>
+  <p>See also <a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/mod_dontdothat/README">README</a>.</p>
 
 
   <h3><a name="svn_backup_dumps_py"
