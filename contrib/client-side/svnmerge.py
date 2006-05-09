@@ -710,7 +710,7 @@ def get_copyfrom(dir):
     except AttributeError:
         return None,None
 
-def get_latestrev(url):
+def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
     try:
         return get_svninfo(url)["Revision"]
@@ -864,7 +864,7 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    end_rev = get_latestrev(branch_url)
+    end_rev = get_latest_rev(branch_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
@@ -944,7 +944,7 @@ def action_init(branch_dir, branch_props):
     check_dir_clean(branch_dir)
 
     # Get the initial revision set if not explicitly specified.
-    revs = opts["revision"] or "1-" + get_latestrev(opts["head-url"])
+    revs = opts["revision"] or "1-" + get_latest_rev(opts["head-url"])
     revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
