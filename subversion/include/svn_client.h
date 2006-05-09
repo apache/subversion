@@ -841,7 +841,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the 
  * added item.
  *
- * If @a no_ignore is FALSE, don't add files or directories that match
+ * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
  *
  * Important:  this is a *scheduling* operation.  No changes will
@@ -1006,7 +1006,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
  *
- * If @a no_ignore is FALSE, don't add files or directories that match
+ * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
  *
  * ### kff todo: This import is similar to cvs import, in that it does
@@ -1291,7 +1291,7 @@ svn_client_log(const apr_array_header_t *targets,
  * svn_opt_revision_working, return the error @c
  * SVN_ERR_UNSUPPORTED_FEATURE.  If any of the revisions of @a
  * path_or_url have a binary mime-type, return the error @c
- * SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is TRUE,
+ * SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is @c TRUE,
  * in which case blame information will be generated regardless of the
  * MIME types of the revisions.
  *
@@ -1316,7 +1316,7 @@ svn_client_blame3(const char *path_or_url,
 
 /** Similar to svn_client_blame3(), but with @a diff_options set to
  * default options as returned by svn_diff_file_options_parse() and
- * @a ignore_mime_type set to FALSE.
+ * @a ignore_mime_type set to @c FALSE.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *
@@ -2233,11 +2233,11 @@ svn_client_revprop_list(apr_hash_t **props,
  * will use the standard eol marker.  Any other value will cause the
  * SVN_ERR_IO_UNKNOWN_EOL error to be returned.
  *
- * If @a recurse is TRUE, export recursively.  Otherwise, export
+ * If @a recurse is @c TRUE, export recursively.  Otherwise, export
  * just the directory represented by @a from and its immediate
  * non-directory children, but none of its child directories (if any).
- * Also, if @a recurse is FALSE, the export will behave as if
- * @a ignore_externals is TRUE.
+ * Also, if @a recurse is @c FALSE, the export will behave as if
+ * @a ignore_externals is @c TRUE.
  *
  * All allocations are done in @a pool.
  *
@@ -2320,7 +2320,7 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * its children.  If @a path_or_url is non-existent, return
  * @c SVN_ERR_FS_NOT_FOUND.
  *
- * If @a fetch_locks is TRUE, include locks when reporting directory entries.
+ * If @a fetch_locks is @c TRUE, include locks when reporting directory entries.
  *
  * Use @a pool for temporary allocations.
  *
@@ -2463,7 +2463,7 @@ svn_client_cat(svn_stream_t *out,
  * @a targets must be in the same repository.
  *
  * If a target is already locked in the repository, no lock will be
- * acquired unless @a steal_lock is TRUE, in which case the locks are
+ * acquired unless @a steal_lock is @c TRUE, in which case the locks are
  * stolen.  @a comment, if non-null, is an xml-escapable description
  * stored with each lock in the repository.  Each acquired lock will
  * be stored in the working copy if the targets are WC paths.
