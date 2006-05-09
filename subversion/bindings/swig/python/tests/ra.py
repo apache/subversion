@@ -31,7 +31,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     fs_uuid = fs.get_uuid(self.fs)
     self.assertEqual(ra_uuid,fs_uuid)
 
-  def test_get_lastest_revnum(self):
+  def test_get_latest_revnum(self):
     ra_revnum = ra.get_latest_revnum(self.ra_ctx)
     fs_revnum = fs.youngest_rev(self.fs)
     self.assertEqual(ra_revnum,fs_revnum)
