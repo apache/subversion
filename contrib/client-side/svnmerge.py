@@ -718,6 +718,27 @@ def get_latest_rev(url):
         report('latest revision of "%s" is %s' % (url, rev))
         return rev
 
+def get_created_rev(url):
+    """Lookup the revision at which the path identified by the
+    provided URL was first created."""
+    oldest_rev = -1
+    report('determining oldest revision for URL "%s"' % url)
+    ### TODO: Refactor this to use a modified RevisionLog class.
+    lines = None
+    cmd = "log -r1:HEAD --stop-on-copy -q " + url
+    try:
+        lines = launchsvn(cmd + " --limit=1")
+    except LaunchError:
+        # Assume that --limit isn't supported by the installed 'svn'.
+        lines = launchsvn(cmd)
+    if lines and len(lines) > 1:
+        i = lines[1].find(" ")
+        if i != -1:
+            oldest_rev = int(lines[1][1:i])
+    if oldest_rev == -1:
+        error('unable to determine oldest revision for URL "%s"' % url)
+    return oldest_rev
+
 def get_commit_log(url, revnum):
     """Return the log message for a specific integer revision
     number."""
@@ -1004,23 +1025,7 @@ def action_integrated(branch_dir, branch_props):
     revs = merge_props_to_revision_set(branch_props, opts["head-path"])
 
     # Lookup the oldest revision on the branch path.
-    ### TODO: Refactor this to use a modified RevisionLog class.
-    oldest_src_rev = -1
-    lines = None
-    src_url = opts["head-url"]
-    cmd = "log -r1:HEAD --stop-on-copy -q " + src_url
-    try:
-        lines = launchsvn(cmd + " --limit=1")
-    except LaunchError:
-        # Assume that --limit isn't supported by the installed 'svn'.
-        lines = launchsvn(cmd)
-    report('determining oldest source URL revision for "%s"' % src_url)
-    if lines and len(lines) > 1:
-        i = lines[1].find(" ")
-        if i != -1:
-            oldest_src_rev = int(lines[1][1:i])
-    if oldest_src_rev == -1:
-        error("unable to determine oldest source revision")
+    oldest_src_rev = get_created_rev(opts["head-url"])
 
     # Subtract any revisions which pre-date the branch.
     report("subtracting revisions which pre-date the source URL (%d)" %
