@@ -34,6 +34,8 @@ Item = svntest.wc.StateItem
 # Convenience functions to make writing more tests easier
 
 def run_svnlook(*varargs):
+  "Run svnlook with VARARGS, returns stdout as list of lines.
+  Raises Failure if any stderr messages."
   output, dummy_errput = svntest.main.run_command(svntest.main.svnlook_binary,
       0, 0, *varargs)
   return output
