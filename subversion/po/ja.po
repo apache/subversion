@@ -162,8 +162,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-05-09 11:01+0900\n"
-"PO-Revision-Date: 2006-05-09 11:01+0900\n"
+"POT-Creation-Date: 2006-05-09 21:27+0900\n"
+"PO-Revision-Date: 2006-05-09 21:28+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1434,8 +1434,8 @@ msgstr "'%s' のエントリが読み込めません"
 
 #: libsvn_client/info.c:377 libsvn_client/info.c:402 libsvn_client/info.c:412
 #, c-format
-msgid "URL '%s' non-existent in revision '%ld'"
-msgstr "URL '%s' は、リビジョン '%ld' には存在しません"
+msgid "URL '%s' non-existent in revision %ld"
+msgstr "URL '%s' は、リビジョン %ld には存在しません"
 
 #: libsvn_client/list.c:225
 #, c-format
@@ -1505,7 +1505,7 @@ msgstr "強制されないときは値は設定されません"
 
 #: libsvn_client/prop_commands.c:499
 #, c-format
-msgid "'%s' does not exist in revision '%ld'"
+msgid "'%s' does not exist in revision %ld"
 msgstr "'%s' がリビジョン %ld に存在しません"
 
 #: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:765
@@ -12483,3 +12483,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "the service."
 #~ msgstr ""
 #~ "サービスを開始できませんでした。サービス開始時に内部エラーが発生しました。"
+
+#~ msgid "URL '%s' non-existent in revision '%ld'"
+#~ msgstr "URL '%s' は、リビジョン '%ld' には存在しません"
+
+#~ msgid "'%s' does not exist in revision '%ld'"
+#~ msgstr "'%s' がリビジョン '%ld' に存在しません"
