@@ -47,12 +47,21 @@ svn_cl__changelist(apr_getopt_t *os,
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
-  if (targets->nelts < 2)
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (opt_state->clear)
+    {
+      if (targets->nelts < 1)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+      changelist_name = NULL;
+    }
+  else
+    {
+      if (targets->nelts < 2)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+      changelist_name = ((const char **) (targets->elts))[0];
+    }
 
-  changelist_name = ((const char **) (targets->elts))[0];
 
-  for (i = 1; i < targets->nelts; i++)
+  for (i = opt_state->clear ? 0 : 1; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
 
