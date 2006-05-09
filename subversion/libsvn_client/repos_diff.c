@@ -2,7 +2,7 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -414,7 +414,7 @@ open_root(void *edit_baton,
   struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
 
   /* Override the wcpath in our baton. */
-  b->wcpath = eb->target ? apr_pstrdup(pool, eb->target) : "";
+  b->wcpath = apr_pstrdup(pool, eb->target);
 
   SVN_ERR(get_dirprops_from_ra(b));
 
