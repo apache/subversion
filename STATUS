@@ -50,6 +50,7 @@ Candidate changes:
       silently converted to BASE by svn_client__get_revision_number().
     Votes:
       +1: dlr, lundblad
+      +0: nori
 
 Approved changes:
 
