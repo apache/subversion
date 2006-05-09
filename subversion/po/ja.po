@@ -162,8 +162,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-05-09 21:27+0900\n"
-"PO-Revision-Date: 2006-05-09 21:28+0900\n"
+"POT-Creation-Date: 2006-05-10 03:55+0900\n"
+"PO-Revision-Date: 2006-05-10 03:55+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6459,20 +6459,25 @@ msgstr ""
 #: svn/main.c:369
 msgid ""
 "Display information about a local or remote item.\n"
-"usage: info [TARGET...]\n"
+"usage: info [TARGET[@REV]...]\n"
 "\n"
 "  Print information about each TARGET (default: '.')\n"
-"  TARGET may be either a working-copy path or URL.\n"
+"  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+"  determines in which revision the target is first looked up.\n"
+"\n"
 msgstr ""
 "ローカルまたはリモートの項目に関する情報を表示します。\n"
-"使用方法: info [<対象>...]\n"
+"使用方法: info [<対象>[@<REV>]...]\n"
 "\n"
 "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
-"  <対象> は作業コピーのパスでも URL でもかまいません。\n"
+"  <対象> は作業コピーのパスでも URL でもかまいません。<REV> を指定すると、"
+"リ\n"
+"  ビジョン <REV> での <対象> をまず探します。\n"
+"\n"
 
 # * Description for 'svn list'.
 # * "list (ls): " is displayed at the head of the first line.
-#: svn/main.c:378
+#: svn/main.c:379
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -6518,7 +6523,7 @@ msgstr ""
 
 # * Description for 'svn lock'.
 # * "lock: " is displayed at the head of the first line.
-#: svn/main.c:400
+#: svn/main.c:401
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -6534,29 +6539,31 @@ msgstr ""
 
 # * Description for 'svn lock --file'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:408
+#: svn/main.c:409
 msgid "read lock comment from file ARG"
 msgstr "ファイル <引数> からロックについてのコメントを読み込みます"
 
 # * Description for 'svn lock --message'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:409
+#: svn/main.c:410
 msgid "specify lock comment ARG"
 msgstr "ロックについてのコメントを <引数> と指定します"
 
 # * Description for 'svn log'.
 # * "log: " is displayed at the head of the first line.
-#: svn/main.c:412
+#: svn/main.c:413
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
-"       2. log URL [PATH...]\n"
+"       2. log URL[@REV] [PATH...]\n"
 "\n"
 "  1. Print the log messages for a local PATH (default: '.').\n"
 "     The default revision range is BASE:1.\n"
 "\n"
 "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-"     The default revision range is HEAD:1.\n"
+"     If specified, REV determines in which revision the URL is first\n"
+"     looked up.  The default revision range is HEAD:1.\n"
+"     \n"
 "\n"
 "  With -v, also print all affected paths with each log message.\n"
 "  With -q, don't print the log message body itself (note that this is\n"
@@ -6575,7 +6582,7 @@ msgid ""
 msgstr ""
 "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
 "使用方法: 1. log [<パス>]\n"
-"          2. log <URL> [<パス>...]\n"
+"          2. log <URL>[@<REV>] [<パス>...]\n"
 "\n"
 "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
 "す。\n"
@@ -6583,7 +6590,10 @@ msgstr ""
 "\n"
 "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示しま"
 "す。\n"
-"     デフォルトで表示するリビジョンの範囲は HEAD:1 です。\n"
+"     <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。デフォ"
+"ル\n"
+"     トで表示するリビジョンの範囲は HEAD:1 です。\n"
+"     \n"
 "\n"
 "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示されま"
 "す。\n"
@@ -6608,7 +6618,7 @@ msgstr ""
 
 # * Description for 'svn merge'.
 # * "merge: " is displayed at the head of the first line.
-#: svn/main.c:441
+#: svn/main.c:444
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6675,7 +6685,7 @@ msgstr ""
 
 # * Description for 'svn mkdir'.
 # * "mkdir: " is displayed at the head of the first line.
-#: svn/main.c:470
+#: svn/main.c:473
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -6709,7 +6719,7 @@ msgstr ""
 
 # * Description for 'svn move'.
 # * "move (mv, rename, ren): " is displayed at the head of the first line.
-#: svn/main.c:487
+#: svn/main.c:490
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -6736,7 +6746,7 @@ msgstr ""
 
 # * Description for 'svn propdel'.
 # * "propdel (pdel, pd): " is displayed at the head of the first line.
-#: svn/main.c:500
+#: svn/main.c:503
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6757,7 +6767,7 @@ msgstr ""
 
 # * Description for 'svn propedit'.
 # * "propedit (pedit, pe): " is displayed at the head of the first line.
-#: svn/main.c:512
+#: svn/main.c:515
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6779,7 +6789,7 @@ msgstr ""
 
 # * Description for 'svn propget'.
 # * "propget (pget, pg): " is displayed at the head of the first line.
-#: svn/main.c:525
+#: svn/main.c:528
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6821,7 +6831,7 @@ msgstr ""
 
 # * Description for 'svn proplist'.
 # * "proplist (plist, pl): " is displayed at the head of the first line.
-#: svn/main.c:544
+#: svn/main.c:547
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6847,7 +6857,7 @@ msgstr ""
 
 # * Description for 'svn propset'.
 # * "propset (pset, ps): " is displayed at the head of the first line.
-#: svn/main.c:556
+#: svn/main.c:559
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6948,13 +6958,13 @@ msgstr ""
 
 # * Description for 'svn propset --file'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:598
+#: svn/main.c:601
 msgid "read property value from file ARG"
 msgstr "ファイル <引数> から属性値を読み込みます"
 
 # * Description for 'svn resolved'.
 # * "resolved: " is displayed at the head of the first line.
-#: svn/main.c:601
+#: svn/main.c:604
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -6974,7 +6984,7 @@ msgstr ""
 
 # * Description for 'svn revert'.
 # * "revert: " is displayed at the head of the first line.
-#: svn/main.c:610
+#: svn/main.c:613
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -6992,7 +7002,7 @@ msgstr ""
 
 # * Description for 'svn status'.
 # * "status (stat, st): " is displayed at the head of the first line.
-#: svn/main.c:618
+#: svn/main.c:621
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -7161,7 +7171,7 @@ msgstr ""
 
 # * Description for 'svn switch'.
 # * "switch (sw): " is displayed at the head of the first line.
-#: svn/main.c:694
+#: svn/main.c:697
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -7196,7 +7206,7 @@ msgstr ""
 
 # * Description for 'svn unlock'.
 # * "unlock: " is displayed at the head of the first line.
-#: svn/main.c:710
+#: svn/main.c:713
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -7210,7 +7220,7 @@ msgstr ""
 
 # * Description for 'svn update'.
 # * "update (up): " is displayed at the head of the first line.
-#: svn/main.c:718
+#: svn/main.c:721
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -7257,15 +7267,15 @@ msgstr ""
 "は、\n"
 "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
-#: svn/main.c:780 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
+#: svn/main.c:783 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
-#: svn/main.c:892
+#: svn/main.c:895
 msgid "Non-numeric limit argument given"
 msgstr "--limit の引数に数値以外が指定されています"
 
-#: svn/main.c:912
+#: svn/main.c:915
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
@@ -7273,19 +7283,19 @@ msgstr ""
 "複数のリビジョン引数が指定されています。-c を 2 つ指定したり -c と -r の両方"
 "を指定したりはできません"
 
-#: svn/main.c:920 svn/main.c:1112
+#: svn/main.c:923 svn/main.c:1115
 msgid "Can't specify -c with --old"
 msgstr "-c は、--old と同時には指定できません"
 
-#: svn/main.c:927
+#: svn/main.c:930
 msgid "Non-numeric change argument given to -c"
 msgstr "-c の引数に数値以外が指定されています"
 
-#: svn/main.c:933
+#: svn/main.c:936
 msgid "There is no change 0"
 msgstr "変更 0 はありません"
 
-#: svn/main.c:960
+#: svn/main.c:963
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -7293,32 +7303,32 @@ msgstr ""
 "複数のリビジョン引数が指定されています。-r と -c を用いた指定はできません。'-"
 "r <N> -r <M>' の代わりに '-r <N>:<M>' を使ってみてください"
 
-#: svn/main.c:973 svnadmin/main.c:1243
+#: svn/main.c:976 svnadmin/main.c:1243
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "リビジョン引数 '%s' で構文エラーが生じました"
 
-#: svn/main.c:1128 svn/main.c:1138
+#: svn/main.c:1131 svn/main.c:1141
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props と --no-auto-props は互いに排他的です"
 
-#: svn/main.c:1154
+#: svn/main.c:1157
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
-#: svn/main.c:1204 svndumpfilter/main.c:1194 svnlook/main.c:2025
+#: svn/main.c:1207 svndumpfilter/main.c:1194 svnlook/main.c:2025
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: svn/main.c:1222 svnadmin/main.c:1354 svndumpfilter/main.c:1212
+#: svn/main.c:1225 svnadmin/main.c:1354 svndumpfilter/main.c:1212
 #: svnlook/main.c:2043
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知のコマンドです: '%s'\n"
 
-#: svn/main.c:1256
+#: svn/main.c:1259
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7327,19 +7337,19 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svn help %s' と打ってください。\n"
 
-#: svn/main.c:1293
+#: svn/main.c:1296
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ログメッセージファイルがバージョン管理されているファイルです。無効にするには "
 "'--force-log' を用いてください"
 
-#: svn/main.c:1300
+#: svn/main.c:1303
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ロックについてのコメントのファイルがバージョン管理されているファイルです。無"
 "効にするには '--force-log' を用いてください"
 
-#: svn/main.c:1321
+#: svn/main.c:1324
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7347,7 +7357,7 @@ msgstr ""
 "ログメッセージがパス名です (-F のつもりでしたか?)。無効にするには '--force-"
 "log' を用いてください"
 
-#: svn/main.c:1328
+#: svn/main.c:1331
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7355,7 +7365,7 @@ msgstr ""
 "ロックについてのコメントがパス名です (-F のつもりでしたか?)。無効にするには "
 "'--force-log' を用いてください"
 
-#: svn/main.c:1453
+#: svn/main.c:1456
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -12489,3 +12499,79 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "'%s' does not exist in revision '%ld'"
 #~ msgstr "'%s' がリビジョン '%ld' に存在しません"
+
+# * Description for 'svn info'.
+# * "info: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display information about a local or remote item.\n"
+#~ "usage: info [TARGET...]\n"
+#~ "\n"
+#~ "  Print information about each TARGET (default: '.')\n"
+#~ "  TARGET may be either a working-copy path or URL.\n"
+#~ msgstr ""
+#~ "ローカルまたはリモートの項目に関する情報を表示します。\n"
+#~ "使用方法: info [<対象>...]\n"
+#~ "\n"
+#~ "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
+#~ "  <対象> は作業コピーのパスでも URL でもかまいません。\n"
+
+# * Description for 'svn log'.
+# * "log: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Show the log messages for a set of revision(s) and/or file(s).\n"
+#~ "usage: 1. log [PATH]\n"
+#~ "       2. log URL [PATH...]\n"
+#~ "\n"
+#~ "  1. Print the log messages for a local PATH (default: '.').\n"
+#~ "     The default revision range is BASE:1.\n"
+#~ "\n"
+#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+#~ "     The default revision range is HEAD:1.\n"
+#~ "\n"
+#~ "  With -v, also print all affected paths with each log message.\n"
+#~ "  With -q, don't print the log message body itself (note that this is\n"
+#~ "  compatible with -v).\n"
+#~ "\n"
+#~ "  Each log message is printed just once, even if more than one of the\n"
+#~ "  affected paths for that revision were explicitly requested.  Logs\n"
+#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+#~ "  behavior, which can be useful for determining branchpoints.\n"
+#~ "\n"
+#~ "  Examples:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+#~ msgstr ""
+#~ "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
+#~ "使用方法: 1. log [<パス>]\n"
+#~ "          2. log <URL> [<パス>...]\n"
+#~ "\n"
+#~ "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
+#~ "す。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は BASE:1 です。\n"
+#~ "\n"
+#~ "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示し"
+#~ "ます。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は HEAD:1 です。\n"
+#~ "\n"
+#~ "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示され"
+#~ "ます。\n"
+#~ "  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できる"
+#~ "こと\n"
+#~ "  に注意してください)。\n"
+#~ "\n"
+#~ "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
+#~ "り、\n"
+#~ "  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
+#~ "ル\n"
+#~ "  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
+#~ "copy\n"
+#~ "  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
+#~ "す。\n"
+#~ "\n"
+#~ "  例:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
