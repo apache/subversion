@@ -692,8 +692,8 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * non-directory children, but none of its child directories (if any).
  *
  * If @a URL refers to a file rather than a directory, return the
- * error SVN_ERR_UNSUPPORTED_FEATURE.  If @a URL does not exist,
- * return the error SVN_ERR_RA_ILLEGAL_URL.
+ * error @c SVN_ERR_UNSUPPORTED_FEATURE.  If @a URL does not exist,
+ * return the error @c SVN_ERR_RA_ILLEGAL_URL.
  *
  * Use @a pool for any temporary allocation.
  *
@@ -1333,7 +1333,7 @@ svn_client_blame2(const char *path_or_url,
                   apr_pool_t *pool);
 
 /**
- * Similar to svn_client_blame() except that @a peg_revision is always
+ * Similar to svn_client_blame2() except that @a peg_revision is always
  * the same as @a end.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
