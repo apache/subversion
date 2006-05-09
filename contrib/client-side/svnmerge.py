@@ -54,10 +54,6 @@
 #  - Add "svnmerge avail -R": show logs in reverse order
 
 import sys, os, getopt, re, types, popen2, tempfile
-try:
-    my_getopt = getopt.gnu_getopt
-except AttributeError:
-    my_getopt = getopt.getopt
 from bisect import bisect
 
 NAME = "svnmerge"
@@ -1371,7 +1367,7 @@ class CommandOpts:
             opts.extend(cmd.opts)
         sfl, lfl, _ = self._compute_flags(opts, check_conflicts=False)
 
-        lopts,largs = my_getopt(args, sfl, lfl)
+        lopts,largs = getopt.getopt(args, sfl, lfl)
         if not largs:
             return None
         return self._command(largs[0])
