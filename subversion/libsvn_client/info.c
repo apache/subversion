@@ -2,7 +2,7 @@
  * info.c:  return system-generated metadata about paths or URLs.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -374,7 +374,7 @@ svn_client_info(const char *path_or_url,
       SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));      
       if (url_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision '%ld'"),
+                                 _("URL '%s' non-existent in revision %ld"),
                                  url, rev);
 
       if (strcmp(url, repos_root_URL) == 0)
