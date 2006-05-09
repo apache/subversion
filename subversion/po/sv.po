@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-05-09 14:02+0200\n"
-"PO-Revision-Date: 2006-04-02 21:51+0200\n"
+"PO-Revision-Date: 2006-05-09 14:23+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -863,7 +863,7 @@ msgstr "Kan inte beräkna blame-information för den binära fil \"%s\""
 
 #: libsvn_client/blame.c:567
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "blame kan inte köras på arbetsrevisionen"
 
 #: libsvn_client/blame.c:580
 msgid "Start revision must precede end revision"
@@ -1286,7 +1286,7 @@ msgid "Cannot read entry for '%s'"
 msgstr "Kan inte läsa post för \"%s\""
 
 #: libsvn_client/info.c:377 libsvn_client/info.c:402 libsvn_client/info.c:412
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' non-existent in revision %ld"
 msgstr "URL:en \"%s\" finns inte i revision %ld"
 
@@ -1357,9 +1357,9 @@ msgid "Value will not be set unless forced"
 msgstr "Värdet sätts inte utan att det framtvingas"
 
 #: libsvn_client/prop_commands.c:499
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' does not exist in revision %ld"
-msgstr "Sökvägen \"%s\" finns inte i revision %ld"
+msgstr "\"%s\" finns inte i revision %ld"
 
 #: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:765
 #, c-format
@@ -2960,49 +2960,42 @@ msgid "File doesn't exist on HEAD"
 msgstr "Filen finns inte i huvudrevisionen"
 
 #: libsvn_ra_serf/locks.c:354
-#, fuzzy, c-format
+#, c-format
 msgid "Lock request failed: %d %s"
-msgstr "Låsförfrågan misslyckades"
+msgstr "Låsförfrågan misslyckades: %d %s"
 
 #: libsvn_ra_serf/locks.c:703
-#, fuzzy, c-format
+#, c-format
 msgid "Unlock request failed: %d %s"
-msgstr "Upplåsningsförfrågan misslyckades"
+msgstr "Upplåsningsförfrågan misslyckades: %d %s"
 
 #: libsvn_ra_serf/replay.c:204
-#, fuzzy
 msgid "Missing revision attr in delete-entry element"
-msgstr "Attributet rev saknas på delete-entry-elementet"
+msgstr "Attributet revision saknas på delete-entry-elementet"
 
 #: libsvn_ra_serf/replay.c:224
-#, fuzzy
 msgid "Missing path attr in open-directory element"
-msgstr "Attributet name saknas på open-directory-elementet"
+msgstr "Attributet path saknas på open-directory-elementet"
 
 #: libsvn_ra_serf/replay.c:230
-#, fuzzy
 msgid "Missing revision attr in open-directory element"
-msgstr "Attributet \"revision\" saknas på open-root-elementet"
+msgstr "Attributet revision saknas på open-directory-elementet"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing path attr in add-directory element"
-msgstr "Attributet name saknas på open-directory-elementet"
+msgstr "Attributet path saknas på add-directory-elementet"
 
 #: libsvn_ra_serf/replay.c:285
-#, fuzzy
 msgid "Missing name attr in open-file element"
-msgstr "Attributet name saknas på open-directory-elementet"
+msgstr "Attributet name saknas på open-file-elementet"
 
 #: libsvn_ra_serf/replay.c:291
-#, fuzzy
 msgid "Missing revision attr in open-file element"
-msgstr "Attributet \"revision\" saknas på open-root-elementet"
+msgstr "Attributet revision saknas på open-file-elementet"
 
 #: libsvn_ra_serf/replay.c:311
-#, fuzzy
 msgid "Missing name attr in add-file element"
-msgstr "Attributet name saknas på %s-elementet"
+msgstr "Attributet name saknas på add-file-elementet"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -3025,7 +3018,7 @@ msgstr "Fel vid hämtning av rapport (%d)"
 
 #: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
-msgstr ""
+msgstr "För tidigt filslut från server"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -4635,26 +4628,25 @@ msgstr "Kan inte kopiera till \"%s\", då den är schemalagd att raderas"
 msgid "Entry '%s' has invalid '%s' value"
 msgstr "Posten \"%s\" har ogiltigt värde för \"%s\""
 
+# ### Better wording!
 #: libsvn_wc/entries.c:111
-#, fuzzy
 msgid "Invalid escape sequence"
-msgstr "Ogiltig schemaläggning"
+msgstr "Ogiltig \"escape-sekvens\""
 
+# ### inpresice
 #: libsvn_wc/entries.c:118
-#, fuzzy
 msgid "Invalid escaped character"
-msgstr "Ogiltig ändringstyp"
+msgstr "Ogiltigt tecken"
 
 #: libsvn_wc/entries.c:136 libsvn_wc/entries.c:165 libsvn_wc/entries.c:191
 #: libsvn_wc/entries.c:203
-#, fuzzy
 msgid "Unexpected end of entry"
-msgstr "Oväntat slut på svndiff"
+msgstr "Oväntat slut på post"
 
 #: libsvn_wc/entries.c:225
 #, c-format
 msgid "Invalid value for field '%s'"
-msgstr ""
+msgstr "Ogiltigt värde för fältet \"%s\""
 
 #: libsvn_wc/entries.c:307 libsvn_wc/entries.c:533
 #, c-format
@@ -4684,24 +4676,22 @@ msgid "Default entry is missing URL"
 msgstr "Normalposten saknar URL"
 
 #: libsvn_wc/entries.c:1076
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "Fel när postfilen för \"%s\" skulle skrivas"
+msgstr "Felaktig versionsrad i postfilen för \"%s\""
 
 #: libsvn_wc/entries.c:1093
-#, fuzzy
 msgid "Missing entry terminator"
-msgstr "Normalpost saknas"
+msgstr "Avslutningstecken för posten saknas"
 
 #: libsvn_wc/entries.c:1096
-#, fuzzy
 msgid "Invalid entry terminator"
-msgstr "Ogiltig omlokalisering"
+msgstr "Ogiltigt avslutningstecken för post"
 
 #: libsvn_wc/entries.c:1100
-#, fuzzy, c-format
+#, c-format
 msgid "Error at entry %d in entries file for '%s':"
-msgstr "Fel när postfilen för \"%s\" skulle skrivas"
+msgstr "Fel vid post %d i postfilen för \"%s\":"
 
 #: libsvn_wc/entries.c:1196
 #, c-format
@@ -4962,9 +4952,8 @@ msgid "Error modifying entry of '%s'"
 msgstr "Fel när posten för \"%s\" ändrades"
 
 #: libsvn_wc/log.c:1423
-#, fuzzy
 msgid "Invalid 'format' attribute"
-msgstr "Ogiltigt konfigurationsvärde"
+msgstr "Ogiltigt format-attribut"
 
 #: libsvn_wc/log.c:1458
 #, c-format
@@ -5052,9 +5041,9 @@ msgstr ""
 "men egenskapen finns redan och har värdet \"%s\"."
 
 #: libsvn_wc/props.c:880
-#, fuzzy, c-format
+#, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "Attributet \"revision\" saknas för \"%s\""
+msgstr "Radslut saknas i wcprops-filen för \"%s\""
 
 #: libsvn_wc/props.c:1064 libsvn_wc/props.c:1100 libsvn_wc/props.c:1370
 #: libsvn_wc/props.c:1627
@@ -5271,9 +5260,8 @@ msgid "Can't open stderr"
 msgstr "Kan inte öppna standard fel"
 
 #: svn/diff-cmd.c:184
-#, fuzzy
 msgid "'--new' option only valid with '--old' option"
-msgstr "Flaggan \"new\" är endast tillåten tillsammans med \"old\""
+msgstr "Flaggan \"--new\" är endast tillåten tillsammans med \"--old\""
 
 #: svn/diff-cmd.c:214
 #, c-format
@@ -8365,7 +8353,6 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "Skriv \"%s --help\" för användning.\n"
 
 #: svnserve/main.c:186
-#, fuzzy
 msgid ""
 "usage: svnserve [options]\n"
 "\n"
@@ -8444,13 +8431,11 @@ msgid "Failed to connect to Service Control Manager"
 msgstr "Kunde inte ansluta till tjänsthanteraren (SCM)"
 
 #: svnserve/winservice.c:411
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service"
-msgstr ""
-"Tjänsten kunde inte starta; ett internt fel inträffade då tjänsten skulle "
-"startas."
+msgstr "Tjänsten kunde inte starta; ett internt fel inträffade då tjänsten skulle startas"
 
 #: svnsync/main.c:64
 msgid ""
@@ -8653,10 +8638,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
-#~ msgstr ""
-#~ "Arkiveringsobjektet \"%s\" har kopieringsflagga men saknar copyfrom-URL\n"
-
-#~ msgid "URL '%s' non-existent in revision '%ld'"
-#~ msgstr "URL:en \"%s\" finns inte i revision %ld"
