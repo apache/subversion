@@ -371,7 +371,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Print information about each TARGET (default: '.')\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
-     "  determines in which revision the target is first looked up.\n\n"),
+     "  determines in which revision the target is first looked up.\n"),
     {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -420,7 +420,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
      "     If specified, REV determines in which revision the URL is first\n"
      "     looked up.  The default revision range is HEAD:1.\n"
-     "     \n"
      "\n"
      "  With -v, also print all affected paths with each log message.\n"
      "  With -q, don't print the log message body itself (note that this is\n"
