@@ -52,12 +52,13 @@ Candidate changes:
       +1: dlr, lundblad
       +0: nori
 
-  * r19581
+  * r19581, r19584
     Add peg rev help text for the 'info' and 'log' commands.
     Justification:
       Advertise that these commands actually support peg revs!
     Votes:
-      +1: dlr
+      +1 (r19581): dlr
+      +0: nori
 
 Approved changes:
 
