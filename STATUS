@@ -14,25 +14,7 @@ Candidate changes:
     Justification:
       Listing large directories consumes large amounts of memory.
     Votes:
-      +1: lundblad
-
-  * r19535, r19536
-    Plug memleak in switch --relocate.
-    Justification:
-      Annoying if you relocate large trees.
-    Notes:
-      r19536 reverts a part that should never have been committed.
-    Votes:
-      +1: lundblad, dlr
-
-  * r19538
-    Reduce memory used by WC access batons, especially when upgrading WC
-    format.
-    Justification:
-      Upgrading large WCs for 1.4 would require people to actually buy new
-      memory...
-    Votes:
-      +1: lundblad, dlr
+      +1: lundblad, rooneg
 
   * r19543
     Fix the convert bug which is caused when converted target is NULL.
@@ -40,16 +22,6 @@ Candidate changes:
       The convert bug raises unnecessary exceptions.
     Votes:
       +1: kou
-      +0: nori
-
-  * r19558
-    Return SVN_ERR_UNSUPPORTED_FEATURE from svn_client_blame3() when
-    WORKING is passed as the start or end revision.
-    Justification:
-      Avoids unexpected and undocumented behavior where WORKING is
-      silently converted to BASE by svn_client__get_revision_number().
-    Votes:
-      +1: dlr, lundblad
       +0: nori
 
   * r19581, r19584, r19591
@@ -62,4 +34,30 @@ Candidate changes:
 
 Approved changes:
 
-  No approved changes at the moment!
+  * r19535, r19536
+    Plug memleak in switch --relocate.
+    Justification:
+      Annoying if you relocate large trees.
+    Notes:
+      r19536 reverts a part that should never have been committed.
+    Votes:
+      +1: lundblad, dlr, rooneg
+
+  * r19538
+    Reduce memory used by WC access batons, especially when upgrading WC
+    format.
+    Justification:
+      Upgrading large WCs for 1.4 would require people to actually buy new
+      memory...
+    Votes:
+      +1: lundblad, dlr, rooneg
+
+  * r19558
+    Return SVN_ERR_UNSUPPORTED_FEATURE from svn_client_blame3() when
+    WORKING is passed as the start or end revision.
+    Justification:
+      Avoids unexpected and undocumented behavior where WORKING is
+      silently converted to BASE by svn_client__get_revision_number().
+    Votes:
+      +1: dlr, lundblad, rooneg
+      +0: nori
