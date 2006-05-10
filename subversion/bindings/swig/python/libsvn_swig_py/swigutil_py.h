@@ -310,6 +310,13 @@ svn_error_t *svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
     svn_boolean_t may_save,
     apr_pool_t *pool);
 
+SVN_SWIG_SWIGUTIL_EXPORT
+void
+svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
+                               void **baton,
+                               PyObject *py_callbacks,
+                               apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

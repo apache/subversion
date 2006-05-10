@@ -20,7 +20,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    self.ra_ctx = ra.open2(self.repos_url, None, None, None)
+    callbacks = ra.callbacks2_t()
+
+    self.ra_ctx = ra.open2(self.repos_url, callbacks, None, None)
 
   def test_get_repos_root(self):
     root = ra.get_repos_root(self.ra_ctx)

@@ -25,6 +25,7 @@
 #endif
 
 %include typemaps.i
+%include constraints.i
 
 %include svn_global.swg
 %import apr.swg
@@ -39,6 +40,8 @@
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
 %ignore svn_ra_serf_init;
+
+%apply Pointer NONNULL { svn_ra_callbacks2_t *callbacks };
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
@@ -118,6 +121,11 @@
                     void *callback_baton)
 {
   svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+
+%typemap(python, in) (svn_ra_callbacks2_t *callbacks, 
+                      void *callback_baton) {
+  svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
 }
 
 %typemap(perl5, in) apr_hash_t *config {
