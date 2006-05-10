@@ -2142,3 +2142,20 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
   *cred = creds;
   return err;
 }
+
+void
+svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
+                               void **baton,
+                               PyObject *py_callbacks,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err = svn_ra_create_callbacks(callbacks, pool);
+
+  if (err)
+    {
+      svn_swig_py_svn_exception(err);
+      return;
+    }
+  
+  *baton = py_callbacks;
+}
