@@ -349,6 +349,15 @@ start_element(void *baton, const char *name, const char **attrs)
       case STATE_BEGINNING:
         if (strcmp(name, "update-report") == 0)
           ctx->state = STATE_IN_UPDATE;
+        else if (strcmp(name, "replay-report") == 0)
+          {
+            /* XXX it would be useful if there was a way to override this
+             *     on a per-user basis... */
+            if (! is_this_legal(ctx, ctx->r->unparsed_uri))
+              ctx->no_soup_for_you = TRUE;
+            else
+              ctx->let_it_go = TRUE;
+          }
         else
           ctx->let_it_go = TRUE;
         break;
