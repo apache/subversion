@@ -567,6 +567,9 @@ class Sandbox:
     # so we recreate it each time a sandbox is created with some default
     # contents.
     if self.repo_url.startswith("http"):
+      # this dir doesn't exist out of the box, so we may have to make it
+      if not(os.path.exists(work_dir)):
+        os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
       fp = open(self.authz_file, "w")
       fp.write("[/]\n* = rw\n")
