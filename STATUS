@@ -32,6 +32,13 @@ Candidate changes:
       +1: dlr, lundblad (not r19591)
       +0: nori
 
+  * r19605, r19565, r19564, r19533, r19531
+    Backport mod_dontdothat.
+    Justification:
+      Low impact (just contrib), people want the abilities it gives them.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
   * r19535, r19536
