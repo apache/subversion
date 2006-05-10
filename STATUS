@@ -114,6 +114,7 @@ Candidate changes:
     Justification:
       The conversion bug raises unnecessary exceptions.
     Votes:
+      +1: kou
       +0: nori
 
 
