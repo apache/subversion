@@ -339,7 +339,10 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-/* Send a trivial auth request, listing no mechanisms. */
+/* Send a trivial auth notification on CONN which lists no mechanisms,
+ * indicating that authentication is unnecessary.  Usually called in
+ * response to invocation of a svnserve command.
+ */
 static svn_error_t *trivial_auth_request(svn_ra_svn_conn_t *conn,
                                          apr_pool_t *pool, server_baton_t *b)
 {
@@ -698,6 +701,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+/* Set BATON->FS_PATH for the repository URL found in PARAMS. */
 static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
