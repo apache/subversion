@@ -39,4 +39,11 @@ Candidate changes:
     Votes:
       +1: rooneg
 
+  * r19620
+    Fix hang in ra_svn when locking unreadable file.
+    Justification:
+      Server protocol error.
+    Votes:
+      +1: lundblad, dlr
+
 Approved changes:
