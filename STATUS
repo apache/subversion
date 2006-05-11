@@ -41,15 +41,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r19538
-    Reduce memory used by WC access batons, especially when upgrading WC
-    format.
-    Justification:
-      Upgrading large WCs for 1.4 would require people to actually buy new
-      memory...
-    Votes:
-      +1: lundblad, dlr, rooneg
-
   * r19558
     Return SVN_ERR_UNSUPPORTED_FEATURE from svn_client_blame3() when
     WORKING is passed as the start or end revision.
