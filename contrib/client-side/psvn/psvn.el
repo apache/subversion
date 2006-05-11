@@ -30,7 +30,7 @@
 ;; At the moment the following commands are implemented:
 ;;
 ;; M-x svn-status: run 'svn -status -v'
-;; M-x svn-examine (like psvn.el cvs-examine) is alias for svn-status
+;; M-x svn-examine (like pcl-cvs cvs-examine) is alias for svn-status
 ;;
 ;; and show the result in the svn-status-buffer-name buffer (normally: *svn-status*).
 ;; If svn-status-verbose is set to nil, only "svn status" without "-v"
@@ -2227,6 +2227,12 @@ non-interactive use."
     ""))
 
 (defun svn-status-toggle-edit-cmd-flag (&optional reset)
+  "Allow the user to edit the parameters for the next svn command.
+This command toggles between
+* editing the next command parameters (EditCmd)
+* editing all all command parameters (EditCmd#)
+* don't edit the command parameters ()
+The string in parentheses is shown in the status line to show the state."
   (interactive)
   (cond ((or reset (eq svn-status-edit-svn-command 'sticky))
          (setq svn-status-edit-svn-command nil))
@@ -2426,10 +2432,12 @@ Then move to that line."
                                        (file-name-as-directory file-name))))
          (newcursorpos-fname)
          (i-fname)
+         (first-line t)
          (current-line svn-start-of-file-list-line-number))
     (while st-info
-      (when (svn-status-line-info->is-visiblep (car st-info))
-        (setq current-line (1+ current-line)))
+      (when (or (svn-status-line-info->is-visiblep (car st-info)) first-line)
+        (setq current-line (1+ current-line))
+        (setq first-line nil))
       (setq i-fname (svn-status-line-info->filename (car st-info)))
       (when (or (string= file-name i-fname)
                 (string-match sub-file-regexp i-fname))
