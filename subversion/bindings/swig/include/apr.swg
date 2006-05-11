@@ -146,14 +146,24 @@ typedef apr_int32_t time_t;
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument defn for an apr_hash_t ** which is storing
+   dirent values
+*/
+%typemap(python,in,numinputs=0) apr_hash_t **DIRENTHASH = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **DIRENTHASH {
+    $result = t_output_helper($result,
+                              svn_swig_py_convert_hash(*$1, 
+                                                       SWIGTYPE_p_svn_dirent_t,
+                                                       NULL));
+}
+
+/* -----------------------------------------------------------------------
+   create an OUTPUT argument defn for an apr_hash_t ** which is storing
    property values
 */
 
 %typemap(python,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(python,argout) apr_hash_t **PROPHASH {
-    /* toss prior result, get new result from the hash */
-    Py_DECREF($result);
-    $result = svn_swig_py_prophash_to_dict(*$1);
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **PROPHASH {
+    $result = t_output_helper($result, svn_swig_py_prophash_to_dict(*$1));
 }
 
 %typemap(perl5,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
