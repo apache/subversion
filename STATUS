@@ -40,13 +40,3 @@ Candidate changes:
       +1: rooneg
 
 Approved changes:
-
-  * r19558
-    Return SVN_ERR_UNSUPPORTED_FEATURE from svn_client_blame3() when
-    WORKING is passed as the start or end revision.
-    Justification:
-      Avoids unexpected and undocumented behavior where WORKING is
-      silently converted to BASE by svn_client__get_revision_number().
-    Votes:
-      +1: dlr, lundblad, rooneg
-      +0: nori

@@ -1287,9 +1287,11 @@ svn_client_log(const apr_array_header_t *targets,
  * WC targets.
  *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
- * return the error @c SVN_ERR_CLIENT_BAD_REVISION.  If any of the
- * revisions of @a path_or_url have a binary mime-type, return the
- * error @c SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is TRUE,
+ * return the error @c SVN_ERR_CLIENT_BAD_REVISION.  If either are @c
+ * svn_opt_revision_working, return the error @c
+ * SVN_ERR_UNSUPPORTED_FEATURE.  If any of the revisions of @a
+ * path_or_url have a binary mime-type, return the error @c
+ * SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is TRUE,
  * in which case blame information will be generated regardless of the
  * MIME types of the revisions.
  *
