@@ -2,7 +2,7 @@
  * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -63,12 +63,22 @@ extern "C" {
  * The change from 5 to 6 was the introduction of caching of property
  * modification state and certain properties in the entries file.
  *
+ * The change from 6 to 7 was changing the entries file format from XML.
+ *
+ * The change from 7 to 8 was putting wcprops in one file per directory.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       6
+#define SVN_WC__VERSION       8
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
+
+/* A version <= this has the entries file in XML format. */
+#define SVN_WC__XML_ENTRIES_VERSION 6
+
+/* A version <= this has wcprops stored in one file per entry. */
+#define SVN_WC__WCPROPS_MANY_FILES_VERSION 7
 
 /*** Update traversals. ***/
 
@@ -117,9 +127,11 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_WCPROPS             "wcprops"
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
+#define SVN_WC__ADM_ALL_WCPROPS         "all-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
-
+#define SVN_WC__ADM_README              "README.txt"
+#define SVN_WC__ADM_EMPTY_FILE          "empty-file"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -156,6 +168,34 @@ typedef struct svn_wc__compat_notify_baton_t {
 void svn_wc__compat_call_notify_func(void *baton,
                                      const svn_wc_notify_t *notify,
                                      apr_pool_t *pool);
+
+/* Set *MODIFIED_P to non-zero if FILENAME's text is modified with
+ * regard to the base revision, else set *MODIFIED_P to zero.
+ * FILENAME is a path to the file, not just a basename. ADM_ACCESS
+ * must be an access baton for @a FILENAME.
+ *
+ * If FORCE_COMPARISON is true, this function will not allow early
+ * return mechanisms that avoid actual content comparison.  Instead,
+ * if there is a text base, a full byte-by-byte comparison will be
+ * done, and the entry checksum verified as well.  (This means that if
+ * the text base is much longer than the working file, every byte of
+ * the text base will still be examined.)
+ *
+ * If COMPARE_TEXTBASES is true, the comparison will be between a
+ * detranslated version of *FILENAME and the text base, otherwise, a
+ * translated version of the text base and *FILENAME will be compared.
+ *
+ * If FILENAME does not exist, consider it unmodified.  If it exists
+ * but is not under revision control (not even scheduled for
+ * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
+                                 const char *filename,
+                                 svn_boolean_t force_comparison,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t compare_textbases,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -422,6 +422,28 @@
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
+%typemap(ruby, argout) (svn_commit_callback_t callback, void *callback_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+
+/* -----------------------------------------------------------------------
+   Callback: svn_commit_callback2_t
+   svn_ra get_commit_editor2()
+   svn_repos_get_commit_editor4()
+*/
+
+%typemap(ruby, in) (svn_commit_callback2_t callback, void *callback_baton)
+{
+  $1 = svn_swig_rb_commit_callback2;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+};
+
+%typemap(ruby, argout) (svn_commit_callback2_t callback, void *callback_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+
 /* -----------------------------------------------------------------------
    Callback: svn_cancel_func_t
 */
@@ -436,6 +458,12 @@
   $1 = svn_swig_rb_cancel_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
+
+%typemap(ruby, argout) (svn_cancel_func_t cancel_func, void *cancel_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+
 
 /* -----------------------------------------------------------------------
    Callback: svn_info_receiver_t
@@ -517,11 +545,36 @@
   $result = output_helper($result, rb_str_new2(digest_string));
 }
 
+
+%typemap(ruby, in, numinputs=0) unsigned char **digest ($*1_type temp)
+{
+    $1 = &temp;
+}
+
+%typemap(ruby, argout, fragment="output_helper") unsigned char **digest
+{
+  char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);
+  $result = output_helper($result, rb_str_new2(digest_string));
+}
+
 /* svn_md5_* functions takes const ones as input */
 %typemap(perl5, in) const unsigned char digest[] {
     SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
 }
 %typemap(perl5, argout) const unsigned char digest[] {}
+
+%typemap(ruby, in) const unsigned char *digest
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else if (RSTRING($input)->len != APR_MD5_DIGESTSIZE) {
+    rb_raise(rb_eArgError, "digest size (%d) must be %d",
+             RSTRING($input)->len, APR_MD5_DIGESTSIZE);
+  } else {
+    $1 = ($1_ltype)StringValuePtr($input);
+  }
+}
+%typemap(ruby, argout) const unsigned char *digest {}
 
 /*
    svn_txdelta_send_stream() uses *digest not digest[] .

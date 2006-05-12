@@ -208,9 +208,6 @@ open_root(void *edit_baton,
   SVN_ERR(svn_fs_txn_name(&(eb->txn_name), eb->txn, eb->pool));
   SVN_ERR(svn_fs_txn_root(&(eb->txn_root), eb->txn, eb->pool));
 
-  /* Check read access to root */
-  SVN_ERR(check_authz(eb, "/", eb->txn_root, svn_authz_read, pool));
-
   /* Create a root dir baton.  The `base_path' field is an -absolute-
      path in the filesystem, upon which all further editor paths are
      based. */
@@ -387,10 +384,6 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
   const char *full_path = svn_path_join(eb->base_path, path, pool);
-
-  /* Check for read authorization. */
-  SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                      svn_authz_read, pool));
 
   /* Check PATH in our transaction.  If it does not exist,
      return a 'Path not present' error. */

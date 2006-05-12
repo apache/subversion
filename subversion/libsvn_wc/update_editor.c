@@ -1687,7 +1687,8 @@ change_file_prop(void *file_baton,
   /* Special case: if the file is added during a checkout, cache the
      last-changed-date propval for future use. */
   if (eb->use_commit_times
-      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
+      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+      && value)
     fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
 
   return SVN_NO_ERROR;
@@ -1947,8 +1948,8 @@ merge_file(svn_stringbuf_t *log_accum,
                       file_path, prop_changes, pool));
 
   /* Has the user made local mods to the working file?  */
-  SVN_ERR(svn_wc_text_modified_p2(&is_locally_modified, file_path,
-                                  FALSE, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_text_modified_p(&is_locally_modified, file_path,
+                                 FALSE, adm_access, pool));
 
   /* In the case where the user has replaced a file with a copy it may 
    * not show as locally modified.  So if the file isn't listed as

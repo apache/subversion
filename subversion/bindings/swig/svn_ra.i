@@ -25,6 +25,7 @@
 #endif
 
 %include typemaps.i
+%include constraints.i
 
 %include svn_global.swg
 %import apr.swg
@@ -40,6 +41,8 @@
 %ignore svn_ra_dav_init;
 %ignore svn_ra_serf_init;
 
+%apply Pointer NONNULL { svn_ra_callbacks2_t *callbacks };
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -53,9 +56,11 @@
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+%apply apr_hash_t **DIRENTHASH { apr_hash_t **dirents };
 
 %apply const char *MAY_BE_NULL {
-    const char *comment
+    const char *comment,
+    const char *lock_token
 };
 
 %apply apr_hash_t *STRING_TO_STRING {
@@ -102,6 +107,12 @@
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
+%apply (const svn_delta_editor_t *EDITOR, void *BATON)
+{
+  (const svn_delta_editor_t *update_editor, void *update_baton),
+  (const svn_delta_editor_t *diff_editor, void *diff_baton)
+}
+
 %typemap(perl5, in) (const svn_ra_callbacks_t *callbacks,
 		     void *callback_baton) {
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
@@ -111,6 +122,11 @@
                     void *callback_baton)
 {
   svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+
+%typemap(python, in) (svn_ra_callbacks2_t *callbacks, 
+                      void *callback_baton) {
+  svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
 }
 
 %typemap(perl5, in) apr_hash_t *config {

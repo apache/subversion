@@ -23,7 +23,6 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_hash.h>
-#include <apr_fnmatch.h>
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_delta.h"
@@ -372,8 +371,8 @@ assemble_status(svn_wc_status2_t **status,
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */          
           )
-        SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, path, FALSE,
-                                        adm_access, TRUE, pool));
+        SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
+                                       adm_access, pool));
 
       if (text_modified_p)
         final_text_status = svn_wc_status_modified;
@@ -1101,7 +1100,10 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
       struct dir_baton *pb = db->parent_baton;
       svn_wc_status2_t *status = apr_hash_get(pb->statii, db->name,
                                               APR_HASH_KEY_STRING);
-      if (status && status->entry)
+      /* Note that status->entry->url is NULL in the case of a missing
+       * directory, which means we need to recurse up another level to
+       * get a useful URL. */
+      if (status && status->entry && status->entry->url)
         return status->entry->url;
 
       url = find_dir_url(pb, pool);
@@ -1198,11 +1200,8 @@ make_file_baton(struct dir_baton *parent_dir_baton,
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
   const char *full_path;
  
-  /* Construct the full path of this directory. */
-  if (pb)
-    full_path = svn_path_join(eb->anchor, path, pool);
-  else
-    full_path = apr_pstrdup(pool, eb->anchor);
+  /* Construct the full path of this file. */
+  full_path = svn_path_join(eb->anchor, path, pool);
 
   /* Finish populating the baton members. */
   f->path = full_path;

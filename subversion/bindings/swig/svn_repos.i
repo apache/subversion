@@ -212,6 +212,14 @@
 }
 
 /* -----------------------------------------------------------------------
+   handle svn_repos_get_committed_info().
+*/
+%typemap(ruby,argout,fragment="output_helper") const char **committed_date
+{
+  $result = output_helper($result, svn_swig_rb_svn_date_string_to_time(*$1));
+}
+
+/* -----------------------------------------------------------------------
    handle config in svn_repos_create
 */
 

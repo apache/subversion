@@ -2140,6 +2140,8 @@ def diff_prop_change_local_propmod(sbox):
     "Name: dirprop\n",
     "   - r2value\n",
     "   + workingvalue\n",
+    "Name: newdirprop\n",
+    "   + newworkingvalue\n",
     "\n",
     "\n",
     "Property changes on: iota\n",
@@ -2147,6 +2149,8 @@ def diff_prop_change_local_propmod(sbox):
     "Name: fileprop\n",
     "   - r2value\n",
     "   + workingvalue\n",
+    "Name: newfileprop\n",
+    "   + newworkingvalue\n",
     "\n" ]
 
   current_dir = os.getcwd()
@@ -2179,11 +2183,22 @@ def diff_prop_change_local_propmod(sbox):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'propset', 'fileprop',
                                        'workingvalue', 'iota')
+    # And also add some properties that only exist in WORKING.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'newdirprop',
+                                       'newworkingvalue', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'newfileprop',
+                                       'newworkingvalue', 'iota')
 
     # Now, if we diff r2 to WORKING, we've got three property values
     # to consider: r2value (in the repository), r3value (in BASE), and
     # workingvalue (in WORKING).
     # The diff should only show the r2->WORKING change.
+    #
+    # We also need to make sure that the 'new' (WORKING only) properties
+    # are included in the output, since they won't be listed in a simple
+    # BASE->r2 diff.
     svntest.actions.run_and_verify_svn(None, expected_output_r2_wc, [],
                                        'diff', '-r', '2')
 
@@ -2397,6 +2412,89 @@ def diff_base_repos_moved(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+# A diff of an added file within an added directory should work, and
+# shouldn't produce an error.
+def diff_added_subtree(sbox):
+  "wc->repos diff of added subtree"
+
+  sbox.build()
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Roll the wc back to r0 (i.e. an empty wc).
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'up', '-r0')
+
+    # We shouldn't get any errors when we request a diff showing the
+    # addition of the greek tree.  The diff contains additions of files
+    # and directories with parents that don't currently exist in the wc,
+    # which is what we're testing here.
+    svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                       'diff', '-r', 'BASE:1')
+
+  finally:
+    os.chdir(current_dir)
+
+#----------------------------------------------------------------------
+def basic_diff_summarize(sbox):
+  "basic diff summarize"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A content modification.
+  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
+
+  # A prop modification.
+  svntest.main.run_svn(None, "propset", "prop", "val",
+                          os.path.join(wc_dir, 'iota'))
+
+  # Both content and prop mods.
+  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
+  svntest.main.file_append(tau_path, "tautau")
+  svntest.main.run_svn(None, "propset", "prop", "val", tau_path)
+
+  # A file addition.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  svntest.main.file_append(newfile_path, 'newfile')
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # A file deletion.
+  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
+                                                    'lambda'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    'iota': Item(verb='Sending'),
+    'newfile': Item(verb='Adding'),
+    'A/D/G/tau': Item(verb='Sending'),
+    'A/B/lambda': Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile': Item(status='  ', wc_rev=2),
+    })
+  expected_status.tweak("A/mu", "iota", "A/D/G/tau", 'newfile', wc_rev=2)
+  expected_status.remove("A/B/lambda")
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/mu': Item(status='M '),
+    'iota': Item(status=' M'),
+    'A/D/G/tau': Item(status='MM'),
+    'newfile': Item(status='A '),
+    'A/B/lambda': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                wc_dir, '-r1:2')
+
 ########################################################################
 #Run the tests
 
@@ -2433,11 +2531,13 @@ test_list = [ None,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
               diff_mime_type_changes,
-              diff_prop_change_local_propmod,
+              XFail(diff_prop_change_local_propmod),
               diff_repos_wc_add_with_props,
               diff_nonrecursive_checkout_deleted_dir,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
+              diff_added_subtree,
+              basic_diff_summarize,
               ]
 
 if __name__ == '__main__':

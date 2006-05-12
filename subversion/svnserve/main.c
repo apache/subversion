@@ -183,7 +183,7 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  svn_error_clear(svn_cmdline_fputs(_("Usage: svnserve [options]\n"
+  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [options]\n"
                                       "\n"
                                       "Valid options:\n"),
                                     stdout, pool));
@@ -518,7 +518,7 @@ int main(int argc, const char *argv[])
       err = winservice_start();
       if (err)
         {
-          svn_handle_error2(err, stderr, FALSE, _("svnserve: "));
+          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
 
           /* This is the most common error.  It means the user started
              svnserve from a shell, and specified the --service

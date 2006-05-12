@@ -26,9 +26,18 @@
 #include <serf_bucket_types.h>
 
 #include "svn_path.h"
+#include "svn_private_config.h"
 
 #include "ra_serf.h"
 
+
+/* Fix for older expat 1.95.x's that do not define
+ * XML_STATUS_OK/XML_STATUS_ERROR
+ */
+#ifndef XML_STATUS_OK
+#define XML_STATUS_OK    1
+#define XML_STATUS_ERROR 0
+#endif
 
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
@@ -299,7 +308,7 @@ cdata_error(svn_ra_serf__xml_parser_t *parser,
 }
 
 apr_status_t
-svn_ra_serf__handler_discard_body(serf_request_t *request,
+svn_ra_serf__handle_discard_body(serf_request_t *request,
                                   serf_bucket_t *response,
                                   void *baton,
                                   apr_pool_t *pool)
@@ -366,6 +375,34 @@ svn_ra_serf__handler_discard_body(serf_request_t *request,
 
       /* feed me */
     }
+}
+
+apr_status_t
+svn_ra_serf__handle_status_only(serf_request_t *request,
+                                serf_bucket_t *response,
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_ra_serf__simple_request_context_t *ctx = baton;
+
+  status = svn_ra_serf__handle_discard_body(request, response,
+                                            &ctx->server_error, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      serf_status_line sl;
+      apr_status_t rv;
+
+      rv = serf_bucket_response_status(response, &sl);
+      
+      ctx->status = sl.code;
+      ctx->reason = sl.reason;
+
+      ctx->done = TRUE;
+    }
+
+  return status;
 }
 
 static apr_status_t
@@ -506,7 +543,7 @@ handle_auth(svn_ra_serf__session_t *session,
   return APR_SUCCESS;
 }
 
-static void XMLCALL
+static void
 start_xml(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -525,7 +562,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
   parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
 
-static void XMLCALL
+static void
 end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -539,7 +576,7 @@ end_xml(void *userData, const char *raw_name)
   parser->error = parser->end(parser, parser->user_data, name);
 }
 
-static void XMLCALL
+static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
@@ -563,7 +600,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   apr_size_t len;
   serf_status_line sl;
   apr_status_t status;
-  enum XML_Status xml_status;
+  int xml_status;
   svn_ra_serf__xml_parser_t *ctx = baton;
 
   serf_bucket_response_status(response, &sl);
@@ -591,7 +628,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
               *ctx->done_list = ctx->done_item;
             }
         }
-      return svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
   if (!ctx->xmlp)
@@ -691,9 +728,20 @@ handler_default(serf_request_t *request,
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
-      if (!APR_STATUS_IS_EOF(status) || strcmp(ctx->method, "HEAD") != 0)
+      if (!APR_STATUS_IS_EOF(status))
         {
           return status;
+        }
+      /* If we got an EOF here when we're not a HEAD request,
+       * something went really wrong: either the server closed on us
+       * early or we're reading too much.  Either way, scream loudly.
+       */
+      if (strcmp(ctx->method, "HEAD") != 0)
+        {
+          ctx->session->pending_error =
+              svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("Premature EOF seen from server"));
+          return ctx->session->pending_error->apr_err;
         }
     }
 
@@ -716,15 +764,25 @@ handler_default(serf_request_t *request,
     {
       handle_auth(ctx->session, ctx->conn, request, response, pool);
       svn_ra_serf__request_create(ctx);
-      status = svn_ra_serf__handler_discard_body(request, response, NULL, pool);
+      status = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
   else if (sl.code >= 500)
     {
       svn_ra_serf__server_error_t server_err;
+      apr_status_t status;
 
       memset(&server_err, 0, sizeof(server_err));
-      status = svn_ra_serf__handler_discard_body(request, response,
-                                                 &server_err, pool);
+      status = svn_ra_serf__handle_discard_body(request, response,
+                                                &server_err, pool);
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          status = svn_ra_serf__is_conn_closing(response);
+          if (status == SERF_ERROR_CLOSING)
+            {
+              serf_connection_reset(ctx->conn->conn);
+            }
+        }
 
       if (server_err.error)
         {

@@ -2,7 +2,7 @@
  * text-delta.c -- Internal text delta representation
  * 
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,6 +32,14 @@
 /* Text delta stream descriptor. */
 
 struct svn_txdelta_stream_t {
+  /* Copied from parameters to svn_txdelta_stream_create. */
+  void *baton;
+  svn_txdelta_next_window_fn_t next_window;
+  svn_txdelta_md5_digest_fn_t md5_digest;
+};
+
+/* Delta stream baton. */
+struct txdelta_baton {
   /* These are copied from parameters passed to svn_txdelta. */
   svn_stream_t *source;
   svn_stream_t *target;
@@ -264,49 +272,61 @@ svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
 
 
 
-/* Allocate a delta stream descriptor. */
+/* Generic delta stream functions. */
 
-void
-svn_txdelta(svn_txdelta_stream_t **stream,
-            svn_stream_t *source,
-            svn_stream_t *target,
-            apr_pool_t *pool)
+svn_txdelta_stream_t *
+svn_txdelta_stream_create(void *baton,
+                          svn_txdelta_next_window_fn_t next_window,
+                          svn_txdelta_md5_digest_fn_t md5_digest,
+                          apr_pool_t *pool)
 {
-  *stream = apr_palloc(pool, sizeof(**stream));
-  (*stream)->source = source;
-  (*stream)->target = target;
-  (*stream)->more_source = TRUE;
-  (*stream)->more = TRUE;
-  (*stream)->pos = 0;
-  (*stream)->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
+  svn_txdelta_stream_t *stream = apr_palloc(pool, sizeof(*stream));
 
-  /* Initialize MD5 digest calculation. */
-  apr_md5_init(&((*stream)->context));
+  stream->baton = baton;
+  stream->next_window = next_window;
+  stream->md5_digest = md5_digest;
+
+  return stream;
 }
 
-
-
 svn_error_t *
 svn_txdelta_next_window(svn_txdelta_window_t **window,
                         svn_txdelta_stream_t *stream,
                         apr_pool_t *pool)
 {
+  return stream->next_window(window, stream->baton, pool);
+}
+
+const unsigned char *
+svn_txdelta_md5_digest(svn_txdelta_stream_t *stream)
+{
+  return stream->md5_digest(stream->baton);
+}
+
+
+
+static svn_error_t *
+txdelta_next_window(svn_txdelta_window_t **window,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct txdelta_baton *b = baton;
   apr_size_t source_len = SVN_DELTA_WINDOW_SIZE;
   apr_size_t target_len = SVN_DELTA_WINDOW_SIZE;
 
   /* Read the source stream. */
-  if (stream->more_source)
+  if (b->more_source)
     {
-      SVN_ERR(svn_stream_read(stream->source, stream->buf, &source_len));
-      stream->more_source = (source_len == SVN_DELTA_WINDOW_SIZE);
+      SVN_ERR(svn_stream_read(b->source, b->buf, &source_len));
+      b->more_source = (source_len == SVN_DELTA_WINDOW_SIZE);
     }
   else
     source_len = 0;
 
   /* Read the target stream. */
-  SVN_ERR(svn_stream_read(stream->target, stream->buf + source_len,
+  SVN_ERR(svn_stream_read(b->target, b->buf + source_len,
                           &target_len));
-  stream->pos += source_len;
+  b->pos += source_len;
 
   /* ### The apr_md5 functions always return APR_SUCCESS.  At one
      point, we proposed to APR folks that the interfaces change to
@@ -316,34 +336,57 @@ svn_txdelta_next_window(svn_txdelta_window_t **window,
   if (target_len == 0)
     {
       /* No target data?  We're done; return the final window. */
-      apr_md5_final(stream->digest, &(stream->context));
+      apr_md5_final(b->digest, &(b->context));
       *window = NULL;
-      stream->more = FALSE;
+      b->more = FALSE;
       return SVN_NO_ERROR;
     }
   else
     {
-      apr_md5_update(&(stream->context), stream->buf + source_len,
+      apr_md5_update(&(b->context), b->buf + source_len,
                      target_len);
     }
 
-  *window = compute_window(stream->buf, source_len, target_len,
-                           stream->pos - source_len, pool);
+  *window = compute_window(b->buf, source_len, target_len,
+                           b->pos - source_len, pool);
   
   /* That's it. */
   return SVN_NO_ERROR;
 }
 
 
-const unsigned char *
-svn_txdelta_md5_digest(svn_txdelta_stream_t *stream)
+static const unsigned char *
+txdelta_md5_digest(void *baton)
 {
+  struct txdelta_baton *b = baton;
   /* If there are more windows for this stream, the digest has not yet
      been calculated.  */
-  if (stream->more)
+  if (b->more)
     return NULL;
 
-  return stream->digest;
+  return b->digest;
+}
+
+
+void
+svn_txdelta(svn_txdelta_stream_t **stream,
+            svn_stream_t *source,
+            svn_stream_t *target,
+            apr_pool_t *pool)
+{
+  struct txdelta_baton *b = apr_palloc(pool, sizeof(*b));
+  b->source = source;
+  b->target = target;
+  b->more_source = TRUE;
+  b->more = TRUE;
+  b->pos = 0;
+  b->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
+
+  /* Initialize MD5 digest calculation. */
+  apr_md5_init(&(b->context));
+
+  *stream = svn_txdelta_stream_create(b, txdelta_next_window,
+                                     txdelta_md5_digest, pool);
 }
 
 

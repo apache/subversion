@@ -2,9 +2,9 @@
 #
 #  main.py: a shared, automated test suite for Subversion
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -24,6 +24,7 @@ import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
+import traceback # for print_exc()
 
 import getopt
 try:
@@ -45,9 +46,9 @@ from svntest import wc
 #     1) imports this 'svntest' package
 #
 #     2) contains a number of related 'test' routines.  (Each test
-#        routine should take no arguments, and return a 0 on success or
-#        non-zero on failure.  Each test should also contain a short
-#        docstring.)
+#        routine should take no arguments, and return None on success
+#        or throw a Failure exception on failure.  Each test should
+#        also contain a short docstring.)
 #
 #     3) places all the tests into a list that begins with None.
 #
@@ -85,6 +86,9 @@ class SVNRepositoryCopyFailure(Failure):
   "Exception raised if unable to copy a repository"
   pass
 
+class SVNRepositoryCreateFailure(Failure):
+  "Exception raised if unable to create a repository"
+  pass
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -224,17 +228,21 @@ def get_pre_revprop_change_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "pre-revprop-change")
 
+def get_svnserve_conf_file_path(repo_dir):
+  "Return the path of the svnserve.conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "svnserve.conf")
 
 # Run any binary, logging the command line (TODO: and return code)
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-  return run_command_stdin(command, error_expected, binary_mode, 
+  return run_command_stdin(command, error_expected, binary_mode,
                            None, *varargs)
 
 # Run any binary, supplying input text, logging the command line
-def run_command_stdin(command, error_expected, binary_mode=0, 
+def run_command_stdin(command, error_expected, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -417,9 +425,13 @@ def create_repos(path):
   stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path, *opts)
 
   # Skip tests if we can't create the repository.
-  for line in stderr:
-    if line.find('Unknown FS type') != -1:
-      raise Skip
+  if stderr:
+    for line in stderr:
+      if line.find('Unknown FS type') != -1:
+        raise Skip
+    # If the FS type is known, assume the repos couldn't be created
+    # (e.g. due to a missing 'svnadmin' binary).
+    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),
@@ -451,7 +463,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
-  
+
   while 1:
     data = dump_out.read(1024*1024)  # Arbitrary buffer size
     if data == "":
@@ -504,7 +516,7 @@ def set_repos_paths(repo_dir):
 
 def canonicalize_url(input):
   "Canonicalize the url, if the scheme is unknown, returns intact input"
-  
+
   m = re.match(r"^((file://)|((svn|svn\+ssh|http|https)(://)))", input)
   if m:
     scheme = m.group(1)
@@ -550,6 +562,25 @@ class Sandbox:
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
+
+    # For dav tests we need a single authz file which must be present,
+    # so we recreate it each time a sandbox is created with some default
+    # contents.
+    if self.repo_url.startswith("http"):
+      # this dir doesn't exist out of the box, so we may have to make it
+      if not(os.path.exists(work_dir)):
+        os.makedirs(work_dir)
+      self.authz_file = os.path.join(work_dir, "authz")
+      fp = open(self.authz_file, "w")
+      fp.write("[/]\n* = rw\n")
+      fp.close()
+
+    # For svnserve tests we have a per-repository authz file, and it
+    # doesn't need to be there in order for things to work, so we don't
+    # have any default contents.
+    elif self.repo_url.startswith("svn"):
+      self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
+
     if windows == 1:
       self.repo_url = string.replace(self.repo_url, '\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
@@ -565,7 +596,9 @@ class Sandbox:
     self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
     return self.dependents[-1]
 
-  def build(self):
+  def build(self, name = None):
+    if name != None:
+      self._set_name(name)
     if actions.make_repo_and_wc(self):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
@@ -616,6 +649,83 @@ def _cleanup_test_path(path, retrying=None):
       print "WARNING: cleanup failed, will try again later"
     _deferred_test_paths.append(path)
 
+
+class TestRunner:
+  """Encapsulate a single test case (predicate), including logic for
+  runing the test and test list output."""
+
+  def __init__(self, func, index):
+    self.pred = testcase.create_test_case(func)
+    self.index = index
+
+  def list(self):
+    print " %2d     %-5s  %s" % (self.index,
+                                 self.pred.list_mode(),
+                                 self.pred.get_description())
+    self.pred.check_description()
+
+  def _print_name(self):
+    print os.path.basename(sys.argv[0]), str(self.index) + ":", \
+          self.pred.get_description()
+    self.pred.check_description()
+
+  def run(self):
+    """Run self.pred and return the result.  The return value is
+        - 0 if the test was successful
+        - 1 if it errored in a way that indicates test failure
+        - 2 if the test skipped
+        """
+    if self.pred.need_sandbox():
+      # ooh! this function takes a sandbox argument
+      sandbox = Sandbox(self.pred.get_sandbox_name(), self.index)
+      args = (sandbox,)
+    else:
+      sandbox = None
+      args = ()
+
+    try:
+      rc = self.pred.run(args)
+      if rc is not None:
+        print 'STYLE ERROR in',
+        self._print_name()
+        print 'Test driver returned a status code.'
+        sys.exit(255)
+      result = 0
+    except Skip, ex:
+      result = 2
+    except Failure, ex:
+      result = 1
+      # We captured Failure and its subclasses. We don't want to print
+      # anything for plain old Failure since that just indicates test
+      # failure, rather than relevant information. However, if there
+      # *is* information in the exception's arguments, then print it.
+      if ex.__class__ != Failure or ex.args:
+        ex_args = str(ex)
+        if ex_args:
+          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+        else:
+          print 'EXCEPTION:', ex.__class__.__name__
+    except KeyboardInterrupt:
+      print 'Interrupted'
+      sys.exit(0)
+    except SystemExit, ex:
+      print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
+      print ex.code and 'FAIL: ' or 'PASS: ',
+      self._print_name()
+      raise
+    except:
+      result = 1
+      print 'UNEXPECTED EXCEPTION:'
+      traceback.print_exc(file=sys.stdout)
+    result = self.pred.convert_result(result)
+    print self.pred.run_text(result),
+    self._print_name()
+    sys.stdout.flush()
+    if sandbox is not None and result != 1 and cleanup_mode:
+      sandbox.cleanup_test_paths()
+    return result
+
+
 ######################################################################
 # Main testing functions
 
@@ -638,35 +748,20 @@ def run_one_test(n, test_list):
   current_repo_dir = None
   current_repo_url = None
 
-  tc = testcase.TestCase(test_list[n], n)
-  func_code = tc.func_code()
-  if func_code.co_argcount:
-    # ooh! this function takes a sandbox argument
-    module, unused = \
-      os.path.splitext(os.path.basename(func_code.co_filename))
-    sandbox = Sandbox(module, n)
-    args = (sandbox,)
-  else:
-    sandbox = None
-    args = ()
-
   # Run the test.
-  exit_code = tc.run(args)
-  if sandbox is not None and not exit_code and cleanup_mode:
-    sandbox.cleanup_test_paths()
+  exit_code = TestRunner(test_list[n], n).run()
   reset_config_dir()
   return exit_code
 
-def _internal_run_tests(test_list, testnum=None):
+def _internal_run_tests(test_list, testnums):
+  """Run the tests from TEST_LIST whose indices are listed in TESTNUMS."""
+
   exit_code = 0
 
-  if testnum is None:
-    for n in range(1, len(test_list)):
-      # 1 is the only return code that indicates actual test failure.
-      if run_one_test(n, test_list) == 1:
-        exit_code = 1
-  else:
-    exit_code = run_one_test(testnum, test_list)
+  for testnum in testnums:
+    # 1 is the only return code that indicates actual test failure.
+    if run_one_test(testnum, test_list) == 1:
+      exit_code = 1
 
   _cleanup_deferred_test_paths()
   return exit_code
@@ -675,13 +770,15 @@ def _internal_run_tests(test_list, testnum=None):
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
-# There are three modes for invoking this routine, and they all depend
-# on parsing sys.argv[]:
+# This routine parses sys.argv to decide what to do.  Basic usage:
 #
-#   1.  No command-line arguments: all tests in TEST_LIST are run.
-#   2.  Number 'N' passed on command-line: only test N is run
-#   3.  String "list" passed on command-line:  print each test's docstring.
-
+# test-script.py [--list] [<testnum>]...
+#
+# --list : Option to print the docstrings for the chosen tests
+# instead of running them.
+#
+# [<testnum>]... : the numbers of the tests that should be run.  If no
+# testnums are specified, then all tests in TEST_LIST are run.
 def run_tests(test_list):
   """Main routine to run all tests in TEST_LIST.
 
@@ -693,34 +790,25 @@ def run_tests(test_list):
   global fs_type
   global verbose_mode
   global cleanup_mode
-  testnum = None
+  testnums = []
+  # Should the tests be listed (as opposed to executed)?
+  list_tests = 0
 
   # Explicitly set this so that commands that commit but don't supply a
   # log message will fail rather than invoke an editor.
   os.environ['SVN_EDITOR'] = ''
 
   opts, args = my_getopt(sys.argv[1:], 'v',
-                         ['url=', 'fs-type=', 'verbose', 'cleanup'])
+                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list'])
 
   for arg in args:
     if arg == "list":
-      print "Test #  Mode   Test Description"
-      print "------  -----  ----------------"
-      n = 1
-      for x in test_list[1:]:
-        testcase.TestCase(x, n).list()
-        n = n+1
-
-      # done. just exit with success.
-      sys.exit(0)
-
-    if arg.startswith('BASE_URL='):
+      # This is an old deprecated variant of the "--list" option:
+      list_tests = 1
+    elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
-      if testnum is not None:
-        print 'Too many arguments: "' + arg + '"'
-        sys.exit(1)
-      testnum = int(arg)
+      testnums.append(int(arg))
 
   for opt, val in opts:
     if opt == "--url":
@@ -735,19 +823,36 @@ def run_tests(test_list):
     elif opt == "--cleanup":
       cleanup_mode = 1
 
+    elif opt == "--list":
+      list_tests = 1
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
-  exit_code = _internal_run_tests(test_list, testnum)
+  if not testnums:
+    # If no test numbers were listed explicitly, include all of them:
+    testnums = range(1, len(test_list))
 
-  # remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  # This ensures that an 'import' will happen the next time we run.
-  safe_rmtree(temp_dir)
+  if list_tests:
+    print "Test #  Mode   Test Description"
+    print "------  -----  ----------------"
+    for testnum in testnums:
+      TestRunner(test_list[testnum], testnum).list()
 
-  _cleanup_deferred_test_paths()
+    # done. just exit with success.
+    sys.exit(0)
 
-  # return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  else:
+    exit_code = _internal_run_tests(test_list, testnums)
+
+    # remove all scratchwork: the 'pristine' repository, greek tree, etc.
+    # This ensures that an 'import' will happen the next time we run.
+    safe_rmtree(temp_dir)
+
+    _cleanup_deferred_test_paths()
+
+    # return the appropriate exit code from the tests.
+    sys.exit(exit_code)
 
 
 ######################################################################

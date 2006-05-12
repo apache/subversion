@@ -2,9 +2,9 @@
 #
 #  testcase.py:  Control of test case execution.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -16,158 +16,164 @@
 #
 ######################################################################
 
-import os, sys, string
-import traceback # for print_exc()
+import os, sys, string, types
 
 import svntest
 
-__all__ = ['TestCase', 'XFail', 'Skip']
-
-
-class SVNTestStatusCodeError(Exception):
-  'Test driver returned a status code.'
-  pass
-
-
-class _Predicate:
-  """A general-purpose predicate that encapsulates a test case (function),
-  a condition for its execution and a set of display properties for test
-  lists and test log output."""
-
-  def __init__(self, func):
-    if isinstance(func, _Predicate):
-      # Whee, this is better than blessing objects in Perl!
-      # For the unenlightened: What we're doing here is adopting the
-      # identity *and class* of 'func'
-      self.__dict__ = func.__dict__
-      self.__class__ = func.__class__
-    else:
-      self.func = func
-      self.cond = 0
-      self.text = ['PASS: ', 'FAIL: ', 'SKIP: ', '']
-    assert type(self.func) is type(lambda x: 0)
-
-  def list_mode(self):
-    return self.text[3]
-
-  def skip_text(self):
-    return self.text[2]
-
-  def run_text(self, result=0):
-    return self.text[result]
-
-  def convert_result(self, result):
-    return result
+__all__ = ['XFail', 'Skip']
 
 
 class TestCase:
-  """Encapsulate a single test case (predicate), including logic for
-  runing the test and test list output."""
+  """A thing that can be tested.  This is an abstract class with
+  several methods that need to be overridden."""
 
-  def __init__(self, func, index):
-    self.pred = _Predicate(func)
-    self.index = index
+  def __init__(self):
+    self._result_text = ['PASS: ', 'FAIL: ', 'SKIP: ']
+    self._list_mode_text = ''
 
-  def _check_name(self):
-    name = self.pred.func.__doc__
-    if not name:
-      raise Exception(self.pred.func.__name__ + ' lacks required doc string')
+  def get_description(self):
+    raise NotImplementedError()
 
-    if len(name) > 50:
+  def check_description(self):
+    description = self.get_description()
+
+    if len(description) > 50:
       print 'WARNING: Test doc string exceeds 50 characters'
-    if name[-1] == '.':
+    if description[-1] == '.':
       print 'WARNING: Test doc string ends in a period (.)'
-    if not string.lower(name[0]) == name[0]:
+    if not string.lower(description[0]) == description[0]:
       print 'WARNING: Test doc string is capitalized'
-    
-  def func_code(self):
-    return self.pred.func.func_code
 
-  def list(self):
-    print " %2d     %-5s  %s" % (self.index,
-                                 self.pred.list_mode(),
-                                 self.pred.func.__doc__)
-    self._check_name()
-      
-  def _print_name(self):
-    print os.path.basename(sys.argv[0]), str(self.index) + ":", \
-          self.pred.func.__doc__
-    self._check_name()
+  def need_sandbox(self):
+    return 0
+
+  def get_sandbox_name(self):
+    return 'sandbox'
 
   def run(self, args):
-    """Run self.pred on ARGS, return the result.  The return value is
-        - 0 if the test was successful
-        - 1 if it errored in a way that indicates test failure
-        - 2 if the test skipped
-        """
-    result = 0
-    if self.pred.cond:
-      print self.pred.skip_text(),
-    else:
-      try:
-        rc = apply(self.pred.func, args)
-        if rc is not None:
-          raise SVNTestStatusCodeError
-      except SVNTestStatusCodeError, ex:
-        print "STYLE ERROR in",
-        self._print_name()
-        print ex.__doc__
-        sys.exit(255)
-      except svntest.Skip, ex:
-        result = 2
-      except svntest.Failure, ex:
-        result = 1
-        # We captured Failure and its subclasses. We don't want to print
-        # anything for plain old Failure since that just indicates test
-        # failure, rather than relevant information. However, if there
-        # *is* information in the exception's arguments, then print it.
-        if ex.__class__ != svntest.Failure or ex.args:
-          ex_args = str(ex)
-          if ex_args:
-            print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
-          else:
-            print 'EXCEPTION:', ex.__class__.__name__
-      except KeyboardInterrupt:
-        print 'Interrupted'
-        sys.exit(0)
-      except SystemExit, ex:
-        print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
-        print ex.code and 'FAIL: ' or 'PASS: ',
-        self._print_name()
-        raise
-      except:
-        result = 1
-        print 'UNEXPECTED EXCEPTION:'
-        traceback.print_exc(file=sys.stdout)
-      print self.pred.run_text(result),
-      result = self.pred.convert_result(result)
-    self._print_name()
-    sys.stdout.flush()
+    raise NotImplementedError()
+
+  def list_mode(self):
+    return self._list_mode_text
+
+  def run_text(self, result=0):
+    return self._result_text[result]
+
+  def convert_result(self, result):
     return result
 
 
-class XFail(_Predicate):
-  "A test that is expected to fail."
+class FunctionTestCase(TestCase):
+  """A TestCase based on a naked Python function object.
+
+  FUNC should be a function that returns None on success and throws an
+  svntest.Failure exception on failure.  It should have a brief
+  docstring describing what it does (and fulfilling the conditions
+  enforced by TestCase.check_description()).  FUNC may take zero or
+  one argument.  It it takes an argument, it will be invoked with an
+  svntest.main.Sandbox instance as argument.  (The sandbox's name is
+  derived from the file name in which FUNC was defined.)"""
 
   def __init__(self, func):
-    _Predicate.__init__(self, func)
-    self.text[0] = 'XPASS:'
-    self.text[1] = 'XFAIL:'
-    if self.text[3] == '':
-      self.text[3] = 'XFAIL'
+    TestCase.__init__(self)
+    self.func = func
+    assert type(self.func) is types.FunctionType
+
+  def get_description(self):
+    """Use the function's docstring as a description."""
+
+    description = self.func.__doc__
+    if not description:
+      raise Exception(self.func.__name__ + ' lacks required doc string')
+    return description
+
+  def need_sandbox(self):
+    """If the function requires an argument, then we need to pass it a
+    sandbox."""
+
+    return self.func.func_code.co_argcount != 0
+
+  def get_sandbox_name(self):
+    """Base the sandbox's name on the name of the file in which the
+    function was defined."""
+
+    filename = self.func.func_code.co_filename
+    return os.path.splitext(os.path.basename(filename))[0]
+
+  def run(self, args):
+    return apply(self.func, args)
+
+
+class XFail(TestCase):
+  "A test that is expected to fail."
+
+  def __init__(self, test_case, cond_func=lambda:1):
+    """Create an XFail instance based on TEST_CASE.  COND_FUNC is a
+    callable that is evaluated at test run time and should return a
+    boolean value.  If COND_FUNC returns true, then TEST_CASE is
+    expected to fail (and a pass is considered an error); otherwise,
+    TEST_CASE is run normally.  The evaluation of COND_FUNC is
+    deferred so that it can base its decision on useful bits of
+    information that are not available at __init__ time (like the fact
+    that we're running over a particular RA layer)."""
+
+    TestCase.__init__(self)
+    self.test_case = create_test_case(test_case)
+    self._list_mode_text = self.test_case.list_mode() or 'XFAIL'
+    # Delegate most methods to self.test_case:
+    self.get_description = self.test_case.get_description
+    self.need_sandbox = self.test_case.need_sandbox
+    self.get_sandbox_name = self.test_case.get_sandbox_name
+    self.run = self.test_case.run
+    self.cond_func = cond_func
+
   def convert_result(self, result):
-    # Conditions are reversed here: a failure expected, therefore it
-    # isn't an error; a pass is an error.
-    return not result
+    if self.cond_func():
+      # Conditions are reversed here: a failure is expected, therefore
+      # it isn't an error; a pass is an error; but a skip remains a skip.
+      return {0:1, 1:0, 2:2}[self.test_case.convert_result(result)]
+    else:
+      return self.test_case.convert_result(result)
 
-class Skip(_Predicate):
-  "A test that will be skipped when a condition is true."
+  def run_text(self, result=0):
+    if self.cond_func():
+      return ['XFAIL:', 'XPASS:', self.test_case.run_text(2)][result]
+    else:
+      return self.test_case.run_text(result)
 
-  def __init__(self, func, cond):
-    _Predicate.__init__(self, func)
+
+class Skip(TestCase):
+  """A test that will be skipped if condition COND is true."""
+
+  def __init__(self, test_case, cond=1):
+    TestCase.__init__(self)
+    self.test_case = create_test_case(test_case)
     self.cond = cond
     if self.cond:
-      self.text[3] = 'SKIP'
+      self._list_mode_text = 'SKIP'
+    # Delegate most methods to self.test_case:
+    self.get_description = self.test_case.get_description
+    self.get_sandbox_name = self.test_case.get_sandbox_name
+    self.convert_result = self.test_case.convert_result
+
+  def need_sandbox(self):
+    if self.cond:
+      return 0
+    else:
+      return self.test_case.need_sandbox()
+
+  def run(self, args):
+    if self.cond:
+      raise svntest.Skip
+    else:
+      return self.test_case.run(args)
+
+
+def create_test_case(func):
+  if isinstance(func, TestCase):
+    return func
+  else:
+    return FunctionTestCase(func)
 
 
 ### End of file.

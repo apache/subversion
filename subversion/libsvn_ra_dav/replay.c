@@ -43,9 +43,6 @@ typedef struct {
    * apply textdelta portions of the editor drive. */
   void *file_baton;
 
-  /* The pool we use for the current file. */
-  apr_pool_t *file_pool;
-
   /* Variables required to decode and apply our svndiff data off the wire. */
   svn_txdelta_window_handler_t whandler;
   void *whandler_baton;
@@ -70,6 +67,7 @@ typedef struct {
   void *baton;
   const char *path;
   apr_pool_t *pool;
+  apr_pool_t *file_pool;
 } dir_item_t;
 
 static void
@@ -80,6 +78,7 @@ push_dir(replay_baton_t *rb, void *baton, const char *path, apr_pool_t *pool)
   di->baton = baton;
   di->path = apr_pstrdup(pool, path);
   di->pool = pool;
+  di->file_pool = svn_pool_create(pool);
 }
 
 static const svn_ra_dav__xml_elm_t editor_report_elements[] =
@@ -145,19 +144,20 @@ start_element(void *baton, int parent_state, const char *nspace,
     case ELEM_open_root:
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
-        apr_pool_t *subpool = svn_pool_create(rb->pool);
-        void *dir_baton;
 
         if (! crev)
           rb->err = svn_error_create
                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                       _("Missing revision attr in open-root element"));
         else
-          rb->err = rb->editor->open_root(rb->edit_baton,
-                                          SVN_STR_TO_REV(crev), subpool,
-                                          &dir_baton);
-
-        push_dir(rb, dir_baton, "", subpool);
+          {
+            apr_pool_t *subpool = svn_pool_create(rb->pool);
+            void *dir_baton;
+            rb->err = rb->editor->open_root(rb->edit_baton,
+                                            SVN_STR_TO_REV(crev), subpool,
+                                            &dir_baton);
+            push_dir(rb, dir_baton, "", subpool);
+          }
       }
       break;
 
@@ -189,15 +189,6 @@ start_element(void *baton, int parent_state, const char *nspace,
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
         const char *path = svn_xml_get_attr_value("path", atts);
-
-        /* If a file pool is in use, destroy it and NULL it out, since it
-         * applies to the previous directory's files, not this one.  If we
-         * need one for this directory we'll create one later on. */
-        if (rb->file_pool)
-          {
-            svn_pool_destroy(rb->file_pool);
-            rb->file_pool = NULL;
-          }
 
         if (! path)
           rb->err = svn_error_create
@@ -259,13 +250,7 @@ start_element(void *baton, int parent_state, const char *nspace,
             break;
           }
 
-        /* If there's already a file pool, clear it out, since it was used
-         * for the previous file.  If not, create a new one so we can use it
-         * for this file. */
-        if (rb->file_pool)
-          svn_pool_clear(rb->file_pool);
-        else
-          rb->file_pool = svn_pool_create(parent->pool);
+        svn_pool_clear(parent->file_pool);
 
         if (elm->id == ELEM_add_file)
           {
@@ -278,7 +263,7 @@ start_element(void *baton, int parent_state, const char *nspace,
               rev = SVN_INVALID_REVNUM;
 
             rb->err = rb->editor->add_file(path, parent->baton, cpath, rev,
-                                           rb->file_pool, &rb->file_baton);
+                                           parent->file_pool, &rb->file_baton);
           }
         else
           {
@@ -290,7 +275,7 @@ start_element(void *baton, int parent_state, const char *nspace,
               rev = SVN_INVALID_REVNUM;
 
             rb->err = rb->editor->open_file(path, parent->baton, rev,
-                                            rb->file_pool,
+                                            parent->file_pool,
                                             &rb->file_baton);
           }
       }
@@ -308,16 +293,16 @@ start_element(void *baton, int parent_state, const char *nspace,
 
           rb->err = rb->editor->apply_textdelta(rb->file_baton,
                                                 checksum,
-                                                rb->file_pool,
+                                                TOP_DIR(rb).file_pool,
                                                 &rb->whandler,
                                                 &rb->whandler_baton);
           if (! rb->err)
             {
               rb->svndiff_decoder = svn_txdelta_parse_svndiff
                                       (rb->whandler, rb->whandler_baton,
-                                       TRUE, rb->file_pool);
+                                       TRUE, TOP_DIR(rb).file_pool);
               rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
-                                                     rb->file_pool);
+                                                     TOP_DIR(rb).file_pool);
             }
         }
       break;
@@ -332,7 +317,7 @@ start_element(void *baton, int parent_state, const char *nspace,
         {
           rb->err = rb->editor->close_file(rb->file_baton,
                                            NULL, /* XXX text checksum */
-                                           rb->file_pool);
+                                           TOP_DIR(rb).file_pool);
           rb->file_baton = NULL;
         }
       break;
@@ -441,7 +426,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
           rb->err = rb->editor->change_file_prop(rb->file_baton,
                                                  rb->prop_name,
                                                  decoded_value,
-                                                 rb->file_pool);
+                                                 TOP_DIR(rb).file_pool);
       }
       break;
 
@@ -497,7 +482,6 @@ svn_ra_dav__replay(svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  const char *vcc_url;
   replay_baton_t rb;
 
   const char *body
@@ -509,8 +493,6 @@ svn_ra_dav__replay(svn_ra_session_t *session,
                    "</S:replay-report>",
                    revision, low_water_mark, send_deltas);
 
-  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->url->data, pool));
-
   memset(&rb, 0, sizeof(rb));
 
   rb.editor = editor;
@@ -521,7 +503,7 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "REPORT", vcc_url, body,
+  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "REPORT", ras->url->data, body,
                                      NULL, NULL,
                                      start_element,
                                      cdata_handler,

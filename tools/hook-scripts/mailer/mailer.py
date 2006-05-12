@@ -202,6 +202,7 @@ class MailedOutput(OutputBase):
            'Subject: %s\n' \
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
+           'Content-Transfer-Encoding: 8bit\n' \
            % (self.from_addr, string.join(self.to_addrs, ', '), subject)
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
@@ -665,6 +666,8 @@ class DiffGenerator:
     self.diffurls = diffurls
     self.pool = pool
 
+    self.diff = self.diff_url = None
+
     self.idx = 0
 
   def __nonzero__(self):
@@ -882,8 +885,8 @@ class TextCommitRenderer:
 
     w = self.output.write
 
-    w('Author: %s\nDate: %s\nNew Revision: %s\n\n'
-      % (data.author, data.date, data.rev))
+    w('Author: %s\nDate: %s\nNew Revision: %s\n\nLog:\n%s\n\n'
+      % (data.author, data.date, data.rev, data.log))
 
     # print summary sections
     self._render_list('Added', data.added_data)
@@ -899,8 +902,6 @@ class TextCommitRenderer:
         self._render_list('Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')
-
-    w('\nLog:\n%s\n' % data.log)
 
     self._render_diffs(data.diffs, '')
     if data.other_diffs:

@@ -3,7 +3,7 @@
  * the differences of two repository versions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -81,11 +81,10 @@ create_item_baton(struct edit_baton *edit_baton,
 
 /* Make sure that this item baton contains a summarize struct.
  * If it doesn't before this call, allocate a new struct in the item's pool,
- * initializing the diff kind to SUM_KIND.
+ * initializing the diff kind to normal.
  * All other fields are also initialized from IB to to NULL/invalid values. */
 static void
-ensure_summarize(struct item_baton *ib,
-                 svn_client_diff_summarize_kind_t sum_kind)
+ensure_summarize(struct item_baton *ib)
 {
   svn_client_diff_summarize_t *sum;
   if (ib->summarize)
@@ -94,7 +93,7 @@ ensure_summarize(struct item_baton *ib,
   sum = apr_pcalloc(ib->item_pool, sizeof(*sum));
 
   sum->node_kind = ib->node_kind;
-  sum->summarize_kind = sum_kind;
+  sum->summarize_kind = svn_client_diff_summarize_kind_normal;
   sum->path = ib->path;
 
   ib->summarize = sum;
@@ -157,7 +156,8 @@ add_directory(const char *path,
   struct item_baton *cb;
 
   cb = create_item_baton(pb->edit_baton, path, svn_node_dir, pool);
-  ensure_summarize(cb, svn_client_diff_summarize_kind_added);
+  ensure_summarize(cb);
+  cb->summarize->summarize_kind = svn_client_diff_summarize_kind_added;
 
   *child_baton = cb;
   return SVN_NO_ERROR;
@@ -210,7 +210,8 @@ add_file(const char *path,
   struct item_baton *cb;
 
   cb = create_item_baton(pb->edit_baton, path, svn_node_file, pool);
-  ensure_summarize(cb, svn_client_diff_summarize_kind_added);
+  ensure_summarize(cb);
+  cb->summarize->summarize_kind = svn_client_diff_summarize_kind_added;
 
   *file_baton = cb;
   return SVN_NO_ERROR;
@@ -243,7 +244,9 @@ apply_textdelta(void *file_baton,
 {
   struct item_baton *ib = file_baton;
 
-  ensure_summarize(ib, svn_client_diff_summarize_kind_modified);
+  ensure_summarize(ib);
+  if (ib->summarize->summarize_kind == svn_client_diff_summarize_kind_normal)
+    ib->summarize->summarize_kind = svn_client_diff_summarize_kind_modified;
 
   *handler = svn_delta_noop_window_handler;
   *handler_baton = NULL;
@@ -281,7 +284,7 @@ change_prop(void *entry_baton,
 
   if (svn_property_kind(NULL, name) == svn_prop_regular_kind)
     {
-      ensure_summarize(ib, svn_client_diff_summarize_kind_normal);
+      ensure_summarize(ib);
       ib->summarize->prop_changed = TRUE;
     }
 

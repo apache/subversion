@@ -51,11 +51,6 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_private_config.h"
-
-#ifdef AS400
-#define SVN_UTF_ETOU_XLATE_HANDLE "svn-utf-etou-xlate-handle"
-#define SVN_UTF_UTOE_XLATE_HANDLE "svn-utf-utoe-xlate-handle"
-#endif
 
 /*
   Windows is 'aided' by a number of types of applications that
@@ -442,10 +437,8 @@ svn_io_create_unique_link(const char **unique_name_p,
 #ifdef AS400_UTF8
   /* On OS400 with UTF support a native cstring is UTF-8, but
    * symlink() *really* needs EBCDIC paths. */
-  SVN_ERR(svn_utf_cstring_from_utf8_ex(&dest_apr_ebcdic, dest_apr,
-                                       (const char*)0,
-                                       SVN_UTF_UTOE_XLATE_HANDLE,
-                                       pool));
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&dest_apr_ebcdic, dest_apr,
+                                        (const char*)0, pool));
   dest_apr = dest_apr_ebcdic;
 #endif
 
@@ -479,10 +472,8 @@ svn_io_create_unique_link(const char **unique_name_p,
 #else
       /* On OS400 with UTF support a native cstring is UTF-8,
        * but symlink() *really* needs an EBCDIC path. */
-      SVN_ERR(svn_utf_cstring_from_utf8_ex(&unique_name_apr, unique_name,
-                                           (const char*)0,
-                                           SVN_UTF_UTOE_XLATE_HANDLE,
-                                           pool));
+      SVN_ERR(svn_utf_cstring_from_utf8_ex2(&unique_name_apr, unique_name,
+                                            (const char*)0, pool));
 #endif
 
       do {
@@ -554,9 +545,8 @@ svn_io_read_link(svn_string_t **dest,
 #else
   /* On OS400 with UTF support a native cstring is UTF-8, but
    * readlink() *really* needs an EBCDIC path. */
-  SVN_ERR(svn_utf_cstring_from_utf8_ex(&path_apr, path, (const char*)0,
-                                       SVN_UTF_UTOE_XLATE_HANDLE,
-                                       pool));
+  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&path_apr, path, (const char*)0,
+                                        pool));
 #endif
   do {
     rv = readlink(path_apr, buf, sizeof(buf) - 1);
@@ -577,9 +567,8 @@ svn_io_read_link(svn_string_t **dest,
 #else
   /* The buf filled by readline() is ebcdic encoded
    * despite V5R4's UTF support. */
-  SVN_ERR(svn_utf_cstring_to_utf8_ex(&buf_utf8, dest_apr.data,
-                                     (const char *)0,
-                                     SVN_UTF_ETOU_XLATE_HANDLE, pool));
+  SVN_ERR(svn_utf_cstring_to_utf8_ex2(&buf_utf8, dest_apr.data,
+                                      (const char *)0, pool));
   *dest = svn_string_create(buf_utf8, pool);
 #endif
   
@@ -2643,23 +2632,23 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
   char c;
 
   for (i = 0; i < *limit; i++)
-  {
-    SVN_ERR(svn_io_file_getc(&c, file, pool)); 
-    /* Note: this error could be APR_EOF, which
-       is totally fine.  The caller should be aware of
-       this. */
+    {
+      SVN_ERR(svn_io_file_getc(&c, file, pool)); 
+      /* Note: this error could be APR_EOF, which
+         is totally fine.  The caller should be aware of
+         this. */
 
-    if (c == '\n')
-      {
-        buf[i] = '\0';
-        *limit = i;
-        return SVN_NO_ERROR;
-      }
-    else
-      {
-        buf[i] = c;
-      }
-  }
+      if (c == '\n')
+        {
+          buf[i] = '\0';
+          *limit = i;
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          buf[i] = c;
+        }
+    }
 
   err = file_name_get(&name, file, pool);
   if (err)
@@ -3162,6 +3151,9 @@ svn_io_read_version_file(int *version,
   len = sizeof(buf);
   SVN_ERR(svn_io_file_read(format_file, buf, &len, pool));
 
+  /* Close the file. */
+  SVN_ERR(svn_io_file_close(format_file, pool));
+
   /* If there was no data in PATH, return an error. */
   if (len == 0)
     return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
@@ -3188,9 +3180,6 @@ svn_io_read_version_file(int *version,
 
   /* Convert to integer. */
   *version = atoi(buf);
-
-  /* And finally, close the file. */
-  SVN_ERR(svn_io_file_close(format_file, pool));
 
   return SVN_NO_ERROR;
 }

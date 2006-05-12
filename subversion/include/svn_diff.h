@@ -346,7 +346,7 @@ svn_diff_file_options_t *
 svn_diff_file_options_create(apr_pool_t *pool);
 
 /**
- * Parse @a args, an array of <ttconst char *</tt> command line switches
+ * Parse @a args, an array of <tt>const char *</tt> command line switches
  * and adjust @a options accordingly.  @a options is assumed to be initialized
  * with default values.  @a pool is used for temporary allocation.
  *

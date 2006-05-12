@@ -433,7 +433,7 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
       const char *path = script[i].path;
       const char *param1 = script[i].param1;
       int cmd = script[i].cmd;
-      int is_dir = (param1 == 0);
+      svn_boolean_t is_dir = (param1 == 0);
  
       switch (cmd)
         {

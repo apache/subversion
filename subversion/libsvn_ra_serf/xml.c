@@ -79,8 +79,7 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
 
 /*
  * Look up NAME in the NS_LIST list for previously declared namespace
- * definitions and return a DAV_PROPS_T-tuple that has values that
- * has a lifetime tied to POOL.
+ * definitions and return a DAV_PROPS_T-tuple that has values.
  */
 svn_ra_serf__dav_props_t
 svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
@@ -94,6 +93,8 @@ svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
     {
       svn_ra_serf__ns_t *ns;
 
+      prop_name.namespace = NULL;
+
       for (ns = ns_list; ns; ns = ns->next)
         {
           if (strncmp(ns->namespace, name, colon - name) == 0)
@@ -102,6 +103,7 @@ svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
               break;
             }
         }
+
       if (!prop_name.namespace)
         {
           abort();

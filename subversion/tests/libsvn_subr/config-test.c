@@ -201,6 +201,34 @@ test2(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+has_section_test(const char **msg, 
+                 svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *cfg_file;
+
+  *msg = "test svn_config_has_section";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
+  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
+
+  if (! svn_config_has_section(cfg, "section1"))
+    return fail(pool, "Failed to find section1");
+
+  if (svn_config_has_section(cfg, "notthere"))
+    return fail(pool, "Returned true on missing section");
+
+  return SVN_NO_ERROR;
+}
 
 /*
    ====================================================================
@@ -215,5 +243,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(test1),
     SVN_TEST_PASS(test2),
+    SVN_TEST_PASS(has_section_test),
     SVN_TEST_NULL
   };

@@ -31,7 +31,7 @@ class SvnLook
   # Initialize the SvnLook application
   def initialize(path, rev, txn)
     # Open a repository
-    @fs = Svn::Repos.open(path).fs
+    @fs = Svn::Repos.open(basename(path)).fs
 
     # If a transaction was specified, open it
     if txn

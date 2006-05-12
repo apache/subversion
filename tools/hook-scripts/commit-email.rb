@@ -306,7 +306,8 @@ def make_mail(to, from, info, params)
 end
 
 def sendmail(to, from, mail)
-  open("| #{SENDMAIL} #{to.join(' ')}", "w") do |f|
+  args = to.collect {|address| address.dump}.join(' ')
+  open("| #{SENDMAIL} #{args}", "w") do |f|
     f.print(mail)
   end
 end

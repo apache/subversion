@@ -282,20 +282,19 @@ class SvnCoreTest < Test::Unit::TestCase
   def test_diff_unified
     original = Tempfile.new("original")
     modified = Tempfile.new("modified")
-    original_src = "a\nb\nc\n"
-    modified_src = "a\n\nc\n"
+    original_src = <<-EOS
+  a
+b
+  c
+EOS
+    modified_src = <<-EOS
+a
+
+ c
+EOS
     original_header = "(orig)"
     modified_header = "(mod)"
-    expected = <<-EOT
---- #{original_header}
-+++ #{modified_header}
-@@ -1,3 +1,3 @@
- a
--b
-+
- c
-EOT
-    
+
     original.open
     original.print(original_src)
     original.close
@@ -303,7 +302,45 @@ EOT
     modified.print(modified_src)
     modified.close
 
+    expected = <<-EOD
+--- #{original_header}
++++ #{modified_header}
+@@ -1,3 +1,3 @@
+-  a
+-b
+-  c
++a
++
++ c
+EOD
     diff = Svn::Core::Diff.file_diff(original.path, modified.path)
+    assert_equal(expected, diff.unified(original_header, modified_header))
+
+    options = Svn::Core::DiffFileOptions.parse("--ignore-space-change")
+    expected = <<-EOD
+--- #{original_header}
++++ #{modified_header}
+@@ -1,3 +1,3 @@
+-  a
+-b
++a
++
+   c
+EOD
+    diff = Svn::Core::Diff.file_diff(original.path, modified.path, options)
+    assert_equal(expected, diff.unified(original_header, modified_header))
+
+    options = Svn::Core::DiffFileOptions.parse("--ignore-all-space")
+    expected = <<-EOD
+--- #{original_header}
++++ #{modified_header}
+@@ -1,3 +1,3 @@
+   a
+-b
++
+   c
+EOD
+    diff = Svn::Core::Diff.file_diff(original.path, modified.path, options)
     assert_equal(expected, diff.unified(original_header, modified_header))
   end
 
@@ -311,11 +348,28 @@ EOT
     original = Tempfile.new("original")
     modified = Tempfile.new("modified")
     latest = Tempfile.new("latest")
-    original_src = "a\nb\nc\nd\ne\n"
-    modified_src = "a\nb\n\nd\ne\n"
-    latest_src = "\nb\nc\n\d\ne\n"
-    expected = "\nb\n\nd\ne\n"
-    
+    original_src = <<-EOS
+a
+ b
+c
+d
+e
+EOS
+    modified_src = <<-EOS
+a
+ b
+
+d
+e
+EOS
+    latest_src = <<-EOS
+
+  b
+c
+d
+ e
+EOS
+
     original.open
     original.print(original_src)
     original.close
@@ -326,12 +380,72 @@ EOT
     latest.print(latest_src)
     latest.close
 
+    expected = <<-EOD
+
+  b
+
+d
+ e
+EOD
     diff = Svn::Core::Diff.file_diff3(original.path,
                                       modified.path,
                                       latest.path)
     assert_equal(expected, diff.merge)
+
+    options = Svn::Core::DiffFileOptions.parse("--ignore-space-change")
+    expected = <<-EOD
+
+ b
+
+d
+ e
+EOD
+    diff = Svn::Core::Diff.file_diff3(original.path,
+                                      modified.path,
+                                      latest.path,
+                                      options)
+    assert_equal(expected, diff.merge)
+
+    options = Svn::Core::DiffFileOptions.parse("--ignore-all-space")
+    expected = <<-EOD
+
+ b
+
+d
+e
+EOD
+    diff = Svn::Core::Diff.file_diff3(original.path,
+                                      modified.path,
+                                      latest.path,
+                                      options)
+    assert_equal(expected, diff.merge)
   end
-  
+
+  def test_diff_file_options
+    args = ["--ignore-all-space"]
+    options = Svn::Core::DiffFileOptions.parse(*args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_ALL,
+                 options.ignore_space)
+    assert_false(options.ignore_eol_style)
+
+    args = ["--ignore-space-change"]
+    options = Svn::Core::DiffFileOptions.parse(*args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_CHANGE,
+                 options.ignore_space)
+    assert_false(options.ignore_eol_style)
+
+    args = ["--ignore-space-change", "--ignore-eol-style"]
+    options = Svn::Core::DiffFileOptions.parse(*args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_CHANGE,
+                 options.ignore_space)
+    assert_true(options.ignore_eol_style)
+
+    options = Svn::Core::DiffFileOptions.parse(args)
+    assert_equal(Svn::Core::DIFF_FILE_IGNORE_SPACE_CHANGE,
+                 options.ignore_space)
+    assert_true(options.ignore_eol_style)
+  end
+
   def test_create_commit_info
     info = Svn::Core::CommitInfo.new
     now = Time.now.gmtime

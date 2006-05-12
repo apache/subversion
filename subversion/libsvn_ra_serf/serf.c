@@ -71,6 +71,36 @@ ra_serf_get_schemes(apr_pool_t *pool)
 }
 
 static svn_error_t *
+load_config(svn_ra_serf__session_t *session,
+            apr_hash_t *config_hash,
+            apr_pool_t *pool)
+{
+  svn_config_t *config;
+  const char *server_group;
+
+  config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
+                        APR_HASH_KEY_STRING);
+
+  SVN_ERR(svn_config_get_bool(config, &session->using_compression,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+
+  server_group = svn_config_find_group(config,
+                                       session->repos_url.hostname,
+                                       SVN_CONFIG_SECTION_GROUPS, pool);
+
+  if (server_group)
+    {
+      SVN_ERR(svn_config_get_bool(config, &session->using_compression,
+                                  server_group,
+                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION,
+                                  session->using_compression));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char *repos_URL,
                   const svn_ra_callbacks2_t *callbacks,
@@ -103,6 +133,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
     }
   serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
 
+  SVN_ERR(load_config(serf_sess, config, pool));
+
   /* register cleanups */
   apr_pool_cleanup_register(serf_sess->pool, serf_sess,
                             svn_ra_serf__cleanup_serf_session,
@@ -124,7 +156,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                url.scheme, url.hostname);
     }
 
-  serf_sess->conns[0]->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+  serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
+  serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostinfo = url.hostinfo;
 
   /* go ahead and tell serf about the connection. */
@@ -234,7 +267,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *vcc_url, *path;
+  const char *vcc_url;
 
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
@@ -244,15 +277,9 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                                      session->repos_url.path, pool));
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, rev, "0",
-                                      checked_in_props, pool));
+                                      vcc_url, rev, "0", all_props, pool));
 
-  path = svn_ra_serf__get_ver_prop(props, vcc_url, rev, "DAV:", "href");
-
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      path, rev, "0", all_props, pool));
-
-  svn_ra_serf__walk_all_props(props, path, rev, svn_ra_serf__set_flat_props,
+  svn_ra_serf__walk_all_props(props, vcc_url, rev, svn_ra_serf__set_bare_props,
                               *ret_props, pool);
 
   return SVN_NO_ERROR;
@@ -657,63 +684,6 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
     }
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svn_ra_serf__lock(svn_ra_session_t *session,
-                  apr_hash_t *path_revs,
-                  const char *comment,
-                  svn_boolean_t force,
-                  svn_ra_lock_callback_t lock_func,
-                  void *lock_baton,
-                  apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__unlock(svn_ra_session_t *session,
-                    apr_hash_t *path_tokens,
-                    svn_boolean_t force,
-                    svn_ra_lock_callback_t lock_func,
-                    void *lock_baton,
-                    apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
-svn_ra_serf__get_lock(svn_ra_session_t *session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      apr_pool_t *pool)
-{
-  /* TODO Shh.  We're telling a white lie for now. */
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                          _("Server does not support locking features"));
-}
-
-static svn_error_t *
-svn_ra_serf__get_locks(svn_ra_session_t *session,
-                       apr_hash_t **locks,
-                       const char *path,
-                       apr_pool_t *pool)
-{
-  /* TODO Shh.  We're telling a white lie for now. */
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                          _("Server does not support locking features"));
-}
-
-static svn_error_t *
-svn_ra_serf__replay(svn_ra_session_t *session,
-                    svn_revnum_t revision,
-                    svn_revnum_t low_water_mark,
-                    svn_boolean_t text_deltas,
-                    const svn_delta_editor_t *editor,
-                    void *edit_baton,
-                    apr_pool_t *pool)
-{
-  abort();
 }
 
 static const svn_ra__vtable_t serf_vtable = {

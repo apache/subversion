@@ -577,7 +577,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_error_t *cleanup_err = SVN_NO_ERROR;
-  svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
 
   /* The commit process uses absolute paths, so we need to open the access
@@ -677,24 +676,16 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                            pool)))
     goto cleanup;
 
-  /* Make a note that we have a commit-in-progress. */
-  commit_in_progress = TRUE;
-
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(dst_url, commit_items, adm_access,
                                   editor, edit_baton, 
                                   0, /* ### any notify_path_offset needed? */
                                   &tempfiles, NULL, ctx, pool);
 
-  commit_in_progress = FALSE;
-
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
  cleanup:
-  /* Abort the commit if it is still in progress. */
-  if (commit_in_progress)
-    svn_error_clear(editor->abort_edit(edit_baton, pool));
 
   /* It's only a read lock, so unlocking is harmless. */
   unlock_err = svn_wc_adm_close(adm_access);

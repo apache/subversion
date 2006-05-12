@@ -91,7 +91,7 @@ def parse_commandline():
     options = default_options()
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'qhk:fts', ['quiet', 'help', 'keep', 'force',
+        opts, args = getopt.getopt(sys.argv[1:], 'qhk:fts', ['quiet', 'help', 'keep=', 'force',
                                                              'trace', 'simulate'])
     except getopt.GetoptError, e:
         print >>sys.stderr, "Error:", e

@@ -3,6 +3,7 @@ require "svn/error"
 require "svn/util"
 require "svn/core"
 require "svn/fs"
+require "svn/client"
 require "svn/ext/repos"
 
 module Svn
@@ -120,7 +121,18 @@ module Svn
         editor.baton = baton
         editor
       end
-      
+
+      def commit_editor2(repos_url, base_path, txn=nil, user=nil,
+                         log_msg=nil, commit_callback=nil,
+                         authz_callback=nil)
+        editor, baton = Repos.get_commit_editor4(self, txn, repos_url,
+                                                 base_path, user, log_msg,
+                                                 commit_callback,
+                                                 authz_callback)
+        editor.baton = baton
+        editor
+      end
+
       def youngest_rev
         fs.youngest_rev
       end
@@ -137,7 +149,6 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         infos = []
         receiver = Proc.new do |changed_paths, revision, author, date, message|
-          date = Time.parse_svn_format(date) if date
           if block_given?
             yield(changed_paths, revision, author, date, message)
           end

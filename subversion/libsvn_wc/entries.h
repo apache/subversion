@@ -2,7 +2,7 @@
  * entries.h :  manipulating entries
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -103,10 +103,8 @@ svn_error_t *svn_wc__entries_write(apr_hash_t *entries,
 
 
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
-   keys and values are both char *.  Allocate the entry itself in
-   POOL, but don't copy attributes into POOL.  Instead,
-   (*NEW_ENTRY)->attributes and any allocated members in *NEW_ENTRY
-   will refer directly to ATTS and its values.
+   keys and values are both char *.  Allocate the entry and copy
+   attributes into POOL as needed.
 
    Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
 svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,

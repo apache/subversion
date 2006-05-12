@@ -42,9 +42,9 @@ converted a repository to subversion. I used cvs2cl before.
 INSTALLING SVN2CL
 =================
 
-Just unpack the tarball in some directory (e.g. /opt/svn2cl-0.6)
+Just unpack the tarball in some directory (e.g. /opt/svn2cl-0.7)
 and symlink the svn2cl.sh script in your path somewhere (e.g.
-ln -s /opt/svn2cl-0.6/svn2cl.sh /usr/local/bin/svn2cl).
+ln -s /opt/svn2cl-0.7/svn2cl.sh /usr/local/bin/svn2cl).
 
 Note: Be sure to keep the svn2cl.xsl file in the same directory as the
 svn2cl.sh script as the script looks for it there (symlinking is ok).

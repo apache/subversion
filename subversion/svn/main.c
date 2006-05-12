@@ -367,10 +367,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "info", svn_cl__info, {0}, N_
     ("Display information about a local or remote item.\n"
-     "usage: info [TARGET...]\n"
+     "usage: info [TARGET[@REV]...]\n"
      "\n"
      "  Print information about each TARGET (default: '.')\n"
-     "  TARGET may be either a working-copy path or URL.\n"),
+     "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+     "  determines in which revision the target is first looked up.\n"),
     {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -411,13 +412,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "log", svn_cl__log, {0}, N_
     ("Show the log messages for a set of revision(s) and/or file(s).\n"
      "usage: 1. log [PATH]\n"
-     "       2. log URL [PATH...]\n"
+     "       2. log URL[@REV] [PATH...]\n"
      "\n"
      "  1. Print the log messages for a local PATH (default: '.').\n"
      "     The default revision range is BASE:1.\n"
      "\n"
      "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-     "     The default revision range is HEAD:1.\n"
+     "     If specified, REV determines in which revision the URL is first\n"
+     "     looked up.  The default revision range is HEAD:1.\n"
      "\n"
      "  With -v, also print all affected paths with each log message.\n"
      "  With -q, don't print the log message body itself (note that this is\n"

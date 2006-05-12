@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,13 +42,6 @@
 #include "utf_impl.h"
 
 #include "svn_private_config.h"
-
-#define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
-#define SVN_UTF_UTOCON_XLATE_HANDLE "svn-utf-utocon-xlate-handle"
-
-#ifdef AS400_UTF8
-#define SVN_UTF_ETOU_XLATE_HANDLE "svn-utf-etou-xlate-handle"
-#endif
 
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
@@ -111,7 +104,8 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* C programs default to the "C" locale. But because svn is supposed
      to be i18n-aware, it should inherit the default locale of its
      environment.  */
-  if (!setlocale(LC_ALL, ""))
+  if (!setlocale(LC_ALL, "")
+      && !setlocale(LC_CTYPE, ""))
     {
       if (error_stream)
         {
@@ -133,12 +127,11 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
             }
 
           fprintf(error_stream,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is correct\n",
+                  "%s: warning: cannot set LC_CTYPE locale\n"
+                  "%s: warning: environment variable %s is %s\n"
+                  "%s: warning: please check that your locale name is correct\n",
                   progname, progname, *env_var, env_val, progname);
         }
-      return EXIT_FAILURE;
     }
 
   /* Initialize the APR subsystem, and register an atexit() function
@@ -195,8 +188,7 @@ svn_cmdline_cstring_from_utf8(const char **dest,
   if (output_encoding == NULL)
     return svn_utf_cstring_from_utf8(dest, src, pool);
   else
-    return svn_utf_cstring_from_utf8_ex(dest, src, output_encoding,
-                                        SVN_UTF_UTOCON_XLATE_HANDLE, pool);
+    return svn_utf_cstring_from_utf8_ex2(dest, src, output_encoding, pool);
 }
 
 
@@ -217,8 +209,7 @@ svn_cmdline_cstring_to_utf8(const char **dest,
   if (input_encoding == NULL)
     return svn_utf_cstring_to_utf8(dest, src, pool);
   else
-    return svn_utf_cstring_to_utf8_ex(dest, src, input_encoding,
-                                      SVN_UTF_CONTOU_XLATE_HANDLE, pool);
+    return svn_utf_cstring_to_utf8_ex2(dest, src, input_encoding, pool);
 }
 
 
@@ -473,10 +464,8 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
   for (i = 0; i < argc; ++i)
     {
       char *arg_utf8;
-      SVN_ERR(svn_utf_cstring_to_utf8_ex(&arg_utf8, argv[i],
-                                         (const char *)0,
-                                         SVN_UTF_ETOU_XLATE_HANDLE,
-                                         pool));
+      SVN_ERR(svn_utf_cstring_to_utf8_ex2(&arg_utf8, argv[i],
+                                          (const char *)0, pool));
       argv[i] = arg_utf8;
     }
 #endif

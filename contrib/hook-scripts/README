@@ -1,41 +1,4 @@
-These are scripts that might be useful to run from repository hooks.
-Your Mileage May Vary.
 
-   1. check-case-insensitive.pl
-      Superceded by check-case-insensitive.py
-      in turn superceded by case-insensitive.py for Subversion 1.3.0 and later.
+An overview of the scripts can be found at:
+http://subversion.tigris.org/tools_contrib.html.
 
-   2. check-case-insensitive.py
-      This script makes your repository case insensitive.  It checks if a file
-      with the same name but different case already exists in the repository
-      and possibly aborts the commit.  This version of the script uses the
-      Python language bindings.
-      Superceded by case-insensitive.py for Subversion 1.3.0 and later.
-
-   3. check-mime-type.pl
-      Force the svn:mime-type and - in case of text files - svn:eol-style
-      properties to be in place.
-
-   4. commit-block-joke.pl
-      Prevents some committers from committing certain revisions.
-
-   5. pre-commit-check.py
-      Template for writing pre-commit checks with the python bindings.
-
-   6. pre-lock-require-needs-lock.py
-      Verifies that the path a user is attempting to lock has the
-      'svn:needs-lock' property set on it.
-
-   7. svn2rss.py
-      Generates a RSS 2.0 file containing commit information.
-
-   8. case-insensitive.py
-      This is *much* more efficient than the check-case-insensitive.* scripts
-      but it does require Subversion 1.3.0 or later.
-
-   8. enforcer
-      This is a pre-commit hook that allows you to more easily specify
-      a variety of rules that govern what may be committed to your
-      repository.
-
-$Id$

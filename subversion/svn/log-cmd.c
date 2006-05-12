@@ -231,6 +231,8 @@ log_message_receiver(void *baton,
       SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", msg));
     }
 
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return SVN_NO_ERROR;
 }
 

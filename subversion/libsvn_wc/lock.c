@@ -2,7 +2,7 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_sorts.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -76,6 +77,13 @@ struct svn_wc_adm_access_t
   apr_hash_t *entries;
   apr_hash_t *entries_hidden;
 
+  /* A hash mapping const char * entry names to hashes of wcprops.
+     These hashes map const char * names to svn_string_t * values.
+     NULL of the wcprops hasn't been read into memory.
+     ### Since there are typically just one or two wcprops per entry,
+     ### we could use a more compact way of storing them. */
+  apr_hash_t *wcprops;
+
   /* POOL is used to allocate cached items, they need to persist for the
      lifetime of this access baton */
   apr_pool_t *pool;
@@ -89,8 +97,15 @@ static svn_wc_adm_access_t missing;
 
 
 static svn_error_t *
-do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
+do_close(svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
+         svn_boolean_t recurse);
 
+
+/* Defining this conditional will result in a client that will refuse to
+   upgrade working copies.  This can be useful if you want to avoid
+   problems caused by accidentally running a development version of SVN
+   on a working copy that you typically use with an older version. */
+#ifndef SVN_DISABLE_WC_UPGRADE
 
 /* Write, to LOG_ACCUM, log entries to convert an old WC that did not have
    propcaching into a WC that uses propcaching.  Do this conversion for
@@ -141,6 +156,66 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
+/* Write, to LOG_ACCUM, commands to convert a WC that has wcprops in individual
+   files to use one wcprops file per directory.
+   Do this for ADM_ACCESS and its file children, using POOL for temporary
+   allocations. */
+static svn_error_t *
+convert_wcprops(svn_stringbuf_t *log_accum,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+
+  /* Walk over the entries, adding a modify-wcprop command for each wcprop.
+     Note that the modifications happen in memory and are just written once
+     at the end of the log execution, so this isn't as inefficient as it
+     might sound. */
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      const svn_wc_entry_t *entry;
+      apr_hash_t *wcprops;
+      apr_hash_index_t *hj;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      entry = val;
+
+      if (entry->kind != svn_node_file
+          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+        continue;
+
+      svn_pool_clear(subpool);
+      
+      SVN_ERR(svn_wc__wcprop_list(&wcprops, entry->name, adm_access, subpool));
+
+      /* Create a subsubpool for the inner loop...
+         No, just kidding.  There are typically just one or two wcprops
+         per entry... */
+      for (hj = apr_hash_first(subpool, wcprops); hj; hj = apr_hash_next(hj))
+        {
+          const void *key2;
+          void *val2;
+          const char *propname;
+          svn_string_t *propval;
+
+          apr_hash_this(hj, &key2, NULL, &val2);
+          propname = key2;
+          propval = val2;
+          SVN_ERR(svn_wc__loggy_modify_wcprop(&log_accum, adm_access,
+                                              entry->name, propname,
+                                              propval->data,
+                                              subpool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Maybe upgrade the working copy directory represented by ADM_ACCESS
    to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
    lock.  Use POOL for all temporary allocation.
@@ -162,48 +237,85 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
      svn_wc__check_format. */
   if (adm_access->wc_format != SVN_WC__VERSION)
     {
-      const char *path = svn_wc__adm_path(adm_access->path, FALSE, pool,
-                                          SVN_WC__ADM_FORMAT, NULL);
-      svn_boolean_t convert_to_propcaching =
-        (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION);
+      svn_boolean_t cleanup_required;
+      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
-      /* Convert an old WC that doesn't use propcaching. */
-      if (convert_to_propcaching)
+      /* Don't try to mess with the WC if there are old log files left. */
+      SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
+                                              adm_access, pool));
+      if (cleanup_required)
+        return SVN_NO_ERROR;
+
+      /* First, loggily upgrade the format file. */
+      SVN_ERR(svn_wc__loggy_upgrade_format(&log_accum, adm_access,
+                                           SVN_WC__VERSION, pool));
+
+      /* Possibly convert an old WC that doesn't use propcaching. */
+      if (adm_access->wc_format <= SVN_WC__NO_PROPCACHING_VERSION)
+        SVN_ERR(introduce_propcaching(log_accum, adm_access, pool));
+
+      /* If the WC uses one file per entry for wcprops, give back some inodes
+         to the poor user. */
+      if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+        SVN_ERR(convert_wcprops(log_accum, adm_access, pool));
+
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+
+      if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         {
-          svn_boolean_t cleanup_required;
-          svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-          const char *tmp_path;
+          const char *access_path = svn_wc_adm_access_path(adm_access);
+          /* Remove wcprops directory, dir-props, README.txt and empty-file
+             files.
+             We just silently ignore errors, because keeping these files is
+             not catastrophic. */
 
-          /* Don't try to mess with the WC if there are old log files left. */
-          SVN_ERR(svn_wc__adm_is_cleanup_required(&cleanup_required,
-                                                  adm_access, pool));
-          if (cleanup_required)
-            return SVN_NO_ERROR;
-
-          /* First, loggily upgrade the format file. */
-          SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_path, path, ".tmp",
-                                           svn_io_file_del_none, pool));
-          SVN_ERR(svn_io_write_version_file(tmp_path, SVN_WC__VERSION,
-                                            pool));
-          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
-                                     svn_path_is_child(adm_access->path,
-                                                       tmp_path, pool),
-                                     svn_path_is_child(adm_access->path,
-                                                       path, pool),
-                                     FALSE, pool));
-          SVN_ERR(introduce_propcaching(log_accum, adm_access, pool));
-          SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-          SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+          svn_error_clear(svn_io_remove_dir
+            (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
+                              NULL), pool));
+          svn_error_clear(svn_io_remove_file
+            (svn_wc__adm_path(access_path, FALSE, pool,
+                              SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
+          svn_error_clear(svn_io_remove_file
+            (svn_wc__adm_path(access_path, FALSE, pool,
+                              SVN_WC__ADM_EMPTY_FILE, NULL), pool));
+          svn_error_clear(svn_io_remove_file
+            (svn_wc__adm_path(access_path, FALSE, pool,
+                              SVN_WC__ADM_README, NULL), pool));
         }
-      else
-        SVN_ERR(svn_io_write_version_file(path, SVN_WC__VERSION, pool));
 
-      adm_access->wc_format = SVN_WC__VERSION;
-
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
     }
 
   return SVN_NO_ERROR;
 }
+
+#else
+
+/* Alternate version of the above for use when working copy upgrades
+   are disabled.  Return an error if the working copy described by
+   ADM_ACCESS is not at the latest 'SVN_WC__VERSION'.  Use POOL for all
+   temporary allocation.  */
+static svn_error_t *
+maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  SVN_ERR(svn_wc__check_format(adm_access->wc_format,
+                               adm_access->path,
+                               pool));
+
+  if (adm_access->wc_format != SVN_WC__VERSION)
+    {
+      return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                               "Would upgrade working copy '%s' from old "
+                               "format (%d) to current format (%d), "
+                               "but automatic upgrade has been disabled",
+                               svn_path_local_style(adm_access->path, pool),
+                               adm_access->wc_format, SVN_WC__VERSION);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+#endif
 
 
 /* Create a physical lock file in the admin directory for ADM_ACCESS. Wait
@@ -275,9 +387,12 @@ pool_cleanup(void *p)
   svn_boolean_t cleanup;
   svn_error_t *err;
 
+  if (lock->type == svn_wc__adm_access_closed)
+    return SVN_NO_ERROR;
+
   err = svn_wc__adm_is_cleanup_required(&cleanup, lock, lock->pool);
   if (!err)
-    err = do_close(lock, cleanup);
+    err = do_close(lock, cleanup, TRUE);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -311,6 +426,7 @@ adm_access_alloc(enum svn_wc__adm_access_type type,
   lock->type = type;
   lock->entries = NULL;
   lock->entries_hidden = NULL;
+  lock->wcprops = NULL;
   lock->wc_format = 0;
   lock->set = NULL;
   lock->lock_exists = FALSE;
@@ -430,6 +546,7 @@ do_open(svn_wc_adm_access_t **adm_access,
   svn_wc_adm_access_t *lock;
   int wc_format;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (associated)
     {
@@ -450,11 +567,25 @@ do_open(svn_wc_adm_access_t **adm_access,
     {
       /* By reading the format file we check both that PATH is a directory
          and that it is a working copy. */
+      /* ### We will read the entries file later.  Maybe read the whole
+         file here instead to avoid reopening it. */
       err = svn_io_read_version_file(&wc_format,
-                                     svn_wc__adm_path(path, FALSE, pool,
-                                                      SVN_WC__ADM_FORMAT,
+                                     svn_wc__adm_path(path, FALSE, subpool,
+                                                      SVN_WC__ADM_ENTRIES,
                                                       NULL),
-                                     pool);
+                                     subpool);
+      /* If the entries file doesn't start with a version number, we're dealing
+         with a pre-format 7 working copy, so we need to get the format from
+         the format file instead. */
+      if (err && err->apr_err == SVN_ERR_BAD_VERSION_FILE_FORMAT)
+        {
+          svn_error_clear(err);
+          err = svn_io_read_version_file(&wc_format,
+                                         svn_wc__adm_path(path, FALSE, subpool,
+                                                          SVN_WC__ADM_FORMAT,
+                                                          NULL),
+                                         subpool);
+        }
       if (err)
         {
           return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, err,
@@ -463,15 +594,15 @@ do_open(svn_wc_adm_access_t **adm_access,
         }
 
       SVN_ERR(svn_wc__check_format(wc_format,
-                                   svn_path_local_style(path, pool),
-                                   pool));
+                                   svn_path_local_style(path, subpool),
+                                   subpool));
     }
 
   /* Need to create a new lock */
   if (write_lock)
     {
       lock = adm_access_alloc(svn_wc__adm_access_write_lock, path, pool);
-      SVN_ERR(create_lock(lock, 0, pool));
+      SVN_ERR(create_lock(lock, 0, subpool));
       lock->lock_exists = TRUE;
     }
   else
@@ -483,14 +614,13 @@ do_open(svn_wc_adm_access_t **adm_access,
     {
       lock->wc_format = wc_format;
       if (write_lock)
-        SVN_ERR(maybe_upgrade_format(lock, pool));
+        SVN_ERR(maybe_upgrade_format(lock, subpool));
     }
 
   if (depth != 0)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* Reduce depth since we are about to recurse */
       if (depth > 0)
@@ -577,7 +707,6 @@ do_open(svn_wc_adm_access_t **adm_access,
             }
           lock->set = associated->set;
         }
-      svn_pool_destroy(subpool);
     }
 
   if (associated)
@@ -595,6 +724,9 @@ do_open(svn_wc_adm_access_t **adm_access,
   apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
                             pool_cleanup_child);
   *adm_access = lock;
+
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -1033,7 +1165,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (! p_access || err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
             {
               if (p_access)
-                svn_error_clear(do_close(p_access, FALSE));
+                svn_error_clear(do_close(p_access, FALSE, TRUE));
               svn_error_clear(p_access_err);
               return err;
             }
@@ -1057,8 +1189,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (err)
             {
               svn_error_clear(p_access_err);
-              svn_error_clear(do_close(p_access, FALSE));
-              svn_error_clear(do_close(t_access, FALSE));
+              svn_error_clear(do_close(p_access, FALSE, TRUE));
+              svn_error_clear(do_close(t_access, FALSE, TRUE));
               return err;
             }
 
@@ -1072,11 +1204,11 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                              svn_path_basename(t_entry->url, pool)))))
             {
               /* Switched or disjoint, so drop P_ACCESS */
-              err = do_close(p_access, FALSE);
+              err = do_close(p_access, FALSE, TRUE);
               if (err)
                 {
                   svn_error_clear(p_access_err);
-                  svn_error_clear(do_close(t_access, FALSE));
+                  svn_error_clear(do_close(t_access, FALSE, TRUE));
                   return err;
                 }
               p_access = NULL;
@@ -1089,8 +1221,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
             {
               /* Need P_ACCESS, so the read-only temporary won't do */
               if (t_access)
-                svn_error_clear(do_close(t_access, FALSE));
-              svn_error_clear(do_close(p_access, FALSE));
+                svn_error_clear(do_close(t_access, FALSE, TRUE));
+              svn_error_clear(do_close(p_access, FALSE, TRUE));
               return p_access_err;
             }
           else if (t_access)
@@ -1105,7 +1237,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
           if (err)
             {
               if (p_access)
-                svn_error_clear(do_close(p_access, FALSE));
+                svn_error_clear(do_close(p_access, FALSE, TRUE));
               return err;
             }
           if (t_entry && t_entry->kind == svn_node_dir)
@@ -1140,51 +1272,43 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
  */
 static svn_error_t *
 do_close(svn_wc_adm_access_t *adm_access,
-         svn_boolean_t preserve_lock)
+         svn_boolean_t preserve_lock,
+         svn_boolean_t recurse)
 {
-  apr_hash_index_t *hi;
 
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
-  apr_pool_cleanup_kill(adm_access->pool, adm_access, pool_cleanup);
-
-  /* Close children */
-  if (adm_access->set)
+  /* Close descendant batons */
+  if (recurse && adm_access->set)
     {
-      /* The documentation says that modifying a hash while iterating over
-         it is allowed but unpredictable!  So, first loop to identify and
-         copy direct descendents, second loop to close them. */
       int i;
-      apr_array_header_t *children = apr_array_make(adm_access->pool, 1,
-                                                    sizeof(adm_access));
+      apr_array_header_t *children
+        = svn_sort__hash(adm_access->set, svn_sort_compare_items_as_paths,
+                         adm_access->pool);
 
-      for (hi = apr_hash_first(adm_access->pool, adm_access->set);
-           hi;
-           hi = apr_hash_next(hi))
+      /* Go backwards through the list to close children before their
+         parents. */
+      for (i = children->nelts - 1; i >= 0; --i)
         {
-          const void *key;
-          void *val;
-          const char *path;
-          svn_wc_adm_access_t *associated;
-          const char *name;
-          apr_hash_this(hi, &key, NULL, &val);
-          path = key;
-          associated = val;
-          name = svn_path_is_child(adm_access->path, path, adm_access->pool);
-          if (name && svn_path_is_single_path_component(name))
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i,
+                                                  svn_sort__item_t);
+          const char *path = item->key;
+          svn_wc_adm_access_t *child = item->value;
+
+          if (child == &missing)
             {
-              if (associated != &missing)
-                *(svn_wc_adm_access_t**)apr_array_push(children) = associated;
-              /* Deleting current element is allowed and predictable */
+              /* We don't close the missing entry, but get rid of it from
+                 the set. */
               apr_hash_set(adm_access->set, path, APR_HASH_KEY_STRING, NULL);
+              continue;
             }
-        }
-      for (i = 0; i < children->nelts; ++i)
-        {
-          svn_wc_adm_access_t *child = APR_ARRAY_IDX(children, i,
-                                                     svn_wc_adm_access_t*);
-          SVN_ERR(do_close(child, preserve_lock));
+
+          if (! svn_path_is_ancestor(adm_access->path, path)
+              || strcmp(adm_access->path, path) == 0)
+            continue;
+
+          SVN_ERR(do_close(child, preserve_lock, FALSE));
         }
     }
 
@@ -1215,7 +1339,7 @@ do_close(svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
 {
-  return do_close(adm_access, FALSE);
+  return do_close(adm_access, FALSE, TRUE);
 }
 
 svn_boolean_t
@@ -1404,11 +1528,31 @@ svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
     return adm_access->entries_hidden;
 }
 
+void
+svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
+                        apr_hash_t *wcprops)
+{
+  adm_access->wcprops = wcprops;
+}
+
+apr_hash_t *
+svn_wc__adm_access_wcprops(svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->wcprops;
+}
+
 
 int
 svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access)
 {
   return adm_access->wc_format;
+}
+
+void
+svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
+                          int format)
+{
+  adm_access->wc_format = format;
 }
 
 

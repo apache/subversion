@@ -2,7 +2,7 @@
  * lock.h:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -69,6 +69,15 @@ apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t show_deleted,
                                        apr_pool_t *pool);
 
+/* Store the WCPROPS in the cache in ADM_ACCESS. */
+void svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
+                                    apr_hash_t *wcprops);
+
+/* Retrieve the wcprops cached in ADM_ACCESS, if any. */
+apr_hash_t *svn_wc__adm_access_wcprops(svn_wc_adm_access_t *adm_access);
+
+
+
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
    to lock the working copy during construction of the admin area, it
    necessarily does less checking than svn_wc_adm_open3. */
@@ -96,6 +105,10 @@ svn_error_t * svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
 
 /* Return the working copy format version number for ADM_ACCESS. */
 int svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access);
+
+/* Set the WC FORMAT of this access baton. */
+void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
+                               int format);
 
 /* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
  * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to

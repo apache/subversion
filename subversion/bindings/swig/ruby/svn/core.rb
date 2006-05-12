@@ -46,6 +46,10 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
+    # for backward compatibility
+    SWIG_INVALID_REVNUM = INVALID_REVNUM
+    SWIG_IGNORED_REVNUM = IGNORED_REVNUM
+
     class << self
       alias binary_mime_type? mime_type_is_binary
     end
@@ -57,8 +61,13 @@ module Svn
     AuthCredSSLClientCert = AuthCredSslClientCert
     AuthCredSSLClientCertPw = AuthCredSslClientCertPw
     AuthCredSSLServerTrust = AuthCredSslServerTrust
-    
-    
+
+    dirent_all = 0
+    constants.each do |name|
+      dirent_all |= const_get(name) if /^DIRENT_/ =~ name
+    end
+    DIRENT_ALL = dirent_all
+
     Pool = Svn::Ext::Core::Apr_pool_wrapper_t
     
     class Pool
@@ -169,15 +178,16 @@ module Svn
 
     Diff = SWIG::TYPE_p_svn_diff_t
     class Diff
-      attr_accessor :original, :modified, :latest
+      attr_accessor :original, :modified, :latest, :ancestor
 
       class << self
         def version
           Core.diff_version
         end
 
-        def file_diff(original, modified)
-          diff = Core.diff_file_diff(original, modified)
+        def file_diff(original, modified, options=nil)
+          options ||= Core::DiffFileOptions.new
+          diff = Core.diff_file_diff_2(original, modified, options)
           if diff
             diff.original = original
             diff.modified = modified
@@ -185,8 +195,9 @@ module Svn
           diff
         end
 
-        def file_diff3(original, modified, latest)
-          diff = Core.diff_file_diff3(original, modified, latest)
+        def file_diff3(original, modified, latest, options=nil)
+          options ||= Core::DiffFileOptions.new
+          diff = Core.diff_file_diff3_2(original, modified, latest, options)
           if diff
             diff.original = original
             diff.modified = modified
@@ -194,8 +205,21 @@ module Svn
           end
           diff
         end
+
+        def file_diff4(original, modified, latest, ancestor, options=nil)
+          options ||= Core::DiffFileOptions.new
+          args = [original, modified, latest, ancestor, options]
+          diff = Core.diff_file_diff4_2(*args)
+          if diff
+            diff.original = original
+            diff.modified = modified
+            diff.latest = latest
+            diff.ancestor = ancestor
+          end
+          diff
+        end
       end
-      
+
       def unified(orig_label, mod_label, header_encoding=nil)
         header_encoding ||= Svn::Core.locale_charset
         output = StringIO.new
@@ -232,6 +256,28 @@ module Svn
 
       def diff?
         Core.diff_contains_diffs(self)
+      end
+    end
+
+    class DiffFileOptions
+      class << self
+        undef new
+        def new(*args)
+          options = Svn::Core.diff_file_options_create(*args)
+          options.__send__("initialize", *args)
+          options
+        end
+
+        def parse(*args)
+          options = new
+          options.parse(*args)
+          options
+        end
+      end
+
+      def parse(*args)
+        args = args.first if args.size == 1 and args.first.is_a?(Array)
+        Svn::Core.diff_file_options_parse(self, args)
       end
     end
 
@@ -274,12 +320,20 @@ module Svn
     end
 
     class Dirent
+      def none?
+        kind == NODE_NONE
+      end
+
       def directory?
         kind == NODE_DIR
       end
 
       def file?
         kind == NODE_FILE
+      end
+
+      def unknown?
+        kind == NODE_UNKNOWN
       end
     end
 

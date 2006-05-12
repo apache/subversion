@@ -131,6 +131,37 @@ svn_utf_initialize(apr_pool_t *pool)
     }
 }
 
+/* Return a unique string key based on TOPAGE and FROMPAGE.  TOPAGE and
+ * FROMPAGE can be any valid arguments of the same name to
+ * apr_xlate_open().  Allocate the returned string in POOL. */
+static const char*
+get_xlate_key(const char *topage,
+              const char *frompage,
+              apr_pool_t *pool)
+{
+#ifndef AS400
+  /* In the cases of SVN_APR_LOCALE_CHARSET and SVN_APR_DEFAULT_CHARSET
+   * topage/frompage is really an int, not a valid string.  So generate a
+   * unique key accordingly. */
+  if (frompage == SVN_APR_LOCALE_CHARSET)
+    frompage = "APR_LOCALE_CHARSET";
+  else if (frompage == SVN_APR_DEFAULT_CHARSET)
+    frompage = "APR_DEFAULT_CHARSET";
+
+  if (topage == SVN_APR_LOCALE_CHARSET)
+    topage = "APR_LOCALE_CHARSET";
+  else if (topage == SVN_APR_DEFAULT_CHARSET)
+    topage = "APR_DEFAULT_CHARSET";
+
+  return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
+                     "-xlate-handle", NULL);
+#else
+  /* OS400 code pages are always ints. */
+  return apr_psprintf(pool, "svn-utf-%dto%d-xlate-handle", (int)frompage,
+                      (int)topage);
+#endif
+}
+
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
    creating the handle node if it doesn't exist in USERDATA_KEY.
    If a node is not cached and apr_xlate_open() returns APR_EINVAL or
@@ -720,14 +751,15 @@ svn_utf_cstring_to_utf8(const char **dest,
 
 
 svn_error_t *
-svn_utf_cstring_to_utf8_ex(const char **dest,
-                           const char *src,
-                           const char *frompage,
-                           const char *convset_key,
-                           apr_pool_t *pool)
+svn_utf_cstring_to_utf8_ex2(const char **dest,
+                            const char *src,
+                            const char *frompage,
+                            apr_pool_t *pool)
 {
   xlate_handle_node_t *node;
   svn_error_t *err;
+  const char *convset_key = get_xlate_key(SVN_APR_UTF8_CHARSET, frompage,
+                                          pool);
 
   SVN_ERR(get_xlate_handle_node(&node, SVN_APR_UTF8_CHARSET, frompage,
                                 convset_key, pool));
@@ -737,6 +769,17 @@ svn_utf_cstring_to_utf8_ex(const char **dest,
   SVN_ERR(check_cstring_utf8(*dest, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf_cstring_to_utf8_ex(const char **dest,
+                           const char *src,
+                           const char *frompage,
+                           const char *convset_key,
+                           apr_pool_t *pool)
+{
+  return svn_utf_cstring_to_utf8_ex2(dest, src, frompage, pool);
 }
 
 
@@ -821,14 +864,15 @@ svn_utf_cstring_from_utf8(const char **dest,
 
 
 svn_error_t *
-svn_utf_cstring_from_utf8_ex(const char **dest,
-                             const char *src,
-                             const char *topage,
-                             const char *convset_key,
-                             apr_pool_t *pool)
+svn_utf_cstring_from_utf8_ex2(const char **dest,
+                              const char *src,
+                              const char *topage,
+                              apr_pool_t *pool)
 {
   xlate_handle_node_t *node;
   svn_error_t *err;
+  const char *convset_key = get_xlate_key(topage, SVN_APR_UTF8_CHARSET,
+                                          pool);
 
   SVN_ERR(check_utf8(src, strlen(src), pool));
 
@@ -838,6 +882,17 @@ svn_utf_cstring_from_utf8_ex(const char **dest,
   put_xlate_handle_node(node, convset_key, pool);
 
   return err;
+}
+
+
+svn_error_t *
+svn_utf_cstring_from_utf8_ex(const char **dest,
+                             const char *src,
+                             const char *topage,
+                             const char *convset_key,
+                             apr_pool_t *pool)
+{
+  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
 }
 
 

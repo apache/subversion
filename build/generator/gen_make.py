@@ -211,6 +211,11 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(link_dep, gen_base.TargetLinked):
           if link_dep.external_lib:
             libs.append(link_dep.external_lib)
+          elif link_dep.external_project:
+            # FIXME: This is a temporary workaround to fix build breakage
+            # expeditiously.  It is of questionable validity for a build
+            # node to have external_project but not have external_lib.
+            pass
           else:
             # append the output of the target to our stated dependencies
             if not self.assume_shared_libs:

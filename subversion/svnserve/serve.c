@@ -2,7 +2,7 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -339,7 +339,10 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-/* Send a trivial auth request, listing no mechanisms. */
+/* Send a trivial auth notification on CONN which lists no mechanisms,
+ * indicating that authentication is unnecessary.  Usually called in
+ * response to invocation of a svnserve command.
+ */
 static svn_error_t *trivial_auth_request(svn_ra_svn_conn_t *conn,
                                          apr_pool_t *pool, server_baton_t *b)
 {
@@ -698,6 +701,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+/* Set BATON->FS_PATH for the repository URL found in PARAMS. */
 static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
@@ -1742,9 +1746,11 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 subpool);
 
       if (! lookup_access(pool, b, svn_authz_write, full_path, TRUE))
-        return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
-                                svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
-                                                 NULL, NULL), NULL);
+        {
+          err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
+                                 NULL, NULL);
+          break;
+        }
 
       err = svn_repos_fs_lock(&l, b->repos, full_path,
                               NULL, comment, FALSE,
@@ -1959,6 +1965,7 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_fs_root_t *root;
   void *edit_baton;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
                                  &send_deltas));
@@ -1967,13 +1974,18 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
 
-  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  err = svn_fs_revision_root(&root, b->fs, rev, pool);
 
-  SVN_CMD_ERR(svn_repos_replay2(root, b->fs_path->data, low_water_mark,
-                                send_deltas, editor, edit_baton,
-                                authz_check_access_cb_func(b), b, pool));
+  if (! err)
+    err = svn_repos_replay2(root, b->fs_path->data, low_water_mark,
+                            send_deltas, editor, edit_baton,
+                            authz_check_access_cb_func(b), b, pool);
+  if (! err)
+    SVN_CMD_ERR(editor->close_edit(edit_baton, pool));
 
-  SVN_CMD_ERR(editor->close_edit(edit_baton, pool));
+  if (err)
+    svn_error_clear(editor->abort_edit(edit_baton, pool));
+  SVN_CMD_ERR(err);
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 

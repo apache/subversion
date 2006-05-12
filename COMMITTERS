@@ -82,7 +82,7 @@ Commit access for specific areas:
       martinto   Martin Tomes <lists@tomes.org>              (chk-case-insens)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
-   giovannibajo  Giovanni Bajo <rasky@develer.com>           (svnmerge)
+  giovannibajo   Giovanni Bajo <rasky@develer.com>           (svnmerge)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
       jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
@@ -92,6 +92,7 @@ Commit access for specific areas:
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
+       mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
 
   Translation of message files:
 

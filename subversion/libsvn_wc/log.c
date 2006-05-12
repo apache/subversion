@@ -137,6 +137,10 @@
  */
 #define SVN_WC__LOG_MERGE        "merge"
 
+/* Upgrade the WC format, both .svn/format and the format number in the
+   entries file to SVN_WC__LOG_ATTR_FORMAT. */
+#define SVN_WC__LOG_UPGRADE_FORMAT "upgrade-format"
+
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
@@ -155,6 +159,8 @@
 #define SVN_WC__LOG_ATTR_ARG_3          "arg3"
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
+/* For upgrade-format. */
+#define SVN_WC__LOG_ATTR_FORMAT         "format"
 
 
 
@@ -166,6 +172,7 @@ struct log_runner
   apr_pool_t *pool;
   svn_xml_parser_t *parser;
   svn_boolean_t entries_modified;
+  svn_boolean_t wcprops_modified;
   svn_boolean_t rerun;
   svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
   const char *diff3_cmd;            /* external diff3 cmd, or null if none */
@@ -1393,8 +1400,39 @@ log_do_modify_wcprop(struct log_runner *loggy,
       value.len = strlen(propval);
     }
 
-  return svn_wc__wcprop_set(propname, propval ? &value : NULL,
-                            path, loggy->adm_access, loggy->pool);
+  SVN_ERR(svn_wc__wcprop_set(propname, propval ? &value : NULL,
+                             path, loggy->adm_access, FALSE, loggy->pool));
+
+  loggy->wcprops_modified = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+log_do_upgrade_format(struct log_runner *loggy,
+                      const char **atts)
+{
+  const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
+  int fmt;
+  const char *path = svn_wc__adm_path(svn_wc_adm_access_path(loggy->adm_access),
+                                      FALSE, loggy->pool,
+                                      SVN_WC__ADM_FORMAT, NULL);
+
+  if (! fmtstr || (fmt = atoi(fmtstr)) == 0)
+    return svn_error_create(pick_error_code(loggy), NULL,
+                            _("Invalid 'format' attribute"));
+
+  /* Update the .svn/format file right away. */
+  SVN_ERR(svn_io_write_version_file(path, fmt, loggy->pool));
+
+  /* The nice thing is that, just by setting this flag, the entries file will
+     be rewritten in the desired format. */
+  loggy->entries_modified = TRUE;
+  /* Reading the entries file will support old formats, even if this number
+     is updated. */
+  svn_wc__adm_set_wc_format(loggy->adm_access, fmt);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1404,7 +1442,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
   svn_error_t *err = SVN_NO_ERROR;
   struct log_runner *loggy = userData;
 
-  /* All elements use the `name' attribute, so grab it now. */
+  /* Most elements use the `name' attribute, so grab it now. */
   const char *name = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_NAME, atts);
 
   /* Clear the per-log-item pool. */
@@ -1412,7 +1450,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
 
   if (strcmp(eltname, "wc-log") == 0)   /* ignore expat pacifier */
     return;
-  else if (! name)
+  else if (! name && strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) != 0)
     {
       signal_error
         (loggy, svn_error_createf 
@@ -1473,6 +1511,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
+  }
+  else if (strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) == 0) {
+    err = log_do_upgrade_format(loggy, atts);
   }
   else
     {
@@ -1596,6 +1637,7 @@ run_log(svn_wc_adm_access_t *adm_access,
   loggy->pool = svn_pool_create(pool);
   loggy->parser = parser;
   loggy->entries_modified = FALSE;
+  loggy->wcprops_modified = FALSE;
   loggy->rerun = rerun;
   loggy->diff3_cmd = diff3_cmd;
   loggy->count = 0;
@@ -1666,6 +1708,8 @@ run_log(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, pool));
       SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, pool));
     }
+  if (loggy->wcprops_modified)
+    SVN_ERR(svn_wc__wcprops_write(loggy->adm_access, pool));
 
   /* Check for a 'killme' file in the administrative area. */
   if (svn_wc__adm_path_exists(svn_wc_adm_access_path(adm_access), 0, pool,
@@ -2187,6 +2231,22 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             int format,
+                             apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_UPGRADE_FORMAT,
+                        SVN_WC__LOG_ATTR_FORMAT,
+                        apr_itoa(pool, format),
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Helper to write log files ***/
@@ -2293,8 +2353,8 @@ svn_wc_cleanup2(const char *path,
           SVN_ERR(svn_wc_props_modified_p(&modified, entry_path,
                                           adm_access, subpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR(svn_wc_text_modified_p2(&modified, entry_path, FALSE,
-                                            adm_access, TRUE, subpool));
+            SVN_ERR(svn_wc_text_modified_p(&modified, entry_path, FALSE,
+                                           adm_access, subpool));
         }
     }
   svn_pool_destroy(subpool);

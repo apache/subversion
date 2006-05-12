@@ -2,7 +2,7 @@
  * log.h :  interfaces for running .svn/log files.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -231,6 +231,13 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      const char *base_name,
                      apr_pool_t *pool);
 
+/* Extend **LOG_ACCUM with instructions to cause the working copy of ADM_ACCESS
+   to be upgraded to FORMAT. */
+svn_error_t *
+svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             int format,
+                             apr_pool_t *pool);
 
 
 /* Create a log file with LOG_NUMBER. Write LOG_CONTENT to it and close-

@@ -140,23 +140,9 @@ static svn_error_t *dav_svn_get_path_revprop(svn_string_t **propval,
                                              const char *propname,
                                              apr_pool_t *pool)
 {
-  dav_svn_authz_read_baton arb;
-  svn_boolean_t allowed;
-  svn_fs_root_t *root;
-
   *propval = NULL;
 
-  arb.r = resource->info->r;
-  arb.repos = resource->info->repos;
-  SVN_ERR(svn_fs_revision_root(&root,
-                               resource->info->repos->fs,
-                               committed_rev, pool));
-  SVN_ERR(dav_svn_authz_read(&allowed,
-                             root,
-                             resource->info->repos_path,
-                             &arb, pool));
-
-  if (! allowed)
+  if (! dav_svn_allow_read(resource, committed_rev, pool))
     return SVN_NO_ERROR;
 
   /* Get the property of the created revision. The authz is already

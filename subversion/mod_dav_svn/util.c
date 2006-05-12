@@ -2,7 +2,7 @@
  * util.c: some handy utilities functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -81,6 +81,9 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
         break;
       case SVN_ERR_UNSUPPORTED_FEATURE:
         status = HTTP_NOT_IMPLEMENTED;
+        break;
+      case SVN_ERR_FS_PATH_ALREADY_LOCKED:
+        status = HTTP_LOCKED;
         break;
         /* add other mappings here */
       }

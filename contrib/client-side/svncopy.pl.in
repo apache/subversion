@@ -445,8 +445,8 @@ sub UpdateExternalsOnDir
   foreach my $external ( @externals )
     {
       chomp( $external );
-      next unless ( $external =~ m"^(\S+)(\s+)(-r\s+?(\d+)\s+)?(.*)" );
-      my ( $ext_dir, $spacing, $revstr, $ext_rev, $ext_val ) = ( $1, $2, $3, $4, $5 );
+      next unless ( $external =~ m"^(\S+)(\s+)(?:-r\s*(\d+)\s+)?(.*)" );
+      my ( $ext_dir, $spacing, $ext_rev, $ext_val ) = ( $1, $2, $3, $4 );
             
       info( " - Found $ext_dir => '$ext_val'" );
       info( " ($ext_rev)" ) if $ext_rev;

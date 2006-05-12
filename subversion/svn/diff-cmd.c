@@ -83,6 +83,8 @@ summarize_func(const svn_client_diff_summarize_t *summary,
                              summary->prop_changed ? 'M' : ' ',
                              path));
 
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
   return SVN_NO_ERROR;
 }
 
@@ -179,7 +181,8 @@ svn_cl__diff(apr_getopt_t *os,
   else if (opt_state->new_target)
     {
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("'new' option only valid with 'old' option"));
+                              _("'--new' option only valid with "
+                                "'--old' option"));
     }
   else
     {

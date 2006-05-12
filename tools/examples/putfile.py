@@ -8,6 +8,10 @@
 import sys
 import os
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 
 from svn import fs, core, repos, delta
 
@@ -49,7 +53,7 @@ def usage():
   sys.exit(1)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], 'm:u:')
+  opts, args = my_getopt(sys.argv[1:], 'm:u:')
   if len(args) != 2:
     usage()
 

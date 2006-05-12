@@ -6,6 +6,10 @@
 import sys
 import os
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 import difflib
 from svn import fs, core, repos
 
@@ -56,7 +60,7 @@ def blame(path, filename, rev=None):
           k = k + 1
           continue
         else:
-	  annotresult[k] = (i, j[2:])
+          annotresult[k] = (i, j[2:])
           k = k + 1
           continue
       elif j[0] == '?':

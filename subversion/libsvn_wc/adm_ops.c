@@ -1262,7 +1262,7 @@ svn_wc_add2(const char *path,
                             pool));
 
           /* Clean out the now-obsolete wcprops. */
-          SVN_ERR(svn_wc__remove_wcprops(adm_access, TRUE, pool));
+          SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, TRUE, pool));
         }
     }
 
@@ -1484,8 +1484,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
          don't need to check if the working file is modified
       */
       if (! reinstall_working)
-        SVN_ERR(svn_wc_text_modified_p2(&reinstall_working, fullpath, FALSE,
-                                        adm_access, FALSE, pool));
+        SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
+                                                 fullpath, FALSE, adm_access,
+                                                 FALSE, pool));
 
       if (reinstall_working)
         {
@@ -1864,20 +1865,22 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       full_path = svn_path_join(full_path, name, pool);
 
       /* Check for local mods. before removing entry */
-      SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, full_path,
-                                      FALSE, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
+                                     FALSE, adm_access, pool));
       if (text_modified_p && instant_error)
         return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                                  _("File '%s' has local modifications"),
                                  svn_path_local_style(full_path, pool));
+
+      /* Remove the wcprops. */
+      SVN_ERR(svn_wc__remove_wcprops(adm_access, name, FALSE, pool));
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
       svn_wc__entry_remove(entries, name);
       SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
 
-      /* Remove text-base/NAME.svn-base, prop/NAME, prop-base/NAME.svn-base,
-         wcprops/NAME */
+      /* Remove text-base/NAME.svn-base, prop/NAME, prop-base/NAME.svn-base. */
       {
         const char *svn_thang;
 
@@ -1898,11 +1901,6 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                        FALSE, pool));
         SVN_ERR(remove_file_if_present(svn_thang, pool));
 
-        /* wc-prop file. */
-        SVN_ERR(svn_wc__wcprop_path(&svn_thang, full_path,
-                                    is_file ? svn_node_file : svn_node_dir,
-                                    FALSE, pool));
-        SVN_ERR(remove_file_if_present(svn_thang, pool));
       }
 
       /* If we were asked to destroy the working file, do so unless
@@ -1937,6 +1935,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                    TRUE, /* sync to disk immediately */
                                    pool));
       
+      /* Get rid of all the wcprops in this directory.  This avoids rewriting
+         the wcprops file over and over (meaning O(n^2) complexity)
+         below. */
+      SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
+
       /* Walk over every entry. */      
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
       
