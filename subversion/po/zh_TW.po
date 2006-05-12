@@ -38,7 +38,7 @@ msgstr "'%s' 不像是 URL"
 #: clients/cmdline/copy-cmd.c:106 clients/cmdline/delete-cmd.c:64
 #: clients/cmdline/mkdir-cmd.c:66
 msgid "Local, non-commit operations do not take a log message"
-msgstr ""
+msgstr "本地非送交的動作不需要送交訊息"
 
 #: clients/cmdline/diff-cmd.c:65
 #, c-format
@@ -1411,7 +1411,7 @@ msgstr "捕捉到信號"
 
 #: clients/cmdline/main.c:912
 msgid "Non-numeric limit argument given"
-msgstr ""
+msgstr "使用了非數字的限制引數"
 
 #: clients/cmdline/main.c:929 svnadmin/main.c:1226
 msgid ""
@@ -1870,7 +1870,7 @@ msgstr "請改試 'svn revert --recursive'?"
 #: clients/cmdline/status.c:261
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
-msgstr ""
+msgstr "'%s' 的鎖定被拿走了, 但是沒有鎖定擁有者"
 
 #: clients/cmdline/switch-cmd.c:58
 #, c-format
@@ -1941,7 +1941,7 @@ msgstr "--This line, and those below, will be ignored--"
 
 #: clients/cmdline/util.c:574
 msgid "Cannot invoke editor to get log message when non-interactive"
-msgstr ""
+msgstr "非互動操作, 無法叫用文字編輯器來取得送交訊息"
 
 #: clients/cmdline/util.c:587
 msgid ""
@@ -4420,7 +4420,7 @@ msgstr "無法儲存版本資源的 URL"
 #: libsvn_ra_dav/fetch.c:398
 #, c-format
 msgid "Could not get content-type from response."
-msgstr ""
+msgstr "無法自回應取得 content-type"
 
 #: libsvn_ra_dav/fetch.c:443
 #, c-format
@@ -4932,7 +4932,7 @@ msgstr "鎖定命令的未知狀態"
 
 #: libsvn_ra_svn/client.c:1635
 msgid "Didn't receive end marker for lock responses"
-msgstr ""
+msgstr "未收到鎖定回應的結束標記"
 
 # as-is
 #: libsvn_ra_svn/client.c:1722
@@ -4945,7 +4945,7 @@ msgstr "解鎖命令的未知狀態"
 
 #: libsvn_ra_svn/client.c:1757
 msgid "Didn't receive end marker for unlock responses"
-msgstr ""
+msgstr "未收到解鎖回應的結束標記"
 
 #: libsvn_ra_svn/client.c:1781 libsvn_ra_svn/client.c:1809
 msgid "Server doesn't support the get-lock command"
@@ -5869,7 +5869,7 @@ msgid "Can't remove directory '%s'"
 msgstr "無法移除目錄 '%s'"
 
 #: libsvn_subr/io.c:2636
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read directory"
 msgstr "無法讀取目錄"
 
@@ -5899,19 +5899,18 @@ msgid "First line of '%s' contains non-digit"
 msgstr "'%s' 的第一行包含非數字字元"
 
 #: libsvn_subr/nls.c:79
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string to UCS-2: '%s'"
-msgstr "無法將字串自 '%s' 轉換至 '%s'"
+msgstr "無法將字串轉換至 UCS-2: '%s'"
 
 #: libsvn_subr/nls.c:86
-#, fuzzy
 msgid "Can't get module file name"
-msgstr "無法取得檔案名稱"
+msgstr "無法取得模組的檔案名稱"
 
 #: libsvn_subr/nls.c:101
 #, c-format
 msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
-msgstr ""
+msgstr "無法將模組路徑自 UCS-2 轉換至 UTF-8: '%s'"
 
 #: libsvn_subr/opt.c:146
 msgid ""
@@ -5972,7 +5971,6 @@ msgstr ""
 
 # as-is
 #: libsvn_subr/opt.c:747
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -5980,7 +5978,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2005 CollabNet.\n"
+"Copyright (C) 2000-2006 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
@@ -6125,9 +6123,9 @@ msgid "Error opening local file"
 msgstr "開啟本地檔案時發生錯誤"
 
 #: libsvn_wc/adm_files.c:102
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid administrative directory name"
-msgstr "'%s' 不是檔案或目錄名稱"
+msgstr "'%s' 不是有效的管理目錄名稱"
 
 # plz leave this as-is
 #: libsvn_wc/adm_files.c:262
@@ -6218,9 +6216,9 @@ msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "無法新增 '%s' 至已預定要刪除的父目錄"
 
 #: libsvn_wc/adm_ops.c:1060
-#, fuzzy, c-format
+#, c-format
 msgid "The URL '%s' has a different repository root than its parent"
-msgstr "來源 URL '%s' 來自其它的檔案庫; 把它當作是脫離的 WC"
+msgstr "URL '%s' 的檔案庫根路徑與其父目錄的不同"
 
 #: libsvn_wc/adm_ops.c:1320 libsvn_wc/adm_ops.c:1325 libsvn_wc/adm_ops.c:1361
 #, c-format
@@ -6274,11 +6272,12 @@ msgid "'%s' already exists and is in the way"
 msgstr "'%s' 已存在, 變成路中間的大石頭"
 
 #: libsvn_wc/copy.c:160
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "'%s' is scheduled for deletion; it must be committed before it can be "
 "overwritten"
-msgstr "'%s' 已排入刪除時程; 在覆寫之前, 必須先被送交"
+msgstr ""
+"'%s' 已排入刪除時程; 在覆寫之前, 必須先被送交"
 
 #: libsvn_wc/copy.c:166
 #, c-format
@@ -6305,9 +6304,9 @@ msgid ""
 msgstr "無法複製或移動 '%s': 它尚未存在於檔案庫之中; 請試著先進行送交"
 
 #: libsvn_wc/copy.c:544
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
-msgstr "無法複製或移動 '%s': 它尚未存在於檔案庫之中; 請試著先進行送交"
+msgstr "無法複製至 '%s', 因為它不是來自檔案庫 '%s'; 它是來自 '%s'"
 
 #: libsvn_wc/copy.c:551
 #, c-format
@@ -6320,9 +6319,9 @@ msgid "Error writing entries file for '%s'"
 msgstr "寫入 '%s' 的項目檔案時發生錯誤"
 
 #: libsvn_wc/entries.c:222
-#, fuzzy, c-format
+#, c-format
 msgid "Entry for '%s' has invalid repository root"
-msgstr "項目 '%s' 有無效的節點種類"
+msgstr "項目 '%s' 有無效的檔案庫根目錄"
 
 #: libsvn_wc/entries.c:244
 #, c-format
@@ -6643,6 +6642,8 @@ msgid ""
 "Trying to add new property '%s' with value '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
+"預計新增性質 '%s', 其值為 '%s',\n"
+"但是該性質已存在, 其值為 '%s'."
 
 #: libsvn_wc/props.c:482
 #, c-format
@@ -6650,12 +6651,15 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property does not exist."
 msgstr ""
+"預計將性質 '%s' 自 '%s' 變更為 '%s',\n"
+"但是該性質不存在."
 
 #: libsvn_wc/props.c:511
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
 msgstr ""
+"預計刪除性質 '%s', 但是其值已自 '%s' 變更為 '%s'."
 
 #: libsvn_wc/props.c:530
 #, c-format
@@ -6663,6 +6667,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
+"預計將性質 '%s' 自 '%s' 變更為 '%s',\n"
+"但是該性質已存在, 其值為 '%s'."
 
 #: libsvn_wc/props.c:1222
 #, c-format
@@ -6744,7 +6750,7 @@ msgstr ""
 
 #: libsvn_wc/relocate.c:68
 msgid "Relocate can only change the repository part of an URL"
-msgstr ""
+msgstr "重新安置只能能變更一個 URL 的檔案庫部份"
 
 #: libsvn_wc/translate.c:124
 #, c-format
@@ -6824,9 +6830,9 @@ msgid "'%s' has no ancestry information"
 msgstr "'%s' 沒有演進歷程資訊"
 
 #: libsvn_wc/update_editor.c:2980
-#, fuzzy, c-format
+#, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
-msgstr "來源 URL '%s' 來自其它的檔案庫"
+msgstr "Copyfrom-url '%s' 與 '%s' 的檔案庫根目錄不同"
 
 #: libsvn_wc/util.c:83
 msgid "Unable to make any directories"
@@ -6921,6 +6927,10 @@ msgid ""
 "Open the repository at REPOS_PATH, then abort, thus simulating\n"
 "a process that crashes while holding an open repository handle.\n"
 msgstr ""
+"用法: svnadmin crashtest REPOS_PATH\n"
+"\n"
+"開啟位於 REPOS_PATH 的檔案庫, 然後中止, 用以模擬\n"
+"行程在取得開啟的檔案庫代號後當掉的狀況.\n"
 
 #: svnadmin/main.c:301
 msgid ""
@@ -7307,7 +7317,7 @@ msgstr "無效的複製來源路徑 '%s'"
 #: svndumpfilter/main.c:558
 #, c-format
 msgid "No valid copyfrom revision in filtered stream"
-msgstr ""
+msgstr "在過濾串流中沒有有效的 copyfrom 修訂版號"
 
 #: svndumpfilter/main.c:663
 msgid "Delta property block detected - not supported by svndumpfilter"
@@ -7448,12 +7458,11 @@ msgstr "不顯示新增檔案的差異"
 
 #: svnlook/main.c:120
 msgid "print differences against the copy source"
-msgstr ""
+msgstr "顯示與複製來源的差異"
 
 #: svnlook/main.c:123
-#, fuzzy
 msgid "operate on a revision property (use with -r or -t)"
-msgstr "操作修訂版性質 (與 -r 一同使用)"
+msgstr "操作修訂版性質 (與 -r 或 -t 一同使用)"
 
 #: svnlook/main.c:126
 msgid "show full paths instead of indenting them"
@@ -7461,7 +7470,7 @@ msgstr "顯示完整路徑而非對其縮排"
 
 #: svnlook/main.c:129
 msgid "show details for copies"
-msgstr ""
+msgstr "顯示複本的細節"
 
 #: svnlook/main.c:142
 msgid ""
@@ -7831,9 +7840,8 @@ msgid "root of directory to serve"
 msgstr "服務的根目錄"
 
 #: svnserve/main.c:116
-#, fuzzy
 msgid "force read only, overriding repository config file"
-msgstr "已過時; 請使用檔案庫設定檔"
+msgstr "強制為唯讀, 略過檔案庫設定檔"
 
 #: svnserve/main.c:117
 msgid "tunnel mode"
@@ -7918,7 +7926,7 @@ msgid "Type 'svnversion --help' for usage.\n"
 msgstr "請使用 'svnversion --help' 以了解用法.\n"
 
 #: svnversion/main.c:101
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -7948,7 +7956,7 @@ msgid ""
 "\n"
 "Valid options:\n"
 msgstr ""
-"用法: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
+"用法: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
 "  為工作複本路徑 WC_PATH 產生簡潔的 '版本號碼'. TRAIL_URL 是\n"
 "  URL 的結尾部份, 用以決定 WC_PATH 是否已被切換 (WC_PATH 內的切換\n"
