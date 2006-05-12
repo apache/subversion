@@ -325,6 +325,13 @@ def get_test_path():
     p = os.path.join(temp_path(), "__svnmerge_test")
     return os.path.abspath(p)
 
+def abspath_to_url(path):
+    assert path == os.path.abspath(path)
+    path = path.replace("\\", "/")
+    if path[0] != '/':
+        path = '/' + path
+    return "file://" + path
+
 class TestCase_TestRepo(TestCase_SvnMerge):
     def setUp(self):
         """Creates a working copy of a branch at r13 with the
@@ -366,10 +373,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.test_path = test_path
 
         self.template_repo_path = os.path.join(template_path, "repo")
-        self.template_repo_url = "file://" + self.template_repo_path.replace("\\", "/")
+        self.template_repo_url = abspath_to_url(self.template_repo_path)
 
         self.test_repo_path = os.path.join(test_path, "repo")
-        self.test_repo_url = "file://" + self.test_repo_path.replace("\\", "/")
+        self.test_repo_url = abspath_to_url(self.test_repo_path)
 
         if not os.path.isdir(template_path):
             rmtree(template_path)
