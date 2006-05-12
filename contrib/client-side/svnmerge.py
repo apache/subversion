@@ -283,7 +283,7 @@ class RevisionLog:
         revision_re = re.compile(r"^r(\d+)")
 
         # Look for changes which contain merge tracking information
-        rlpath = url_to_rlpath(url)
+        rlpath = target_to_rlpath(url)
         srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
 
         # Setup the log options (--quiet, so we don't show log messages)
@@ -661,31 +661,44 @@ def target_to_url(dir):
     return dir
 
 def get_repo_root(dir):
-    """Compute the root repos URL given a working-copy path or an URL."""
-    url = target_to_url(dir)
-    assert url[-1] != '/'
+    """Compute the root repos URL given a working-copy path, or a URL."""
+    # Try using "svn info WCDIR". This works only on SVN clients >= 1.3
+    if not is_url(dir):
+        try:
+            info = get_svninfo(dir)
+            return info["Repository Root"]
+        except KeyError:
+            pass
+        url = target_to_url(dir)
+        assert url[-1] != '/'
+    else:
+        url = dir
 
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
         info = get_svninfo(url)
         return info["Repository Root"]
-
     except LaunchError:
-        # Constrained to older svn clients, we are stuck with this ugly
-        # trial-and-error implementation. It could be made faster with a
-        # binary search.
-        while url:
-            temp = os.path.dirname(url)
-            try:
-                launchsvn('proplist "%s"' % temp)
-            except LaunchError:
-                return url
-            url = temp
-        assert False, "svn repos root not found"
+        pass
 
-def url_to_rlpath(url):
-    """Convert a repos URL into a repo-local path."""
-    root = get_repo_root(url)
+    # Constrained to older svn clients, we are stuck with this ugly
+    # trial-and-error implementation. It could be made faster with a
+    # binary search.
+    while url:
+        temp = os.path.dirname(url)
+        try:
+            launchsvn('proplist "%s"' % temp)
+        except LaunchError:
+            return url
+        url = temp
+
+    assert False, "svn repos root not found"
+
+def target_to_rlpath(target):
+    """Convert a target (either a working copy path or an URL) into a
+    repo-local path."""
+    root = get_repo_root(target)
+    url = target_to_url(target)
     assert root[-1] != "/"
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
@@ -694,7 +707,7 @@ def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
-    rlpath = url_to_rlpath(target_to_url(dir))
+    rlpath = target_to_rlpath(dir)
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
                     split_lines=False)
     out = out.replace("\n", " ")
@@ -777,7 +790,7 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    directory = url_to_rlpath(target_to_url(branch_dir))
+    directory = target_to_rlpath(branch_dir)
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
@@ -877,7 +890,7 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
     """For the given branch and head, extract the real and phantom
     head revisions."""
     branch_url = target_to_url(branch_dir)
-    target_dir = url_to_rlpath(branch_url)
+    target_dir = target_to_rlpath(branch_dir)
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
@@ -1709,7 +1722,7 @@ def main(args):
         if not is_wc(head) and not is_url(head):
             error('"%s" is not a valid URL or working directory' % head)
         opts["head-url"] = target_to_url(head)
-        opts["head-path"] = url_to_rlpath(opts["head-url"])
+        opts["head-path"] = target_to_rlpath(head)
 
     # Sanity check head_url
     assert is_url(opts["head-url"])
