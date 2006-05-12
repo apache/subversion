@@ -169,12 +169,17 @@ def authz_read_access(sbox):
   if sbox.repo_url.startswith('http'):
     fp.write("[authz_read_access:/]\n" +
              "* = r\n" +
-             "\n" +
              "[authz_read_access:/A/B]\n" +
              "* = \n" +
-             "\n" +
              "[authz_read_access:/A/D]\n" +
-             "* = rw")
+             "* = rw\n" +
+             "[authz_read_access:/A/D/G]\n" +
+             "* = rw\n" +
+             svntest.main.wc_author + " = \n" +
+             "[authz_read_access:/A/D/H]\n" +
+             "* = \n" +
+             svntest.main.wc_author + " = rw\n")
+
     expected_err = ".*403 Forbidden.*"
     
   # Otherwise we can just go with the permissions needed for the source
@@ -185,7 +190,13 @@ def authz_read_access(sbox):
              "[/A/B]\n" +
              "* =\n" +
              "[/A/D]\n" +
-             "* = rw\n")
+             "* = rw\n" +
+             "[/A/D/G]\n" +
+             "* = rw\n" +
+             svntest.main.wc_author + " =\n" +
+             "[/A/D/H]\n" +
+             "* = \n" +
+             svntest.main.wc_author + " = rw\n")
     expected_err = ".*svn: Authorization failed.*"
          
   fp.close()
@@ -200,6 +211,10 @@ def authz_read_access(sbox):
   lambda_url = B_url + '/lambda'
   alpha_url = E_url + '/alpha'
   D_url = A_url + '/D'
+  G_url = D_url + '/G'
+  pi_url = G_url + '/pi'
+  H_url = D_url + '/H'
+  chi_url = H_url + '/chi'
 
   # read a remote file
   svntest.actions.run_and_verify_svn(None, ["This is the file 'iota'.\n"],
@@ -208,6 +223,13 @@ def authz_read_access(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      iota_url)
 
+  # read a remote file, readably by user specific exception
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'chi'.\n"],
+                                     [], 'cat',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     chi_url)
+                                     
   # read a remote file, unreadable: should fail
   svntest.actions.run_and_verify_svn("",
                                      None, expected_err,
@@ -217,13 +239,19 @@ def authz_read_access(sbox):
                                      lambda_url)
 
   # read a remote file, unreadable through recursion: should fail
-  output, errput = svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn("",
                                      None, expected_err,
                                      'cat',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      alpha_url)
 
+  # read a remote file, user specific authorization is ignored because * = rw
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'pi'.\n"],
+                                     [], 'cat',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     pi_url)
   # open a remote folder(ls)
   svntest.actions.run_and_verify_svn("ls remote root folder",
                                      ["A/\n", "iota\n"],
@@ -233,14 +261,14 @@ def authz_read_access(sbox):
                                      root_url)
 
   # open a remote folder(ls), unreadable: should fail
-  output, errput = svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn("",
                                      None, svntest.SVNAnyOutput, 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url)
 
   # open a remote folder(ls), unreadable through recursion: should fail
-  output, errput = svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn("",
                                      None, expected_err,
                                      'ls',
                                      '--username', svntest.main.wc_author,
@@ -408,6 +436,126 @@ def authz_write_access(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'logmsg',
                                      B_url, D_url)
+                                     
+#----------------------------------------------------------------------
+
+def authz_checkout_test(sbox):
+  "test authz for checkout"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("authz_checkout_test")
+  wc_dir = sbox.wc_dir
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  # 1st part: disable all read access, checkout should fail
+  
+  # write an authz file with *= on /
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_test:/]\n" +
+             "* =\n")
+    expected_err = ".*403 Forbidden.*"
+  else:
+    fp.write("[/]\n" +
+             "* =\n")
+    expected_err = ".*svn: Authorization failed.*"
+         
+  fp.close()
+  
+  # checkout a second working copy, should fail
+  wc2_dir = sbox.wc_dir + '2'
+  
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'co', sbox.repo_url, wc2_dir)
+                          
+  # 2nd part: now enable read access
+  
+  # write an authz file with *=r on /
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_test:/]\n" +
+             "* = r\n")
+    expected_err = ".*403 Forbidden.*"
+  else:
+    fp.write("[/]\n" +
+             "* = r\n")
+    expected_err = ".*svn: Authorization failed.*"
+         
+  fp.close()
+  
+  # checkout a second working copy, should succeed because we have read
+  # access
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = wc2_dir
+  expected_output.tweak(status='A ', contents=None)
+
+  expected_wc = svntest.main.greek_state
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                          wc2_dir,
+                          expected_output,
+                          expected_wc)
+
+#----------------------------------------------------------------------
+
+def authz_log_test(sbox):
+  "test authz for log"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("authz_log_test")
+  wc_dir = sbox.wc_dir
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  # write an authz file with *=rw on /
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_log_test:/]\n" +
+             "* = rw\n")
+    expected_err = ".*403 Forbidden.*"
+  else:
+    fp.write("[/]\n" +
+             "* = rw\n")
+    expected_err = ".*svn: Authorization failed.*"
+         
+  fp.close()
+  
+  # check if log doesn't spill any info on which you don't have read access
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append (rho_path, 'new appended text for rho')
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                 'ci', '-m', 'test commit', sbox.wc_dir)
+
+  # now disable read access on that folder
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_log_test:/]\n" +
+             "* = rw\n" +
+             "[authz_log_test:/A/D/G]\n" +
+             "* =\n")
+  else:
+    fp.write("[/]\n" +
+             "* = rw\n" +
+             "[/A/D/G]\n" +
+             "* =\n")
+         
+  fp.close()
+  
+  # changed file in this rev. is not readable anymore, so author and date
+  # should be hidden, like this:
+  # r2 | (no author) | (no date) | 1 line 
+  
+  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
+                                     'log', '-r', 'HEAD', '--limit', '1',
+                                     sbox.wc_dir)
 
 ########################################################################
 # Run the tests
@@ -421,7 +569,9 @@ test_list = [ None,
               XFail(authz_open_directory, is_this_dav),
               broken_authz_file,
               authz_read_access,
-              authz_write_access
+              authz_write_access,
+              authz_checkout_test,
+              authz_log_test
              ]
 
 if __name__ == '__main__':
