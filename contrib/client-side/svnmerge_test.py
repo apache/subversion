@@ -720,12 +720,12 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 19")
 
         # Merge into trunk
-        self.svnmerge("merge -vv --head ../test-branch2",
+        self.svnmerge("merge -vv --head branch2",
                       match=r"merge -r 18:19")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
 
-        self.svnmerge("integrated --head ../test-branch2", match=r"^14-19$")
+        self.svnmerge("integrated --head branch2", match=r"^14-19$")
         self.svnmerge("integrated --head ../test-branch", match=r"^13-16$")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",

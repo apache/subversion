@@ -1532,9 +1532,11 @@ common_opts = [
                    'and ranges separated by commas, e.g., "534,537-539,540"'),
     OptionArg("-S", "--head", "--source",
               default=None,
-              help="specify the head for this branch. It can be either a path "
-                   "or an URL. Needed only to disambiguate in case of "
-                   "multiple merge tracking (merging from multiple heads)"),
+              help="specify the head for this branch. It can be either a path,"
+                   " a full URL, or an unambigous substring of one the paths "
+                   "for which merge tracking was already initialized. Needed "
+                   "only to disambiguate in case of multiple merge tracking "
+                   "(merging from multiple heads)"),
 ]
 
 command_table = {
@@ -1725,7 +1727,18 @@ def main(args):
         # trailing /'s.
         head = rstrip(head, "/")
         if not is_wc(head) and not is_url(head):
-            error('"%s" is not a valid URL or working directory' % head)
+            # Check if it is a substring of a repo-relative URL recorded
+            # within the branch properties.
+            found = []
+            for rlpath in branch_props.keys():
+                if rlpath.find(head) > 0:
+                    found.append(rlpath)
+            if len(found) == 1:
+                head = get_repo_root(branch_dir) + found[0]
+            else:
+                error('"%s" is neither a valid URL (or an unambiguous '
+                      'substring), nor a working directory' % head)
+
         opts["head-url"] = target_to_url(head)
         opts["head-path"] = target_to_rlpath(head)
 
