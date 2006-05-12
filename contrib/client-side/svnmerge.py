@@ -33,6 +33,10 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
+# Requisites:
+# svnmerge.py has been tested with all SVN major versions since 1.1 (both
+# client and server). It is unknown if it works with previous versions.
+#
 # Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
