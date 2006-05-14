@@ -36,7 +36,15 @@ AC_CANONICAL_TARGET
 ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
 
 AC_PROG_LN_S
+
 AC_PROG_INSTALL
+# If $INSTALL is relative path to our fallback install-sh, then convert
+# to an absolute path, as in some cases (e.g. Solaris VPATH build), libtool
+# may try to use it from a changed working directory.
+if test "$INSTALL" = "build/install-sh -c"; then
+  INSTALL="$abs_srcdir/$INSTALL"
+fi
+
 AC_SUBST([MKDIR], ["$INSTALL -d"])
 
 
