@@ -321,7 +321,7 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
 /* Show differences between TMPFILE1 and TMPFILE2. PATH, REV1, and REV2 are
    used in the headers to indicate the file and revisions.  If either
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
-   but instread print a warning message. */
+   but instead print a warning message. */
 static svn_error_t *
 diff_content_changed(const char *path,
                      const char *tmpfile1,
@@ -1415,7 +1415,7 @@ struct diff_parameters
   /* Recurse */
   svn_boolean_t recurse;
 
-  /* Ignore acestry */
+  /* Ignore ancestry */
   svn_boolean_t ignore_ancestry;
 
   /* Ignore deleted */

@@ -302,7 +302,7 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE is TRUE.
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
-   occur, but the working copy is not modifed.  If NOTIFY_FUNC is not
+   occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
 svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_wc_adm_access_t *adm_access,
@@ -386,7 +386,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
  * ADM_ACCESS may be NULL, in which case the DIFF_CMD callbacks will be
  * passed a NULL access baton.
  *
- * DIFF_CMD/DIFF_CMD_BATON represent the callback and calback argument that
+ * DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
  * implement the file comparison function
  *
  * RECURSE is set if the diff is to be recursive.

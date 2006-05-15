@@ -652,7 +652,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
           err = svn_client_add3(path, FALSE, FALSE, FALSE, ctx, subpool);
 
           /* We just created a new directory, but couldn't add it to
-             version control. Don't leave unversioned directoies behind. */
+             version control. Don't leave unversioned directories behind. */
           if (err)
             {
               /* ### If this returns an error, should we link it onto
