@@ -167,6 +167,10 @@ print_info_xml(const char *target,
       /* "<checksum> xx </checksum>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "checksum", info->checksum);
 
+      if (info->changelist)
+        /* "<changelist> xx </changelist>" */
+        svn_cl__xml_tagged_cdata(&sb, pool, "changelist", info->changelist);
+
       /* "</wc-info>" */
       svn_xml_make_close_tag(&sb, pool, "wc-info");
     }
