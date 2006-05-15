@@ -526,6 +526,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-get-specific-revision-file-info)
 (defvar svn-status-last-output-buffer-name)
 (defvar svn-status-pre-run-svn-buffer nil)
+(defvar svn-status-update-list nil)
 (defvar svn-transient-buffers)
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
@@ -1011,6 +1012,11 @@ can edit ARGLIST before running svn."
                     (insert svn-status-update-previous-process-output)
                     (goto-char (point-min))
                     (setq svn-status-update-previous-process-output nil))
+                  (when svn-status-update-list
+                    ;; (message "Using svn-status-update-list: %S" svn-status-update-list)
+                    (save-excursion
+                      (svn-status-update-with-command-list svn-status-update-list))
+                    (setq svn-status-update-list nil))
                   (when svn-status-display-new-status-buffer
                     (set-window-configuration svn-status-initial-window-configuration)
                     (if (svn-had-user-input-since-asynch-run)
@@ -1047,6 +1053,7 @@ can edit ARGLIST before running svn."
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-output 'update t)
+                  (setq svn-status-update-list (svn-status-parse-update-output))
                   (svn-status-update)
                   (message "svn update finished"))
                  ((eq svn-process-cmd 'add)
@@ -1884,6 +1891,8 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <deleted>"))
           ((equal action 'replaced)
            (setq tag-string " <replaced>"))
+          ((equal action 'updated)
+           (setq tag-string " <updated>"))
           ((equal action 'propset)
            ;;(setq tag-string " <propset>")
            (svn-status-line-info->set-propmark line-info svn-status-file-modified-after-save-flag))
@@ -1985,6 +1994,43 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       result)))
 ;; (svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
+
+(defun svn-status-parse-update-output ()
+  "Parse the output of svn update.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((action)
+          (name)
+          (skip)
+          (result))
+      (goto-char (point-min))
+      (while (< (point) (point-max))
+        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "Updated to")
+               (setq skip t))
+              ((looking-at "At revision")
+               (setq skip t))
+              ((looking-at "U")
+               (setq action 'updated))
+              ((looking-at "A")
+               (setq action 'added))
+              ((looking-at "D")
+               (setq skip t))
+               ;;(setq action 'deleted)) ;;deleted files are not displayed in the svn status output.
+              (t ;; this should never be needed(?)
+               (setq action 'unknown)))
+        (unless skip ;found an interesting line
+          (forward-char 3)
+          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
+          (setq result (cons (list name action)
+                             result))
+          (setq skip nil))
+        (forward-line 1))
+      result)))
+;; (svn-status-parse-update-output)
+;; (svn-status-update-with-command-list (svn-status-parse-update-output))
 
 (defun svn-status-parse-property-output ()
   "Parse the output of svn propset.
@@ -2961,12 +3007,14 @@ When called with a prefix argument add the command line switch --force."
           (svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
         (svn-run t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
-(defun svn-status-update-cmd ()
-  "Run svn update."
-  (interactive)
-  (message "Running svn-update for %s" default-directory)
-  ;TODO: use file names also
-  (svn-run t t 'update "update"))
+(defun svn-status-update-cmd (arg)
+  "Run svn update.
+When called with a prefix argument, ask the user for the revision to update to."
+  (interactive "P")
+  (let ((rev (when arg (svn-status-read-revision-string (format "Directory: %s: Run svn update -r " default-directory)))))
+    (message "Running svn-update for %s" default-directory)
+    ;;TODO: use file names also??
+    (svn-run t t 'update "update" (when rev (list "-r" rev)))))
 
 (defun svn-status-commit ()
   "Commit selected files.
