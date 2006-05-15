@@ -170,8 +170,14 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
                      apr_pool_t *pool)
 {
   svn_string_t date;
-
+  fs_fs_data_t *ffd = (fs_fs_data_t *)fs->fsap_data;
+  
   SVN_ERR(svn_fs_fs__check_fs(fs));
+
+  if (ffd->mtd == NULL)
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            "sqlite seems to not be open");
+  SVN_ERR(fs_sqlite_exec(ffd->mtd, "begin transaction", NULL, NULL));
 
   SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));
 

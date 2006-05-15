@@ -574,6 +574,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_OUT_OF_DATE,
              SVN_ERR_FS_CATEGORY_START + 42,
              "Item is out of date")
+  
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
+             SVN_ERR_FS_CATEGORY_START + 43,
+             "SQlite error")
 
   /**@since New in 1.2.
    *

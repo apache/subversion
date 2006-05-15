@@ -622,6 +622,48 @@ svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 const char *
 svn_uuid_generate(apr_pool_t *pool);
 
+/**
+ * Types of merge info in the merge info value
+ * @since New in 1.5
+ */
+typedef enum
+{
+  MERGE_RANGE_SINGLE,
+  MERGE_RANGE_RANGE
+} merge_range_type_t;
+
+/** 
+ * Merge info representing a merge of a single revision.
+ * @since New in 1.5
+ */ 
+typedef struct merge_single_t
+{
+  svn_revnum_t revision;
+} merge_single_t;
+
+/** 
+ * Merge info representing a merge of a range of revisions.
+ * @since New in 1.5
+ */ 
+typedef struct merge_range_t
+{
+  svn_revnum_t start;
+  svn_revnum_t end;
+} merge_range_t;
+
+/**
+ * Structure containing all possible merge info types
+ * @since New in 1.5
+ */
+typedef struct merge_info_t
+{
+  merge_range_type_t type;
+  union {
+    merge_range_t range;
+    merge_single_t single;
+  } u;
+} merge_info_t;
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

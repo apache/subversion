@@ -229,6 +229,9 @@ svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
  */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 
+/** Merge info property.  */
+#define SVN_PROP_MERGE_INFO SVN_PROP_PREFIX "mergeinfo"
+
 /** @} */
 
 /** WC props are props that are invisible to users:  they're generated

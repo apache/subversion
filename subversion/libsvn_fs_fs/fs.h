@@ -22,6 +22,8 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
+#include <sqlite3.h>
+
 #include "svn_fs.h"
 
 #ifdef __cplusplus
@@ -52,6 +54,9 @@ typedef struct
   apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
   apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
 
+  /* Merge tracking database. */
+  sqlite3 *mtd;
+  
   /* The format number of this FS. */
   int format;
 
@@ -206,6 +211,13 @@ typedef struct
 
 } change_t;
 
+/* Wrapper for sqlite_exec that returns an SVN error on errors.
+   Parameters match those of sqlite_exec, meaning that DB is the
+   database to operate on, SQL is the string of sql to submit, CB is
+   the callback to call with the results, and DATA is the first
+   argument given to callback.  */
+svn_error_t *fs_sqlite_exec(sqlite3 *db , const char *sql, 
+                            sqlite3_callback cb, void *data);
 
 #ifdef __cplusplus
 }

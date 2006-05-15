@@ -4372,7 +4372,9 @@ static root_vtable_t root_vtable = {
   base_apply_text,
   base_contents_changed,
   base_get_file_delta_stream,
-  base_merge
+  base_merge,
+  NULL,
+  NULL
 };
 
 

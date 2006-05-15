@@ -1090,13 +1090,19 @@ fs_change_node_prop(svn_fs_root_t *root,
                     const svn_string_t *value,
                     apr_pool_t *pool)
 {
+  svn_revnum_t rev;
+  sqlite3_stmt *stmt;
   parent_path_t *parent_path;
   apr_hash_t *proplist;
   const char *txn_id;
-
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  
   if (! root->is_txn_root)
     return not_txn(root);
   txn_id = root->txn;
+
+  ffd = root->fs->fsap_data;
 
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, pool));
 
@@ -1116,13 +1122,46 @@ fs_change_node_prop(svn_fs_root_t *root,
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
     proplist = apr_hash_make(pool);
-
+  if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
+    {
+      
+      if (sqlite3_prepare(ffd->mtd, 
+                          "INSERT INTO mergeinfo_changed (uuid, path) VALUES (?, ?);", 
+                          -1, &stmt, NULL) != SQLITE_OK)
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(ffd->mtd));
+      
+      if (sqlite3_bind_text(stmt, 1, txn_id, -1, SQLITE_TRANSIENT) != SQLITE_OK)
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(ffd->mtd));
+      
+      if (sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT) != SQLITE_OK)  
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(ffd->mtd));
+      
+      if (sqlite3_step(stmt) != SQLITE_DONE)
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(ffd->mtd));
+      
+      if (sqlite3_finalize(stmt) != SQLITE_OK)
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(ffd->mtd));
+      SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
+      SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
+                                         SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                         svn_string_create("true", pool),
+                                         pool));
+      
+    }
+  
   /* Set the property. */
   apr_hash_set(proplist, name, APR_HASH_KEY_STRING, value);
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_fs__dag_set_proplist(parent_path->node, proplist, 
                                       txn_id, pool));
+  
+  
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
@@ -3166,7 +3205,9 @@ static root_vtable_t root_vtable = {
   fs_apply_text,
   fs_contents_changed,
   fs_get_file_delta_stream,
-  fs_merge
+  fs_merge,
+  NULL, 
+  NULL
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */

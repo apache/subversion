@@ -720,6 +720,23 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
+svn_fs_change_merge_info(svn_fs_root_t *root, const char *path, 
+                         const char *from,
+                         apr_array_header_t *info,
+                         apr_pool_t *pool)
+{
+  return root->vtable->change_merge_info(root, path, from, info, pool);
+}
+
+svn_error_t *
+svn_fs_get_merge_info(svn_fs_root_t *root,
+                      apr_array_header_t *paths,
+                      apr_hash_t **info, apr_pool_t *pool)
+{
+  return root->vtable->get_merge_info(root, paths, info, pool);
+}
+
+svn_error_t *
 svn_fs_merge(const char **conflict_p, svn_fs_root_t *source_root,
              const char *source_path, svn_fs_root_t *target_root,
              const char *target_path, svn_fs_root_t *ancestor_root,
