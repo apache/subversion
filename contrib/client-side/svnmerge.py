@@ -248,7 +248,7 @@ def svn_command(s):
         print out
 
 def check_dir_clean(dir):
-    """Check the current status of dir for up-to-dateness and local mods."""
+    """Check the current status of dir for local mods."""
     if opts["force"]:
         report('skipping status check because of --force')
         return
@@ -261,9 +261,6 @@ def check_dir_clean(dir):
     out = launchsvn("status -q %s" % dir)
     if out and out[0].strip():
         error('"%s" has local modifications; it must be clean' % dir)
-    for L in launchsvn("status -u %s" % dir):
-        if len(L) > 7 and L[7] == '*':
-            error('"%s" is not up to date; please "svn update" first' % dir)
 
 class RevisionLog:
     """
