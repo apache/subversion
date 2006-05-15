@@ -378,7 +378,7 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t wc_root = FALSE;
 
       /* If this is not a WC root then its parent's revision is
-         admissible for comparitive purposes. */
+         admissible for comparative purposes. */
       SVN_ERR(svn_wc_is_wc_root(&wc_root, path, adm_access, pool));
       if (! wc_root)
         {

@@ -739,7 +739,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   if (new_entries->nelts
       /* What's this, what's this?  This assignment is here because we
          use the value to construct the error message just below.  It
-         may not be asethetically pleasing, but it's less ugly than
+         may not be aesthetically pleasing, but it's less ugly than
          calling APR_ARRAY_IDX twice. */
       && svn_wc_is_adm_dir(temp = APR_ARRAY_IDX(new_entries,
                                                 new_entries->nelts - 1,
@@ -931,7 +931,7 @@ have_processed_parent(apr_array_header_t *commit_items,
 
 
 /* Remove redundancies by removing duplicates from NONRECURSIVE_TARGETS,
- * and removing any target that either is, a decendant of, a path in
+ * and removing any target that either is, a descendant of, a path in
  * RECURSIVE_TARGETS.  Return the result in *PUNIQUE_TARGETS.
  */
 static svn_error_t *
