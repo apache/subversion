@@ -493,21 +493,27 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                    apr_pool_t *pool);
 
 /**
- * Print either generic help, or command-specific help for @a pgm_name.
- * If there are arguments in @a os, then try printing help for them as
- * though they are subcommands, using  @a cmd_table and @a option_table 
- * for option information.
+ * Central dispatcher function for various kinds of help message.
+ * Prints one of:
+ *   * subcommand-specific help (svn_opt_subcommand_help)
+ *   * generic help (svn_opt_print_generic_help)
+ *   * version info
+ *   * simple usage complaint: "Type '@a pgn_name help' for usage."
  *
- * If @a os is @c NULL, or there are no targets in @a os, then:
+ * If @os is not @c NULL and it contains arguments, then try printing
+ * help for them as though they are subcommands, using @a cmd_table
+ * and @a option_table for option information.
  *
- *    - If @a print_version is true, then print version info, in brief
- *      form if @a quiet is also true; if @a quiet is false, then if
- *      @a version_footer is non-null, print it following the version
- *      information.
+ * Else, if @a print_version is true, then print version info, in
+ * brief form if @a quiet is also true; if @a quiet is false, then if
+ * @a version_footer is non-null, print it following the version
+ * information.
  *
- *    - Else if @a print_version is not true, then print generic help,
- *      via svn_opt_print_generic_help2() with the @a header, @a cmd_table,
- *      @a option_table, and @a footer arguments.
+ * Else, if @a os is not @NULL and does not contain arguments, print
+ * generic help, via svn_opt_print_generic_help2() with the @a header,
+ * @a cmd_table, @a option_table, and @a footer arguments.
+ *
+ * Else, when @os is @NULL, print the simple usage complaint.
  *
  * Use @a pool for temporary allocations.
  *

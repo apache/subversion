@@ -20,6 +20,7 @@
 
 #include "svn_wc.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_path.h"
 
 #include "wc.h"
@@ -75,8 +76,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
 
       if (strncmp(from, entry->repos, from_len) == 0)
         {
-          entry2.repos = apr_psprintf(svn_wc_adm_access_pool(adm_access),
-                                      "%s%s", to, entry->repos + from_len);
+          entry2.repos = apr_pstrcat(pool, to, entry->repos + from_len, NULL);
           flags |= SVN_WC__ENTRY_MODIFY_REPOS;
           /* Make sure to is really the repository root. */
           SVN_ERR(validator(validator_baton, entry->uuid, entry2.repos,
@@ -86,8 +86,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
 
   if (entry->url && ! strncmp(entry->url, from, from_len))
     {
-      entry2.url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
-                                "%s%s", to, entry->url + from_len);
+      entry2.url = apr_pstrcat(pool, to, entry->url + from_len, NULL);
       if (entry->uuid)
         SVN_ERR(validator(validator_baton, entry->uuid, entry2.url, FALSE,
                           pool));
@@ -96,9 +95,8 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
 
   if (entry->copyfrom_url && ! strncmp(entry->copyfrom_url, from, from_len))
     {
-      entry2.copyfrom_url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
-                                         "%s%s", to,
-                                         entry->copyfrom_url + from_len);
+      entry2.copyfrom_url = apr_pstrcat(pool, to,
+                                        entry->copyfrom_url + from_len, NULL);
       if (entry->uuid)
         SVN_ERR(validator(validator_baton, entry->uuid,
                           entry2.copyfrom_url, FALSE, pool));
@@ -124,6 +122,7 @@ svn_wc_relocate2(const char *path,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *entry;
+  apr_pool_t *subpool;
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
   if (! entry)
@@ -147,6 +146,8 @@ svn_wc_relocate2(const char *path,
   SVN_ERR(relocate_entry(adm_access, entry, from, to,
                          validator, validator_baton, FALSE, pool));
 
+  subpool = svn_pool_create(pool);
+
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -158,23 +159,27 @@ svn_wc_relocate2(const char *path,
       if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
+      svn_pool_clear(subpool);
+
       if (recurse && (entry->kind == svn_node_dir)
           && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
           && ! entry->absent)
         {
           svn_wc_adm_access_t *subdir_access;
-          const char *subdir = svn_path_join(path, key, pool);
+          const char *subdir = svn_path_join(path, key, subpool);
           if (svn_wc__adm_missing(adm_access, subdir))
             continue;
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, 
-                                      subdir, pool));
+                                      subdir, subpool));
           SVN_ERR(svn_wc_relocate2(subdir, subdir_access, from, to,
                                    recurse, validator, 
-                                   validator_baton, pool));
+                                   validator_baton, subpool));
         }
       SVN_ERR(relocate_entry(adm_access, entry, from, to,
-                             validator, validator_baton, FALSE, pool));
+                             validator, validator_baton, FALSE, subpool));
     }
+
+  svn_pool_destroy(subpool);
 
   SVN_ERR(svn_wc__remove_wcprops(adm_access, NULL, FALSE, pool));
   SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));

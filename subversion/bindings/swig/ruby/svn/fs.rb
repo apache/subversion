@@ -434,9 +434,7 @@ module Svn
       end
 
       def committed_info(path)
-        rev, date, author = Repos.get_committed_info(self, path)
-        date = Time.parse_svn_format(date) if date
-        [rev, date, author]
+        Repos.get_committed_info(self, path)
       end
 
       def closest_copy(path)

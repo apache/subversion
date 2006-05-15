@@ -33,6 +33,10 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
+# Requisites:
+# svnmerge.py has been tested with all SVN major versions since 1.1 (both
+# client and server). It is unknown if it works with previous versions.
+#
 # Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
@@ -283,7 +287,7 @@ class RevisionLog:
         revision_re = re.compile(r"^r(\d+)")
 
         # Look for changes which contain merge tracking information
-        rlpath = url_to_rlpath(url)
+        rlpath = target_to_rlpath(url)
         srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
 
         # Setup the log options (--quiet, so we don't show log messages)
@@ -661,31 +665,44 @@ def target_to_url(dir):
     return dir
 
 def get_repo_root(dir):
-    """Compute the root repos URL given a working-copy path or an URL."""
-    url = target_to_url(dir)
-    assert url[-1] != '/'
+    """Compute the root repos URL given a working-copy path, or a URL."""
+    # Try using "svn info WCDIR". This works only on SVN clients >= 1.3
+    if not is_url(dir):
+        try:
+            info = get_svninfo(dir)
+            return info["Repository Root"]
+        except KeyError:
+            pass
+        url = target_to_url(dir)
+        assert url[-1] != '/'
+    else:
+        url = dir
 
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
         info = get_svninfo(url)
         return info["Repository Root"]
-
     except LaunchError:
-        # Constrained to older svn clients, we are stuck with this ugly
-        # trial-and-error implementation. It could be made faster with a
-        # binary search.
-        while url:
-            temp = os.path.dirname(url)
-            try:
-                launchsvn('proplist "%s"' % temp)
-            except LaunchError:
-                return url
-            url = temp
-        assert False, "svn repos root not found"
+        pass
 
-def url_to_rlpath(url):
-    """Convert a repos URL into a repo-local path."""
-    root = get_repo_root(url)
+    # Constrained to older svn clients, we are stuck with this ugly
+    # trial-and-error implementation. It could be made faster with a
+    # binary search.
+    while url:
+        temp = os.path.dirname(url)
+        try:
+            launchsvn('proplist "%s"' % temp)
+        except LaunchError:
+            return url
+        url = temp
+
+    assert False, "svn repos root not found"
+
+def target_to_rlpath(target):
+    """Convert a target (either a working copy path or an URL) into a
+    repo-local path."""
+    root = get_repo_root(target)
+    url = target_to_url(target)
     assert root[-1] != "/"
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
@@ -694,19 +711,20 @@ def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
-    rlpath = url_to_rlpath(target_to_url(dir))
+    rlpath = target_to_rlpath(dir)
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
                     split_lines=False)
     out = out.replace("\n", " ")
     try:
-        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)' % rlpath, out)
+        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)'
+                      % re.escape(rlpath), out)
         head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
         rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
         return head,rev
     except AttributeError:
         return None,None
 
-def get_latestrev(url):
+def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
     try:
         return get_svninfo(url)["Revision"]
@@ -717,6 +735,27 @@ def get_latestrev(url):
         rev = re.search("revision (\d+)", L).group(1)
         report('latest revision of "%s" is %s' % (url, rev))
         return rev
+
+def get_created_rev(url):
+    """Lookup the revision at which the path identified by the
+    provided URL was first created."""
+    oldest_rev = -1
+    report('determining oldest revision for URL "%s"' % url)
+    ### TODO: Refactor this to use a modified RevisionLog class.
+    lines = None
+    cmd = "log -r1:HEAD --stop-on-copy -q " + url
+    try:
+        lines = launchsvn(cmd + " --limit=1")
+    except LaunchError:
+        # Assume that --limit isn't supported by the installed 'svn'.
+        lines = launchsvn(cmd)
+    if lines and len(lines) > 1:
+        i = lines[1].find(" ")
+        if i != -1:
+            oldest_rev = int(lines[1][1:i])
+    if oldest_rev == -1:
+        error('unable to determine oldest revision for URL "%s"' % url)
+    return oldest_rev
 
 def get_commit_log(url, revnum):
     """Return the log message for a specific integer revision
@@ -756,7 +795,7 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    directory = url_to_rlpath(target_to_url(branch_dir))
+    directory = target_to_rlpath(branch_dir)
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
@@ -768,9 +807,8 @@ def get_default_head(branch_dir, branch_props):
         err_msg = "multiple heads found. "
         err_msg += "Explicit head argument (-S/--head) required.\n"
         err_msg += "The head values available are:"
-        repo_root = get_repo_root(branch_dir)
         for prop in props:
-          err_msg += "\n  " + repo_root + prop
+          err_msg += "\n  " + prop
         error(err_msg)
 
     return props.keys()[0]
@@ -856,11 +894,11 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
     """For the given branch and head, extract the real and phantom
     head revisions."""
     branch_url = target_to_url(branch_dir)
-    target_dir = url_to_rlpath(branch_url)
+    target_dir = target_to_rlpath(branch_dir)
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    end_rev = get_latestrev(branch_url)
+    end_rev = get_latest_rev(branch_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
@@ -940,7 +978,7 @@ def action_init(branch_dir, branch_props):
     check_dir_clean(branch_dir)
 
     # Get the initial revision set if not explicitly specified.
-    revs = opts["revision"] or "1-" + get_latestrev(opts["head-url"])
+    revs = opts["revision"] or "1-" + get_latest_rev(opts["head-url"])
     revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
@@ -1004,23 +1042,7 @@ def action_integrated(branch_dir, branch_props):
     revs = merge_props_to_revision_set(branch_props, opts["head-path"])
 
     # Lookup the oldest revision on the branch path.
-    ### TODO: Refactor this to use a modified RevisionLog class.
-    oldest_src_rev = -1
-    lines = None
-    src_url = opts["head-url"]
-    cmd = "log -r1:HEAD --stop-on-copy -q " + src_url
-    try:
-        lines = launchsvn(cmd + " --limit=1")
-    except LaunchError:
-        # Assume that --limit isn't supported by the installed 'svn'.
-        lines = launchsvn(cmd)
-    report('determining oldest source URL revision for "%s"' % src_url)
-    if lines and len(lines) > 1:
-        i = lines[1].find(" ")
-        if i != -1:
-            oldest_src_rev = int(lines[1][1:i])
-    if oldest_src_rev == -1:
-        error("unable to determine oldest source revision")
+    oldest_src_rev = get_created_rev(opts["head-url"])
 
     # Subtract any revisions which pre-date the branch.
     report("subtracting revisions which pre-date the source URL (%d)" %
@@ -1509,9 +1531,11 @@ common_opts = [
                    'and ranges separated by commas, e.g., "534,537-539,540"'),
     OptionArg("-S", "--head", "--source",
               default=None,
-              help="specify the head for this branch. It can be either a path "
-                   "or an URL. Needed only to disambiguate in case of "
-                   "multiple merge tracking (merging from multiple heads)"),
+              help="specify the head for this branch. It can be either a path,"
+                   " a full URL, or an unambigous substring of one the paths "
+                   "for which merge tracking was already initialized. Needed "
+                   "only to disambiguate in case of multiple merge tracking "
+                   "(merging from multiple heads)"),
 ]
 
 command_table = {
@@ -1702,9 +1726,20 @@ def main(args):
         # trailing /'s.
         head = rstrip(head, "/")
         if not is_wc(head) and not is_url(head):
-            error('"%s" is not a valid URL or working directory' % head)
+            # Check if it is a substring of a repo-relative URL recorded
+            # within the branch properties.
+            found = []
+            for rlpath in branch_props.keys():
+                if rlpath.find(head) > 0:
+                    found.append(rlpath)
+            if len(found) == 1:
+                head = get_repo_root(branch_dir) + found[0]
+            else:
+                error('"%s" is neither a valid URL (or an unambiguous '
+                      'substring), nor a working directory' % head)
+
         opts["head-url"] = target_to_url(head)
-        opts["head-path"] = url_to_rlpath(opts["head-url"])
+        opts["head-path"] = target_to_rlpath(head)
 
     # Sanity check head_url
     assert is_url(opts["head-url"])

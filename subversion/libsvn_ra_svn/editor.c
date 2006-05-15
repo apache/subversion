@@ -2,7 +2,7 @@
  * editor.c :  Driving and consuming an editor across an svn connection
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -608,7 +608,8 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
     entry->err = ds->editor->apply_textdelta(entry->baton, base_checksum, pool,
                                              &wh, &wh_baton);
 
-  stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
+  if (!entry->err)
+    stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
   subpool = svn_pool_create(entry->pool);
   while (1)
     {

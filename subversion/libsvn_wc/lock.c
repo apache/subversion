@@ -546,6 +546,7 @@ do_open(svn_wc_adm_access_t **adm_access,
   svn_wc_adm_access_t *lock;
   int wc_format;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (associated)
     {
@@ -569,10 +570,10 @@ do_open(svn_wc_adm_access_t **adm_access,
       /* ### We will read the entries file later.  Maybe read the whole
          file here instead to avoid reopening it. */
       err = svn_io_read_version_file(&wc_format,
-                                     svn_wc__adm_path(path, FALSE, pool,
+                                     svn_wc__adm_path(path, FALSE, subpool,
                                                       SVN_WC__ADM_ENTRIES,
                                                       NULL),
-                                     pool);
+                                     subpool);
       /* If the entries file doesn't start with a version number, we're dealing
          with a pre-format 7 working copy, so we need to get the format from
          the format file instead. */
@@ -580,10 +581,10 @@ do_open(svn_wc_adm_access_t **adm_access,
         {
           svn_error_clear(err);
           err = svn_io_read_version_file(&wc_format,
-                                         svn_wc__adm_path(path, FALSE, pool,
+                                         svn_wc__adm_path(path, FALSE, subpool,
                                                           SVN_WC__ADM_FORMAT,
                                                           NULL),
-                                         pool);
+                                         subpool);
         }
       if (err)
         {
@@ -593,15 +594,15 @@ do_open(svn_wc_adm_access_t **adm_access,
         }
 
       SVN_ERR(svn_wc__check_format(wc_format,
-                                   svn_path_local_style(path, pool),
-                                   pool));
+                                   svn_path_local_style(path, subpool),
+                                   subpool));
     }
 
   /* Need to create a new lock */
   if (write_lock)
     {
       lock = adm_access_alloc(svn_wc__adm_access_write_lock, path, pool);
-      SVN_ERR(create_lock(lock, 0, pool));
+      SVN_ERR(create_lock(lock, 0, subpool));
       lock->lock_exists = TRUE;
     }
   else
@@ -613,14 +614,13 @@ do_open(svn_wc_adm_access_t **adm_access,
     {
       lock->wc_format = wc_format;
       if (write_lock)
-        SVN_ERR(maybe_upgrade_format(lock, pool));
+        SVN_ERR(maybe_upgrade_format(lock, subpool));
     }
 
   if (depth != 0)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* Reduce depth since we are about to recurse */
       if (depth > 0)
@@ -707,7 +707,6 @@ do_open(svn_wc_adm_access_t **adm_access,
             }
           lock->set = associated->set;
         }
-      svn_pool_destroy(subpool);
     }
 
   if (associated)
@@ -725,6 +724,9 @@ do_open(svn_wc_adm_access_t **adm_access,
   apr_pool_cleanup_register(lock->pool, lock, pool_cleanup,
                             pool_cleanup_child);
   *adm_access = lock;
+
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 

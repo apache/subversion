@@ -491,7 +491,7 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,
                                send_deltas, editor, edit_baton,
-                               dav_svn_authz_read, &arb,
+                               dav_svn_authz_read_func(&arb), &arb,
                                resource->pool)))
     return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                "Problem replaying revision",

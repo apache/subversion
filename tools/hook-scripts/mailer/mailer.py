@@ -885,8 +885,8 @@ class TextCommitRenderer:
 
     w = self.output.write
 
-    w('Author: %s\nDate: %s\nNew Revision: %s\n\n'
-      % (data.author, data.date, data.rev))
+    w('Author: %s\nDate: %s\nNew Revision: %s\n\nLog:\n%s\n\n'
+      % (data.author, data.date, data.rev, data.log))
 
     # print summary sections
     self._render_list('Added', data.added_data)
@@ -902,8 +902,6 @@ class TextCommitRenderer:
         self._render_list('Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')
-
-    w('\nLog:\n%s\n' % data.log)
 
     self._render_diffs(data.diffs, '')
     if data.other_diffs:
