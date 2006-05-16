@@ -1205,6 +1205,32 @@ def action_unblock(branch_dir, branch_props):
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
+def action_uninit(branch_dir, branch_props):
+    """Uninit HEAD URL."""
+    # Check branch directory is ready for being modified
+    check_dir_clean(branch_dir)
+
+    # If the head-path does not have an entry in the svnmerge-integrated
+    # property, simply error out.
+    if not branch_props.has_key(opts["head-path"]):
+        error('"%s" does not contain merge tracking information for "%s"' \
+                % (opts["head-path"], branch_dir))
+
+    del branch_props[opts["head-path"]]
+
+    # Set merge property with the selected head deleted
+    set_merge_props(branch_dir, branch_props)
+
+    # Set blocked revisions for the selected head to None
+    set_blocked_revs(branch_dir, opts["head-path"], None)
+
+    # Write out commit message if desired
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
+        print >>f, 'Removed merge tracking for "%s" for ' % NAME
+        print >>f, '%s' % opts["head-url"]
+        f.close()
+        report('wrote commit message to "%s"' % opts["commit-file"])
 
 ###############################################################################
 # Command line parsing -- options and commands management
@@ -1655,6 +1681,17 @@ command_table = {
     blocked revisions are unblocked""" % NAME,
     [
         "-f", "-r", "-S", # import common opts
+    ]),
+
+    "uninit": (action_uninit,
+    "uninit [OPTION...] [PATH]",
+    """Remove merge tracking information from PATH. It cleans any kind of merge
+    tracking information (including the list of blocked revisions). If there
+    are multiple heads, use --head to indicate which head you want to forget
+    about.
+    """,
+    [
+        "-f", "-S", # import common opts
     ]),
 }
 
