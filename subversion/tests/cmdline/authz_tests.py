@@ -436,7 +436,19 @@ def authz_write_access(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'logmsg',
                                      B_url, D_url)
-                                     
+
+  if sbox.repo_url.startswith('svn'):
+    expected_err = ".*svn: Authorization failed.*"
+    
+  # lock a file, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'lock msg',
+                                     iota_url)
+
 #----------------------------------------------------------------------
 
 def authz_checkout_test(sbox):
