@@ -178,8 +178,8 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-parse_mergeinfo(const char **input, const char *end, apr_hash_t *hash, 
-                apr_pool_t *pool)
+svn_parse_mergeinfo(const char **input, const char *end, apr_hash_t *hash, 
+                    apr_pool_t *pool)
 {
   return parse_top(input, end, hash, pool);
 }

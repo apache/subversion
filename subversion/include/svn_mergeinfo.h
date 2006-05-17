@@ -38,8 +38,8 @@ extern "C" {
  * @since New in 1.5.  
  */
 svn_error_t *
-parse_mergeinfo(const char **input, const char *end, apr_hash_t *hash, 
-                apr_pool_t *pool);
+svn_parse_mergeinfo(const char **input, const char *end, apr_hash_t *hash, 
+                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

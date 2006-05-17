@@ -702,6 +702,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_utf_h.swg
 %include svn_nls_h.swg
 %include svn_path_h.swg
+%include svn_mergeinfo_h.swg
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
