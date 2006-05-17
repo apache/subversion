@@ -416,7 +416,7 @@ def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
   exist, create it."""
 
-  if not(os.path.exists(path)):
+  if not os.path.exists(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
@@ -568,7 +568,7 @@ class Sandbox:
     # contents.
     if self.repo_url.startswith("http"):
       # this dir doesn't exist out of the box, so we may have to make it
-      if not(os.path.exists(work_dir)):
+      if not os.path.exists(work_dir):
         os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
       fp = open(self.authz_file, "w")
