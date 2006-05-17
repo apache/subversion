@@ -1106,24 +1106,43 @@ close_directory(void *dir_baton,
         }
       else
         {
+          svn_wc_adm_access_t *adm_access;
+
+          SVN_ERR(svn_wc_adm_retrieve(&adm_access,
+                                      b->edit_baton->anchor, b->path,
+                                      b->pool));
+
           if (b->edit_baton->use_text_base)
             {
-              svn_wc_adm_access_t *adm_access;
-
-              SVN_ERR(svn_wc_adm_retrieve(&adm_access,
-                                          b->edit_baton->anchor, b->path,
-                                          b->pool));
-
               SVN_ERR(svn_wc_get_prop_diffs(NULL, &originalprops,
                                             b->path, adm_access, pool));
             }
           else
             {
+              apr_hash_t *base_props, *repos_props;
+              int i;
+
               SVN_ERR(svn_wc_prop_list(&originalprops, b->path,
                                        b->edit_baton->anchor, pool));
-              /* ### need to combine the BASE->repos changes in b->propchanges
-                 with the WORKING->BASE propchanges, if any, so that
-                 b->propchanges becomes WORKING->repos. */
+
+              /* Load the BASE and repository directory properties. */
+              SVN_ERR(svn_wc_get_prop_diffs(NULL, &base_props,
+                                            b->path, adm_access, pool));
+
+              repos_props = apr_hash_copy(pool, base_props);
+
+              for (i = 0; i < b->propchanges->nelts; ++i)
+                {
+                  const svn_prop_t *prop = &APR_ARRAY_IDX(b->propchanges, i,
+                                                          svn_prop_t);
+                  apr_hash_set(repos_props, prop->name, APR_HASH_KEY_STRING,
+                               prop->value);
+                }
+
+              /* Recalculate b->propchanges as the change between WORKING
+                 and repos. */
+              SVN_ERR(svn_prop_diffs(&b->propchanges,
+                                     repos_props, originalprops, b->pool));
             }
         }
 
