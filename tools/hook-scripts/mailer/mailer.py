@@ -202,6 +202,7 @@ class MailedOutput(OutputBase):
            'Subject: %s\n' \
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
+           'Content-Transfer-Encoding: 8bit\n' \
            % (self.from_addr, string.join(self.to_addrs, ', '), subject)
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
