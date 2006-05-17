@@ -16,26 +16,11 @@ Candidate changes:
     Votes:
       +1: rooneg, lundblad
 
-  * r19636
-    Fix up $INSTALL after AC_PROG_INSTALL.
-    Justification:
-      Avoid build breakage on Solaris with VPATH build.
-    Votes:
-      +1: maxb, lundblad
-
   * r19638
     Fix bug: Use of log with limit against a pre-1.3.x svnserve which does not
     support limit renders the RA session unusable for future commands.
     Votes:
       +1: maxb, danderson
-
-  * r19656
-    Eliminate dead code in notification fflushing.
-    Justification:
-      Regression: no fflush after each period in post-commit txdelta
-      transmission.
-    Votes:
-      +1: lundblad, dlr
 
   * r19527 (testcase), r19658 (fix)
     Fix bug in svn diff -rN: local propchanges are not shown for
@@ -52,6 +37,21 @@ Candidate changes:
     Justification:
       Oft-requested usability improvement for merges involving binary files.
     Votes:
-      +1: dlr
+      +1: dlr, rooneg
 
 Approved changes:
+
+  * r19636
+    Fix up $INSTALL after AC_PROG_INSTALL.
+    Justification:
+      Avoid build breakage on Solaris with VPATH build.
+    Votes:
+      +1: maxb, lundblad, rooneg
+
+  * r19656
+    Eliminate dead code in notification fflushing.
+    Justification:
+      Regression: no fflush after each period in post-commit txdelta
+      transmission.
+    Votes:
+      +1: lundblad, dlr, rooneg
