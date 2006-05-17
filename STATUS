@@ -70,10 +70,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r19581, r19584, r19591
-    Add peg rev help text for the 'info' and 'log' commands.
-    Justification:
-      Advertise that these commands actually support peg revs!
-    Votes:
-      +1: dlr, lundblad, danderson
-      +0: nori
