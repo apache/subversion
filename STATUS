@@ -54,10 +54,3 @@ Candidate changes:
       +1: malcolm, lundblad
 
 Approved changes:
-
-  * r19675
-    Fix bug in svn log file@BASE.
-    Justification:
-      Small change, TortoiseSVN needs the fix.  Regression.
-    Votes:
-      +1: rooneg, lundblad, dlr
