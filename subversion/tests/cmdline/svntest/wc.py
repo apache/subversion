@@ -181,6 +181,6 @@ class StateItem:
   def tweak(self, **kw):
     for name, value in kw.items():
       ### refine the revision args (for now) to ensure they are strings
-      if name == 'wc_rev':
+      if value is not None and name == 'wc_rev':
         value = str(value)
       setattr(self, name, value)
