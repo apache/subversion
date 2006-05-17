@@ -1003,6 +1003,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_NO_AUTH_FILE_PATH,
              SVN_ERR_MISC_CATEGORY_START + 18,
              "No auth file path available")
+  
+  SVN_ERRDEF(SVN_ERR_MERGE_INFO_PARSE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 19,
+             "Merge info parse error")
 
   /** @since New in 1.1. */
   SVN_ERRDEF(SVN_ERR_VERSION_MISMATCH,
