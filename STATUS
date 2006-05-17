@@ -22,7 +22,7 @@ Candidate changes:
     Justification:
       Advertise that these commands actually support peg revs!
     Votes:
-      +1: dlr, lundblad (not r19591)
+      +1: dlr, lundblad
       +0: nori
 
   * r19605, r19565, r19564, r19533, r19531
@@ -30,7 +30,7 @@ Candidate changes:
     Justification:
       Low impact (just contrib), people want the abilities it gives them.
     Votes:
-      +1: rooneg
+      +1: rooneg, lundblad
 
   * r19620
     Fix hang in ra_svn when locking unreadable file.
@@ -44,7 +44,7 @@ Candidate changes:
     Justification:
       Avoid build breakage on Solaris with VPATH build.
     Votes:
-      +1: maxb
+      +1: maxb, lundblad
 
   * r19638
     Fix bug: Use of log with limit against a pre-1.3.x svnserve which does not
