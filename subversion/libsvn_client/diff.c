@@ -691,6 +691,13 @@ struct merge_cmd_baton {
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
   svn_client_ctx_t *ctx;
 
+  /* Whether invocation of the merge_file_added() callback required
+     delegation to the merge_file_changed() function for the file
+     currently being merged.  This info is used to detect whether a
+     file on the left side of a 3-way merge actually exists (important
+     because it's created as an empty temp file on disk regardless).*/
+  svn_boolean_t add_necessitated_merge;
+
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
@@ -828,18 +835,27 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
          allow svn_wc_merge to produce a conflict.  Instead, just
-         overwrite the working file with the 'right' side of the merge. */
+         overwrite the working file with the 'right' side of the merge.
+
+         Alternately, if the 'left' side of the merge doesn't exist in
+         the repository, and the 'right' side of the merge is
+         identical to the WC, pretend we did the merge (a no-op). */
       if ((! has_local_mods)
           && ((mimetype1 && svn_mime_type_is_binary(mimetype1))
               || (mimetype2 && svn_mime_type_is_binary(mimetype2))))
         {
+          /* For adds, the 'left' side of the merge doesn't exist. */
+          svn_boolean_t older_revision_exists =
+              !merge_b->add_necessitated_merge;
           svn_boolean_t same_contents;
           SVN_ERR(svn_io_files_contents_same_p(&same_contents,
-                                               older, mine, subpool));
+                                               (older_revision_exists ?
+                                                older : yours),
+                                               mine, subpool));
           if (same_contents)
             {
-              if (! merge_b->dry_run)
-                SVN_ERR(svn_io_file_rename(yours, mine, subpool));          
+              if (older_revision_exists && !merge_b->dry_run)
+                SVN_ERR(svn_io_file_rename(yours, mine, subpool));
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
             }
@@ -1002,12 +1018,20 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           }
         else
           {
+            /* Indicate that we merge because of an add to handle a
+               special case for binary files w/ no local mods. */
+            merge_b->add_necessitated_merge = TRUE;
+
             SVN_ERR(merge_file_changed(adm_access, content_state, prop_state,
                                        mine, older, yours,
                                        rev1, rev2,
                                        mimetype1, mimetype2,
                                        prop_changes, original_props,
                                        baton));            
+
+            /* Reset the state so that the baton can safely be reused
+               in subsequent ops occurring during this merge. */
+            merge_b->add_necessitated_merge = FALSE;
           }
         break;      
       }
@@ -2713,6 +2737,7 @@ svn_client_merge2(const char *source1,
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = path2;
   merge_cmd_baton.added_path = NULL;
+  merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 
@@ -2841,6 +2866,7 @@ svn_client_merge_peg2(const char *source,
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = path;
   merge_cmd_baton.added_path = NULL;
+  merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 

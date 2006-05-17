@@ -1435,6 +1435,92 @@ def merge_binary_file (sbox):
     os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
+# Regression test for issue #2403: Incorrect 3-way merge of "added"
+# binary file which already exists (unmodified) in the WC
+
+def three_way_merge_add_of_existing_binary_file(sbox):
+  "3-way merge of 'file add' into existing binary"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a branch of A, creating revision 2.
+  A_url = svntest.main.current_repo_url + "/A"
+  branch_A_url = svntest.main.current_repo_url + "/copy-of-A"
+  svntest.actions.run_and_verify_svn(None, None, [], "cp",
+                                     A_url, branch_A_url,
+                                     "-m", "Creating copy-of-A")
+
+  # Add a binary file to the WC.
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  theta_contents = fp.read()  # suck up contents of a test .png file
+  fp.close()
+
+  theta_path = os.path.join(wc_dir, "A", "theta")
+  fp = open(theta_path, "w")
+  fp.write(theta_contents)    # write png filedata into 'A/theta'
+  fp.close()
+  
+  svntest.main.run_svn(None, "add", theta_path)
+
+  # Commit the new binary file to the repos, creating revision 3.
+  expected_output = svntest.wc.State(wc_dir, {
+    "A/theta" : Item(verb="Adding  (bin)"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)  # "and nothing else matters..."
+  expected_status.add({
+    "A/theta" : Item(status="  ", wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
+  short_wc = wc_dir[shorten_by:]
+
+  # In the working copy, attempt to 'svn merge branch_A_url@2 A_url@3 A'.
+  # We should *not* see a conflict during the merge, but an 'A'.
+  # And after the merge, the status should not report any differences.
+  expected_output = wc.State(short_wc, {
+    "A/theta" : Item(status="A "),
+    })
+
+  # As greek_state is rooted at / instead of /A (our merge target), we
+  # need a sub-tree of it rather than straight copy.
+  expected_disk = svntest.main.greek_state.subtree("A")
+  expected_disk.add({
+    "theta" : Item(theta_contents,
+                   props={"svn:mime-type" : "application/octet-stream"}),
+    })
+  expected_status = svntest.actions.get_virginal_state(short_wc, 1)
+  #expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    "A/theta" : Item(status="  ", wc_rev=3),
+    })
+  expected_status.remove("")  # top-level of the WC
+  expected_status.remove("iota")
+  expected_skip = wc.State("", { })
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    # If we merge into short_wc alone, theta appears at the WC root,
+    # which is in the wrong location -- append "/A" to stay on target.
+    svntest.actions.run_and_verify_merge2(short_wc + "/A", "2", "3",
+                                          branch_A_url, A_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          expected_skip,
+                                          None, None, None, None, None,
+                                          1)
+  finally:
+    os.chdir(saved_cwd)
+
+#----------------------------------------------------------------------
 # Regression test for Issue #1297:
 # A merge that creates a new file followed by an immediate diff
 # The diff should succeed.
@@ -3283,6 +3369,7 @@ test_list = [ None,
               merge_similar_unrelated_trees,
               merge_with_prev,
               merge_binary_file,
+              three_way_merge_add_of_existing_binary_file,
               merge_one_file_using_r,
               merge_one_file_using_c,
               merge_in_new_file_and_diff,
