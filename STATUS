@@ -80,14 +80,6 @@ Candidate changes:
     Votes:
       +1: brane
 
-  * r19319
-    Add Content-Transfer-Encoding header to mails sent out by mailer.py.
-    Justification:
-      Required for RFC compliance; prevents picky mailers (e.g. Courier)
-      from munging incoming commit emails containing non-ASCII chararacters.
-    Votes:
-      +1: malcolm, dlr
-
   * r19520
     Fix crash in mod_dav_svn on valid request body.
     Justification:
@@ -108,14 +100,6 @@ Candidate changes:
       Memory leak is a critical bug.
     Votes:
       +1: kou
-
-  * r19543
-    Fix the conversion bug which is caused when converted target is NULL.
-    Justification:
-      The conversion bug raises unnecessary exceptions.
-    Votes:
-      +1: kou
-      +0: nori
 
   * r19620
     Fix hang in ra_svn when locking unreadable file.
@@ -141,4 +125,20 @@ Approved changes:
       Depends on r17280 et al.
     Votes:
       +1: malcolm, dlr
+
+  * r19319
+    Add Content-Transfer-Encoding header to mails sent out by mailer.py.
+    Justification:
+      Required for RFC compliance; prevents picky mailers (e.g. Courier)
+      from munging incoming commit emails containing non-ASCII chararacters.
+    Votes:
+      +1: malcolm, dlr
+
+  * r19543
+    Fix the conversion bug which is caused when converted target is NULL.
+    Justification:
+      The conversion bug raises unnecessary exceptions.
+    Votes:
+      +1: kou
+      +0: nori
 
