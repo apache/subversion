@@ -70,7 +70,7 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
   const char *buf, *buf_apr;
 
   va_start(ap, format);
-  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap); 
+  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap);
   va_end(ap);
 
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&buf_apr, buf, encoding,
@@ -345,7 +345,7 @@ diff_content_changed(const char *path,
   int i;
 
   /* Get a stream from our output file. */
-  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool); 
+  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool);
 
   /* Assemble any option args. */
   nargs = diff_cmd_baton->options->nelts;
@@ -738,7 +738,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_missing;
           svn_error_clear(err);
-          return SVN_NO_ERROR;        
+          return SVN_NO_ERROR;
         }
       else if (err)
         return err;
@@ -859,7 +859,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
             }
-        }  
+        }
 
       if (merge_required)
         {
@@ -1027,13 +1027,13 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                                        rev1, rev2,
                                        mimetype1, mimetype2,
                                        prop_changes, original_props,
-                                       baton));            
+                                       baton));
 
             /* Reset the state so that the baton can safely be reused
                in subsequent ops occurring during this merge. */
             merge_b->add_necessitated_merge = FALSE;
           }
-        break;      
+        break;
       }
     default:
       if (content_state)
@@ -1390,7 +1390,7 @@ convert_to_url(const char **url,
                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
-  const svn_wc_entry_t *entry;      
+  const svn_wc_entry_t *entry;
 
   if (svn_path_is_url(path))
     {
@@ -1619,9 +1619,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   drr->target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool); 
+      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool);
       drr->target1 = svn_path_uri_decode(drr->target1, pool);
-      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool); 
+      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool);
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
         drr->base_path = svn_path_dirname(drr->base_path, pool);
