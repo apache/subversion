@@ -32,6 +32,13 @@ Candidate changes:
       +1: dlr, lundblad (not r19591)
       +0: nori
 
+  * r19603
+    Fixes DAV tests when run for the first time on a machine.
+    Justification:
+      Failing tests bad.
+    Votes:
+      +1: rooneg
+
   * r19605, r19565, r19564, r19533, r19531
     Backport mod_dontdothat.
     Justification:
