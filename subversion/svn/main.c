@@ -894,6 +894,12 @@ main(int argc, const char *argv[])
                                      _("Non-numeric limit argument given"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
+          if (opt_state.limit <= 0)
+            {
+              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                    _("Argument to --limit must be positive"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
         }
         break;
       case 'm':
