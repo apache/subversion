@@ -69,5 +69,12 @@ Candidate changes:
     Votes:
       +1: malcolm, lundblad
 
+  * r19675
+    Fix bug in svn log file@BASE.
+    Justification:
+      Small change, TortoiseSVN needs the fix.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
