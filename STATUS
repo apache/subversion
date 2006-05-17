@@ -37,7 +37,7 @@ Candidate changes:
     Justification:
       Failing tests bad.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
   * r19605, r19565, r19564, r19533, r19531
     Backport mod_dontdothat.
