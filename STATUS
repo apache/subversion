@@ -9,13 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19528
-    Plug memleak with svn ls and mod_dav_svn.
-    Justification:
-      Listing large directories consumes large amounts of memory.
-    Votes:
-      +1: lundblad, rooneg, dlr
-
   * r19543
     Fix the convert bug which is caused when converted target is NULL.
     Justification:
