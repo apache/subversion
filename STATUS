@@ -27,7 +27,7 @@ Candidate changes:
     Fix bug: Use of log with limit against a pre-1.3.x svnserve which does not
     support limit renders the RA session unusable for future commands.
     Votes:
-      +1: maxb
+      +1: maxb, danderson
 
   * r19656
     Eliminate dead code in notification fflushing.
