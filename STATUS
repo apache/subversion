@@ -65,7 +65,7 @@ Candidate changes:
       Regression: no fflush after each period in post-commit txdelta
       transmission.
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
 
   * r19527 (testcase), r19658 (fix)
     Fix bug in svn diff -rN: local propchanges are not shown for
