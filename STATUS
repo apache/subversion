@@ -55,14 +55,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r19543
-    Fix the convert bug which is caused when converted target is NULL.
-    Justification:
-      The convert bug raises unnecessary exceptions.
-    Votes:
-      +1: kou
-      +0: nori
-
   * r19675
     Fix bug in svn log file@BASE.
     Justification:
