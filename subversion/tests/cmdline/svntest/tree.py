@@ -184,9 +184,17 @@ class SVNTreeNode:
 
 
   def pprint(self):
+    "Pretty-print the meta data for this node."
     print " * Node name:  ", self.name
     print "    Path:      ", self.path
-    print "    Contents:  ", self.contents
+    mime_type = self.props.get("svn:mime-type")
+    if not mime_type or mime_type.startswith("text/"):
+      if self.children is not None:
+        print "    Contents:   N/A (node is a directory)"
+      else:
+        print "    Contents:  ", self.contents
+    else:
+      print "    Contents:   %d bytes (binary)" % len(self.contents)
     print "    Properties:", self.props
     print "    Attributes:", self.atts
     ### FIXME: I'd like to be able to tell the difference between
@@ -198,7 +206,7 @@ class SVNTreeNode:
     if self.children is not None:
       print "    Children:  ", len(self.children)
     else:
-      print "    Children: is a file."
+      print "    Children:   N/A (node is a file)"
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -385,13 +393,13 @@ def get_child(node, name):
 # Helpers for compare_trees
 def default_singleton_handler_a(a, baton):
   "Printing SVNTreeNode A's name, then raise SVNTreeUnequal."
-  print "Got singleton from actual tree:", a.name
+  print "Couldn't find node '%s' in expected tree" % a.name
   a.pprint()
   raise SVNTreeUnequal
 
 def default_singleton_handler_b(b, baton):
   "Printing SVNTreeNode B's name, then raise SVNTreeUnequal."
-  print "Got singleton from expected tree:", b.name
+  print "Couldn't find node '%s' in actual tree" % b.name
   b.pprint()
   raise SVNTreeUnequal
 
@@ -408,10 +416,10 @@ def compare_trees(a, b,
                   a_baton = None,
                   singleton_handler_b = None,
                   b_baton = None):
-  """Compare SVNTreeNodes A and B, expressing differences using FUNC_A
-  and FUNC_B.  FUNC_A and FUNC_B are functions of two arguments (a
-  SVNTreeNode and a context baton), and may raise exception
-  SVNTreeUnequal.  Their return value is ignored.
+  """Compare SVNTreeNodes A (actual) and B (expected), expressing
+  differences using FUNC_A and FUNC_B.  FUNC_A and FUNC_B are
+  functions of two arguments (a SVNTreeNode and a context baton), and
+  may raise exception SVNTreeUnequal.  Their return value is ignored.
 
   If A and B are both files, then return if their contents,
   properties, and names are all the same; else raise a SVNTreeUnequal.
