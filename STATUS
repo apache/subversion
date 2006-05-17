@@ -67,4 +67,13 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r19527 (testcase), r19658 (fix)
+    Fix bug in svn diff -rN: local propchanges are not shown for
+    a directory if we are also reporting remote propchanges for a
+    different property on the same directory.
+    Justification:
+      Localised change; last piece of the diff rework puzzle for 1.4.x.
+    Votes:
+      +1: malcolm
+
 Approved changes:
