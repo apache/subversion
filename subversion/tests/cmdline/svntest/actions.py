@@ -400,8 +400,33 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          check_props = 0,
                          dry_run = 1,
                          *args):
+  """Run 'svn merge -rREV1:REV2 URL DIR'."""
+  if args:
+    run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
+                          status_tree, skip_tree, error_re_string,
+                          singleton_handler_a, a_baton, singleton_handler_b,
+                          b_baton, check_props, dry_run, *args)
+  else:
+    run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
+                          status_tree, skip_tree, error_re_string,
+                          singleton_handler_a, a_baton, singleton_handler_b,
+                          b_baton, check_props, dry_run)
 
-  """Run 'svn merge -rREV1:REV2 URL DIR'
+
+def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
+                          output_tree, disk_tree, status_tree, skip_tree,
+                          error_re_string = None,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None,
+                          check_props = 0,
+                          dry_run = 1,
+                          *args):
+  """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
+  (for a three-way merge between URLs and WC).
+
+  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.
 
   If ERROR_RE_STRING, the merge must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -432,7 +457,11 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   if isinstance(skip_tree, wc.State):
     skip_tree = skip_tree.old_tree()
 
-  merge_command = ('merge', '-r', rev1 + ':' + rev2, url, dir)
+  if url2:
+    merge_command = ("merge", url1 + "@" + str(rev1),url2 + "@" + str(rev2),
+                     dir)
+  else:
+    merge_command = ("merge", "-r", str(rev1) + ":" + str(rev2), url1, dir)
 
   if dry_run:
     pre_disk = tree.build_tree_from_wc(dir)

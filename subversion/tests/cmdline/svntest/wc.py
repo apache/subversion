@@ -78,6 +78,17 @@ class State:
       if filter(path, item):
         apply(item.tweak, (), kw)
 
+  def subtree(self, subtree_path):
+    """Return a State object which is a deep copy of the sub-tree
+    identified by PATH (which is assumed to contain only on element
+    rooted at the tree of this State object's WC_DIR)."""
+    desc = { }
+    for path, item in self.desc.items():
+      path_elements = path.split("/")
+      if len(path_elements) > 1 and path_elements[0] == subtree_path:
+        desc["/".join(path_elements[1:])] = item.copy()
+    return State(self.wc_dir, desc)
+
   def write_to_disk(self, target_dir):
     """Construct a directory structure on disk, matching our state.
 
