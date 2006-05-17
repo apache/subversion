@@ -93,6 +93,7 @@ Commit access for specific areas:
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
+           lgo   Lieven Govaerts <lgo@mobsol.be>             (svntest)
 
   Translation of message files:
 
