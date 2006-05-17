@@ -16,13 +16,6 @@ Candidate changes:
     Votes:
       +1: rooneg, lundblad
 
-  * r19620
-    Fix hang in ra_svn when locking unreadable file.
-    Justification:
-      Server protocol error.
-    Votes:
-      +1: lundblad, dlr
-
   * r19636
     Fix up $INSTALL after AC_PROG_INSTALL.
     Justification:
@@ -62,3 +55,10 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
+
+  * r19620
+    Fix hang in ra_svn when locking unreadable file.
+    Justification:
+      Server protocol error.
+    Votes:
+      +1: lundblad, dlr, danderson
