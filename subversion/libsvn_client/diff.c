@@ -766,15 +766,6 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
-  /* xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
-     strings are used to tag onto a filename in case of a merge conflict */
-  const char *target_label = _(".working");
-  const char *left_label = apr_psprintf(subpool,
-                                        _(".merge-left.r%ld"),
-                                        older_rev);
-  const char *right_label = apr_psprintf(subpool,
-                                         _(".merge-right.r%ld"),
-                                         yours_rev);
   svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
@@ -863,6 +854,16 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
       if (merge_required)
         {
+          /* xgettext: the '.working', '.merge-left.r%ld' and
+             '.merge-right.r%ld' strings are used to tag onto a file
+             name in case of a merge conflict */
+          const char *target_label = _(".working");
+          const char *left_label = apr_psprintf(subpool,
+                                                _(".merge-left.r%ld"),
+                                                older_rev);
+          const char *right_label = apr_psprintf(subpool,
+                                                 _(".merge-right.r%ld"),
+                                                 yours_rev);
           SVN_ERR(svn_wc_merge2(older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
                                 merge_b->dry_run, &merge_outcome, 
