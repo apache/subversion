@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       Listing large directories consumes large amounts of memory.
     Votes:
-      +1: lundblad, rooneg
+      +1: lundblad, rooneg, dlr
 
   * r19543
     Fix the convert bug which is caused when converted target is NULL.
