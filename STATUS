@@ -71,9 +71,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r19603
-    Fixes DAV tests when run for the first time on a machine.
-    Justification:
-      Failing tests bad.
-    Votes:
-      +1: rooneg, dlr, lundblad
