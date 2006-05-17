@@ -126,14 +126,6 @@ Approved changes:
     Votes:
       +1: malcolm, dlr
 
-  * r19319
-    Add Content-Transfer-Encoding header to mails sent out by mailer.py.
-    Justification:
-      Required for RFC compliance; prevents picky mailers (e.g. Courier)
-      from munging incoming commit emails containing non-ASCII chararacters.
-    Votes:
-      +1: malcolm, dlr
-
   * r19543
     Fix the conversion bug which is caused when converted target is NULL.
     Justification:
