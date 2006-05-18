@@ -58,6 +58,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertTrue(dirents.has_key('README2.txt'))
     self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
 
+  def test_commit(self):
+    def my_callback(info, pool):
+        self.assertEqual(info.revision, fs.youngest_rev(self.fs))
+
+    ra.get_commit_editor2(self.ra_ctx, "foobar", my_callback, None, False)
+
 def suite():
     return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
                               suiteClass=SubversionRepositoryTestSetup)
