@@ -31,11 +31,3 @@ Candidate changes:
       +1: dlr, rooneg
 
 Approved changes:
-
-  * r19656
-    Eliminate dead code in notification fflushing.
-    Justification:
-      Regression: no fflush after each period in post-commit txdelta
-      transmission.
-    Votes:
-      +1: lundblad, dlr, rooneg
