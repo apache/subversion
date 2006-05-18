@@ -2140,6 +2140,8 @@ def diff_prop_change_local_propmod(sbox):
     "Name: dirprop\n",
     "   - r2value\n",
     "   + workingvalue\n",
+    "Name: newdirprop\n",
+    "   + newworkingvalue\n",
     "\n",
     "\n",
     "Property changes on: iota\n",
@@ -2147,6 +2149,8 @@ def diff_prop_change_local_propmod(sbox):
     "Name: fileprop\n",
     "   - r2value\n",
     "   + workingvalue\n",
+    "Name: newfileprop\n",
+    "   + newworkingvalue\n",
     "\n" ]
 
   current_dir = os.getcwd()
@@ -2179,11 +2183,22 @@ def diff_prop_change_local_propmod(sbox):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'propset', 'fileprop',
                                        'workingvalue', 'iota')
+    # And also add some properties that only exist in WORKING.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'newdirprop',
+                                       'newworkingvalue', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'newfileprop',
+                                       'newworkingvalue', 'iota')
 
     # Now, if we diff r2 to WORKING, we've got three property values
     # to consider: r2value (in the repository), r3value (in BASE), and
     # workingvalue (in WORKING).
     # The diff should only show the r2->WORKING change.
+    #
+    # We also need to make sure that the 'new' (WORKING only) properties
+    # are included in the output, since they won't be listed in a simple
+    # BASE->r2 diff.
     svntest.actions.run_and_verify_svn(None, expected_output_r2_wc, [],
                                        'diff', '-r', '2')
 
