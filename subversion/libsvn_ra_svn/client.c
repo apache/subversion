@@ -1270,11 +1270,8 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
     }
   apr_pool_destroy(subpool);
 
-  if (nreceived <= limit)
-    {
-      /* Read the response. */
-      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
-    }
+  /* Read the response. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;
 }
