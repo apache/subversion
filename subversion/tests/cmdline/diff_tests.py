@@ -807,7 +807,7 @@ def dont_diff_binary_file(sbox):
 def diff_nonextant_urls(sbox):
   "svn diff errors against a non-existent URL"
 
-  sbox.build()
+  sbox.build(create_wc = False)
   non_extant_url = sbox.repo_url + '/A/does_not_exist'
   extant_url = sbox.repo_url + '/A/mu'
 

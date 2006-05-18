@@ -1508,17 +1508,16 @@ def basic_add_no_ignores(sbox):
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
-  sbox.build()
-  wc_dir = sbox.wc_dir
+  sbox.build(create_wc = False)
+  local_dir = sbox.wc_dir
 
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
-  svntest.main.safe_rmtree(wc_dir)
   url = svntest.main.current_repo_url
   scheme = url[:string.find(url, ":")]
   url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
                                      None, SVNAnyOutput,
-                                     'co', url, wc_dir)
+                                     'co', url, local_dir)
 
   # Different RA layers give different errors for failed checkouts;
   # for us, it's only important to know that it _did_ error (as

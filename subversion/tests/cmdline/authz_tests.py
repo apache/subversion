@@ -130,7 +130,7 @@ def authz_open_directory(sbox):
 
 def broken_authz_file(sbox):
   "broken authz files cause errors"
-  sbox.build()
+  sbox.build(create_wc = False)
   
   skip_test_when_no_authz_available()
   
@@ -157,8 +157,7 @@ def authz_read_access(sbox):
   
   skip_test_when_no_authz_available()
 
-  sbox.build("authz_read_access")
-  wc_dir = sbox.wc_dir
+  sbox.build("authz_read_access", create_wc = False)
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -313,8 +312,7 @@ def authz_write_access(sbox):
   
   skip_test_when_no_authz_available()
   
-  sbox.build("authz_write_access")
-  wc_dir = sbox.wc_dir
+  sbox.build("authz_write_access", create_wc = False)
   
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -456,8 +454,8 @@ def authz_checkout_test(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build("authz_checkout_test")
-  wc_dir = sbox.wc_dir
+  sbox.build("authz_checkout_test", create_wc = False)
+  local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -477,11 +475,9 @@ def authz_checkout_test(sbox):
          
   fp.close()
   
-  # checkout a second working copy, should fail
-  wc2_dir = sbox.wc_dir + '2'
-  
+  # checkout a working copy, should fail
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'co', sbox.repo_url, wc2_dir)
+                                     'co', sbox.repo_url, local_dir)
                           
   # 2nd part: now enable read access
   
@@ -499,16 +495,16 @@ def authz_checkout_test(sbox):
          
   fp.close()
   
-  # checkout a second working copy, should succeed because we have read
+  # checkout a working copy, should succeed because we have read
   # access
   expected_output = svntest.main.greek_state.copy()
-  expected_output.wc_dir = wc2_dir
+  expected_output.wc_dir = local_dir
   expected_output.tweak(status='A ', contents=None)
 
   expected_wc = svntest.main.greek_state
   
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
-                          wc2_dir,
+                          local_dir,
                           expected_output,
                           expected_wc)
 
