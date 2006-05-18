@@ -596,10 +596,10 @@ class Sandbox:
     self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
     return self.dependents[-1]
 
-  def build(self, name = None):
+  def build(self, name = None, create_wc = True):
     if name != None:
       self._set_name(name)
-    if actions.make_repo_and_wc(self):
+    if actions.make_repo_and_wc(self, create_wc):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
   def add_test_path(self, path, remove=1):
