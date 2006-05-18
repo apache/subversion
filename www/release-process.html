@@ -173,7 +173,40 @@ release stabilization section of the hacking guide</a>.</p>
 
 <div class="h2" id="the-changes-file" title="the-changes-file">
 <h2>Managing the CHANGES file</h2>
-</div>
+
+<div class="h3">
+<h3>Writing the initial content for a branch</h3>
+
+<p>Run <code>svn log -rHEAD:BRANCH_POINT
+http://svn.collab.net/repos/svn/branches/RELEASE</code> (where RELEASE
+is something like 1.4.x, and BRANCH_POINT is a revnum like 16325 where
+the <em>previous</em> release was branched off of the trunk).  This
+should give you every change ever made to the RELEASE line, including
+backports made to the RELEASE branch.  You then need to
+<em>remove</em> logs of changes that have already been released in
+RELEASE - 1 bugfixes (e.g. in 1.3.x).  Run <code>svn log -q
+--stop-on-copy</code> on the RELEASE - 1 branch, and then write a
+script to parse the revnums and remove them from your primary log
+output.  (Karl and Ben used to use emacs macros to do that, but
+suggest that we write a more general script.)</p>
+
+<p>Read that log from oldest to newest, summarizing points as you go.
+The trick is to know what level of detail to write at: you don't want
+to mention every tiny little commit, but you don't want to be too
+general either.  Set your filter-level by reading through a few pages
+of the CHANGES file before I start writing the new one, just to keep
+things consistent.</p>
+
+</div>  <!-- h3 -->
+
+<div class="h3">
+<h3>Adding content for patch release</h3>
+
+<p>TODO</p>
+
+</div>  <!-- h3 -->
+
+</div>  <!-- the-changes-file -->
 
 <![CDATA[=========================================================]]>
 
