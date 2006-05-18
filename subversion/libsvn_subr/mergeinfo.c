@@ -32,7 +32,8 @@ parse_revision(const char **input, const char *end, svn_revnum_t *revision)
   svn_revnum_t result = strtol(curr, &endptr, 10);
 
   if (curr == endptr)
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL, "Invalid revision number");
+    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                            _("Invalid revision number"));
 
   *revision = result;
 
