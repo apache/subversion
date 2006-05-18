@@ -22,8 +22,11 @@
 # ======================
 #
 # abort                   中断
+# add-directory element   add-directory 要素
+# add-file element        add-file 要素
 # ancestor                祖先
 # ancestry                系統
+# apply-textdelta element     apply-textdelta 要素
 # attempted ...           〜しようとしました
 # attribute               属性
 # author                  変更者
@@ -32,21 +35,26 @@
 # BASE                    BASE
 # baseline                ベースライン
 # basename                ベース名
+# bump                    上げる
 # character converter     文字列コンバータ
 # child                   子ノード
 # cleanup                 掃除
+# close-directory element     close-directory 要素
+# close-file element      close-file 要素
 # commit                  コミット
 # conflict                衝突
 # contents                内容
 # copyfrom                コピー元
 # creating ...            〜を作成しています
 # datestamp               タイムスタンプ
+# delete-entry element    delete-entry 要素
 # delta                   差分
 # deltification           差分化
 # destination             コピー先 / 移動先
 # dumpstream              ダンプストリーム
 # end                     途切れる
 # end revision            終了リビジョン
+# entries file            entries ファイル
 # entry                   エントリ
 # error ...ing            〜する際にエラーが発生しました / 〜中にエラーが
 #                         発生しました
@@ -83,6 +91,7 @@
 # MIME type               MIME タイプ
 # modified                修正された
 # mutex                   相互排除ロック
+# name attr               name 属性
 # native encoding         ネイティブのエンコーディング
 # no ... available        利用できる〜がありません
 # node kind               ノード種別
@@ -91,8 +100,14 @@
 # non-file                ファイルでない
 # null                    空の
 # object                  オブジェクト
+# open-directory element  open-directory 要素
+# open-file element       open-file 要素
+# open-root element       open-root 要素
 # out of date             リポジトリ側と比べて古くなった
 # overflow                溢れる
+# parent pool             親メモリプール
+# path attr               path 属性
+# pegged diff             peg リビジョン指定つきの diff
 # post-commit hook        post-commit フック
 # post-lock hook          post-lock フック
 # post-revprop-change hook    post-revprop-change フック
@@ -113,7 +128,11 @@
 # repository              リポジトリ
 # repository root         リポジトリのルート
 # representation          表現
+# rev attr                rev 属性
 # revision                リビジョン
+# revision attr           rev 属性
+# revision root           リビジョンルート
+# revision type           リビジョン形式
 # root of edit            編集用ルートパス
 # scheduled for ...       〜準備中の
 # source                  コピー元 / 移動元 / マージ元
@@ -125,6 +144,8 @@
 # stolen                  (ロックが) 奪われた
 # store                   保存する
 # target                  対象
+# target-revision element     target-revision 要素
+# text base               テキストベース
 # text-base               テキストベース
 # textual contents        テキスト
 # token                   トークン
@@ -137,6 +158,8 @@
 # unversioned             バージョン管理されていない
 # versioned               バージョン管理された
 # view                    ビュー
+# wcprops file            wcprops ファイル
+# WORKING                 作業中 (WORKING)
 # working copy            作業コピー
 # working copy path       作業コピーのパス
 # youngest revision       最新リビジョン
@@ -145,8 +168,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-03-31 02:06+0900\n"
-"PO-Revision-Date: 2006-03-31 00:54+0900\n"
+"POT-Creation-Date: 2006-05-18 18:26+0900\n"
+"PO-Revision-Date: 2006-05-18 18:02+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -878,9 +901,9 @@ msgstr ""
 "  ログメッセージが必須ですが、その中身は空でもかまいません。--message か\n"
 "  --file オプションによってログメッセージを与えない場合、エディタが起動しま"
 "す。\n"
-"  対象の中にロックされた項目がある場合、それらはコミットが成功した後にロッ"
-"ク\n"
-"  が解除されます。\n"
+"  対象の中にロックされた項目がある場合、コミット成功後にそれらのロックが解"
+"除\n"
+"  されます。\n"
 
 # * Description for 'svn copy'.
 # * "copy (cp): " is displayed at the head of the first line.
@@ -1056,15 +1079,15 @@ msgstr ""
 "な\n"
 "     いディレクトリツリーを <パス 2> にエクスポートします。その際、<REV> を"
 "指\n"
-"     定していればリビジョン <REV> の、そうでないときは作業中のツリーがエク"
-"ス\n"
-"     ポートされます。<パス 2> を省略した場合は、ローカルのディレクトリ名と"
-"し\n"
-"     て <パス 1> のベース名が使われます。<REV> を指定していない場合、ローカ"
-"ル\n"
-"     での変更はすべて保存されます。バージョン管理下にないファイルはコピーさ"
-"れ\n"
-"     ません。\n"
+"     定していればリビジョン <REV> の、そうでないときは作業中 (WORKING) のツ"
+"リー\n"
+"     がエクスポートされます。<パス 2> を省略した場合は、ローカルのディレク"
+"ト\n"
+"     リ名として <パス 1> のベース名が使われます。<REV> を指定していない場"
+"合、\n"
+"     ローカルでの変更はすべて保存されます。バージョン管理下にないファイルは"
+"コ\n"
+"     ピーされません。\n"
 "\n"
 "  <PEGREV> を指定すると、リビジョン <PEGREV> での <対象> をまず探します。\n"
 
@@ -1091,8 +1114,7 @@ msgid ""
 "  If PATH is a directory, the contents of the directory are added\n"
 "  directly under URL.\n"
 msgstr ""
-"import: バージョン管理されていないファイルやツリーをリポジトリに入れてコ"
-"ミッ\n"
+"バージョン管理されていないファイルやツリーをリポジトリに入れてコミッ\n"
 "トします。\n"
 "使用方法: import [<パス>] <URL>\n"
 "\n"
@@ -2457,10 +2479,9 @@ msgstr "この制限を無効にするには --force を用いてください"
 msgid "Write error"
 msgstr "書き込みエラーです"
 
-# ? parent pool
 #: include/svn_error_codes.h:152
 msgid "Bad parent pool passed to svn_make_pool()"
-msgstr "親のプールとして不正なものが svn_make_pool() に渡されました"
+msgstr "svn_make_pool() に渡された親メモリプールが不正です"
 
 #: include/svn_error_codes.h:156
 msgid "Bogus filename"
@@ -2636,7 +2657,6 @@ msgstr "作業ディレクトリ内に衝突があり、実行中の操作が妨
 msgid "Working copy is corrupt"
 msgstr "作業コピーが壊れています"
 
-# ? text base
 #: include/svn_error_codes.h:355
 msgid "Working copy text base is corrupt"
 msgstr "作業コピーのテキストベースが壊れています"
@@ -2766,12 +2786,11 @@ msgstr ""
 
 #: include/svn_error_codes.h:484
 msgid "Object is not a transaction root"
-msgstr "オブジェクトはトランザクションルートではありません"
+msgstr "オブジェクトがトランザクションルートではありません"
 
-# ? revision root
 #: include/svn_error_codes.h:488
 msgid "Object is not a revision root"
-msgstr "オブジェクトはリビジョンルートではありません"
+msgstr "オブジェクトがリビジョンルートではありません"
 
 #: include/svn_error_codes.h:492
 msgid "Merge conflict during commit"
@@ -3670,12 +3689,11 @@ msgstr "'%s' は、リポジトリのリビジョン %ld には見つかりま�
 msgid "Directory '%s' has no URL"
 msgstr "ディレクトリ '%s' に URL がありません"
 
-# ? pegged diff
 #: libsvn_client/diff.c:2183
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr ""
-"pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
-"せん"
+"peg リビジョン指定をつけて diff を使う場合、少なくとも一方のリビジョンはロー"
+"カルにあってはいけません"
 
 #: libsvn_client/diff.c:2487 libsvn_client/diff.c:2493
 #: libsvn_client/diff.c:2608 libsvn_client/locking_commands.c:263
@@ -4018,10 +4036,9 @@ msgstr "コピー記録を保存しています"
 msgid "allocating new copy ID (getting 'next-key')"
 msgstr "新しいコピー ID を割り当てています ('next-key' を取得しています)"
 
-# ? bump
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr "次のコピーキーにぶつかっています"
+msgstr "コピーキーを次のものに上げています"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
@@ -4035,10 +4052,9 @@ msgstr "コピーを読み込んでいます"
 msgid "allocating new node ID (getting 'next-key')"
 msgstr "新しいノード ID を割り当てています ('next-key' を取得しています)"
 
-# ? bump
 #: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
-msgstr "次のノード ID キーにぶつかっています"
+msgstr "ノード ID のキーを次のものに上げています"
 
 # ? successor id
 #: libsvn_fs_base/bdb/nodes-table.c:154
@@ -4078,10 +4094,9 @@ msgstr "表現を保存しています"
 msgid "allocating new representation (getting next-key)"
 msgstr "新しい表現を割り当てています (next-key を取得しています)"
 
-# ? bump
 #: libsvn_fs_base/bdb/reps-table.c:177
 msgid "bumping next representation key"
-msgstr "次の表現キーにぶつかっています"
+msgstr "表現キーを次のものに上げています"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:205
@@ -5598,23 +5613,23 @@ msgstr "コマンドへのレスポンス内に未知のステータス '%s' が
 msgid "Out of date: '%s' in transaction '%s'"
 msgstr "'%s' (トランザクション '%s' 中) はリポジトリ側と比べて古くなっています"
 
-#: libsvn_repos/commit.c:295 libsvn_repos/commit.c:460
+#: libsvn_repos/commit.c:292 libsvn_repos/commit.c:453
 #, c-format
 msgid "Got source path but no source revision for '%s'"
 msgstr "'%s' は、ソースパスはありますがソースリビジョンがありません"
 
-#: libsvn_repos/commit.c:327 libsvn_repos/commit.c:491
+#: libsvn_repos/commit.c:324 libsvn_repos/commit.c:484
 #, c-format
 msgid "Source url '%s' is from different repository"
 msgstr ""
 "コピー元 (もしくは移動元) の URL '%s' は異なるリポジトリに由来するものです"
 
-#: libsvn_repos/commit.c:400
+#: libsvn_repos/commit.c:393
 #, c-format
 msgid "Path '%s' not present"
 msgstr "パス '%s' は存在しません"
 
-#: libsvn_repos/commit.c:616
+#: libsvn_repos/commit.c:609
 #, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
@@ -6708,7 +6723,7 @@ msgstr ""
 ".svn/tmp ディレクトリが欠落しているか壊れています。'svn cleanup' を実行してか"
 "らもう一度試してみてください"
 
-#: libsvn_wc/adm_files.c:672 libsvn_wc/lock.c:378 libsvn_wc/lock.c:631
+#: libsvn_wc/adm_files.c:672 libsvn_wc/lock.c:378 libsvn_wc/lock.c:640
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' は作業コピーではありません"
@@ -6897,7 +6912,7 @@ msgstr "削除準備中のディレクトリ '%s' にはコピーできません
 #: libsvn_wc/entries.c:127
 #, c-format
 msgid "Error writing entries file for '%s'"
-msgstr "'%s' のエントリをファイルに書いている際にエラーが発生しました"
+msgstr "'%s' の entries ファイルに書き込み中にエラーが発生しました"
 
 #: libsvn_wc/entries.c:222
 #, c-format
@@ -7050,22 +7065,22 @@ msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr ""
 "パス '%s' は '%s' で終わっています。これはこの操作ではサポートされていません"
 
-#: libsvn_wc/lock.c:679
+#: libsvn_wc/lock.c:688
 #, c-format
 msgid "Working copy '%s' is missing or not locked"
 msgstr "作業コピー '%s' がないか、ロックされていません"
 
-#: libsvn_wc/lock.c:1079
+#: libsvn_wc/lock.c:1088
 #, c-format
 msgid "Write-lock stolen in '%s'"
 msgstr "'%s' への書き込み用のロックが奪われました"
 
-#: libsvn_wc/lock.c:1087
+#: libsvn_wc/lock.c:1096
 #, c-format
 msgid "No write-lock in '%s'"
 msgstr "'%s' には書き込み用のロックがかけられていません"
 
-#: libsvn_wc/lock.c:1109
+#: libsvn_wc/lock.c:1118
 #, c-format
 msgid "Lock file '%s' is not a regular file"
 msgstr "ロック用のファイル '%s' は正常なファイルではありません"
@@ -7097,7 +7112,7 @@ msgstr "'%s' には 'dest' 属性がありません"
 #: libsvn_wc/log.c:475
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
-msgstr "'%s' には「タイムスタンプ」属性がありません"
+msgstr "'%s' には 'timestamp' 属性がありません"
 
 #: libsvn_wc/log.c:551 libsvn_wc/log.c:584
 #, c-format
@@ -7122,7 +7137,7 @@ msgstr "'%s' のエントリからロックを削除する際にエラーが発�
 #: libsvn_wc/log.c:759
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
-msgstr "'%s' には「リビジョン」属性がありません"
+msgstr "'%s' には 'revision' 属性がありません"
 
 #: libsvn_wc/log.c:773
 #, c-format
@@ -7163,7 +7178,7 @@ msgstr "'%s' のエントリを変更している際にエラーが発生しま�
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr ""
-"ログエントリに「名前」属性がありません (エントリ: '%s', ディレクトリ: '%s')"
+"ログエントリに 'name' 属性がありません (エントリ: '%s', ディレクトリ: '%s')"
 
 #: libsvn_wc/log.c:1331
 #, c-format
@@ -9001,6 +9016,21 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
 #~ "同期先のリポジトリを初期化します。\n"
 
+#~ msgid ""
+#~ "The service failed to start; an internal error occurred while starting "
+#~ "the service"
+#~ msgstr ""
+#~ "サービスを開始できませんでした。サービス開始時に内部エラーが発生しました"
+
+#~ msgid "Failed to connect to Service Control Manager"
+#~ msgstr "Service Control Manager に接続できませんでした"
+
+#~ msgid "The service failed to start"
+#~ msgstr "サービスを開始できませんでした"
+
+#~ msgid "Failed to create winservice_start_event"
+#~ msgstr "winservice_start_event を作成できませんでした"
+
 #~ msgid "Can't create thread"
 #~ msgstr "スレッドを作成できません"
 
@@ -9021,6 +9051,28 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "Can't get address info"
 #~ msgstr "アドレス情報を取得できません"
+
+#~ msgid ""
+#~ "svnserve: The --service flag is only valid if the process is started by "
+#~ "the Service Control Manager.\n"
+#~ msgstr ""
+#~ "svnserve: --service フラグは、プロセスが Service Control Manager によって"
+#~ "開始されている場合にのみ有効です。\n"
+
+# * Description for svnserve.
+#~ msgid ""
+#~ "usage: svnserve [options]\n"
+#~ "\n"
+#~ "Valid options:\n"
+#~ msgstr ""
+#~ "使用方法: svnserve [オプション]\n"
+#~ "\n"
+#~ "有効なオプション:\n"
+
+# * Description for 'svnserve --service'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "run as a windows service (SCM only)"
+#~ msgstr "Windows サービスとして実行します (SCM のみ)"
 
 # * Description for 'svnserve --pid-file'.
 # * 29 half-size characters are displayed on the left.
@@ -9055,11 +9107,21 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "                             イルを削除します [Berkeley DB]"
 
 #~ msgid ""
+#~ "Use of an external editor to fetch log message is not supported on OS400; "
+#~ "consider using the --message (-m) or --file (-F) options"
+#~ msgstr ""
+#~ "外部エディタを用いたログメッセージの取得は OS400 でサポートされていませ"
+#~ "ん。--message (-m) または --file (-F) オプションの利用を検討してください"
+
+#~ msgid ""
 #~ "\n"
 #~ "Warning: %s\n"
 #~ msgstr ""
 #~ "\n"
 #~ "警告: %s\n"
+
+#~ msgid "Properties on '%s':\n"
+#~ msgstr "'%s' の属性:\n"
 
 #~ msgid "Too many arguments given"
 #~ msgstr "与える引数が多すぎます"
@@ -9075,7 +9137,10 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "変更 0 はありません"
 
 #~ msgid "Non-numeric change argument given to -c"
-#~ msgstr "--change の引数に数値以外が指定されています"
+#~ msgstr "-c の引数に数値以外が指定されています"
+
+#~ msgid "Can't specify -c with --old"
+#~ msgstr "-c は、--old と同時には指定できません"
 
 #~ msgid ""
 #~ "Multiple revision arguments encountered; can't specify -c twice, or both -"
@@ -9083,6 +9148,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "複数のリビジョン引数が指定されています。-c を 2 つ指定したり -c と -r の両"
 #~ "方を指定したりはできません"
+
+#~ msgid "Argument to --limit must be positive"
+#~ msgstr "--limit に渡す引数は正でなければなりません"
 
 # * Description for 'svn propset --file'.
 # * 29 half-size characters are displayed on the left.
@@ -9183,6 +9251,70 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "のファ\n"
 #~ "  イルに適用されます。\n"
 
+# * Description for 'svn log'.
+# * "log: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Show the log messages for a set of revision(s) and/or file(s).\n"
+#~ "usage: 1. log [PATH]\n"
+#~ "       2. log URL[@REV] [PATH...]\n"
+#~ "\n"
+#~ "  1. Print the log messages for a local PATH (default: '.').\n"
+#~ "     The default revision range is BASE:1.\n"
+#~ "\n"
+#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+#~ "     If specified, REV determines in which revision the URL is first\n"
+#~ "     looked up.  The default revision range is HEAD:1.\n"
+#~ "\n"
+#~ "  With -v, also print all affected paths with each log message.\n"
+#~ "  With -q, don't print the log message body itself (note that this is\n"
+#~ "  compatible with -v).\n"
+#~ "\n"
+#~ "  Each log message is printed just once, even if more than one of the\n"
+#~ "  affected paths for that revision were explicitly requested.  Logs\n"
+#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+#~ "  behavior, which can be useful for determining branchpoints.\n"
+#~ "\n"
+#~ "  Examples:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+#~ msgstr ""
+#~ "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
+#~ "使用方法: 1. log [<パス>]\n"
+#~ "          2. log <URL>[@<REV>] [<パス>...]\n"
+#~ "\n"
+#~ "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
+#~ "す。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は BASE:1 です。\n"
+#~ "\n"
+#~ "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示し"
+#~ "ます。\n"
+#~ "     <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。デ"
+#~ "フォル\n"
+#~ "     トで表示するリビジョンの範囲は HEAD:1 です。\n"
+#~ "\n"
+#~ "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示され"
+#~ "ます。\n"
+#~ "  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できる"
+#~ "こと\n"
+#~ "  に注意してください)。\n"
+#~ "\n"
+#~ "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
+#~ "り、\n"
+#~ "  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
+#~ "ル\n"
+#~ "  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
+#~ "copy\n"
+#~ "  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
+#~ "す。\n"
+#~ "\n"
+#~ "  例:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+
 # * Description for 'svn lock --message'.
 # * 29 half-size characters are displayed on the left.
 #~ msgid "specify lock comment ARG"
@@ -9192,6 +9324,457 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 # * 29 half-size characters are displayed on the left.
 #~ msgid "read lock comment from file ARG"
 #~ msgstr "ファイル <引数> からロックについてのコメントを読み込みます"
+
+# * Description for 'svn info'.
+# * "info: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display information about a local or remote item.\n"
+#~ "usage: info [TARGET[@REV]...]\n"
+#~ "\n"
+#~ "  Print information about each TARGET (default: '.')\n"
+#~ "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+#~ "  determines in which revision the target is first looked up.\n"
+#~ msgstr ""
+#~ "ローカルまたはリモートの項目に関する情報を表示します。\n"
+#~ "使用方法: info [<対象>[@<REV>]...]\n"
+#~ "\n"
+#~ "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
+#~ "  <対象> は作業コピーのパスでも URL でもかまいません。<REV> を指定すると、"
+#~ "リ\n"
+#~ "  ビジョン <REV> での <対象> をまず探します。\n"
+
+# * Description for 'svn diff'.
+# * "diff (di): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display the differences between two revisions or paths.\n"
+#~ "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+#~ "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] "
+#~ "\\\n"
+#~ "               [PATH...]\n"
+#~ "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+#~ "\n"
+#~ "  1. Display the changes made to TARGETs as they are seen in REV between\n"
+#~ "     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
+#~ "     If TARGETs are working copy paths, N defaults to BASE and M to the\n"
+#~ "     working copy; if URLs, N must be specified and M defaults to HEAD.\n"
+#~ "     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
+#~ "     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
+#~ "\n"
+#~ "  2. Display the differences between OLD-TGT as it was seen in OLDREV "
+#~ "and\n"
+#~ "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
+#~ "     OLD-TGT and NEW-TGT and restrict the output to differences for "
+#~ "those\n"
+#~ "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL"
+#~ "[@REV]. \n"
+#~ "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV "
+#~ "default\n"
+#~ "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
+#~ "\n"
+#~ "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL"
+#~ "[@NEWREV]'\n"
+#~ "\n"
+#~ "  Use just 'svn diff' to display local modifications in a working copy.\n"
+#~ msgstr ""
+#~ "2 つのリビジョンまたはパスの差分を表示します。\n"
+#~ "使用方法: 1. diff [-c <M> | -r <N>[:<M>]] [<対象>[@<REV>]...]\n"
+#~ "          2. diff [-r <N>[:<M>]] --old=<古い対象>[@<古い REV>] \\\n"
+#~ "                  [--new=<新しい対象>[@<新しい REV>]] [<パス>...]\n"
+#~ "          3. diff <古い URL>[@<古い REV>] <新しい URL>[@<新しい REV>]\n"
+#~ "\n"
+#~ "  1. リビジョン <REV> において <対象> にあった項目の、2 つのリビジョン間で"
+#~ "の\n"
+#~ "     差分を表示します。<対象> は、すべて作業コピーのパスまたはすべて URL "
+#~ "です。\n"
+#~ "     <対象> が作業コピーのパスである場合、デフォルトでは <N> が BASE で "
+#~ "<M>\n"
+#~ "     は作業コピーとなります。<対象> が URL である場合、<N> は指定しなけれ"
+#~ "ばな\n"
+#~ "     らなく、<M> はデフォルトでは HEAD となります。\n"
+#~ "     '-c <M>' オプションは、<N> = <M>-1 のときの '-r <N>:<M>' に相当しま"
+#~ "す。\n"
+#~ "     '-c -<M>' とすると逆、つまり '-r <M>:<N>' (ただし <N> = <M>-1) となり"
+#~ "ま\n"
+#~ "     す。\n"
+#~ "\n"
+#~ "  2. リビジョン <古い REV> において <古い対象> にあった項目と、リビジョン "
+#~ "<新\n"
+#~ "     しい REV> において <新しい対象> にあった項目との差分を表示します。<パ"
+#~ "ス>\n"
+#~ "     に <古い対象> と <新しい対象> に対する相対パスを与え、それらのパスに"
+#~ "関す\n"
+#~ "     る差分だけを出力するようにすることができます。<古い対象> と <新しい対"
+#~ "象>\n"
+#~ "     は作業コピーのパスでも URL[@<REV>] でもかまいません。<新しい対象> "
+#~ "は、明\n"
+#~ "     示的に指定されない場合はデフォルトで <古い対象> となります。-r <N> が"
+#~ "あ\n"
+#~ "     る場合 <古い REV> はデフォルトで <N> となります。また、-r <N>:<M> が"
+#~ "ある\n"
+#~ "     場合 <古い REV> はデフォルトで <N> となり、<新しい REV> はデフォルト"
+#~ "で\n"
+#~ "     <M> となります。\n"
+#~ "\n"
+#~ "  3. 'svn diff --old=<古い URL>[@<古い REV>] --new=<新しい URL>[@<新しい "
+#~ "REV>]'\n"
+#~ "     の短縮形です。\n"
+#~ "\n"
+#~ "  作業コピーにローカルで加えられた変更を見るには、単に 'svn diff' を使って"
+#~ "く\n"
+#~ "  ださい。\n"
+
+# * Description for 'svn commit' (for OS400).
+# * "commit (ci): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Send changes from your working copy to the repository.\n"
+#~ "usage: commit [PATH...]\n"
+#~ "\n"
+#~ "  A log message must be provided, but it can be empty.\n"
+#~ "  OS400 does not support the starting of an editor,\n"
+#~ "  so --message or --file must be used. If any targets are\n"
+#~ "  (or contain) locked items, those will be unlocked after a\n"
+#~ "  successful commit.\n"
+#~ msgstr ""
+#~ "作業コピーからリポジトリに変更点を送信します。\n"
+#~ "使用方法: commit [<パス>...]\n"
+#~ "\n"
+#~ "  ログメッセージが必須ですが、その中身は空でもかまいません。\n"
+#~ "  OS400 ではエディタの起動がサポートされていないので、--message または --"
+#~ "file\n"
+#~ "  を使用してください。対象の中にロックされた項目がある場合、コミット成功後"
+#~ "に\n"
+#~ "  それらのロックが解除されます。\n"
+
+# * Description for 'svn --summarize'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "show a summary of the results"
+#~ msgstr "結果を要約したものを表示します"
+
+# * Description for 'svn commit --file'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "read log message from file ARG"
+#~ msgstr "ファイル <引数> からログメッセージを読み込みます"
+
+# * Description for 'svn --revision'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "ARG (some commands also take ARG1:ARG2 range)\n"
+#~ "                             A revision argument can be one of:\n"
+#~ "                                NUMBER       revision number\n"
+#~ "                                '{' DATE '}' revision at start of the "
+#~ "date\n"
+#~ "                                'HEAD'       latest in repository\n"
+#~ "                                'BASE'       base rev of item's working "
+#~ "copy\n"
+#~ "                                'COMMITTED'  last commit at or before "
+#~ "BASE\n"
+#~ "                                'PREV'       revision just before "
+#~ "COMMITTED"
+#~ msgstr ""
+#~ "<引数> (一部のコマンドは <引数 1>:<引数 2> の範\n"
+#~ "                             囲も引数にとることができます)\n"
+#~ "                             リビジョン引数は次のいずれかを使って指定でき"
+#~ "ます:\n"
+#~ "                                NUMBER       リビジョン番号\n"
+#~ "                                '{' DATE '}' その日時が始まったときのリビ"
+#~ "ジョ\n"
+#~ "                                             ン\n"
+#~ "                                'HEAD'       リポジトリで最新のもの\n"
+#~ "                                'BASE'       項目の作業コピーのベースとな"
+#~ "るリ\n"
+#~ "                                             ビジョン\n"
+#~ "                                'COMMITTED'  BASE またはそれ以前の最後のコ"
+#~ "ミ\n"
+#~ "                                             ット\n"
+#~ "                                'PREV'       COMMITTED の直前のリビジョン"
+
+# * Description for 'svn --change'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "the change made by revision ARG (like -r ARG-1:ARG)\n"
+#~ "                             If ARG is negative this is like -r ARG:ARG-1"
+#~ msgstr ""
+#~ "リビジョン <引数> における変更\n"
+#~ "                             (-r <引数>-1:<引数> と同等)\n"
+#~ "                             <引数> が負の場合は -r <引数>:<引数>-1 と同等"
+#~ "です"
+
+# * Description for 'svn commit --message'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "specify log message ARG"
+#~ msgstr "ログメッセージを <引数> と指定します"
+
+#~ msgid "'--new' option only valid with '--old' option"
+#~ msgstr ""
+#~ "'--new' オプションは '--old' オプションとともに使われた場合のみ有効です"
+
+#~ msgid "Missing end of line in wcprops file for '%s'"
+#~ msgstr "'%s' の wcprops ファイルに行末文字がありません"
+
+#~ msgid "Invalid 'format' attribute"
+#~ msgstr "'format' 属性が不正です"
+
+#~ msgid "Working copy '%s' is not locked"
+#~ msgstr "作業コピー '%s' はロックされていません"
+
+#~ msgid "Unable to lock '%s'"
+#~ msgstr "'%s' をロックできません"
+
+#~ msgid "Directory '%s' containing working copy admin area is missing"
+#~ msgstr "作業コピー管理領域を含むディレクトリ '%s' がありません"
+
+#~ msgid "Directory '%s' is missing"
+#~ msgstr "ディレクトリ '%s' がありません"
+
+#~ msgid "Expected '%s' to be a file but found a directory"
+#~ msgstr ""
+#~ "'%s' がファイルであることを期待しましたが、ディレクトリが見つかりました"
+
+#~ msgid "Expected '%s' to be a directory but found a file"
+#~ msgstr ""
+#~ "'%s' がディレクトリであることを期待しましたが、ファイルが見つかりました"
+
+#~ msgid "Unable to check path existence for '%s'"
+#~ msgstr "'%s' というパスの存在を確かめられません"
+
+#~ msgid "Error at entry %d in entries file for '%s':"
+#~ msgstr "エントリ %d ('%s' の entries ファイル内) でエラーが発生しました:"
+
+#~ msgid "Invalid entry terminator"
+#~ msgstr "エントリ終端文字が不正です"
+
+#~ msgid "Missing entry terminator"
+#~ msgstr "エントリ終端文字がありません"
+
+#~ msgid "Invalid version line in entries file of '%s'"
+#~ msgstr "'%s' の entries ファイルのバージョン行が不正です"
+
+#~ msgid "Invalid value for field '%s'"
+#~ msgstr "フィールド '%s' の値が不正です"
+
+#~ msgid "Unexpected end of entry"
+#~ msgstr "エントリが突然途切れました"
+
+#~ msgid "Invalid escaped character"
+#~ msgstr "エスケープされた文字が不正です"
+
+#~ msgid "Invalid escape sequence"
+#~ msgstr "エスケープ文字列が不正です"
+
+#~ msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
+#~ msgstr "CCSID '%i' から CCSID '%i' に文字列を変換できません:"
+
+#~ msgid "Can't create a character converter from '%i' to '%i'"
+#~ msgstr "'%i' から '%i' への文字列コンバータを作成できません"
+
+#~ msgid "'%s' has unsupported special file type '%s'"
+#~ msgstr "'%s' に、サポートされていない特別なファイル形式 '%s' があります"
+
+#~ msgid "Can't set process '%s' error handler"
+#~ msgstr "プロセス '%s' に対してエラーハンドラを設定できません"
+
+#~ msgid "Can't set process '%s' child errfile for error handler"
+#~ msgstr ""
+#~ "プロセス '%s' に対してエラーハンドラ用の子のエラー出力ファイルを設定できま"
+#~ "せん"
+
+#~ msgid "Error initializing command line arguments"
+#~ msgstr "コマンドライン引数の初期化中にエラーが発生しました"
+
+#~ msgid "Target path does not exist"
+#~ msgstr "対象パスは存在しません"
+
+#~ msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
+#~ msgstr ""
+#~ "ダンプストリームの '%.20s' に不正な (値がない) ヘッダが含まれています"
+
+#~ msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
+#~ msgstr ""
+#~ "ダンプストリームの '%.20s' に不正な (':' がない) ヘッダが含まれています"
+
+#~ msgid "Server doesn't support the replay command"
+#~ msgstr "再生 (replay) コマンドをサーバがサポートしていません"
+
+#~ msgid "Premature EOF seen from server"
+#~ msgstr "サーバからの送信内容において EOF が現れるのが早すぎます"
+
+#~ msgid "Error retrieving REPORT (%d)"
+#~ msgstr "REPORT の取得中にエラー (%d) が発生しました"
+
+#~ msgid "Unsupported RA loader version (%d) for ra_serf"
+#~ msgstr ""
+#~ "ra_serf 用のリポジトリアクセスローダバージョン (%d) はサポートされていませ"
+#~ "ん"
+
+#~ msgid "Could not lookup hostname: %s://%s"
+#~ msgstr "ホスト名を検索できませんでした: %s://%s"
+
+#~ msgid "Access repository via WebDAV protocol through serf."
+#~ msgstr "WebDAV プロトコルを使い serf でリポジトリにアクセスします。"
+
+#~ msgid "Missing name attr in add-file element"
+#~ msgstr "add-file 要素に name 属性がありません"
+
+#~ msgid "Missing revision attr in open-file element"
+#~ msgstr "open-file 要素に rev 属性がありません"
+
+#~ msgid "Missing name attr in open-file element"
+#~ msgstr "open-file 要素に name 属性がありません"
+
+#~ msgid "Missing path attr in add-directory element"
+#~ msgstr "add-directory 要素に path 属性がありません"
+
+#~ msgid "Missing revision attr in open-directory element"
+#~ msgstr "open-directory 要素に rev 属性がありません"
+
+#~ msgid "Missing path attr in open-directory element"
+#~ msgstr "open-directory 要素に path 属性がありません"
+
+#~ msgid "Missing revision attr in delete-entry element"
+#~ msgstr "delete-entry 要素に rev 属性がありません"
+
+#~ msgid "Unlock request failed: %d %s"
+#~ msgstr "ロック解除のリクエストが失敗しました: %d %s"
+
+#~ msgid "Lock request failed: %d %s"
+#~ msgstr "ロックのリクエストが失敗しました: %d %s"
+
+#~ msgid "File doesn't exist on HEAD"
+#~ msgstr "ファイルが HEAD に存在しません"
+
+#~ msgid "Failed writing updated file"
+#~ msgstr "更新されたファイルを書き込めませんでした"
+
+#~ msgid "Got cdata content for a prop delete"
+#~ msgstr "属性削除用の cdata の内容があります"
+
+#~ msgid "Error writing stream: unexpected EOF"
+#~ msgstr "ストリームへの書き込み中にエラーが発生しました: 予想外の EOF です"
+
+#~ msgid "Got close-directory element without ever opening a directory"
+#~ msgstr "ディレクトリを開かずに close-directory 要素を使っています"
+
+#~ msgid "Got close-file element without preceding add-file or open-file"
+#~ msgstr ""
+#~ "add-file 要素や open-file 要素を先に使っていないのに close-file 要素を使っ"
+#~ "ています"
+
+#~ msgid "Got apply-textdelta element without preceding add-file or open-file"
+#~ msgstr ""
+#~ "add-file 要素や open-file 要素を先に使っていないのに apply-textdelta 要素"
+#~ "を使っています"
+
+#~ msgid "Missing name attr in %s element"
+#~ msgstr "%s 要素に name 属性がありません"
+
+#~ msgid "Missing name attr in open-directory element"
+#~ msgstr "open-directory 要素に name 属性がありません"
+
+#~ msgid "Missing rev attr in delete-entry element"
+#~ msgstr "delete-entry 要素に rev 属性がありません"
+
+#~ msgid "Missing name attr in delete-entry element"
+#~ msgstr "delete-entry 要素に name 属性がありません"
+
+#~ msgid "Missing revision attr in open-root element"
+#~ msgstr "open-root 要素に rev 属性がありません"
+
+#~ msgid "Missing revision attr in target-revision element"
+#~ msgstr "target-revision 要素に rev 属性がありません"
+
+#~ msgid "Server response missing the expected deadprop-count property"
+#~ msgstr "予想される deadprop-count 属性がサーバからのレスポンスにありません"
+
+#~ msgid "Could not get content-type from response"
+#~ msgstr "レスポンスから content-type を取得できませんでした"
+
+#~ msgid "'%s' isn't in the same repository as '%s'"
+#~ msgstr "'%s' は '%s' と同じリポジトリにありません"
+
+#~ msgid "Cannot copy between two different filesystems ('%s' and '%s')"
+#~ msgstr ""
+#~ "二つの異なるファイルシステム ('%s' と '%s') の間でコピーはできません"
+
+#~ msgid "Unknown node kind for representation '%s'"
+#~ msgstr "表現 '%s' のノード種別が不明です"
+
+#~ msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
+#~ msgstr ""
+#~ "ファイルシステム '%s' に対して環境を開いているときに Berkeley DB エラーが"
+#~ "起きました\n"
+
+#~ msgid "Berkeley DB error for filesystem '%s' while creating environment:\n"
+#~ msgstr ""
+#~ "ファイルシステム '%s' に対して環境を作成しているときに Berkeley DB エラー"
+#~ "が起きました\n"
+
+#~ msgid "Berkeley DB error for filesystem '%s' while closing environment:\n"
+#~ msgstr ""
+#~ "ファイルシステム '%s' に対して環境を閉じているときに Berkeley DB エラーが"
+#~ "起きました\n"
+
+#~ msgid "Berkeley DB error for filesystem '%s' while %s:\n"
+#~ msgstr ""
+#~ "ファイルシステム '%s' に対して %s をしているときに Berkeley DB エラーが起"
+#~ "きました\n"
+
+#~ msgid "Invalid argument '%s' in diff options"
+#~ msgstr "diff のオプションに不正な引数 '%s' があります"
+
+#~ msgid "Error parsing diff options"
+#~ msgstr "diff のオプションをパースする際にエラーが発生しました"
+
+#~ msgid "The file '%s' changed unexpectedly during diff"
+#~ msgstr "diff の最中にファイル '%s' が突然変更されました"
+
+#~ msgid "Size of uncompressed data does not match stored original length"
+#~ msgstr ""
+#~ "非圧縮データのサイズが、保存されているオリジナルの長さと一致しません"
+
+#~ msgid "Decompression of svndiff data failed"
+#~ msgstr "svndiff データの解凍に失敗しました"
+
+#~ msgid "Compression of svndiff data failed"
+#~ msgstr "svndiff データの圧縮に失敗しました"
+
+#~ msgid "Path '%s' has no committed revision"
+#~ msgstr "パス '%s' にはコミットされたリビジョンがありません"
+
+#~ msgid "'%s' is not the root of the repository"
+#~ msgstr "'%s' はリポジトリのルートではありません"
+
+#~ msgid "'%s' does not exist in revision %ld"
+#~ msgstr "'%s' がリビジョン %ld に存在しません"
+
+#~ msgid "Revision type requires a working copy path, not a URL"
+#~ msgstr "リビジョン形式には URL ではなく作業コピーパスが必要となります。"
+
+#~ msgid "URL '%s' non-existent in revision %ld"
+#~ msgstr "URL '%s' は、リビジョン %ld には存在しません"
+
+#~ msgid "Summarizing diff can only compare repository to repository"
+#~ msgstr "差分の要約はリポジトリとリポジトリとの比較にしか使えません"
+
+#~ msgid "Path '%s' is not a directory"
+#~ msgstr "パス '%s' はディレクトリではありません"
+
+#~ msgid "blame of the WORKING revision is not supported"
+#~ msgstr ""
+#~ "作業中のリビジョン (WORKING) についての blame はサポートされていません"
+
+#~ msgid "Not enough arguments provided; try 'svn help' for more info"
+#~ msgstr ""
+#~ "与える引数が不十分です。より詳しく知りたいときは 'svn help' を試してみてく"
+#~ "ださい。"
+
+#~ msgid "Diff data source modified unexpectedly"
+#~ msgstr "diff データのソースが突然変更されました"
+
+#~ msgid "Svndiff compressed data is invalid"
+#~ msgstr "svndiff 圧縮データが不正です"
+
+#~ msgid "svnserve: "
+#~ msgstr "svnserve: "
 
 # * Description for 'svn diff'.
 # * "diff (di): " is displayed at the head of the first line.
@@ -9288,248 +9871,6 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "  作業コピーにローカルで加えられた変更を見るには、単に 'svn diff' を使って"
 #~ "く\n"
 #~ "  ださい。\n"
-
-# * Description for 'svn --summarize'.
-# * 29 half-size characters are displayed on the left.
-#~ msgid "show a summary of the results"
-#~ msgstr "結果を要約したものを表示します"
-
-# * Description for 'svn commit --file'.
-# * 29 half-size characters are displayed on the left.
-#~ msgid "read log message from file ARG"
-#~ msgstr "ファイル <引数> からログメッセージを読み込みます"
-
-# * Description for 'svn --revision'.
-# * 29 half-size characters are displayed on the left.
-#~ msgid ""
-#~ "ARG (some commands also take ARG1:ARG2 range)\n"
-#~ "                             A revision argument can be one of:\n"
-#~ "                                NUMBER       revision number\n"
-#~ "                                '{' DATE '}' revision at start of the "
-#~ "date\n"
-#~ "                                'HEAD'       latest in repository\n"
-#~ "                                'BASE'       base rev of item's working "
-#~ "copy\n"
-#~ "                                'COMMITTED'  last commit at or before "
-#~ "BASE\n"
-#~ "                                'PREV'       revision just before "
-#~ "COMMITTED"
-#~ msgstr ""
-#~ "<引数> (一部のコマンドは <引数 1>:<引数 2> の範\n"
-#~ "                             囲も引数にとることができます)\n"
-#~ "                             リビジョン引数は次のいずれかを使って指定でき"
-#~ "ます:\n"
-#~ "                                NUMBER       リビジョン番号\n"
-#~ "                                '{' DATE '}' その日時が始まったときのリビ"
-#~ "ジョ\n"
-#~ "                                             ン\n"
-#~ "                                'HEAD'       リポジトリで最新のもの\n"
-#~ "                                'BASE'       項目の作業コピーのベースとな"
-#~ "るリ\n"
-#~ "                                             ビジョン\n"
-#~ "                                'COMMITTED'  BASE またはそれ以前の最後のコ"
-#~ "ミ\n"
-#~ "                                             ット\n"
-#~ "                                'PREV'       COMMITTED の直前のリビジョン"
-
-# * Description for 'svn --change'.
-# * 29 half-size characters are displayed on the left.
-#~ msgid ""
-#~ "the change made by revision ARG (like -r ARG-1:ARG)\n"
-#~ "                             If ARG is negative this is like -r ARG:ARG-1"
-#~ msgstr ""
-#~ "リビジョン <引数> における変更\n"
-#~ "                             (-r <引数>-1:<引数> と同等)\n"
-#~ "                             <引数> が負の場合は -r <引数>:<引数>-1 と同等"
-#~ "です"
-
-# * Description for 'svn commit --message'.
-# * 29 half-size characters are displayed on the left.
-#~ msgid "specify log message ARG"
-#~ msgstr "ログメッセージを <引数> と指定します"
-
-#~ msgid "Working copy '%s' is not locked"
-#~ msgstr "作業コピー '%s' はロックされていません"
-
-#~ msgid "Unable to lock '%s'"
-#~ msgstr "'%s' をロックできません"
-
-#~ msgid "Directory '%s' containing working copy admin area is missing"
-#~ msgstr "作業コピー管理領域を含むディレクトリ '%s' がありません"
-
-#~ msgid "Directory '%s' is missing"
-#~ msgstr "ディレクトリ '%s' がありません"
-
-#~ msgid "Expected '%s' to be a file but found a directory"
-#~ msgstr ""
-#~ "'%s' がファイルであることを期待しましたが、ディレクトリが見つかりました"
-
-#~ msgid "Expected '%s' to be a directory but found a file"
-#~ msgstr ""
-#~ "'%s' がディレクトリであることを期待しましたが、ファイルが見つかりました"
-
-#~ msgid "Unable to check path existence for '%s'"
-#~ msgstr "'%s' というパスの存在を確かめられません"
-
-#~ msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
-#~ msgstr "CCSID '%i' から CCSID '%i' に文字列を変換できません:"
-
-#~ msgid "Can't create a character converter from '%i' to '%i'"
-#~ msgstr "'%i' から '%i' への文字列コンバータを作成できません"
-
-#~ msgid "Can't set process '%s' error handler"
-#~ msgstr "プロセス '%s' に対してエラーハンドラを設定できません"
-
-#~ msgid "Can't set process '%s' child errfile for error handler"
-#~ msgstr ""
-#~ "プロセス '%s' に対してエラーハンドラ用の子のエラー出力ファイルを設定できま"
-#~ "せん"
-
-#~ msgid "Error initializing command line arguments"
-#~ msgstr "コマンドライン引数の初期化中にエラーが発生しました"
-
-#~ msgid "Target path does not exist"
-#~ msgstr "対象パスは存在しません"
-
-#~ msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
-#~ msgstr ""
-#~ "ダンプストリームの '%.20s' に不正な (値がない) ヘッダが含まれています"
-
-#~ msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
-#~ msgstr ""
-#~ "ダンプストリームの '%.20s' に不正な (':' がない) ヘッダが含まれています"
-
-#~ msgid "Server doesn't support the replay command"
-#~ msgstr "再生 (replay) コマンドをサーバがサポートしていません"
-
-#~ msgid "Error retrieving REPORT"
-#~ msgstr "REPORT の取得中にエラーが発生しました"
-
-#~ msgid "Unsupported RA loader version (%d) for ra_serf"
-#~ msgstr ""
-#~ "ra_serf 用のリポジトリアクセスローダバージョン (%d) はサポートされていませ"
-#~ "ん"
-
-#~ msgid "Could not lookup hostname: %s://%s"
-#~ msgstr "ホスト名を検索できませんでした: %s://%s"
-
-#~ msgid "Access repository via WebDAV protocol through serf."
-#~ msgstr "WebDAV プロトコルを使い serf でリポジトリにアクセスします。"
-
-#~ msgid "Failed writing updated file"
-#~ msgstr "更新されたファイルを書き込めませんでした"
-
-#~ msgid "Got cdata content for a prop delete"
-#~ msgstr "属性削除用の cdata の内容があります"
-
-#~ msgid "Error writing stream: unexpected EOF"
-#~ msgstr "ストリームへの書き込み中にエラーが発生しました: 予想外の EOF です"
-
-#~ msgid "Got close-directory element without ever opening a directory"
-#~ msgstr "ディレクトリを開かずに close-directory 要素を使っています"
-
-#~ msgid "Got close-file element without preceding add-file or open-file"
-#~ msgstr ""
-#~ "add-file や open-file を先におこなっていないのに close-file 要素を使ってい"
-#~ "ます"
-
-#~ msgid "Got apply-textdelta element without preceding add-file or open-file"
-#~ msgstr ""
-#~ "add-file や open-file を先におこなっていないのに apply-textdelta 要素を"
-#~ "使っています"
-
-#~ msgid "Missing name attr in %s element"
-#~ msgstr "%s 要素に名前属性がありません"
-
-#~ msgid "Missing name attr in open-directory element"
-#~ msgstr "ディレクトリ解放要素に名前要素がありません"
-
-#~ msgid "Missing rev attr in delete-entry element"
-#~ msgstr "エントリ削除要素にリビジョン属性がありません"
-
-#~ msgid "Missing name attr in delete-entry element"
-#~ msgstr "エントリ削除要素に名前属性がありません"
-
-#~ msgid "Missing revision attr in open-root element"
-#~ msgstr "ルート解放要素にリビジョン属性がありません"
-
-#~ msgid "Missing revision attr in target-revision element"
-#~ msgstr "対象リビジョン要素にリビジョン属性がありません"
-
-#~ msgid "Server response missing the expected deadprop-count property"
-#~ msgstr "予想される deadprop-count 属性がサーバからのレスポンスにありません"
-
-#~ msgid "Could not get content-type from response"
-#~ msgstr "レスポンスから content-type を取得できませんでした"
-
-#~ msgid "'%s' isn't in the same repository as '%s'"
-#~ msgstr "'%s' は '%s' と同じリポジトリにありません"
-
-#~ msgid "Cannot copy between two different filesystems ('%s' and '%s')"
-#~ msgstr ""
-#~ "二つの異なるファイルシステム ('%s' と '%s') の間でコピーはできません"
-
-#~ msgid "Unknown node kind for representation '%s'"
-#~ msgstr "表現 '%s' のノード種別が不明です"
-
-#~ msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
-#~ msgstr ""
-#~ "ファイルシステム '%s' に対して環境を開いているときに Berkeley DB エラーが"
-#~ "起きました\n"
-
-#~ msgid "Berkeley DB error for filesystem '%s' while creating environment:\n"
-#~ msgstr ""
-#~ "ファイルシステム '%s' に対して環境を作成しているときに Berkeley DB エラー"
-#~ "が起きました\n"
-
-#~ msgid "Berkeley DB error for filesystem '%s' while closing environment:\n"
-#~ msgstr ""
-#~ "ファイルシステム '%s' に対して環境を閉じているときに Berkeley DB エラーが"
-#~ "起きました\n"
-
-#~ msgid "Berkeley DB error for filesystem '%s' while %s:\n"
-#~ msgstr ""
-#~ "ファイルシステム '%s' に対して %s をしているときに Berkeley DB エラーが起"
-#~ "きました\n"
-
-#~ msgid "Invalid argument '%s' in diff options"
-#~ msgstr "diff のオプションに不正な引数 '%s' があります"
-
-#~ msgid "Error parsing diff options"
-#~ msgstr "diff のオプションをパースする際にエラーが発生しました"
-
-#~ msgid "The file '%s' changed unexpectedly during diff"
-#~ msgstr "diff の最中にファイル '%s' が突然変更されました"
-
-#~ msgid "Size of uncompressed data does not match stored original length"
-#~ msgstr ""
-#~ "非圧縮データのサイズが、保存されているオリジナルの長さと一致しません"
-
-#~ msgid "Decompression of svndiff data failed"
-#~ msgstr "svndiff データの解凍に失敗しました"
-
-#~ msgid "Compression of svndiff data failed"
-#~ msgstr "svndiff データの圧縮に失敗しました"
-
-#~ msgid "'%s' is not the root of the repository"
-#~ msgstr "'%s' はリポジトリのルートではありません"
-
-#~ msgid "Summarizing diff can only compare repository to repository"
-#~ msgstr "差分の要約はリポジトリとリポジトリとの比較にしか使えません"
-
-#~ msgid "Path '%s' is not a directory"
-#~ msgstr "パス '%s' はディレクトリではありません"
-
-#~ msgid "Not enough arguments provided; try 'svn help' for more info"
-#~ msgstr ""
-#~ "与える引数が不十分です。より詳しく知りたいときは 'svn help' を試してみてく"
-#~ "ださい。"
-
-#~ msgid "Diff data source modified unexpectedly"
-#~ msgstr "diff データのソースが突然変更されました"
-
-#~ msgid "Svndiff compressed data is invalid"
-#~ msgstr "svndiff 圧縮データが不正です"
 
 #~ msgid "Argument to -c must be positive"
 #~ msgstr "-c に渡す引数は正でなければなりません"
@@ -9947,15 +10288,15 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "まない\n"
 #~ "     ディレクトリツリーを <パス 2> にエクスポートします。その際、<リビジョ"
 #~ "ン>\n"
-#~ "     が指定されていればリビジョン <リビジョン> の、そうでないときは作業中"
-#~ "の\n"
-#~ "     ツリーがエクスポートされます。<パス 2> が省略された場合は、ローカル"
-#~ "の\n"
-#~ "     ディレクトリ名として <パス 1> のベース名が使われます。<リビジョン> "
-#~ "が\n"
-#~ "     指定されていない場合、ローカルでの変更はすべて保存されますが、バー"
-#~ "ジョン\n"
-#~ "     管理下にないファイルはコピーされません。\n"
+#~ "     が指定されていればリビジョン <リビジョン> の、そうでないときは作業"
+#~ "中\n"
+#~ "     (WORKING) のツリーがエクスポートされます。<パス 2> が省略された場合"
+#~ "は、\n"
+#~ "     ローカルのディレクトリ名として <パス 1> のベース名が使われます。<リビ"
+#~ "ジョ\n"
+#~ "     ン> が指定されていない場合、ローカルでの変更はすべて保存されますが、"
+#~ "バー\n"
+#~ "     ジョン管理下にないファイルはコピーされません。\n"
 
 #~ msgid ""
 #~ "Output the content of specified files or URLs.\n"
@@ -11489,15 +11830,15 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "まな\n"
 #~ "     いディレクトリツリーを <パス 2> にエクスポートします。その際、<REV> "
 #~ "を指\n"
-#~ "     定していればリビジョン <REV> の、そうでないときは作業中のツリーがエク"
-#~ "ス\n"
-#~ "     ポートされます。<パス 2> を省略した場合は、ローカルのディレクトリ名と"
-#~ "し\n"
-#~ "     て <パス 1> のベース名が使われます。<REV> を指定していない場合、ロー"
-#~ "カル\n"
-#~ "     での変更はすべて保存されますが、バージョン管理下にないファイルはコ"
-#~ "ピーさ\n"
-#~ "     れません。\n"
+#~ "     定していればリビジョン <REV> の、そうでないときは作業中 (WORKING) の"
+#~ "ツリー\n"
+#~ "     がエクスポートされます。<パス 2> を省略した場合は、ローカルのディレク"
+#~ "ト\n"
+#~ "     リ名として <パス 1> のベース名が使われます。<REV> を指定していない場"
+#~ "合、\n"
+#~ "     ローカルでの変更はすべて保存されますが、バージョン管理下にないファイ"
+#~ "ルは\n"
+#~ "     コピーされません。\n"
 #~ "\n"
 #~ "  <PEGREV> を指定すると、リビジョン <PEGREV> での <対象> をまず探しま"
 #~ "す。\n"
@@ -12113,3 +12454,104 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
 #~ "同期先のリポジトリを初期化します。"
+
+#~ msgid "Error retrieving REPORT"
+#~ msgstr "REPORT の取得中にエラーが発生しました"
+
+#~ msgid "'new' option only valid with 'old' option"
+#~ msgstr "'new' オプションは 'old' オプションとともに使われた場合のみ有効です"
+
+#~ msgid ""
+#~ "The service failed to start; an internal error occurred while starting "
+#~ "the service."
+#~ msgstr ""
+#~ "サービスを開始できませんでした。サービス開始時に内部エラーが発生しました。"
+
+#~ msgid "'%s' does not exist in revision '%ld'"
+#~ msgstr "'%s' がリビジョン '%ld' に存在しません"
+
+# * Description for 'svn info'.
+# * "info: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display information about a local or remote item.\n"
+#~ "usage: info [TARGET[@REV]...]\n"
+#~ "\n"
+#~ "  Print information about each TARGET (default: '.')\n"
+#~ "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+#~ "  determines in which revision the target is first looked up.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "ローカルまたはリモートの項目に関する情報を表示します。\n"
+#~ "使用方法: info [<対象>[@<REV>]...]\n"
+#~ "\n"
+#~ "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
+#~ "  <対象> は作業コピーのパスでも URL でもかまいません。<REV> を指定すると、"
+#~ "リ\n"
+#~ "  ビジョン <REV> での <対象> をまず探します。\n"
+#~ "\n"
+
+# * Description for 'svn log'.
+# * "log: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Show the log messages for a set of revision(s) and/or file(s).\n"
+#~ "usage: 1. log [PATH]\n"
+#~ "       2. log URL[@REV] [PATH...]\n"
+#~ "\n"
+#~ "  1. Print the log messages for a local PATH (default: '.').\n"
+#~ "     The default revision range is BASE:1.\n"
+#~ "\n"
+#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+#~ "     If specified, REV determines in which revision the URL is first\n"
+#~ "     looked up.  The default revision range is HEAD:1.\n"
+#~ "     \n"
+#~ "\n"
+#~ "  With -v, also print all affected paths with each log message.\n"
+#~ "  With -q, don't print the log message body itself (note that this is\n"
+#~ "  compatible with -v).\n"
+#~ "\n"
+#~ "  Each log message is printed just once, even if more than one of the\n"
+#~ "  affected paths for that revision were explicitly requested.  Logs\n"
+#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+#~ "  behavior, which can be useful for determining branchpoints.\n"
+#~ "\n"
+#~ "  Examples:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+#~ msgstr ""
+#~ "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
+#~ "使用方法: 1. log [<パス>]\n"
+#~ "          2. log <URL>[@<REV>] [<パス>...]\n"
+#~ "\n"
+#~ "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
+#~ "す。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は BASE:1 です。\n"
+#~ "\n"
+#~ "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示し"
+#~ "ます。\n"
+#~ "     <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。デ"
+#~ "フォル\n"
+#~ "     トで表示するリビジョンの範囲は HEAD:1 です。\n"
+#~ "     \n"
+#~ "\n"
+#~ "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示され"
+#~ "ます。\n"
+#~ "  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できる"
+#~ "こと\n"
+#~ "  に注意してください)。\n"
+#~ "\n"
+#~ "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
+#~ "り、\n"
+#~ "  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
+#~ "ル\n"
+#~ "  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
+#~ "copy\n"
+#~ "  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
+#~ "す。\n"
+#~ "\n"
+#~ "  例:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
