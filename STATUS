@@ -32,13 +32,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r19636
-    Fix up $INSTALL after AC_PROG_INSTALL.
-    Justification:
-      Avoid build breakage on Solaris with VPATH build.
-    Votes:
-      +1: maxb, lundblad, rooneg
-
   * r19656
     Eliminate dead code in notification fflushing.
     Justification:
