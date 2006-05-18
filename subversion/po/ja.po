@@ -35,6 +35,7 @@
 # BASE                    BASE
 # baseline                ベースライン
 # basename                ベース名
+# bump                    上げる
 # character converter     文字列コンバータ
 # child                   子ノード
 # cleanup                 掃除
@@ -104,7 +105,9 @@
 # open-root element       open-root 要素
 # out of date             リポジトリ側と比べて古くなった
 # overflow                溢れる
+# parent pool             親メモリプール
 # path attr               path 属性
+# pegged diff             peg リビジョン指定つきの diff
 # post-commit hook        post-commit フック
 # post-lock hook          post-lock フック
 # post-revprop-change hook    post-revprop-change フック
@@ -128,6 +131,8 @@
 # rev attr                rev 属性
 # revision                リビジョン
 # revision attr           rev 属性
+# revision root           リビジョンルート
+# revision type           リビジョン形式
 # root of edit            編集用ルートパス
 # scheduled for ...       〜準備中の
 # source                  コピー元 / 移動元 / マージ元
@@ -140,6 +145,7 @@
 # store                   保存する
 # target                  対象
 # target-revision element     target-revision 要素
+# text base               テキストベース
 # text-base               テキストベース
 # textual contents        テキスト
 # token                   トークン
@@ -162,18 +168,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-05-11 17:03+0900\n"
-"PO-Revision-Date: 2006-05-10 04:29+0900\n"
+"POT-Creation-Date: 2006-05-18 18:09+0900\n"
+"PO-Revision-Date: 2006-05-18 18:02+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-# ? parent pool
 #: include/svn_error_codes.h:154
 msgid "Bad parent pool passed to svn_make_pool()"
-msgstr "親のプールとして不正なものが svn_make_pool() に渡されました"
+msgstr "svn_make_pool() に渡された親メモリプールが不正です"
 
 #: include/svn_error_codes.h:158
 msgid "Bogus filename"
@@ -355,7 +360,6 @@ msgstr "作業ディレクトリ内に衝突があり、実行中の操作が妨
 msgid "Working copy is corrupt"
 msgstr "作業コピーが壊れています"
 
-# ? text base
 #: include/svn_error_codes.h:357
 msgid "Working copy text base is corrupt"
 msgstr "作業コピーのテキストベースが壊れています"
@@ -485,12 +489,11 @@ msgstr ""
 
 #: include/svn_error_codes.h:486
 msgid "Object is not a transaction root"
-msgstr "オブジェクトはトランザクションルートではありません"
+msgstr "オブジェクトがトランザクションルートではありません"
 
-# ? revision root
 #: include/svn_error_codes.h:490
 msgid "Object is not a revision root"
-msgstr "オブジェクトはリビジョンルートではありません"
+msgstr "オブジェクトがリビジョンルートではありません"
 
 #: include/svn_error_codes.h:494
 msgid "Merge conflict during commit"
@@ -1147,7 +1150,7 @@ msgstr ""
 #: libsvn_client/copy.c:1002 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1384 libsvn_client/diff.c:2110
 #: libsvn_client/diff.c:2705 libsvn_client/diff.c:2833
-#: libsvn_client/locking_commands.c:259 libsvn_client/log.c:126
+#: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
 #: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:958
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
@@ -1155,7 +1158,7 @@ msgstr ""
 #: libsvn_wc/adm_crawler.c:471 libsvn_wc/adm_crawler.c:764
 #: libsvn_wc/adm_ops.c:1021 libsvn_wc/adm_ops.c:2305 libsvn_wc/adm_ops.c:2331
 #: libsvn_wc/adm_ops.c:2368 libsvn_wc/copy.c:349 libsvn_wc/copy.c:430
-#: libsvn_wc/copy.c:437 libsvn_wc/diff.c:1765 libsvn_wc/entries.c:2225
+#: libsvn_wc/copy.c:437 libsvn_wc/diff.c:1784 libsvn_wc/entries.c:2225
 #: libsvn_wc/entries.c:2780 libsvn_wc/props.c:479 libsvn_wc/props.c:1088
 #: libsvn_wc/props.c:1506 libsvn_wc/questions.c:182 libsvn_wc/questions.c:291
 #: libsvn_wc/status.c:722 libsvn_wc/translate.c:193
@@ -1358,12 +1361,11 @@ msgstr ".merge-right.r%ld"
 msgid "Not all required revisions are specified"
 msgstr "必要なリビジョンがすべては指定されていません"
 
-# ? pegged diff
 #: libsvn_client/diff.c:1464
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr ""
-"pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
-"せん"
+"peg リビジョン指定をつけて diff を使う場合、少なくとも一方のリビジョンはロー"
+"カルにあってはいけません"
 
 #: libsvn_client/diff.c:1576 libsvn_client/diff.c:1588
 #, c-format
@@ -1469,13 +1471,17 @@ msgstr "ロックについてのコメントに不正な文字が含まれてい
 msgid "Missing required revision specification"
 msgstr "必要なリビジョン指定がなされていません"
 
-#: libsvn_client/log.c:132 libsvn_client/status.c:261
+#: libsvn_client/log.c:86
+msgid "Revision type requires a working copy path, not a URL"
+msgstr "リビジョン形式には URL ではなく作業コピーパスが必要となります。"
+
+#: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "エントリ '%s' に URL がありません"
 
-#: libsvn_client/log.c:349
+#: libsvn_client/log.c:370
 msgid "No commits in repository"
 msgstr "リポジトリにコミット内容がありません"
 
@@ -1776,10 +1782,9 @@ msgstr "コピー記録を保存しています"
 msgid "allocating new copy ID (getting 'next-key')"
 msgstr "新しいコピー ID を割り当てています ('next-key' を取得しています)"
 
-# ? bump
 #: libsvn_fs_base/bdb/copies-table.c:128
 msgid "bumping next copy key"
-msgstr "次のコピーキーにぶつかっています"
+msgstr "コピーキーを次のものに上げています"
 
 #: libsvn_fs_base/bdb/copies-table.c:167
 msgid "deleting entry from 'copies' table"
@@ -1793,10 +1798,9 @@ msgstr "コピーを読み込んでいます"
 msgid "allocating new node ID (getting 'next-key')"
 msgstr "新しいノード ID を割り当てています ('next-key' を取得しています)"
 
-# ? bump
 #: libsvn_fs_base/bdb/nodes-table.c:115
 msgid "bumping next node ID key"
-msgstr "次のノード ID キーにぶつかっています"
+msgstr "ノード ID のキーを次のものに上げています"
 
 # ? successor id
 #: libsvn_fs_base/bdb/nodes-table.c:152
@@ -1836,10 +1840,9 @@ msgstr "表現を保存しています"
 msgid "allocating new representation (getting next-key)"
 msgstr "新しい表現を割り当てています (next-key を取得しています)"
 
-# ? bump
 #: libsvn_fs_base/bdb/reps-table.c:175
 msgid "bumping next representation key"
-msgstr "次の表現キーにぶつかっています"
+msgstr "表現キーを次のものに上げています"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:203
@@ -3331,80 +3334,80 @@ msgstr "log エントリがリストではありません"
 msgid "Changed-path entry not a list"
 msgstr "changed-path エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1327
+#: libsvn_ra_svn/client.c:1324
 msgid "'stat' not implemented"
 msgstr "'stat' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1384
+#: libsvn_ra_svn/client.c:1381
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1396
+#: libsvn_ra_svn/client.c:1393
 msgid "Location entry not a list"
 msgstr "location エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1446
+#: libsvn_ra_svn/client.c:1443
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1459
+#: libsvn_ra_svn/client.c:1456
 msgid "Revision entry not a list"
 msgstr "revision エントリはリストではありません"
 
 # ? text delta chunk
-#: libsvn_ra_svn/client.c:1472 libsvn_ra_svn/client.c:1497
+#: libsvn_ra_svn/client.c:1469 libsvn_ra_svn/client.c:1494
 msgid "Text delta chunk not a string"
 msgstr "テキスト差分の塊が文字列ではありません"
 
-#: libsvn_ra_svn/client.c:1509
+#: libsvn_ra_svn/client.c:1506
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "コマンド get-file-revs がリビジョンを返しませんでした"
 
-#: libsvn_ra_svn/client.c:1557
+#: libsvn_ra_svn/client.c:1554
 msgid "Server doesn't support the lock command"
 msgstr "ロック (lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1621
+#: libsvn_ra_svn/client.c:1618
 msgid "Server doesn't support the unlock command"
 msgstr "ロック解除 (unlock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1718
+#: libsvn_ra_svn/client.c:1715
 msgid "Lock response not a list"
 msgstr "lock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1732
+#: libsvn_ra_svn/client.c:1729
 msgid "Unknown status for lock command"
 msgstr "lock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1754
+#: libsvn_ra_svn/client.c:1751
 msgid "Didn't receive end marker for lock responses"
 msgstr "lock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1841
+#: libsvn_ra_svn/client.c:1838
 msgid "Unlock response not a list"
 msgstr "unlock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1855
+#: libsvn_ra_svn/client.c:1852
 msgid "Unknown status for unlock command"
 msgstr "unlock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1876
+#: libsvn_ra_svn/client.c:1873
 msgid "Didn't receive end marker for unlock responses"
 msgstr "unlock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1900 libsvn_ra_svn/client.c:1928
+#: libsvn_ra_svn/client.c:1897 libsvn_ra_svn/client.c:1925
 msgid "Server doesn't support the get-lock command"
 msgstr "ロック取得 (get-lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1941
+#: libsvn_ra_svn/client.c:1938
 msgid "Lock element not a list"
 msgstr "lock 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1964
+#: libsvn_ra_svn/client.c:1961
 msgid "Server doesn't support the replay command"
 msgstr "再生 (replay) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:2028
+#: libsvn_ra_svn/client.c:2025
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -6458,20 +6461,23 @@ msgstr ""
 #: svn/main.c:369
 msgid ""
 "Display information about a local or remote item.\n"
-"usage: info [TARGET...]\n"
+"usage: info [TARGET[@REV]...]\n"
 "\n"
 "  Print information about each TARGET (default: '.')\n"
-"  TARGET may be either a working-copy path or URL.\n"
+"  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+"  determines in which revision the target is first looked up.\n"
 msgstr ""
 "ローカルまたはリモートの項目に関する情報を表示します。\n"
-"使用方法: info [<対象>...]\n"
+"使用方法: info [<対象>[@<REV>]...]\n"
 "\n"
 "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
-"  <対象> は作業コピーのパスでも URL でもかまいません。\n"
+"  <対象> は作業コピーのパスでも URL でもかまいません。<REV> を指定すると、"
+"リ\n"
+"  ビジョン <REV> での <対象> をまず探します。\n"
 
 # * Description for 'svn list'.
 # * "list (ls): " is displayed at the head of the first line.
-#: svn/main.c:378
+#: svn/main.c:379
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -6517,7 +6523,7 @@ msgstr ""
 
 # * Description for 'svn lock'.
 # * "lock: " is displayed at the head of the first line.
-#: svn/main.c:400
+#: svn/main.c:401
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -6533,29 +6539,30 @@ msgstr ""
 
 # * Description for 'svn lock --file'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:408
+#: svn/main.c:409
 msgid "read lock comment from file ARG"
 msgstr "ファイル <引数> からロックについてのコメントを読み込みます"
 
 # * Description for 'svn lock --message'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:409
+#: svn/main.c:410
 msgid "specify lock comment ARG"
 msgstr "ロックについてのコメントを <引数> と指定します"
 
 # * Description for 'svn log'.
 # * "log: " is displayed at the head of the first line.
-#: svn/main.c:412
+#: svn/main.c:413
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
-"       2. log URL [PATH...]\n"
+"       2. log URL[@REV] [PATH...]\n"
 "\n"
 "  1. Print the log messages for a local PATH (default: '.').\n"
 "     The default revision range is BASE:1.\n"
 "\n"
 "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-"     The default revision range is HEAD:1.\n"
+"     If specified, REV determines in which revision the URL is first\n"
+"     looked up.  The default revision range is HEAD:1.\n"
 "\n"
 "  With -v, also print all affected paths with each log message.\n"
 "  With -q, don't print the log message body itself (note that this is\n"
@@ -6574,7 +6581,7 @@ msgid ""
 msgstr ""
 "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
 "使用方法: 1. log [<パス>]\n"
-"          2. log <URL> [<パス>...]\n"
+"          2. log <URL>[@<REV>] [<パス>...]\n"
 "\n"
 "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
 "す。\n"
@@ -6582,7 +6589,9 @@ msgstr ""
 "\n"
 "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示しま"
 "す。\n"
-"     デフォルトで表示するリビジョンの範囲は HEAD:1 です。\n"
+"     <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。デフォ"
+"ル\n"
+"     トで表示するリビジョンの範囲は HEAD:1 です。\n"
 "\n"
 "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示されま"
 "す。\n"
@@ -6607,7 +6616,7 @@ msgstr ""
 
 # * Description for 'svn merge'.
 # * "merge: " is displayed at the head of the first line.
-#: svn/main.c:441
+#: svn/main.c:443
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6674,7 +6683,7 @@ msgstr ""
 
 # * Description for 'svn mkdir'.
 # * "mkdir: " is displayed at the head of the first line.
-#: svn/main.c:470
+#: svn/main.c:472
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -6708,7 +6717,7 @@ msgstr ""
 
 # * Description for 'svn move'.
 # * "move (mv, rename, ren): " is displayed at the head of the first line.
-#: svn/main.c:487
+#: svn/main.c:489
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -6735,7 +6744,7 @@ msgstr ""
 
 # * Description for 'svn propdel'.
 # * "propdel (pdel, pd): " is displayed at the head of the first line.
-#: svn/main.c:500
+#: svn/main.c:502
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6756,7 +6765,7 @@ msgstr ""
 
 # * Description for 'svn propedit'.
 # * "propedit (pedit, pe): " is displayed at the head of the first line.
-#: svn/main.c:512
+#: svn/main.c:514
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6778,7 +6787,7 @@ msgstr ""
 
 # * Description for 'svn propget'.
 # * "propget (pget, pg): " is displayed at the head of the first line.
-#: svn/main.c:525
+#: svn/main.c:527
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6820,7 +6829,7 @@ msgstr ""
 
 # * Description for 'svn proplist'.
 # * "proplist (plist, pl): " is displayed at the head of the first line.
-#: svn/main.c:544
+#: svn/main.c:546
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6846,7 +6855,7 @@ msgstr ""
 
 # * Description for 'svn propset'.
 # * "propset (pset, ps): " is displayed at the head of the first line.
-#: svn/main.c:556
+#: svn/main.c:558
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6947,13 +6956,13 @@ msgstr ""
 
 # * Description for 'svn propset --file'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:598
+#: svn/main.c:600
 msgid "read property value from file ARG"
 msgstr "ファイル <引数> から属性値を読み込みます"
 
 # * Description for 'svn resolved'.
 # * "resolved: " is displayed at the head of the first line.
-#: svn/main.c:601
+#: svn/main.c:603
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -6973,7 +6982,7 @@ msgstr ""
 
 # * Description for 'svn revert'.
 # * "revert: " is displayed at the head of the first line.
-#: svn/main.c:610
+#: svn/main.c:612
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -6991,7 +7000,7 @@ msgstr ""
 
 # * Description for 'svn status'.
 # * "status (stat, st): " is displayed at the head of the first line.
-#: svn/main.c:618
+#: svn/main.c:620
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -7160,7 +7169,7 @@ msgstr ""
 
 # * Description for 'svn switch'.
 # * "switch (sw): " is displayed at the head of the first line.
-#: svn/main.c:694
+#: svn/main.c:696
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -7195,7 +7204,7 @@ msgstr ""
 
 # * Description for 'svn unlock'.
 # * "unlock: " is displayed at the head of the first line.
-#: svn/main.c:710
+#: svn/main.c:712
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -7209,7 +7218,7 @@ msgstr ""
 
 # * Description for 'svn update'.
 # * "update (up): " is displayed at the head of the first line.
-#: svn/main.c:718
+#: svn/main.c:720
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -7256,15 +7265,15 @@ msgstr ""
 "は、\n"
 "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
-#: svn/main.c:780 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
+#: svn/main.c:782 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
-#: svn/main.c:892
+#: svn/main.c:894
 msgid "Non-numeric limit argument given"
 msgstr "--limit の引数に数値以外が指定されています"
 
-#: svn/main.c:912
+#: svn/main.c:914
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
@@ -7272,19 +7281,19 @@ msgstr ""
 "複数のリビジョン引数が指定されています。-c を 2 つ指定したり -c と -r の両方"
 "を指定したりはできません"
 
-#: svn/main.c:920 svn/main.c:1112
+#: svn/main.c:922 svn/main.c:1114
 msgid "Can't specify -c with --old"
 msgstr "-c は、--old と同時には指定できません"
 
-#: svn/main.c:927
+#: svn/main.c:929
 msgid "Non-numeric change argument given to -c"
 msgstr "-c の引数に数値以外が指定されています"
 
-#: svn/main.c:933
+#: svn/main.c:935
 msgid "There is no change 0"
 msgstr "変更 0 はありません"
 
-#: svn/main.c:960
+#: svn/main.c:962
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -7292,32 +7301,32 @@ msgstr ""
 "複数のリビジョン引数が指定されています。-r と -c を用いた指定はできません。'-"
 "r <N> -r <M>' の代わりに '-r <N>:<M>' を使ってみてください"
 
-#: svn/main.c:973 svnadmin/main.c:1243
+#: svn/main.c:975 svnadmin/main.c:1243
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "リビジョン引数 '%s' で構文エラーが生じました"
 
-#: svn/main.c:1128 svn/main.c:1138
+#: svn/main.c:1130 svn/main.c:1140
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props と --no-auto-props は互いに排他的です"
 
-#: svn/main.c:1154
+#: svn/main.c:1156
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
-#: svn/main.c:1204 svndumpfilter/main.c:1194 svnlook/main.c:2025
+#: svn/main.c:1206 svndumpfilter/main.c:1194 svnlook/main.c:2025
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: svn/main.c:1222 svnadmin/main.c:1354 svndumpfilter/main.c:1212
+#: svn/main.c:1224 svnadmin/main.c:1354 svndumpfilter/main.c:1212
 #: svnlook/main.c:2043
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知のコマンドです: '%s'\n"
 
-#: svn/main.c:1256
+#: svn/main.c:1258
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7326,19 +7335,19 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svn help %s' と打ってください。\n"
 
-#: svn/main.c:1293
+#: svn/main.c:1295
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ログメッセージファイルがバージョン管理されているファイルです。無効にするには "
 "'--force-log' を用いてください"
 
-#: svn/main.c:1300
+#: svn/main.c:1302
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ロックについてのコメントのファイルがバージョン管理されているファイルです。無"
 "効にするには '--force-log' を用いてください"
 
-#: svn/main.c:1321
+#: svn/main.c:1323
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7346,7 +7355,7 @@ msgstr ""
 "ログメッセージがパス名です (-F のつもりでしたか?)。無効にするには '--force-"
 "log' を用いてください"
 
-#: svn/main.c:1328
+#: svn/main.c:1330
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7354,7 +7363,7 @@ msgstr ""
 "ロックについてのコメントがパス名です (-F のつもりでしたか?)。無効にするには "
 "'--force-log' を用いてください"
 
-#: svn/main.c:1453
+#: svn/main.c:1455
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -9393,87 +9402,8 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
-# * Description for 'svn log'.
-# * "log: " is displayed at the head of the first line.
-#~ msgid ""
-#~ "Show the log messages for a set of revision(s) and/or file(s).\n"
-#~ "usage: 1. log [PATH]\n"
-#~ "       2. log URL[@REV] [PATH...]\n"
-#~ "\n"
-#~ "  1. Print the log messages for a local PATH (default: '.').\n"
-#~ "     The default revision range is BASE:1.\n"
-#~ "\n"
-#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-#~ "     If specified, REV determines in which revision the URL is first\n"
-#~ "     looked up.  The default revision range is HEAD:1.\n"
-#~ "\n"
-#~ "  With -v, also print all affected paths with each log message.\n"
-#~ "  With -q, don't print the log message body itself (note that this is\n"
-#~ "  compatible with -v).\n"
-#~ "\n"
-#~ "  Each log message is printed just once, even if more than one of the\n"
-#~ "  affected paths for that revision were explicitly requested.  Logs\n"
-#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
-#~ "  behavior, which can be useful for determining branchpoints.\n"
-#~ "\n"
-#~ "  Examples:\n"
-#~ "    svn log\n"
-#~ "    svn log foo.c\n"
-#~ "    svn log http://www.example.com/repo/project/foo.c\n"
-#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
-#~ msgstr ""
-#~ "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
-#~ "使用方法: 1. log [<パス>]\n"
-#~ "          2. log <URL>[@<REV>] [<パス>...]\n"
-#~ "\n"
-#~ "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
-#~ "す。\n"
-#~ "     デフォルトで表示するリビジョンの範囲は BASE:1 です。\n"
-#~ "\n"
-#~ "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示し"
-#~ "ます。\n"
-#~ "     <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。デ"
-#~ "フォル\n"
-#~ "     トで表示するリビジョンの範囲は HEAD:1 です。\n"
-#~ "\n"
-#~ "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示され"
-#~ "ます。\n"
-#~ "  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できる"
-#~ "こと\n"
-#~ "  に注意してください)。\n"
-#~ "\n"
-#~ "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
-#~ "り、\n"
-#~ "  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
-#~ "ル\n"
-#~ "  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
-#~ "copy\n"
-#~ "  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
-#~ "す。\n"
-#~ "\n"
-#~ "  例:\n"
-#~ "    svn log\n"
-#~ "    svn log foo.c\n"
-#~ "    svn log http://www.example.com/repo/project/foo.c\n"
-#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
-
-# * Description for 'svn info'.
-# * "info: " is displayed at the head of the first line.
-#~ msgid ""
-#~ "Display information about a local or remote item.\n"
-#~ "usage: info [TARGET[@REV]...]\n"
-#~ "\n"
-#~ "  Print information about each TARGET (default: '.')\n"
-#~ "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
-#~ "  determines in which revision the target is first looked up.\n"
-#~ msgstr ""
-#~ "ローカルまたはリモートの項目に関する情報を表示します。\n"
-#~ "使用方法: info [<対象>[@<REV>]...]\n"
-#~ "\n"
-#~ "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
-#~ "  <対象> は作業コピーのパスでも URL でもかまいません。<REV> を指定すると、"
-#~ "リ\n"
-#~ "  ビジョン <REV> での <対象> をまず探します。\n"
+#~ msgid "Argument to --limit must be positive"
+#~ msgstr "--limit に渡す引数は正でなければなりません"
 
 #~ msgid "'%s' does not exist in revision %ld"
 #~ msgstr "'%s' がリビジョン %ld に存在しません"
@@ -12570,6 +12500,82 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "the service."
 #~ msgstr ""
 #~ "サービスを開始できませんでした。サービス開始時に内部エラーが発生しました。"
+
+# * Description for 'svn info'.
+# * "info: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display information about a local or remote item.\n"
+#~ "usage: info [TARGET...]\n"
+#~ "\n"
+#~ "  Print information about each TARGET (default: '.')\n"
+#~ "  TARGET may be either a working-copy path or URL.\n"
+#~ msgstr ""
+#~ "ローカルまたはリモートの項目に関する情報を表示します。\n"
+#~ "使用方法: info [<対象>...]\n"
+#~ "\n"
+#~ "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
+#~ "  <対象> は作業コピーのパスでも URL でもかまいません。\n"
+
+# * Description for 'svn log'.
+# * "log: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Show the log messages for a set of revision(s) and/or file(s).\n"
+#~ "usage: 1. log [PATH]\n"
+#~ "       2. log URL [PATH...]\n"
+#~ "\n"
+#~ "  1. Print the log messages for a local PATH (default: '.').\n"
+#~ "     The default revision range is BASE:1.\n"
+#~ "\n"
+#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+#~ "     The default revision range is HEAD:1.\n"
+#~ "\n"
+#~ "  With -v, also print all affected paths with each log message.\n"
+#~ "  With -q, don't print the log message body itself (note that this is\n"
+#~ "  compatible with -v).\n"
+#~ "\n"
+#~ "  Each log message is printed just once, even if more than one of the\n"
+#~ "  affected paths for that revision were explicitly requested.  Logs\n"
+#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+#~ "  behavior, which can be useful for determining branchpoints.\n"
+#~ "\n"
+#~ "  Examples:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+#~ msgstr ""
+#~ "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
+#~ "使用方法: 1. log [<パス>]\n"
+#~ "          2. log <URL> [<パス>...]\n"
+#~ "\n"
+#~ "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
+#~ "す。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は BASE:1 です。\n"
+#~ "\n"
+#~ "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示し"
+#~ "ます。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は HEAD:1 です。\n"
+#~ "\n"
+#~ "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示され"
+#~ "ます。\n"
+#~ "  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できる"
+#~ "こと\n"
+#~ "  に注意してください)。\n"
+#~ "\n"
+#~ "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
+#~ "り、\n"
+#~ "  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
+#~ "ル\n"
+#~ "  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
+#~ "copy\n"
+#~ "  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
+#~ "す。\n"
+#~ "\n"
+#~ "  例:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 # * Description for 'svn info'.
 # * "info: " is displayed at the head of the first line.
