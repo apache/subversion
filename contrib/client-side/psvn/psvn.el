@@ -194,6 +194,9 @@
       (require 'diff-mode))
   (error nil))
 
+(defconst svn-psvn-revision "$Id$"
+  "The revision number of psvn.")
+
 ;;; user setable variables
 (defcustom svn-status-verbose t
   "*Add '-v' to svn status call."
