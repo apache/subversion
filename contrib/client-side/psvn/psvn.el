@@ -1859,7 +1859,7 @@ When called with the prefix argument 0, use the full path name."
           ;;(message "found: %S" found)
           (unless found (setq st-info (cdr st-info))))
         (unless found
-          (message "continue to search for %s" (caar cmd-list))
+          (svn-status-message 3 "psvn: continue to search for %s" (caar cmd-list))
           (setq st-info svn-status-info)
           (while (and (not found) st-info)
             (setq found (string= (caar cmd-list) (svn-status-line-info->filename (car st-info))))
@@ -1870,7 +1870,7 @@ When called with the prefix argument 0, use the full path name."
               (setq action (cadar cmd-list))
               ;;(message "found %s, action: %S" (caar cmd-list) action)
               (svn-status-annotate-status-buffer-entry action (car st-info)))
-          (message "did not find %s" (caar cmd-list)))
+          (svn-status-message 3 "psvn: did not find %s" (caar cmd-list)))
         (setq cmd-list (cdr cmd-list)))
       (if fname
           (progn
@@ -3153,7 +3153,7 @@ Recommended values are ?m or ?M.")
                         (delete-region (svn-point-at-bol) (svn-point-at-eol))
                         (svn-insert-line-in-status-buffer (car st-info))
                         (delete-char 1))
-                    (message "psvn: file %s not found, updating %s buffer content..."
+                    (svn-status-message 3 "psvn: file %s not found, updating %s buffer content..."
                              i-fname svn-status-buffer-name)
                     (svn-status-update-buffer))))))
           (setq st-info (cdr st-info))))))
