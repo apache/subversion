@@ -2,7 +2,7 @@
  * svn_server.h :  declarations for the svn server
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,8 +42,8 @@ typedef struct serve_params_t {
      identity EXTERNAL authenticates as. */
   const char *tunnel_user;
 
-  /* True if the deprecated read-only flag was specified on the
-     command-line, which forces all connections to be read-only. */
+  /* True if the read-only flag was specified on the command-line,
+     which forces all connections to be read-only. */
   svn_boolean_t read_only;
 } serve_params_t;
 
