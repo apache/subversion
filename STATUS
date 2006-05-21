@@ -18,11 +18,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r19688
-    Fix issue #2403, incorrect 3-way merge of "added" binary file
-    which already exists in the repository and WC (unmodified).
-    Justification:
-      Oft-requested usability improvement for merges involving binary files.
-    Votes:
-      +1: dlr, rooneg, malcolm
-
