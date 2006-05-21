@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -80,7 +80,7 @@ class State:
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
-    identified by PATH (which is assumed to contain only on element
+    identified by PATH (which is assumed to contain only one element
     rooted at the tree of this State object's WC_DIR)."""
     desc = { }
     for path, item in self.desc.items():
