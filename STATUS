@@ -9,12 +9,5 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19605, r19565, r19564, r19533, r19531
-    Backport mod_dontdothat.
-    Justification:
-      Low impact (just contrib), people want the abilities it gives them.
-    Votes:
-      +1: rooneg, lundblad
-
 Approved changes:
 
