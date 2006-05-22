@@ -372,10 +372,6 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
     *rb_pool = rb_pool_new(rb_get_pool(target));
   }
 
-  if (!NIL_P(target) && !CONTEXT_P(target)) {
-    rb_set_pool(target, *rb_pool);
-  }
-
   pool_wrapper_p = &pool_wrapper;
   r2c_swig_type2(*rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
   *pool = pool_wrapper->pool;
