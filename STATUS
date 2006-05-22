@@ -104,10 +104,3 @@ Approved changes:
       Depends on r17280 et al.
     Votes:
       +1: malcolm, dlr
-
-  * r19528
-    Plug memleak with svn ls and mod_dav_svn.
-    Justification:
-      Listing large directories consumes large amounts of memory.
-    Votes:
-      +1: lundblad, dlr, rooneg
