@@ -80,13 +80,6 @@ Candidate changes:
     Votes:
       +1: brane
 
-  * r19528
-    Plug memleak with svn ls and mod_dav_svn.
-    Justification:
-      Listing large directories consumes large amounts of memory.
-    Votes:
-      +1: lundblad, dlr
-
   * r19493
     Fix memory leak by not holding subpool.
     Justification:
@@ -112,3 +105,9 @@ Approved changes:
     Votes:
       +1: malcolm, dlr
 
+  * r19528
+    Plug memleak with svn ls and mod_dav_svn.
+    Justification:
+      Listing large directories consumes large amounts of memory.
+    Votes:
+      +1: lundblad, dlr, rooneg
