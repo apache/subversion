@@ -284,12 +284,14 @@ check_format(int format)
 }
 
 #define SQLITE3_DEBUG 1
+#ifdef SQLITE3_DEBUG
 static void
 sqlite_tracer (void *data, const char *sql)
 {
-  sqlite3 *db = data;
+  /*  sqlite3 *db = data; */
   fprintf (stderr, "SQLITE SQL is \"%s\"\n", sql);
 }
+#endif
 
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
@@ -4167,7 +4169,7 @@ fs_sqlite_exec (sqlite3 *db, const char *sql,
 
 const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
   APR_EOL_STR 
-  "create table mergeinfo (uuid text not null, mergedfrom text not null, mergedto text not null, mergedrev integer not null);"
+  "create table mergeinfo (uuid text not null, mergedfrom text not null, mergedto text not null, mergedrevstart integer not null, mergedrevend integer not null);"
   APR_EOL_STR
   "create index mergedfrom_idx on mergeinfo (mergedfrom);"
   APR_EOL_STR

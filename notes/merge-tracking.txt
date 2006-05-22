@@ -79,23 +79,41 @@ this:
 A merge info property, named SVN_MERGE_PROPERTY (not the real name, I
 have made it a constant so we can have a large bikeshed about what to
 really call it) stored in the directory properties, and file properties.
-Each will store the *full, complete* list of revisions that are directly merged into the item.  This ensures that the merge algorithm and other
-consumers do not have to go through the same properties on old revisions, in order to compute a complete list of merge information for a directory.
 
-Directly merged into the item means changes from any merge that have affected this directory, which includes merges into parents, grandparents, etc that had some affect on this directory.
+Each will store the *full, complete* list of revisions that are
+directly merged into the item.  This ensures that the merge algorithm
+and other consumers do not have to go through the same properties on
+old revisions, in order to compute a complete list of merge
+information for a directory.
 
-Doing this storage of complete information at each point makes manual editing safe, because the changes to a directory/file's merge info are localized to that directory or file.
+Directly merged into the item means changes from any merge that have
+affected this directory, which includes merges into parents,
+grandparents, etc that had some affect on this directory.
 
-However, as a space optimization, if the information on a subdirectory or file is exactly the same as the merge information for its parent directory, it *may* be elided in favor of that parent information.  This eliding may be done on the fly, or as a postpass (i.e. a "svnadmin mergeinfooptimize").  Eliding information means that an implementation may have to walk parent directories in order to gather information about merge info, however, this would have been necessary anyway to determine.  It is expected that directory trees are not that deep, and the lookup of merge info properties quick enough (due to indexing, etc), to make this eliding not affect performance.
+Doing this storage of complete information at each point makes manual
+editing safe, because the changes to a directory/file's merge info are
+localized to that directory or file.
+
+However, as a space optimization, if the information on a subdirectory
+or file is exactly the same as the merge information for its parent
+directory, it *may* be elided in favor of that parent information.
+This eliding may be done on the fly, or as a postpass (i.e. a
+"svnadmin mergeinfooptimize").  Eliding information means that an
+implementation may have to walk parent directories in order to gather
+information about merge info, however, this would have been necessary
+anyway to determine.  It is expected that directory trees are not that
+deep, and the lookup of merge info properties quick enough (due to
+indexing, etc), to make this eliding not affect performance.
 
 Eliding will never affect the semantics of merge information, as it should only be performed in the case when it was exactly the same, and if it was exactly the same, it could not have had an effect on the merge results.  
 
 Other than eliding, any directory or file may have merge info attached to it.
 
-The way we choose which of file and dir merge info to use in case
-of conflicts simple system of inheritance[1] where the "most specific"
+The way we choose which of file and dir merge info to use in case of
+conflicts simple system of inheritance[1] where the "most specific"
 place wins.  This means that if the property is set on a file, that
-completely overrides the directory level properties for the directory containing the file.
+completely overrides the directory level properties for the directory
+containing the file.
 
 The way we choose which to store to depends on how much and where you
 merge, and will be covered in the semantics.
@@ -127,7 +145,7 @@ revisioneelement -> revisionrange | REVISION
 
 revisionlist -> (revisionrange | REVISION)(COMMA revisioneelement)*
 
-revisionline -> PATHNAME@REVISION COLON revisionlist
+revisionline -> PATHNAME COLON revisionlist
 
 top -> revisionline (NEWLINE revisionline)*
 
@@ -167,8 +185,6 @@ svn rename: No change to merge info
 svn copy: Copies the merge info from the source path to the destination
 path, if any.  
 
-The peg-rev syntax of pathname should enable us to do copy/rename like this without fear (otherwise you could have cases where you are renaming/copying a directory so that it has the same name as something it was previously merged from).
-
 All copies include full-copies of the merge information.
 
 svn merge: Adds or subtracts to the merge info, according to the
@@ -177,10 +193,25 @@ following:
 Where to put the info (this is performed for *each merge target*)
 1. If the merge target is a single file, the merge info goes to the
 property SVN_MERGE_INFO set on that file.
-2. If the merge target is a directory, the merge info goes
-to the property SVN_MERGE_INFO set on the shallowest directory of the merge (IE the topmost directory affected by the merge) that will require different info than the info already set on other directories.
 
-The last clause of rule 2 is only meant to handle cherry picking and multiple merges.  In the standard case that people repeatedly merge the same directories into the same directories, the information will end up only on the shallowest directory of the merge.   If changes are selectively applied (i.e. all changes are applied to every directory but one), the information will be on the shallowest common ancestor of all those directories, *as well* as information being placed on the directory where the changes are not applied, so that it will override the information from that shallow directory. See cherry picking example for more details.   Besides selective application, apply changes that affect some directory, and then applying different changes to subdirectories of that directory, will also produce merge info on multiple directories in a given path.
+2. If the merge target is a directory, the merge info goes to the
+property SVN_MERGE_INFO set on the shallowest directory of the merge
+(IE the topmost directory affected by the merge) that will require
+different info than the info already set on other directories.
+
+The last clause of rule 2 is only meant to handle cherry picking and
+multiple merges.  In the standard case that people repeatedly merge
+the same directories into the same directories, the information will
+end up only on the shallowest directory of the merge.  If changes are
+selectively applied (i.e. all changes are applied to every directory
+but one), the information will be on the shallowest common ancestor of
+all those directories, *as well* as information being placed on the
+directory where the changes are not applied, so that it will override
+the information from that shallow directory. See cherry picking
+example for more details.  Besides selective application, apply
+changes that affect some directory, and then applying different
+changes to subdirectories of that directory, will also produce merge
+info on multiple directories in a given path.
 
 
 What info is put:
@@ -198,12 +229,21 @@ correct.
 3. The path (known as PATHNAME in the grammar) used as the key to
 determine which revision line to change is the subdirectory path being
 merged from, relative to the repo root, with the repo url stripped from
-it.  The peg revision contained in the mergeinfo must always be specified as part of pathname. It is not optional.  It can always be obtained from the information present about the urls being merged.  The peg revision *must be canonicalized to the last changed revision for that directory/file's name*.  I.E. if the merge specified http://foo/bar@50, and the last time the name changed was in revision 43, the merge information should specify /bar@43 as the pathname + pegrev.  This is done because the information necessary to do it is immediately available (copied_from), and without it, merging indirect merge info is very difficult.
+it.  
 
-In the case that we are merging changes that themselves contain merge info, the merge info properties must be merged.  The effect of this is that indirect merge info becomes direct merge info as it is  integrated as part of the merge info now set on the property.  The way this merge is performed is to merge the revision lists for each identical pathname@peg, and to copy the rest.  Blocking of merges and how this affects this information is not covered in this design.  The indirect info merging is *in addition* to specifying the merge that we are now doing.  See the repeated merge with indirect info example for an example.
+In the case that we are merging changes that themselves contain merge
+info, the merge info properties must be merged.  The effect of this is
+that indirect merge info becomes direct merge info as it is integrated
+as part of the merge info now set on the property.  The way this merge
+is performed is to merge the revision lists for each identical
+pathname, and to copy the rest.  Blocking of merges and how this
+affects this information is not covered in this design.  The indirect
+info merging is *in addition* to specifying the merge that we are now
+doing.  See the repeated merge with indirect info example for an
+example.
 
 Thus a merge of revisions 1-9 from http://foo.bar.com/reposroot/trunk
-would produce "/trunk@1:1-9"
+would produce "/trunk:1-9"
 
 cross-repo merging is a bridge we can cross if we ever get there :).
 
@@ -211,84 +251,125 @@ cross-repo merging is a bridge we can cross if we ever get there :).
 Examples:
 
 Repeated merge:
-(I have assumed no renames here, and that all directories were added in rev 1, hence the peg rev will always be 1 in these examples, for simplicity.  The pathname will never change, this should not cause any issues that need examples )
+(I have assumed no renames here, and that all directories were added
+in rev 1, for simplicity.  The pathname will never change, this should
+not cause any issues that need examples )
 
 Assume trunk has 9 revisions, 1-9.
 
-A merge of /trunk into /branches/release will produce the merge info "/trunk@1: 1-9".
+A merge of /trunk into /branches/release will produce the merge info
+"/trunk: 1-9".
 
 Assume trunk now has 6 additional revisions, 14-18.
 
-A merge of /trunk into /branches/release should only merge 14-18 and produce the merge info "/trunk@1: 1-9,14-18".
+A merge of /trunk into /branches/release should only merge 14-18 and
+produce the merge info "/trunk: 1-9,14-18".
 This merge info will be placed on /branches/release.
 
-(note the canonical minimal form of the above would be 1-18, as 9-14 do not affect that path.  This is also an acceptable answer, as is any variant that represents the same information).
+(note the canonical minimal form of the above would be 1-18, as 9-14
+do not affect that path.  This is also an acceptable answer, as is any
+variant that represents the same information).
 
 
-Repeated merge with indirect info:
-Assume the repository is in the state it would be after the "Repeated merge" example.
-Assume additionally, we onw have a branch /branches/next-release, with revisions 20-24 on it.
+Repeated merge with indirect info: 
+Assume the repository is in the state it would be after the "Repeated
+merge" example.
+Assume additionally, we onw have a branch /branches/next-release, with
+revisions 20-24 on it.
+
 We wish to merge /branches/release into /branches/next-release.
 
-A merge of /branches/release into /branches/next-release will produce the merge info:
-"/branches/release@1: 1-24
- /trunk@1:1-9,14-18"
+A merge of /branches/release into /branches/next-release will produce
+the merge info:
+"/branches/release: 1-24
+ /trunk:1-9,14-18"
 
 This merge info will be placed on /branches/next-release.
 
-Note that the merge information about merges *to* /branches/release has been added to our merge info.
+Note that the merge information about merges *to* /branches/release
+has been added to our merge info.
 
-A future merge of /trunk into /branches/next-release, assuming no new revisions on /trunk, will merge nothing.
+A future merge of /trunk into /branches/next-release, assuming no new
+revisions on /trunk, will merge nothing.
 
 Cherry picking a change to a file:
-Assume the repository is in the state it would be after the "Repeated merge with indirect info" example.
-Assume we have revision 25 on /trunk, which affects /trunk/foo.c and /trunk/foo/bar/bar.c
+Assume the repository is in the state it would be after the "Repeated
+merge with indirect info" example.
+
+Assume we have revision 25 on /trunk, which affects /trunk/foo.c and
+/trunk/foo/bar/bar.c
+
 We wish to merge the portion of change affecting /trunk/foo.c 
 
-A merge of revision 25 of /trunk/foo.c into /branches/release/foo.c will produce the merge info:
-"/trunk@1:1-9,14-18,25".  
+A merge of revision 25 of /trunk/foo.c into /branches/release/foo.c
+will produce the merge info:
+"/trunk/foo.c:1-9,14-18,25".  
 This merge information will be placed on /branches/release/foo.c
 
-All other merge information will still be intact on /branches/release (ie there is information on /branches/release's directory).
+All other merge information will still be intact on /branches/release
+(ie there is information on /branches/release's directory).
 
-(the cherry picking one directory case is the same as file, with files replaced with directories, hence i have not gone through the example).
+(the cherry picking one directory case is the same as file, with files
+replaced with directories, hence i have not gone through the example).
 
 Merging changes into parents and then merging changes into children.
-Assume the repository is in the state it would be after the "Repeated merge with indirect info" example.
+Assume the repository is in the state it would be after the "Repeated
+merge with indirect info" example.
 Assume we have revision 25 on /trunk, which affects /trunk/foo
 Assume we have revision 26 on /trunk, which affects /trunk/foo/baz
-We wish to merge revision 25 into /branches/release/foo, and merge revision 26 into /branches/release/foo/baz.
+We wish to merge revision 25 into /branches/release/foo, and merge
+revision 26 into /branches/release/foo/baz.
 
-A merge of revision 25 of /trunk/foo into /branches/release/foo will produce the merge info:
-"/trunk@1:1-9,14-18,25".
+A merge of revision 25 of /trunk/foo into /branches/release/foo will
+produce the merge info:
+"/trunk:1-9,14-18,25".
+
 This merge information will be placed on /branches/release/foo
-A merge of revision 26 of /trunk/foo/baz into /branches/release/foo/baz will produce the merge info:
-"/trunk@1:1-9,14-18,26".
+
+A merge of revision 26 of /trunk/foo/baz into
+/branches/release/foo/baz will produce the merge info:
+
+"/trunk:1-9,14-18,26".
 This merge information will be placed on /branches/release/foo/baz.
 
-Note that if you instead merge revision 26 of /trunk/foo into /branches/release/foo, you will get the same effect, but the merge info will be:
-"/trunk@1:1-9,14-18,25-26".
+Note that if you instead merge revision 26 of /trunk/foo into
+/branches/release/foo, you will get the same effect, but the merge
+info will be:
+"/trunk:1-9,14-18,25-26".
 This merge information will be placed on /branches/releases/foo
 
-Both are different "spellings" of the same merge information, and future merges should produce the same result with either merge info (one is of course, more space efficient, and transformation of one to the other could be done on the fly or as a postpass, if desired).
+Both are different "spellings" of the same merge information, and
+future merges should produce the same result with either merge info
+(one is of course, more space efficient, and transformation of one to
+the other could be done on the fly or as a postpass, if desired).
 
-All other merge information will still be intact on /branches/release (ie there is information on /branches/release's directory).
+All other merge information will still be intact on /branches/release
+(ie there is information on /branches/release's directory).
 
 
 Random questions and answers
 
 Are there many different "spellings" of the same merge info?
 
-Yes.  Depending on the urls and target you specify for merges, I believe it is possible to end up with merge info in different places, or with slightly different revision lines that have the same semantic effect (IE info like /trunk@1:1-9 vs /trunk@1:1-8<newline>/trunk/bar@1:9 when revision 9 on /trunk only affected /trunk/bar)
-posyou can end up with merge info in different places, even though the semantic result will be the same in all cases.
+Yes.  Depending on the urls and target you specify for merges, I
+believe it is possible to end up with merge info in different places,
+or with slightly different revision lines that have the same semantic
+effect (IE info like /trunk:1-9 vs /trunk:1-8<newline>/trunk/bar:9
+when revision 9 on /trunk only affected /trunk/bar) posyou can end up
+with merge info in different places, even though the semantic result
+will be the same in all cases.
 
 What happens if someone commits a merge with a non-merge tracking
 client?
+
 It simply means the next time you merge, you may receive conflicts that
 you would have received if you were using a non-history-sensitive
 client.
+
 Can we do history sensitive wc<->wc merges without contacting the server?
-No. But you probably couldn't anyway without *all* repo merge data stored locally.
+
+No. But you probably couldn't anyway without *all* repo merge data
+stored locally.
 
 What happens if the info is not there?
 The same thing that happens if the info is not there now.
@@ -319,13 +400,13 @@ No.
 
 Let's say you have
 
-a/foo (merge info: /trunk@1:5-9
-a/branches/bar (merge info: /trunk@1:1-4)
+a/foo (merge info: /trunk:5-9
+a/branches/bar (merge info: /trunk:1-4)
 
 If you copy a/foo into a/branches/bar, we now have
 
-a/branches/bar (merge info: /trunk@1:1-4)
-a/branches/bar/foo (merge info: /trunk@1:5-9)
+a/branches/bar (merge info: /trunk:1-4)
+a/branches/bar/foo (merge info: /trunk:5-9)
 
 This is strictly correct.  The only changes which have been merged into
 a/branches/bar/foo, are still 5-9.  The only changes which have been

@@ -38,6 +38,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
@@ -52,6 +53,17 @@
 #include "../libsvn_fs/fs-loader.h"
 
 
+/* SQLITE->SVN quick error wrap, much like SVN_ERR. 
+   XXX: This macro probably belongs elsehwere, like svn_sqlite.h or
+   something.  Later. */
+#define SQLITE_ERR(x, db) do                                    \
+{                                                               \
+  if ((x) != SQLITE_OK)                                         \
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,      \
+                            sqlite3_errmsg((db)));              \
+ } while (0)
+
+  
 /* ### I believe this constant will become internal to reps-strings.c.
    ### see the comment in window_consumer() for more information. */
 
@@ -1077,6 +1089,76 @@ fs_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+/* Change the merge info for a given path.  */
+static svn_error_t *
+fs_change_merge_info(svn_fs_root_t *root,
+                     const char *path,
+                     const char *from,
+                     apr_array_header_t *info,
+                     apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  const char *txn_id;
+  sqlite3_stmt *stmt;
+   
+  if (! root->is_txn_root)
+    return not_txn(root);
+  txn_id = root->txn;
+
+  ffd = root->fs->fsap_data;
+  
+  if (from && info)
+    {
+      int i;
+      for (i = 0; i < info->nelts; i++)
+        {
+          svn_merge_range_t *range;
+
+          range = APR_ARRAY_IDX(info, i, svn_merge_range_t *);
+          SQLITE_ERR(sqlite3_prepare(ffd->mtd,
+                                     "INSERT INTO mergeinfo (uuid, mergedto, mergedfrom, mergedrevstart, mergedrevend) VALUES (?, ?, ?, ?, ?);",
+                                     -1, &stmt, NULL), ffd->mtd);
+          SQLITE_ERR(sqlite3_bind_text(stmt, 1, txn_id, -1, SQLITE_TRANSIENT),
+                     ffd->mtd);
+          SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
+                     ffd->mtd);
+          SQLITE_ERR(sqlite3_bind_text(stmt, 3, from, -1, SQLITE_TRANSIENT),
+                     ffd->mtd);
+          SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
+                     ffd->mtd);
+          SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
+                     ffd->mtd);
+          if (sqlite3_step(stmt) != SQLITE_DONE)
+            return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                    sqlite3_errmsg(ffd->mtd));
+          
+          SQLITE_ERR(sqlite3_finalize(stmt), ffd->mtd);
+        }
+    }
+  
+  SQLITE_ERR (sqlite3_prepare(ffd->mtd, 
+                      "INSERT INTO mergeinfo_changed (uuid, path) VALUES (?, ?);", 
+                              -1, &stmt, NULL),
+              ffd->mtd);
+  SQLITE_ERR(sqlite3_bind_text(stmt, 1, txn_id, -1, SQLITE_TRANSIENT),
+             ffd->mtd);
+
+  SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
+             ffd->mtd);
+
+  if (sqlite3_step(stmt) != SQLITE_DONE)
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            sqlite3_errmsg(ffd->mtd));
+  
+  SQLITE_ERR(sqlite3_finalize(stmt), ffd->mtd);
+  SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
+  SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
+                                     SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                     svn_string_create("true", pool),
+                                     pool));
+  return SVN_NO_ERROR;
+}
 
 /* Change, add, or delete a node's property value.  The node affect is
    PATH under ROOT, the property value to modify is NAME, and VALUE
@@ -1090,13 +1172,10 @@ fs_change_node_prop(svn_fs_root_t *root,
                     const svn_string_t *value,
                     apr_pool_t *pool)
 {
-  svn_revnum_t rev;
-  sqlite3_stmt *stmt;
   parent_path_t *parent_path;
   apr_hash_t *proplist;
   const char *txn_id;
   fs_fs_data_t *ffd;
-  svn_fs_txn_t *txn;
   
   if (! root->is_txn_root)
     return not_txn(root);
@@ -1122,38 +1201,31 @@ fs_change_node_prop(svn_fs_root_t *root,
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
     proplist = apr_hash_make(pool);
+
   if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
     {
+      apr_hash_t *minfo = NULL;
       
-      if (sqlite3_prepare(ffd->mtd, 
-                          "INSERT INTO mergeinfo_changed (uuid, path) VALUES (?, ?);", 
-                          -1, &stmt, NULL) != SQLITE_OK)
-        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                sqlite3_errmsg(ffd->mtd));
-      
-      if (sqlite3_bind_text(stmt, 1, txn_id, -1, SQLITE_TRANSIENT) != SQLITE_OK)
-        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                sqlite3_errmsg(ffd->mtd));
-      
-      if (sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT) != SQLITE_OK)  
-        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                sqlite3_errmsg(ffd->mtd));
-      
-      if (sqlite3_step(stmt) != SQLITE_DONE)
-        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                sqlite3_errmsg(ffd->mtd));
-      
-      if (sqlite3_finalize(stmt) != SQLITE_OK)
-        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                sqlite3_errmsg(ffd->mtd));
-      SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
-      SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
-                                         SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
-                                         svn_string_create("true", pool),
-                                         pool));
-      
+      if (value)
+        SVN_ERR(svn_parse_mergeinfo(value->data, &minfo, pool));
+
+      if (minfo)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(pool, minfo); 
+               hi != NULL;
+               hi = apr_hash_next(hi))
+            {
+              const void *from;
+              void *revlist;
+              
+              apr_hash_this(hi, &from, NULL, &revlist);
+              SVN_ERR(fs_change_merge_info(root, path, from, revlist, pool));
+            }
+        }
     }
-  
+
   /* Set the property. */
   apr_hash_set(proplist, name, APR_HASH_KEY_STRING, value);
 
@@ -3206,7 +3278,7 @@ static root_vtable_t root_vtable = {
   fs_contents_changed,
   fs_get_file_delta_stream,
   fs_merge,
-  NULL, 
+  fs_change_merge_info, 
   NULL
 };
 

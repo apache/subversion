@@ -23,6 +23,7 @@
 #include "svn_error_codes.h"
 #include "svn_string.h"
 #include "svn_mergeinfo.h"
+#include "svn_private_config.h"
 
 static svn_error_t *
 parse_revision(const char **input, const char *end, svn_revnum_t *revision)
@@ -41,30 +42,20 @@ parse_revision(const char **input, const char *end, svn_revnum_t *revision)
   return SVN_NO_ERROR;
 }
 
-/* pathname -> PATHNAME@REVISION */
+/* pathname -> PATHNAME */
 static svn_error_t *
 parse_pathname(const char **input, const char *end,
-               svn_pathrev_pair_t *pathrev, apr_pool_t *pool)
+               svn_stringbuf_t **pathname, apr_pool_t *pool)
 {
   const char *curr = *input;
-  svn_stringbuf_t *pathname = svn_stringbuf_create("", pool);
+  *pathname = svn_stringbuf_create("", pool);
 
-  while (curr < end && *curr != '@')
+  while (curr < end && *curr != ':')
     {
-      svn_stringbuf_appendbytes(pathname, curr, 1);
+      svn_stringbuf_appendbytes(*pathname, curr, 1);
       curr++;
     }
-  if (*curr != '@')
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL, "No '@' found in pathname");
 
-  pathrev->path = pathname->data;
-  curr++;
-
-  if (curr >= end || !svn_ctype_isdigit(*curr))
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            "Revision number missing after ");
-
-  SVN_ERR(parse_revision(&curr, end, &pathrev->revnum));
   *input = curr;
 
   return SVN_NO_ERROR;
@@ -76,60 +67,58 @@ parse_pathname(const char **input, const char *end,
    revisioneelement -> revisionrange | REVISION
  */
 static svn_error_t *
-parse_revlist(const char **input, const char *end, apr_array_header_t *revlist,
-              apr_pool_t *pool)
+parse_revlist(const char **input, const char *end,
+              apr_array_header_t *revlist, apr_pool_t *pool)
 {
   const char *curr = *input;
 
   if (curr == end)
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL, 
-                            "No revision list found ");
+    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                            _("No revision list found "));
 
   while (curr < end)
     {
-      svn_merge_info_t *minfo = apr_pcalloc(pool, sizeof(*minfo));
+      svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
 
       SVN_ERR(parse_revision(&curr, end, &firstrev));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && curr != end)
         return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                "Invalid character found in revision list");
-      minfo->type = SVN_MERGE_RANGE_SINGLE;
-      minfo->u.single.revision = firstrev;
-
+                                _("Invalid character found in revision list"));
+      mrange->start = firstrev;
+      mrange->end = firstrev;
+      
       if (*curr == '-')
         {
           svn_revnum_t secondrev;
 
           curr++;
           SVN_ERR(parse_revision(&curr, end, &secondrev));
-          minfo->type = SVN_MERGE_RANGE_RANGE;
-          minfo->u.range.start = firstrev;
-          minfo->u.range.end = secondrev;
+          mrange->end = secondrev;
         }
 
       /* XXX: Watch empty revision list problem */
       if (*curr == '\n' || curr == end)
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_info_t *) = minfo;
+          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
           *input = curr;
           return SVN_NO_ERROR;
         }
       else if (*curr == ',')
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_info_t *) = minfo;
+          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
           curr++;
         }
       else
         {
           return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                  "Invalid character found in revision list");
+                                  _("Invalid character found in revision list"));
         }
 
     }
   if (*curr != '\n')
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                "Revision list parsing ended before hitting newline");
+                            _("Revision list parsing ended before hitting newline"));
   *input = curr;
   return SVN_NO_ERROR;
 }
@@ -137,18 +126,18 @@ parse_revlist(const char **input, const char *end, apr_array_header_t *revlist,
 /* revisionline -> PATHNAME@REVISION COLON revisionlist */
 
 static svn_error_t *
-parse_revision_line(const char **input, const char *end, apr_hash_t *hash, 
+parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
                     apr_pool_t *pool)
 {
-  svn_pathrev_pair_t *pair = apr_pcalloc(pool, sizeof (*pair));
-  apr_array_header_t *revlist = apr_array_make(pool, 1, 
-                                               sizeof(svn_merge_info_t *));
+  svn_stringbuf_t *pathname;
+  apr_array_header_t *revlist = apr_array_make(pool, 1,
+                                               sizeof(svn_merge_range_t *));
 
-  SVN_ERR(parse_pathname(input, end, pair, pool));
+  SVN_ERR(parse_pathname(input, end, &pathname, pool));
 
   if (*(*input) != ':')
-    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL, 
-                            "Pathname not terminated by ':'");
+    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
+                            _("Pathname not terminated by ':'"));
 
   *input = *input + 1;
 
@@ -156,19 +145,19 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
 
   if (*input != end && *(*input) != '\n')
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                            "Could not find end of line in revision line");
+                            _("Could not find end of line in revision line"));
 
   if (*input != end)
     *input = *input + 1;
 
-  apr_hash_set (hash, pair, sizeof (*pair), revlist);
-  
+  apr_hash_set (hash, pathname->data, APR_HASH_KEY_STRING, revlist);
+
   return SVN_NO_ERROR;
 }
 
 /* top -> revisionline (NEWLINE revisionline)*  */
 static svn_error_t *
-parse_top(const char **input, const char *end, apr_hash_t *hash, 
+parse_top(const char **input, const char *end, apr_hash_t *hash,
           apr_pool_t *pool)
 {
   while (*input < end)
@@ -179,9 +168,9 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_parse_mergeinfo(const char **input, const char *end, apr_hash_t *hash, 
+svn_parse_mergeinfo(const char *input, apr_hash_t **hash,
                     apr_pool_t *pool)
 {
-  return parse_top(input, end, hash, pool);
+  *hash = apr_hash_make(pool);
+  return parse_top(&input, input + strlen(input), *hash, pool);
 }
-
