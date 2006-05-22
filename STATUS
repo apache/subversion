@@ -89,11 +89,3 @@ Approved changes:
       Depends on r17280 et al.
     Votes:
       +1: malcolm, dlr
-
-  * r19493
-    Fix memory leak by not holding subpool.
-    Justification:
-      Memory leak is a critical bug.
-    Votes:
-      +1: kou
-      +0: djames
