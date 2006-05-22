@@ -275,7 +275,7 @@ def steal_lock(sbox):
 
   # This should give a "iota' is already locked... error.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*((already locked)|(423 Locked))",
+                                     ".*already locked",
                                      'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1325,8 +1325,8 @@ def unlock_already_unlocked_files(sbox):
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  error_msg = "(.*Path '/A/B/E/alpha' is already locked by user '" + \
-              svntest.main.wc_author2 + "'.*)|(.*423 Locked.*)"
+  error_msg = ".*Path '/A/B/E/alpha' is already locked by user '" + \
+              svntest.main.wc_author2 + "'.*"
   svntest.actions.run_and_verify_svn(None, None, error_msg,
                                      'lock',
                                      '--username', svntest.main.wc_author2,
