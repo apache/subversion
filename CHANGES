@@ -18,7 +18,7 @@ http://svn.collab.net/repos/svn/tags/1.3.2
   - Server:
     * fixed: memory leak in mod_dav_svn when listing large dirs (r19528)
     * fixed: svnserve protocol error in lock, causing client hang (issue #2548)
-    * fixed: mod_dav_svn crash on valid request (found by Coverity) (r19520)
+    * fixed: mod_dav_svn crash on valid request (r19520)
     * mailer.py: add Content-Transfer-Encoding header (r19319)
     * fixed: authz requires read access for root for writes (issue #2486)
 
