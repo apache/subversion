@@ -90,15 +90,6 @@ Approved changes:
     Votes:
       +1: malcolm, dlr
 
-  * r18924, r17931, r18928, r18951, r18953
-    Support SWIG 1.3.28.
-    Justification:
-      The latest stable SWIG version is 1.3.28. To be used extensively,
-      the Ruby bindings should support SWIG 1.3.28.
-    Votes:
-      +1: kou
-      +0: djames
-
   * r19493
     Fix memory leak by not holding subpool.
     Justification:
