@@ -74,10 +74,3 @@ Approved changes:
     Votes:
       +1: rooneg, dlr
       +1: djames (build.conf changes only)
-
-  * r18853
-    Document that the SWIG bindings are compatible with SWIG 1.3.28
-    Note:
-      Depends on r17280 et al.
-    Votes:
-      +1: malcolm, dlr
