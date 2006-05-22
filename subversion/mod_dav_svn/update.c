@@ -652,7 +652,9 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
         SVN_ERR(dav_svn__send_xml(baton->uc->bb, baton->uc->output,
                                   "<D:creator-displayname>%s"
                                   "</D:creator-displayname>",
-                                  baton->last_author));
+                                  apr_xml_quote_string(baton->pool,
+                                                       baton->last_author,
+                                                       1)));
 
     }
 
