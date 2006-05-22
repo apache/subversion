@@ -24,8 +24,8 @@ Candidate changes:
     Note:
       Depends on r18924 et al.
     Votes:
-      +1: djames
-      +0: blair, malcolm
+      +1: djames, malcolm
+      +0: blair
 
   * r18114, r18681
     In mailer.py:
