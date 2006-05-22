@@ -80,8 +80,8 @@ class State:
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
-    identified by PATH (which is assumed to contain only one element
-    rooted at the tree of this State object's WC_DIR)."""
+    identified by SUBTREE_PATH (which is assumed to contain only one
+    element rooted at the tree of this State object's WC_DIR)."""
     desc = { }
     for path, item in self.desc.items():
       path_elements = path.split("/")
