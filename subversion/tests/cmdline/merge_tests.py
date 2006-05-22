@@ -1499,7 +1499,6 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                    props={"svn:mime-type" : "application/octet-stream"}),
     })
   expected_status = svntest.actions.get_virginal_state(short_wc, 1)
-  #expected_status.tweak(wc_rev=1)
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
