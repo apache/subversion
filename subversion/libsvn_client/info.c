@@ -157,6 +157,8 @@ push_dir_info(svn_ra_session_t *ra_session,
      
       fs_path = svn_path_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
+      fs_path = svn_path_uri_decode(fs_path, subpool);
+
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 
       SVN_ERR(build_info_from_dirent(&info, the_ent, lock, URL, rev,
