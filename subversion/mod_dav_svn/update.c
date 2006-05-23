@@ -437,7 +437,10 @@ static svn_error_t * absent_helper(svn_boolean_t is_dir,
       const char *elt = apr_psprintf(pool,
                                      "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
                                      DIR_OR_FILE(is_dir),
-                                     svn_path_basename(path, pool));
+                                     apr_xml_quote_string
+                                       (pool,
+                                        svn_path_basename(path, pool),
+                                        1));
       SVN_ERR(dav_svn__send_xml(uc->bb, uc->output, "%s", elt));
     }
 
@@ -1034,7 +1037,7 @@ static svn_error_t * upd_close_file(void *file_baton,
                          file->base_checksum ? " base-checksum=\"" : "",
                          file->base_checksum ? file->base_checksum : "",
                          file->base_checksum ? "\"" : "");
-      SVN_ERR(dav_svn__send_xml(file->uc->bb, file->uc->output, elt));
+      SVN_ERR(dav_svn__send_xml(file->uc->bb, file->uc->output, "%s", elt));
     }
 
   return close_helper(FALSE /* is_dir */, file);
