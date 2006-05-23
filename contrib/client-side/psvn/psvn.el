@@ -146,7 +146,8 @@
 ;; * help (?, h)
 ;; * import
 ;; * info                      implemented
-;; * list (ls)
+;; * list (ls)                 implemented
+;; * lock
 ;; * log                       implemented
 ;; * merge
 ;; * mkdir                     implemented
@@ -160,6 +161,7 @@
 ;; * revert                    implemented
 ;; * status (stat, st)         implemented
 ;; * switch (sw)
+;; * unlock
 ;; * update (up)               implemented
 
 ;; For the not yet implemented commands you should use the command line
@@ -473,7 +475,7 @@ If t, their full path name will be displayed, else only the filename."
 (defvar svn-process-cmd nil)
 (defvar svn-status-info nil)
 (defvar svn-status-filename-to-buffer-position-cache (make-hash-table :test 'equal :weakness t))
-(defvar svn-status-base-info nil)
+(defvar svn-status-base-info nil "The parsed result from the svn info command.")
 (defvar svn-status-initial-window-configuration nil)
 (defvar svn-status-default-column 23)
 (defvar svn-status-default-revision-width 4)
@@ -1035,6 +1037,9 @@ can edit ARGLIST before running svn."
                  ((eq svn-process-cmd 'info)
                   (svn-status-show-process-output 'info t)
                   (message "svn info finished"))
+                 ((eq svn-process-cmd 'ls)
+                  (svn-status-show-process-output 'info t)
+                  (message "svn ls finished"))
                  ((eq svn-process-cmd 'parse-info)
                   (svn-status-parse-info-result))
                  ((eq svn-process-cmd 'blame)
@@ -2261,19 +2266,43 @@ non-interactive use."
     (svn-status-update-buffer)))
 
 (defun svn-status-parse-info-result ()
-  (let ((url))
+  "Parse the result from the svn info command.
+Put the found values in `svn-status-base-info'."
+  (let ((url)
+        (repository-root))
     (save-excursion
       (set-buffer "*svn-process*")
       (goto-char (point-min))
       (let ((case-fold-search t))
-        (search-forward "url: "))
-      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
-    (setq svn-status-base-info `((url ,url)))))
+        (search-forward "url: ")
+        (setq url (buffer-substring-no-properties (point) (svn-point-at-eol)))
+        (search-forward "repository root: ")
+        (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol)))))
+    (setq svn-status-base-info `((url ,url) (repository-root ,repository-root)))))
 
 (defun svn-status-base-info->url ()
+  "Extract the url part from `svn-status-base-info'."
   (if svn-status-base-info
       (cadr (assoc 'url svn-status-base-info))
     ""))
+
+(defun svn-status-base-info->repository-root ()
+  "Extract the repository-root part from `svn-status-base-info'."
+  (if svn-status-base-info
+      (cadr (assoc 'repository-root svn-status-base-info))
+    ""))
+
+(defun svn-status-ls (path)
+  "Run svn ls PATH."
+  (interactive "sPath for svn ls: ")
+  (svn-run t t 'ls "ls" path))
+
+(defun svn-status-ls-branches ()
+  "Show, which branches exist for the actual working copy.
+Note: this command assumes the proposed standard svn repository layout."
+  (interactive)
+  (svn-status-parse-info t)
+  (svn-status-ls (concat (svn-status-base-info->repository-root) "/branches")))
 
 (defun svn-status-toggle-edit-cmd-flag (&optional reset)
   "Allow the user to edit the parameters for the next svn command.
