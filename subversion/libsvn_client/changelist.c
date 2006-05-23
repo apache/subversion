@@ -49,3 +49,73 @@ svn_client_changelist(const char *path,
 }
 
 
+/* ### Make this a public func:  should this be in libsvn_wc instead?? */
+
+/* Entry-walker callback routine (& baton) for
+   svn_client_retrieve_changelist. */
+
+struct fe_baton
+{
+  apr_array_header_t *path_list;
+  const char *changelist_name;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+found_an_entry(const char *path,
+               const svn_wc_entry_t *entry,
+               void *baton,
+               apr_pool_t *pool)
+{
+  struct fe_baton *b = (struct fe_baton *)baton;
+
+  if (entry->changelist
+      && (strcmp(entry->changelist, b->changelist_name) == 0))
+    {
+      if ((entry->kind == svn_node_file)
+          || ((entry->kind == svn_node_dir)
+              && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)))
+        {
+          (*((const char **) apr_array_push(b->path_list))) =
+            apr_pstrdup(b->pool, path);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_retrieve_changelist(apr_array_header_t **paths,
+                               const char *changelist_name,
+                               const char *root_path,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool)
+{
+  svn_wc_entry_callbacks_t entry_callbacks;
+  struct fe_baton feb;
+  svn_wc_adm_access_t *adm_access;
+
+  entry_callbacks.found_entry = found_an_entry;
+  feb.pool = pool;
+  feb.changelist_name = changelist_name;
+  feb.path_list = apr_array_make(pool, 1, sizeof(const char *));
+
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
+                                 FALSE, /* no write lock */
+                                 -1, /* infinite depth */
+                                 cancel_func, cancel_baton, pool));
+
+  SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
+                               &entry_callbacks, &feb,
+                               FALSE, /* don't show hidden entries */
+                               cancel_func, cancel_baton,
+                               pool));
+
+  SVN_ERR(svn_wc_adm_close(adm_access));
+
+  *paths = feb.path_list;
+  return SVN_NO_ERROR;
+}

@@ -48,6 +48,7 @@ typedef enum {
   svn_cl__auth_password_opt,
   svn_cl__auth_username_opt,
   svn_cl__autoprops_opt,
+  svn_cl__changelist_opt,
   svn_cl__config_dir_opt,
   svn_cl__clear_opt,
   svn_cl__diff_cmd_opt,
@@ -145,6 +146,7 @@ typedef struct svn_cl__opt_state_t
   const char *native_eol;        /* override system standard eol marker */
   svn_boolean_t summarize;       /* create a summary of a diff */
   svn_boolean_t clear;           /* deassociate a changelist */
+  const char *changelist;        /* operate on this changelist */
 } svn_cl__opt_state_t;
 
 

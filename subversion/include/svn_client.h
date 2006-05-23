@@ -2468,6 +2468,26 @@ svn_client_changelist(const char *path,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 
+
+/**
+ * Beginning at @a root_path, do a recursive walk of a working copy
+ * and discover every path which belongs to @a changelist_name.
+ * Return the list of paths in @a *paths.  If no matching paths are
+ * found, return an empty array.
+ *
+ * @a cancel_func/cancel_baton are optional.  If non-NULL, poll them
+ * for user cancellation during the recursive walk.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_retrieve_changelist(apr_array_header_t **paths,
+                               const char *changelist_name,
+                               const char *root_path,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
 
 /** Locking commands
  *

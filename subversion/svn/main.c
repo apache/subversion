@@ -159,6 +159,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("show a summary of the results")},
   {"clear",         svn_cl__clear_opt, 0,
                     N_("remove changelist association")},
+  {"changelist",    svn_cl__changelist_opt, 1,
+                    N_("operate only on members of changelist ARG")},
   {0,               0, 0, 0}
 };
 
@@ -381,7 +383,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
      "  determines in which revision the target is first looked up.\n"),
     {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__changelist_opt, svn_cl__config_dir_opt} },
 
   { "list", svn_cl__list, {"ls"}, N_
     ("List directory entries in the repository.\n"
@@ -1177,6 +1179,9 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__clear_opt:
         opt_state.clear = TRUE;
+      case svn_cl__changelist_opt:
+        opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
