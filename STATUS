@@ -9,13 +9,13 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19760
-    Fix invalid xml in update report.
+  * r19760, r19784, r19786
+    Fix invalid xml in update report, replay report.
     Justification:
       Small, obvious fix.
     Votes:
-      +1: rooneg, dlr
-      +0: lundblad (awaiting improved test case)
+      +1: rooneg, dlr (r19760 only)
+      +0: lundblad (r19760 only, awaiting improved test case)
 
   * r19777
     Fix issue where info wasn't showing lock info sometimes.
