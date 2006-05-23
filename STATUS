@@ -9,12 +9,12 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19760 
+  * r19760
     Fix invalid xml in update report.
     Justification:
       Small, obvious fix.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
 Approved changes:
 
