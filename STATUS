@@ -17,10 +17,3 @@ Candidate changes:
       +1: breser, lundblad
 
 Approved changes:
-
-  * r19760, r19785, r19786
-    Fix invalid xml in update report, replay report.
-    Justification:
-      Small, obvious fix.
-    Votes:
-      +1: rooneg, dlr, lundblad

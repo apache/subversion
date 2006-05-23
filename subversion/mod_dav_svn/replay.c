@@ -189,8 +189,11 @@ static svn_error_t *change_dir_prop(void *baton,
                                     apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = baton;
+  const char *qname;
 
   SVN_ERR(maybe_close_textdelta(eb));
+
+  qname = apr_xml_quote_string(pool, name, 1);
 
   if (value)
     {
@@ -199,14 +202,14 @@ static svn_error_t *change_dir_prop(void *baton,
       SVN_ERR(dav_svn__send_xml
                 (eb->bb, eb->output,
                  "<S:change-dir-prop name=\"%s\">%s</S:change-dir-prop>"
-                 DEBUG_CR, name, enc_value->data));
+                 DEBUG_CR, qname, enc_value->data));
     }
   else
     {
       SVN_ERR(dav_svn__send_xml
                 (eb->bb, eb->output,
                  "<S:change-dir-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
-                 name));
+                 qname));
     }
 
   return SVN_NO_ERROR;
@@ -300,8 +303,11 @@ static svn_error_t *change_file_prop(void *baton,
                                      apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = baton;
+  const char *qname;
 
   SVN_ERR(maybe_close_textdelta(eb));
+
+  qname = apr_xml_quote_string(pool, name, 1);
 
   if (value)
     {
@@ -310,14 +316,14 @@ static svn_error_t *change_file_prop(void *baton,
       SVN_ERR(dav_svn__send_xml
                 (eb->bb, eb->output,
                  "<S:change-file-prop name=\"%s\">%s</S:change-file-prop>"
-                 DEBUG_CR, name, enc_value->data));
+                 DEBUG_CR, qname, enc_value->data));
     }
   else
     {
       SVN_ERR(dav_svn__send_xml
                 (eb->bb, eb->output,
                  "<S:change-file-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
-                 name));
+                 qname));
     }
   return SVN_NO_ERROR;
 }
