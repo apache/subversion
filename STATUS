@@ -9,7 +9,7 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19760, r19784, r19786
+  * r19760, r19785, r19786
     Fix invalid xml in update report, replay report.
     Justification:
       Small, obvious fix.
