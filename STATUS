@@ -15,13 +15,14 @@ Candidate changes:
       Small, obvious fix.
     Votes:
       +1: rooneg, dlr
+      +0: lundblad (awaiting improved test case)
 
   * r19777
     Fix issue where info wasn't showing lock info sometimes.
     Justification:
       Straightforward bug fix.
     Votes:
-      +1: breser
+      +1: breser, lundblad
 
 Approved changes:
 
