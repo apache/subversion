@@ -9,11 +9,11 @@ Status of 1.4.0:
 
 Candidate changes:
 
+Approved changes:
+
   * r19777
     Fix issue where info wasn't showing lock info sometimes.
     Justification:
       Straightforward bug fix.
     Votes:
-      +1: breser, lundblad
-
-Approved changes:
+      +1: breser, lundblad, dlr
