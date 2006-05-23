@@ -9,7 +9,7 @@ http://svn.collab.net/repos/svn/tags/1.3.2
 
  User-visible-changes:
   - Client:
-    * fixed: crash in svn st -u on missing subdirs (r19348, -73, issue #2551)
+    * fixed: crash in svn st -u on missing subdirs (r19348, -71, issue #2551)
     * svn_load_dirs.pl symlink support (issue #2478)
     * fixed: svn_load_dirs.pl trying to import .svn and _svn dirs (r18549)
     * fixed: leaving stray WC locks on cancellation (r18893)
@@ -25,10 +25,9 @@ http://svn.collab.net/repos/svn/tags/1.3.2
     * svnauthz-validate: add config file validation tool (r18504, -09)
 
 Developer-visible-changes:
-* fixed: RPM breakage (r19060)
 * fixed: tests don't catch repository creation failure properly (r19149,-51)
 * support SWIG 1.3.28
-* support APR 0.9.x >= 0.9.10 (r19039, -57)
+* support APR 0.9.x >= 0.9.10 (r19039, -57, -60)
 * python bindings:
       - fixed: link error on OpenBSD (r18983)
 * ruby bindings:
