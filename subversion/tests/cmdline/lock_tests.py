@@ -1549,9 +1549,11 @@ def examine_lock_encoded_recurse(sbox):
                                      '-m', comment, file_path)
 
   # Run info and check that we get the lock fields.
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'info', '-R', 
-						   svntest.main.current_repo_url + '/A/B/F')
+  output, err = \
+          svntest.actions.run_and_verify_svn(None, None, [],
+                                             'info', '-R', 
+                                             svntest.main.current_repo_url +
+                                             '/A/B/F')
 
   lock_info = output[-6:-1]
   if ((len(lock_info) != 5)
