@@ -2519,6 +2519,12 @@ def diff_weird_author(sbox):
   svntest.main.run_svn(None, "propset", "--revprop", "-r", "2", "svn:author",
                        "J. Random <jrandom@example.com>", sbox.repo_url)
 
+  svntest.actions.run_and_verify_svn(None,
+                                     ["J. Random <jrandom@example.com>\n"],
+                                     [],
+                                     "pget", "--revprop", "-r" "2",
+                                     "svn:author", sbox.repo_url)
+
   expected_output = [
     "Index: A/mu\n",
     "===================================================================\n",
