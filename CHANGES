@@ -22,6 +22,7 @@ http://svn.collab.net/repos/svn/tags/1.3.2
     * mailer.py: add Content-Transfer-Encoding header (r19319)
     * mailer.py: fixed: named substitutions incorrectly ignored (r18114, -681)
     * fixed: authz requires read access for root for writes (issue #2486)
+    * svnauthz-validate: add config file validation tool (r18504, -09)
 
 Developer-visible-changes:
 * fixed: RPM breakage (r19060)
