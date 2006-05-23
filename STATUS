@@ -14,8 +14,7 @@ Candidate changes:
     Justification:
       Small, obvious fix.
     Votes:
-      +1: rooneg, dlr (r19760 only)
-      +0: lundblad (r19760 only, awaiting improved test case)
+      +1: rooneg, dlr (r19760 only), lundblad
 
   * r19777
     Fix issue where info wasn't showing lock info sometimes.
