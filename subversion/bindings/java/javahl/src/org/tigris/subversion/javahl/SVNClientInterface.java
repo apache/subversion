@@ -124,13 +124,15 @@ public interface SVNClientInterface
      */
     Status singleStatus(String path, boolean onServer) throws ClientException;
     /**
-     * Sets the username used for authentification.
-     * @param username  the username
+     * Sets the username used for authentication.
+     * @param username The username (<code>null</code> means none).
+     * @see #password(String)
      */
     void username(String username);
     /**
-     * Sets the password used for authification.
-     * @param password  the password
+     * Sets the password used for authentication.
+     * @param password The password (<code>null</code> means none).
+     * @see #username(String)
      */
     void password(String password);
     /**
