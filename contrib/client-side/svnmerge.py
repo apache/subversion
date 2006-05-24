@@ -1205,6 +1205,83 @@ def action_unblock(branch_dir, branch_props):
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
+def action_rollback(branch_dir, branch_props):
+    """Rollback previously integrated revisions."""
+
+    # Make sure the revision arguments are present
+    if not opts["revision"]:
+        error("The '-r' option is mandatory for rollback")
+
+    # Check branch directory is ready for being modified
+    check_dir_clean(branch_dir)
+
+    # Extract the integration info for the branch_dir
+    branch_props = get_merge_props(branch_dir)
+    check_old_prop_version(branch_dir, branch_props)
+    # Get the list of all revisions already merged into this source-path.
+    merged_revs = merge_props_to_revision_set(branch_props, opts["head-path"])
+
+    # At which revision was the src created?
+    oldest_src_rev = get_created_rev(opts["head-url"])
+    src_pre_exist_range = RevisionSet("1-%d" % oldest_src_rev)
+
+    # Limit to revisions specified by -r (if any)
+    revs = merged_revs & RevisionSet(opts["revision"])
+
+    # make sure theres some revision to rollback
+    if not revs:
+        report("Nothing to rollback in revision range r%s" % opts["revision"])
+        return
+
+    # If even one specified revision lies outside the lifetime of the
+    # source head, error out.
+    if revs & src_pre_exist_range:
+        err_str  = "Specified revision range falls out of the rollback range.\n"
+        err_str += "%s was created at r%d" % (opts["head-path"], oldest_src_rev)
+        error(err_str)
+
+    record_only = opts["record-only"]
+
+    if record_only:
+        report('recording rollback of revision(s) %s from "%s"' %
+               (revs, opts["head-url"]))
+    else:
+        report('rollback of revision(s) %s from "%s"' %
+               (revs, opts["head-url"]))
+
+    # Do the reverse merge(s). Note: the starting revision number
+    # to 'svn merge' is NOT inclusive so we have to subtract one from start.
+    # We try to keep the number of merge operations as low as possible,
+    # because it is faster and reduces the number of conflicts.
+    rollback_intervals = minimal_merge_intervals(revs, [])
+    # rollback in the reverse order of merge
+    rollback_intervals.reverse()
+    for start, end in rollback_intervals:
+        if not record_only:
+            # Do the merge
+            svn_command("merge -r %d:%d %s %s" % \
+                        (end, start - 1, opts["head-url"], branch_dir))
+
+    # Write out commit message if desired
+    # calculate the phantom revs first
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
+        if record_only:
+            print >>f, 'Recorded rollback of revisions %s via %s from ' % \
+                  (revs , NAME)
+        else:
+            print >>f, 'Rolled back revisions %s via %s from ' % \
+                  (revs , NAME)
+        print >>f, '%s' % opts["head-url"]
+
+        f.close()
+        report('wrote commit message to "%s"' % opts["commit-file"])
+
+    # Update the set of merged revisions.
+    merged_revs = merged_revs - revs 
+    branch_props[opts["head-path"]] = str(merged_revs)
+    set_merge_props(branch_dir, branch_props)
+
 def action_uninit(branch_dir, branch_props):
     """Uninit HEAD URL."""
     # Check branch directory is ready for being modified
@@ -1514,83 +1591,6 @@ class CommandOpts:
 
     def print_version(self):
         print self.version
-
-def action_rollback(branch_dir, branch_props):
-    """Rollback previously integrated revisions."""
-
-    # Make sure the revision arguments are present
-    if not opts["revision"]:
-        error("The '-r' option is mandatory for rollback")
-
-    # Check branch directory is ready for being modified
-    check_dir_clean(branch_dir)
-
-    # Extract the integration info for the branch_dir
-    branch_props = get_merge_props(branch_dir)
-    check_old_prop_version(branch_dir, branch_props)
-    # Get the list of all revisions already merged into this source-path.
-    merged_revs = merge_props_to_revision_set(branch_props, opts["head-path"])
-
-    # At which revision was the src created?
-    oldest_src_rev = get_created_rev(opts["head-url"])
-    src_pre_exist_range = RevisionSet("1-%d" % oldest_src_rev)
-
-    # Limit to revisions specified by -r (if any)
-    revs = merged_revs & RevisionSet(opts["revision"])
-
-    # make sure theres some revision to rollback
-    if len(revs) == 0:
-        report("Nothing to rollback in revision range r%s" % opts["revision"])
-        return
-
-    # If even one specified revision lies outside the lifetime of the
-    # source head, error out.
-    if len(revs & src_pre_exist_range) != 0:
-        err_str  = "Specified revision range falls out of the rollback range.\n"
-        err_str += "%s was created at r%d" % (opts["head-path"], oldest_src_rev)
-        error(err_str)
-
-    record_only = opts["record-only"]
-
-    if record_only:
-        report('recording rollback of revision(s) %s from "%s"' %
-               (revs, opts["head-url"]))
-    else:
-        report('rollback of revision(s) %s from "%s"' %
-               (revs, opts["head-url"]))
-
-    # Do the reverse merge(s). Note: the starting revision number
-    # to 'svn merge' is NOT inclusive so we have to subtract one from start.
-    # We try to keep the number of merge operations as low as possible,
-    # because it is faster and reduces the number of conflicts.
-    rollback_intervals = minimal_merge_intervals(revs, [])
-    # rollback in the reverse order of merge
-    rollback_intervals.reverse()
-    for start, end in rollback_intervals:
-        if not record_only:
-            # Do the merge
-            svn_command("merge -r %d:%d %s %s" % \
-                        (end, start - 1, opts["head-url"], branch_dir))
-
-    # Write out commit message if desired
-    # calculate the phantom revs first
-    if opts["commit-file"]:
-        f = open(opts["commit-file"], "w")
-        if record_only:
-            print >>f, 'Recorded rollback of revisions %s via %s from ' % \
-                  (revs , NAME)
-        else:
-            print >>f, 'Rolled back revisions %s via %s from ' % \
-                  (revs , NAME)
-        print >>f, '%s' % opts["head-url"]
-
-        f.close()
-        report('wrote commit message to "%s"' % opts["commit-file"])
-
-    # Update the set of merged revisions.
-    merged_revs = merged_revs - revs 
-    branch_props[opts["head-path"]] = str(merged_revs)
-    set_merge_props(branch_dir, branch_props)
 
 ###############################################################################
 # Options and Commands description
