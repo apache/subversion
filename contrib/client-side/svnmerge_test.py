@@ -857,6 +857,169 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("integrated", match=r"^3-20$")
 
+    def testRollbackWithoutInit(self):
+        """Rollback should error out if invoked prior to init"""
+
+        self.svnmerge("rollback -vv --head ../trunk",
+                      error = True,
+                      match = r"no integration info available for repository path")
+
+    def testRollbackOutsidePossibleRange(self):
+        """`svnmerge rollback' should error out if range contains revisions prior to
+        SOURCE creation date."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        expected_error  = r"""Specified revision range falls out of the rollback range."""
+        self.svnmerge("rollback -vv --head ../trunk -r 2-14",
+                      error = True,
+                      match = expected_error)
+
+    def testRollbackWithoutRevisionOpt(self):
+        """`svnmerge rollback' should error out if -r option is not given"""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        self.svnmerge("rollback -vv --head ../trunk",
+                      error = True,
+                      match = r"The '-r' option is mandatory for rollback")
+
+    def testInitAndRollbackRecordOnly(self):
+        """Init svnmerge, modify source head, merge, rollback --record-only."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        # Rollback record-only
+        expected_output = r"property 'svnmerge-integrated' set on '.'"
+        detested_output = r"""
+D    test2
+D    test3"""
+        self.svnmerge("rollback -vv --record-only --head ../trunk -r5-7",
+                      match = expected_output,
+                      nonmatch = detested_output)
+
+    def testInitAndRollback(self):
+        """Init svnmerge, modify source head, merge, rollback."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        # Svnmerge rollback r5-7
+        expected_output = r"""
+D    test2
+D    test3"""
+        self.svnmerge("rollback -vv --head ../trunk -r5-7",
+                      match = expected_output)
+
+    def testMergeAndRollbackEmptyRevisionRange(self):
+        """Init svnmerge, modify source head, merge, rollback where no merge
+           occured."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        # Make changes to trunk
+        os.chdir("../trunk")
+        open("newfile", "w").close()
+        self.launch("svn add newfile")
+        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        open("anothernewfile", "w").close()
+        self.launch("svn add anothernewfile")
+        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
+
+        # Svnmerge block r15,16
+        os.chdir("../test-branch")
+        self.launch("svn up ..",
+                    error = False)
+        self.svnmerge("block -r 15,16 --head ../trunk")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 17")
+        self.svnmerge("merge --head ../trunk")
+        self.launch("svn commit -F svnmerge-commit-message.txt")
+
+        # Svnmerge rollback r15-16
+        self.svnmerge("rollback -vv --head ../trunk -r15-16",
+                      error = False,
+                      match = r"Nothing to rollback in revision range r15-16")
+
+    def testMergeAndRollback(self):
+        """Init svnmerge, modify source head, merge, rollback."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        # Make changes to trunk
+        os.chdir("../trunk")
+        open("newfile", "w").close()
+        self.launch("svn add newfile")
+        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+
+        # Svnmerge merge r15
+        os.chdir("../test-branch")
+        self.svnmerge("merge -r 15 --head ../trunk")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 16")
+
+        # Svnmerge rollback r15
+        self.svnmerge("rollback -vv --head ../trunk -r15",
+                      match = r"-r 15:14")
+
+    def testBlockMergeAndRollback(self):
+        """Init svnmerge, block, modify head, merge, rollback."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        # Make changes to trunk
+        os.chdir("../trunk")
+        open("newfile", "w").close()
+        self.launch("svn add newfile")
+        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
+        open("anothernewfile", "w").close()
+        self.launch("svn add anothernewfile")
+        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
+
+        # Svnmerge block r16, merge r15
+        os.chdir("../test-branch")
+        self.launch("svn up ..",
+                    error = False)
+        self.svnmerge("block -r 16 --head ../trunk")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 17")
+        self.svnmerge("merge --head ../trunk",
+                      nonmatch = r"A    anothernewfile",
+                      match = r"A    newfile")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 18")
+
+        # Svnmerge rollback revision range 15-18 (in effect only 15,17)
+        self.svnmerge("rollback -vv --head ../trunk -r15-18",
+                      nonmatch = r"D    anothernewfile")
+
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing
     # exists, then always remove it.  This prevents any problems if
