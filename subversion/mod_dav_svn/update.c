@@ -677,11 +677,7 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 
 
 /* Send the opening tag of the update-report if it hasn't been sent
-   already.
-
-   Note: because dav_svn__send_xml does not return an error, this function
-   never returns error either.  However, its prototype anticipates a
-   day when dav_svn__send_xml() can return error. */
+   already. */
 static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
 {
   if ((! uc->resource_walk) && (! uc->started_update))
