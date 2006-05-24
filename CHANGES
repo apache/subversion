@@ -2,6 +2,97 @@ Version 1.4.0
 (?? July 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.0
 
+ User-visible-changes:
+  - Client:
+    * new switches added:
+      - svn blame --force (ignores MIME type of file, issue #2509)
+      - svn diff/merge -c/--change (r18568 -741)
+      - svn diff --summarize (issue #2015)
+    * fixed: incorrect merge of add of binary file already in WC (issue #2403)
+    * fixed: lots of diff wc-repos bugs
+    * change property storage, improving performance and saving space (r17583)
+    * reduce memory usage for large working copies (r19183 -538)
+    * internal wcprops take up less space (19433 -37)
+    * numerous improvements to svnmerge.py, vc-svn and psvn
+    * new svn2cl, svn-viewdiff and svn-resolve contrib script
+    * fixed: memory leak in switch --relocate (r19535)
+    * fixed: unfriendly error messae on propget on nonexistent path (r19399)
+    * translation updates for all languages
+    * fixed: switch --relocate not caching auth creds (issue #2360)
+    * fixed: errorful targets shouldn't end the status operation (issue #2030)
+    * large file commit speedups (r17861 -73 18867 -918 -29 -44 -45 -48 -49)
+    * use switch/relocate when svn:externals updated (issue #2209)
+    * fixed: spurious revert report after manual conflict removal (issue #2517)
+    * the following commands can ignore whitespace and eol style changes:
+      - merge (r18716 -20)
+      - blame (r18602 -857)
+      - diff (issue #2121)
+    * improve performance when detecting modified WC fies (r18628 -56)
+    * fixed: don't allow -rPREV on schedule add path (issue #2315)
+    * fixed: svn ls slow over ra_dav (issue #2151
+    * fixed: keywords with dollar signs cause badness (issue #1780)
+    * fixed: checkout should default operative rev to peg rev (r18422)
+    * fixed: blame should default operative rev range to peg rev (r18400)
+    * diff supports eol styles other than linefeed (r17624 -8 -61 18195 -392)
+    * svn log supports peg rev (issue #2287)
+    * fixed: svn rm of non-existent item should fail (issue #2440)
+    * use file's eol style on conflict markers (r17645)
+    * Store auth creds encrypted on Mac OS X (r17619 -43)
+    * fixed: memory leak on multi-target diff (r17518)
+    * fixed: blame ignores eol-style (issue #2431)
+
+  - Server:
+    * new svnsync repository mirroring utility
+    * new contrib hook scripts:
+      - enforcer
+      - detect-merge-conflict.sh 
+      - svn-backup-dumps.poy
+      - log-policy.py
+      - case-insensitive.py
+    * support BDB 4.4, including automatic recovery (issue #2449)
+    * svnserve improvements:
+      - can now run as a native Windows service (r18855)
+      - new option --pid-file (r17836)
+    * mod_dav_svn improvements:
+      - fixed: error conversion crash (r19516)
+      - fixed: unfriendly error when locking already locked path (issue #2275)
+    * new mod_dontdothat apache module (r19531)
+    * new mod_authz_svn directive 'AuthzSVNNoAuthWhenAnonymousAllowed' (r18680)
+    * make sure the authz rules don't contain unexpected characters (r19471)
+    * lots of improvements to mailer.py and commit-email.pl
+    * fsfs performance improvements (r19119 456 -58 -59)
+    * fixed: svnadmin verify output not in native encoding (issue #1997)
+    * support .wsf hook scripts on Windows (r18972 19076)
+    * fixed: uuid file in fsfs could be destroyed on write error (issue #2193)
+    * fixed: fsfs path encoding bug (r17774)
+    * fixed: don't crash on corrupt repositories (r17625)
+
+  - Both:
+    * new encoding giving smaller deltas (r18363 -94 -66 -78 -98 -99 -457 -950)
+    * don't bail on invalid locale (r19445)
+    * xdelta algorithm speed improvements (r18986, 19047)
+    * fixed: delta combiner reading past EOF (r17743)
+
+Developer-visible-changes:
+* numerous improvements to gen-make.py build system, especially on win32
+* numerous improvements to the test suite
+* new public APIs:  
+   - several rev'd APIs, see doxygen docs
+* flush stdout after each status/notification line (r19476 -656)
+* new, experimental, ra_serf repository access module
+* .svn/entries use a less verbose non-xml format (r19420)
+* fixed: log --limit against old svnserve leaves unusable session (r19638)
+* fixed: Solaris build problems (r19636)
+* fixed: blame of WORKING revision shouldn't give BASE (r19558)
+* fixed: svn_client_copy and _move should fail if target exists (issue #2188)
+* make recursive svn ls streamy (issue #1809)
+* remove svn-config script
+* SWIG bindings:
+    - SWIG/python bindings:
+    - SWIG/ruby bindings:
+    - SWIG/perl bindings:
+* javahl bindings:
+
 
 Version 1.3.2
 (23 May 2006, from /branches/1.3.x)
