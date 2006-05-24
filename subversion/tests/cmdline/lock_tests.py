@@ -1478,7 +1478,7 @@ def ls_url_encoded(sbox):
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
 def unlock_wrong_token(sbox):
-  "veriy unlocking with wrong lock token"
+  "verify unlocking with wrong lock token"
 
   sbox.build()
   wc_dir = sbox.wc_dir
