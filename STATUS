@@ -9,5 +9,13 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  * r19803
+    Fix a JVM crash in username/password portion of the client API of
+    the JavaHL bindings.
+    Justification:
+      Hard JVM crashes are Very Bad Things.
+    Votes:
+      +1: dlr
+
 Approved changes:
 
