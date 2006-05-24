@@ -1557,10 +1557,10 @@ def examine_lock_encoded_recurse(sbox):
 
   lock_info = output[-6:-1]
   if ((len(lock_info) != 5)
-      or (lock_info[0][0:28] != 'Lock Token: opaquelocktoken:')
-      or (lock_info[1] != 'Lock Owner: ' + svntest.main.wc_author + '\n')
-      or (lock_info[2][0:13] != 'Lock Created:')
-      or (lock_info[4] != comment + '\n')):
+      or (not lock_info[0].startswith('Lock Token: opaquelocktoken:'))
+      or (lock_info[1] != 'Lock Owner: %s\n' % svntest.main.wc_author)
+      or (not lock_info[2].startswith('Lock Created:'))
+      or (lock_info[4] != '%s\n' % comment)):
     raise svntest.Failure
 
 
