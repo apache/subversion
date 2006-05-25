@@ -150,7 +150,7 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
   if (*input != end)
     *input = *input + 1;
 
-  apr_hash_set (hash, pathname->data, APR_HASH_KEY_STRING, revlist);
+  apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, revlist);
 
   return SVN_NO_ERROR;
 }
