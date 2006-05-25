@@ -125,13 +125,19 @@ public interface SVNClientInterface
     Status singleStatus(String path, boolean onServer) throws ClientException;
     /**
      * Sets the username used for authentication.
-     * @param username The username (<code>null</code> means none).
+     * @param username The username, ignored if the empty string.  Set
+     * to the empty string to clear it.
+     * @throws IllegalArgumentException If <code>username</code> is
+     * <code>null</code>.
      * @see #password(String)
      */
     void username(String username);
     /**
      * Sets the password used for authentication.
-     * @param password The password (<code>null</code> means none).
+     * @param password The password, ignored if the empty string.  Set
+     * to the empty string to clear it.
+     * @throws IllegalArgumentException If <code>password</code> is
+     * <code>null</code>.
      * @see #username(String)
      */
     void password(String password);
