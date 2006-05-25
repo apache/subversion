@@ -89,7 +89,24 @@ Developer-visible-changes:
 * numerous improvements to gen-make.py build system, especially on win32
 * numerous improvements to the test suite
 * new public APIs:  
-  - ### summarize
+  - keyword and eol translation helpers and generic streams (see svn_subst.h)
+  - new generic stream helpers (see svn_io.h)
+  - authentication providers made available to other clients (see svn_auth.h)
+  - svn_cmdline_setup_auth_baton
+  - svn_client_diff_summarize and svn_client_diff_summarize_peg
+  - svn_client_list
+  - svn_config_has_section
+  - svn_txdelta_compose_windows and svn_txdelta_apply_instructions
+  - svn_txdelta_stream_create
+  - svn_diff_file_options_create and svn_diff_file_options_parse
+  - svn_err_best_message
+  - svn_compat_wrap_commit_callback
+  - svn_uuid_generate
+  - svn_user_get_name and svn_user_get_homedir
+  - svn_io_get_dir_filenames
+  - svn_ra_reparent
+  - svn_ra_replay
+  - svn_wc_revision_status
   - several rev'd APIs, see doxygen docs
 * flush stdout after each status/notification line (r19476 -656)
 * new, experimental, ra_serf repository access module
