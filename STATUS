@@ -9,9 +9,10 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19562, r19632, r19652, r19732
+  * r19562, r19632, r19652, r19732, r19713
     Extra python tests for authz validation: copy, delete, move, cat, log, 
-    checkout, lock and diff.
+    checkout, lock and diff. These tests depend on the no-working-copy 
+    sandbox feature introduced in r19713.
     Justification:
       Tests how secure Subversion is.
     Votes:
