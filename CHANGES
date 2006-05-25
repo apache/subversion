@@ -106,8 +106,14 @@ Developer-visible-changes:
 * fixed: ra_dav memory leak when reusing session (issue #2247)
 * SWIG bindings:
     - SWIG/python bindings:
+      - New support for svn_client_info (r19413)
     - SWIG/ruby bindings:
+      - Full support for Subversion 1.4 APIs, including 
+        svn_ra_replay and svn_diff_summarize
+      - Numerous bug fixes
     - SWIG/perl bindings:
+      - New support for svn_client_info (r18758)
+      - Minor corrections to SVN::Fs (r19312)
 * javahl bindings:
 ### "numerous" or any major things worth listing? ###
 
