@@ -9,5 +9,20 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  * r19562, r19632, r19652, r19732
+    Extra python tests for authz validation: copy, delete, move, cat, log, 
+    checkout, lock and diff.
+    Justification:
+      Tests how secure Subversion is.
+    Votes:
+      +1: lgo (non-binding)
+  
+  * r19746
+    Python test for fix for issue 2275
+    Justification:
+      Fix is already included in 1.4.x (r19509)
+    Votes:
+      +1: lgo (non-binding)
+      
 Approved changes:
 
