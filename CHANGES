@@ -48,6 +48,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: post-commit error output not sent to the client (issue #443)
     * fixed: not locked error on commit of switched path (issue #2353)
     * fixed: svn switch --relocate may set wrong repos root (r17031)
+    * fixed: info not showing locks sometimes (r19777)
 
   - Server:
     * new svnsync repository mirroring utility
@@ -65,6 +66,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * mod_dav_svn improvements:
       - fixed: error conversion crash (r19516)
       - fixed: unfriendly error when locking already locked path (issue #2275)
+      - fixed: xml escaping bugs (r19760 -85 -86)
     * new mod_dontdothat apache module (r19531)
     * new mod_authz_svn directive 'AuthzSVNNoAuthWhenAnonymousAllowed' (r18680)
     * error out when authz rules don't contain unexpected characters (r19471)
