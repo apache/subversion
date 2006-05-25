@@ -27,6 +27,8 @@
 #include <apr_tables.h>         /* for apr_array_header_t */
 #include <apr_hash.h>
 
+#include "svn_error.h"
+
 
 #ifdef __cplusplus
 extern "C" {
