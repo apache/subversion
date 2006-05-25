@@ -241,6 +241,12 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_username
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
+    if (jusername == NULL)
+    {
+        JNIUtil::raiseThrowable("java/lang/IllegalArgumentException",
+                       _("Provide a username (null is not supported)"));
+        return;
+    }
     JNIStringHolder username(jusername);
     if(JNIUtil::isExceptionThrown())
     {
@@ -262,6 +268,12 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_password
     if(cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    if (jpassword == NULL)
+    {
+        JNIUtil::raiseThrowable("java/lang/IllegalArgumentException",
+		       _("Provide a password (null is not supported)"));
         return;
     }
     JNIStringHolder password(jpassword);

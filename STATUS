@@ -11,12 +11,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r19803, r19813
-    Fix a JVM crash in username/password portion of the client API of
-    the JavaHL bindings.  Improve API semantics.
-    Justification:
-      Hard JVM crashes are Very Bad Things.
-    Votes:
-      +1: dlr
-      +0: lundblad
-
