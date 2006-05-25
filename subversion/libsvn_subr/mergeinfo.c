@@ -123,7 +123,7 @@ parse_revlist(const char **input, const char *end,
   return SVN_NO_ERROR;
 }
 
-/* revisionline -> PATHNAME@REVISION COLON revisionlist */
+/* revisionline -> PATHNAME COLON revisionlist */
 
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
