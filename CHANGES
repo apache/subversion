@@ -24,7 +24,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * use file's eol style on conflict markers (r17645)
     * store auth creds encrypted on Mac OS X (r17619 -43)
     * increase wc stability with merge, copy and move:
-      - fixes issuse #2144, #2148
+      - fixes issues #845, #1516, #1553, #2135, #2144, #2148
     * fixed: incorrect merge of add of binary file already in WC (issue #2403)
     * fixed: lots of diff wc<->repos bugs
     * fixed: memory leak in switch --relocate (r19535)
