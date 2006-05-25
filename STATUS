@@ -17,7 +17,15 @@ Candidate changes:
       Tests how secure Subversion is.
     Votes:
       +1: lgo
-  
+
+  * r19700, r19753, r19829
+    Error out for limit arguments that are less than or equal to zero,
+    since they don't make sense, plus a test for it.
+    Justification:
+      Minor issue, non-intrusive fix.
+    Votes:
+      +1: rooneg
+ 
   * r19746
     Python test for fix for issue 2275
     Justification:
