@@ -15,14 +15,14 @@ Candidate changes:
     Justification:
       Tests how secure Subversion is.
     Votes:
-      +1: lgo (non-binding)
+      +1: lgo
   
   * r19746
     Python test for fix for issue 2275
     Justification:
       Fix is already included in 1.4.x (r19509)
     Votes:
-      +1: lgo (non-binding)
+      +1: lgo, dlr
       
 Approved changes:
 
