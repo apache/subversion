@@ -12,7 +12,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
       - svn blame -x (r18602 -857)
     * svn log supports peg rev (issue #2287)
     * change property storage, improving performance and saving space (r17583)
-    * internal wcprops take up less space (19433 -37)
+    * internal wcprops take up less space (r19433 -37)
     * reduce memory usage for large working copies (r19183 -538)
     * large file commit speedups (r17861 -73 18867 -918 -29 -44 -45 -48 -49)
     * improve performance when detecting modified fies (r18628 -56)
