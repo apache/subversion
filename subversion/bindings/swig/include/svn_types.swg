@@ -444,6 +444,12 @@
   svn_swig_rb_set_baton($result, (VALUE)$2);
 };
 
+%typemap(python, in) (svn_commit_callback2_t callback, void *callback_baton)
+{
+  $1 = svn_swig_py_commit_callback2;
+  $2 = (void *)$input;
+}
+
 /* -----------------------------------------------------------------------
    Callback: svn_cancel_func_t
 */

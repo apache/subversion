@@ -552,6 +552,7 @@ DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
 DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
     svn_auth_ssl_server_cert_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(info, svn_info_dup)
+DECLARE_SWIG_CONSTRUCTOR(commit_info, svn_commit_info_dup)
 
 static PyObject *convert_log_changed_path(void *value, void *ctx,
                                           PyObject *py_pool)
@@ -2159,3 +2160,37 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
   
   *baton = py_callbacks;
 }
+
+svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
+                                          void *baton,
+                                          apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+ 
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)"O&O&", 
+                                      make_ob_commit_info, commit_info,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+

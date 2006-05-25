@@ -177,7 +177,7 @@ switch_external(const char *path,
                                            pool), pool);
   
   /* If path is a directory, try to update/switch to the correct URL
-     and revison. */
+     and revision. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     {

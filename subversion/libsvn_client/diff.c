@@ -70,7 +70,7 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
   const char *buf, *buf_apr;
 
   va_start(ap, format);
-  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap); 
+  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap);
   va_end(ap);
 
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&buf_apr, buf, encoding,
@@ -321,7 +321,7 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
 /* Show differences between TMPFILE1 and TMPFILE2. PATH, REV1, and REV2 are
    used in the headers to indicate the file and revisions.  If either
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
-   but instread print a warning message. */
+   but instead print a warning message. */
 static svn_error_t *
 diff_content_changed(const char *path,
                      const char *tmpfile1,
@@ -345,7 +345,7 @@ diff_content_changed(const char *path,
   int i;
 
   /* Get a stream from our output file. */
-  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool); 
+  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool);
 
   /* Assemble any option args. */
   nargs = diff_cmd_baton->options->nelts;
@@ -691,6 +691,13 @@ struct merge_cmd_baton {
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
   svn_client_ctx_t *ctx;
 
+  /* Whether invocation of the merge_file_added() callback required
+     delegation to the merge_file_changed() function for the file
+     currently being merged.  This info is used to detect whether a
+     file on the left side of a 3-way merge actually exists (important
+     because it's created as an empty temp file on disk regardless).*/
+  svn_boolean_t add_necessitated_merge;
+
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
@@ -731,7 +738,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_missing;
           svn_error_clear(err);
-          return SVN_NO_ERROR;        
+          return SVN_NO_ERROR;
         }
       else if (err)
         return err;
@@ -759,15 +766,6 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
-  /* xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
-     strings are used to tag onto a filename in case of a merge conflict */
-  const char *target_label = _(".working");
-  const char *left_label = apr_psprintf(subpool,
-                                        _(".merge-left.r%ld"),
-                                        older_rev);
-  const char *right_label = apr_psprintf(subpool,
-                                         _(".merge-right.r%ld"),
-                                         yours_rev);
   svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
@@ -828,25 +826,44 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
          allow svn_wc_merge to produce a conflict.  Instead, just
-         overwrite the working file with the 'right' side of the merge. */
+         overwrite the working file with the 'right' side of the merge.
+
+         Alternately, if the 'left' side of the merge doesn't exist in
+         the repository, and the 'right' side of the merge is
+         identical to the WC, pretend we did the merge (a no-op). */
       if ((! has_local_mods)
           && ((mimetype1 && svn_mime_type_is_binary(mimetype1))
               || (mimetype2 && svn_mime_type_is_binary(mimetype2))))
         {
+          /* For adds, the 'left' side of the merge doesn't exist. */
+          svn_boolean_t older_revision_exists =
+              !merge_b->add_necessitated_merge;
           svn_boolean_t same_contents;
           SVN_ERR(svn_io_files_contents_same_p(&same_contents,
-                                               older, mine, subpool));
+                                               (older_revision_exists ?
+                                                older : yours),
+                                               mine, subpool));
           if (same_contents)
             {
-              if (! merge_b->dry_run)
-                SVN_ERR(svn_io_file_rename(yours, mine, subpool));          
+              if (older_revision_exists && !merge_b->dry_run)
+                SVN_ERR(svn_io_file_rename(yours, mine, subpool));
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
             }
-        }  
+        }
 
       if (merge_required)
         {
+          /* xgettext: the '.working', '.merge-left.r%ld' and
+             '.merge-right.r%ld' strings are used to tag onto a file
+             name in case of a merge conflict */
+          const char *target_label = _(".working");
+          const char *left_label = apr_psprintf(subpool,
+                                                _(".merge-left.r%ld"),
+                                                older_rev);
+          const char *right_label = apr_psprintf(subpool,
+                                                 _(".merge-right.r%ld"),
+                                                 yours_rev);
           SVN_ERR(svn_wc_merge2(older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
                                 merge_b->dry_run, &merge_outcome, 
@@ -1002,14 +1019,22 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           }
         else
           {
+            /* Indicate that we merge because of an add to handle a
+               special case for binary files w/ no local mods. */
+            merge_b->add_necessitated_merge = TRUE;
+
             SVN_ERR(merge_file_changed(adm_access, content_state, prop_state,
                                        mine, older, yours,
                                        rev1, rev2,
                                        mimetype1, mimetype2,
                                        prop_changes, original_props,
-                                       baton));            
+                                       baton));
+
+            /* Reset the state so that the baton can safely be reused
+               in subsequent ops occurring during this merge. */
+            merge_b->add_necessitated_merge = FALSE;
           }
-        break;      
+        break;
       }
     default:
       if (content_state)
@@ -1366,7 +1391,7 @@ convert_to_url(const char **url,
                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
-  const svn_wc_entry_t *entry;      
+  const svn_wc_entry_t *entry;
 
   if (svn_path_is_url(path))
     {
@@ -1415,7 +1440,7 @@ struct diff_parameters
   /* Recurse */
   svn_boolean_t recurse;
 
-  /* Ignore acestry */
+  /* Ignore ancestry */
   svn_boolean_t ignore_ancestry;
 
   /* Ignore deleted */
@@ -1595,9 +1620,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   drr->target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool); 
+      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool);
       drr->target1 = svn_path_uri_decode(drr->target1, pool);
-      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool); 
+      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool);
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
         drr->base_path = svn_path_dirname(drr->base_path, pool);
@@ -2713,6 +2738,7 @@ svn_client_merge2(const char *source1,
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = path2;
   merge_cmd_baton.added_path = NULL;
+  merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 
@@ -2841,6 +2867,7 @@ svn_client_merge_peg2(const char *source,
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = path;
   merge_cmd_baton.added_path = NULL;
+  merge_cmd_baton.add_necessitated_merge = FALSE;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 

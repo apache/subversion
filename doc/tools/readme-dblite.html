@@ -1,7 +1,24 @@
 <html>
 <head>
 <title>Using DocBook Lite</title>
+<style>
+body {
+  background-color: wheat;
+  font-family: sans-serif;
+}
+.section {
+  margin: 0.5em;
+  padding: 0.5em;
+  background-color: wheat;
+}
+.contents {
+  margin: 0.5em;
+  padding: 0.5em;
+  background-color: silver;
+}
+</style>
 </head>
+
 <body>
 <h1 class="doctitle">Using DocBook Lite</h1>
 <div class="contents">
@@ -933,9 +950,9 @@ elements with examples:
         <td>Paragraph.</td>
         <td>
           <div class="programlisting">
-<pre>&lt;para&gt;The quick, brown fox jumped over the lazy dog. The
-quick, brown fox jumped over the lazy dog. The quick, brown fox jumped
-over the lazy dog.&lt;/para&gt;</pre>
+<pre>&lt;para&gt;The quick, brown fox jumped over the lazy 
+dog. The quick, brown fox jumped over the lazy dog. 
+The quick, brown fox jumped over the lazy dog.&lt;/para&gt;</pre>
 </div>
         </td>
       </tr>
@@ -951,7 +968,7 @@ over the lazy dog.&lt;/para&gt;</pre>
       </tr>
 
       <tr>
-        <td><tt>&lt;comment&gt;</tt></td>
+        <td><tt>&lt;remark&gt;</tt></td>
         <td>
           <p>
 Comment that is not meant for the audience, and outside of the
@@ -961,8 +978,8 @@ reviewers, copyeditors, etc.
         </td>
         <td>
           <div class="programlisting">
-<pre>&lt;comment&gt;This section is too short
-and needs more examples. [Ellen]&lt;/comment&gt;</pre>
+<pre>&lt;remark&gt;This section is too short
+and needs more examples. [Ellen]&lt;/remark&gt;</pre>
 </div>
         </td>
       </tr>
@@ -1072,11 +1089,11 @@ screen. (Whitespace and other formatting are preserved.)
           <div class="programlisting">
 <pre>&lt;screen&gt;&amp;gt; ls -l
 total 6860
--r--r--r--   1 jliggett ora         2570 Mar 27 19:38 BOOKFILES
--rw-rw-r--   1 jliggett ora       103283 Mar 27 19:38 BOOKIDS
--rw-rw-r--   1 bsalter  ora         2692 Mar 28 14:43 Makefile
-drwxrwxr-x   2 bsalter  ora          512 Aug 10 14:22 RCS/
--rw-rw-r--   1 jliggett ora           39 Jul 26 17:39 README.txt&lt;/screen&gt;</pre>
+-r--r--r-- 1 eray   ora  2570 Mar 27 19:38 BOOKFILES
+-rw-rw-r-- 1 eray   ora 13283 Mar 27 19:38 BOOKIDS
+-rw-rw-r-- 1 sierra ora  2692 Mar 28 14:43 Makefile
+drwxrwxr-x 2 jwizda ora   512 Aug 10 14:22 RCS/
+-rw-rw-r-- 1 jwizda ora    39 Jul 26 17:39 README&lt;/screen&gt;</pre>
 </div>
         </td>
       </tr>
@@ -1128,7 +1145,8 @@ title.)
         <td>
           <div class="programlisting">
 <pre>&lt;example id="BAZ-CH-14-EX-5"&gt;
-  &lt;title&gt;Contents of the file &lt;filename&gt;blather.cfg&lt;/filename&gt;&lt;/title&gt;
+  &lt;title&gt;Contents of the file 
+    &lt;filename&gt;blather.cfg&lt;/filename&gt;&lt;/title&gt;
   &lt;programlisting&gt;CATS	= -c/usr/local/prod/sgml/CATALOG
 DSLCAT	= -c/usr/local/sp/dsssl/catalog
 DECL	= /usr/local/sp/pubtext/xml.dcl
@@ -1228,7 +1246,7 @@ The name of a computer software program.</p>
         <td>
           <div class="programlisting">
 <pre>We can convert any document written in
-&lt;application&gt;Microsoft Word&lt;/application&gt;.</pre>
+&lt;application&lt;Microsoft Word&lt;/application&gt;.</pre>
 </div>
         </td> 
       </tr>
@@ -1412,7 +1430,8 @@ definition.
         </td>
         <td>
           <div class="programlisting">
-<pre>The Eiffel Tower is huge&lt;footnote id="ABC-CH-4-FN-2"&gt;&lt;para&gt;Although, compared to a breadbox, any
+<pre>The Eiffel Tower is huge&lt;footnote id="ABC-CH-4-FN-2"&gt;
+&lt;para&gt;Although, compared to a breadbox, any
 building is huge.&lt;/para&gt;&lt;/footnote&gt;. So is a redwood 
 tree&lt;footnoteref linkend="ABC-CH-4-FN-2"&gt;.</pre>
 </div>
@@ -1580,7 +1599,8 @@ Designates some text as an optional item.
         <td>
           <div class="programlisting">
 <pre>The stylesheet specification is optional: 
-&lt;command&gt;formatfiles &lt;optional&gt;stylesheet&lt;/optional&gt; in.xml&lt;command&gt;.</pre>
+&lt;command&gt;formatfiles &lt;optional&gt;stylesheet&lt;/optional&gt; 
+in.xml&lt;command&gt;.</pre>
 </div>
         </td>
       </tr>
@@ -2593,17 +2613,7 @@ Nutshell</i>, Chapter 32.
     </div>
   </div>
 
-
-
-
   <a name="section-12"></a>
-<div class="section">
-    <h2 class="stitle">12. See Also...</h2>
-    <p>
-For a simpler markup language better suited for general-purpose
-documentation, try out <a href="https://intranet.ora.com/production/doc/howto/simpledoc.html">SimpleDoc</a>.
-    </p>
-  </div>
 <hr>
 <span class="footertitle">Written by:</span>
 <br>

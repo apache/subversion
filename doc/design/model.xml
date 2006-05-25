@@ -262,10 +262,13 @@ write/Makefile:6
     </itemizedlist>
   </sect1>
 
-  <sect1 id="model.nolock">
-    <title>Subversion Does Not Lock Files</title>
+  <sect1 id="model.lock-merge">
+    <title>Locking vs. Merging - Two Paradigms of Co-operative
+     Developments</title>
 
-    <para>Subversion does not prevent two users from making changes to the same
+    <para>By default, Subversion prefers the &ldquo;merging&rdquo; method of
+      handling simultaneous editing by multiple users.  This means that
+      Subversion does not prevent two users from making changes to the same
       file at the same time.  For example, if both you and Felix have checked
       out working directories of <filename>/trunk/write</filename>, Subversion
       will allow both of you to change <filename>write/search.c</filename> in
@@ -274,23 +277,23 @@ write/Makefile:6
 
     <itemizedlist mark="bullet">
       <listitem><para>Suppose Felix tries to commit his changes to
-          <filename>search.c</filename> first.  Hiscommit will succeed, and his
-          text will appear in the latest revision inthe
+          <filename>search.c</filename> first.  His commit will succeed, and
+          his text will appear in the latest revision inthe
           repository.</para></listitem>
       <listitem><para>When you attempt to commit your changes to
-          <filename>search.c</filename>, Subversionwill reject your commit, and
-          tell you that you must update<filename>search.c</filename> before you
-          can commit it.</para></listitem>
+          <filename>search.c</filename>, Subversion will reject your commit,
+          and tell you that you must update<filename>search.c</filename> before
+          you can commit it.</para></listitem>
       <listitem><para>When you update <filename>search.c</filename>, Subversion
-          will try to merge Felix'schanges from the repository with your local
-          changes.  By default,Subversion merges as if it were applying a
-          patch: if your local changesdo not overlap textually with Felix's,
-          then all is well; otherwise,Subversion leaves it to you to resolve
-          the overlappingchanges.  In either case,Subversion carefully
+          will try to merge Felix's changes from the repository with your local
+          changes.  By default, Subversion merges as if it were applying a
+          patch: if your local changes do not overlap textually with Felix's,
+          then all is well; otherwise, Subversion leaves it to you to resolve
+          the overlapping changes.  In either case, Subversion carefully
           preserves a copy of the original pre-merge text.</para></listitem>
       <listitem><para>Once you have verified that Felix's changes and your
-          changes have beenmerged correctly, you can commit the new revision of
-          <filename>search.c</filename>,which now contains everyone's
+          changes have been merged correctly, you can commit the new revision
+          of <filename>search.c</filename>, which now contains everyone's
           changes.</para></listitem>
     </itemizedlist>
 
@@ -300,23 +303,28 @@ write/Makefile:6
 
     <itemizedlist mark="bullet">
       <listitem><para>changes usually do not conflict, so Subversion's behavior
-          does the rightthing by default, while locking can interfere with
+          does the right thing by default, while locking can interfere with
           legitimate work;</para></listitem>
       <listitem><para>locking can prevent conflicts within a file, but not
-          conflicts betweenfiles (say, between a C header file and another file
-          that includes it),so it doesn't really solve the problem; and
+          conflicts between files (say, between a C header file and another
+          file that includes it), so it doesn't really solve the problem; and
           finally,</para></listitem>
       <listitem><para>people often forget that they are holding locks,
-          resulting inunnecessary delays and friction.</para></listitem>
+          resulting in unnecessary delays and friction.</para></listitem>
     </itemizedlist>
 
-    <para>Of course, the merge process needs to be under the users' control.
-      Patch is not appropriate for files with rigid formats, like images or
-      executables.  Subversion allows users to customize its merging behavior
-      on a per-file basis.  You can direct Subversion to refuse to merge
-      changes to certain files, and simply present you with the two original
-      texts to choose from.  (Or, someday, you can direct Subversion to merge
-      using a tool which respects the semantics of the file format.)</para>
+    <para>Of course, some kinds of files with rigid formats, like images or
+      executables, are simply not mergeable.  To support this, Subversion
+      allows users to customize its merging behavior on a per-file basis.
+      Firstly, you can direct Subversion to refuse to merge changes to certain
+      files, and simply present you with the two original texts to choose from.
+      Secondly, in Subversion 1.2 and later, support for the
+      &ldquo;locking&rdquo; method of working is also available, and individual
+      files can be designated as requiring locking.</para>
+
+    <para>(In the future, you may be able to direct Subversion to merge using a
+      tool which respects the semantics of specific complex file
+      formats.)</para>
   </sect1>
 
   <sect1 id="model.props">

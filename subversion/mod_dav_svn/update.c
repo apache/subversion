@@ -437,7 +437,10 @@ static svn_error_t * absent_helper(svn_boolean_t is_dir,
       const char *elt = apr_psprintf(pool,
                                      "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
                                      DIR_OR_FILE(is_dir),
-                                     svn_path_basename(path, pool));
+                                     apr_xml_quote_string
+                                       (pool,
+                                        svn_path_basename(path, pool),
+                                        1));
       SVN_ERR(dav_svn__send_xml(uc->bb, uc->output, "%s", elt));
     }
 
@@ -652,7 +655,9 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
         SVN_ERR(dav_svn__send_xml(baton->uc->bb, baton->uc->output,
                                   "<D:creator-displayname>%s"
                                   "</D:creator-displayname>",
-                                  baton->last_author));
+                                  apr_xml_quote_string(baton->pool,
+                                                       baton->last_author,
+                                                       1)));
 
     }
 
@@ -672,11 +677,7 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 
 
 /* Send the opening tag of the update-report if it hasn't been sent
-   already.
-
-   Note: because dav_svn__send_xml does not return an error, this function
-   never returns error either.  However, its prototype anticipates a
-   day when dav_svn__send_xml() can return error. */
+   already. */
 static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
 {
   if ((! uc->resource_walk) && (! uc->started_update))
@@ -1032,7 +1033,7 @@ static svn_error_t * upd_close_file(void *file_baton,
                          file->base_checksum ? " base-checksum=\"" : "",
                          file->base_checksum ? file->base_checksum : "",
                          file->base_checksum ? "\"" : "");
-      SVN_ERR(dav_svn__send_xml(file->uc->bb, file->uc->output, elt));
+      SVN_ERR(dav_svn__send_xml(file->uc->bb, file->uc->output, "%s", elt));
     }
 
   return close_helper(FALSE /* is_dir */, file);

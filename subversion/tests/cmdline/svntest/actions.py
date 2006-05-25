@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os.path, shutil, string, re, sys
+import os.path, shutil, string, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
@@ -400,8 +400,33 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          check_props = 0,
                          dry_run = 1,
                          *args):
+  """Run 'svn merge -rREV1:REV2 URL DIR'."""
+  if args:
+    run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
+                          status_tree, skip_tree, error_re_string,
+                          singleton_handler_a, a_baton, singleton_handler_b,
+                          b_baton, check_props, dry_run, *args)
+  else:
+    run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
+                          status_tree, skip_tree, error_re_string,
+                          singleton_handler_a, a_baton, singleton_handler_b,
+                          b_baton, check_props, dry_run)
 
-  """Run 'svn merge -rREV1:REV2 URL DIR'
+
+def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
+                          output_tree, disk_tree, status_tree, skip_tree,
+                          error_re_string = None,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None,
+                          check_props = 0,
+                          dry_run = 1,
+                          *args):
+  """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
+  (for a three-way merge between URLs and WC).
+
+  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.
 
   If ERROR_RE_STRING, the merge must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -432,7 +457,11 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   if isinstance(skip_tree, wc.State):
     skip_tree = skip_tree.old_tree()
 
-  merge_command = ('merge', '-r', rev1 + ':' + rev2, url, dir)
+  if url2:
+    merge_command = ("merge", url1 + "@" + str(rev1),url2 + "@" + str(rev2),
+                     dir)
+  else:
+    merge_command = ("merge", "-r", str(rev1) + ":" + str(rev2), url1, dir)
 
   if dry_run:
     pre_disk = tree.build_tree_from_wc(dir)
@@ -794,7 +823,7 @@ def match_or_fail(message, label, expected, actual):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox):
+def make_repo_and_wc(sbox, create_wc = True):
   """Create a fresh repository and checkout a wc from it.
 
   The repo and wc directories will both be named TEST_NAME, and
@@ -808,20 +837,27 @@ def make_repo_and_wc(sbox):
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(sbox.repo_dir)
 
-  # Generate the expected output tree.
-  expected_output = main.greek_state.copy()
-  expected_output.wc_dir = sbox.wc_dir
-  expected_output.tweak(status='A ', contents=None)
+  if create_wc:
+    # Generate the expected output tree.
+    expected_output = main.greek_state.copy()
+    expected_output.wc_dir = sbox.wc_dir
+    expected_output.tweak(status='A ', contents=None)
 
-  # Generate an expected wc tree.
-  expected_wc = main.greek_state
+    # Generate an expected wc tree.
+    expected_wc = main.greek_state
 
-  # Do a checkout, and verify the resulting output and disk contents.
-  run_and_verify_checkout(main.current_repo_url,
-                          sbox.wc_dir,
-                          expected_output,
-                          expected_wc)
-
+    # Do a checkout, and verify the resulting output and disk contents.
+    run_and_verify_checkout(main.current_repo_url,
+                            sbox.wc_dir,
+                            expected_output,
+                            expected_wc)
+  else:
+    # just make sure the parent folder of our working copy is created
+    try:
+      os.mkdir(main.general_wc_dir)
+    except OSError, err:
+      if err.errno != errno.EEXIST:
+        raise
 
 # Duplicate a working copy or other dir.
 def duplicate_dir(wc_name, wc_copy_name):

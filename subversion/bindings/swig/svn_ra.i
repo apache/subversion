@@ -52,10 +52,12 @@
     const svn_ra_reporter2_t **reporter,
     void **report_baton,
     svn_dirent_t **dirent,
-    svn_lock_t **lock
+    svn_lock_t **lock,
+    const svn_delta_editor_t **
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+%apply apr_hash_t **DIRENTHASH { apr_hash_t **dirents };
 
 %apply const char *MAY_BE_NULL {
     const char *comment,

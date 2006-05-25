@@ -275,7 +275,7 @@ def steal_lock(sbox):
 
   # This should give a "iota' is already locked... error.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*((already locked)|(423 Locked))",
+                                     ".*already locked",
                                      'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -311,10 +311,10 @@ def examine_lock(sbox):
 
   lock_info = output[-6:-1]
   if ((len(lock_info) != 5)
-      or (lock_info[0][0:28] != 'Lock Token: opaquelocktoken:')
-      or (lock_info[1] != 'Lock Owner: ' + svntest.main.wc_author + '\n')
-      or (lock_info[2][0:13] != 'Lock Created:')
-      or (lock_info[4] != comment + '\n')):
+      or (not lock_info[0].startswith('Lock Token: opaquelocktoken:'))
+      or (lock_info[1] != 'Lock Owner: %s\n' % svntest.main.wc_author)
+      or (not lock_info[2].startswith('Lock Created:'))
+      or (lock_info[4] != '%s\n' % comment)):
     raise svntest.Failure
 
 
@@ -1325,8 +1325,8 @@ def unlock_already_unlocked_files(sbox):
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  error_msg = "(.*Path '/A/B/E/alpha' is already locked by user '" + \
-              svntest.main.wc_author2 + "'.*)|(.*423 Locked.*)"
+  error_msg = ".*Path '/A/B/E/alpha' is already locked by user '" + \
+              svntest.main.wc_author2 + "'.*"
   svntest.actions.run_and_verify_svn(None, None, error_msg,
                                      'lock',
                                      '--username', svntest.main.wc_author2,
@@ -1478,7 +1478,7 @@ def ls_url_encoded(sbox):
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
 def unlock_wrong_token(sbox):
-  "veriy unlocking with wrong lock token"
+  "verify unlocking with wrong lock token"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1509,6 +1509,60 @@ def unlock_wrong_token(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      file_path)
+
+#----------------------------------------------------------------------
+# Verify that info shows lock info for locked files with URI-unsafe names
+# when run in recursive mode.
+def examine_lock_encoded_recurse(sbox):
+  "verify recursive info shows lock info"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'A/B/F/one iota'
+  comment = 'This is a lock test.'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.actions.run_and_verify_svn(None, None, [], "add", file_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    fname : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({ fname: Item(wc_rev=2, status='  ') })
+
+  # Commit the file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        file_path)
+
+  # lock the file
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', comment, file_path)
+
+  # Run info and check that we get the lock fields.
+  output, err = \
+          svntest.actions.run_and_verify_svn(None, None, [],
+                                             'info', '-R', 
+                                             svntest.main.current_repo_url +
+                                             '/A/B/F')
+
+  lock_info = output[-6:-1]
+  if ((len(lock_info) != 5)
+      or (not lock_info[0].startswith('Lock Token: opaquelocktoken:'))
+      or (lock_info[1] != 'Lock Owner: %s\n' % svntest.main.wc_author)
+      or (not lock_info[2].startswith('Lock Created:'))
+      or (lock_info[4] != '%s\n' % comment)):
+    raise svntest.Failure
+
 
 
 ########################################################################
@@ -1548,6 +1602,7 @@ test_list = [ None,
               info_moved_path,
               ls_url_encoded,
               unlock_wrong_token,
+              examine_lock_encoded_recurse,
             ]
 
 if __name__ == '__main__':

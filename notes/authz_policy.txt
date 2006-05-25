@@ -67,7 +67,7 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
    
    ...then there is a potential for failure, should older versions of
    the file exist at unreadable paths.  In other words, the tracing of
-   copies/renames is subject to readabliity checks.
+   copies/renames is subject to readability checks.
    
    If history-tracing wanders into unreadable territory, the process
    halts; no further information is retrieved.
