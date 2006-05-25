@@ -778,18 +778,16 @@ def log_limit(sbox):
   log_chain = parse_log_output (out)
   check_log_chain(log_chain, [1])
 
+  must_be_positive = ".*Argument to --limit must be positive.*"
+
   # error expected when limit <= 0
-  svntest.actions.run_and_verify_svn(None, None, ".*Argument to --limit must be positive.*",
-                                                'log', '--limit', '0',
-                                                '--revision', '1',
-                                                svntest.main.current_repo_url,
-                                                'A/B')
+  svntest.actions.run_and_verify_svn(None, None, must_be_positive,
+                                     'log', '--limit', '0', '--revision', '1',
+                                     svntest.main.current_repo_url, 'A/B')
                                                 
-  svntest.actions.run_and_verify_svn(None, None, ".*Argument to --limit must be positive.*",
-                                                'log', '--limit', '-1',
-                                                '--revision', '1',
-                                                svntest.main.current_repo_url,
-                                                'A/B')
+  svntest.actions.run_and_verify_svn(None, None, must_be_positive,
+                                     'log', '--limit', '-1', '--revision', '1',
+                                     svntest.main.current_repo_url, 'A/B')
                                                                                                 
 def log_base_peg(sbox):
   "run log on an @BASE target"
