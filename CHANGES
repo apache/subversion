@@ -11,48 +11,48 @@ http://svn.collab.net/repos/svn/tags/1.4.0
       - internal wcprops take up less space (r19433 -37)
       - large file commit speedups (r17861 -73 18867 -918 -29 -44 -45 -48 -49)
       - reduce memory usage for large working copies (r19183 -538)
-      - use file's eol style on conflict markers (r17645)
-      - increased wc stability with merge, copy and move:
+      - increased working copy stability with merge, copy and move:
             (fixes issues #845, #1516, #1553, #2135, #2144, #2148)
     * new switches added:
-      - 'svn blame --force'(issue #2509)
+      - 'svn blame --force' (issue #2509)
       - 'svn diff/merge -c/--change' (r17054 -6 -68 18568 -741)
       - 'svn diff --summarize' (issue #2015)
       - 'svn merge/blame -x' (r18716 -20) (r18602 -857)
     * 'svn log' now supports peg revisions (issue #2287)
     * use switch/relocate when svn:externals updated (issue #2209)
     * internal diff can ignore whitespace and eol style changes (issue #2121)
-    * new svn2cl, svn-viewdiff and svn-resolve contrib script
+    * conflict markers now match the file's eol style (issue #1325)
+    * new svn2cl, svn-viewdiff and svn-resolve contrib scripts
     * numerous improvements to svnmerge.py, vc-svn and psvn
     * translation updates for all languages
     * Mac OS X: store cached passwords encrypted in Keychain (r17619 -43)
     * fixed: 'svn ls' slow over ra_dav (issue #2151)
-    * fixed: 'svn import' not handling eol style correctly (issue #2433)
+    * fixed: 'svn import' not handling eol-style correctly (issue #2433)
     * fixed: 'svn blame' should default operative rev range to peg rev (r18400)
     * fixed: 'svn blame' ignores eol-style (issue #2431)
     * fixed: 'svn checkout' should default operative rev to peg rev (r18422)
     * fixed: 'svn diff' supports all eol styles (r17624 -8 -61 18195 -392)
     * fixed: 'svn diff' multi-target memory leak (r17518)
     * fixed: 'svn rm' of non-existent item should fail (issue #2440)
+    * fixed: 'svn status' should skip unversioned files (issue #2030)
     * fixed: 'svn switch --relocate' may set wrong repos root (r17031)
     * fixed: 'svn switch --relocate' memory leak (r19535)
+    * fixed: 'svn switch --relocate' not caching passwords (issue #2360)
     * fixed: 'svn info' not showing locks sometimes (r19777)
     * fixed: incorrect merge of add of binary file already in WC (issue #2403)
     * fixed: lots of diff wc<->repos bugs
     * fixed: unfriendly error message on propget on nonexistent path (r19399)
-    * fixed: 'svn switch --relocate' not caching passwords (issue #2360)
-    * fixed: errorful targets shouldn't end the status operation (issue #2030)
     * fixed: spurious revert report after manual conflict removal (issue #2517)
     * fixed: don't allow -rPREV on schedule add path (issue #2315)
     * fixed: keywords with dollar signs cause badness (issue #1780)
     * fixed: really revert file with locally modified keywords (issue #1663)
-    * fixed: delete schedule add file leaves working props file (issue #2419)
+    * fixed: deleting schedule add file leaves working props file (issue #2419)
     * fixed: svn:needs-lock and read-only-ness not always in sync (issue #2306)
     * fixed: post-commit error output not sent to the client (issue #443)
     * fixed: not locked error on commit of switched path (issue #2353)
 
   - Server:
-    * new svnsync repository mirroring utility (required for svnsync tool)
+    * support for new 'svnsync' repository mirroring utility
     * support for BDB 4.4, including automatic recovery (issue #2449)
     * new contrib hook scripts:
       - enforcer
@@ -63,7 +63,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * svnserve improvements:
       - can now run as a native Windows service (r18855)
       - new option --pid-file (r17836)
-      - allow the password databse to be read-only (r16840)
+      - allow the password database to be read-only (r16840)
     * mod_dav_svn improvements:
       - fixed: error conversion crash (r19516)
       - fixed: unfriendly error when locking already locked path (issue #2275)
@@ -72,7 +72,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
       - new mod_dontdothat apache module (r19531)
       - new mod_authz_svn directive AuthzSVNNoAuthWhenAnonymousAllowed (r18680)
       - error out when authz rules don't contain unexpected characters (r19471)
-    * support .wsf hook scripts on Windows (r18972 19076)
+    * support .wsf hook scripts on Windows (r18972, 19076)
     * lots of improvements to mailer.py and commit-email.pl
     * FSFS back-end performance improvements (r17125 19119 -456 -58 -59)
     * fixed: 'svnadmin verify' output not in native encoding (issue #1997)
@@ -83,7 +83,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: catch errors starting hook scripts (r16891 17041 -81)
 
   - Both:
-    * xdelta compression improvements:
+    * delta compression improvements:
        - new delta encoding reduces size (r18363 -94 -66 -78 -98 -99 -457 -950)
        - xdelta algorithm speed improvements (r18986, 19047)
     * don't bail on invalid locale (r19445)
