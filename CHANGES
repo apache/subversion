@@ -6,7 +6,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
   - Client:
     * new 'svnsync' commandline tool for repository replication
     * numerous working copy improvements (WARNING! upgrades to new format!):
-      - improved performance when detecting modified fies (r18628 -56)
+      - improved performance when detecting modified files (r18628 -56)
       - new property storage is faster and uses less disk space (r17583)
       - internal wcprops take up less space (r19433 -37)
       - large file commit speedups (r17861 -73 18867 -918 -29 -44 -45 -48 -49)
