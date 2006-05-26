@@ -1095,7 +1095,10 @@ find_dir_url (const struct dir_baton *db, apr_pool_t *pool)
       struct dir_baton *pb = db->parent_baton;
       svn_wc_status2_t *status = apr_hash_get (pb->statii, db->name,
                                                APR_HASH_KEY_STRING);
-      if (status && status->entry)
+      /* Note that status->entry->url is NULL in the case of a missing
+       * directory, which means we need to recurse up another level to
+       * get a useful URL. */
+      if (status && status->entry && status->entry->url)
         return status->entry->url;
 
       url = find_dir_url (pb, pool);

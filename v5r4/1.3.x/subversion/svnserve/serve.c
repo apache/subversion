@@ -1637,9 +1637,11 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 subpool);
 
       if (! lookup_access(pool, b, svn_authz_write, full_path, TRUE))
-        return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
-                                svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
-                                                 NULL, NULL), NULL);
+        {
+          err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
+                                 NULL, NULL);
+          break;
+        }
 
       err = svn_repos_fs_lock(&l, b->repos, full_path,
                               NULL, comment, FALSE,

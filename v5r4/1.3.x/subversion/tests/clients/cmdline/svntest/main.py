@@ -85,6 +85,9 @@ class SVNRepositoryCopyFailure(Failure):
   "Exception raised if unable to copy a repository"
   pass
 
+class SVNRepositoryCreateFailure(Failure):
+  "Exception raised if unable to create a repository"
+  pass
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -239,6 +242,16 @@ def get_post_commit_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "post-commit")
 
+
+def get_authz_file_path(repo_dir):
+  "Return the path of the authz file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "authz")
+
+def get_svnserve_conf_file_path(repo_dir):
+  "Return the path of the svnserve.conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "svnserve.conf")
 
 # Run any binary, logging the command line (TODO: and return code)
 def run_command(command, error_expected, binary_mode=0, *varargs):
@@ -463,9 +476,13 @@ def create_repos(path):
   stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path, *opts)
 
   # Skip tests if we can't create the repository.
-  for line in stderr:
-    if line.find('Unknown FS type') != -1:
-      raise Skip
+  if stderr:
+    for line in stderr:
+      if line.find('Unknown FS type') != -1:
+        raise Skip
+    # If the FS type is known, assume the repos couldn't be created
+    # (e.g. due to a missing 'svnadmin' binary).
+    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),

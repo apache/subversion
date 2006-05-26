@@ -2,7 +2,7 @@
  * version.c: mod_dav_svn versioning provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1480,6 +1480,13 @@ dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
           if (strcmp(child->name, "lock-token-list") == 0)
             break;
         }
+    }
+
+  /* Did we find what we were looking for? */
+  if (! child)
+    {
+      *locks = hash;
+      return SVN_NO_ERROR;
     }
 
   /* Then look for N different <lock> structures within. */

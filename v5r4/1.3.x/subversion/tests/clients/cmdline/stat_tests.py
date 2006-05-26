@@ -909,9 +909,6 @@ def status_in_xml(sbox):
                 "",
                ]
 
-#  for i in range(0, len(template)):
-#    template[i] = template[i].encode('utf-8')
-
   output, error = svntest.actions.run_and_verify_svn (None, None, [],
                                                       'status', file_path,
                                                       '--xml', '-u')
@@ -923,6 +920,60 @@ def status_in_xml(sbox):
 
 #----------------------------------------------------------------------
 
+def status_ignored_dir(sbox):
+  "status on ignored directory"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  new_dir = os.path.join(wc_dir, "dir.o")
+  new_dir_url = svntest.main.current_repo_url + "/dir.o"
+
+  svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
+                                     'mkdir', new_dir_url, '-m', 'msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd)
+
+  # Make a dir that is ignored by the default ignore patterns.
+  os.mkdir(new_dir)
+
+  # run_and_verify_status doesn't handle this weird kind of entry.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['I      *            ' + new_dir + "\n",
+                                      'Status against revision:      2\n'], [],
+                                     "status", "-u", wc_dir)
+
+#----------------------------------------------------------------------  
+
+def status_dash_u_missing_dir(sbox):
+  "status on missing directory"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  a_d_g = os.path.join(wc_dir, "A", "D", "G")
+
+  # ok, blow away the A/D/G directory
+  svntest.main.safe_rmtree(a_d_g)
+
+  if sys.platform != 'AS/400':
+    xout = ["       *            " + os.path.join(a_d_g, "pi") + "\n",
+            "       *            " + os.path.join(a_d_g, "rho") + "\n",
+            "       *            " + os.path.join(a_d_g, "tau") + "\n",
+            "!      *       ?    " + a_d_g + "\n",
+            "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
+            "Status against revision:      1\n" ]
+  else:
+    xout = ["       *            " + os.path.join(a_d_g, "tau") + "\n", 
+            "       *            " + os.path.join(a_d_g, "pi") + "\n",
+            "       *            " + os.path.join(a_d_g, "rho") + "\n",
+            "!      *       ?    " + a_d_g + "\n",
+            "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
+            "Status against revision:      1\n" ]
+
+  # now run status -u, we should be able to do this without crashing
+  svntest.actions.run_and_verify_svn(None,
+                                     xout,
+                                     [],
+                                     "status", "-u", wc_dir)
+
+#----------------------------------------------------------------------  
 
 ########################################################################
 # Run the tests
@@ -947,6 +998,8 @@ test_list = [ None,
               status_on_partially_nonrecursive_wc,
               missing_dir_in_anchor,
               status_in_xml,
+              status_ignored_dir,
+              status_dash_u_missing_dir,
              ]
 
 if __name__ == '__main__':
