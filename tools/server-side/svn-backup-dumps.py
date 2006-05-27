@@ -124,17 +124,18 @@
 #
 #
 # TODO:
+#  - find out how to report smbclient errors
 #  - improve documentation
 #
 
-__version = "0.3"
+__version = "0.4"
 
 import sys
 import os
 import fcntl
 import select
 import gzip
-from os.path import exists
+import os.path
 from optparse import OptionParser
 from ftplib import FTP
 
@@ -339,11 +340,56 @@ class SvnBackupOutputBzip2(SvnBackupOutput):
         self.__ofd.close()
 
 
+class SvnBackupException( Exception ):
+
+    def __init__( self, errortext ):
+        self.errortext = errortext
+
+    def __str__( self ):
+        return self.errortext
+
 class SvnBackup:
 
     def __init__( self, options, args ):
+        # need 3 args: progname, reposname, dumpdir
+        if len(args) != 3:
+            if len(args) < 3:
+                raise SvnBackupException, \
+                    "too few arguments, specify repospath and dumpdir."
+            else:
+                raise SvnBackupException, \
+                    "too many arguments, specify repospath and dumpdir only."
         self.__repospath = args[1]
         self.__dumpdir = args[2]
+        # check repospath
+        rpathparts = os.path.split( self.__repospath )
+        if len( rpathparts[1] ) == 0:
+            # repospath without trailing slash
+            self.__repospath = rpathparts[0]
+        if not os.path.exists( self.__repospath ):
+            raise SvnBackupException, \
+                "repos '%s' does not exist." % self.__repospath
+        if not os.path.isdir( self.__repospath ):
+            raise SvnBackupException, \
+                "repos '%s' is not a directory." % self.__repospath
+        for subdir in [ "db", "conf", "hooks" ]:
+            dir = os.path.join( self.__repospath, "db" )
+            if not os.path.isdir( dir ):
+                raise SvnBackupException, \
+                    "repos '%s' is not a repository." % self.__repospath
+        rpathparts = os.path.split( self.__repospath )
+        self.__reposname = rpathparts[1]
+        if self.__reposname in [ "", ".", ".." ]:
+            raise SvnBackupException, \
+                "couldn't extract repos name from '%s'." % self.__repospath
+        # check dumpdir
+        if not os.path.exists( self.__dumpdir ):
+            raise SvnBackupException, \
+                "dumpdir '%s' does not exist." % self.__dumpdir
+        elif not os.path.isdir( self.__dumpdir ):
+            raise SvnBackupException, \
+                "dumpdir '%s' is not a directory." % self.__dumpdir
+        # set options
         self.__rev_nr = options.rev
         self.__count = options.cnt
         self.__quiet = options.quiet
@@ -358,8 +404,16 @@ class SvnBackup:
         self.__transfer = None
         if options.transfer != None:
             self.__transfer = options.transfer.split( ":" )
-        repparts = self.__repospath.split( '/' )
-        self.__reposname = repparts[len(repparts)-1]
+            if len( self.__transfer ) != 5:
+                if len( self.__transfer ) < 5:
+                    raise SvnBackupException, \
+                        "too few fields for transfer '%s'." % self.__transfer
+                else:
+                    raise SvnBackupException, \
+                        "too many fields for transfer '%s'." % self.__transfer
+            if self.__transfer[0] not in [ "ftp", "smb" ]:
+                raise SvnBackupException, \
+                    "unknown transfer method '%s'." % self.__transfer[0]
 
     def set_nonblock( self, fileobj ):
         fd = fileobj.fileno()
@@ -413,17 +467,23 @@ class SvnBackup:
         return -1
 
     def transfer_ftp( self, absfilename, filename ):
-        host = self.__transfer[1]
-        user = self.__transfer[2]
-        passwd = self.__transfer[3]
-        destdir = self.__transfer[4].replace( "%r", self.__reposname )
-        ftp = FTP( host, user, passwd )
-        ftp.cwd( destdir )
-        ifd = open( absfilename, "rb" )
-        ftp.storbinary( "STOR %s" % filename, ifd )
-        ftp.quit()
-        rc = len( ifd.read(1) ) == 0
-        ifd.close()
+        rc = False
+        try:
+            host = self.__transfer[1]
+            user = self.__transfer[2]
+            passwd = self.__transfer[3]
+            destdir = self.__transfer[4].replace( "%r", self.__reposname )
+            ftp = FTP( host, user, passwd )
+            ftp.cwd( destdir )
+            ifd = open( absfilename, "rb" )
+            ftp.storbinary( "STOR %s" % filename, ifd )
+            ftp.quit()
+            rc = len( ifd.read(1) ) == 0
+            ifd.close()
+        except Exception, e:
+            raise SvnBackupException, \
+                "ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
+                    ( absfilename, str(e) )
         return rc
 
     def transfer_smb( self, absfilename, filename ):
@@ -469,8 +529,8 @@ class SvnBackup:
             output = SvnBackupOutputPlain( absfilename )
         realfilename = output.get_filename()
         if checkonly:
-            return exists( realfilename )
-        elif exists( realfilename ):
+            return os.path.exists( realfilename )
+        elif os.path.exists( realfilename ):
             if overwrite:
                 print "overwriting " + realfilename
             else:
@@ -582,8 +642,12 @@ if __name__ == "__main__":
         print "    -t smb:<share>:<user>:<password>:<dest-path>"
         print ""
         sys.exit( 0 )
-    backup = SvnBackup( options, args )
-    rc = backup.execute()
+    rc = False
+    try:
+        backup = SvnBackup( options, args )
+        rc = backup.execute()
+    except SvnBackupException, e:
+        print "svn-backup-dumps.py:", e
     if rc:
         print "Everything OK."
         sys.exit( 0 )
@@ -591,3 +655,4 @@ if __name__ == "__main__":
         print "An error occured!"
         sys.exit( 1 )
 
+# vim:et:ts=4:sw=4
