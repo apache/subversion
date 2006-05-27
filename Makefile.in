@@ -520,7 +520,6 @@ doc-design-ps:
 
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
-	cd $(top_srcdir)/doc/design && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
 
 # Converting from the .rnc XML shcemas to various other schema formats.
