@@ -122,7 +122,13 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    if failed:
+    # We always return 1 for failed tests, if some other failure than 1
+    # probably means the test didn't run at all and probably didn't
+    # output any failure info.
+    if failed == 1:
+      print 'FAILURE'
+    elif failed:
+      print >> self.log, 'FAIL:  ' + progbase + ': Unknown test failure see tests.log.\n'
       print 'FAILURE'
     else:
       print 'success'
