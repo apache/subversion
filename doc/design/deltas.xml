@@ -1,0 +1,840 @@
+<chapter id="deltas">
+  <title>Deltas &mdash; How to describe changes</title>
+
+  <simplesect>
+    <para>Subversion uses three kinds of deltas:</para>
+
+    <itemizedlist mark="bullet">
+
+      <listitem><para>A <emphasis role="bold"><firstterm>tree
+              delta</firstterm></emphasis> describes the difference between two
+          arbitrary directory trees, the way a traditional patch describes the
+          difference between two files.  For example, the delta between
+          directories A and B could be applied to A, to produce B.</para>
+        
+        <para>Tree deltas can also carry ancestry information, indicating how
+          the files in one tree are related to files in the other tree.  And
+          deltas can describe changes to file meta-information, like permission
+          bits, creation dates, and so on.  The repository and working copy use
+          deltas to communicate changes.</para></listitem>
+
+      <listitem><para>A <emphasis role="bold"><firstterm>text
+              delta</firstterm></emphasis> describes changes to a string of
+          bytes, such as the contents of a file.  It is analogous to
+          traditional patch format, except that it works equally well on binary
+          and text files, and is not invertible (because context and deleted
+          data are not recorded).</para></listitem>
+
+      <listitem><para>A <emphasis role="bold"><firstterm>property
+              delta</firstterm></emphasis> describes changes to a list of named
+          properties (see <xref linkend="model.props"/>).</para></listitem>
+    </itemizedlist>
+
+    <para>The term <firstterm>delta</firstterm> without qualification generally
+      means a tree delta, unless some other meaning is clear from
+      context.</para>
+
+    <para>In the examples below, deltas will be described in XML, which happens
+      to be Subversion's (now mostly defunct) import/export patch format.
+      However, note that deltas are an abstract data structure, of which the
+      XML format is merely one representation.  Later, we will describe other
+      representations: for example, there is a serialized representation
+      (useful for streaming protocols, among other things), and a db-style
+      representation, used for repository storage.  The various representations
+      of a given delta are (in theory, anyway) perfectly isomorphic to one
+      another, since they describe the same underlying structure.</para>
+  </simplesect>
+
+  <sect1 id="deltas.text">
+    <title>Text Deltas</title>
+
+    <para>A text delta describes the difference between two strings of bytes,
+      the <firstterm>source</firstterm> string and the
+      <firstterm>target</firstterm> string.  Given a source string and a target
+      string, we can compute a text delta; given a source string and a delta,
+      we can reconstruct the target string.  However, note that deltas are not
+      invertible: you cannot always reconstruct the source string given the
+      target string and delta.</para>
+
+    <para>The standard Unix &ldquo;diff&rdquo; format is one possible
+      representation for text deltas; however, diffs are not ideal for internal
+      use by a revision control system, for several reasons:</para>
+
+    <itemizedlist mark="bullet">
+      <listitem><para>Diffs are line-oriented, which makes them human-readable,
+          but sometimes makes them perform poorly on binary
+          files.</para></listitem>
+      <listitem><para>Diffs represent a series of replacements, exchanging
+          selected ranges ofthe old text with new text; again, this is easy for
+          humans to read, butit is more expensive to compute and less compact
+          than some alternatives.</para></listitem>
+    </itemizedlist>
+
+    <para>Instead, Subversion uses the VDelta binary-diffing algorithm, as
+      described in <citetitle>Hunt, J. J., Vo, K.-P., and Tichy, W. F.  An
+        empirical study of delta algorithms.  Lecture Notes in Computer Science
+        1167 (July 1996), 49-66.</citetitle>  Currently, the output of this
+      algorithm is stored in a custom data format called
+      <firstterm>svndiff</firstterm>, invented by Greg Hudson &lt;&gt;, a
+      Subversion developer.</para>
+
+    <para>The concrete form of a text delta is a well-formed XML element,
+      having the following form:</para>
+
+    <programlisting>
+&lt;text-delta&gt;<replaceable>data</replaceable>&lt;/text-delta&gt;
+</programlisting>
+
+    <para>Here, <replaceable>data</replaceable> is the raw svndiff data,
+      encoded in the MIME Base64 format.</para>
+  </sect1>
+
+  <sect1 id="deltas.prop">
+    <title>Property Deltas</title>
+    
+    <para>A property delta describes changes to a property list, of the sort
+      associated with files, directories, and directory entries, and revision
+      numbers (see <xref linkend="model.props"/>).  A property delta can record
+      creating, deleting, and changing the text of any number of
+      properties.</para>
+
+    <para>A property delta is an unordered set of name/change pairs.  No two
+      pairs within a given property delta have the same name.  A pair's name
+      indicates the property affected, and the change indicates what happens to
+      its value.  There are two kinds of changes:</para>
+
+    <variablelist>
+      <varlistentry><term>set <replaceable>value</replaceable></term>
+        <listitem><para>Change the value of the named property to the byte
+            string <replaceable>value</replaceable>. If there is no property
+            with the given name, one is added to the property
+            list.</para></listitem>
+      </varlistentry>
+      <varlistentry><term>delete</term>
+        <listitem><para>Remove the named property from the property
+            list.</para></listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>At the moment, the <literal>set</literal> command can either create
+      or change a property value.  However, this simplification means that the
+      server cannot distinguish between a client which believes it is creating
+      a value afresh, and a client which believes it is changing the value of
+      an existing property.  It may simplify conflict detection to divide
+      <literal>set</literal> into two separate <literal>add</literal> and
+      <literal>change</literal> operations.</para>
+
+    <para>In the future, we may add a <literal>text-delta</literal> change,
+      which specifies a change to an existing property's value as a text delta.
+      This would give us a compact way to describe small changes to large
+      property values.</para>
+
+    <para>The concrete form of a property delta is a well-formed XML element,
+      having the following form:</para>
+
+    <programlisting>
+&lt;property-delta&gt;<replaceable>change</replaceable>&hellip;&lt;/property-delta&gt;
+</programlisting>
+
+    <para>Each <replaceable>change</replaceable> in a property delta has one of
+      the following forms:</para>
+
+    <programlisting>
+&lt;set name='<replaceable>name</replaceable>'&gt;<replaceable>value</replaceable>&lt;/set&gt;
+&lt;delete name='<replaceable>name</replaceable>'/&gt;
+</programlisting>
+
+    <para>The <replaceable>name</replaceable> attribute of a
+      <literal>set</literal> or <literal>delete</literal> element gives the
+      name of the property to change.  The <replaceable>value</replaceable> of
+      a <literal>set</literal> element gives the new value of the
+      property.</para>
+
+    <para>If either the property name or the property value contains the
+      characters &lsquo;<literal>&amp;</literal>&rsquo;,
+      &lsquo;<literal>&lt;</literal>&rsquo;, or
+      &lsquo;<literal>'</literal>&rsquo;, they should be replaced with the
+      sequences &lsquo;<literal>&amp;#38</literal>&rsquo;,
+      &lsquo;<literal>&amp;#60</literal>&rsquo;, or
+      &lsquo;<literal>&amp;#39</literal>&rsquo;, respectively.</para>
+  </sect1>
+
+  <sect1 id="deltas.tree">
+    <title>Tree Deltas</title>
+
+    <para>A tree delta describes changes between two directory trees, the
+      <firstterm>source tree</firstterm> and the <firstterm>target
+        tree</firstterm>.  Tree deltas can describe copies, renames, and
+      deletions of files and directories, changes to file contents, and changes
+      to property lists.  A tree delta can also carry information about how the
+      files in the target tree are derived from the files in the source tree,
+      if this information is available.</para>
+
+    <para>The format for tree deltas described here is easy to compute from a
+      Subversion working directory, and easy to apply to a Subversion
+      repository.  Furthermore, the size of a tree delta in this format is
+      independent of the commands used to produce the target tree &mdash; it
+      depends only on the degree of difference between the source and target
+      trees.</para>
+
+    <para>A tree delta is interpreted in the context of three
+      parameters:</para>
+
+    <itemizedlist mark="bullet">
+      <listitem><para><replaceable>source-root</replaceable>, the name of the
+          directory to which this completetree delta applies,</para></listitem>
+      <listitem><para><replaceable>revision</replaceable>, indicating a
+          particular revision of &hellip;</para></listitem>
+      <listitem><para><replaceable>source-dir</replaceable>, which is a
+          directory in the source tree that we arecurrently modifying to yield
+          &hellip;</para></listitem>
+      <listitem><para>&hellip; <firstterm>target-dir</firstterm> &mdash; the
+          directory we're constructing.</para></listitem>
+    </itemizedlist>
+
+    <para>When we start interpreting a tree delta,
+      <replaceable>source-root</replaceable>,
+      <replaceable>source-dir</replaceable>, and
+      <replaceable>target-dir</replaceable> are all equal.  As we walk the tree
+      delta, <replaceable>target-dir</replaceable> walks the tree we are
+      constructing, and <replaceable>source-dir</replaceable> walks the
+      corresponding portion of the source tree, which we use as the original.
+      <replaceable>Source-root</replaceable> remains constant as we walk the
+      delta; we may use it to choose new source trees.</para>
+
+    <para>A tree delta is a list of changes of the form</para>
+
+    <programlisting>
+&lt;tree-delta&gt;<replaceable>change</replaceable>&hellip;&lt;/tree-delta&gt;
+</programlisting>
+
+    <para>which describe how to edit the contents of
+      <replaceable>source-dir</replaceable> to yield
+      <replaceable>target-dir</replaceable>.  There are three kinds of
+      changes:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>&lt;delete
+          name='<replaceable>name</replaceable>'/&gt;</term>
+        <listitem><para><replaceable>Source-dir</replaceable> has an entry
+            named <replaceable>name</replaceable>, which is not present
+            in <replaceable>target-dir</replaceable>.</para></listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>&lt;add
+          name='<replaceable>name</replaceable>'&gt;<replaceable>content</replaceable>&lt;/add&gt;</term>
+        <listitem><para><replaceable>target-dir</replaceable> has an entry
+            named <replaceable>name</replaceable>, which is not present
+            in <replaceable>source-dir</replaceable>;
+            <replaceable>content</replaceable> describes the file or directory
+            to which the new directory entry refers.</para></listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>&lt;open
+          name='<replaceable>name</replaceable>'&gt;<replaceable>content</replaceable>&lt;/open&gt;</term>
+        <listitem><para>Both <replaceable>source-dir</replaceable> and
+            <replaceable>target-dir</replaceable> have an entry
+            named <replaceable>name</replaceable>, which has changed;
+            <replaceable>content</replaceable> describes the new file
+            or directory.</para></listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Any entries in <replaceable>source-dir</replaceable> whose names
+      aren't mentioned are assumed to appear unchanged in
+      <replaceable>target-dir</replaceable>.  Thus, an empty
+      <literal>tree-delta</literal> element indicates that
+      <replaceable>target-dir</replaceable> is identical to
+      <replaceable>source-dir</replaceable>.</para>
+
+    <para>In the change descriptions above, each
+      <replaceable>content</replaceable> takes one of the following
+      forms:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>&lt;file
+          <replaceable>ancestor</replaceable>&gt;<replaceable>prop-delta</replaceable>
+          <replaceable>text-delta</replaceable>&lt;/file&gt;</term>
+
+        <listitem><para>The given <replaceable>target-dir</replaceable> entry
+            refers to a file, <replaceable>f</replaceable>.
+            <replaceable>Ancestor</replaceable> indicates which file in the
+            source tree <replaceable>f</replaceable> is derived from, if any.
+          </para>
+
+          <para><replaceable>Prop-delta</replaceable> is a property delta
+            describing how <replaceable>f</replaceable>'s properties differ
+            from that ancestor; it may be omitted, indicating that the
+            properties are unchanged.</para>
+          
+          <para><replaceable>Text-delta</replaceable> is a text delta
+            describing how to construct <replaceable>f</replaceable> from that
+            ancestor; it may also be omitted, indicating that
+            <replaceable>f</replaceable>'s text is identical to its
+            ancestor's.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&lt;file <replaceable>ancestor</replaceable>/&gt;</term>
+
+        <listitem><para>An abbreviation for <literal>&lt;file
+              <replaceable>ancestor</replaceable>&gt;&lt;/file&gt;</literal>
+            &mdash; a fileelement with no property or text delta, thus
+            describing a file identicalto its ancestor.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&lt;directory
+          <replaceable>ancestor</replaceable>&gt;<replaceable>prop-delta</replaceable>
+          <replaceable>tree-delta</replaceable>&lt;/directory&gt;</term>
+
+        <listitem><para>The given <replaceable>target-dir</replaceable> entry
+            refers to a subdirectory, <replaceable>sub</replaceable>.
+            <replaceable>Ancestor</replaceable> indicates which directory in
+            the source tree <replaceable>sub</replaceable> is derived from, if
+            any.</para>
+            
+          <para><replaceable>Prop-delta</replaceable> is a property delta
+            describing how <replaceable>sub</replaceable>'sproperties differ
+            from that ancestor; it may be omitted, indicating thatthe
+            properties are unchanged.</para>
+            
+          <para><replaceable>Tree-delta</replaceable>
+            describes how to construct <replaceable>sub</replaceable> from
+            that ancestor; it may be omitted, indicating that the directory is
+            identical to its ancestor.  <replaceable>Tree-delta</replaceable>
+            should be interpreted with a new
+            <replaceable>target-dir</replaceable> of
+            <filename><replaceable>target-dir</replaceable>/<replaceable>name</replaceable></filename>.</para>
+            
+          <para>Since <replaceable>tree-delta</replaceable> is itself a
+            complete tree delta structure, tree deltas are themselves trees,
+            whose structure is a subgraph of the target tree.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>&lt;directory
+          <replaceable>ancestor</replaceable>/&gt;</term>
+
+        <listitem><para>An abbreviation for <literal>&lt;directory
+              <replaceable>ancestor</replaceable>&gt;&lt;/directory&gt;</literal>
+            &mdash; a directory element with no property or tree delta, thus
+            describing a directory identical to its ancestor.</para></listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>The <replaceable>content</replaceable> of a <literal>add</literal> or
+      <literal>open</literal> tag may also contain a property delta, describing
+      changes to the properties of that <emphasis>directory
+        entry</emphasis>.</para>
+
+    <para>In the <literal>file</literal> and <literal>directory</literal>
+      elements described above, each <replaceable>ancestor</replaceable> has
+      one of the following forms:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>ancestor='<replaceable>path</replaceable>'</term>
+
+        <listitem><para>The ancestor of the new or changed file or directory is
+            <filename><replaceable>source-root</replaceable>/<replaceable>path</replaceable></filename>,
+            in <replaceable>revision</replaceable>.  When this appears as an
+            attribute of a <literal>file</literal> element, the element's text
+            delta should be applied to
+            <filename><replaceable>source-root</replaceable>/<replaceable>path</replaceable></filename>.
+            When this appears as an attribute of a <literal>directory</literal>
+            element,
+            <filename><replaceable>source-root</replaceable>/<replaceable>path</replaceable></filename>
+            should be the new <replaceable>source-dir</replaceable> for
+            interpreting that element's tree delta.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>new='true'</term>
+
+        <listitem><para>This indicates that the file or directory has no
+            ancestor in the source tree.  When followed by a
+            <replaceable>text-delta</replaceable>, that delta should be applied
+            to the empty file to yield the new text; when followed by a
+            <replaceable>tree-delta</replaceable>, that delta should be
+            evaluated as if <replaceable>source-dir</replaceable> were an
+            imaginary empty directory.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><replaceable>nothing</replaceable></term>
+
+        <listitem><para>If neither an <literal>ancestor</literal> nor a
+            <literal>new</literal> attribute is given, this is an abbreviation
+            for
+            <literal>ancestor='<replaceable>source-dir</replaceable>/<replaceable>name</replaceable>'</literal>,
+            with the same revision number.  This makes the common case &mdash;
+            files or directories modified in place &mdash; more
+            compact.</para></listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>If the <replaceable>ancestor</replaceable> spec is not
+      <literal>new='true'</literal>, it may also contain the text
+      <literal>revision='<replaceable>rev</replaceable>'</literal>, indicating
+      a new value for <replaceable>revision</replaceable>, in which we should
+      find the ancestor.</para>
+
+    <para>If a filename or path appearing as a <replaceable>name</replaceable>
+      or <replaceable>path</replaceable> in the description above contains the
+      characters &lsquo;<literal>&amp;</literal>&rsquo;,
+      &lsquo;<literal>&lt;</literal>&rsquo;, or
+      &lsquo;<literal>'</literal>&rsquo;, they should be replaced with the
+      sequences &lsquo;<literal>&amp;#38;</literal>&rsquo;,
+      &lsquo;<literal>&amp;#60;</literal>&rsquo;, or
+      &lsquo;<literal>&amp;#39;</literal>&rsquo;, respectively.</para>
+
+    <para>Suppose we have the following source tree:</para>
+
+    <programlisting>
+/dir1/file1
+      file2
+      dir2/file3
+           file4
+      dir3/file5
+           file6
+</programlisting>
+
+    <para>If we edit the contents of <filename>/dir1/file1</filename>, we can
+      describe the effect on the tree with the following tree delta, to be
+      applied to the root:</para>
+
+    <programlisting>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='file1'&gt;
+          &lt;file&gt;<replaceable>text-delta</replaceable>&lt;/file&gt;
+        &lt;/open&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
+</programlisting>
+
+    <para>The outer <literal>tree-delta</literal> element describes the changes
+      made to the root directory.  Within the root directory, there are changes
+      in <filename>dir1</filename>, described by the nested
+      <literal>tree-delta</literal>.  Within <filename>/dir1</filename>, there
+      are changes in <filename>file1</filename>, described by the
+      <replaceable>text-delta</replaceable>.</para>
+
+    <para>If we had edited both <filename>/dir1/file1</filename> and
+      <filename>/dir1/file2</filename>, then there would simply be two
+      <literal>open</literal> elements in the inner
+      <literal>tree-delta</literal>.</para>
+
+    <para>As another example, starting from the same source tree, suppose we
+      rename <filename>/dir1/file1</filename> to
+      <filename>/dir1/file8</filename>:</para>
+
+    <programlisting>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;delete name='file1'/&gt;
+        &lt;add name='file8'&gt;
+          &lt;file ancestor='/dir1/file1'/&gt;
+        &lt;/add&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
+</programlisting>
+
+    <para>As above, the inner <literal>tdelta</literal> describes how
+      <filename>/dir1</filename> has changed: the entry for
+      <filename>/dir1/file1</filename> has disappeared, but there is a new
+      entry, <filename>/dir1/file8</filename>, which is derived from and
+      textually identical to <filename>/dir1/file1</filename> in the source
+      directory.  This is just an indirect way of describing the rename.</para>
+
+    <para>Why is it necessary to be so indirect?  Consider the delta
+      representing the result of:</para>
+
+    <orderedlist numeration="arabic">
+      <listitem><para>renaming <filename>/dir1/file1</filename> to
+          <filename>/dir1/tmp</filename>,</para></listitem>
+      <listitem><para>renaming <filename>/dir1/file2</filename> to
+          <filename>/dir1/file1</filename>, and</para></listitem>
+      <listitem><para>renaming <filename>/dir1/tmp</filename> to
+          <filename>/dir1/file2</filename></para></listitem>
+    </orderedlist>
+
+    <para>(in other words, exchanging <filename>file1</filename> and
+      <filename>file2</filename>):</para>
+
+    <programlisting>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='file1'&gt;
+          &lt;file ancestor='/dir1/file2'/&gt;
+        &lt;/open&gt;
+        &lt;open name='file2'&gt;
+          &lt;file ancestor='/dir1/file1'/&gt;
+        &lt;/open&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
+</programlisting>
+
+    <para>The indirectness allows the tree delta to capture an arbitrary
+      rearrangement without resorting to temporary filenames.</para>
+
+    <para>Another example, starting from the same source tree:</para>
+
+    <orderedlist numeration="arabic">
+      <listitem><para>rename <filename>/dir1/dir2</filename> to
+          <filename>/dir1/dir4</filename>,</para></listitem>
+      <listitem><para>rename <filename>/dir1/dir3</filename> to
+          <filename>/dir1/dir2</filename>, and</para></listitem>
+      <listitem><para>move <filename>file3</filename> from
+          <replaceable>/dir1/dir4</replaceable> to
+          <replaceable>/dir1/dir2</replaceable>.</para></listitem>
+    </orderedlist>
+
+    <para>Note that <filename>file3</filename>'s path has remained the same,
+      even though the directories around it have changed.  Here is the tree
+      delta:</para>
+
+    <programlisting>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='dir2'&gt;
+          &lt;directory ancestor='/dir1/dir3'&gt;
+            &lt;tree-delta&gt;
+              &lt;add name='file3'&gt;
+                &lt;file ancestor='/dir1/dir2/file3'/&gt;
+              &lt;/add&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/open&gt;
+        &lt;delete name='dir3'/&gt;
+        &lt;add name='dir4'&gt;
+          &lt;directory ancestor='/dir1/dir2'&gt;
+            &lt;tree-delta&gt;
+              &lt;delete name='file3'/&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/add&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
+</programlisting>
+
+    <para>In other words:</para>
+
+    <itemizedlist mark="bullet">
+      <listitem><para><filename>/dir1</filename> has changed;</para></listitem>
+      <listitem><para>the new directory <filename>/dir1/dir2</filename> is
+          derived from the old <filename>/dir1/dir3</filename>, and contains a
+          new entry <filename>file3</filename>, derived from the old
+          <filename>/dir1/dir2/file3</filename>;</para></listitem>
+      <listitem><para>there is no longer any <filename>/dir1/dir3</filename>;
+          and</para></listitem>
+      <listitem><para>the new directory <filename>/dir1/dir4</filename> is
+          derived from the old <filename>/dir1/dir2</filename>, except that its
+          entry for <filename>file3</filename> is now gone.</para></listitem>
+    
+    </itemizedlist>
+    
+    <para>Some more possible maneuvers, left as exercises for the
+      reader:</para>
+
+    <itemizedlist mark="bullet">
+      <listitem><para>Delete <filename>dir2</filename>, and then create a file
+          named <filename>dir2</filename>.</para></listitem>
+      <listitem><para>Rename <filename>/dir1/dir2</filename> to
+          <filename>/dir1/dir4</filename>; move <filename>file2</filename>
+          into <filename>/dir1/dir4</filename>; and move
+          <filename>file3</filename> into
+          <replaceable>/dir1/dir3</replaceable>.</para></listitem>
+      <listitem><para>Move <filename>dir2</filename> into
+          <filename>dir3</filename>, and move <filename>dir3</filename> into
+          <filename>/</filename>.</para></listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="deltas.postfix-text">
+    <title>Postfix Text Deltas</title>
+
+    <para>It is sometimes useful to represent a set of changes to a tree
+      without providing text deltas in the middle of the stream.  Text deltas
+      are often large and expensive to compute, and tree deltas can be useful
+      without them.  For example, one can detect whether two changes might
+      conflict &mdash; whether they change the same file, for example &mdash;
+      without knowing exactly how the conflicting files changed.</para>
+
+    <para>For this reason, our XML representation of a tree delta allows the
+      text deltas to come <emphasis>after</emphasis> the &lt;/tree-delta&gt;
+      closure.  This allows the client to receive early notice of conflicts:
+      during a <literal>svn commit</literal> command, the client sends a
+      tree-delta to the server, which can check for skeletal conflicts and
+      reject the commit, before the client takes the time to transmit the
+      (possibly large) textual changes.  This potentially saves quite a bit of
+      network traffic.</para>
+
+    <para>In terms of XML, postfix text deltas are split into two parts.  The
+      first part appears "in-line" and contains a reference ID.  The second
+      part appears after the tree delta is complete.  Here's an example:</para>
+
+    <programlisting>
+ &lt;tree-delta&gt;
+   &lt;open name="foo.c"&gt;
+      &lt;file&gt;
+        &lt;text-delta-ref id="123"&gt;
+      &lt;/file&gt;
+   &lt;/open&gt;
+   &lt;add name="bar.c"&gt;
+      &lt;file&gt;
+        &lt;text-delta-ref id="456"&gt;
+      &lt;/file&gt;
+    &lt;/add&gt;
+ &lt;/tree-delta&gt;
+ &lt;text-delta id="123"&gt;<emphasis>data</emphasis>&lt;/text-delta&gt;
+ &lt;text-delta id="456"&gt;<emphasis>data</emphasis>&lt;/text-delta&gt;
+</programlisting>
+
+  </sect1>
+
+  <sect1 id="deltas.serializing-via-editor">
+    <title>Serializing Deltas via the "Editor" Interface</title>
+
+    <para>The static XML forms above are useful as an import/export format, and
+      as a visualization aid, but we also need a way to express a delta as a
+      <emphasis>series of operations</emphasis>, to implement directory tree
+      diffing and patching.  Subversion defines a standard set of such
+      operations in the vtable <literal>svn_delta_edit_fns_t</literal>, a set
+      of function prototypes which anyone may implement (see
+      <filename>svn_delta.h</filename>).</para>
+
+    <para>Each function in an instance of <literal>svn_delta_editor_t</literal>
+      (colloquially known as an <firstterm>editor</firstterm>) implements some
+      distinct subtask of editing a directory tree.  In fact, if you compare
+      the editor function prototypes to the XML elements described previously,
+      you'll notice a fairly strict correspondence: there's one function for
+      replacing a directory, another function for replacing a file, one for
+      adding a directory, another for adding a file, a function for deleting,
+      and so on.</para>
+
+    <para>Although the editor interface was designed around the general idea of
+      making changes to a directory tree, a specific implementation's behavior
+      depends on its role.  For example, the versioning filesystem library
+      offers an editor that creates new revisions, while the working copy
+      library offers an editor that updates working copies.  And the network
+      layer offers an editor that turns editing calls into wire protocol, which
+      is then converted back into editing calls on the other side!  All of
+      these different tasks can share a single interface, because they are all
+      fundamentally about the same thing: expressing and applying differences
+      between directory trees.</para>
+
+    <para>Like the XML forms, a series of editor calls must follow certain
+      nesting conventions; these conventions are implicit in the interface, in
+      that some of the functions take arguments that can only be obtained from
+      previous calls to other editor functions.</para>
+
+    <para>Editors can best be understood by watching one work on a real
+      directory tree.  For example:</para>
+
+<!-- kff todo: fooo working here. -->
+
+    <para>Suppose that the user has made a number of local changes to her
+      working copy and wants to commit them to the repository.  Let's represent
+      her changes with the same tree-delta from a previous example.  Notice
+      that she has also made textual modifications to
+      <filename>file3</filename>; hence the in-line
+      <literal>&lt;text-delta&gt;</literal>:</para>
+
+    <programlisting>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='dir2'&gt;
+          &lt;directory ancestor='/dir1/dir3'&gt;
+            &lt;tree-delta&gt;
+              &lt;add name='file3'&gt;
+                &lt;file ancestor='/dir1/dir2/file3'&gt;
+                  &lt;text-delta&gt;<emphasis>data</emphasis>&lt;/text-delta&gt;
+                &lt;/file&gt;
+              &lt;/add&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/open&gt;
+        &lt;delete name='dir3'/&gt;
+        &lt;add name='dir4'&gt;
+          &lt;directory ancestor='/dir1/dir2'&gt;
+            &lt;tree-delta&gt;
+              &lt;delete name='file3'/&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/add&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
+</programlisting>
+
+    <para>So how does the client send this information to the server?</para>
+
+    <para>In a nutshell: the tree-delta is <emphasis>streamed</emphasis> over
+      the network, as a series of individual commands given in depth-first
+      order.</para>
+
+    <para>Let's be more specific.  The server presents the client with an
+      object of type <literal>struct svn_delta_edit_fns_t</literal>,
+      colloquially known as an <firstterm>editor</firstterm>.  An editor is
+      really just table of functions; each function makes a change to a
+      filesystem.  Agent A (who has a private filesystem) presents an editor to
+      agent B.  Agent B then calls the editor's functions to change A's
+      filesystem.  B is said to be <firstterm>driving</firstterm> the
+      editor.</para>
+
+    <para>As Karl Fogel likes to describe the process, if one thinks of the
+      tree-delta as a lion, the editor is a "hoop" that the lion jumps through
+      &ndash; each portion of the lion being decomposed through time.</para>
+
+    <para>B cannot call the functions in any willy-nilly order; there are some
+      logical restrictions.  In particular, as B drives the editor, it receives
+      opaque data structures which represent directories and files.  It must
+      use and pass these structures, known as <firstterm>batons</firstterm>, to
+      make further function calls.</para>
+
+    <para>As an example, let's watch how the client would transmit the above
+      tree-delta to the repository.  (The description below is slightly
+      simplified.  For exact interface details, see
+      <filename>subversion/include/svn_delta.h</filename>.)</para>
+
+    <para>[Note:  in the examples below, and throughout Subversion's code base,
+      you'll see references to 'baton' objects.  This is simply a project
+      convention, a name given to structures that define contexts for
+      functions.  Many APIs call these structures 'userdata'.  In Subversion,
+      we like the term 'baton', because it reminds us of one function
+      &ldquo;handing off&rdquo; context to another function.]</para>
+
+    <orderedlist numeration="arabic">
+      <listitem><para>The repository hands an "editor" to the
+          client.</para></listitem>
+
+      <listitem><para>The client begins by calling <literal>root_baton =
+            editor-&gt;open_root();</literal> The client now has an opaque
+          object, <firstterm>root_baton</firstterm>, which represents the root
+          of the repository's filesystem.</para></listitem>
+
+      <listitem><para><literal>dir1_baton = editor-&gt;open_dir("dir1",
+            root_baton);</literal> Notice that <emphasis>root_baton</emphasis>
+          gives the client free license to make any changes it wants in the
+          repository's root directory &ndash; until, of course, it calls
+          <literal>editor-&gt;close_dir(root_baton)</literal>.  The first
+          change made was a replacement of <filename>dir1</filename>.  In
+          return, the client now has a new opaque data structure that can be
+          used to change <filename>dir1</filename>.</para></listitem>
+
+      <listitem><para><literal>dir2_baton = editor-&gt;open_dir("dir2",
+            "/dir1/dir3", dir1_baton);</literal> The
+          <emphasis>dir1_baton</emphasis> is now used to open
+          <filename>dir2</filename> with adirectory whose ancestor is
+          <filename>/dir1/dir3</filename>.</para></listitem>
+
+      <listitem><para><literal>file_baton = editor-&gt;add_file("file3",
+            "/dir1/dir2/file3", dir2_baton);</literal> Edits are now made to
+          <filename>dir2</filename> (using <emphasis>dir2_baton</emphasis>).
+          In particular, a new file is added to this directory whose ancestor
+          is <filename>/dir1/dir2/file3</filename>.</para></listitem>
+
+      <listitem><para>Now the text-delta associated with
+          <emphasis>file_baton</emphasis> needs to be transmitted:
+          <literal>window_handler =
+            editor-&gt;apply_textdelta(file_baton);</literal> Text-deltas
+          themselves, for network efficiency, are streamed in "chunks".  So
+          instead of receiving a baton object, we now have a routine that is
+          able to receive any number of small "windows" of text-delta data.We
+          won't go into the details of the <literal>svn_txdelta_*</literal>
+          functions right here;  but suffice it to say that these routines are
+          used for sending svndiff data to the
+          <emphasis>window_handler</emphasis> routine.</para></listitem>
+
+      <listitem><para><literal>editor-&gt;close_file(file_baton);</literal> The
+          client is done sending the file's text-delta, so it releases the file
+          baton.</para></listitem>
+
+      <listitem><para><literal>editor-&gt;close_dir(dir2_baton));</literal> The
+          client is done making changes to <filename>dir2</filename>, so it
+          releases its baton as well.</para></listitem>
+
+      <listitem><para>The client isn't yet finished with
+          <filename>dir1</filename>, however; it makes two more edits:
+          <literal>editor-&gt;delete_item("dir3", dir1_baton);</literal>
+          <literal>dir4_baton = editor-&gt;add_dir("dir4", "/dir1/dir2",
+            dir1_baton);</literal><emphasis>(The function's name is
+            <literal>delete_item</literal> rather than
+            <literal>delete</literal> to avoid gratuitous incompatibility with
+            C++, where <literal>delete</literal> is a reserved
+            keyword.)</emphasis></para></listitem>
+
+      <listitem><para>Within the directory <filename>dir4</filename> (whose
+          ancestry is <filename>/dir1/dir2</filename>), the client removes a
+          file:  <literal>editor-&gt;delete_item("file3",
+            dir4_baton);</literal></para></listitem>
+
+      <listitem><para>The client is now finished with both
+          <filename>dir4</filename>, as well as its
+          parent <filename>dir1</filename>:
+          <literal>editor-&gt;close_dir(dir4_baton);</literal>
+          <literal>editor-&gt;close_dir(dir1_baton);</literal></para></listitem>
+
+      <listitem><para>The entire tree-delta is complete.  The repository knows
+          this when the root directory is closed:
+          <literal>editor-&gt;close_dir(root_baton);</literal></para></listitem>
+
+    </orderedlist>
+    
+    <para>Of course, at any point above, the repository may reject an edit.  If
+      this is the case, the client aborts the transmission and the repository
+      hasn't changed a bit.  (Thank goodness for transactions!)</para>
+
+    <para>Note, however, that this "editor interface" works in the other
+      direction as well.  When the repository wishes to update a client's
+      working copy, it is the <emphasis>client's</emphasis> reponsibility to
+      give a custom editor-object to the server, and the
+      <emphasis>server</emphasis> is the editor-driver.</para>
+
+    <para>Here are the main advantages of this interface:</para>
+
+    <itemizedlist mark="bullet">
+      <listitem><para><emphasis>Consistency</emphasis>.  Tree-deltas move
+          across the network, in both directions, using the same
+          interface.</para></listitem>
+      <listitem><para><emphasis>Flexibility</emphasis>.  Custom
+          editor-implementations can be written to do anything one might want;
+          the editor-driver has no idea what is happening on the other side of
+          the interface.  For example, an editor might
+          <itemizedlist mark="bullet">
+            <listitem><para>Output XML that matches the tree-delta DTD
+                above;</para></listitem>
+            <listitem><para>Output human-readable descriptions of the edits
+                taking place;</para></listitem>
+            <listitem><para>Modify a filesystem</para></listitem>
+          </itemizedlist>
+      </para></listitem>
+    </itemizedlist>
+
+    <para>Whatever the case, it's easy to "swap" editors around, and make
+      client and server do new and interesting things.</para>
+  </sect1>
+</chapter>
