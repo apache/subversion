@@ -32,6 +32,14 @@ Candidate changes:
       Fix is already included in 1.4.x (r19509)
     Votes:
       +1: lgo, dlr
+
+  * r19841
+    Check cmdline arguments and report errors in svn-backup-dumps.py.
+    The tool showed a python backtrace instead of a useful error message.
+    Justification:
+      Not everyone can interpret a python backtrace.
+    Votes:
+      +1: mf (author of teh commit)
       
 Approved changes:
 
