@@ -52,7 +52,7 @@
       </head>
 
       <x:text>&#10;</x:text>
-      <body id="bodycol">
+      <body>
         <x:text>&#10;</x:text>
         <div class="app">
           <x:text>&#10;</x:text>
