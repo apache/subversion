@@ -61,7 +61,7 @@
 <!ENTITY license         SYSTEM "license.xml">
 ]>
 
-<book id="svn-design">
+<book>
   <title>Subversion</title>
   <subtitle>A New Version Control System</subtitle>
   <subtitle>(compiled from &svn.version;)</subtitle>
