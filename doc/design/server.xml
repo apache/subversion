@@ -183,7 +183,7 @@ A <firstterm>repository</firstterm> consists of node table and a history.
         <!-- </jimb> -->
       </sect3>
 
-      <sect3 id="server.fs.bubble-up">
+      <sect3 id="server.fs.struct.bubble-up">
         <title>Bubble-Up Method</title>
 
         <para>This section provides a conversational explanation of how the
@@ -655,7 +655,7 @@ prompt$
       </sect3>
     </sect2>
 
-    <sect2 id="Implementation">
+    <sect2 id="server.fs.implementation">
       <title>Implementation</title>
 
       <para>For the initial release of Subversion,</para>
