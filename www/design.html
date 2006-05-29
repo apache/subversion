@@ -12,14 +12,99 @@
 <title>Subversion Design</title>
 </head>
 
-<!--
-  TODO: The license below dates from the old ../doc/design/*.xml files. 
-  It's probably a bit weird for documentation, and especially for HTML
-  documentation.  However, let's leave it for now, so that there's a
-  clear indication that the design doc is open source.  We can change
-  to a more documentation-friendly license once we pick one.
--->
-
+<body>
+<div class="app">
+<div class="h1">
+<h1 style="text-align: center">Subversion Design</h1>
+</div><p class="warningmark"><em>NOTE: This document is out of date.  The
+              last substantial update was in October 2002 (r3377).  However,
+              people often come here for the section on the <a href="#server.fs.misc.bubble-up">directory bubble-up
+                method</a>, which is still accurate.</em></p>
+<div class="h1">
+<h2>Table of Contents</h2>
+<ol>
+  <li><a href="#goals">Goals &mdash; The goals of the Subversion project</a>
+  <ol>
+    <li><a href="#goals.rename-remove-resurrect">Rename/removal/resurrection support</a></li>
+    <li><a href="#goals.textbinary">Text vs binary issues</a></li>
+    <li><a href="#goals.i18n">I18N/Multilingual support</a></li>
+    <li><a href="#goals.branching-and-tagging">Branching and tagging</a></li>
+    <li><a href="#goals.misc">Miscellaneous new behaviors</a>
+    <ol>
+      <li><a href="#goals.misc.logmsgs">Log messages</a></li>
+      <li><a href="#goals.misc.diffplugins">Client side diff plug-ins</a></li>
+      <li><a href="#goals.misc.merging">Better merging</a></li>
+      <li><a href="#goals.misc.conflicts">Conflicts resolution</a></li>
+    </ol>
+    </li> <!-- goals.misc -->
+  </ol>
+  </li> <!-- goals -->
+  <li><a href="#model">Model &mdash; The versioning model used by Subversion</a>
+  <ol>
+    <li><a href="#model.wc-and-repos">Working Directories and Repositories</a></li>
+    <li><a href="#model.txns-and-revnums">Transactions and Revision Numbers</a></li>
+    <li><a href="#model.how-wc">How Working Directories Track the Repository</a></li>
+    <li><a href="#model.lock-merge">Locking vs. Merging - Two Paradigms of Co-operative
+     Developments</a></li>
+    <li><a href="#model.props">Properties</a></li>
+    <li><a href="#model.merging-and-ancestry">Merging and Ancestry</a></li>
+  </ol>
+  </li> <!-- model -->
+  <li><a href="#archi">Architecture &mdash; How Subversion's components work together</a>
+  <ol>
+    <li><a href="#archi.client">Client Layer</a></li>
+    <li><a href="#archi.network">Network Layer</a></li>
+    <li><a href="#archi.fs">Filesystem Layer</a></li>
+  </ol>
+  </li> <!-- archi -->
+  <li><a href="#deltas">Deltas &mdash; How to describe changes</a>
+  <ol>
+    <li><a href="#deltas.text">Text Deltas</a></li>
+    <li><a href="#deltas.prop">Property Deltas</a></li>
+    <li><a href="#deltas.tree">Tree Deltas</a></li>
+    <li><a href="#deltas.postfix-text">Postfix Text Deltas</a></li>
+    <li><a href="#deltas.serializing-via-editor">Serializing Deltas via the "Editor" Interface</a></li>
+  </ol>
+  </li> <!-- deltas -->
+  <li><a href="#client">Client &mdash; How the client works</a>
+  <ol>
+    <li><a href="#client.wc">Working copies and the working copy library</a>
+    <ol>
+      <li><a href="#client.wc.layout">The layout of working copies</a></li>
+      <li><a href="#client.wc.library">The working copy management library</a></li>
+    </ol>
+    </li> <!-- client.wc -->
+    <li><a href="#client.libsvn_ra">The repository access library</a></li>
+    <li><a href="#client.libsvn_client">The client operation library</a></li>
+  </ol>
+  </li> <!-- client -->
+  <li><a href="#protocol">Protocol &mdash; How the client and server communicate</a>
+  <ol>
+    <li><a href="#protocol.webdav">The HTTP/WebDAV/DeltaV based protocol</a></li>
+    <li><a href="#protocol.svn">The custom protocol</a></li>
+  </ol>
+  </li> <!-- protocol -->
+  <li><a href="#server">Server &mdash; How the server works</a>
+  <ol>
+    <li><a href="#server.fs">Filesystem</a>
+    <ol>
+      <li><a href="#server.fs.overview">Filesystem Overview</a></li>
+      <li><a href="#server.fs.api">API</a></li>
+      <li><a href="#server.fs.struct">Repository Structure</a>
+      <ol>
+        <li><a href="#server.fs.struct.schema">Schema</a></li>
+        <li><a href="#server.fs.struct.bubble-up">Bubble-Up Method</a></li>
+        <li><a href="#server.fs.struct.diffy-storage">Diffy Storage</a></li>
+      </ol>
+      </li> <!-- server.fs.struct -->
+      <li><a href="#server.fs.implementation">Implementation</a></li>
+    </ol>
+    </li> <!-- server.fs -->
+    <li><a href="#server.libsvn_repos">Repository Library</a></li>
+  </ol>
+  </li> <!-- server -->
+  <li><a href="#license">License &mdash; Copyright</a></li>
+</ol></div>
 <!--
   ================================================================
   Copyright (c) 1999-2004 CollabNet.  All rights reserved.
@@ -66,149 +151,29 @@
   This software consists of voluntary contributions made by many
   individuals on behalf of CollabNet.
 -->
+  
+  
+  
+  
 
-<body>
+  
 
-<div class="h1">
-<center><h1>Subversion Design</h1></center>
+  <div class="h2" id="goals" title="#goals">
+  <h2>Goals &mdash; The goals of the Subversion project</h2>
+  
 
-<p class="warningmark"><em>NOTE: This document is out of date.  The
-last substantial update was in October 2002 (r3377).  However, people
-often come here for the section on the 
-<a href="#server:fs:bubble-up">directory bubble-up method</a>, which
-is still accurate.</em></p>
+  
+    <p>The goal of the Subversion project is to write a version control
+      system that takes over CVS's current and future user base
+      
+    (If you're not familiar with CVS or its shortcomings, then
+          skip to <a href="#model">Model &mdash; The versioning model used by Subversion</a>)
+  . The first release
+      has all the major features of CVS, plus certain new features that CVS
+      users often wish they had.  In general, Subversion works like CVS, except
+      where there's a compelling reason to be different.</p>
 
-</div>  <!-- title (h1) -->
-
-<div class="h1"><!-- no 'id' or 'title' attribute for TOC -->
-<h2>Table of Contents</h2>
-
-<ol>
-<li><a href="#goals"
-    >Goals &mdash; The goals of the Subversion project</a></li>
-    <ol>
-    <li><a href="#goals:rename-remove-resurrect"
-        >Rename/removal/resurrection support</a></li>
-    <li><a href="#goals:textbinary"
-        >Text vs binary issues</a></li>
-    <li><a href="#goals:i18n"
-        >I18N/Multilingual support</a></li>
-    <li><a href="#goals:branching-and-tagging"
-        >Branching and tagging</a></li>
-    <li><a href="#goals:misc"
-        >Miscellaneous new behaviors</a></li>
-      <ol>
-      <li><a href="#goals:misc:logmsgs"
-          >Log messages</a></li>
-      <li><a href="#goals:misc:diffplugins"
-          >Client side diff plug-ins</a></li>
-      <li><a href="#goals:misc:merging"
-          >Better merging</a></li>
-      <li><a href="#goals:conflicts"
-          >Conflicts resolution</a></li>
-      </ol>
-    </ol>
-<li><a href="#model"
-    >Model &mdash; The versioning model used by Subversion</a></li>
-    <ol>
-    <li><a href="#model:wc-and-repos"
-        >Working Directories and Repositories</a></li>
-    <li><a href="#model:txns-and-revnums"
-        >Transactions and Revision Numbers</a></li>
-    <li><a href="#model:how-wc"
-        >How Working Directories Track the Repository</a></li>
-    <li><a href="#model:nolock"
-        >Subversion Does Not Lock Files</a></li>
-    <li><a href="#model:props"
-        >Properties</a></li>
-    <li><a href="#model:merging-and-ancestry"
-        >Merging and Ancestry</a></li>
-    </ol>
-<li><a href="#architecture"
-    >Architecture &mdash; How Subversion's components work together</a></li>
-    <ol>
-    <li><a href="#archi:client"
-        >Client Layer</a></li>
-    <li><a href="#archi:network"
-        >Network Layer</a></li>
-    <li><a href="#archi:fs"
-        >Filesystem Layer</a></li>
-    </ol>
-<li><a href="#deltas"
-    >Deltas &mdash; How to describe changes</a></li>
-    <ol>
-    <li><a href="#deltas:text"
-        >Text Deltas</a></li>
-    <li><a href="#deltas:prop"
-        >Property Deltas</a></li>
-    <li><a href="#deltas:tree"
-        >Tree Deltas</a></li>
-    <li><a href="#deltas:postfix-text"
-        >Postfix Text Deltas</a></li>
-    <li><a href="#deltas.serializing-via-editor"
-        >Serializing Deltas via the "Editor" Interface</a></li>
-    </ol>
-<li><a href="#client"
-    >Client &mdash; How the client works</a></li>
-    <ol>
-    <li><a href="#client:wc"
-        >Working copies and the working copy library</a></li>
-      <ol>
-      <li><a href="#client:wc:layout"
-          >The layout of working copies</a></li>
-      <li><a href="#client:wc:library"
-          >The working copy management library</a></li>
-      </ol>
-    <li><a href="#client:libsvn_ra"
-        >The repository access library</a></li>
-    <li><a href="#client:libsvn_client"
-        >The client operation library</a></li>
-    </ol>
-<li><a href="#protocol"
-    >Protocol &mdash; How the client and server communicate</a></li>
-<li><a href="#server"
-    >Server &mdash; How the server works</a></li>
-    <ol>
-    <li><a href="#server:fs"
-        >Filesystem</a></li>
-      <ol>
-      <li><a href="#server:fs:overview"
-          >Filesystem Overview</a></li>
-      <li><a href="#server:fs:api"
-          >API</a></li>
-      <li><a href="#server:fs:struct"
-          >Repository Structure</a></li>
-        <ol>
-        <li><a href="#server:fs:struct:schema"
-            >Schema</a></li>
-        <li><a href="#server:fs:bubble-up"
-            >Bubble-Up Method</a></li>
-        <li><a href="#server:fs:struct:diffy-storage"
-            >Diffy Storage</a></li>
-        </ol>
-      <li><a href="#Implementation"
-          >Implementation</a></li>
-      <ol>
-    <li><a href="#server:libsvn_repos"
-        >Repository Library</a></li>
-    </ol>
-</ol>
-
-</div>  <!-- TOC (h1) -->
-
-<![CDATA[=========================================================]]>
-<div class="h2" id="goals" title="goals">
-<h2>Goals &mdash; The goals of the Subversion project</h2>
-
-<p>The goal of the Subversion project is to write a version control
-system that takes over CVS's current and future user base (if you're
-not familiar with CVS or its shortcomings, then skip to
-<a href="#model">model</a>). The first release has all the major
-features of CVS, plus certain new features that CVS users often wish
-they had.  In general, Subversion works like CVS, except where there's
-a compelling reason to be different.</p>
-
-<p>So what does Subversion have that CVS doesn't?</p>
+    <p>So what does Subversion have that CVS doesn't?</p>
 
     <ul>
       <li><p>It versions directories, file-metadata, renames, copies
@@ -252,9 +217,11 @@ a compelling reason to be different.</p>
     <p>Some of these advantages are clear and require no further discussion.
       Others are not so obvious, and are explained in greater detail
       below.</p>
+  
 
-  <div class="h3" id="goals:rename-remove-resurrect" title="goals:rename-remove-resurrect">
+  <div class="h3" id="goals.rename-remove-resurrect" title="#goals.rename-remove-resurrect">
     <h3>Rename/removal/resurrection support</h3>
+    
 
     <p>Full rename support means you can trace through ancestry by name
       <em>or</em> by entity.  For example, if you say "Give me
@@ -267,20 +234,21 @@ a compelling reason to be different.</p>
     <p>(Note:  we've not yet implemented this, but it wouldn't be too hard.
       People are advocating switches to 'svn log' that cause history to be
       traced backwards either by entity or by path.)</p>
-  </div>  <!-- goals.rename-remove-resurrect (h3) -->
+  </div> <!-- goals.rename-remove-resurrect (h3) -->
 
-  <div class="h3" id="goals:textbinary" title="goals:textbinary">
+  <div class="h3" id="goals.textbinary" title="#goals.textbinary">
     <h3>Text vs binary issues</h3>
+    
 
     <p>Historically, binary files have been problematic in CVS for two
       unrelated reasons: keyword expansion, and line-end conversion.</p>
 
     <ul>
-      <li><p><b orig-elt="firstterm">Keyword expansion</b> is when CVS
+      <li><p><strong class="firstterm">Keyword expansion</strong> is when CVS
           expands "$Revision$" into "$Revision: 1.1 $", for example.  There
           are a number of keywords in CVS: "$Author: sussman $", "$Date:
           2001/06/04 22:00:52 $", and so on.</p></li>
-      <li><p><b orig-elt="firstterm">Line-end conversion</b> is when CVS
+      <li><p><strong class="firstterm">Line-end conversion</strong> is when CVS
           gives plaintext files theappropriate line-ending conventions for the
           working copy's platform. For example, Unix working copies use LF, but
           Windows working copies use CRLF.  (Like CVS, the Subversion
@@ -312,10 +280,11 @@ a compelling reason to be different.</p>
 
     <p>Both of these changes are done on the client side; the repository
       does not even know about them.</p>
-  </div>  <!-- goals.textbinary (h3) -->
+  </div> <!-- goals.textbinary (h3) -->
 
-  <div class="h3" id="goals:i18n" title="goals:i18n">
+  <div class="h3" id="goals.i18n" title="#goals.i18n">
     <h3>I18N/Multilingual support</h3>
+    
 
     <p>Subversion is internationalized &ndash; commands, user messages, and
       errors can be customized to the appropriate human language at build-time
@@ -325,10 +294,11 @@ a compelling reason to be different.</p>
       assume an ASCII-only universe.  For purposes of keyword expansion and
       line-end conversion, Subversion also understands the UTF-* encodings (but
       not necessarily all of them by the first release).</p>
-  </div>  <!-- goals.i18n (h3) -->
+  </div> <!-- goals.i18n (h3) -->
 
-  <div class="h3" id="goals:branching-and-tagging" title="goals:branching-and-tagging">
+  <div class="h3" id="goals.branching-and-tagging" title="#goals.branching-and-tagging">
     <h3>Branching and tagging</h3>
+    
   
     <p>Subversion supports branching and tagging with one efficient
       operation: `clone'.  To clone a tree is to copy it, to create another
@@ -341,13 +311,15 @@ a compelling reason to be different.</p>
       it's just like a CVS tag.  If you start committing on it, then it's a
       branch.  Voila!  This also implies CVS's "vendor branching" feature,
       since Subversion has real rename and directory support.</p>
-  </div>  <!-- goals.branching-and-tagging (h3) -->
+  </div> <!-- goals.branching-and-tagging (h3) -->
 
-  <div class="h3" id="goals:misc" title="goals:misc">
+  <div class="h3" id="goals.misc" title="#goals.misc">
     <h3>Miscellaneous new behaviors</h3>
+    
 
-    <div class="h4" id="goals:misc:logmsgs" title="goals:misc:logmsgs">
+    <div class="h4" id="goals.misc.logmsgs" title="#goals.misc.logmsgs">
       <h4>Log messages</h4>
+      
 
       <p>Subversion has a flexible log message policy (a small matter, but
         one dear to our hearts).</p>
@@ -360,8 +332,9 @@ a compelling reason to be different.</p>
         madness now.)</p>
     </div> <!-- goals.misc.logmsgs (h4) -->
 
-    <div class="h4" id="goals:misc:diffplugins" title="goals:misc:diffplugins">
+    <div class="h4" id="goals.misc.diffplugins" title="#goals.misc.diffplugins">
       <h4>Client side diff plug-ins</h4>
+      
 
       <p>Subversion supports client-side plug-in diff programs.</p>
 
@@ -373,8 +346,9 @@ a compelling reason to be different.</p>
         post-1.0.)</p>
     </div> <!-- goals.misc.diffplugins (h4) -->
 
-    <div class="h4" id="goals:misc:merging" title="goals:misc:merging">
+    <div class="h4" id="goals.misc.merging" title="#goals.misc.merging">
       <h4>Better merging</h4>
+      
 
       <p>Subversion remembers what has already been merged in and what
         hasn't, thereby avoiding the problem, familiar to CVS users, of
@@ -383,11 +357,12 @@ a compelling reason to be different.</p>
       <p>(Note:  This feature does not exist yet, but is planned for
         post-1.0.)</p>
 
-      <p>For details, see <a href="#model:merging-and-ancestry">model:merging-and-ancestry</a>.</p>
+      <p>For details, see <a href="#model.merging-and-ancestry">Merging and Ancestry</a>.</p>
     </div> <!-- goals.misc.merging (h4) -->
 
-    <div class="h4" id="goals:conflicts" title="goals:conflicts">
+    <div class="h4" id="goals.misc.conflicts" title="#goals.misc.conflicts">
       <h4>Conflicts resolution</h4>
+      
 
       <p>For text files, Subversion resolves conflicts similarly to CVS, by
         folding repository changes into the working files with conflict
@@ -419,28 +394,29 @@ a compelling reason to be different.</p>
         on the client side; but this is not scheduled for the first release).
         Note that users can use their own merge tools anyway, since all the
         original files are available.</p>
-    </div> <!-- goals.conflicts (h4) -->
-  </div>  <!-- goals.misc (h3) -->
+    </div> <!-- goals.misc.conflicts (h4) -->
+  </div> <!-- goals.misc (h3) -->
+</div> <!-- goals (h2) -->
 
-</div>  <!-- goals (h2) -->
+  <div class="h2" id="model" title="#model">
+  <h2>Model &mdash; The versioning model used by Subversion</h2>
+  
 
-
-<![CDATA[=========================================================]]>
-<div class="h2" id="model" title="model">
-<h2>Model &mdash; The versioning model used by Subversion</h2>
-
+  
     <p>This chapter explains the user's view of Subversion &mdash; what
       &ldquo;objects&rdquo; you interact with, how they behave, and how they
       relate to each other.</p>
+  
 
-  <div class="h3" id="model:wc-and-repos" title="model:wc-and-repos">
+  <div class="h3" id="model.wc-and-repos" title="#model.wc-and-repos">
     <h3>Working Directories and Repositories</h3>
+    
 
     <p>Suppose you are using Subversion to manage a software project.  There
       are two things you will interact with: your working directory, and the
       repository.</p>
 
-    <p>Your <b orig-elt="firstterm">working directory</b> is an ordinary
+    <p>Your <strong class="firstterm">working directory</strong> is an ordinary
       directory tree, on your local system, containing your project's sources.
       You can edit these files and compile your program from them in the usual
       way.  Your working directory is your own private work area: Subversion
@@ -459,7 +435,7 @@ a compelling reason to be different.</p>
       and which files are out-of-date with respect to others' work.</p>
 
     <p>While your working directory is for your use alone, the
-      <b orig-elt="firstterm">repository</b> is the common public record you share
+      <strong class="firstterm">repository</strong> is the common public record you share
       with everyone else working on the project.  To publish your changes, you
       use Subversion to put them in the repository.  (What this means, exactly,
       we explain below.)  Once your changes are in the repository, others can
@@ -483,95 +459,96 @@ a compelling reason to be different.</p>
 
     <p>For example, suppose you have a repository laid out like this:</p>
 
-<pre>
-   /trunk/paint/Makefile
-                canvas.c
-                brush.c
-          write/Makefile
-                document.c
-                search.c
+    <pre>
+/trunk/paint/Makefile
+             canvas.c
+             brush.c
+       write/Makefile
+             document.c
+             search.c
 </pre>
 
     <p>In other words, the repository's root directory has a single
-      subdirectory named <tt>trunk</tt>, which itself contains two
-      subdirectories: <tt>paint</tt> and
-      <tt>write</tt>.</p>
+      subdirectory named <tt class="filename">trunk</tt>, which itself contains two
+      subdirectories: <tt class="filename">paint</tt> and
+      <tt class="filename">write</tt>.</p>
 
-    <p>To get a working directory, you must <b orig-elt="firstterm">check out</b>
+    <p>To get a working directory, you must <strong class="firstterm">check out</strong>
       some subtree of the repository.  If you check out
-      <tt>/trunk/write</tt>, you will get a working directory like
+      <tt class="filename">/trunk/write</tt>, you will get a working directory like
       this:</p>
 
-<pre>
-   write/Makefile
-         document.c
-         search.c
-         .svn/
+    <pre>
+write/Makefile
+      document.c
+      search.c
+      .svn/
 </pre>
 
     <p>This working directory is a copy of the repository's
-      <tt>/trunk/write</tt> directory, with one additional entry
-      &mdash; <tt>.svn</tt> &mdash; which holds the extra
+      <tt class="filename">/trunk/write</tt> directory, with one additional entry
+      &mdash; <tt class="filename">.svn</tt> &mdash; which holds the extra
       information needed by Subversion, as mentioned above.</p>
 
-    <p>Suppose you make changes to <tt>search.c</tt>.  Since the
-      <tt>.svn</tt> directory remembers the file's modification
+    <p>Suppose you make changes to <tt class="filename">search.c</tt>.  Since the
+      <tt class="filename">.svn</tt> directory remembers the file's modification
       date and original contents, Subversion can tell that you've changed the
       file.  However, Subversion does not make your changes public until you
       explicitly tell it to.</p>
 
     <p>To publish your changes, you can use Subversion's
-      &lsquo;<literal>commit</literal>&rsquo; command:</p>
+      &lsquo;<tt class="literal">commit</tt>&rsquo; command:</p>
 
-<pre>
-   $ pwd
-   /home/jimb/write
-   $ ls -a
-   .svn/   Makefile   document.c    search.c
-   $ svn commit search.c
-   $
+    <pre>
+$ pwd
+/home/jimb/write
+$ ls -a
+.svn/   Makefile   document.c    search.c
+$ svn commit search.c
+$
 </pre>
 
-    <p>Now your changes to <tt>search.c</tt> have been committed
+    <p>Now your changes to <tt class="filename">search.c</tt> have been committed
       to the repository; if another user checks out a working copy of
-      <tt>/trunk/write</tt>, they will see your text.</p>
+      <tt class="filename">/trunk/write</tt>, they will see your text.</p>
 
     <p>Suppose you have a collaborator, Felix, who checked out a working
-      directory of <tt>/trunk/write</tt> at the same time you did.
-      When you commit your change to <tt>search.c</tt>, Felix's
+      directory of <tt class="filename">/trunk/write</tt> at the same time you did.
+      When you commit your change to <tt class="filename">search.c</tt>, Felix's
       working copy is left unchanged; Subversion only modifies working
       directories at the user's request.</p>
 
     <p>To bring his working directory up to date, Felix can use the
-      Subversion &lsquo;<literal>update</literal>&rsquo; command.  This will
+      Subversion &lsquo;<tt class="literal">update</tt>&rsquo; command.  This will
       incorporate your changes into his working directory, as well as any
       others that have been committed since he checked it out.</p>
 
-<pre>
-   $ pwd
-   /home/felix/write
-   $ ls -a
-   .svn/    Makefile    document.c    search.c
-   $ svn update
-   U search.c
-   $
+    <pre>
+$ pwd
+/home/felix/write
+$ ls -a
+.svn/    Makefile    document.c    search.c
+$ svn update
+U search.c
+$
 </pre>
 
-    <p>The output from the &lsquo;<literal>svn update</literal>&rsquo;
+    <p>The output from the &lsquo;<tt class="literal">svn update</tt>&rsquo;
       command indicates that Subversion updated the contents of
-      <tt>search.c</tt>.  Note that Felix didn't need to specify
+      <tt class="filename">search.c</tt>.  Note that Felix didn't need to specify
       which files to update; Subversion uses the information in the
-      <tt>.svn</tt> directory, and further information in the
+      <tt class="filename">.svn</tt> directory, and further information in the
       repository, to decide which files need to be brought up to date.</p>
 
     <p>We explain below what happens when both you and Felix make changes to
       the same file.</p>
-  </div>  <!-- model.wc-and-repos (h3) -->
+  </div> <!-- model.wc-and-repos (h3) -->
 
-  <div class="h3" id="model:txns-and-revnums" title="model:txns-and-revnums">
+  <div class="h3" id="model.txns-and-revnums" title="#model.txns-and-revnums">
     <h3>Transactions and Revision Numbers</h3>
+    
 
-    <p>A Subversion &lsquo;<literal>commit</literal>&rsquo; operation can
+    <p>A Subversion &lsquo;<tt class="literal">commit</tt>&rsquo; operation can
       publish changes to any number of files and directories as a single atomic
       transaction.  In your working directory, you can change files' contents,
       create, delete, rename and copy files and directories, and then commit
@@ -581,11 +558,11 @@ a compelling reason to be different.</p>
       either all the commit's changes take place, or none of them take place.
       Subversion tries to retain this atomicity in the face of program crashes,
       system crashes, network problems, and other users' actions.  We may call
-      a commit a <b orig-elt="firstterm">transaction</b> when we want to emphasize
+      a commit a <strong class="firstterm">transaction</strong> when we want to emphasize
       its indivisible nature.</p>
 
     <p>Each time the repository accepts a transaction, this creates a new
-      state of the tree, called a <b orig-elt="firstterm">revision</b>.  Each
+      state of the tree, called a <strong class="firstterm">revision</strong>.  Each
       revision is assigned a unique natural number, one greater than the number
       of the previous revision.  The initial revision of a freshly created
       repository is numbered zero, and consists of an empty root
@@ -593,8 +570,8 @@ a compelling reason to be different.</p>
 
     <p>Since each transaction creates a new revision, with its own number,
       we can also use these numbers to refer to transactions; transaction
-      <replaceable>n</replaceable> is the transaction which created revision
-      <replaceable>n</replaceable>.  There is no transaction numbered
+      <em class="replaceable">n</em> is the transaction which created revision
+      <em class="replaceable">n</em>.  There is no transaction numbered
       zero.</p>
 
     <p>Unlike those of many other systems, Subversion's revision numbers
@@ -607,55 +584,56 @@ a compelling reason to be different.</p>
       out a working directory from a repository whose most recent revision is
       4:</p>
 
-<pre>
-   write/Makefile:4
-         document.c:4
-         search.c:4
+    <pre>
+write/Makefile:4
+      document.c:4
+      search.c:4
 </pre>
 
     <p>At the moment, this working directory corresponds exactly to revision
       4 in the repository.  However, suppose you make a change to
-      <tt>search.c</tt>, and commit that change.  Assuming no other
+      <tt class="filename">search.c</tt>, and commit that change.  Assuming no other
       commits have taken place, your commit will create revision 5 of the
       repository, and your working directory will look like this:</p>
 
-<pre>
-   write/Makefile:4
-         document.c:4
-         search.c:5
+    <pre>
+write/Makefile:4
+      document.c:4
+      search.c:5
 </pre>
 
     <p>Suppose that, at this point, Felix commits a change to
-      <tt>document.c</tt>, creating revision 6.  If you use
-      &lsquo;<literal>svn update</literal>&rsquo; to bring your working
+      <tt class="filename">document.c</tt>, creating revision 6.  If you use
+      &lsquo;<tt class="literal">svn update</tt>&rsquo; to bring your working
       directory up to date, then it will look like this:</p>
 
-<pre>
-   write/Makefile:6
-         document.c:6
-         search.c:6
+    <pre>
+write/Makefile:6
+      document.c:6
+      search.c:6
 </pre>
 
-    <p>Felix's changes to <tt>document.c</tt> will appear in
+    <p>Felix's changes to <tt class="filename">document.c</tt> will appear in
       your working copy of that file, and your change will still be present in
-      <tt>search.c</tt>.  In this example, the text of
-      <tt>Makefile</tt> is identical in revisions 4, 5, and 6, but
+      <tt class="filename">search.c</tt>.  In this example, the text of
+      <tt class="filename">Makefile</tt> is identical in revisions 4, 5, and 6, but
       Subversion will mark your working copy with revision 6 to indicate that
       it is still current.  So, after you do a clean update at the root of your
       working directory, your working directory will generally correspond
       exactly to some revision in the repository.</p>
-  </div>  <!-- model.txns-and-revnums (h3) -->
+  </div> <!-- model.txns-and-revnums (h3) -->
 
-  <div class="h3" id="model:how-wc" title="model:how-wc">
+  <div class="h3" id="model.how-wc" title="#model.how-wc">
     <h3>How Working Directories Track the Repository</h3>
+    
 
     <p>For each file in a working directory, Subversion records two
       essential pieces of information:</p>
 
     <ul>
       <li><p>what revision of what repository file your working copy
-          is based on (this is called the file's <b orig-elt="firstterm">base
-            revision</b>), and</p></li>
+          is based on (this is called the file's <strong class="firstterm">base
+            revision</strong>), and</p></li>
       <li><p>a timestamp recording when the local copy was last
           updated.</p></li>
     </ul>
@@ -664,59 +642,63 @@ a compelling reason to be different.</p>
       tell which of the following four states a file is in:</p>
 
     <ul>
-      <li><p><emphasis role="bold">Unchanged, and current.</em>
+      <li><p><strong>Unchanged, and current.</strong>
           The file is unchanged in the workingdirectory, and no changes to that
           file have been committed to therepository since its base
           revision.</p></li>
-      <li><p><emphasis role="bold">Locally changed, and
-            current</em>.  The file has been changed in theworking
+      <li><p><strong>Locally changed, and
+            current</strong>.  The file has been changed in theworking
           directory, and no changes to that file have been committed tothe
           repository since its base revision.  There are local changes thathave
           not been committed to the repository.</p></li>
-      <li><p><emphasis role="bold">Unchanged, and
-            out-of-date</em>.  The file has not been changed in
+      <li><p><strong>Unchanged, and
+            out-of-date</strong>.  The file has not been changed in
           theworking directory, but it has been changed in the repository.  The
           fileshould eventually be updated, to make it current with the
           publicrevision.</p></li>
-      <li><p><emphasis role="bold">Locally changed, and
-            out-of-date</em>.  The file has been changed bothin the
+      <li><p><strong>Locally changed, and
+            out-of-date</strong>.  The file has been changed bothin the
           working directory, and in the repository.  The file should beupdated;
           Subversion will attempt to merge the public changes with thelocal
           changes.  If it can't complete the merge in a plausible
           wayautomatically, Subversion leaves it to the user to resolve the
           conflict.</p></li>
     </ul>
-  </div>  <!-- model.how-wc (h3) -->
+  </div> <!-- model.how-wc (h3) -->
 
-  <div class="h3" id="model:nolock" title="model:nolock">
-    <h3>Subversion Does Not Lock Files</h3>
+  <div class="h3" id="model.lock-merge" title="#model.lock-merge">
+    <h3>Locking vs. Merging - Two Paradigms of Co-operative
+     Developments</h3>
+    
 
-    <p>Subversion does not prevent two users from making changes to the same
+    <p>By default, Subversion prefers the &ldquo;merging&rdquo; method of
+      handling simultaneous editing by multiple users.  This means that
+      Subversion does not prevent two users from making changes to the same
       file at the same time.  For example, if both you and Felix have checked
-      out working directories of <tt>/trunk/write</tt>, Subversion
-      will allow both of you to change <tt>write/search.c</tt> in
+      out working directories of <tt class="filename">/trunk/write</tt>, Subversion
+      will allow both of you to change <tt class="filename">write/search.c</tt> in
       your working directories.  Then, the following sequence of events will
       occur:</p>
 
     <ul>
       <li><p>Suppose Felix tries to commit his changes to
-          <tt>search.c</tt> first.  Hiscommit will succeed, and his
-          text will appear in the latest revision inthe
+          <tt class="filename">search.c</tt> first.  His commit will succeed, and
+          his text will appear in the latest revision inthe
           repository.</p></li>
       <li><p>When you attempt to commit your changes to
-          <tt>search.c</tt>, Subversionwill reject your commit, and
-          tell you that you must update<tt>search.c</tt> before you
-          can commit it.</p></li>
-      <li><p>When you update <tt>search.c</tt>, Subversion
-          will try to merge Felix'schanges from the repository with your local
-          changes.  By default,Subversion merges as if it were applying a
-          patch: if your local changesdo not overlap textually with Felix's,
-          then all is well; otherwise,Subversion leaves it to you to resolve
-          the overlappingchanges.  In either case,Subversion carefully
+          <tt class="filename">search.c</tt>, Subversion will reject your commit,
+          and tell you that you must update<tt class="filename">search.c</tt> before
+          you can commit it.</p></li>
+      <li><p>When you update <tt class="filename">search.c</tt>, Subversion
+          will try to merge Felix's changes from the repository with your local
+          changes.  By default, Subversion merges as if it were applying a
+          patch: if your local changes do not overlap textually with Felix's,
+          then all is well; otherwise, Subversion leaves it to you to resolve
+          the overlapping changes.  In either case, Subversion carefully
           preserves a copy of the original pre-merge text.</p></li>
       <li><p>Once you have verified that Felix's changes and your
-          changes have beenmerged correctly, you can commit the new revision of
-          <tt>search.c</tt>,which now contains everyone's
+          changes have been merged correctly, you can commit the new revision
+          of <tt class="filename">search.c</tt>, which now contains everyone's
           changes.</p></li>
     </ul>
 
@@ -726,27 +708,33 @@ a compelling reason to be different.</p>
 
     <ul>
       <li><p>changes usually do not conflict, so Subversion's behavior
-          does the rightthing by default, while locking can interfere with
+          does the right thing by default, while locking can interfere with
           legitimate work;</p></li>
       <li><p>locking can prevent conflicts within a file, but not
-          conflicts betweenfiles (say, between a C header file and another file
-          that includes it),so it doesn't really solve the problem; and
+          conflicts between files (say, between a C header file and another
+          file that includes it), so it doesn't really solve the problem; and
           finally,</p></li>
       <li><p>people often forget that they are holding locks,
-          resulting inunnecessary delays and friction.</p></li>
+          resulting in unnecessary delays and friction.</p></li>
     </ul>
 
-    <p>Of course, the merge process needs to be under the users' control.
-      Patch is not appropriate for files with rigid formats, like images or
-      executables.  Subversion allows users to customize its merging behavior
-      on a per-file basis.  You can direct Subversion to refuse to merge
-      changes to certain files, and simply present you with the two original
-      texts to choose from.  (Or, someday, you can direct Subversion to merge
-      using a tool which respects the semantics of the file format.)</p>
-  </div>  <!-- model.nolock (h3) -->
+    <p>Of course, some kinds of files with rigid formats, like images or
+      executables, are simply not mergeable.  To support this, Subversion
+      allows users to customize its merging behavior on a per-file basis.
+      Firstly, you can direct Subversion to refuse to merge changes to certain
+      files, and simply present you with the two original texts to choose from.
+      Secondly, in Subversion 1.2 and later, support for the
+      &ldquo;locking&rdquo; method of working is also available, and individual
+      files can be designated as requiring locking.</p>
 
-  <div class="h3" id="model:props" title="model:props">
+    <p>(In the future, you may be able to direct Subversion to merge using a
+      tool which respects the semantics of specific complex file
+      formats.)</p>
+  </div> <!-- model.lock-merge (h3) -->
+
+  <div class="h3" id="model.props" title="#model.props">
     <h3>Properties</h3>
+    
 
     <p>Files generally have interesting attributes beyond their contents:
       mime-types, executable permissions, EOL styles, and so on.  Subversion
@@ -757,8 +745,8 @@ a compelling reason to be different.</p>
       Unix permission bits.</p>
 
     <p>In order to interoperate well with clients on many different
-      operating systems, Subversion supports <b orig-elt="firstterm">property
-        lists</b>, a simple, general-purpose mechanism which clients
+      operating systems, Subversion supports <strong class="firstterm">property
+        lists</strong>, a simple, general-purpose mechanism which clients
       can use to store arbitrary out-of-band information about files.</p>
 
     <p>A property list is a set of name / value pairs.  A property name is
@@ -780,7 +768,7 @@ a compelling reason to be different.</p>
           described above.</p></li>
       <li><p>The Subversion server uses properties to hold attributes
           of its own,and allow clients to read and modify them.  For example,
-          someday ahypothetical &lsquo;<literal>svn-acl</literal>&rsquo;
+          someday ahypothetical &lsquo;<tt class="literal">svn-acl</tt>&rsquo;
           property might hold an access control listwhich the Subversion server
           uses to regulate access to repositoryfiles.</p></li>
       <li><p>Users can invent properties of their own, to store
@@ -794,10 +782,11 @@ a compelling reason to be different.</p>
       visible in the repository until you commit your local changes.  If you do
       commit a change to a property value, other users will see your change
       when they update their working directories.</p>
-  </div>  <!-- model.props (h3) -->
+  </div> <!-- model.props (h3) -->
 
-  <div class="h3" id="model:merging-and-ancestry" title="model:merging-and-ancestry">
+  <div class="h3" id="model.merging-and-ancestry" title="#model.merging-and-ancestry">
     <h3>Merging and Ancestry</h3>
+    
 
     <p>[WARNING:  this section was written in May 2000, at the very
       beginning of the Subversion project.  This functionality probably will
@@ -821,8 +810,8 @@ a compelling reason to be different.</p>
       using branch- and merge-point tags, but that involves a lot of unwieldy
       bookkeeping.)</p>
 
-    <p>In Subversion, merges are remembered by recording <b orig-elt="firstterm">ancestry
-        sets</b>.  A revision's ancestry set is the set of all changes
+    <p>In Subversion, merges are remembered by recording <strong class="firstterm">ancestry
+        sets</strong>.  A revision's ancestry set is the set of all changes
       "accounted for" in that revision.  By maintaining ancestry sets, and
       consulting them when doing merges, Subversion can detect when it would
       apply the same patch twice, and spare users much bookkeeping.  Ancestry
@@ -836,26 +825,31 @@ a compelling reason to be different.</p>
     <p>The simplest ancestor sets are associated with linear histories.  For
       example, here's the history of a file A:</p>
 
-<pre>
-    _____        _____        _____        _____        _____
-   |     |      |     |      |     |      |     |      |     |
-   | A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |
-   |_____|      |_____|      |_____|      |_____|      |_____|
+    <pre>
+
+ _____        _____        _____        _____        _____
+|     |      |     |      |     |      |     |      |     |
+| A:1 |-----&gt;| A:2 |-----&gt;| A:3 |-----&gt;| A:4 |-----&gt;| A:5 |
+|_____|      |_____|      |_____|      |_____|      |_____|
 
 </pre>
 
     <p>The ancestor set of A:5 is:</p>
 
-<pre>
-   { A:1, A:2, A:3, A:4, A:5 }
+    <pre>
+
+  { A:1, A:2, A:3, A:4, A:5 }
+
 </pre>
 
     <p>That is, it includes the change that brought A from nothing to A:1,
       the change from A:1 to A:2, and so on to A:5.  From now on, ranges like
       this will be represented with a more compact notation:</p>
 
-<pre>
-   { A:1-5 }
+    <pre>
+
+  { A:1-5 }
+
 </pre>
 
     <p>Now assume there's a branch B based, or "rooted", at A:2.  (This
@@ -863,45 +857,53 @@ a compelling reason to be different.</p>
       global revision numbers in the diagrams will change to reflect it.)
       Here's what the project looks like with the branch:</p>
 
-<pre>
-    _____        _____        _____        _____        _____        _____
-   |     |      |     |      |     |      |     |      |     |      |     |
-   | A:1 |----->| A:2 |----->| A:4 |----->| A:6 |----->| A:8 |----->| A:9 |
-   |_____|      |_____|      |_____|      |_____|      |_____|      |_____|
-                   \
-                    \
-                     \  _____        _____        _____
-                      \|     |      |     |      |     |
-                       | B:3 |----->| B:5 |----->| B:7 |
-                       |_____|      |_____|      |_____|
+    <pre>
+
+ _____        _____        _____        _____        _____        _____
+|     |      |     |      |     |      |     |      |     |      |     |
+| A:1 |-----&gt;| A:2 |-----&gt;| A:4 |-----&gt;| A:6 |-----&gt;| A:8 |-----&gt;| A:9 |
+|_____|      |_____|      |_____|      |_____|      |_____|      |_____|
+                \
+                 \
+                  \  _____        _____        _____
+                   \|     |      |     |      |     |
+                    | B:3 |-----&gt;| B:5 |-----&gt;| B:7 |
+                    |_____|      |_____|      |_____|
+
 </pre>
 
     <p>If we produce A:9 by merging the B branch back into the
       trunk</p>
 
-<pre>
-    _____        _____        _____        _____        _____        _____
-   |     |      |     |      |     |      |     |      |     |      |     |
-   | A:1 |----->| A:2 |----->| A:4 |----->| A:6 |----->| A:8 |---.->| A:9 |
-   |_____|      |_____|      |_____|      |_____|      |_____|  /   |_____|
-                   \                                            |
-                    \                                           |
-                     \  _____        _____        _____        /
-                      \|     |      |     |      |     |      /
-                       | B:3 |----->| B:5 |----->| B:7 |--->-'
-                       |_____|      |_____|      |_____|
+    <pre>
+
+ _____        _____        _____        _____        _____        _____
+|     |      |     |      |     |      |     |      |     |      |     |
+| A:1 |-----&gt;| A:2 |-----&gt;| A:4 |-----&gt;| A:6 |-----&gt;| A:8 |---.-&gt;| A:9 |
+|_____|      |_____|      |_____|      |_____|      |_____|  /   |_____|
+                \                                            |
+                 \                                           |
+                  \  _____        _____        _____        /
+                   \|     |      |     |      |     |      /
+                    | B:3 |-----&gt;| B:5 |-----&gt;| B:7 |---&gt;-'
+                    |_____|      |_____|      |_____|
+
 </pre>
 
     <p>then what will A:9's ancestor set be?</p>
 
-<pre>
-   { A:1, A:2, A:4, A:6, A:8, A:9, B:3, B:5, B:7}
+    <pre>
+
+  { A:1, A:2, A:4, A:6, A:8, A:9, B:3, B:5, B:7}
+
 </pre>
 
     <p>or more compactly:</p>
 
-<pre>
-   { A:1-9, B:3-7 }
+    <pre>
+
+  { A:1-9, B:3-7 }
+
 </pre>
 
     <p>(It's all right that each file's ranges seem to include non-changes;
@@ -917,45 +919,51 @@ a compelling reason to be different.</p>
       needn't be the case.  For example, the next time we merge the B
       line</p>
 
-<pre>
-    _____     _____     _____     _____     _____      _____      _____
-   |     |   |     |   |     |   |     |   |     |    |     |    |     |
-   | A:1 |-->| A:2 |-->| A:4 |-->| A:6 |-->| A:8 |-.->| A:9 |-.->|A:11 |
-   |_____|   |_____|   |_____|   |_____|   |_____| |  |_____| |  |_____|
-                \                                  /          |
-                 \                                /           |
-                  \  _____     _____     _____   / _____      |
-                   \|     |   |     |   |     | / |     |    /
-                    | B:3 |-->| B:5 |-->| B:7 |-->|B:10 |->-'
-                    |_____|   |_____|   |_____|   |_____|
+    <pre>
+
+ _____     _____     _____     _____     _____      _____      _____
+|     |   |     |   |     |   |     |   |     |    |     |    |     |
+| A:1 |--&gt;| A:2 |--&gt;| A:4 |--&gt;| A:6 |--&gt;| A:8 |-.-&gt;| A:9 |-.-&gt;|A:11 |
+|_____|   |_____|   |_____|   |_____|   |_____| |  |_____| |  |_____|
+             \                                  /          |
+              \                                /           |
+               \  _____     _____     _____   / _____      |
+                \|     |   |     |   |     | / |     |    /
+                 | B:3 |--&gt;| B:5 |--&gt;| B:7 |--&gt;|B:10 |-&gt;-'
+                 |_____|   |_____|   |_____|   |_____|
+
 </pre>
 
     <p>Subversion will know that A's ancestry set already contains B:3-7, so
       only the difference between B:7 and B:10 will be applied.  A's new
       ancestry will be</p>
 
-<pre>
-   { A:1-11, B:3-10 }
+    <pre>
+
+  { A:1-11, B:3-10 }
+
 </pre>
 
     <p>But why limit ourselves to contiguous ranges?  An ancestry set is
       truly a set &ndash; it can be any subset of the changes available:</p>
 
-<pre>
-    _____        _____        _____        _____        _____        _____
-   |     |      |     |      |     |      |     |      |     |      |     |
-   | A:1 |----->| A:2 |----->| A:4 |----->| A:6 |----->| A:8 |--.-->|A:10 |
-   |_____|      |_____|      |_____|      |_____|      |_____| /    |_____|
-                   |                                          /
-                   |                ______________________.__/
-                   |               /                      |
-                   |              /                       |
-                   \           __/_                      _|__
-                    \         {    }                    {    }
-                     \  _____        _____        _____        _____
-                      \|     |      |     |      |     |      |     |
-                       | B:3 |----->| B:5 |----->| B:7 |----->| B:9 |----->
-                       |_____|      |_____|      |_____|      |_____|
+    <pre>
+
+ _____        _____        _____        _____        _____        _____
+|     |      |     |      |     |      |     |      |     |      |     |
+| A:1 |-----&gt;| A:2 |-----&gt;| A:4 |-----&gt;| A:6 |-----&gt;| A:8 |--.--&gt;|A:10 |
+|_____|      |_____|      |_____|      |_____|      |_____| /    |_____|
+                |                                          /
+                |                ______________________.__/
+                |               /                      |
+                |              /                       |
+                \           __/_                      _|__
+                 \         {    }                    {    }
+                  \  _____        _____        _____        _____
+                   \|     |      |     |      |     |      |     |
+                    | B:3 |-----&gt;| B:5 |-----&gt;| B:7 |-----&gt;| B:9 |-----&gt;
+                    |_____|      |_____|      |_____|      |_____|
+
 </pre>
 
     <p>In this diagram, the change from B:3-5 and the change from B:7-9 are
@@ -963,8 +971,10 @@ a compelling reason to be different.</p>
       {&nbsp;A:1-8&nbsp;} plus any local changes.  After committing, A:10's
       ancestry set is</p>
 
-<pre>
-   { A:1-10, B:5, B:9 }
+    <pre>
+
+  { A:1-10, B:5, B:9 }
+
 </pre>
 
     <p>Clearly, saying "Let's merge branch B into A" is a little ambiguous.
@@ -988,8 +998,10 @@ a compelling reason to be different.</p>
       merge only the other two changes, resulting in a final ancestry set
       of:</p>
 
-<pre>
-   { A:1-10, B:3-9 }
+    <pre>
+
+  { A:1-10, B:3-9 }
+
 </pre>
 
 <!--
@@ -1012,16 +1024,14 @@ a compelling reason to be different.</p>
     <p>This description of merging and ancestry applies to both intra- and
       inter-repository merges.  However, inter-repository merging will probably
       not be implemented until a future release of Subversion.</p>
-  </div>  <!-- model.merging-and-ancestry (h3) -->
+  </div> <!-- model.merging-and-ancestry (h3) -->
+</div> <!-- model (h2) -->
 
+  <div class="h2" id="archi" title="#archi">
+  <h2>Architecture &mdash; How Subversion's components work together</h2>
+  
 
-</div>  <!-- model (h2) -->
-
-
-<![CDATA[=========================================================]]>
-<div class="h2" id="architecture" title="architecture">
-<h2>Architecture &mdash; How Subversion's components work together</h2>
-
+  
     <p>Subversion is conceptually divided into a number of separable
       layers.</p>
 
@@ -1033,54 +1043,57 @@ a compelling reason to be different.</p>
     <p>The following diagram illustrates the "layered" architecture, and
       where each particular interface lies.</p>
 
-<pre>
-                       +--------------------+
-                       | commandline or GUI |
-                       |    client app      |
-            +----------+--------------------+----------+ <=== Client interface
-            |              Client Library              |
-            |                                          |
-            |        +----+                            |
-            |        |    |                            |
-    +-------+--------+    +--------------+--+----------+ <=== Network interface
-    | Working Copy   |    |    Remote    |  | Local    |
-    | Management lib |    | Repos Access |  | Repos    |
-    +----------------+    +--------------+  | Access   |
-                          |     neon     |  |          |
-                          +--------------+  |          |
-                             ^              |          |
-                            /               |          |
-                      DAV  /                |          |
-                          /                 |          |
-                         v                  |          |
-                 +---------+                |          |
-                 |         |                |          |
-                 | Apache  |                |          |
-                 |         |                |          |
-                 +---------+                |          |
-                 | mod_DAV |                |          |
-               +-------------+              |          |
-               | mod_DAV_SVN |              |          |
-    +----------+-------------+--------------+----------+ <=== Filesystem interface
-    |                                                  |
-    |               Subversion Filesystem              |
-    |                                                  |
-    +--------------------------------------------------+
-</pre>
+    <pre>
+                    +--------------------+
+                    | commandline or GUI |
+                    |    client app      |
+         +----------+--------------------+----------+ &lt;=== Client interface
+         |              Client Library              |
+         |                                          |
+         |        +----+                            |
+         |        |    |                            |
+ +-------+--------+    +--------------+--+----------+ &lt;=== Network interface
+ | Working Copy   |    |    Remote    |  | Local    |
+ | Management lib |    | Repos Access |  | Repos    |
+ +----------------+    +--------------+  | Access   |
+                       |     neon     |  |          |
+                       +--------------+  |          |
+                          ^              |          |
+                         /               |          |
+                   DAV  /                |          |
+                       /                 |          |
+                      v                  |          |
+              +---------+                |          |
+              |         |                |          |
+              | Apache  |                |          |
+              |         |                |          |
+              +---------+                |          |
+              | mod_DAV |                |          |
+            +-------------+              |          |
+            | mod_DAV_SVN |              |          |
+ +----------+-------------+--------------+----------+ &lt;=== Filesystem interface
+ |                                                  |
+ |               Subversion Filesystem              |
+ |                                                  |
+ +--------------------------------------------------+
 
-  <div class="h3" id="archi:client" title="archi:client">
+</pre>
+  
+
+  <div class="h3" id="archi.client" title="#archi.client">
     <h3>Client Layer</h3>
+    
 
     <p>The Subversion client, which may be either
       command-line or GUI, draws on three libraries.</p>
 
-    <p>The working copy library, <tt>libsvn_wc</tt>, provides
+    <p>The working copy library, <tt class="filename">libsvn_wc</tt>, provides
       an API for managing the client's working copy of a project.  This
       includes operations like renaming or removal of files, patching files,
       extracting local diffs, and routines for maintaining administrative
-      files in the <tt>.svn/</tt> directory.</p>
+      files in the <tt class="filename">.svn/</tt> directory.</p>
 
-    <p>The repository_access library, <tt>libsvn_ra</tt>,
+    <p>The repository_access library, <tt class="filename">libsvn_ra</tt>,
       provides an API for exchanging information with a Subversion
       repository.  This includes the ability to read files, write new
       revisions of files, and ask the repository to compare a working copy
@@ -1089,24 +1102,25 @@ a compelling reason to be different.</p>
       and one designed to work with a repository on local disk.  Any number
       of interface implementations can exist.</p>
 
-    <p>The client library, <tt>libsvn_client</tt> provides
-      general client functions such as <literal>update()</literal> and
-      <literal>commit()</literal>, which may involve one or both of the other
-      two client libraries.  <tt>libsvn_client</tt> should, in
+    <p>The client library, <tt class="filename">libsvn_client</tt> provides
+      general client functions such as <tt class="literal">update()</tt> and
+      <tt class="literal">commit()</tt>, which may involve one or both of the other
+      two client libraries.  <tt class="filename">libsvn_client</tt> should, in
       theory, provide an API that allows anyone to write a Subversion client
       application.</p>
 
-    <p>For details, see <a href="#client">client</a>.</p>
-  </div>  <!-- archi.client (h3) -->
+    <p>For details, see <a href="#client">Client &mdash; How the client works</a>.</p>
+  </div> <!-- archi.client (h3) -->
 
-  <div class="h3" id="archi:network" title="archi:network">
+  <div class="h3" id="archi.network" title="#archi.network">
     <h3>Network Layer</h3>
+    
 
     <p> The network layer's job is to move the repository API requests
       over a wire.</p>
 
     <p>On the client side, a network library
-      (<tt>libneon</tt>) translates these requests into a set of
+      (<tt class="filename">libneon</tt>) translates these requests into a set of
       HTTP WebDAV/DeltaV requests.  The information is sent over TCP/IP to an
       Apache server.  Apache is used for the following reasons:</p>
 
@@ -1129,39 +1143,39 @@ a compelling reason to be different.</p>
       anyone from writing a totally new network access
       implementation.)</p>
 
-    <p>An Apache module (<tt>mod_dav_svn</tt>) translates the
+    <p>An Apache module (<tt class="filename">mod_dav_svn</tt>) translates the
       DAV requests into API calls against a particular repository.</p>
 
-    <p>For details, see <a href="#protocol">protocol</a>.</p>
-  </div>  <!-- archi.network (h3) -->
+    <p>For details, see <a href="#protocol">Protocol &mdash; How the client and server communicate</a>.</p>
+  </div> <!-- archi.network (h3) -->
 
-  <div class="h3" id="archi:fs" title="archi:fs">
+  <div class="h3" id="archi.fs" title="#archi.fs">
     <h3>Filesystem Layer</h3>
+    
 
     <p>When the requests reach a particular repository, they are
-      interpreted by the <b orig-elt="firstterm">Subversion Filesystem
-        library</b>, <tt>libsvn_fs</tt>.  The Subversion
+      interpreted by the <strong class="firstterm">Subversion Filesystem
+        library</strong>, <tt class="filename">libsvn_fs</tt>.  The Subversion
       Filesystem is a custom Unix-like filesystem, with a twist: writes are
       revisioned and atomic, and no data is ever deleted!  This filesystem is
       currently implemented on top of a normal filesystem, using Berkeley DB
       files.</p>
 
-    <p>For a more detailed explanation: see <a href="#server">server</a>.</p>
-  </div>  <!-- archi.fs (h3) -->
+    <p>For a more detailed explanation: see <a href="#server">Server &mdash; How the server works</a>.</p>
+  </div> <!-- archi.fs (h3) -->
+</div> <!-- archi (h2) -->
 
-</div>  <!-- architecture (h2) -->
+  <div class="h2" id="deltas" title="#deltas">
+  <h2>Deltas &mdash; How to describe changes</h2>
+  
 
-
-<![CDATA[=========================================================]]>
-<div class="h2" id="deltas" title="deltas">
-<h2>Deltas &mdash; How to describe changes</h2>
-
+  
     <p>Subversion uses three kinds of deltas:</p>
 
     <ul>
 
-      <li><p>A <emphasis role="bold"><b orig-elt="firstterm">tree
-              delta</b></em> describes the difference between two
+      <li><p>A <strong><strong class="firstterm">tree
+              delta</strong></strong> describes the difference between two
           arbitrary directory trees, the way a traditional patch describes the
           difference between two files.  For example, the delta between
           directories A and B could be applied to A, to produce B.</p>
@@ -1172,19 +1186,19 @@ a compelling reason to be different.</p>
           bits, creation dates, and so on.  The repository and working copy use
           deltas to communicate changes.</p></li>
 
-      <li><p>A <emphasis role="bold"><b orig-elt="firstterm">text
-              delta</b></em> describes changes to a string of
+      <li><p>A <strong><strong class="firstterm">text
+              delta</strong></strong> describes changes to a string of
           bytes, such as the contents of a file.  It is analogous to
           traditional patch format, except that it works equally well on binary
           and text files, and is not invertible (because context and deleted
           data are not recorded).</p></li>
 
-      <li><p>A <emphasis role="bold"><b orig-elt="firstterm">property
-              delta</b></em> describes changes to a list of named
-          properties (see <a href="#model:props">model:props</a>).</p></li>
+      <li><p>A <strong><strong class="firstterm">property
+              delta</strong></strong> describes changes to a list of named
+          properties (see <a href="#model.props">Properties</a>).</p></li>
     </ul>
 
-    <p>The term <b orig-elt="firstterm">delta</b> without qualification generally
+    <p>The term <strong class="firstterm">delta</strong> without qualification generally
       means a tree delta, unless some other meaning is clear from
       context.</p>
 
@@ -1197,13 +1211,15 @@ a compelling reason to be different.</p>
       representation, used for repository storage.  The various representations
       of a given delta are (in theory, anyway) perfectly isomorphic to one
       another, since they describe the same underlying structure.</p>
+  
 
-  <div class="h3" id="deltas:text" title="deltas:text">
+  <div class="h3" id="deltas.text" title="#deltas.text">
     <h3>Text Deltas</h3>
+    
 
     <p>A text delta describes the difference between two strings of bytes,
-      the <b orig-elt="firstterm">source</b> string and the
-      <b orig-elt="firstterm">target</b> string.  Given a source string and a target
+      the <strong class="firstterm">source</strong> string and the
+      <strong class="firstterm">target</strong> string.  Given a source string and a target
       string, we can compute a text delta; given a source string and a delta,
       we can reconstruct the target string.  However, note that deltas are not
       invertible: you cannot always reconstruct the source string given the
@@ -1224,30 +1240,31 @@ a compelling reason to be different.</p>
     </ul>
 
     <p>Instead, Subversion uses the VDelta binary-diffing algorithm, as
-      described in <citetitle>Hunt, J. J., Vo, K.-P., and Tichy, W. F.  An
+      described in <em class="citetitle">Hunt, J. J., Vo, K.-P., and Tichy, W. F.  An
         empirical study of delta algorithms.  Lecture Notes in Computer Science
-        1167 (July 1996), 49-66.</citetitle>  Currently, the output of this
+        1167 (July 1996), 49-66.</em>  Currently, the output of this
       algorithm is stored in a custom data format called
-      <b orig-elt="firstterm">svndiff</b>, invented by Greg Hudson &lt;&gt;, a
+      <strong class="firstterm">svndiff</strong>, invented by Greg Hudson &lt;&gt;, a
       Subversion developer.</p>
 
     <p>The concrete form of a text delta is a well-formed XML element,
       having the following form:</p>
 
-<pre>
-   &lt;text-delta&gt;<em>data</em>&lt;/text-delta&gt;
+    <pre>
+&lt;text-delta&gt;<em class="replaceable">data</em>&lt;/text-delta&gt;
 </pre>
 
-    <p>Here, <replaceable>data</replaceable> is the raw svndiff data,
+    <p>Here, <em class="replaceable">data</em> is the raw svndiff data,
       encoded in the MIME Base64 format.</p>
-  </div>  <!-- deltas.text (h3) -->
+  </div> <!-- deltas.text (h3) -->
 
-  <div class="h3" id="deltas:prop" title="deltas:prop">
+  <div class="h3" id="deltas.prop" title="#deltas.prop">
     <h3>Property Deltas</h3>
+    
     
     <p>A property delta describes changes to a property list, of the sort
       associated with files, directories, and directory entries, and revision
-      numbers (see <a href="#model:props">model:props</a>).  A property delta can record
+      numbers (see <a href="#model.props">Properties</a>).  A property delta can record
       creating, deleting, and changing the text of any number of
       properties.</p>
 
@@ -1257,25 +1274,27 @@ a compelling reason to be different.</p>
       its value.  There are two kinds of changes:</p>
 
     <dl>
-      <dt>set <em>value</em></dt>
+      <dt>set <em class="replaceable">value</em></dt>
         <dd><p>Change the value of the named property to the byte
-            string <em>value</em>. If there is no property
+            string <em class="replaceable">value</em>. If there is no property
             with the given name, one is added to the property
             list.</p></dd>
+      
       <dt>delete</dt>
         <dd><p>Remove the named property from the property
             list.</p></dd>
+      
     </dl>
 
-    <p>At the moment, the <literal>set</literal> command can either create
+    <p>At the moment, the <tt class="literal">set</tt> command can either create
       or change a property value.  However, this simplification means that the
       server cannot distinguish between a client which believes it is creating
       a value afresh, and a client which believes it is changing the value of
       an existing property.  It may simplify conflict detection to divide
-      <literal>set</literal> into two separate <literal>add</literal> and
-      <literal>change</literal> operations.</p>
+      <tt class="literal">set</tt> into two separate <tt class="literal">add</tt> and
+      <tt class="literal">change</tt> operations.</p>
 
-    <p>In the future, we may add a <literal>text-delta</literal> change,
+    <p>In the future, we may add a <tt class="literal">text-delta</tt> change,
       which specifies a change to an existing property's value as a text delta.
       This would give us a compact way to describe small changes to large
       property values.</p>
@@ -1283,39 +1302,40 @@ a compelling reason to be different.</p>
     <p>The concrete form of a property delta is a well-formed XML element,
       having the following form:</p>
 
-<pre>
-   &lt;property-delta&gt;<em>change</em>&hellip;&lt;/property-delta&gt;
+    <pre>
+&lt;property-delta&gt;<em class="replaceable">change</em>&hellip;&lt;/property-delta&gt;
 </pre>
 
-    <p>Each <em>change</em> in a property delta has one of
+    <p>Each <em class="replaceable">change</em> in a property delta has one of
       the following forms:</p>
 
-<pre>
-   &lt;set name='<em>name</em>'&gt;<em>value</em>&lt;/set&gt;
-   &lt;delete name='<em>name</em>'/&gt;
+    <pre>
+&lt;set name='<em class="replaceable">name</em>'&gt;<em class="replaceable">value</em>&lt;/set&gt;
+&lt;delete name='<em class="replaceable">name</em>'/&gt;
 </pre>
 
-    <p>The <em>name</em> attribute of a
-      <literal>set</literal> or <literal>delete</literal> element gives the
-      name of the property to change.  The <em>value</em> of
-      a <literal>set</literal> element gives the new value of the
+    <p>The <em class="replaceable">name</em> attribute of a
+      <tt class="literal">set</tt> or <tt class="literal">delete</tt> element gives the
+      name of the property to change.  The <em class="replaceable">value</em> of
+      a <tt class="literal">set</tt> element gives the new value of the
       property.</p>
 
     <p>If either the property name or the property value contains the
-      characters &lsquo;<literal>&amp;</literal>&rsquo;,
-      &lsquo;<literal>&lt;</literal>&rsquo;, or
-      &lsquo;<literal>'</literal>&rsquo;, they should be replaced with the
-      sequences &lsquo;<literal>&amp;#38</literal>&rsquo;,
-      &lsquo;<literal>&amp;#60</literal>&rsquo;, or
-      &lsquo;<literal>&amp;#39</literal>&rsquo;, respectively.</p>
-  </div>  <!-- deltas.prop (h3) -->
+      characters &lsquo;<tt class="literal">&amp;</tt>&rsquo;,
+      &lsquo;<tt class="literal">&lt;</tt>&rsquo;, or
+      &lsquo;<tt class="literal">'</tt>&rsquo;, they should be replaced with the
+      sequences &lsquo;<tt class="literal">&amp;#38</tt>&rsquo;,
+      &lsquo;<tt class="literal">&amp;#60</tt>&rsquo;, or
+      &lsquo;<tt class="literal">&amp;#39</tt>&rsquo;, respectively.</p>
+  </div> <!-- deltas.prop (h3) -->
 
-  <div class="h3" id="deltas:tree" title="deltas:tree">
+  <div class="h3" id="deltas.tree" title="#deltas.tree">
     <h3>Tree Deltas</h3>
+    
 
     <p>A tree delta describes changes between two directory trees, the
-      <b orig-elt="firstterm">source tree</b> and the <b orig-elt="firstterm">target
-        tree</b>.  Tree deltas can describe copies, renames, and
+      <strong class="firstterm">source tree</strong> and the <strong class="firstterm">target
+        tree</strong>.  Tree deltas can describe copies, renames, and
       deletions of files and directories, changes to file contents, and changes
       to property lists.  A tree delta can also carry information about how the
       files in the target tree are derived from the files in the source tree,
@@ -1332,293 +1352,313 @@ a compelling reason to be different.</p>
       parameters:</p>
 
     <ul>
-      <li><p><em>source-root</em>, the name of the
+      <li><p><em class="replaceable">source-root</em>, the name of the
           directory to which this completetree delta applies,</p></li>
-      <li><p><em>revision</em>, indicating a
+      <li><p><em class="replaceable">revision</em>, indicating a
           particular revision of &hellip;</p></li>
-      <li><p><em>source-dir</em>, which is a
+      <li><p><em class="replaceable">source-dir</em>, which is a
           directory in the source tree that we arecurrently modifying to yield
           &hellip;</p></li>
-      <li><p>&hellip; <b orig-elt="firstterm">target-dir</b> &mdash; the
+      <li><p>&hellip; <strong class="firstterm">target-dir</strong> &mdash; the
           directory we're constructing.</p></li>
     </ul>
 
     <p>When we start interpreting a tree delta,
-      <em>source-root</em>,
-      <em>source-dir</em>, and
-      <em>target-dir</em> are all equal.  As we walk the tree
-      delta, <em>target-dir</em> walks the tree we are
-      constructing, and <em>source-dir</em> walks the
+      <em class="replaceable">source-root</em>,
+      <em class="replaceable">source-dir</em>, and
+      <em class="replaceable">target-dir</em> are all equal.  As we walk the tree
+      delta, <em class="replaceable">target-dir</em> walks the tree we are
+      constructing, and <em class="replaceable">source-dir</em> walks the
       corresponding portion of the source tree, which we use as the original.
-      <em>Source-root</em> remains constant as we walk the
+      <em class="replaceable">Source-root</em> remains constant as we walk the
       delta; we may use it to choose new source trees.</p>
 
     <p>A tree delta is a list of changes of the form</p>
 
-<pre>
-   &lt;tree-delta&gt;<em>change</em>&hellip;&lt;/tree-delta&gt;
+    <pre>
+&lt;tree-delta&gt;<em class="replaceable">change</em>&hellip;&lt;/tree-delta&gt;
 </pre>
 
     <p>which describe how to edit the contents of
-      <em>source-dir</em> to yield
-      <em>target-dir</em>.  There are three kinds of
+      <em class="replaceable">source-dir</em> to yield
+      <em class="replaceable">target-dir</em>.  There are three kinds of
       changes:</p>
 
     <dl>
+      
         <dt>&lt;delete
-          name='<em>name</em>'/&gt;</dt>
-        <dd><p><em>Source-dir</em> has an entry
-            named <em>name</em>, which is not present
-            in <em>target-dir</em>.</p></dd>
+          name='<em class="replaceable">name</em>'/&gt;</dt>
+        <dd><p><em class="replaceable">Source-dir</em> has an entry
+            named <em class="replaceable">name</em>, which is not present
+            in <em class="replaceable">target-dir</em>.</p></dd>
+      
+      
         <dt>&lt;add
-          name='<em>name</em>'&gt;<em>content</em>&lt;/add&gt;</dt>
-        <dd><p><em>target-dir</em> has an entry
-            named <em>name</em>, which is not present
-            in <em>source-dir</em>;
-            <em>content</em> describes the file or directory
+          name='<em class="replaceable">name</em>'&gt;<em class="replaceable">content</em>&lt;/add&gt;</dt>
+        <dd><p><em class="replaceable">target-dir</em> has an entry
+            named <em class="replaceable">name</em>, which is not present
+            in <em class="replaceable">source-dir</em>;
+            <em class="replaceable">content</em> describes the file or directory
             to which the new directory entry refers.</p></dd>
+      
+      
         <dt>&lt;open
-          name='<em>name</em>'&gt;<em>content</em>&lt;/open&gt;</dt>
-        <dd><p>Both <em>source-dir</em> and
-            <em>target-dir</em> have an entry
-            named <em>name</em>, which has changed;
-            <em>content</em> describes the new file
+          name='<em class="replaceable">name</em>'&gt;<em class="replaceable">content</em>&lt;/open&gt;</dt>
+        <dd><p>Both <em class="replaceable">source-dir</em> and
+            <em class="replaceable">target-dir</em> have an entry
+            named <em class="replaceable">name</em>, which has changed;
+            <em class="replaceable">content</em> describes the new file
             or directory.</p></dd>
+      
     </dl>
 
-    <p>Any entries in <em>source-dir</em> whose names
+    <p>Any entries in <em class="replaceable">source-dir</em> whose names
       aren't mentioned are assumed to appear unchanged in
-      <em>target-dir</em>.  Thus, an empty
-      <literal>tree-delta</literal> element indicates that
-      <em>target-dir</em> is identical to
-      <em>source-dir</em>.</p>
+      <em class="replaceable">target-dir</em>.  Thus, an empty
+      <tt class="literal">tree-delta</tt> element indicates that
+      <em class="replaceable">target-dir</em> is identical to
+      <em class="replaceable">source-dir</em>.</p>
 
     <p>In the change descriptions above, each
-      <em>content</em> takes one of the following
+      <em class="replaceable">content</em> takes one of the following
       forms:</p>
 
     <dl>
+      
         <dt>&lt;file
-          <em>ancestor</em>&gt;<em>prop-delta</em>
-          <em>text-delta</em>&lt;/file&gt;</dt>
+          <em class="replaceable">ancestor</em>&gt;<em class="replaceable">prop-delta</em>
+          <em class="replaceable">text-delta</em>&lt;/file&gt;</dt>
 
-        <dd><p>The given <em>target-dir</em> entry
-            refers to a file, <em>f</em>.
-            <em>Ancestor</em> indicates which file in the
-            source tree <em>f</em> is derived from, if any.
+        <dd><p>The given <em class="replaceable">target-dir</em> entry
+            refers to a file, <em class="replaceable">f</em>.
+            <em class="replaceable">Ancestor</em> indicates which file in the
+            source tree <em class="replaceable">f</em> is derived from, if any.
           </p>
 
-          <p><em>Prop-delta</em> is a property delta
-            describing how <em>f</em>'s properties differ
+          <p><em class="replaceable">Prop-delta</em> is a property delta
+            describing how <em class="replaceable">f</em>'s properties differ
             from that ancestor; it may be omitted, indicating that the
             properties are unchanged.</p>
           
-          <p><em>Text-delta</em> is a text delta
-            describing how to construct <em>f</em> from that
+          <p><em class="replaceable">Text-delta</em> is a text delta
+            describing how to construct <em class="replaceable">f</em> from that
             ancestor; it may also be omitted, indicating that
-            <em>f</em>'s text is identical to its
+            <em class="replaceable">f</em>'s text is identical to its
             ancestor's.</p></dd>
+      
 
-        <dt>&lt;file <em>ancestor</em>/&gt;</dt>
+      
+        <dt>&lt;file <em class="replaceable">ancestor</em>/&gt;</dt>
 
-        <dd><p>An abbreviation for <literal>&lt;file
-              <em>ancestor</em>&gt;&lt;/file&gt;</literal>
+        <dd><p>An abbreviation for <tt class="literal">&lt;file
+              <em class="replaceable">ancestor</em>&gt;&lt;/file&gt;</tt>
             &mdash; a fileelement with no property or text delta, thus
             describing a file identicalto its ancestor.</p></dd>
+      
 
+      
         <dt>&lt;directory
-          <em>ancestor</em>&gt;<em>prop-delta</em>
-          <em>tree-delta</em>&lt;/directory&gt;</dt>
+          <em class="replaceable">ancestor</em>&gt;<em class="replaceable">prop-delta</em>
+          <em class="replaceable">tree-delta</em>&lt;/directory&gt;</dt>
 
-        <dd><p>The given <em>target-dir</em> entry
-            refers to a subdirectory, <em>sub</em>.
-            <em>Ancestor</em> indicates which directory in
-            the source tree <em>sub</em> is derived from, if
+        <dd><p>The given <em class="replaceable">target-dir</em> entry
+            refers to a subdirectory, <em class="replaceable">sub</em>.
+            <em class="replaceable">Ancestor</em> indicates which directory in
+            the source tree <em class="replaceable">sub</em> is derived from, if
             any.</p>
             
-          <p><em>Prop-delta</em> is a property delta
-            describing how <em>sub</em>'sproperties differ
+          <p><em class="replaceable">Prop-delta</em> is a property delta
+            describing how <em class="replaceable">sub</em>'sproperties differ
             from that ancestor; it may be omitted, indicating thatthe
             properties are unchanged.</p>
             
-          <p><em>Tree-delta</em>
-            describes how to construct <em>sub</em> from
+          <p><em class="replaceable">Tree-delta</em>
+            describes how to construct <em class="replaceable">sub</em> from
             that ancestor; it may be omitted, indicating that the directory is
-            identical to its ancestor.  <em>Tree-delta</em>
+            identical to its ancestor.  <em class="replaceable">Tree-delta</em>
             should be interpreted with a new
-            <em>target-dir</em> of
-            <tt><em>target-dir</em>/<em>name</em></tt>.</p>
+            <em class="replaceable">target-dir</em> of
+            <tt class="filename"><em class="replaceable">target-dir</em>/<em class="replaceable">name</em></tt>.</p>
             
-          <p>Since <em>tree-delta</em> is itself a
+          <p>Since <em class="replaceable">tree-delta</em> is itself a
             complete tree delta structure, tree deltas are themselves trees,
             whose structure is a subgraph of the target tree.</p></dd>
+      
 
+      
         <dt>&lt;directory
-          <em>ancestor</em>/&gt;</dt>
+          <em class="replaceable">ancestor</em>/&gt;</dt>
 
-        <dd><p>An abbreviation for <literal>&lt;directory
-              <em>ancestor</em>&gt;&lt;/directory&gt;</literal>
+        <dd><p>An abbreviation for <tt class="literal">&lt;directory
+              <em class="replaceable">ancestor</em>&gt;&lt;/directory&gt;</tt>
             &mdash; a directory element with no property or tree delta, thus
             describing a directory identical to its ancestor.</p></dd>
+      
     </dl>
 
-    <p>The <em>content</em> of a <literal>add</literal> or
-      <literal>open</literal> tag may also contain a property delta, describing
+    <p>The <em class="replaceable">content</em> of a <tt class="literal">add</tt> or
+      <tt class="literal">open</tt> tag may also contain a property delta, describing
       changes to the properties of that <em>directory
         entry</em>.</p>
 
-    <p>In the <literal>file</literal> and <literal>directory</literal>
-      elements described above, each <em>ancestor</em> has
+    <p>In the <tt class="literal">file</tt> and <tt class="literal">directory</tt>
+      elements described above, each <em class="replaceable">ancestor</em> has
       one of the following forms:</p>
 
     <dl>
-        <dt>ancestor='<em>path</em>'</dt>
+      
+        <dt>ancestor='<em class="replaceable">path</em>'</dt>
 
         <dd><p>The ancestor of the new or changed file or directory is
-            <tt><em>source-root</em>/<em>path</em></tt>,
-            in <em>revision</em>.  When this appears as an
-            attribute of a <literal>file</literal> element, the element's text
+            <tt class="filename"><em class="replaceable">source-root</em>/<em class="replaceable">path</em></tt>,
+            in <em class="replaceable">revision</em>.  When this appears as an
+            attribute of a <tt class="literal">file</tt> element, the element's text
             delta should be applied to
-            <tt><em>source-root</em>/<em>path</em></tt>.
-            When this appears as an attribute of a <literal>directory</literal>
+            <tt class="filename"><em class="replaceable">source-root</em>/<em class="replaceable">path</em></tt>.
+            When this appears as an attribute of a <tt class="literal">directory</tt>
             element,
-            <tt><em>source-root</em>/<em>path</em></tt>
-            should be the new <em>source-dir</em> for
+            <tt class="filename"><em class="replaceable">source-root</em>/<em class="replaceable">path</em></tt>
+            should be the new <em class="replaceable">source-dir</em> for
             interpreting that element's tree delta.</p></dd>
+      
 
+      
         <dt>new='true'</dt>
 
         <dd><p>This indicates that the file or directory has no
             ancestor in the source tree.  When followed by a
-            <em>text-delta</em>, that delta should be applied
+            <em class="replaceable">text-delta</em>, that delta should be applied
             to the empty file to yield the new text; when followed by a
-            <em>tree-delta</em>, that delta should be
-            evaluated as if <em>source-dir</em> were an
+            <em class="replaceable">tree-delta</em>, that delta should be
+            evaluated as if <em class="replaceable">source-dir</em> were an
             imaginary empty directory.</p></dd>
+      
 
-        <dt><em>nothing</em></dt>
+      
+        <dt><em class="replaceable">nothing</em></dt>
 
-        <dd><p>If neither an <literal>ancestor</literal> nor a
-            <literal>new</literal> attribute is given, this is an abbreviation
+        <dd><p>If neither an <tt class="literal">ancestor</tt> nor a
+            <tt class="literal">new</tt> attribute is given, this is an abbreviation
             for
-            <literal>ancestor='<em>source-dir</em>/<em>name</em>'</literal>,
+            <tt class="literal">ancestor='<em class="replaceable">source-dir</em>/<em class="replaceable">name</em>'</tt>,
             with the same revision number.  This makes the common case &mdash;
             files or directories modified in place &mdash; more
             compact.</p></dd>
+      
     </dl>
 
-    <p>If the <em>ancestor</em> spec is not
-      <literal>new='true'</literal>, it may also contain the text
-      <literal>revision='<em>rev</em>'</literal>, indicating
-      a new value for <em>revision</em>, in which we should
+    <p>If the <em class="replaceable">ancestor</em> spec is not
+      <tt class="literal">new='true'</tt>, it may also contain the text
+      <tt class="literal">revision='<em class="replaceable">rev</em>'</tt>, indicating
+      a new value for <em class="replaceable">revision</em>, in which we should
       find the ancestor.</p>
 
-    <p>If a filename or path appearing as a <em>name</em>
-      or <em>path</em> in the description above contains the
-      characters &lsquo;<literal>&amp;</literal>&rsquo;,
-      &lsquo;<literal>&lt;</literal>&rsquo;, or
-      &lsquo;<literal>'</literal>&rsquo;, they should be replaced with the
-      sequences &lsquo;<literal>&amp;#38;</literal>&rsquo;,
-      &lsquo;<literal>&amp;#60;</literal>&rsquo;, or
-      &lsquo;<literal>&amp;#39;</literal>&rsquo;, respectively.</p>
+    <p>If a filename or path appearing as a <em class="replaceable">name</em>
+      or <em class="replaceable">path</em> in the description above contains the
+      characters &lsquo;<tt class="literal">&amp;</tt>&rsquo;,
+      &lsquo;<tt class="literal">&lt;</tt>&rsquo;, or
+      &lsquo;<tt class="literal">'</tt>&rsquo;, they should be replaced with the
+      sequences &lsquo;<tt class="literal">&amp;#38;</tt>&rsquo;,
+      &lsquo;<tt class="literal">&amp;#60;</tt>&rsquo;, or
+      &lsquo;<tt class="literal">&amp;#39;</tt>&rsquo;, respectively.</p>
 
     <p>Suppose we have the following source tree:</p>
 
-<pre>
-   /dir1/file1
-         file2
-         dir2/file3
-              file4
-         dir3/file5
-              file6
+    <pre>
+/dir1/file1
+      file2
+      dir2/file3
+           file4
+      dir3/file5
+           file6
 </pre>
 
-    <p>If we edit the contents of <tt>/dir1/file1</tt>, we can
+    <p>If we edit the contents of <tt class="filename">/dir1/file1</tt>, we can
       describe the effect on the tree with the following tree delta, to be
       applied to the root:</p>
 
-<pre>
-   &lt;tree-delta&gt;
-     &lt;open name='dir1'&gt;
-       &lt;directory&gt;
-         &lt;tree-delta&gt;
-           &lt;open name='file1'&gt;
-             &lt;file&gt;<em>text-delta</em>&lt;/file&gt;
-           &lt;/open&gt;
-         &lt;/tree-delta&gt;
-       &lt;/directory&gt;
-     &lt;/open&gt;
-   &lt;/tree-delta&gt;
+    <pre>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='file1'&gt;
+          &lt;file&gt;<em class="replaceable">text-delta</em>&lt;/file&gt;
+        &lt;/open&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
 </pre>
 
-    <p>The outer <literal>tree-delta</literal> element describes the changes
+    <p>The outer <tt class="literal">tree-delta</tt> element describes the changes
       made to the root directory.  Within the root directory, there are changes
-      in <tt>dir1</tt>, described by the nested
-      <literal>tree-delta</literal>.  Within <tt>/dir1</tt>, there
-      are changes in <tt>file1</tt>, described by the
-      <em>text-delta</em>.</p>
+      in <tt class="filename">dir1</tt>, described by the nested
+      <tt class="literal">tree-delta</tt>.  Within <tt class="filename">/dir1</tt>, there
+      are changes in <tt class="filename">file1</tt>, described by the
+      <em class="replaceable">text-delta</em>.</p>
 
-    <p>If we had edited both <tt>/dir1/file1</tt> and
-      <tt>/dir1/file2</tt>, then there would simply be two
-      <literal>open</literal> elements in the inner
-      <literal>tree-delta</literal>.</p>
+    <p>If we had edited both <tt class="filename">/dir1/file1</tt> and
+      <tt class="filename">/dir1/file2</tt>, then there would simply be two
+      <tt class="literal">open</tt> elements in the inner
+      <tt class="literal">tree-delta</tt>.</p>
 
     <p>As another example, starting from the same source tree, suppose we
-      rename <tt>/dir1/file1</tt> to
-      <tt>/dir1/file8</tt>:</p>
+      rename <tt class="filename">/dir1/file1</tt> to
+      <tt class="filename">/dir1/file8</tt>:</p>
 
-<pre>
-   &lt;tree-delta&gt;
-     &lt;open name='dir1'&gt;
-       &lt;directory&gt;
-         &lt;tree-delta&gt;
-           &lt;delete name='file1'/&gt;
-           &lt;add name='file8'&gt;
-             &lt;file ancestor='/dir1/file1'/&gt;
-           &lt;/add&gt;
-         &lt;/tree-delta&gt;
-       &lt;/directory&gt;
-     &lt;/open&gt;
-   &lt;/tree-delta&gt;
+    <pre>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;delete name='file1'/&gt;
+        &lt;add name='file8'&gt;
+          &lt;file ancestor='/dir1/file1'/&gt;
+        &lt;/add&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
 </pre>
 
-    <p>As above, the inner <literal>tdelta</literal> describes how
-      <tt>/dir1</tt> has changed: the entry for
-      <tt>/dir1/file1</tt> has disappeared, but there is a new
-      entry, <tt>/dir1/file8</tt>, which is derived from and
-      textually identical to <tt>/dir1/file1</tt> in the source
+    <p>As above, the inner <tt class="literal">tdelta</tt> describes how
+      <tt class="filename">/dir1</tt> has changed: the entry for
+      <tt class="filename">/dir1/file1</tt> has disappeared, but there is a new
+      entry, <tt class="filename">/dir1/file8</tt>, which is derived from and
+      textually identical to <tt class="filename">/dir1/file1</tt> in the source
       directory.  This is just an indirect way of describing the rename.</p>
 
     <p>Why is it necessary to be so indirect?  Consider the delta
       representing the result of:</p>
 
     <ol>
-      <li><p>renaming <tt>/dir1/file1</tt> to
-          <tt>/dir1/tmp</tt>,</p></li>
-      <li><p>renaming <tt>/dir1/file2</tt> to
-          <tt>/dir1/file1</tt>, and</p></li>
-      <li><p>renaming <tt>/dir1/tmp</tt> to
-          <tt>/dir1/file2</tt></p></li>
+      <li><p>renaming <tt class="filename">/dir1/file1</tt> to
+          <tt class="filename">/dir1/tmp</tt>,</p></li>
+      <li><p>renaming <tt class="filename">/dir1/file2</tt> to
+          <tt class="filename">/dir1/file1</tt>, and</p></li>
+      <li><p>renaming <tt class="filename">/dir1/tmp</tt> to
+          <tt class="filename">/dir1/file2</tt></p></li>
     </ol>
 
-    <p>(in other words, exchanging <tt>file1</tt> and
-      <tt>file2</tt>):</p>
+    <p>(in other words, exchanging <tt class="filename">file1</tt> and
+      <tt class="filename">file2</tt>):</p>
 
-<pre>
-   &lt;tree-delta&gt;
-     &lt;open name='dir1'&gt;
-       &lt;directory&gt;
-         &lt;tree-delta&gt;
-           &lt;open name='file1'&gt;
-             &lt;file ancestor='/dir1/file2'/&gt;
-           &lt;/open&gt;
-           &lt;open name='file2'&gt;
-             &lt;file ancestor='/dir1/file1'/&gt;
-           &lt;/open&gt;
-         &lt;/tree-delta&gt;
-       &lt;/directory&gt;
-     &lt;/open&gt;
-   &lt;/tree-delta&gt;
+    <pre>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='file1'&gt;
+          &lt;file ancestor='/dir1/file2'/&gt;
+        &lt;/open&gt;
+        &lt;open name='file2'&gt;
+          &lt;file ancestor='/dir1/file1'/&gt;
+        &lt;/open&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
 </pre>
 
     <p>The indirectness allows the tree delta to capture an arbitrary
@@ -1627,60 +1667,60 @@ a compelling reason to be different.</p>
     <p>Another example, starting from the same source tree:</p>
 
     <ol>
-      <li><p>rename <tt>/dir1/dir2</tt> to
-          <tt>/dir1/dir4</tt>,</p></li>
-      <li><p>rename <tt>/dir1/dir3</tt> to
-          <tt>/dir1/dir2</tt>, and</p></li>
-      <li><p>move <tt>file3</tt> from
-          <em>/dir1/dir4</em> to
-          <em>/dir1/dir2</em>.</p></li>
+      <li><p>rename <tt class="filename">/dir1/dir2</tt> to
+          <tt class="filename">/dir1/dir4</tt>,</p></li>
+      <li><p>rename <tt class="filename">/dir1/dir3</tt> to
+          <tt class="filename">/dir1/dir2</tt>, and</p></li>
+      <li><p>move <tt class="filename">file3</tt> from
+          <em class="replaceable">/dir1/dir4</em> to
+          <em class="replaceable">/dir1/dir2</em>.</p></li>
     </ol>
 
-    <p>Note that <tt>file3</tt>'s path has remained the same,
+    <p>Note that <tt class="filename">file3</tt>'s path has remained the same,
       even though the directories around it have changed.  Here is the tree
       delta:</p>
 
-<pre>
-   &lt;tree-delta&gt;
-     &lt;open name='dir1'&gt;
-       &lt;directory&gt;
-         &lt;tree-delta&gt;
-           &lt;open name='dir2'&gt;
-             &lt;directory ancestor='/dir1/dir3'&gt;
-               &lt;tree-delta&gt;
-                 &lt;add name='file3'&gt;
-                   &lt;file ancestor='/dir1/dir2/file3'/&gt;
-                 &lt;/add&gt;
-               &lt;/tree-delta&gt;
-             &lt;/directory&gt;
-           &lt;/open&gt;
-           &lt;delete name='dir3'/&gt;
-           &lt;add name='dir4'&gt;
-             &lt;directory ancestor='/dir1/dir2'&gt;
-               &lt;tree-delta&gt;
-                 &lt;delete name='file3'/&gt;
-               &lt;/tree-delta&gt;
-             &lt;/directory&gt;
-           &lt;/add&gt;
-         &lt;/tree-delta&gt;
-       &lt;/directory&gt;
-     &lt;/open&gt;
-   &lt;/tree-delta&gt;
+    <pre>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='dir2'&gt;
+          &lt;directory ancestor='/dir1/dir3'&gt;
+            &lt;tree-delta&gt;
+              &lt;add name='file3'&gt;
+                &lt;file ancestor='/dir1/dir2/file3'/&gt;
+              &lt;/add&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/open&gt;
+        &lt;delete name='dir3'/&gt;
+        &lt;add name='dir4'&gt;
+          &lt;directory ancestor='/dir1/dir2'&gt;
+            &lt;tree-delta&gt;
+              &lt;delete name='file3'/&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/add&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
 </pre>
 
     <p>In other words:</p>
 
     <ul>
-      <li><p><tt>/dir1</tt> has changed;</p></li>
-      <li><p>the new directory <tt>/dir1/dir2</tt> is
-          derived from the old <tt>/dir1/dir3</tt>, and contains a
-          new entry <tt>file3</tt>, derived from the old
-          <tt>/dir1/dir2/file3</tt>;</p></li>
-      <li><p>there is no longer any <tt>/dir1/dir3</tt>;
+      <li><p><tt class="filename">/dir1</tt> has changed;</p></li>
+      <li><p>the new directory <tt class="filename">/dir1/dir2</tt> is
+          derived from the old <tt class="filename">/dir1/dir3</tt>, and contains a
+          new entry <tt class="filename">file3</tt>, derived from the old
+          <tt class="filename">/dir1/dir2/file3</tt>;</p></li>
+      <li><p>there is no longer any <tt class="filename">/dir1/dir3</tt>;
           and</p></li>
-      <li><p>the new directory <tt>/dir1/dir4</tt> is
-          derived from the old <tt>/dir1/dir2</tt>, except that its
-          entry for <tt>file3</tt> is now gone.</p></li>
+      <li><p>the new directory <tt class="filename">/dir1/dir4</tt> is
+          derived from the old <tt class="filename">/dir1/dir2</tt>, except that its
+          entry for <tt class="filename">file3</tt> is now gone.</p></li>
     
     </ul>
     
@@ -1688,21 +1728,22 @@ a compelling reason to be different.</p>
       reader:</p>
 
     <ul>
-      <li><p>Delete <tt>dir2</tt>, and then create a file
-          named <tt>dir2</tt>.</p></li>
-      <li><p>Rename <tt>/dir1/dir2</tt> to
-          <tt>/dir1/dir4</tt>; move <tt>file2</tt>
-          into <tt>/dir1/dir4</tt>; and move
-          <tt>file3</tt> into
-          <em>/dir1/dir3</em>.</p></li>
-      <li><p>Move <tt>dir2</tt> into
-          <tt>dir3</tt>, and move <tt>dir3</tt> into
-          <tt>/</tt>.</p></li>
+      <li><p>Delete <tt class="filename">dir2</tt>, and then create a file
+          named <tt class="filename">dir2</tt>.</p></li>
+      <li><p>Rename <tt class="filename">/dir1/dir2</tt> to
+          <tt class="filename">/dir1/dir4</tt>; move <tt class="filename">file2</tt>
+          into <tt class="filename">/dir1/dir4</tt>; and move
+          <tt class="filename">file3</tt> into
+          <em class="replaceable">/dir1/dir3</em>.</p></li>
+      <li><p>Move <tt class="filename">dir2</tt> into
+          <tt class="filename">dir3</tt>, and move <tt class="filename">dir3</tt> into
+          <tt class="filename">/</tt>.</p></li>
     </ul>
-  </div>  <!-- deltas.tree (h3) -->
+  </div> <!-- deltas.tree (h3) -->
 
-  <div class="h3" id="deltas:postfix-text" title="deltas:postfix-text">
+  <div class="h3" id="deltas.postfix-text" title="#deltas.postfix-text">
     <h3>Postfix Text Deltas</h3>
+    
 
     <p>It is sometimes useful to represent a set of changes to a tree
       without providing text deltas in the middle of the stream.  Text deltas
@@ -1714,7 +1755,7 @@ a compelling reason to be different.</p>
     <p>For this reason, our XML representation of a tree delta allows the
       text deltas to come <em>after</em> the &lt;/tree-delta&gt;
       closure.  This allows the client to receive early notice of conflicts:
-      during a <literal>svn commit</literal> command, the client sends a
+      during a <tt class="literal">svn commit</tt> command, the client sends a
       tree-delta to the server, which can check for skeletal conflicts and
       reject the commit, before the client takes the time to transmit the
       (possibly large) textual changes.  This potentially saves quite a bit of
@@ -1724,38 +1765,39 @@ a compelling reason to be different.</p>
       first part appears "in-line" and contains a reference ID.  The second
       part appears after the tree delta is complete.  Here's an example:</p>
 
-<pre>
-   &lt;tree-delta&gt;
-     &lt;open name="foo.c"&gt;
-        &lt;file&gt;
-          &lt;text-delta-ref id="123"&gt;
-        &lt;/file&gt;
-     &lt;/open&gt;
-     &lt;add name="bar.c"&gt;
-        &lt;file&gt;
-          &lt;text-delta-ref id="456"&gt;
-        &lt;/file&gt;
-      &lt;/add&gt;
-   &lt;/tree-delta&gt;
-   &lt;text-delta id="123"&gt;<em>data</em>&lt;/text-delta&gt;
-   &lt;text-delta id="456"&gt;<em>data</em>&lt;/text-delta&gt;
+    <pre>
+ &lt;tree-delta&gt;
+   &lt;open name="foo.c"&gt;
+      &lt;file&gt;
+        &lt;text-delta-ref id="123"&gt;
+      &lt;/file&gt;
+   &lt;/open&gt;
+   &lt;add name="bar.c"&gt;
+      &lt;file&gt;
+        &lt;text-delta-ref id="456"&gt;
+      &lt;/file&gt;
+    &lt;/add&gt;
+ &lt;/tree-delta&gt;
+ &lt;text-delta id="123"&gt;<em>data</em>&lt;/text-delta&gt;
+ &lt;text-delta id="456"&gt;<em>data</em>&lt;/text-delta&gt;
 </pre>
 
-  </div>  <!-- deltas.postfix-text (h3) -->
+  </div> <!-- deltas.postfix-text (h3) -->
 
-  <div class="h3" id="deltas.serializing-via-editor" title="deltas.serializing-via-editor">
+  <div class="h3" id="deltas.serializing-via-editor" title="#deltas.serializing-via-editor">
     <h3>Serializing Deltas via the "Editor" Interface</h3>
+    
 
     <p>The static XML forms above are useful as an import/export format, and
       as a visualization aid, but we also need a way to express a delta as a
       <em>series of operations</em>, to implement directory tree
       diffing and patching.  Subversion defines a standard set of such
-      operations in the vtable <literal>svn_delta_edit_fns_t</literal>, a set
+      operations in the vtable <tt class="literal">svn_delta_edit_fns_t</tt>, a set
       of function prototypes which anyone may implement (see
-      <tt>svn_delta.h</tt>).</p>
+      <tt class="filename">svn_delta.h</tt>).</p>
 
-    <p>Each function in an instance of <literal>svn_delta_editor_t</literal>
-      (colloquially known as an <b orig-elt="firstterm">editor</b>) implements some
+    <p>Each function in an instance of <tt class="literal">svn_delta_editor_t</tt>
+      (colloquially known as an <strong class="firstterm">editor</strong>) implements some
       distinct subtask of editing a directory tree.  In fact, if you compare
       the editor function prototypes to the XML elements described previously,
       you'll notice a fairly strict correspondence: there's one function for
@@ -1788,37 +1830,37 @@ a compelling reason to be different.</p>
       working copy and wants to commit them to the repository.  Let's represent
       her changes with the same tree-delta from a previous example.  Notice
       that she has also made textual modifications to
-      <tt>file3</tt>; hence the in-line
-      <literal>&lt;text-delta&gt;</literal>:</p>
+      <tt class="filename">file3</tt>; hence the in-line
+      <tt class="literal">&lt;text-delta&gt;</tt>:</p>
 
-<pre>
-   &lt;tree-delta&gt;
-     &lt;open name='dir1'&gt;
-       &lt;directory&gt;
-         &lt;tree-delta&gt;
-           &lt;open name='dir2'&gt;
-             &lt;directory ancestor='/dir1/dir3'&gt;
-               &lt;tree-delta&gt;
-                 &lt;add name='file3'&gt;
-                   &lt;file ancestor='/dir1/dir2/file3'&gt;
-                     &lt;text-delta&gt;<em>data</em>&lt;/text-delta&gt;
-                   &lt;/file&gt;
-                 &lt;/add&gt;
-               &lt;/tree-delta&gt;
-             &lt;/directory&gt;
-           &lt;/open&gt;
-           &lt;delete name='dir3'/&gt;
-           &lt;add name='dir4'&gt;
-             &lt;directory ancestor='/dir1/dir2'&gt;
-               &lt;tree-delta&gt;
-                 &lt;delete name='file3'/&gt;
-               &lt;/tree-delta&gt;
-             &lt;/directory&gt;
-           &lt;/add&gt;
-         &lt;/tree-delta&gt;
-       &lt;/directory&gt;
-     &lt;/open&gt;
-   &lt;/tree-delta&gt;
+    <pre>
+&lt;tree-delta&gt;
+  &lt;open name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;open name='dir2'&gt;
+          &lt;directory ancestor='/dir1/dir3'&gt;
+            &lt;tree-delta&gt;
+              &lt;add name='file3'&gt;
+                &lt;file ancestor='/dir1/dir2/file3'&gt;
+                  &lt;text-delta&gt;<em>data</em>&lt;/text-delta&gt;
+                &lt;/file&gt;
+              &lt;/add&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/open&gt;
+        &lt;delete name='dir3'/&gt;
+        &lt;add name='dir4'&gt;
+          &lt;directory ancestor='/dir1/dir2'&gt;
+            &lt;tree-delta&gt;
+              &lt;delete name='file3'/&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/add&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/open&gt;
+&lt;/tree-delta&gt;
 </pre>
 
     <p>So how does the client send this information to the server?</p>
@@ -1828,12 +1870,12 @@ a compelling reason to be different.</p>
       order.</p>
 
     <p>Let's be more specific.  The server presents the client with an
-      object of type <literal>struct svn_delta_edit_fns_t</literal>,
-      colloquially known as an <b orig-elt="firstterm">editor</b>.  An editor is
+      object of type <tt class="literal">struct svn_delta_edit_fns_t</tt>,
+      colloquially known as an <strong class="firstterm">editor</strong>.  An editor is
       really just table of functions; each function makes a change to a
       filesystem.  Agent A (who has a private filesystem) presents an editor to
       agent B.  Agent B then calls the editor's functions to change A's
-      filesystem.  B is said to be <b orig-elt="firstterm">driving</b> the
+      filesystem.  B is said to be <strong class="firstterm">driving</strong> the
       editor.</p>
 
     <p>As Karl Fogel likes to describe the process, if one thinks of the
@@ -1843,13 +1885,13 @@ a compelling reason to be different.</p>
     <p>B cannot call the functions in any willy-nilly order; there are some
       logical restrictions.  In particular, as B drives the editor, it receives
       opaque data structures which represent directories and files.  It must
-      use and pass these structures, known as <b orig-elt="firstterm">batons</b>, to
+      use and pass these structures, known as <strong class="firstterm">batons</strong>, to
       make further function calls.</p>
 
     <p>As an example, let's watch how the client would transmit the above
       tree-delta to the repository.  (The description below is slightly
       simplified.  For exact interface details, see
-      <tt>subversion/include/svn_delta.h</tt>.)</p>
+      <tt class="filename">subversion/include/svn_delta.h</tt>.)</p>
 
     <p>[Note:  in the examples below, and throughout Subversion's code base,
       you'll see references to 'baton' objects.  This is simply a project
@@ -1862,76 +1904,76 @@ a compelling reason to be different.</p>
       <li><p>The repository hands an "editor" to the
           client.</p></li>
 
-      <li><p>The client begins by calling <literal>root_baton =
-            editor-&gt;open_root();</literal> The client now has an opaque
-          object, <b orig-elt="firstterm">root_baton</b>, which represents the root
+      <li><p>The client begins by calling <tt class="literal">root_baton =
+            editor-&gt;open_root();</tt> The client now has an opaque
+          object, <strong class="firstterm">root_baton</strong>, which represents the root
           of the repository's filesystem.</p></li>
 
-      <li><p><literal>dir1_baton = editor-&gt;open_dir("dir1",
-            root_baton);</literal> Notice that <em>root_baton</em>
+      <li><p><tt class="literal">dir1_baton = editor-&gt;open_dir("dir1",
+            root_baton);</tt> Notice that <em>root_baton</em>
           gives the client free license to make any changes it wants in the
           repository's root directory &ndash; until, of course, it calls
-          <literal>editor-&gt;close_dir(root_baton)</literal>.  The first
-          change made was a replacement of <tt>dir1</tt>.  In
+          <tt class="literal">editor-&gt;close_dir(root_baton)</tt>.  The first
+          change made was a replacement of <tt class="filename">dir1</tt>.  In
           return, the client now has a new opaque data structure that can be
-          used to change <tt>dir1</tt>.</p></li>
+          used to change <tt class="filename">dir1</tt>.</p></li>
 
-      <li><p><literal>dir2_baton = editor-&gt;open_dir("dir2",
-            "/dir1/dir3", dir1_baton);</literal> The
+      <li><p><tt class="literal">dir2_baton = editor-&gt;open_dir("dir2",
+            "/dir1/dir3", dir1_baton);</tt> The
           <em>dir1_baton</em> is now used to open
-          <tt>dir2</tt> with adirectory whose ancestor is
-          <tt>/dir1/dir3</tt>.</p></li>
+          <tt class="filename">dir2</tt> with adirectory whose ancestor is
+          <tt class="filename">/dir1/dir3</tt>.</p></li>
 
-      <li><p><literal>file_baton = editor-&gt;add_file("file3",
-            "/dir1/dir2/file3", dir2_baton);</literal> Edits are now made to
-          <tt>dir2</tt> (using <em>dir2_baton</em>).
+      <li><p><tt class="literal">file_baton = editor-&gt;add_file("file3",
+            "/dir1/dir2/file3", dir2_baton);</tt> Edits are now made to
+          <tt class="filename">dir2</tt> (using <em>dir2_baton</em>).
           In particular, a new file is added to this directory whose ancestor
-          is <tt>/dir1/dir2/file3</tt>.</p></li>
+          is <tt class="filename">/dir1/dir2/file3</tt>.</p></li>
 
       <li><p>Now the text-delta associated with
           <em>file_baton</em> needs to be transmitted:
-          <literal>window_handler =
-            editor-&gt;apply_textdelta(file_baton);</literal> Text-deltas
+          <tt class="literal">window_handler =
+            editor-&gt;apply_textdelta(file_baton);</tt> Text-deltas
           themselves, for network efficiency, are streamed in "chunks".  So
           instead of receiving a baton object, we now have a routine that is
           able to receive any number of small "windows" of text-delta data.We
-          won't go into the details of the <literal>svn_txdelta_*</literal>
+          won't go into the details of the <tt class="literal">svn_txdelta_*</tt>
           functions right here;  but suffice it to say that these routines are
           used for sending svndiff data to the
           <em>window_handler</em> routine.</p></li>
 
-      <li><p><literal>editor-&gt;close_file(file_baton);</literal> The
+      <li><p><tt class="literal">editor-&gt;close_file(file_baton);</tt> The
           client is done sending the file's text-delta, so it releases the file
           baton.</p></li>
 
-      <li><p><literal>editor-&gt;close_dir(dir2_baton));</literal> The
-          client is done making changes to <tt>dir2</tt>, so it
+      <li><p><tt class="literal">editor-&gt;close_dir(dir2_baton));</tt> The
+          client is done making changes to <tt class="filename">dir2</tt>, so it
           releases its baton as well.</p></li>
 
       <li><p>The client isn't yet finished with
-          <tt>dir1</tt>, however; it makes two more edits:
-          <literal>editor-&gt;delete_item("dir3", dir1_baton);</literal>
-          <literal>dir4_baton = editor-&gt;add_dir("dir4", "/dir1/dir2",
-            dir1_baton);</literal><em>(The function's name is
-            <literal>delete_item</literal> rather than
-            <literal>delete</literal> to avoid gratuitous incompatibility with
-            C++, where <literal>delete</literal> is a reserved
+          <tt class="filename">dir1</tt>, however; it makes two more edits:
+          <tt class="literal">editor-&gt;delete_item("dir3", dir1_baton);</tt>
+          <tt class="literal">dir4_baton = editor-&gt;add_dir("dir4", "/dir1/dir2",
+            dir1_baton);</tt><em>(The function's name is
+            <tt class="literal">delete_item</tt> rather than
+            <tt class="literal">delete</tt> to avoid gratuitous incompatibility with
+            C++, where <tt class="literal">delete</tt> is a reserved
             keyword.)</em></p></li>
 
-      <li><p>Within the directory <tt>dir4</tt> (whose
-          ancestry is <tt>/dir1/dir2</tt>), the client removes a
-          file:  <literal>editor-&gt;delete_item("file3",
-            dir4_baton);</literal></p></li>
+      <li><p>Within the directory <tt class="filename">dir4</tt> (whose
+          ancestry is <tt class="filename">/dir1/dir2</tt>), the client removes a
+          file:  <tt class="literal">editor-&gt;delete_item("file3",
+            dir4_baton);</tt></p></li>
 
       <li><p>The client is now finished with both
-          <tt>dir4</tt>, as well as its
-          parent <tt>dir1</tt>:
-          <literal>editor-&gt;close_dir(dir4_baton);</literal>
-          <literal>editor-&gt;close_dir(dir1_baton);</literal></p></li>
+          <tt class="filename">dir4</tt>, as well as its
+          parent <tt class="filename">dir1</tt>:
+          <tt class="literal">editor-&gt;close_dir(dir4_baton);</tt>
+          <tt class="literal">editor-&gt;close_dir(dir1_baton);</tt></p></li>
 
       <li><p>The entire tree-delta is complete.  The repository knows
           this when the root directory is closed:
-          <literal>editor-&gt;close_dir(root_baton);</literal></p></li>
+          <tt class="literal">editor-&gt;close_dir(root_baton);</tt></p></li>
 
     </ol>
     
@@ -1955,32 +1997,31 @@ a compelling reason to be different.</p>
           editor-implementations can be written to do anything one might want;
           the editor-driver has no idea what is happening on the other side of
           the interface.  For example, an editor might
-          <ul>
+          </p><ul>
             <li><p>Output XML that matches the tree-delta DTD
                 above;</p></li>
             <li><p>Output human-readable descriptions of the edits
                 taking place;</p></li>
             <li><p>Modify a filesystem</p></li>
-          </ul>
+          </ul><p>
       </p></li>
     </ul>
 
     <p>Whatever the case, it's easy to "swap" editors around, and make
       client and server do new and interesting things.</p>
-  </div>  <!-- deltas.serializing-via-editor (h3) -->
+  </div> <!-- deltas.serializing-via-editor (h3) -->
+</div> <!-- deltas (h2) -->
 
-</div>  <!-- deltas (h2) -->
+  <div class="h2" id="client" title="#client">
+  <h2>Client &mdash; How the client works</h2>
+  
 
-
-<![CDATA[=========================================================]]>
-<div class="h2" id="client" title="client">
-<h2>Client &mdash; How the client works</h2>
-
+  
     <p>The Subversion client is built on three libraries.  One operates
       strictly on the working copy and does not talk to the repository.
       Another talks to the repository but never changes the working copy.  The
       third library uses the first two to provide operations such as
-      <literal>commit</literal> and <literal>update</literal> &ndash;
+      <tt class="literal">commit</tt> and <tt class="literal">update</tt> &ndash;
       operations which need to both talk to the repository and change the
       working copy.</p>
 
@@ -1991,17 +2032,20 @@ a compelling reason to be different.</p>
 
     <p>This chapter describes the libraries, and the physical layout of
       working copies.</p>
+  
 
-  <div class="h3" id="client:wc" title="client:wc">
+  <div class="h3" id="client.wc" title="#client.wc">
     <h3>Working copies and the working copy library</h3>
+    
 
     <p>Working copies are client-side directory trees containing both
       versioned data and Subversion administrative files.  The functions in the
       working copy management library are the only functions in Subversion
       which operate on these trees.</p>
 
-    <div class="h4" id="client:wc:layout" title="client:wc:layout">
+    <div class="h4" id="client.wc.layout" title="#client.wc.layout">
       <h4>The layout of working copies</h4>
+      
 
       <p>This section gives an overview of how
         working copies are arranged physically, but is not a full specification
@@ -2011,7 +2055,7 @@ a compelling reason to be different.</p>
         with special administrative subdirectories, in this case named ".svn"
         instead of "CVS":</p>
 
-<pre>
+      <pre>
                              myproj
                              / | \
                _____________/  |  \______________
@@ -2030,14 +2074,15 @@ a compelling reason to be different.</p>
           ___/ \___
          |         |
        foo.c     bar.c
+
 </pre>
 
-      <p>Each <tt>dir/.svn/</tt> directory records the files in
-        <tt>dir</tt>, their revision numbers and property lists,
+      <p>Each <tt class="filename">dir/.svn/</tt> directory records the files in
+        <tt class="filename">dir</tt>, their revision numbers and property lists,
         pristine revisions of all the files (for client-side delta generation),
-        the repository from which <tt>dir</tt> came, and any local
+        the repository from which <tt class="filename">dir</tt> came, and any local
         changes (such as uncommitted adds, deletes, and renames) that affect
-        <tt>dir</tt>.</p>
+        <tt class="filename">dir</tt>.</p>
 
       <p>Although it would often be possible to deduce certain information
         (such as the original repository) by examining parent directories, this
@@ -2052,99 +2097,101 @@ a compelling reason to be different.</p>
         also makes it easier for the user to prune a big, complete tree into a
         small subtree and still have a valid working copy.</p>
 
-      <p>The <tt>.svn</tt> subdir contains:</p>
+      <p>The <tt class="filename">.svn</tt> subdir contains:</p>
 
       <ul>
-          <li><p>A <tt>format</tt> file, which indicates
+          <li><p>A <tt class="filename">format</tt> file, which indicates
               which version of the working copy adm format this is (so future
               clients can be backwards compatibleeasily).</p></li>
           
-          <li><p>A <tt>text-base</tt> directory,
+          <li><p>A <tt class="filename">text-base</tt> directory,
               containing the pristine repository revisions of the files in the
               corresponding working directory</p></li>
           
-          <li><p>An <tt>entries</tt> file, which holds
+          <li><p>An <tt class="filename">entries</tt> file, which holds
               revision numbers and other information for this directory and its
               files, and records the presence of subdirs.  It also contains the
               repository URLs that each file and directory came from. It may
               help to think of this file as the functional equivalent of the
-              <tt>CVS/Entries</tt> file.</p></li>
+              <tt class="filename">CVS/Entries</tt> file.</p></li>
 
-          <li><p>A <tt>props</tt> directory, containing
+          <li><p>A <tt class="filename">props</tt> directory, containing
               property names and values for each file in the working
               directory.</p></li>
 
-          <li><p>A <tt>prop-base</tt> directory,
+          <li><p>A <tt class="filename">prop-base</tt> directory,
               containing pristine property names and values for each file in
               the working directory.</p></li>
 
-          <li><p>A <tt>dir-props</tt> file, recording
+          <li><p>A <tt class="filename">dir-props</tt> file, recording
               properties for this directory.</p></li>
 
-          <li><p>A <tt>dir-prop-base</tt> file, recording
+          <li><p>A <tt class="filename">dir-prop-base</tt> file, recording
               pristine properties for thisdirectory.</p></li>
 
-          <li><p>A <tt>lock</tt> file, whose presence
+          <li><p>A <tt class="filename">lock</tt> file, whose presence
               implies that some client is currently operating on the
               administrative area.</p></li>
 
-          <li><p>A <tt>tmp</tt> directory, for holding
+          <li><p>A <tt class="filename">tmp</tt> directory, for holding
               scratch-work and helping make working copy operations more
               crash-proof.</p></li>
 
-          <li><p>A <tt>log</tt> file.  If present,
+          <li><p>A <tt class="filename">log</tt> file.  If present,
               indicates a list of actions that need to be taken to complete a
               working-copy-operation that is still "in
               progress".</p></li>
         </ul>
 
       <p>You can read much more about these files in the file
-        <tt>subversion/libsvn_wc/README</tt>.</p>
+        <tt class="filename">subversion/libsvn_wc/README</tt>.</p>
     </div> <!-- client.wc.layout (h4) -->
 
-    <div class="h4" id="client:wc:library" title="client:wc:library">
+    <div class="h4" id="client.wc.library" title="#client.wc.library">
       <h4>The working copy management library</h4>
+      
 
       <ul>
-        <li><p><emphasis role="bold">Requires:</em>  
-          <ul>
+        <li><p><strong>Requires:</strong>  
+          </p><ul>
             <li><p>a working copy</p></li>
-          </ul>
+          </ul><p>
         </p></li>
-        <li><p><emphasis role="bold">Provides:</em>  
-          <ul>
+        <li><p><strong>Provides:</strong>  
+          </p><ul>
             <li><p>ability to manipulate the working copy's versioned
                 data</p></li>
             <li><p>ability to manipulate the working copy's
                 administrative files</p></li>
-          </ul>
+          </ul><p>
         </p></li>
       </ul>
 
       <p>This library performs "offline" operations on the working copy, and
-        lives in <tt>subversion/libsvn_wc/</tt>.</p>
+        lives in <tt class="filename">subversion/libsvn_wc/</tt>.</p>
 
-      <p>The API for <em>libsvn_wc</em> is always
+      <p>The API for <em class="replaceable">libsvn_wc</em> is always
         evolving;  please read the header file for a detailed description:
-        <tt>subversion/include/svn_wc.h</tt>.</p>
+        <tt class="filename">subversion/include/svn_wc.h</tt>.</p>
     </div> <!-- client.wc.library (h4) -->
-  </div>  <!-- client.wc (h3) -->
+  </div> <!-- client.wc (h3) -->
 
-  <div class="h3" id="client:libsvn_ra" title="client:libsvn_ra">
+  <div class="h3" id="client.libsvn_ra" title="#client.libsvn_ra">
     <h3>The repository access library</h3>
+    
 
     <ul>
-      <li><p><emphasis role="bold">Requires:</em>  
-        <ul>
+      <li><p><strong>Requires:</strong>  
+        </p><ul>
           <li><p>network access to a Subversion
               server</p></li>
-        </ul>
+        </ul><p>
       </p></li>
-      <li><p><emphasis role="bold">Provides:</em>  
-        <ul>
+      <li><p><strong>Provides:</strong>  
+        </p><ul>
           <li><p>the ability to interact with a
               repository</p></li>
-        </ul>
+        </ul><p>
       </p></li>
     </ul>
 
@@ -2152,209 +2199,240 @@ a compelling reason to be different.</p>
       repository.</p>
 
     <p>The interface defined in
-      <tt>subversion/include/svn_ra.h</tt> provides a uniform
+      <tt class="filename">subversion/include/svn_ra.h</tt> provides a uniform
       interface to both local and remote repository access.</p>
 
-    <p>Specifically, <em>libsvn_ra_dav</em> will provide
+    <p>Specifically, <em class="replaceable">libsvn_ra_dav</em> will provide
       this interface and speak to repositories using DAV requests.  At some
-      future point, another library <em>libsvn_ra_local</em>
+      future point, another library <em class="replaceable">libsvn_ra_local</em>
       will provide the same interface &ndash; but will link directly to the
       filesystem library for accessing local disk repositories.</p>
-  </div>  <!-- client.libsvn_ra (h3) -->
+  </div> <!-- client.libsvn_ra (h3) -->
 
-  <div class="h3" id="client:libsvn_client" title="client:libsvn_client">
+  <div class="h3" id="client.libsvn_client" title="#client.libsvn_client">
     <h3>The client operation library</h3>
     
+    
     <ul>
-      <li><p><emphasis role="bold">Requires:</em>  
-        <ul>
+      <li><p><strong>Requires:</strong>  
+        </p><ul>
           <li><p>the working copy management library</p></li>
           <li><p>a repository access library</p></li>
-        </ul>
+        </ul><p>
       </p></li>
-      <li><p><emphasis role="bold">Provides:</em>  
-        <ul>
+      <li><p><strong>Provides:</strong>  
+        </p><ul>
           <li><p>all client-side Subversion commands</p></li>
-        </ul>
+        </ul><p>
       </p></li>
     </ul>
 
     <p>These functions correspond to user-level client commands.  In theory,
       any client interface (command-line, GUI, emacs, Python, etc.) should be
-      able to link to <em>libsvn_client</em> and have the
+      able to link to <em class="replaceable">libsvn_client</em> and have the
       ability to act as a full-featured Subversion client.</p>
 
     <p>Again, the detailed API can be found in
-      <tt>subversion/include/svn_client.h</tt>.</p>
-  </div>  <!-- client.libsvn_client (h3) -->
+      <tt class="filename">subversion/include/svn_client.h</tt>.</p>
+  </div> <!-- client.libsvn_client (h3) -->
+</div> <!-- client (h2) -->
 
-</div>  <!-- client (h2) -->
+  <div class="h2" id="protocol" title="#protocol">
+  <h2>Protocol &mdash; How the client and server communicate</h2>
+  
 
+  
+    <p>The wire protocol is the connection between the servers, and the
+      client-side <em>Repository Access (RA) API</em>, provided by
+      <tt class="literal">libsvn_ra</tt>.  Note that <tt class="literal">libsvn_ra</tt> is
+      in fact only a plugin manager, which delegates the actual task of
+      communicating with a server to one of a selection of back-end modules (the
+      <tt class="literal">libsvn_ra_*</tt> libraries).  Therefore, there is not just
+      one Subversion protocol - in fact, at present, there are two:</p>
+    
+    <ul>
+      <li><p>The HTTP/WebDAV/DeltaV based protocol, implemented by the
+          <tt class="literal">mod_dav_svn</tt> Apache 2 server module, and by two
+          independent RA modules, <tt class="literal">libsvn_ra_dav</tt> and
+          <tt class="literal">libsvn_ra_serf</tt>.</p></li>
 
-<![CDATA[=========================================================]]>
-<div class="h2" id="protocol" title="protocol">
-<h2>Protocol &mdash; How the client and server communicate</h2>
+      <li><p>The custom-designed protocol built directly upon TCP,
+          implemented by the <tt class="literal">svnserve</tt> server, and the
+          <tt class="literal">libsvn_ra_svn</tt> RA module.</p></li>
+    </ul>
+  
 
-    <p>The Subversion client library <literal>libsvn_ra_dav</literal> uses
+  <div class="h3" id="protocol.webdav" title="#protocol.webdav">
+    <h3>The HTTP/WebDAV/DeltaV based protocol</h3>
+    
+
+    <p>The Subversion client library <tt class="literal">libsvn_ra_dav</tt> uses
       the <em>Neon</em> library to generate WebDAV DeltaV requests
       and sends them to a "Subversion-aware" Apache server.</p>
 
-    <p>This Apache server is running <em>mod_dav</em> and
-      <em>mod_dav_svn</em>, which translates the requests into
+    <p>This Apache server is running <tt class="literal">mod_dav</tt> and
+      <tt class="literal">mod_dav_svn</tt>, which translates the requests into
       Subversion filesystem calls.</p>
 
-    <p>For more info, see <a href="#archi:network">archi:network</a>.</p>
+    <p>For more info, see <a href="#archi.network">Network Layer</a>.</p>
 
     <p>For a detailed description of exactly how Greg Stein
-      <email>gstein@lyra.org</email> is mapping the WebDAV DeltaV spec to
-      Subversion, see his paper: <systemitem
-        class="url">http://svn.collab.net/repos/svn/trunk/www/webdav-usage.html</systemitem>
+      <em class="email">gstein@lyra.org</em> is mapping the WebDAV DeltaV spec to
+      Subversion, see his paper: <a href="http://svn.collab.net/repos/svn/trunk/www/webdav-usage.html">http://svn.collab.net/repos/svn/trunk/www/webdav-usage.html</a>
     </p>
 
     <p>For more information on WebDAV and the DeltaV extensions, see
-      <systemitem class="url">http://www.webdav.org</systemitem> and
-      <systemitem class="url">http://www.webdav.org/deltav.</systemitem>
+      <a href="http://www.webdav.org">http://www.webdav.org</a> and
+      <a href="http://www.webdav.org/deltav">http://www.webdav.org/deltav</a>.
     </p>
 
     <p>For more information on <em>Neon</em>, see
-      http://www.webdav.org/neon.</p>
+      <a href="http://www.webdav.org/neon">http://www.webdav.org/neon</a>.</p>
+  </div> <!-- protocol.webdav (h3) -->
 
-</div>  <!-- protocol (h2) -->
+  <div class="h3" id="protocol.svn" title="#protocol.svn">
+    <h3>The custom protocol</h3>
+    
 
+    <p>The client library <tt class="literal">libsvn_ra_svn</tt> and standalone
+      server program <tt class="literal">svnserve</tt> implement a custom protocol
+      over TCP.  This protocol is documented at <a href="http://svn.collab.net/repos/svn/trunk/subversion/libsvn_ra_svn/protocol">http://svn.collab.net/repos/svn/trunk/subversion/libsvn_ra_svn/protocol</a>.</p>
+  </div> <!-- protocol.svn (h3) -->
+</div> <!-- protocol (h2) -->
 
-<![CDATA[=========================================================]]>
-<div class="h2" id="server" title="server">
-<h2>Server &mdash; How the server works</h2>
+  <div class="h2" id="server" title="#server">
+  <h2>Server &mdash; How the server works</h2>
+  
 
+  
     <p>The term &ldquo;server&rdquo; is ambiguous, because it has at least
       two different meanings: it can refer to a powerful computer which offers
       services to users on a network, or it can refer to a CPU process designed
       to receive network requests.</p>
 
-    <p>In Subversion, however, the <b orig-elt="firstterm">server</b> is just a
-      set of libraries that implements <b orig-elt="firstterm">repositories</b> and
+    <p>In Subversion, however, the <strong class="firstterm">server</strong> is just a
+      set of libraries that implements <strong class="firstterm">repositories</strong> and
       makes them available to other programs.  No networking is
       required.</p>
 
-    <p>There are two main libraries: the <b orig-elt="firstterm">Subversion
-        Filesystem</b> library, and the <b orig-elt="firstterm">Subversion
-        Repository</b> library.</p>
+    <p>There are two main libraries: the <strong class="firstterm">Subversion
+        Filesystem</strong> library, and the <strong class="firstterm">Subversion
+        Repository</strong> library.</p>
+  
 
-  <div class="h3" id="server:fs" title="server:fs">
+  <div class="h3" id="server.fs" title="#server.fs">
     <h3>Filesystem</h3>
+    
 
-    <div class="h4" id="server:fs:overview" title="server:fs:overview">
+    <div class="h4" id="server.fs.overview" title="#server.fs.overview">
       <h4>Filesystem Overview</h4>
+      
       <ul>
-        <li><p><emphasis role="bold">Requires:</em>  
-          <ul>
+        <li><p><strong>Requires:</strong>  
+          </p><ul>
             <li><p>some writable disk space</p></li>
             <li><p>(for now) Berkeley DB library</p></li>
-          </ul>
+          </ul><p>
         </p></li>
-        <li><p><emphasis role="bold">Provides:</em>  
-          <ul>
+        <li><p><strong>Provides:</strong>  
+          </p><ul>
             <li><p>a repository for storing files</p></li>
             <li><p>concurrent client transactions</p></li>
             <li><p>enforcement of user &amp; group permissions
                 [someday, not yet]</p></li>
-          </ul>
+          </ul><p>
         </p></li>
       </ul>
       <p>This library implements a hierarchical filesystem which supports
         atomic changes to directory trees, and records a complete history of
         the changes.  In addition to recording changes to file and directory
         contents, the Subversion Filesystem records changes to file meta-data
-        (see discussion of <b orig-elt="firstterm">properties</b> in <a href="#model">model</a>).</p>
+        (see discussion of <strong class="firstterm">properties</strong> in <a href="#model">Model &mdash; The versioning model used by Subversion</a>).</p>
     </div> <!-- server.fs.overview (h4) -->
 
-    <div class="h4" id="server:fs:api" title="server:fs:api">
+    <div class="h4" id="server.fs.api" title="#server.fs.api">
       <h4>API</h4>
+      
 
       <p> There are two main files that describe the Subversion
         filesystem.</p>
 
-      <p>First, read the section below (<a href="#server:fs:struct">server:fs:struct</a>)
+      <p>First, read the section below (<a href="#server.fs.struct">Repository Structure</a>)
         for a general overview of how the filesystem works.</p>
 
       <p>Once you've done this, read Jim Blandy's own structural overview,
         which explains how nodes and revisions are organized (among other
         things) in the filesystem implementation:
-        <tt>subversion/libsvn_fs/structure</tt>.</p>
+        <tt class="filename">subversion/libsvn_fs/structure</tt>.</p>
 
       <p>Finally, read the well-documented API in
-        <tt>subversion/include/svn_fs.h</tt>.</p>
+        <tt class="filename">subversion/include/svn_fs.h</tt>.</p>
     </div> <!-- server.fs.api (h4) -->
 
-    <div class="h4" id="server:fs:struct" title="server:fs:struct">
+    <div class="h4" id="server.fs.struct" title="#server.fs.struct">
       <h4>Repository Structure</h4>
+      
 
-      <div class="h5" id="server:fs:struct:schema" title="server:fs:struct:schema">
+      <div class="h5" id="server.fs.struct.schema">
         <h5>Schema</h5>
+        
 
         <p>
           To begin, please be sure that you're already casually familiar with
           Subversion's ideas of files, directories, and revision histories.  If
-          not, see <a href="#model">model</a>.  We can now offer precise,
+          not, see <a href="#model">Model &mdash; The versioning model used by Subversion</a>.  We can now offer precise,
           technical descriptions of the terms introduced there.</p>
 
         <!-- This is taken from jimb's very first Subversion spec! -->
 
-<!-- I'm not sure what the best way to achieve the rendering effect of
-     the original is; non-li paragraphs inside a ul is the best I can
-     come up with. -->
-<ul>
+        <pre>
+A <strong class="firstterm">text string</strong> is a string of Unicode characters which is
+canonically decomposed and ordered, according to the rules described in the
+Unicode standard.
 
-   <p>A <b orig-elt="firstterm">text string</b> is a string of Unicode
-   characters which is canonically decomposed and ordered, according
-   to the rules described in the Unicode standard.</p>
+A <strong class="firstterm">string of bytes</strong> is what you'd expect.
 
-   <p>A <b orig-elt="firstterm">string of bytes</b> is what you'd
-   expect.</p>
+A <strong class="firstterm">property list</strong> is an unordered list of properties.  A
+<strong class="firstterm">property</strong> is a pair
+<tt class="literal">(<em class="replaceable">name</em>,
+  <em class="replaceable">value</em>)</tt>, where
+<em class="replaceable">name</em> is a text string, and
+<em class="replaceable">value</em> is a string of bytes.  No two properties in a
+property list have the same name.
 
-   <p>A <b orig-elt="firstterm">property list</b> is an unordered list
-   of properties.  A <b orig-elt="firstterm">property</b> is a
-   pair <literal>(<em>name</em>, <em>value</em>)</literal>,
-   where <em>name</em> is a text string, and <em>value</em> is a string of
-   bytes.  No two properties in a property list have the same
-   name.</p>
+A <strong class="firstterm">file</strong> is a property list and a string of bytes.
 
-   <p>A <b orig-elt="firstterm">file</b> is a property list and a
-   string of bytes.</p>
+A <strong class="firstterm">node</strong> is either a file or a directory.  (We define a
+directory below.)  Nodes are distinguished unions &mdash; you can always tell
+whether a node is a file or a directory.
 
-   <p>A <b orig-elt="firstterm">node</b> is either a file or a
-   directory.  (We define a directory below.)  Nodes are distinguished
-   unions &mdash; you can always tell whether a node is a file or a
-   directory.</p>
+A <strong class="firstterm">node table</strong> is an array mapping some set of positive
+integers, called <strong class="firstterm">node numbers</strong>, onto
+<strong class="firstterm">nodes</strong>.  If a node table maps some number
+<em class="replaceable">i</em> to some node <em class="replaceable">n</em>, then
+<em class="replaceable">i</em> is a <strong class="firstterm">valid node number</strong> in
+that table, and <strong class="firstterm">node</strong> <em class="replaceable">i</em>is
+<em class="replaceable">n</em>.  Otherwise, <em class="replaceable">i</em> is an
+<strong class="firstterm">invalid node number</strong> in that table.
 
-   <p>A <b orig-elt="firstterm">node table</b> is an array mapping
-   some set of positive integers, called <b orig-elt="firstterm">node
-   numbers</b>, onto <b orig-elt="firstterm">nodes</b>.  If a node
-   table maps some number <em>i</em> to some node <em>n</em>, then <em>i</em>
-   is a <b orig-elt="firstterm">valid node number</b> in that table,
-   and <b orig-elt="firstterm">node</b> <em>i</em>is <em>n</em>.
-   Otherwise, <em>i</em> is an <b orig-elt="firstterm">invalid node
-   number</b> in that table.</p>
+A <strong class="firstterm">directory entry</strong> is a triple
+<tt class="literal">(<em class="replaceable">name</em>, <em class="replaceable">props</em>,
+  <em class="replaceable">node</em>)</tt>, where
+<em class="replaceable">name</em> is a text string,
+<em class="replaceable">props</em> is a property list, and
+<em class="replaceable">node</em> is a node number.
 
-   <p>A <b orig-elt="firstterm">directory entry</b> is a
-   triple <literal>(<em>name</em>, <em>props</em>, <em>node</em>)</literal>,
-   where <em>name</em> is a text string, <em>props</em> is a property
-   list, and <em>node</em> is a node number.</p>
+A <strong class="firstterm">directory</strong> is an unordered list of directory entries,
+and a property list.
 
-   <p>A <b orig-elt="firstterm">directory</b> is an unordered list of
-   directory entries, and a property list.</p>
+A <strong class="firstterm">revision</strong> is a node number and a property list.
 
-   <p>A <b orig-elt="firstterm">revision</b> is a node number and a
-   property list.</p>
+A <strong class="firstterm">history</strong> is an array of revisions, indexed by a
+contiguous range of non-negative integers containing 0.
 
-   <p>A <b orig-elt="firstterm">history</b> is an array of revisions,
-   indexed by a contiguous range of non-negative integers containing
-   0.</p>
+A <strong class="firstterm">repository</strong> consists of node table and a history.
 
-   <p>A <b orig-elt="firstterm">repository</b> consists of node table
-   and a history.</p>
-
-</ul>
+</pre>
 
         <!-- Some definitions: we say that a node @var{n} is a @dfn{direct
         child} of a directory @var{d} iff @var{d} contains a directory entry
@@ -2375,45 +2453,46 @@ a compelling reason to be different.</p>
         <p>Now that we've explained the form of the data, we make some
           restrictions on that form.</p>
 
-        <p><emphasis role="bold">Every revision has a root
-            directory.</em>  Every revision's node number is a valid node
+        <p><strong>Every revision has a root
+            directory.</strong>  Every revision's node number is a valid node
           number, and the node it refers to is always a directory.  We call
-          this the revision's <b orig-elt="firstterm">root directory</b>.</p>
+          this the revision's <strong class="firstterm">root directory</strong>.</p>
 
-        <p><emphasis role="bold">Revision 0 always contains an empty root
-            directory.</em>  This baseline makes it easy to check out
+        <p><strong>Revision 0 always contains an empty root
+            directory.</strong>  This baseline makes it easy to check out
           whole projects from the repository.</p>
 
-        <p><emphasis role="bold">Directories contain only valid
-            links.</em> Every directory entry's
-          <em>node</em> is a valid node number.</p>
+        <p><strong>Directories contain only valid
+            links.</strong> Every directory entry's
+          <em class="replaceable">node</em> is a valid node number.</p>
 
-        <p><emphasis role="bold">Directory entries can be identified by
-            name.</em> For any directory <em>d</em>,
-          every directory entry in <em>d</em> has a distinct
+        <p><strong>Directory entries can be identified by
+            name.</strong> For any directory <em class="replaceable">d</em>,
+          every directory entry in <em class="replaceable">d</em> has a distinct
           name.</p>
 
-        <p><emphasis role="bold">There are no cycles of
-            directories.</em>  No node is its own child.</p>
+        <p><strong>There are no cycles of
+            directories.</strong>  No node is its own child.</p>
 
-        <p><emphasis role="bold">Directories can have more than one
-            parent.</em>  The Unix file system does not allow more than
+        <p><strong>Directories can have more than one
+            parent.</strong>  The Unix file system does not allow more than
           one hard link to a directory, but Subversion does allow the analogous
           situation.  Thus, the directories in a Subversion repository form a
-          directed acyclic graph (<b orig-elt="firstterm">DAG</b>), not a tree.
+          directed acyclic graph (<strong class="firstterm">DAG</strong>), not a tree.
           However, it would be distracting and unhelpful to replace the
           familiar term &ldquo;directory tree&rdquo; with the unfamiliar term
           &ldquo;directory DAG&rdquo;, so we still call it a &ldquo;directory
           tree&rdquo; here.</p>
 
-        <p><emphasis role="bold">There are no dead nodes.</em>  Every
+        <p><strong>There are no dead nodes.</strong>  Every
           node is a child of some revision's root directory.</p>
 
         <!-- </jimb> -->
-      </div>  <!-- server:fs:struct:schema (h5) -->
+      </div> <!-- server.fs.struct.schema (h5) -->
 
-      <div class="h5" id="server:fs:bubble-up" title="server:fs:bubble-up">
+      <div class="h5" id="server.fs.struct.bubble-up">
         <h5>Bubble-Up Method</h5>
+        
 
         <p>This section provides a conversational explanation of how the
           repository actually stores and revisions file trees.  It's not
@@ -2424,17 +2503,17 @@ a compelling reason to be different.</p>
         <p>Suppose we have a new project, at revision 1, looking like this
           (using CVS syntax):</p>
 
-<pre>
-   prompt$ svn checkout myproj
-   U myproj/
-   U myproj/B
-   U myproj/A
-   U myproj/A/fish
-   U myproj/A/fish/tuna
-   prompt$
+        <pre>
+prompt$ svn checkout myproj
+U myproj/
+U myproj/B
+U myproj/A
+U myproj/A/fish
+U myproj/A/fish/tuna
+prompt$
 </pre>
 
-        <p>Only the file <tt>tuna</tt> is a regular file,
+        <p>Only the file <tt class="filename">tuna</tt> is a regular file,
           everything else in myproj is a directory.</p>
 
         <p>Let's see what this looks like as an abstract data structure in
@@ -2458,7 +2537,7 @@ a compelling reason to be different.</p>
           index 1 points to anything; it points to the root node of revision 1
           of the project:</p>
 
-<pre>
+        <pre>
                     ( myproj's revision array )
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
@@ -2496,12 +2575,12 @@ a compelling reason to be different.</p>
 
 </pre>
 
-        <p>What happens when we modify <tt>tuna</tt> and commit?
-          First, we make a new <tt>tuna</tt> node, containing the
+        <p>What happens when we modify <tt class="filename">tuna</tt> and commit?
+          First, we make a new <tt class="filename">tuna</tt> node, containing the
           latest text.  The new node is not connected to anything yet, it's
           just hanging out there in space:</p>
 
-<pre>
+        <pre>
                          ________
                         |F       |
                         |        |
@@ -2512,7 +2591,7 @@ a compelling reason to be different.</p>
         <p>Next, we create a <em>new</em> revision of its parent
           directory:</p>
 
-<pre>
+        <pre>
                  ________
                 |D       |
                 |        |
@@ -2530,7 +2609,7 @@ a compelling reason to be different.</p>
         <p>We continue up the line, creating a new revision of the next
           parent directory:</p>
 
-<pre>
+        <pre>
               ________
              |D       |
              |        |
@@ -2558,7 +2637,7 @@ a compelling reason to be different.</p>
           all.  Therefore, our new root directory also has an entry that still
           points to the <em>old</em> directory B node!</p>
 
-<pre>
+        <pre>
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
           |
@@ -2600,7 +2679,7 @@ a compelling reason to be different.</p>
           available revision in the history array.  In this case, the new tree
           becomes revision 2 in the repository.</p>
 
-<pre>
+        <pre>
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
           |        \
@@ -2646,36 +2725,36 @@ a compelling reason to be different.</p>
         <p>Many nice behaviors come from this model:</p>
 
         <ol>
-          <li><p><emphasis role="bold">Easy reads.</em>  If a
+          <li><p><strong>Easy reads.</strong>  If a
               filesystem reader wants to locate revision
-              <em>X</em> of file <tt>foo.c</tt>,
+              <em class="replaceable">X</em> of file <tt class="filename">foo.c</tt>,
               it need only traverse the repository's history, locate revision
-              <em>X</em>'s root node, then walk down the tree
-              to <tt>foo.c</tt>.</p></li>
+              <em class="replaceable">X</em>'s root node, then walk down the tree
+              to <tt class="filename">foo.c</tt>.</p></li>
 
-          <li><p><emphasis role="bold">Writers don't interfere with
-                readers.</em>  Writers can continue to create new nodes,
+          <li><p><strong>Writers don't interfere with
+                readers.</strong>  Writers can continue to create new nodes,
               bubbling their way up to the top, and concurrent readers cannot
               see the work in progress.  The new tree only becomes visible to
               readers after the writer makes its final &ldquo;link&rdquo; to
               the repository's history.</p></li>
 
-          <li><p><emphasis role="bold">File structure is
-                versioned.</em>  Unlike CVS, the very structure of each
+          <li><p><strong>File structure is
+                versioned.</strong>  Unlike CVS, the very structure of each
               tree is being saved from revision to revision.  File and
               directory renames, additions, and deletions are part of the
               repository's history.</p></li>
         </ol>
 
         <p>Let's demonstrate the last point by renaming the
-          <tt>tuna</tt> to <tt>book</tt>.</p>
+          <tt class="filename">tuna</tt> to <tt class="filename">book</tt>.</p>
 
         <p>We start by creating a new parent &ldquo;fish&rdquo; directory,
           except that this parent directory has a different dir_entry, one
           which points the <em>same</em> old file node, but has a
           different name:</p>
 
-<pre>
+        <pre>
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
           |        \
@@ -2718,7 +2797,7 @@ a compelling reason to be different.</p>
           &ldquo;A&rdquo;), and finally link the new tree to the history as
           revision 3:</p>
 
-<pre>
+        <pre>
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
           |        \        \_________________
@@ -2763,13 +2842,13 @@ a compelling reason to be different.</p>
           so easily shared, we simply create a <em>new</em>
           directory entry that points to an existing directory node.  It's an
           extremely cheap way of copying a tree; we call this new entry a
-          <b orig-elt="firstterm">clone</b>, or more colloquially, a &ldquo;cheap
+          <strong class="firstterm">clone</strong>, or more colloquially, a &ldquo;cheap
           copy&rdquo;.</p>
 
         <p>Let's go back to our original tree, assuming that we're at
           revision 6 to begin with:</p>
 
-<pre>
+        <pre>
        ______________________________________________________
     ...___6_______7________8________9________10_________11_____...
           |
@@ -2807,10 +2886,10 @@ a compelling reason to be different.</p>
 </pre>
 
         <p>Let's &ldquo;tag&rdquo; directory A.  To make the clone, we
-          create a new dir_entry <emphasis role="bold">T</em> in our
+          create a new dir_entry <strong>T</strong> in our
           root, pointing to A's node:</p>
 
-<pre>
+        <pre>
        ______________________________________________________
       |___6_______7________8________9________10_________11_____...
           |        \
@@ -2864,10 +2943,11 @@ a compelling reason to be different.</p>
           then T becomes a branch.  Specifically, it's a branch of directory A
           which shares history with A up to a certain point, and then
           &ldquo;broke off&rdquo; from the main line at revision 8.</p>
-      </div>  <!-- server:fs:bubble-up (h5) -->
+      </div> <!-- server.fs.struct.bubble-up (h5) -->
 
-      <div class="h5" id="server:fs:struct:diffy-storage" title="server:fs:struct:diffy-storage">
+      <div class="h5" id="server.fs.struct.diffy-storage">
         <h5>Diffy Storage</h5>
+        
           
         <p>You may have been thinking, &ldquo;Gee, this bubble up method
           seems nice, but it sure wastes a lot of space.  Every commit to the
@@ -2881,11 +2961,12 @@ a compelling reason to be different.</p>
           word "diff" is used loosely here &ndash; for files, it means vdeltas,
           for directories, it means a format that expresses changes to
           directories).</p>
-      </div>  <!-- server:fs:struct:diffy-storage (h5) -->
+      </div> <!-- server.fs.struct.diffy-storage (h5) -->
     </div> <!-- server.fs.struct (h4) -->
 
-    <div class="h4" id="Implementation" title="Implementation">
+    <div class="h4" id="server.fs.implementation" title="#server.fs.implementation">
       <h4>Implementation</h4>
+      
 
       <p>For the initial release of Subversion,</p>
 
@@ -2895,23 +2976,25 @@ a compelling reason to be different.</p>
 
         <li><p>The filesystem's data will probably be stored in a
             collection of .db files, using the Berkeley Database library.
-            <footnote><p>In the future, of course, contributors are free
+            
+    (In the future, ofcourse, contributors are free
                 modify the Subversion filesystem tooperate with more powerful
-                SQL database.</p></footnote> (For more information, see
-            <a href="http://www.sleepycat.com">Sleepycat
-            Software</a>.)</p></li>
+                SQL database.)
+   (For more information, see
+            <a href="http://www.sleepycat.com">http://www.sleepycat.com</a>.)</p></li>
       </ul>
-    </div> <!-- implementation (h4) -->
-  </div>  <!-- server.fs (h3) -->
+    </div> <!-- server.fs.implementation (h4) -->
+  </div> <!-- server.fs (h3) -->
 
-  <div class="h3" id="server:libsvn_repos" title="server:libsvn_repos">
+  <div class="h3" id="server.libsvn_repos" title="#server.libsvn_repos">
     <h3>Repository Library</h3>
+    
 
     <!-- Jimb, Karl:  Maybe we should turn this into a discussion about how the
     filesystem will use non-historical properties for internal ACLs, and how
     people can add "external" ACL systems via historical properties...? -->
 
-    <p>A subversion <b orig-elt="firstterm">repository</b> is a directory that
+    <p>A subversion <strong class="firstterm">repository</strong> is a directory that
       contains a number of components:</p>
 
     <ul>
@@ -2927,9 +3010,9 @@ a compelling reason to be different.</p>
 
     <p>The Subversion filesystem is just that: a filesystem.  But it's also
       useful to provide an API that acts at the level of the repository.  The
-      repository library (<tt>libsvn_repos</tt>) does this.</p>
+      repository library (<tt class="filename">libsvn_repos</tt>) does this.</p>
 
-    <p>In particular, it wraps a few <tt>libsvn_fs</tt>
+    <p>In particular, it wraps a few <tt class="filename">libsvn_fs</tt>
       routines, such as those for beginning and ending commits, so that
       hook-scripts can run.  A pre-commit-hook script might check for a valid
       log message, and a post-commit-hook script might send an email to a
@@ -2940,9 +3023,26 @@ a compelling reason to be different.</p>
       generate a tree-delta by comparing two revisions, routines for
       constructing new transactions, routines for querying log messages, and
       routines for exporting and importing filesystem data.</p>
-  </div>  <!-- server.libsvn_repos (h3) -->
+  </div> <!-- server.libsvn_repos (h3) -->
+</div> <!-- server (h2) -->
 
-</div>  <!-- Server (h2) -->
+  <div class="h2" id="license" title="#license">
+  <h2>License &mdash; Copyright</h2>
+  
 
+  
+    <p>Copyright &copy; 2000-2006 Collab.Net.  All rights reserved.</p>
+
+    <p>This software is licensed as described in the file
+      <tt class="filename">COPYING</tt>, which you should have received as part of
+      this distribution.  The terms are also available at
+      <a href="http://subversion.tigris.org/license-1.html">http://subversion.tigris.org/license-1.html</a>.  If newer
+      versions of this license are posted there, you may use a newer version
+      instead, at your option.</p>
+  
+</div> <!-- license (h2) -->
+
+
+</div>
 </body>
 </html>
