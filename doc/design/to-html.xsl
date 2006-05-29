@@ -56,11 +56,67 @@
         <x:text>&#10;</x:text>
         <div class="app">
           <x:text>&#10;</x:text>
+          <div class="h1">
+            <x:text>&#10;</x:text>
+            <h1 style="text-align: center">Subversion Design</h1>
+            <x:text>&#10;</x:text>
+          </div>
+          <p class="warningmark"><em>NOTE: This document is out of date.  The
+              last substantial update was in October 2002 (r3377).  However,
+              people often come here for the section on the <a
+                href="#server.fs.misc.bubble-up">directory bubble-up
+                method</a>, which is still accurate.</em></p>
+          <x:text>&#10;</x:text>
+          <x:apply-templates mode="toc"/>
           <x:apply-templates/>
+          <x:text>&#10;</x:text>
         </div>
       </body>
     </html>
   </x:template>
+
+  <!-- toc-mode templates begin -->
+  <x:template mode="toc" match="*">
+    <x:apply-templates mode="toc"/>
+  </x:template>
+  <x:template mode="toc" match="text()"/>
+  <x:template mode="toc" match="book">
+    <div class="h1">
+      <x:text>&#10;</x:text>
+      <h2>Table of Contents</h2>
+      <x:text>&#10;</x:text>
+      <ol>
+        <x:text>&#10;</x:text>
+        <x:apply-templates mode="toc"/>
+      </ol>
+    </div>
+    <x:text>&#10;</x:text>
+  </x:template>
+  <x:template mode="toc" match="chapter | appendix | sect1 | sect2 | sect3">
+    <x:variable name="indent-elts" select="ancestor-or-self::chapter |
+      ancestor-or-self::appendix | ancestor-or-self::sect1 |
+      ancestor-or-self::sect2 | ancestor-or-self::sect3"/>
+    <x:for-each select="$indent-elts"><x:text>  </x:text></x:for-each>
+    <li><a href="#{@id}"><x:value-of select="title"/></a>
+      <x:if test="sect1 | sect2 | sect3">
+        <x:text>&#10;</x:text>
+        <x:for-each select="$indent-elts"><x:text>  </x:text></x:for-each>
+        <ol>
+          <x:text>&#10;</x:text>
+          <x:apply-templates mode="toc"/>
+          <x:for-each select="$indent-elts"><x:text>  </x:text></x:for-each>
+        </ol>
+        <x:text>&#10;</x:text>
+        <x:for-each select="$indent-elts"><x:text>  </x:text></x:for-each>
+      </x:if>
+    </li>
+    <x:if test="sect1 | sect2 | sect3">
+      <x:text> </x:text><x:comment><x:text> </x:text><x:value-of
+          select="@id"/><x:text> </x:text></x:comment>
+    </x:if>
+    <x:text>&#10;</x:text>
+  </x:template>
+  <!-- toc-mode templates end -->
 
   <!-- <book> is a redundant container -->
   <x:template match="book">
@@ -70,11 +126,7 @@
   <!-- <bookinfo> is various metadata which can be removed -->
   <x:template match="bookinfo" />
 
-  <x:template match="book/title | book/subtitle">
-    <p class="warningmark"><em>
-        <x:apply-templates/>
-    </em></p>
-  </x:template>
+  <x:template match="book/title | book/subtitle" />
 
   <x:template match="para">
     <p><x:apply-templates/></p>
