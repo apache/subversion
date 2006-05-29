@@ -64,7 +64,7 @@
           <p class="warningmark"><em>NOTE: This document is out of date.  The
               last substantial update was in October 2002 (r3377).  However,
               people often come here for the section on the <a
-                href="#server.fs.misc.bubble-up">directory bubble-up
+                href="#server.fs.struct.bubble-up">directory bubble-up
                 method</a>, which is still accurate.</em></p>
           <x:text>&#10;</x:text>
           <x:apply-templates mode="toc"/>
