@@ -2871,11 +2871,12 @@ That function uses `add-log-current-defun'"
 (defun svn-status-activate-diff-mode ()
   "Show the *svn-process* buffer, using the diff-mode."
   (svn-status-show-process-output 'diff t)
-  (save-excursion
-    (set-buffer svn-status-last-output-buffer-name)
-    (svn-status-diff-mode)
-    (setq buffer-read-only t)))
-
+  (let ((working-directory default-directory))
+    (save-excursion
+      (set-buffer svn-status-last-output-buffer-name)
+      (setq default-directory working-directory)
+      (svn-status-diff-mode)
+      (setq buffer-read-only t))))
 
 (define-derived-mode svn-status-diff-mode fundamental-mode "svn-diff"
   "Major mode to display svn diffs. Derives from `diff-mode'.
