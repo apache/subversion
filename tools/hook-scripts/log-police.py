@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # log-police.py: Ensure that log messages end with a single newline.
 # See usage() function for details, or just run with no arguments.

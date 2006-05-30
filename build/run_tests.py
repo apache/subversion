@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # run_tests.py - run the tests in the regression test suite.
 #
