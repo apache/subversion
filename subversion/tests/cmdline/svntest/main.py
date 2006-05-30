@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
 #

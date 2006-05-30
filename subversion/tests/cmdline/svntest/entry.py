@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  entry.py:  module to parse '.svn/entries' file
 #

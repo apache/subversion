@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  actions.py:  routines that actually run the svn client.
 #
