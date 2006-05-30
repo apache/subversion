@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+use ExtUtils::MakeMaker;
+use Config;
+use Cwd 'abs_path';
+
+my $perl_path = $Config{perlpath};
+if ($^O ne 'VMS') {
+  $perl_path .= $Config{_exe} unless $perl_path =~ m/$Config{_exe}$/i;
+}
+
+my $top_builddir = '@top_builddir@';
+my $top_srcdir = '@top_srcdir@';
+my $svnlib_srcdir = "${top_srcdir}/subversion";
+my $svnlib_builddir = "${top_builddir}/subversion";
+my $swig_srcdir = "${svnlib_srcdir}/bindings/swig";
+my $swig_builddir = "${svnlib_builddir}/bindings/swig";
+
+my @modules = qw/client delta fs ra repos wc/;
+my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
+               map {"$svnlib_builddir/libsvn_$_/.libs"} (@modules, qw/diff subr
+                                                                      ra_local
+                                                                      ra_svn
+                                                                      ra_dav
+                                                                      fs_base
+                                                                      fs_fs/));
+my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
+
+my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
+my $apr_cflags = '@SVN_APR_INCLUDES@';
+my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
+
+# According to the log of r7937, the flags guarded by the conditional break
+# the build on FreeBSD if not conditionalized.
+my $apr_ldflags = '@SVN_APR_EXPORT_LIBS@' 
+   if $^O eq 'darwin' or $^O eq 'cygwin';
+
+chomp $apr_shlib_path_var;
+
+my %config = (
+    ABSTRACT => 'Perl bindings for Subversion',
+    INC  => join(' ',$apr_cflags, $apu_cflags, 
+                 " -I$swig_srcdir/perl/libsvn_swig_perl",
+                 " -I$svnlib_srcdir/include",
+                 " -I$svnlib_builddir",
+                 " -I$swig_srcdir -g"),
+    OBJECT => q/$(O_FILES)/,
+    LIBS => [join(' ', $apr_ldflags,
+                  (map {$_ = abs_path($_); "-L$_"} @ldpaths),
+                  @ldmodules, '-lsvn_swig_perl-1',
+                  `$swig -perl -ldflags`)],
+    test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
+);
+
+sub perlish {
+    local $_ = $_[0];
+    s/^(\w)/\U$1/;
+    $_;
+}
+
+WriteMakefile(%config, NAME => 'SVN::_Core', C => ['core.c'],
+        PM => {map { ("$swig_srcdir/perl/native/$_.pm" =>
+                      "\$(INST_LIBDIR)/$_.pm") }
+         map { perlish $_ }
+         ('base', 'core', @modules)},
+        MAN3PODS => {map { ("$swig_srcdir/perl/native/$_.pm" =>
+                            "\$(INST_MAN3DIR)/SVN::$_.\$(MAN3EXT)") }
+         map { perlish $_ }
+         ('base', 'core', @modules)},
+        clean => { FILES => "*.bs".
+                         join(' Makefile.','',@modules) }
+       );
+
+for (@modules) {
+    WriteMakefile(%config,
+      MAKEFILE=> "Makefile.$_",
+      NAME    => "SVN::_".perlish($_),
+      C => ["svn_$_.c"],
+     );
+}
+
+# the dependencies need to be fixed
+
+sub MY::postamble {
+   package MY ;
+   
+   my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
+   my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
+
+  my $fullperlrun = "$apr_shlib_path_var=" . join(':',@ldpaths);
+  
+   return <<"EOPOST";
+all :: modules
+test :: modules
+install :: modules
+
+par :: all
+\t$perl_path -MPAR::Dist -e"blip_to_par(name=>'SVN",version=>'`$perl_path -Mblib -MSVN::Core -e 'print $SVN::Core::VERSION'`')"
+
+modules :: $module_c_files
+$module_make_commands\t\$(NOECHO) \$(TOUCH) \$\@
+
+FULLPERLRUN=$fullperlrun \$(FULLPERL)
+
+EOPOST
+
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="neon"
+	SccProjectName=""
+	SccLocalPath=""
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake /nologo /f neon.mak ALL DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				CleanCommandLine="nmake /nologo /f neon.mak CLEAN DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				Output="libneonD.lib"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake /nologo /f neon.mak ALL EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				CleanCommandLine="nmake /nologo /f neon.mak CLEAN EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				Output="libneon.lib"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			[for neon_sources]<File
+				RelativePath="[neon_sources]">
+			</File>
+[end]
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+			[for neon_headers]<File
+				RelativePath="[neon_headers]">
+			</File>
+[end]
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

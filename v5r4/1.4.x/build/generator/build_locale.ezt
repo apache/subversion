@@ -1,0 +1,18 @@
+@echo off
+@rem **************************************************************************
+cd ..\..\subversion\po
+mkdir ..\..\%1\mo
+set exitcode=0
+[for pofiles]echo Running msgfmt on [pofiles.po]...
+python ..\..\build\strip-po-charset.py [pofiles.po] [pofiles.spo]
+if not errorlevel 0 goto err
+msgfmt.exe -c -o ..\..\%1\mo\[pofiles.mo] [pofiles.spo]
+if not errorlevel 0 goto err
+del [pofiles.spo]
+[end]
+goto end
+@rem **************************************************************************
+:err
+set exitcode=1
+:end
+exit %exitcode%

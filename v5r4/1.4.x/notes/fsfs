@@ -1,0 +1,256 @@
+"FSFS" is the name of a Subversion filesystem implementation, an
+alternative to the original Berkeley DB-based implementation.  See
+http://subversion.tigris.org/ for information about Subversion.  This
+is a propaganda document for FSFS, to help people determine if they
+should be interested in using it instead of the BDB filesystem.
+
+How FSFS is Better
+------------------
+
+* Write access not required for read operations
+
+To perform a checkout, update, or similar operation on an FSFS
+repository requires no write access to any part of the repository.
+
+* Little or no need for recovery
+
+An svn process which terminates improperly will not generally cause
+the repository to wedge.  (See "Note: Recovery" below for a more
+in-depth discussion of what could conceivably go wrong.)
+
+* Smaller repositories
+
+An FSFS repository is smaller than a BDB repository.  Generally, the
+space savings are on the order of 10-20%, but if you do a lot of work
+on branches, the savings could be much higher, due to the way FSFS
+stores deltas.  Also, if you have many small repositories, the
+overhead of FSFS is much smaller than the overhead of the BDB
+implementation.
+
+* Platform-independent
+
+The format of an FSFS repository is platform-independent, whereas a
+BDB repository will generally require recovery (or a dump and load)
+before it can be accessed with a different operating system, hardware
+platform, or BDB version.
+
+* Can host on network filesystem
+
+FSFS repositories can be hosted on network filesystems, just as CVS
+repositories can.  (See "Note: Locking" for caveats about
+write-locking.)
+
+* No umask issues
+
+FSFS is careful to match the permissions of new revision files to the
+permissions of the previous most-recent revision, so there is no need
+to worry about a committer's umask rendering part of the repository
+inaccessible to other users.  (You must still set the g+s bit on the
+db directories on most Unix platforms other than the *BSDs.)
+
+* Standard backup software
+
+An FSFS repository can be backed up with standard backup software.
+Since old revision files don't change, incremental backups with
+standard backup software are efficient.  (See "Note: Backups" for
+caveats.)
+
+(BDB repositories can be backed up using "svnadmin hotcopy" and can be
+backed up incrementally using "svnadmin dump".  FSFS just makes it
+easier.)
+
+* Can split up repository across multiple spools
+
+If an FSFS repository is outgrowing the filesystem it lives on, you
+can symlink old revisions off to another filesystem.
+
+* More easily understood repository layout
+
+If something goes wrong and you need to examine your repository, it
+may be easier to do so with the FSFS format than with the BDB format.
+(To be fair, both of them are difficult to extract file contents from
+by hand, because they use delta storage, and "db_dump" makes it
+possible to analyze a BDB repository.)
+
+* Faster handling of directories with many files
+
+If you are importing a tree which has directories with many files in
+it, the BDB repository must, by design, rewrite the directory once for
+each file, which is O(n^2) work.  FSFS appends an entry to the
+directory file for each change and then collapses the changes at the
+end of the commit, so it can do the import with O(n) work.
+
+Purely as a matter of implementation, FSFS also performs better
+caching, so that iterations over large directories are much faster for
+both read and write operations.  Some of those caching changes could
+be ported to BDB without changing the schema.
+
+* (Fine point) Fast "svn log -v" over big revisions
+
+In the BDB filesystem, if you do a large import and then do "svn log
+-v", the server has to crawl the database for each changed path to
+find the copyfrom information, which can take a minute or two of high
+server load.  FSFS stores the copyfrom information along with the
+changed-path information, so the same operation takes just a few
+seconds.
+
+* (Marginal) Can give insert-only access to revs subdir for commits
+
+In some filesystems such as AFS, it is possible to give insert-only
+write access to a directory.  If you can do this, you can give people
+commit access to an FSFS repository without allowing them to modify
+old revisions, without using a server.
+
+(The Unix sticky bit comes close, but people would still have
+permission to modify their own old revisions, which, because of delta
+storage, might allow them to influence the contents of other people's
+more recent revisions.)
+
+How FSFS is Worse
+-----------------
+
+Most of the downsides of FSFS are more theoretical than practical, but
+for the sake of completeness, here are all the ones I know about:
+
+* More server work for head checkout
+
+Because of the way FSFS stores deltas, it takes more work to derive
+the contents of the head revision than it does in a BDB filesystem.
+Measurements suggest that in a typical workload, the server has to do
+about twice as much work (computation and file access) to check out
+the head.  From the client's perspective, with network and working
+copy overhead added in, the extra time required for a checkout
+operation is minimal, but if server resources are scarce, FSFS might
+not be the best choice for a repository with many readers.
+
+* Finalization delay
+
+Although FSFS commits are generally faster than BDB commits, more of
+the work of an FSFS commit is deferred until the final step.  For a
+very large commit (tens of thousands of files), the final step may
+involve a delay of over a minute.  There is no user feedback during
+the final phase of a commit, which can lead to impatience and, in
+really bad cases, HTTP client timeouts.
+
+* Lower commit throughput
+
+Because of the greater amount of work done during the final phase of a
+commit, if there are many commits to an FSFS repository, they may
+stack up behind each other waiting for the write lock, whereas in a
+BDB repository they would be able to do more of their work in
+parallel.
+
+* Less mature code base
+
+FSFS was introduced in the Subversion 1.1 release, whereas BDB has
+been around since the inception of the Subversion project.
+
+* Big directories full of revision files
+
+Each revision in an FSFS repository corresponds to a file in the
+db/revs directory and another one in the db/rev-props directory.  If
+you have many revisions, this means there are two directories each
+containing many files.  Though some modern filesystems perform well on
+directories containing many files (even if they require a linear
+search for files within a directory, they may do well on repeated
+accesses using an in-memory hash of the directory), some do not.
+
+A future release of Subversion may address this issue by optionally
+organizing revision files into subdirectories.
+
+* (Developers) More difficult to index
+
+Every so often, people propose new Subversion features which require
+adding new indexing to the repository in order to implement
+efficiently.  Here's a little picture showing where FSFS lies on the
+indexing difficulty axis:
+
+               Ease of adding new indexing
+   harder <----------------------------------> easier
+           FSFS            BDB            SQL
+
+With a hypothetical SQL database implementation, new indexes could be
+added easily.  In the BDB implementation, it is necessary to write
+code to maintain the index, but transactions and tables make that code
+relatively straightforward to write.  In a dedicated format like FSFS,
+particularly with its "old revisions never change" constraint, adding
+new indexing features would generally require a careful design
+process.
+
+How To Use
+----------
+
+FSFS support is new in Subversion 1.1.  If you are running a
+Subversion 1.0.x release, you will need to upgrade the server (but not
+the client, unless you are using file:/// access).
+
+Once you've gotten that out of the way, using FSFS is simple: just
+create your repositories with "svnadmin create --fs-type=fsfs PATH".
+Or, build Subversion without Berkeley DB support, and repositories
+will be created with FSFS by default.
+
+Note: Recovery
+--------------
+
+If a process terminates abnormally during a read operation, it should
+leave behind no traces in the repository, since read operations do not
+modify the repository in any way.
+
+If a process terminates abnormally during a commit operation, it will
+leave behind a stale transaction, which will not interfere with
+operation and which can be removed with a normal recursive delete
+operation.
+
+If a process terminates abnormally during the final phase of a commit
+operation, it may be holding the write lock.  The way locking is
+currently implemented, a dead process should not be able to hold a
+lock, but over a remote filesystem that guarantee may not apply.
+Also, in the future, FSFS may have optional support for
+NFSv2-compatible locking which would allow for the possibility of
+stale locks.  In either case, the write-lock file can simply be
+removed to unblock commits, and read operations will remain
+unaffected.
+
+Note: Locking
+-------------
+
+Locking is currently implemented using the apr_file_lock() function,
+which on Unix uses fcntl() locking, and on Windows uses LockFile().
+Modern remote filesystem implementations should support these
+operations, but may not do so perfectly, and NFSv2 servers may not
+support them at all.
+
+It is possible to do exclusive locking under basic NFSv2 using a
+complicated dance involving link().  It's possible that FSFS will
+evolve to allow NFSv2-compatible locking, or perhaps just basic O_EXCL
+locking, as a repository configuration option.
+
+Note: Backups
+-------------
+
+Naively copying an FSFS repository while a commit is taking place
+could result in an easily-repaired inconsistency in the backed-up
+repository.  The backed-up "current" file could wind up referring to a
+new revision which wasn't copied, or which was only partially
+populated when it was copied.
+
+The "svnadmin hotcopy" command avoids this problem by copying the
+"current" file before copying the revision files.  But a backup using
+the hotcopy command isn't as efficient as a straight incremental
+backup.  FSFS may evolve so that "svnadmin recover" (currently a
+no-op) knows how to recover from the inconsistency which might result
+from a naive backup.
+
+Naively copying an FSFS repository might also copy in-progress
+transactions, which would become stale and take up extra room until
+manually removed.  "svnadmin hotcopy" does not copy in-progress
+transactions from an FSFS repository, although that might need to
+change if Subversion starts making use of long-lived transactions.
+
+So, if you are using standard backup tools to make backups of a FSFS
+repository, configure the software to copy the "current" file before
+the numbered revision files, if possible, and configure it not to copy
+the "transactions" directory.  If you can't do those things, use
+"svnadmin hotcopy", or be prepared to cope with the very occasional
+need for manual repair of the repository upon restoring it from
+backup.

@@ -1,0 +1,7 @@
+The subdirectories contain distribution and platform specific versions of
+RPM package builders.
+
+To build from a Subversion checkout, just go to to the appropriate directory and
+type "make" as a normal user.  This will create a .rpmmacros file in your
+home directory (if it is not already there) and build the RPM.
+

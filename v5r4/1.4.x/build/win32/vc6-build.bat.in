@@ -1,0 +1,159 @@
+@echo off
+
+rem ====== Set these shell variables before doing a build.
+rem VER is used to name the output bin dir as svn-win32-%VER%
+set VER=trunk
+rem DIR is appended to src- to make the dir name, e.g., src-trunk
+set DIR=trunk
+set DRIVE=C
+set PYTHONDIR=C:\Python22
+set AWKDIR=C:\SVN\awk
+set NASMDIR=C:\SVN\nasm
+set SDKINC=C:\Program Files\Microsoft SDK\include
+set SDKLIB=C:\Program Files\Microsoft SDK\lib
+set APACHEDIR=C:\Program Files\Apache Group\Apache2
+set GETTEXTINC=C:\SVN\gettext\include
+set GETTEXTLIB=C:\SVN\gettext\lib
+set GETTEXTBIN=C:\SVN\gettext\bin
+rem ====== End of shell variables which need to be set.
+
+rem Set up path to include Python and BDB.
+PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%NASMDIR%;%PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
+
+rem Set INCLUDE and LIB for the msdev builds.
+set INCLUDE=%SDKINC%;%INCLUDE%;%GETTEXTINC%
+set LIB=%SDKLIB%;%LIB%;%GETTEXTLIB%
+
+rem Check that the subversion code exists here.
+cd %DRIVE%:\SVN\src-%DIR%
+if not exist subversion goto wrongstartdir
+cd ..
+
+rem ====== Check the prerequisites are at least in the right place.
+if not exist httpd-2.0.50 goto httpderr
+if not exist nasm goto nasmerr
+if not exist openssl-0.9.7d goto opensslerr
+if not exist src-%DIR% goto svnerr
+if not exist zlib goto zliberr
+if not exist zlib\zlibstat.lib goto zlibstaterr
+if not exist src-%DIR%\db4-win32 goto bdberr
+if not exist src-%DIR%\neon goto neonerr
+if not exist gettext goto gettexterr
+goto allok
+
+:wrongstartdir
+echo Unable to find %DRIVE%:\SVN\src-%DIR%\subversion
+goto theveryend
+:httpderr
+echo Unable to find httpd-2.0.50
+goto end
+:nasmerr
+echo Unable to find nasm
+goto end
+:opensslerr
+echo Unable to find openssl-0.9.7d
+goto end
+:svnerr
+echo Unable to find Subversion source in src-%DIR%
+goto end
+:zliberr
+echo Unable to find zlib
+goto end
+:zliberrstat
+echo Please copy zlib\static32\zlibstat.lib to zlib\zlibstat.lib
+goto end
+:bdberr
+echo Unable to find Berekely DB
+goto end
+:neonerr
+echo Unable to find neon
+goto end
+:gettexterr
+echo Unable to find gettext
+goto end
+:allok
+
+rem ====== Build openssl.
+cd openssl-0.9.7d
+perl Configure VC-WIN32
+call ms\do_nasm
+nmake -f ms\ntdll.mak
+cd out32dll
+call ..\ms\test
+cd ..\..
+
+rem ====== Build Apache 2
+cd src-%DIR%
+python gen-make.py -t dsp --with-httpd=..\httpd-2.0.50 --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
+cd ..
+msdev httpd-2.0.50\apache.dsw /MAKE "BuildBin - Win32 Release"
+
+rem ====== Subversion
+cd src-%DIR%
+msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
+mkdir Release\subversion\tests\cmdline
+xcopy /S /Y subversion\tests\cmdline Release\subversion\tests\cmdline
+copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
+copy Release\subversion\mod_authz_svn\mod_authz_svn.so "%APACHEDIR%"\modules
+cd ..
+
+rem ====== Copy the binaries into a tree suitable for zipping.
+mkdir svn-win32-%VER%
+mkdir svn-win32-%VER%\bin
+mkdir svn-win32-%VER%\httpd
+mkdir svn-win32-%VER%\iconv
+copy src-%DIR%\db4-win32\bin\libdb42.dll svn-win32-%VER%\bin
+copy openssl-0.9.7d\out32dll\libeay32.dll svn-win32-%VER%\bin
+copy openssl-0.9.7d\out32dll\ssleay32.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
+copy httpd-2.0.50\srclib\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
+copy gettext\bin\intl.dll svn-win32-%VER%\bin
+copy gettext\bin\iconv.dll svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svn\svn.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svnadmin\svnadmin.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svndumpfilter\svndumpfilter.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svnlook\svnlook.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svnserve\svnserve.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\svnversion\svnversion.exe svn-win32-%VER%\bin
+copy src-%DIR%\Release\subversion\mod_authz_svn\mod_authz_svn.so svn-win32-%VER%\httpd
+copy src-%DIR%\Release\subversion\mod_dav_svn\mod_dav_svn.so svn-win32-%VER%\httpd
+copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
+copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
+copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
+
+rem ====== Configure Apache ready for doing tests.
+@echo off
+echo Configure Apache to use the mod_dav_svn and mod_authz_svn modules
+echo by making sure these lines appear uncommented in httpd.conf:
+echo LoadModule dav_module         modules/mod_dav.so
+echo LoadModule dav_fs_module      modules/mod_dav_fs.so
+echo LoadModule dav_svn_module     modules/mod_dav_svn.so
+echo LoadModule authz_svn_module   modules/mod_authz_svn.so
+echo And further down the file add:
+echo ^<Location /svn-test-work/repositories^>
+echo  DAV svn
+echo  SVNParentPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/cmdline/svn-test-work/repositories
+echo ^</Location^>
+echo ^<Location /svn-test-work/local_tmp/repos^>
+echo  DAV svn
+echo  SVNPath %DRIVE%:/SVN/src-%DIR%/Release/subversion/tests/cmdline/svn-test-work/local_tmp/repos
+echo ^</Location^>
+echo Then restart Apache.
+
+echo Please configure Apache and press enter:
+pause
+@echo on
+
+rem ====== Run the tests.
+PATH=%DRIVE%:\SVN\svn-win32-%VER%\bin;%PATH%
+cd src-%DIR%
+python win-tests.py -c -r -v
+python win-tests.py -c -r -v -u http://localhost
+cd ..
+
+:end
+cd src-%DIR%
+:theveryend
+

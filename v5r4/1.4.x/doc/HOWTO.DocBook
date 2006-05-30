@@ -1,0 +1,182 @@
+HOW-TO:  Compiling Subversion DocBook XML Documents
+===================================================
+
+The Subversion project uses for some of its documentation DocBook
+Lite, a scaled-down version of the DocBook DTD, used by O'Reilly &
+Associates.
+
+The goal of this document is to give simple instructions to anyone who
+wants to compile Subversion DocBook documents into a useful format,
+like HTML or PDF.  It should state *exactly* which tools to use, and
+how to invoke them, in simplest terms.
+
+Table of Contents:
+
+  I. PRIMER
+ II. COMPILING THE DOCS
+III. HACKING ON THE DOCS
+
+I. PRIMER
+
+  DocBook has a tortured, confusing history.  Before you do anything,
+  take a look at Eric Raymond's excellent "DocBook Demystification HOWTO":
+
+     http://tldp.org/HOWTO/DocBook-Demystification-HOWTO/
+
+  It's very short and clears up many things.
+
+
+II. COMPILING THE DOCS
+
+
+1. Fetch XSL stylesheets for DocBook and place them in tools/xsl
+
+   The "DocBook Open Repository" on Sourceforge has a large collection
+   of XSL stylesheets that specifically operate on DocBook.  Download
+   and install the latest 'docbook-xsl' package from this page:
+  
+      http://sourceforge.net/project/showfiles.php?group_id=21935
+
+   Download the latest version of docbook-xsl, unpack it, then rename
+   the unpacked directory to tools/xsl, something like this:
+
+      $ cd doc/book/tools
+      $ tar zxvf docbook-xsl-X.YY.Z.tar.gz
+      $ mv docbook-xsl-X.YY.Z xsl
+
+   The default build process expects the stylesheets to be in
+   tools/xsl/.
+
+
+2. Use XSLT to transform the documents.
+
+   XSLT applies an .xsl stylesheet to an .xml file, and produces some
+   new markup document.
+
+   * Get libxslt, a C library for XSLT, from http://xmlsoft.org/XSLT/.
+     (If you're having trouble finding a source package to compile,
+     try ftp://archive.progeny.com/GNOME/sources/libxslt/1.0/.)
+     Install it:
+
+        $ tar zxvf libxslt-1.0.22.tar.gz
+        $ cd libxslt-1.0.22
+        $ ./configure
+        $ ./make
+        # make install
+
+     (Note: you may discover that you need to install libxml2 first.
+     Find it at ftp://archive.progeny.com/GNOME/sources/libxml2/)
+
+     If you don't want to compile libxslt, you can just fetch the
+     appropriate OS binary package.  
+
+   * From this directory, do
+
+        $ make all-html
+
+     This produces an HTML version for the Subversion DocBook docs in
+     misc-docs/svn-misc-docs.html.
+
+         
+3. Make a PDF file.
+
+   Formatting Objects (FO) is a layout language, kind of like
+   postscript, dvi or css.  People are quickly standardizing on it.
+
+   * Fetch FOP, a java program which converts .fo files into PDF:
+
+        http://xml.apache.org/fop/index.html
+
+     There are approximately 17577 ways to install FOP.  Rather than
+     describe them all, we will recommend one way.  If you've already
+     installed FOP some other way, that's fine, then you can ignore
+     the following recipe:
+
+        1. Download the latest version from 
+           http://www.apache.org/dyn/closer.cgi/xml/fop, for example,
+           fop-0.20.5-bin.tar.gz.  Just get a binary distribution,
+           there's no need for the Java source.
+
+        2. Unpack it into tools/fop/
+
+           $ cd doc/book/tools
+           $ tar zxvf fop-0.20.5-bin.tar.gz
+           $ mv fop-0.20.5 fop
+
+     That should be enough.  The Makefile will actually invoke
+     tools/bin/run-fop.sh.  That script attempts to find FOP already
+     installed on your system, but falls back to the FOP unpacked into
+     tools/fop/ if there's no other FOP available.
+
+     Of course, to run FOP at all, you also need a Java runtime
+     environment.  Try java.sun.com or www.blackdown.org if you don't
+     already have that.
+
+     Sometimes building the DocBook documents can use more memory than
+     Java is willing to allocate by default, and you may need to increase
+     the default heap size.  With Sun's JVM, this is accomplished by
+     passing the arguments "-Xms100m -Xmx200m" (known to work with
+     versions 1.2.x-1.4.x, and likely different for JVMs from other
+     vendors).  To tell fop.sh about these arguments, pass them via
+     the environment variable FOP_OPTS (which is also configurable in
+     your ~/.foprc).
+
+        $ export FOP_OPTS="-Xms100m -Xmx200m"
+
+   * If you want images to be included in the PDF, you'll need to use
+     the JIMI image processing library.  Grab the latest release from
+     http://java.sun.com/products/jimi/, then cp the jar file into the
+     same place as the FOP jar files:
+
+        $ cd doc/book/tools/
+        $ tar zxvf jimi1_0.tar.Z
+        $ cp Jimi/examples/AppletDemo/JimiProClasses.jar fop/lib/
+
+     Poof!  You now have PNG support.
+
+   * From this directory, do
+
+        $ make pdf
+
+     This produces PDF for the Subversion DocBook documents in
+     misc-docs/svn-misc-docs.pdf.
+
+
+III. HACKING ON THE DOCS
+
+In addition to everything in section II:
+
+
+1. Get a nice editing environment for SGML/XML.
+
+   This isn't strictly required, but it's nice when your editor
+   colorizes things, understands the DTD, tells you what tags you can
+   insert, etc.
+
+   If you use emacs, we recommend the PSGML major-mode.  Most free
+   operating systems package it, or its home page is here:
+
+         http://www.lysator.liu.se/projects/about_psgml.html
+
+   If you use vim, you might check out xmledit, at:
+
+         http://www.vim.org/scripts/script.php?script_id=301
+
+
+2. Get a validating parser.
+
+   Actually, if you have what you need to compile the documentation,
+   then you almost certainly have an XML validator installed already -
+   it is called xmllint, and comes as part of libxml2.
+
+   The makefile is preconfigured with a suitable invocation of it,
+   so simply run:
+   
+      $ make valid
+
+
+3. Read about the DocBook lite tags.
+
+   The tools area contains the readme-dblite.html file which describes
+   how to write with DocBook Lite.  Familiarize yourself with these
+   tags before changing the docs.

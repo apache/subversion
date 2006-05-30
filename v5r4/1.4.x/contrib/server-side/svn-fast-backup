@@ -1,0 +1,283 @@
+#!/usr/bin/env python2.4
+
+# $Id: svn-fast-backup 8698 2005-09-02 07:28:22Z quarl $
+
+# svn-fast-backup: use rsync snapshots for very fast FSFS repository backup.
+#    Multiple FSFS backups share data via hardlinks, meaning old backups are
+#    almost free, since a newer revision of a repository is almost a complete
+#    superset of an older revision.
+
+# This is good for replacing incremental log-dump+restore-style backups
+# because it is just as space-conserving and even faster; there is no
+# inter-backup state (old backups are essentially caches); each backup
+# directory is self-contained.  It keeps the same interface as svn-hot-backup
+# (if you use --force), but only works for FSFS repositories.
+
+# Author: Karl Chen <quarl@quarl.org>
+
+## quarl 2005-08-17 initial version
+## quarl 2005-09-01 refactor, documentation; new options: --force, --keep,
+##                  --simulate, --trace
+
+
+# Originally based on svn-hot-backup.py, whose copyright notice states:
+
+# ====================================================================
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+
+######################################################################
+
+import sys, os, re
+import getopt
+import subprocess                                   # python2.4
+
+######################################################################
+# Global Settings
+
+svnlook = "svnlook"                                 # Path to svnlook
+svnadmin = "svnadmin"                               # Path to svnadmin
+rsync = "rsync"                                     # Path to rsync
+
+######################################################################
+# Command line arguments
+
+def usage():
+    raise SystemExit("""Syntax: %s [OPTIONS] repos_path backup_dir
+
+Makes a hot backup of a Subversion FSFS repository at REPOS_PATH to
+BACKUP_DIR/repos-rev.
+
+If a previous version exists, make hard links of its files using rsync.
+As multiple FSFS backups share data via hardlinks, old backups use
+almost no space, since a newer revision of a repository is almost a complete
+superset of an older revision (excluding direct repository modifications).
+
+Keeps up to N backups and deletes the rest.  (N includes the current backup.)
+
+OPTIONS:
+   -h, --help        This screen
+   -q, --quiet       Quieter than usual
+   -k, --keep=N      Keep N backups instead of 64
+   -k, --keep=all    Keep all backups (never delete any)
+   -f, --force       Make a new backup even if one with current revision exists
+   -t, --trace       Show actions
+   -s, --simulate    Don't perform actions
+
+""" %sys.argv[0])
+
+class Options: pass
+
+def default_options():
+    options = Options()
+    options.force = False
+    options.trace = False
+    options.simulate = False
+    options.quiet = False
+    options.keep = 64                       # Number of backups to keep around
+    return options
+
+def parse_commandline():
+    options = default_options()
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'qhk:fts', ['quiet', 'help', 'keep=', 'force',
+                                                             'trace', 'simulate'])
+    except getopt.GetoptError, e:
+        print >>sys.stderr, "Error:", e
+        usage()
+
+    for (o,a) in opts:
+        if o == '-h' or o == '--help':
+            usage()
+        elif o == '-q' or o == '--quiet':
+            options.quiet = True
+        elif o == '-f' or o == '--force':
+            options.force = True
+        elif o == '-t' or o == '--trace':
+            options.trace = True
+        elif o == '-s' or o == '--simulate':
+            options.simulate = True
+        elif o == '-k' or o == '--keep':
+            if a.strip().lower() == 'all':
+                options.keep = 0
+            else:
+                options.keep = int(a)
+        else:
+            raise Exception("Internal error")
+
+    if len(args) != 2:
+        usage()
+
+    # Path to repository
+    options.repo_dir = args[0]
+
+    # Where to store the repository backup.  The backup will be placed in a
+    # *subdirectory* of this location, named after the youngest revision.
+
+    options.backup_dir = os.path.abspath(args[1])
+
+    options.repo = os.path.basename(os.path.abspath(options.repo_dir))
+
+    return options
+
+def comparator(a, b):
+    # We pass in filenames so there is never a case where they are equal.
+    regexp = re.compile("-(?P<revision>[0-9]+)(-(?P<increment>[0-9]+))?$")
+    matcha = regexp.search(a)
+    matchb = regexp.search(b)
+    reva = int(matcha.groupdict()['revision'])
+    revb = int(matchb.groupdict()['revision'])
+    if (reva < revb):
+        return -1
+    elif (reva > revb):
+        return 1
+    else:
+        inca = matcha.groupdict()['increment']
+        incb = matchb.groupdict()['increment']
+    if not inca:
+        return -1
+    elif not incb:
+        return 1;
+    elif (int(inca) < int(incb)):
+        return -1
+    else:
+        return 1
+
+def pipe(command):
+    return subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0].strip()
+
+def readfile(filename):
+    try:
+        return open(filename).read().strip()
+    except:
+        return ''
+
+def runcmd(cmd):
+    if options.trace:
+        print >>sys.stderr, '#', cmd
+    if options.simulate:
+        return 0
+    return subprocess.call(cmd)
+
+def deltree(path):
+    runcmd(['rm', '-r', path])
+
+def get_youngest_revision():
+    if readfile(os.path.join('db', 'fs-type')) != 'fsfs':
+        raise SystemExit("Path '%s' doesn't contain a FSFS repository"%options.repo_dir)
+
+    return pipe(["svnlook","youngest","."])
+
+def list_repo_backups():
+    '''Return a sorted list of backups for this repository.'''
+    regexp = re.compile(options.repo + "-[0-9]+(-[0-9]+)?$")
+    directory_list = [x for x in os.listdir(options.backup_dir) if regexp.match(x)]
+    directory_list.sort(comparator)
+    return directory_list
+
+def delete_old_backups():
+    if options.keep <= 0:
+        return
+
+    for item in list_repo_backups()[:-options.keep]:
+        old_backup_subdir = os.path.join(options.backup_dir, item)
+        print "  Removing old backup: ", old_backup_subdir
+        deltree(old_backup_subdir)
+
+def find_next_backup_name(youngest):
+    # If there is already a backup of this revision, then append the next
+    # highest increment to the path.  We still need to do a backup because the
+    # repository might have changed despite no new revision having been
+    # created.  We find the highest increment and add one rather than start
+    # from 1 and increment because the starting increments may have already
+    # been removed due to options.keep.
+
+    regexp = re.compile(options.repo + "-" + youngest + "(-(?P<increment>[0-9]+))?$")
+    directory_list = os.listdir(options.backup_dir)
+    young_list = [ x for x in directory_list if regexp.match(x) ]
+    young_list.sort(comparator)
+
+    if not young_list:
+        return "%s-%s" %(options.repo, youngest)
+
+    # Backups for this revision exist already.
+
+    if not options.force:
+        if not options.quiet:
+            print "Backup already exists at",young_list[-1]
+        raise SystemExit
+
+    increment = int(regexp.match(young_list[-1]).groupdict()['increment'] or '0')
+
+    return "%s-%s-%d" %(options.repo, youngest, increment+1)
+
+def do_rsync_backup():
+    youngest = get_youngest_revision()
+
+    if not options.quiet:
+        print "Beginning hot backup of '%s' (youngest revision is %s)..." %(options.repo, youngest),
+
+    backup_subdir = os.path.join(options.backup_dir, find_next_backup_name(youngest))
+    backup_tmpdir = backup_subdir + '.tmp'
+
+    if os.path.exists(backup_tmpdir):
+        raise SystemExit("%s: Backup in progress?  '%s' exists -- aborting."%(sys.argv[0],backup_tmpdir))
+
+    if not options.simulate:
+        os.mkdir(backup_tmpdir)                     # ensures atomicity
+
+    if os.path.exists(backup_subdir):
+        # Check again after doing mkdir (which serves as a mutex acquire) --
+        # just in case another process just finished the same backup.
+        if not options.quiet:
+            print "Backup already exists at",backup_subdir
+        raise SystemExit
+
+    previous_backups = list_repo_backups()
+
+    ### Use rsync to make a copy.
+    # We need to copy the 'current' file first.
+    # Don't copy the transactions/ directory.
+    # See http://svn.collab.net/repos/svn/trunk/notes/fsfs
+
+    rsync_dest = os.path.join(backup_tmpdir,'')
+
+    # copy db/current.  -R tells rsync to use relative pathnames.
+    if runcmd(['rsync', '-aR', 'db/current', rsync_dest]):
+        raise "%s: rsync failed" %sys.argv[0]
+
+    # Now copy everything else.
+    cmd = [rsync, '-a',
+           '--exclude', 'db/current',
+           '--exclude', 'db/transactions/*',
+           '--exclude', 'db/log.*',
+           '.', rsync_dest]
+    # If there's a previous backup, make hard links against the latest.
+    if previous_backups:
+        cmd += ['--link-dest', os.path.join(options.backup_dir, previous_backups[-1])]
+
+    if runcmd(cmd):
+        raise "%s: rsync failed" %sys.argv[0]
+
+    # Rename to final name.
+    if not options.simulate:
+        os.rename(backup_tmpdir, backup_subdir)
+
+    print "Finished backup to", backup_subdir
+
+
+options = parse_commandline()
+os.chdir(options.repo_dir)
+do_rsync_backup()
+delete_old_backups()

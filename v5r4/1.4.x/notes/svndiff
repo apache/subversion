@@ -1,0 +1,99 @@
+This file describes the svndiff version 0 and 1 format used by the
+Subversion code.  Its design borrows many ideas from the vdelta and
+vcdiff encoding formats from AT&T Research Labs, but it is much
+simpler and thus a little less compact.
+
+From the point of view of svndiff, a delta is a sequence of windows,
+each containing a list of instructions for reconstructing a contiguous
+section of the target using a contiguous section of the source as a
+reference.  The section of the target being reconstructed is called
+the "target view"; the section of the source being referenced is
+called the "source view."  Source views must not slide backwards from
+one window to the next; this allows svndiffs to be applied using a
+single pass through the source file.  Instructions in a window direct
+copies to be made into the target view from one of three places: from
+the source view, from the portion of the target view which has already
+been reconstructed, or from a block of new data encoded inside the
+window.
+
+An svndiff document begins with four bytes, "SVN" followed by a zero
+byte which represents a version number.  After the header come one or
+more windows, until the document ends.  (So the decoder must have
+external context indicating when there is no more svndiff data.)
+
+A window is the concatenation of the following:
+
+	The source view offset
+	The source view length
+	The target view length
+	The length of the instructions section in bytes
+	The length of the new data section in bytes
+	The window's instructions section
+	The window's new data section
+
+In svndiff version 1, the instructions and new data
+sections may be compressed by zlib.  In svndiff1, in order to determine the
+original size, an integer is appended to the beginning of each of the
+sections.  If the original size matches the encoded size (minus the
+length of the original size integer) from the header, the data is not
+compressed.  If the original size is different than the encoded size
+from the header, the remaining data in the section is compressed with zlib.
+
+Integers (including the offset and all of the lengths) are encoded using a
+variable-length format.  The high bit of each byte is used as a
+continuation bit; 1 indicates that there is more data and 0 indicates
+the final byte.  The other seven bits of each byte are data.
+Higher-order bits are encoded before lower-order bits.  As an example,
+130 would be encoded as two bytes, 10000001 followed by 00000010.
+
+Instructions are encoded as follows: the two high bits of the first
+byte compose an instruction selector, as follows:
+
+	00	Copy from source view
+	01	Copy from target view
+	10	Copy from new data
+	11	invalid
+
+The remaining six bits of the first byte indicate the length of the
+copy.  If those six bits are all zero, then the length is encoded as
+an integer immediately following the first byte of the instruction.
+If the instruction selector is 00 or 01, then the instruction encoding
+continues with an offset encoded as an integer.  If the instruction
+selector is 10, then the offset into the new data is implicit; each
+copy from the new data is always for "the next <length> bytes" after
+the last copy.
+
+A copy from the target view must begin at a location before the
+current position in the target view, but its length may extend past
+the current position.  In this case, the target data copied is
+repeated, as happens naturally if the copy is performed byte by byte
+starting at the beginning.
+
+Following are some example instruction encodings.
+
+	Copy 11 bytes from offset 0 in source view:
+	00001011 00000000
+
+	Copy 64 bytes from offset 128 in target view:
+	01000000 01000000 10000001 00000000
+
+	Copy the next 63 bytes of new data:
+	10111111
+
+Following is a complete example of an svndiff between the source
+document "aaaabbbbcccc" and the target document "aaaaccccdddddddd":
+
+	01010011 01010110 01001110 00000000	Header ("SVN\0")
+
+	00000000				Source view offset 0
+	00001100				Source view length 12
+	00010000				Target view length 16
+	00000111				Instruction length 7
+	00000001				New data length 1
+
+	00000100 00000000			Source, len 4, offset 0
+	00000100 00001000			Source, len 4, offset 8
+	10000001				New, len 1
+	01000111 00001000			Target, len 7, offset 8
+
+	01100100				The new data: 'd'

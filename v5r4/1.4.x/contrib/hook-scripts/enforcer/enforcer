@@ -1,0 +1,448 @@
+#!/usr/bin/python
+# -*- coding:utf-8;mode:python;mode:font-lock -*-
+
+##
+# Utility for Subversion commit hook scripts
+# This script enforces certain coding guidelines
+##
+# Copyright (c) 2005 Wilfredo Sanchez Vega <wsanchez@wsanchez.net>.
+# All rights reserved.
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL
+# WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+# AUTHORS BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+# DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+# PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+# TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+##
+
+import sys
+import os
+import getopt
+import popen2
+
+#
+# FIXME: Should probably retool this using python bindings, not svnlook
+#
+
+__doc__ = '''
+Enforcer is a utility which can be used in a Subversion pre-commit
+hook script to enforce various requirements which a repository
+administrator would like to impose on data coming into the repository.
+
+A couple of example scenarios:
+
+ - In a Java project I work on, we use log4j extensively.  Use of
+   System.out.println() bypasses the control that we get from log4j,
+   so we would like to discourage the addition of println calls in our
+   code.
+
+   We want to deny any commits that add a println into the code.  The
+   world being full of exceptions, we do need a way to allow some uses
+   of println, so we will allow it if the line of code that calls
+   println ends in a comment that says it is ok:
+
+       System.out.println("No log4j here"); // (authorized)
+
+   We also do not (presently) want to refuse a commit to a file which
+   already has a println in it.  There are too many already in the
+   code and a given developer may not have time to fix them up before
+   commiting an unrelated change to a file.
+
+ - The above project uses WebObjects, and you can enable debugging in
+   a WebObjects component by turning on the WODebug flag in the
+   component WOD file.  That is great for debugging, but massively
+   bloats the log files when the application is deployed.
+
+   We want to disable any commit of a file enabling WODebug,
+   regardless of whether the committer made the change or not; these
+   have to be cleaned up before any successful commit.
+
+What this script does is it uses svnlook to peek into the transaction
+is progress.  As it sifts through the transaction, it calls out to a
+set of hooks which allow the repository administrator to examine what
+is going on and decide whether it is acceptable.  Hooks may be written
+(in Python) into a configuration file.  If the hook raises an
+exception, enforcer will exit with an error status (and presumably the
+commit will be denied by th pre-commit hook). The following hooks are
+available:
+
+ verify_file_added(filename)
+  - called when a file is added.
+
+ verify_file_removed(fielname)
+  - called when a file is removed.
+
+ verify_file_copied(destination_filename, source_filename)
+  - called when a file is copied.
+
+ verify_file_modified(filename)
+  - called when a file is modified.
+
+ verify_line_added(filename, line)
+  - called for each line that is added to a file.
+    (verify_file_modified() will have been called on the file
+    beforehand)
+
+ verify_line_removed(filename, line)
+  - called for each line that is removed from a file.
+    (verify_file_modified() will have been called on the file
+    beforehand)
+
+ verify_property_line_added(filename, property, line)
+  - called for each line that is added to a property on a file.
+
+ verify_property_line_removed(filename, property, line)
+  - called for each line that is removed from a property on a file.
+
+In addition, these functions are available to be called from within a
+hook routine:
+
+ open_file(filename)
+  - Returns an open file-like object from which the data of the given
+    file (as available in the transaction being processed) can be
+    read.
+
+In our example scenarios, we can deny the addition of println calls by
+hooking into verify_line_added(): if the file is a Java file, and the
+added line calls println, raise an exception.
+
+Similarly, we can deny the commit of any WOD file enabling WODebug by
+hooking into verify_file_modified(): open the file using open_file(),
+then raise if WODebug is enabled anywhere in the file.
+
+Note that verify_file_modified() is called once per modified file,
+whereas verify_line_added() and verify_line_removed() may each be
+called zero or many times for each modified file, depending on the
+change.  This makes verify_file_modified() appropriate for checking
+the entire file and the other two appropriate for checking specific
+changes to files.
+
+These example scenarios are implemented in the provided example
+configuration file "enforcer.conf".
+
+When writing hooks, it is usually easier to test the hooks on commited
+transactions already in the repository, rather than installing the
+hook and making commits to test the them.  Enforcer allows you to
+specify either a transaction ID (for use in a hook script) or a
+revision number (for testing).  You can then, for example, find a
+revision that you would like to have blocked (or not) and test your
+hooks against that revision.
+'''
+__author__ = "Wilfredo Sanchez Vega <wsanchez@wsanchez.net>"
+
+##
+# Handle command line
+##
+
+program     = os.path.split(sys.argv[0])[1]
+debug       = 0
+transaction = None
+revision    = None
+
+def usage(e=None):
+    if e:
+        print e
+        print ""
+
+    print "usage: %s [options] repository config" % program
+    print "options:"
+    print "\t-d, --debug             Print debugging output; use twice for more"
+    print "\t-r, --revision    rev   Specify revision to check"
+    print "\t-t, --transaction txn   Specify transaction to check"
+    print "Exactly one of --revision or --transaction is required"
+
+    sys.exit(1)
+
+# Read options
+try:
+    (optargs, args) = getopt.getopt(sys.argv[1:], "dt:r:", ["debug", "transaction=", "revision="])
+except getopt.GetoptError, e:
+    usage(e)
+
+for optarg in optargs:
+    (opt, arg) = optarg
+    if   opt in ("-d", "--debug"      ): debug += 1
+    elif opt in ("-t", "--transaction"): transaction = arg
+    elif opt in ("-r", "--revision"   ): revision    = arg
+
+if transaction and revision:
+    usage("Cannot specify both transaction and revision to check")
+if not transaction and not revision:
+    usage("Must specify transaction or revision to check")
+
+if not len(args): usage("No repository")
+repository = args.pop(0)
+
+if not len(args): usage("No config")
+configuration_filename = args.pop(0)
+
+if len(args): usage("Too many arguments")
+
+##
+# Validation
+# All rule enforcement goes in these routines
+##
+
+def open_file(filename):
+    """
+    Retrieves the contents of the given file.
+    """
+    cat_cmd = [ "svnlook", "cat", None, repository, filename ]
+
+    if   transaction: cat_cmd[2] = "--transaction=" + transaction
+    elif revision:    cat_cmd[2] = "--revision="    + revision
+    else: raise ValueError("No transaction or revision")
+
+    cat_out, cat_in = popen2.popen2(cat_cmd)
+    cat_in.close()
+
+    return cat_out
+
+def verify_file_added(filename):
+    """
+    Here we verify file additions which may not meet our requirements.
+    """
+    if debug: print "Added file %r" % filename
+    if configuration.has_key("verify_file_added"):
+        configuration["verify_file_added"](filename)
+
+def verify_file_removed(filename):
+    """
+    Here we verify file removals which may not meet our requirements.
+    """
+    if debug: print "Removed file %r" % filename
+    if configuration.has_key("verify_file_removed"):
+        configuration["verify_file_removed"](filename)
+
+def verify_file_copied(destination_filename, source_filename):
+    """
+    Here we verify file copies which may not meet our requirements.
+    """
+    if debug: print "Copied %r to %r" % (source_filename, destination_filename)
+    if configuration.has_key("verify_file_copied"):
+        configuration["verify_file_copied"](destination_filename, source_filename)
+
+def verify_file_modified(filename):
+    """
+    Here we verify files which may not meet our requirements.
+    Any failure, even if not due to the specific changes in the commit
+    will raise an error.
+    """
+    if debug: print "Modified file %r" % filename
+    if configuration.has_key("verify_file_modified"):
+        configuration["verify_file_modified"](filename)
+
+def verify_line_added(filename, line):
+    """
+    Here we verify new lines of code which may not meet our requirements.
+    Code not changed as part of this commit is not verified.
+    """
+    if configuration.has_key("verify_line_added"):
+        configuration["verify_line_added"](filename, line)
+
+def verify_line_removed(filename, line):
+    """
+    Here we verify removed lines of code which may not meet our requirements.
+    Code not changed as part of this commit is not verified.
+    """
+    if configuration.has_key("verify_line_removed"):
+        configuration["verify_line_removed"](filename, line)
+
+def verify_property_line_added(filename, property, line):
+    """
+    Here we verify added property lines which may not meet our requirements.
+    Code not changed as part of this commit is not verified.
+    """
+    if debug: print "Add %s::%s: %s" % (filename, property, line)
+    if configuration.has_key("verify_property_line_added"):
+        configuration["verify_property_line_added"](filename, property, line)
+
+def verify_property_line_removed(filename, property, line):
+    """
+    Here we verify removed property lines which may not meet our requirements.
+    Code not changed as part of this commit is not verified.
+    """
+    if debug: print "Del %s::%s: %s" % (filename, property, line)
+    if configuration.has_key("verify_property_line_removed"):
+        configuration["verify_property_line_removed"](filename, property, line)
+
+##
+# Do the Right Thing
+##
+
+configuration = {"open_file": open_file}
+execfile(configuration_filename, configuration, configuration)
+
+diff_cmd = [ "svnlook", "diff", None, repository ]
+
+if   transaction: diff_cmd[2] = "--transaction=" + transaction
+elif revision:    diff_cmd[2] = "--revision="    + revision
+else: raise ValueError("No transaction or revision")
+
+diff_out, diff_in = popen2.popen2(diff_cmd)
+diff_in.close()
+
+try:
+    state = 0
+
+    #
+    # This is the svnlook output parser
+    #
+    for line in diff_out:
+	if line[-1] == "\n": line = line[:-1] # Zap trailing newline
+
+        # Test cases:
+        #   r2266:  Added text files, property changes
+        #  r18923: Added, deleted, modified text files
+        #  r25692: Copied files
+        #   r7758: Added binary files
+
+        if debug > 1: print "%4d: %s" % (state, line) # Useful for testing parser problems
+
+        if state is -1: # Used for testing new states: print whatever is left
+            print line
+            continue
+
+        if state in (0, 100, 300): # Initial state or in a state that may return to initial state
+            if state is 0 and not line: continue
+
+            colon = line.find(":")
+
+            if colon != -1 and len(line) > colon + 2:
+                action   = line[:colon]
+                filename = line[colon+2:]
+
+                if action in (
+                    "Modified",
+                    "Added", "Deleted", "Copied",
+                    "Property changes on",
+                ):
+                    if   action == "Modified": verify_file_modified(filename)
+                    elif action == "Added"   : verify_file_added   (filename)
+                    elif action == "Deleted" : verify_file_removed (filename)
+                    elif action == "Copied":
+                        i = filename.find(" (from rev ")
+                        destination_filename = filename[:i]
+                        filename = filename[i:]
+
+                        i = filename.find(", ")
+                        assert filename[-1] == ")"
+                        source_filename = filename[i+2:-1]
+
+                        verify_file_copied(destination_filename, source_filename)
+
+                        filename = destination_filename
+
+                    if   action == "Modified"           : state = 10
+                    elif action == "Added"              : state = 10
+                    elif action == "Deleted"            : state = 10
+                    elif action == "Copied"             : state = 20
+                    elif action == "Property changes on": state = 30
+                    else: raise AssertionError("Unknown action")
+
+                    current_filename = filename
+                    current_property = None
+
+                    continue
+
+            assert state in (100, 300)
+
+        if state is 10: # Expecting a bar (follows "Modified:" line)
+            assert line == "=" * 67
+            state = 11
+            continue
+
+        if state is 11: # Expecting left file info (follows bar)
+            if   line == "":                      state =  0
+            elif line == "(Binary files differ)": state =  0
+            elif line.startswith("--- "):         state = 12
+            else: raise AssertionError("Expected left file info, got: %r" % line)
+
+            continue
+
+        if state is 12: # Expecting right file info (follows left file info)
+            assert line.startswith("+++ " + current_filename)
+            state = 100
+            continue
+
+        if state is 20: # Expecting a bar or blank (follows "Copied:" line)
+            # Test cases:
+            # r25692: Copied and not modified (blank)
+            # r26613: Copied and modified (bar)
+            if not line:
+                state = 0
+            elif line == "=" * 67:
+                state = 11
+            else:
+                raise AssertionError("After Copied: line, neither bar nor blank: %r" % line)
+            continue
+
+        if state is 100: # Expecting diff data
+            for c, verify in (("-", verify_line_removed), ("+", verify_line_added)):
+                if len(line) >= 1 and line[0] == c:
+                    try: verify(current_filename, line[1:])
+                    except Exception, e:
+                        sys.stderr.write(str(e))
+                        sys.stderr.write("\n")
+                        sys.exit(1)
+                    break
+            else:
+                if (
+                    not line or
+                    (len(line) >= 4 and line[:2] == "@@" == line[-2:]) or
+                    (len(line) >= 1 and line[0]  == " ") or
+                    line == "\\ No newline at end of file"
+                ):
+                    continue
+
+                raise AssertionError("Expected diff data, got: %r" % line)
+
+            continue
+
+        if state is 30: # Expecting a bar (follows "Property changes on:" line)
+            assert line == "_" * 67
+            state = 31
+            continue
+
+        if state is 31: # Expecting property name (follows bar)
+            assert line.startswith("Name: ")
+            state = 300
+            # Fall through to state 300
+
+        if state is 300:
+            if line.startswith("Name: "):
+                current_property = line[6:]
+                continue
+
+            for prefix, verify in (
+                ("   - ", verify_property_line_removed),
+                ("   + ", verify_property_line_added)
+            ):
+                if line.startswith(prefix):
+                    try: verify(current_filename, current_property, line[5:])
+                    except Exception, e:
+                        sys.stderr.write(str(e))
+                        sys.stderr.write("\n")
+                        sys.exit(1)
+                    break
+            else:
+                if not line: continue
+
+                raise AssertionError("Expected property diff data, got: %r" % line)
+
+            continue
+
+        raise AssertionError("Unparsed line: %r" % line)
+
+    if debug: print "Commit is OK"
+
+finally:
+    while diff_out.read(1024 * 1024 * 64): pass
+    diff_out.close()

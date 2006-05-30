@@ -1,0 +1,80 @@
+log: Show the log messages for a set of revision(s) and/or file(s).
+usage: 1. log [PATH]
+       2. log URL[@REV] [PATH...]
+
+  1. Print the log messages for a local PATH (default: '.').
+     The default revision range is BASE:1.
+
+  2. Print the log messages for the PATHs (default: '.') under URL.
+     If specified, REV determines in which revision the URL is first
+     looked up.  The default revision range is HEAD:1.
+
+  With -v, also print all affected paths with each log message.
+  With -q, don't print the log message body itself (note that this is
+  compatible with -v).
+
+  Each log message is printed just once, even if more than one of the
+  affected paths for that revision were explicitly requested.  Logs
+  follow copy history by default.  Use --stop-on-copy to disable this
+  behavior, which can be useful for determining branchpoints.
+
+  Examples:
+    svn log
+    svn log foo.c
+    svn log http://www.example.com/repo/project/foo.c
+    svn log http://www.example.com/repo/project foo.c bar.c
+
+Valid options:
+  -r [--revision] arg      : ARG (some commands also take ARG1:ARG2 range)
+                             A revision argument can be one of:
+                                NUMBER       revision number
+                                '{' DATE '}' revision at start of the date
+                                'HEAD'       latest in repository
+                                'BASE'       base rev of item's working copy
+                                'COMMITTED'  last commit at or before BASE
+                                'PREV'       revision just before COMMITTED
+  -q [--quiet]             : print as little as possible
+  -v [--verbose]           : print extra information
+  --targets arg            : pass contents of file ARG as additional args
+  --stop-on-copy           : do not cross copies while traversing history
+  --incremental            : give output suitable for concatenation
+  --xml                    : output in XML
+  --username arg           : specify a username ARG
+  --password arg           : specify a password ARG
+  --no-auth-cache          : do not cache authentication tokens
+  --non-interactive        : do no interactive prompting
+  --config-dir arg         : read user configuration files from directory ARG
+  --limit arg              : maximum number of log entries
+
+switch (sw): Update the working copy to a different URL.
+usage: 1. switch URL [PATH]
+       2. switch --relocate FROM TO [PATH...]
+
+  1. Update the working copy to mirror a new URL within the repository.
+     This behaviour is similar to 'svn update', and is the way to
+     move a working copy to a branch or tag within the same repository.
+
+  2. Rewrite working copy URL metadata to reflect a syntactic change only.
+     This is used when repository's root URL changes (such as a scheme
+     or hostname change) but your working copy still reflects the same
+     directory within the same repository.
+
+Valid options:
+  -r [--revision] arg      : ARG (some commands also take ARG1:ARG2 range)
+                             A revision argument can be one of:
+                                NUMBER       revision number
+                                '{' DATE '}' revision at start of the date
+                                'HEAD'       latest in repository
+                                'BASE'       base rev of item's working copy
+                                'COMMITTED'  last commit at or before BASE
+                                'PREV'       revision just before COMMITTED
+  -N [--non-recursive]     : operate on single directory only
+  -q [--quiet]             : print as little as possible
+  --diff3-cmd arg          : use ARG as merge command
+  --relocate               : relocate via URL-rewriting
+  --username arg           : specify a username ARG
+  --password arg           : specify a password ARG
+  --no-auth-cache          : do not cache authentication tokens
+  --non-interactive        : do no interactive prompting
+  --config-dir arg         : read user configuration files from directory ARG
+

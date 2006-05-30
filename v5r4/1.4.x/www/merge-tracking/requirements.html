@@ -1,0 +1,486 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Merge Tracking Requirements and Use Cases</title>
+</head>
+
+<body>
+<div class="h2">
+<h2>Merge Tracking Requirements and Use Cases</h2>
+
+<p>This document details Subversion's <a href="index.html">merge
+tracking</a> requirements and their supporting use cases, the majority
+of which are driven by Subversion's <a
+href="../user-classifications.html#developer">Developer</a> and <a
+href="../user-classifications.html#merge-meister">Merge Meister</a>
+users.  A few outliers are driven by <a
+href="../user-classifications.html#program">SCM automation</a>.</p>
+
+<div id="requirements">
+
+<p style="color: red">*** UNDER CONSTRUCTION ***</p>
+
+<p style="color: red">TODO:
+Incorporate <a href="summit.html">CollabNet Summit findings</a> into
+the material below.  There is a lot of data in those findings not
+reflected below.  For the most part the summit results are not
+surprising, but they represent the best writeup we have of certain
+requirements that were formerly only hinted at tangentially on the
+users@ list and in other forums.</p>
+
+<div class="h3" id="summary">
+<h3>Summary</h3>
+
+<ul>
+  <li>
+    Merging
+    <ul>
+      <li><a href="#repeated-merge">Repeated Merge</a></li>
+      <li><a href="#cherry-picking">Cherry Picking</a></li>
+      <li><a href="#rename-tracking">Handle Renames</a></li>
+      <li><a href="#manual-merge">Record Manual Merge</a></li>
+      <li><a href="#rollback-merge">Rollback Merge</a></li>
+      <li><a href="#revision-blocking">Block/Unblock Change Set</a></li>
+      <li><a href="#properties">Properties</a></li>
+      <li><a href="#merge-previews">Preview</a></li>
+      <li><a href="#automated-merge">SCM Automation</a></li>
+      <li><a href="#distributable-resolution">Distribution of Conflict
+      Resolution</a></li>
+    </ul>
+  </li>
+
+  <li>
+    <a href="#auditing">Auditing</a>
+    <ul>
+      <li>Show Change Sets Available for Merge</li>
+      <li>Show Change Sets Already Merged</li>
+      <li>Show Change Sets Blocked from Merging</li>
+      <li><em>Merged From</em> info for Change Set and/or Path</li>
+      <li><em>Merged To</em> info for Change Set and/or Path</li>
+      <li>Find Paths containing Specific Incarnation of Versioned Resource</li>
+      <li>Commutative Author Reporting From Merged Change Set and/or
+      Path (e.g. for <code>log</code> and <code>blame</code>)</li>
+      <!-- ### Need to explicitly call out renames? -->
+    </ul>
+  </li>
+
+  <li>
+    Other
+    <ul>
+      <li><a href="#dump-load">Consistent UI</a></li>
+      <li><a href="#dump-load">Allow Dump/Load</a></li>
+      <li><a href="#compatibility">Compatibility with older Subversion
+      clients</a></li>
+      <li><a href="#versioning">Versioning</a></li>
+      <li><a href="#authz">Authorization</a></li>
+    </ul>
+  </li>
+</ul>
+
+</div>  <!-- summary -->
+
+
+<div class="h3" id="merging">
+<h3>Merging</h3>
+
+<div class="h4" id="repeated-merge">
+<h4>Repeated Merge</h4>
+
+<p>Track which changesets have been applied where, so users can
+repeatedly merge branch A to branch B without having to remember the
+last range of revisions ported.  This would also track changeset <a
+href="#cherry-picking">cherry picking</a> done by users, so we don't
+accidentally re-merge changesets that are already applied.  This is
+the problem that <a href="http://svk.elixus.org/">svk</a> and <a
+href="http://www.gnu.org/software/gnu-arch/">arch</a> claim to have
+already solved, what they're calling <em>star-merge</em>.</p>
+
+</div>  <!-- repeated-merge -->
+
+<div class="h4" id="cherry-picking">
+<h4>Cherry Picking</h4>
+
+<p>Merge of one or more individual changes from branch A into branch
+B.  This sometimes involves manual application of the changes from rN
+in branch A (e.g. not using <code>svn merge</code>), or manual
+adjustment of a change merged into a WC before it's committed to the
+repository.  Regardless of the merge method used, Subversion must
+provide a way to indicate that the change(s) have been merged into
+branch B.</p>
+
+<p>Additionally, it's important to be able to cherry pick changes in
+multiple different directions.  For example, if you create a release
+branch B by copying the trunk you should be able to both forward port
+changes made on B into trunk and backport changes made on trunk into B
+without confusing the merge tracking algorithm.</p>
+
+<p>Use may be predicated on information from the <em>Show Change Sets
+Available for Merge</em> feature (<a href="#auditing">Auditing</a>
+section).</p>
+
+</div>  <!-- cherry picking -->
+
+<div class="h4" id="rename-tracking">
+<h4>Track Renames in Merge</h4>
+
+<p><code>svn merge</code> needs to handle renames better.  This
+requires <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
+rename support</a>.</p>
+
+<p>Edit foo.c on branch A.  Rename foo.c to bar.c on branch B.</p>
+
+<ol>
+  <li>Try merging the branch A edit into a working copy of branchB:
+  <code>svn merge</code> will skip the file, because it can't find
+  it.</li>
+
+  <li>Conversely, try merging branch B rename to branch A: <code>svn
+  merge</code> will delete the 'newer' version of foo.c and add bar.c,
+  which has the older text.</li>
+</ol>
+
+<p>Problem #2 stems from the fact that we don't have <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
+renames</a>, just copies (with history) and deletes.  That's not
+fixable without a FS schema change, and (probably) a libsvn_wc
+rewrite.</p>
+
+<p>It's not clear what it would take to solve problem #1.  See <a
+href="http://www.contactor.se/~dast/svn/archive-2004-07/0084.shtml">the
+discussion</a> about our rename woes, and the relationship to merge
+tracking.</p>
+
+</div>  <!-- rename-tracking -->
+
+<div class="h4" id="manual-merge">
+<h4>Record Manual Merge</h4>
+
+<p>Allow change sets to be marked as merged, effectively a way to
+manipulate the merge memory on a source and destination.  This is
+related to the <a href="#revision-blocking">revision blocking</a>
+concept.</p>
+
+<p>Fundamentally, the use case is to support merge tracking of change
+set which is sufficiently different when ported to a different branch
+that use of <code>svn merge</code> is no longer appropriate.  Examples
+scenarios include:</p>
+
+<ul>
+  <li>The actual change you want to apply to branch has no overlap
+  with its incarnation on the source branch, yet is conceptually
+  equivalent.</li>
+
+  <li>Only a subset of a change set warrants application.</li>
+
+  <li>The branch content has drifted far enough apart to make
+  automatic merging impossible.</li>
+</ul>
+
+<p>David James cites a specific example from Subversion's own
+development:</p>
+
+<blockquote><p>"When I merge from trunk to 1.3.x, I often run into
+conflicts, so I create a temporary merge branch. If I tried to merge
+from the temporary merge branch to 1.3.x, the merge metadata would be
+lost because svnmerge.py does not track indirect metadata. To correct
+this metadata, I'd use [this feature]."</p></blockquote>
+
+<p>Use may be predicated on information from the <em>Show Change Sets
+Available for Merge</em> feature (<a href="#auditing">Auditing</a>
+section).</p>
+
+</div>  <!-- manual-merge -->
+
+<div class="h4" id="rollback-merge">
+<h4>Rollback Merge</h4>
+
+<p>Undo a merge and/or associated tracking meta data.  Necessary for
+both <a href="#repeated-merge">automated</a> and <a
+href="#manual-merge">manual</a> merges.</p>
+
+<p>Use may be predicated on information from the <em>Show Change Sets
+Available for Merge</em> and <em>Show Change Sets Already Merged</em>
+features (<a href="#auditing">Auditing</a> section).</p>
+
+</div>  <!-- rollback-merge -->
+
+<div class="h4" id="revision-blocking">
+<h4>Block/Unblock Change Set</h4>
+
+<p>Protect revisions which should never be merged from accidental
+merging.</p>
+
+</div>  <!-- revision-blocking -->
+
+<div class="h4" id="properties">
+<h4>Properties</h4>
+
+<p>Changes to arbitrary properties set on a versioned resource should
+be mergable exactly as entries within a directory (e.g. add, deleted,
+etc.), or content in a file (see <a href="#repeated-merge">repeated
+merge</a>).</p>
+
+<p>Subversion's <em>revision properties</em> (sometimes referred to as
+<em>revprops</em>) need not be handled.</p>
+
+</div>  <!-- properties -->
+
+<div class="h4" id="merge-previews">
+<h4>Merge Previews</h4>
+
+<p>Merge previews are dry runs that show conflicts and "non-trivial,
+non-conflicting" (NTNC) changes in advance.  These previews should be
+exportable and parseable.  (From the <a href="summit.html#merge-previews" 
+>distributable resolution item</a> in the summit summary.)</p>
+
+</div>  <!-- merge-previews -->
+
+<div class="h4" id="automated-merge">
+<h4>SCM Automated Merge</h4>
+
+<p>The ability to automate merges (e.g. from a stable branch to a
+development branch), including interfaces for resolving conflicts and
+handling other errors, is important.  <a
+href="../user-classifications.html#merge-meister">Merge Meisters</a>
+who do multi-thousand file merges stress this.</p>
+
+</div>  <!-- automated-merge -->
+
+<div class="h4" id="distributable-resolution">
+<h4>Distributability of Merge Resolution</h4>
+
+<p>The mechanism for resolving conflicts in a merge should be
+distributable across N developers.  Meeting this requirement might
+mean a departure for Subversion, since it implies that merge results
+are not just stored in one working copy, but are somehow available on
+the server side.  (From the <a href="summit.html#distributable-resolution"
+>distributable resolution item</a> in the summit summary.)</p>
+
+</div>  <!-- distributable-resolution -->
+
+</div>  <!-- merging -->
+
+
+<div class="h3" id="auditing">
+<h3>Auditing</h3>
+
+<p>Merge tracking must be audit-friendly, supporting some basic forms
+of reporting which allow for discovery of following types of
+information:</p>
+
+<ul>
+  <li>If you merge rN into some destination (e.g. branch B), it should
+  be possible to query rN itself to ask what destinations it has been
+  merged to, and the answer set should contain B.</li>
+
+  <li>If you merge rN into a branch B, and rN was committed by author A,
+  then <code>svn blame</code> should show the changed lines in B as
+  last touched by A, even if the merge was committed by you and you
+  are not A.  This must also work when merging a range of revisions
+  with different authors.</li>
+
+  <li>If you've <a href="#revision-blocking">blocked</a> some set
+  of revisions from being merged from branch B into some destination
+  (e.g. trunk), you should be able to discover which revisions have
+  been blocked.</li>
+
+  <li>If you merge rN into a branch B, and rN was committed by author
+  A, then <code>svn log -rN</code> should show both the original
+  author A, <em>and</em> the author who merged the change.</li>
+
+  <li>It should be possible to query any path (file, directory, or
+  symlink) to find out what changes (revisions) have been merged under
+  it.  For files, "under" just means "into".</li>
+
+  <li>It should be possible to get a 'log' of changes to merge tracking
+  information. This 'log' should list both when the merges were applied,
+  and when the merge-tracking information was updated.</li>
+
+  <li>It should be easy to discover all the paths at which a particular
+  node revision (i.e., unique versioned file entity) exists,
+  especially in a given revision.  In other words, this is the "what
+  branches does this exact version of this file exist in" problem,
+  often requested by so-called enterprise-level users.</li>
+
+  <li>Merge records should be transitive.  Often we merge a bunch of
+  changes to a backport branch, tweak them there, then later merge the
+  branch into a release line.  Later queries of the release line
+  should show that the original revisions are present, and queries
+  of the original revisions should show that they went to the release
+  line as well as the backport branch.</li>
+</ul>
+
+</div>  <!-- auditing -->
+
+
+<div class="h3" id="misc">
+<h3>Miscellaneous</h3>
+
+<div class="h4" id="dump-load">
+<h4>Allow for Dump/Load</h4>
+
+<p>Whatever solution is chosen must play well with <code>svnadmin
+dump</code> and <code>svnadmin load</code>.  For example, the metadata
+used to store merge tracking history must not be stored in terms of
+some filesystem backend implementation detail (e.g.
+"node-revision-ids") unless, perhaps, those IDs are present for all
+items in the dump as a sort of "soft data" (which would allow them to
+be used for "translating" the merge tracking data at load time, where
+those IDs would be otherwise irrelevant).  See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1525">issue
+1525</a> about user-visible entity IDs.</p>
+
+</div>  <!-- dump-load -->
+
+<div class="h4" id="common-case-ease">
+<h4>User Interface Ease in Common Cases</h4>
+
+<p>(This was one of the points made at the <a
+href="http://svn.collab.net/repos/svn/trunk/notes/EuroOSCON-2005-vc-bof.txt"
+>EuroOSCON 2005 Version Control BOF session</a>.)</p>
+
+<p>The interface for common-case merges should be easy.  Currently it
+is not.  For example, a very common case is merging all previously
+unmerged changes from trunk to branch (more formally, from a source
+line to a descendant destination line).  Today, one must type
+<code>svn&nbsp;merge&nbsp;-rX:Y&nbsp;URL&nbsp;WC</code>.  But why
+can't the dest just remember what has been merged from that src before
+and do the right thing?  Then one could type
+<code>svn&nbsp;merge&nbsp;SRC&nbsp;DST</code>.  Or better yet,
+branches could remember where they come from, and one could just type
+<code>svn&nbsp;merge&nbsp;SRC</code>, or
+<code>svn&nbsp;merge&nbsp;DST</code>, depending on whether one wants a
+push or pull interface.  (It was pointed out that SVK does remember
+these things; if someone familiar with the SVK interface wants to put
+an example transcript here, that would be great.)</p>
+
+<p>Here is the svk command transcript:
+</p>
+<blockquote>
+<p>
+A branch creation by:
+<code>svk copy //project/trunk //project/branch-B</code>
+(or mirroring an existing subversion repository containing such branch)
+</p>
+
+<p>
+To merge from trunk to branch-B:
+<code>svk smerge //project/trunk //project/branch-B</code>, or
+<code>svk smerge --to //project/branch-B</code>, or
+<code>svk pull //project/branch-B</code>
+</p>
+<p>
+To merge from branch-B back to trunk:
+<code>svk smerge //project/trunk //project/branch-B</code>, or
+<code>svk smerge --from //project/branch-B</code>, or
+<code>svk push //project/branch-B</code>
+</p>
+
+<p>
+There is also a <code>-I</code> flag in smerge to merge changes
+revision-by-revision.  Push is by default with the option, and
+pull is not.
+</p>
+
+</blockquote>
+
+<p>Another common case is porting a single change from one line to
+another.  This currently requires <code>-r&lt;X-1&gt;:X</code> syntax,
+but Subversion 1.4 will include the <code>-c</code> option (introduced
+in <a href="http://svn.collab.net/viewvc/svn?rev=17054&amp;view=rev"
+>r17054</a>), so users will no longer need to perform this menial
+arithmetic.  However, Subversion 1.4 will still require the URL of the
+merge source to be specified; a merge tracking solution that eases
+common cases would obviate the need for the user to supply the URL
+when a single change is ported from a branch's ancestor line.</p>
+
+<p>svk merge also supports <code>-c N</code> flag which is
+<code>-rN-1:N</code>.</p>
+
+</div>  <!-- common-case-ease -->
+
+<div class="h4" id="compatibility">
+<h4>Compatibility with older Subversion clients</h4>
+
+<ul>
+
+<li>Older Subversion clients should still be able to commit merges on new
+    repositories.</li>
+
+<li>Repository administrators should be able to control whether older clients
+    (which do not support merge tracking) can commit changes to specific (e.g.
+    branch or tag) subdirectories.</li>
+
+</ul>
+
+</div>  <!-- compatibility -->
+
+<div class="h4" id="versioning">
+<h4>Versioning</h4>
+
+<p>Merge tracking information should be maintained for all versions of
+files in a repository. Thus, if you create a copy of an old version of
+a branch, the merge tracking information will still be accurate.</p>
+
+<p>Changes to merge tracking information should be versioned,
+therefore allowing tracking and auditing of changes to merge
+tracking data.</p>
+
+</div>  <!-- versioning -->
+
+<div class="h4" id="authz">
+<h4>Authorization</h4>
+
+<p>Repository administrators should be able to control whether merge
+tracking information can be committed by specific users or to specific
+directories.</p>
+
+<p>Repository administrators should be able to control whether changes
+can be committed without associated merge-tracking information. Using
+this feature, a repository administrator could enforce (for example)
+that all changes must be committed to trunk before they are merged to
+a release branch.</p>
+
+</div>  <!-- permissions -->
+
+</div>  <!-- misc -->
+
+</div>  <!-- requirements -->
+</div>  <!-- h2 -->
+
+
+<div class="h2" id="related-documents">
+<h2>Related Documents and Discussion</h2>
+
+<ul>
+  <li><a
+  href="http://svn.collab.net/repos/svn/trunk/notes/schema-tradeoffs.txt"
+  >schema-tradeoffs.txt</a>: Search for the section called "Questions
+  that Users Ask".</li>
+
+<!-- TODO: "Import" from Karl's site:
+  <li><a href="merge-history/threads.html">Various merging threads
+  from dev@svn</a></li>
+
+  <li><a href="jackr-diff-merge-syntax/threads.html">Mail from Jack
+  Repenning about diff/merge syntax</a></li>
+-->
+
+  <li>Bram Cohen <a
+  href="http://lists.zooko.com/pipermail/revctrl/2005-May/000012.html"
+  >muses on rename/copy, etc.</a></li>
+</ul>
+
+</div>  <!-- related-documents -->
+
+</body>
+</html>

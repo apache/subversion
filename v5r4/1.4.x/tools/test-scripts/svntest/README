@@ -1,0 +1,114 @@
+svntest scripts                                           -*- Text -*-
+===============
+
+This set of scripts is designed to wrap execution of all of
+Subversion's Makefile test targets (e.g. "check", "davcheck",
+"svncheck", etc.).
+
+
+Usage
+=====
+
+1) Read the INSTALL (http://svn.collab.net/repos/svn/trunk/INSTALL)
+   file, especially the sections about bootstrapping from a tarball
+   and getting the latest APR-0.9, APR-UTIL-0.9 and httpd-2.0 sources.
+   Check out and compile the latest Subversion. You could easily run
+   svntest.sh against APR/APR-UTIL 1.0 and HTTPD 2.1 branches, just 
+   checkout corresponding repositories, and edit svntest-config.sh.
+
+2) Copy the svntest scripts from trunk/tools/test-scripts/svntest to
+   somewhere outside the repository.  Then read and modify
+   svntest-config.sh to reflect your local installation.  The rest of
+   these instructions assume you have done this, and that you are
+   familiar with the $TEST_ROOT and $INST_DIR locations from
+   svntest-config.sh.
+
+3) In $TEST_ROOT, create one or more scripts that configure Subversion
+   in different ways (e.g., configure.shared, configure.static).
+   These scripts must be set executable (chmod +x).
+
+   Although they live in $TEST_ROOT, these scripts will be invoked
+   from a $TEST_ROOT/obj-<projname>, e.g., $TEST_ROOT/obj-apr-0.9,
+   (for which the config script would be $TEST_ROOT/config.apr-0.9).
+
+   See the examples/ directory next to this README for some examples
+   of these config scripts.
+
+   At the moment, svntest-rebuild.sh will only recognize shared and
+   static build types, but you can easily change that. If you do, also
+   change svntest.sh so that it tests all the different configurations.
+
+4) Tailor ${TEST_ROOT}/$HTTPD_NAME.conf (e.g., httpd-2.0.conf) as
+   necessary.  The easiest way to get a template for http-2.0.conf is
+   to install Apache httpd once, take the installed conf/httpd.conf,
+   and edit it.  Things you probably want to change are: 
+
+      a) Listen 127.0.0.1:52080
+
+      b) LoadModule dav_svn_module     modules/mod_dav_svn.so
+
+      c) User YOUR_USERNAME
+         Group YOUR_GROUPNAME
+
+      d) ServerName localhost:52080
+
+      e) Add a mod_dav_svn block:
+    
+           <IfModule mod_dav_svn.c>
+              Include conf/mod_dav_svn.conf
+           </IfModule>
+
+      f) Copy ./mod_dav_svn.conf (i.e., the one in the same directory
+         as this README) to ${TEST_ROOT}/mod_dav_svn.conf, and adjust
+         it as necessary.
+
+         The actual name of the used mod_dav_svn conf file is
+         ${TEST_ROOT}/mod_dav_${SVN_NAME}.conf, which is
+         mod_dav_svn.conf with default settings.
+
+         Likwise, copy ./dav_svn.passwd to ${TEST_ROOT}/dav_svn.passwd.
+         (You shouldn't need to adjust it.)
+
+         If you want to run regression tests for 1.1.x or 1.2.x with
+         the same svntest setup, you have to change the SVN_NAME
+         variable, and generate two additional mod_dav_svn conf files:
+
+           sed 's!/svn-test-work!!' mod_dav_svn.conf > mod_dav_svn_1.2.x.conf
+           sed 's!/svn-test-work!!' mod_dav_svn.conf > mod_dav_svn_1.1.x.conf
+        
+         and set SVN_NAME=svn_1.2.x for 1.2.x, and SVN_NAME=svn_1.1.x
+         for 1.1.x.
+
+   Don't ever touch config files under $INST_DIR/$HTTPD_NAME/conf,
+   they will be overwritten by the script.
+   
+5) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
+   to find Berkeley DB, etc.
+
+6) Test execution can be dramatically sped up by keeping Subversion
+   test data on a RAM disk.  On a Linux system, add lines like the
+   following in your /etc/fstab file:
+
+   tmpfs  /home/YOUR_USERNAME/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+   tmpfs  /home/YOUR_USERNAME/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+
+   The minimum required size for testing RAM disk is actually many
+   times greater than shown above.  However, svntest will
+   automatically flag your test targets for cleanup when using a
+   ramdisk, which dramatically reduces the space requirement.
+
+   To enable RAM disk usage by svntest, set RAMDISK=yes, and check
+   mount_ramdisk and umount_ramdisk in the svntest-config.sh file if
+   your system is not GNU/Linux.  See
+   http://subversion.tigris.org/faq.html#ramdisk-tests for further
+   information.
+   
+7) Run svntest.sh to get the latest versions of APR, APR-UTIL, HTTPPD and
+   Subversion, build and test all the configurations. 
+
+8) If you like force rebuilding of some component, you could do:
+   echo "0" > $<PROJ>_SOURCE.rb, dependencies are:
+   apr-util depends on apr, and httpd depends on apr and apr-util.
+   Any dependent project will be also rebuild.
+   When you run this script first time, everything will be rebuilt 
+   automatically.

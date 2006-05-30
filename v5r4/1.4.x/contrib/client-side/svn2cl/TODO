@@ -1,0 +1,9 @@
+* flag deleted files (<path action="D"...>)
+* look at more command line compatibility with cvs2cl (e.g. -r, --revisions, --show-dead, --no-wrap, --hide-filenames, --lines-modified)
+* support more xslt processors
+* group changes per autor per day
+* svn2rss?
+* if an authors.xml file exists in the current directory automatically pick it up
+* improve performance of processing authors.xml
+* fix awk magic to not break with spaces in repository names
+* find better names for options
