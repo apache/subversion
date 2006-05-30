@@ -9,6 +9,24 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  * r19700, r19753, r19829
+    Error out for limit arguments that are less than or equal to zero,
+    since they don't make sense, plus a test for it.
+    Justification:
+      Minor issue, non-intrusive fix.
+    Votes:
+      +1: rooneg, lundblad
+ 
+  * r19841
+    Check cmdline arguments and report errors in svn-backup-dumps.py.
+    The tool showed a python backtrace instead of a useful error message.
+    Justification:
+      Not everyone can interpret a python backtrace.
+    Votes:
+      +1:
+      
+Approved changes:
+
   * r19562, r19632, r19652, r19732, r19713
     Extra python tests for authz validation: copy, delete, move, cat, log, 
     checkout, lock and diff. These tests depend on the no-working-copy 
@@ -16,30 +34,12 @@ Candidate changes:
     Justification:
       Tests how secure Subversion is.
     Votes:
-      +1: lgo
+      +1: lgo, lundblad
 
-  * r19700, r19753, r19829
-    Error out for limit arguments that are less than or equal to zero,
-    since they don't make sense, plus a test for it.
-    Justification:
-      Minor issue, non-intrusive fix.
-    Votes:
-      +1: rooneg
- 
   * r19746
     Python test for fix for issue 2275
     Justification:
       Fix is already included in 1.4.x (r19509)
     Votes:
-      +1: lgo, dlr
-
-  * r19841
-    Check cmdline arguments and report errors in svn-backup-dumps.py.
-    The tool showed a python backtrace instead of a useful error message.
-    Justification:
-      Not everyone can interpret a python backtrace.
-    Votes:
-      +1: mf (author of teh commit)
-      
-Approved changes:
+      +1: lgo, dlr, lundblad
 
