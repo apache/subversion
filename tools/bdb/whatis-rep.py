@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Print a description (including data, path, and revision) of the
 # specified node reps in a Subversion filesystem.  Walks as much of
