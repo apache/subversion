@@ -62,7 +62,24 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     def my_callback(info, pool):
         self.assertEqual(info.revision, fs.youngest_rev(self.fs))
 
-    ra.get_commit_editor2(self.ra_ctx, "foobar", my_callback, None, False)
+    editor, edit_baton = ra.get_commit_editor2(self.ra_ctx, "foobar", my_callback, None, False)
+    root = delta.editor_invoke_open_root(editor, edit_baton, 4)
+    child = delta.editor_invoke_add_directory(editor, "bla", root, None, 0)
+    delta.editor_invoke_close_edit(editor, edit_baton)
+
+  def test_update(self):
+    class TestEditor(delta.Editor):
+        pass
+
+    editor = TestEditor()
+
+    e_ptr, e_baton = delta.make_editor(editor)
+    
+    reporter, reporter_baton = ra.do_update(self.ra_ctx, 10, "", True, e_ptr, e_baton)
+
+    ra.reporter2_invoke_set_path(reporter, reporter_baton, "", 0, True, None)
+
+    ra.reporter2_invoke_finish_report(reporter, reporter_baton)
 
 def suite():
     return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
