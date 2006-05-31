@@ -15,15 +15,22 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
+#include <assert.h>
 
 #include "svn_types.h"
 #include "svn_ctype.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
 #include "svn_string.h"
 #include "svn_mergeinfo.h"
 #include "svn_private_config.h"
+
+/* Define a MAX macro if we don't already have one */
+#ifndef MAX
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#endif
 
 static svn_error_t *
 parse_revision(const char **input, const char *end, svn_revnum_t *revision)
@@ -87,7 +94,7 @@ parse_revlist(const char **input, const char *end,
                                 _("Invalid character found in revision list"));
       mrange->start = firstrev;
       mrange->end = firstrev;
-      
+
       if (*curr == '-')
         {
           svn_revnum_t secondrev;
@@ -173,4 +180,240 @@ svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
 {
   *hash = apr_hash_make(pool);
   return parse_top(&input, input + strlen(input), *hash, pool);
+}
+
+
+/* Attempt to combine two ranges, IN1 and IN2, and put the result in
+   OUTPUT.
+   If they could be combined, return TRUE. If they could not, return FALSE  */
+static svn_boolean_t
+svn_combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
+                   svn_merge_range_t *in2)
+{
+  if (in1->start == in2->start)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = MAX(in1->end, in2->end);
+      return TRUE;
+    }
+  /* [1,4] U [5,9] = [1,9] in subversion revisions */
+  else if (in2->start == in1->end
+           || in2->start == in1->end + 1)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = in2->end;
+      return TRUE;
+    }
+  else if (in1->start == in2->end
+           || in1->start == in2->end + 1)
+    {
+      (*output)->start = in2->start;
+      (*output)->end = in1->end;
+      return TRUE;
+    }
+  else if (in1->start <= in2->start
+           && in1->end >= in2->start)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = MAX(in1->end, in2->end);
+      return TRUE;
+    }
+  else if (in2->start <= in1->start
+           && in2->end >= in1->start)
+    {
+      (*output)->start = in2->start;
+      (*output)->end = MAX(in1->end, in2->end);
+      return TRUE;
+    }
+  else if (in1->start >= in2->start
+           && in1->end <= in2->end)
+    {
+      (*output)->start = in2->start;
+      (*output)->end = in2->end;
+      return TRUE;
+    }
+  else if (in2->start >= in1->start
+           && in2->end <= in1->end)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = in1->end;
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
+/* Merge two revision lists IN1 and IN2 and place the result in
+   OUTPUT.  We do some trivial attempts to combine ranges as we go.  */
+svn_error_t *
+svn_rangelists_merge(apr_array_header_t **output, apr_array_header_t *in1,
+                     apr_array_header_t *in2, apr_pool_t *pool)
+{
+  int i, j;
+  svn_merge_range_t *lastrange = NULL;
+  svn_merge_range_t *newrange;
+
+  *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+
+  qsort(in1->elts, in1->nelts, in1->elt_size, svn_sort_compare_ranges);
+  qsort(in2->elts, in2->nelts, in2->elt_size, svn_sort_compare_ranges);
+
+  i = 0;
+  j = 0;
+  while (i < in1->nelts && j < in2->nelts)
+    {
+      svn_merge_range_t *elt1, *elt2;
+      int res;
+
+      elt1 = APR_ARRAY_IDX(in1, i, svn_merge_range_t *);
+      elt2 = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
+
+      res = svn_sort_compare_ranges(&elt1, &elt2);
+      if (res == 0)
+        {
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt1))
+            {
+              newrange = apr_pcalloc(pool, sizeof(*newrange));
+              newrange->start = elt1->start;
+              newrange->end = elt1->end;
+
+              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+              lastrange = newrange;
+            }
+
+          i++;
+          j++;
+        }
+      else if (res < 0)
+        {
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt1))
+            {
+
+              newrange = apr_pcalloc(pool, sizeof(*newrange));
+              newrange->start = elt1->start;
+              newrange->end = elt1->end;
+
+              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+              lastrange = newrange;
+            }
+
+          i++;
+        }
+      else
+        {
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt2))
+            {
+              newrange = apr_pcalloc(pool, sizeof(*newrange));
+              newrange->start = elt2->start;
+              newrange->end = elt2->end;
+
+              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+              lastrange = newrange;
+            }
+
+          j++;
+        }
+    }
+  /* Copy back any remaining elements.
+     Only one of these loops should end up running, if anything. */
+
+  assert (!(i < in1->nelts && j < in2->nelts));
+
+  for (; i < in1->nelts; i++)
+    {
+      svn_merge_range_t *elt = APR_ARRAY_IDX(in1, i, svn_merge_range_t *);
+
+      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+        {
+          newrange = apr_pcalloc(pool, sizeof(*newrange));
+          newrange->start = elt->start;
+          newrange->end = elt->end;
+
+          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+          lastrange = newrange;
+        }
+    }
+
+
+  for (; j < in2->nelts; j++)
+    {
+      svn_merge_range_t *elt = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
+
+      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+        {
+          newrange = apr_pcalloc(pool, sizeof(*newrange));
+          newrange->start = elt->start;
+          newrange->end = elt->end;
+
+          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+          lastrange = newrange;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* Merge two sets of merge info IN1 and IN2 and place the result in
+   OUTPUT */
+svn_error_t *
+svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
+                    apr_pool_t *pool)
+{
+  apr_array_header_t *sorted1, *sorted2;
+  int i, j;
+
+  *output = apr_hash_make (pool);
+  sorted1 = svn_sort__hash(in1, svn_sort_compare_items_as_paths, pool);
+  sorted2 = svn_sort__hash(in2, svn_sort_compare_items_as_paths, pool);
+
+  i = 0;
+  j = 0;
+  while (i < sorted1->nelts && j < sorted2->nelts)
+    {
+      svn_sort__item_t elt1, elt2;
+      int res;
+
+      elt1 = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
+      elt2 = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
+      res = svn_sort_compare_items_as_paths(&elt1, &elt2);
+
+      if (res == 0)
+        {
+          apr_array_header_t *merged;
+
+          SVN_ERR(svn_rangelists_merge(&merged, elt1.value, elt2.value, pool));
+          apr_hash_set(*output, elt1.key, elt1.klen, merged);
+          i++;
+          j++;
+        }
+      else if (res < 0)
+        {
+          apr_hash_set(*output, elt1.key, elt1.klen, elt1.value);
+          i++;
+        }
+      else
+        {
+          apr_hash_set(*output, elt2.key, elt2.klen, elt2.value);
+          j++;
+        }
+    }
+
+  /* Copy back any remaining elements.
+     Only one of these loops should end up running, if anything. */
+
+  assert (!(i < sorted1->nelts && j < sorted2->nelts));
+
+  for (; i < sorted1->nelts; i++)
+    {
+      svn_sort__item_t elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
+      apr_hash_set(*output, elt.key, elt.klen, elt.value);
+    }
+
+  for (; j < sorted2->nelts; j++)
+    {
+      svn_sort__item_t elt = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
+      apr_hash_set(*output, elt.key, elt.klen, elt.value);
+    }
+
+  return SVN_NO_ERROR;
 }

@@ -43,6 +43,22 @@ extern "C" {
 svn_error_t *
 svn_mergeinfo_parse(const char *input, apr_hash_t **hash, apr_pool_t *pool);
 
+/** Merge two hashes of merge info, @a in1 and @a in2,
+ * and place the result in @a output.  
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
+                    apr_pool_t *pool);
+
+/** Merge two rangelists consisting of @c svn_merge_range_t *
+ *  elements, @a in1 and @a in2, and place the result in @a output.
+ *  @since New in 1.5
+ */
+svn_error_t *
+svn_rangelists_merge(apr_array_header_t **output, apr_array_header_t *in1,
+                     apr_array_header_t *in2, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
