@@ -303,7 +303,6 @@ run_hook_cmd(const char *name,
        * stderr. */
       if (rc == 0)
         {
-          /* Null terminate the stringbuf. */
           script_output->data[script_output->len] = '\0';
           break;
         }
