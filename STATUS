@@ -26,11 +26,3 @@ Candidate changes:
       +1: mf
       
 Approved changes:
-
-  * r19746
-    Python test for fix for issue 2275
-    Justification:
-      Fix is already included in 1.4.x (r19509)
-    Votes:
-      +1: lgo, dlr, lundblad
-
