@@ -26,12 +26,3 @@ Candidate changes:
       +0: dlr (concept, tweak suggested on dev list)
 
 Approved changes:
-
-  * r19700, r19753, r19829
-    Error out for limit arguments that are less than or equal to zero,
-    since they don't make sense, plus a test for it.
-    Justification:
-      Minor issue, non-intrusive fix.
-    Votes:
-      +1: rooneg, lundblad, danderson
-
