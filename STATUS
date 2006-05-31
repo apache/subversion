@@ -9,14 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r19841
-    Check cmdline arguments and report errors in svn-backup-dumps.py.
-    The tool showed a python backtrace instead of a useful error message.
-    Justification:
-      Not everyone can interpret a python backtrace.
-    Votes:
-      +1: mf
-
   * r19869
     Ensure hook script's stderr messages on OS400 are NULL terminated.
     Justification:
@@ -26,3 +18,12 @@ Candidate changes:
       +0: dlr (concept, tweak suggested on dev list)
 
 Approved changes:
+
+  * r19841
+    Check cmdline arguments and report errors in svn-backup-dumps.py.
+    The tool showed a python backtrace instead of a useful error message.
+    Justification:
+      Not everyone can interpret a python backtrace.
+    Votes:
+      +1: mf
+      +0: danderson
