@@ -1207,7 +1207,7 @@ fs_change_node_prop(svn_fs_root_t *root,
       apr_hash_t *minfo = NULL;
       
       if (value)
-        SVN_ERR(svn_parse_mergeinfo(value->data, &minfo, pool));
+        SVN_ERR(svn_mergeinfo_parse(value->data, &minfo, pool));
 
       if (minfo)
         {

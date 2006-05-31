@@ -34,13 +34,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Parse the mergeinfo stored @a input, into @a
- * hash mapping from paths to arrays of svn_merge_range_t.
- * Perform temporary allocations in @a pool.
+/** Parse the mergeinfo from @a input into @a hash, mapping from paths
+ * to arrays of svn_merge_range_t.  Perform temporary allocations in
+ * @a pool.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_parse_mergeinfo(const char *input, apr_hash_t **hash, apr_pool_t *pool);
+svn_mergeinfo_parse(const char *input, apr_hash_t **hash, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -168,7 +168,7 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_parse_mergeinfo(const char *input, apr_hash_t **hash,
+svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
                     apr_pool_t *pool)
 {
   *hash = apr_hash_make(pool);
