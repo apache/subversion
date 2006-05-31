@@ -66,9 +66,12 @@ test_parse_mergeinfo(const char **msg,
       err = svn_parse_mergeinfo(BOGUS_MERGEINFO_LINE, &path_to_merge_ranges,
                                 pool);
       if (!err)
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_parse_mergeinfo (%s) succeeded "
-                                 "unexpectedly", BOGUS_MERGEINFO_LINE);
+        {
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "svn_parse_mergeinfo (%s) succeeded "
+                                   "unexpectedly", BOGUS_MERGEINFO_LINE);
+        }
 
       /* Test valid input. */
       err = svn_parse_mergeinfo(mergeinfo_lines[i], &path_to_merge_ranges,
@@ -86,7 +89,7 @@ test_parse_mergeinfo(const char **msg,
 
           apr_hash_this(hi, &path, NULL, &val);
           if (strcmp((const char *) path, mergeinfo_paths[i]) != 0)
-            return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                      "svn_parse_mergeinfo (%s) failed to "
                                      "parse the correct path (%s)",
                                      mergeinfo_lines[i], mergeinfo_paths[i]);
@@ -97,7 +100,7 @@ test_parse_mergeinfo(const char **msg,
               != mergeinfo_ranges[i].start ||
               APR_ARRAY_IDX(ranges, 0, svn_merge_range_t *)->end
               != mergeinfo_ranges[i].end)
-            return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                      "svn_parse_mergeinfo (%s) failed to "
                                      "parse the correct range",
                                      mergeinfo_lines[i]);
