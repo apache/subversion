@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os.path, shutil, string, re, sys
+import os.path, shutil, string, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
@@ -823,7 +823,7 @@ def match_or_fail(message, label, expected, actual):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox):
+def make_repo_and_wc(sbox, create_wc = True):
   """Create a fresh repository and checkout a wc from it.
 
   The repo and wc directories will both be named TEST_NAME, and
@@ -837,20 +837,27 @@ def make_repo_and_wc(sbox):
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(sbox.repo_dir)
 
-  # Generate the expected output tree.
-  expected_output = main.greek_state.copy()
-  expected_output.wc_dir = sbox.wc_dir
-  expected_output.tweak(status='A ', contents=None)
+  if create_wc:
+    # Generate the expected output tree.
+    expected_output = main.greek_state.copy()
+    expected_output.wc_dir = sbox.wc_dir
+    expected_output.tweak(status='A ', contents=None)
 
-  # Generate an expected wc tree.
-  expected_wc = main.greek_state
+    # Generate an expected wc tree.
+    expected_wc = main.greek_state
 
-  # Do a checkout, and verify the resulting output and disk contents.
-  run_and_verify_checkout(main.current_repo_url,
-                          sbox.wc_dir,
-                          expected_output,
-                          expected_wc)
-
+    # Do a checkout, and verify the resulting output and disk contents.
+    run_and_verify_checkout(main.current_repo_url,
+                            sbox.wc_dir,
+                            expected_output,
+                            expected_wc)
+  else:
+    # just make sure the parent folder of our working copy is created
+    try:
+      os.mkdir(main.general_wc_dir)
+    except OSError, err:
+      if err.errno != errno.EEXIST:
+        raise
 
 # Duplicate a working copy or other dir.
 def duplicate_dir(wc_name, wc_copy_name):
