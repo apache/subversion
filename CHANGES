@@ -137,16 +137,13 @@ Developer-visible-changes:
       - new support for svn_client_info (r18758)
       - minor corrections to SVN::Fs (r19312)
 * javahl bindings:
-    - APIs to get the major/minor/patch/tag for the version (r17604 -07)
+    - APIs to get version info for the native libraries  (r17604 -07)
     - API for path validation (r18989, r19079)
-    - cleanups to and consolidation of READMEs
     - C++/Java code refactoring, cleanup, and consolidation
     - fixed: handle possible errors from date/time conversions (r17213)
     - fixed: SVNClient username()/password() JVM crash on null input (r19825)
     - fixed: specify default UUID load action (r18030)
-    - fixed: cleanse gcc compilation warnings (r16436)
-    - fixed: Visual Studio 2005 compilation error (r16436)
-    - fixed: run unit tests against SVNClientSynchronized (r18054)
+    - fixed: compile error on Visual Studio 2005 (r18054)
 
 
 Version 1.3.2
