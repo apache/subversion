@@ -24,5 +24,12 @@ Candidate changes:
       Not everyone can interpret a python backtrace.
     Votes:
       +1: mf
-      
+
+  * r19869
+    Ensure hook script's stderr messages on OS400 are NULL terminated.
+    Justification:
+      Simple fix, effects only OS400.
+    Votes:
+      +1: pburba
+
 Approved changes:
