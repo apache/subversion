@@ -71,7 +71,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * authorization improvements:
       - new mod_dontdothat apache module (r19531)
       - new mod_authz_svn directive AuthzSVNNoAuthWhenAnonymousAllowed (r18680)
-      - error out when authz rules don't contain unexpected characters (r19471)
+      - error out when authz rules contain unexpected characters (r19471)
     * support .wsf hook scripts on Windows (r18972, 19076)
     * lots of improvements to mailer.py and commit-email.pl
     * FSFS back-end performance improvements (r17125 19119 -456 -58 -59)
