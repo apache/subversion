@@ -574,7 +574,9 @@ while (defined (my $load_dir = &get_next_load_dir))
                         "type for '$source_path'.\n";
                   }
 
-                if ($source_type ne 'f' and $source_type ne 'd')
+                if ($source_type ne 'd' and
+                    $source_type ne 'f' and
+                    $source_type ne 'l')
                   {
                     warn "$0: skipping loading file '$source_path' of type ",
                          "'$source_type'.\n";
@@ -603,7 +605,8 @@ while (defined (my $load_dir = &get_next_load_dir))
               or die "$0: cannot chdir '$load_dir': $!\n";
 
             find({no_chdir   => 1,
-                  preprocess => sub { sort { $b cmp $a } @_ },
+                  preprocess => sub { sort { $b cmp $a }
+                                      grep { $_ !~ /^[._]svn$/ } @_ },
                   wanted     => $wanted
                  }, '.');
 
@@ -898,7 +901,9 @@ while (defined (my $load_dir = &get_next_load_dir))
         my ($source_type, $source_is_exe) = &file_info($source_path);
         my ($dest_type)                   = &file_info($dest_path);
 
-        return if ($source_type ne 'd' and $source_type ne 'f');
+        return if ($source_type ne 'd' and
+                   $source_type ne 'f' and
+                   $source_type ne 'l');
 
         # Fail if the destination type exists but is of a different
         # type of file than the source type.
@@ -1010,6 +1015,21 @@ while (defined (my $load_dir = &get_next_load_dir))
               }
           }
         elsif
+          ($source_type eq 'l') {
+            my $link_target = readlink($source_path)
+              or die "$0: cannot readlink '$source_path': $!\n";
+            if ($dest_type eq 'l')
+              {
+                my $old_target = readlink($dest_path)
+                  or die "$0: cannot readlink '$dest_path': $!\n";
+                return if ($old_target eq $link_target);
+                unlink($dest_path)
+                  or die "$0: unlink '$dest_path' failed: $!\n";
+              }
+            symlink($link_target, $dest_path)
+              or die "$0: cannot symlink '$dest_path' to '$link_target': $!\n";
+          }
+        elsif
           ($source_type eq 'f') {
             # Only copy the file if the digests do not match.
             if ($add_files{$source_path} or $upd_files{$source_path})
@@ -1034,7 +1054,8 @@ while (defined (my $load_dir = &get_next_load_dir))
       or die "$0: cannot chdir '$load_dir': $!\n";
 
     find({no_chdir   => 1,
-          preprocess => sub { sort { $b cmp $a } @_ },
+          preprocess => sub { sort { $b cmp $a }
+                              grep { $_ !~ /^[._]svn$/ } @_ },
           wanted     => $wanted
          }, '.');
 
@@ -1569,7 +1590,7 @@ sub recursive_ls_and_hash
                     digest => $file_digest};
     };
   find({no_chdir   => 1,
-        preprocess => sub { grep { $_ !~ /\.svn$/ } @_ },
+        preprocess => sub { grep { $_ !~ /^[._]svn$/ } @_ },
         wanted     => $wanted
        }, '.');
 

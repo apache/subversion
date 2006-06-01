@@ -15,8 +15,7 @@ dnl
 
 AC_DEFUN(SVN_LIB_APRUTIL,
 [
-  APRUTIL_WANTED_REGEX="$1"
-  APRUTIL_WANTED_REGEX_TOO="$2"
+  APRUTIL_WANTED_REGEXES="$1"
 
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
@@ -49,9 +48,16 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
   AC_MSG_RESULT([$apu_version])
 
-  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0 \
-       -a `expr $apu_version : $APRUTIL_WANTED_REGEX_TOO` -eq 0; then
-    echo "wanted regex is $APRUTIL_WANTED_REGEX or $APRUTIL_WANTED_REGEX_TOO"
+  APU_WANTED_REGEX_MATCH=0
+  for apu_wanted_regex in $APRUTIL_WANTED_REGEXES; do
+    if test `expr $apu_version : $apu_wanted_regex` -ne 0; then
+      APU_WANTED_REGEX_MATCH=1
+      break
+    fi
+  done
+
+  if test $APU_WANTED_REGEX_MATCH -eq 0; then
+    echo "wanted regexes are $APRUTIL_WANTED_REGEXES"
     AC_MSG_ERROR([invalid apr-util version found])
   fi
 

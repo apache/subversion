@@ -84,7 +84,7 @@ def link_options():
       sysconfig.get_config_var('PYTHON'))
     add_option_if_missing(options, "-bundle_loader", python_exe)
 
-  elif sys.platform == 'cygwin':
+  elif sys.platform == 'cygwin' or sys.platform.startswith('openbsd'):
 
     # Add flags to build against the Python library (also necessary
     # for Darwin, but handled elsewhere).
