@@ -1110,7 +1110,8 @@ class Config:
         # then just return the value unchanged.
         setattr(self.maps, optname,
                 lambda value,
-                       sect=getattr(self, sectname): getattr(sect, value,
+                       sect=getattr(self, sectname): getattr(sect,
+                                                             value.lower(),
                                                              value))
         # mark for removal when all optnames are done
         if sectname not in mapsections:
