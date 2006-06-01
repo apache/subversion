@@ -1,0 +1,36 @@
+body
+{
+  background-image: url(svn_bck.png);
+	font-family: Arial, Helvetica, Sans-Serif;
+	font-size: 13px;
+}
+
+i
+{
+	font-family: Times New Roman, Times, Serif;
+  font-size: 14px;
+}
+
+pre
+{
+  background: #F8F8F8;
+}
+
+hr
+{
+  border: 1px solid #000000;
+}
+
+div.navheader
+{
+  background: #F0F0F0;
+	font-family: Arial, Helvetica, Sans-Serif;
+	font-size: 12px;
+}
+
+div.navfooter
+{
+  background: #F0F0F0;
+	font-family: Arial, Helvetica, Sans-Serif;
+	font-size: 12px;
+}

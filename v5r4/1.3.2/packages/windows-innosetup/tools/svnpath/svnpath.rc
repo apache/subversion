@@ -1,0 +1,42 @@
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+1 VERSIONINFO
+ FILEVERSION 1,1,2,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "000004b0"
+        {
+            VALUE "CompanyName", "CollabNet\0"
+            VALUE "FileDescription", "Subversion Windows Distro's Inno Setup System path editor\0"
+            VALUE "FileVersion", "1.1.2\0"
+            VALUE "InternalName", "svnpath\0"
+            VALUE "LegalCopyright", "Copyright ©2000-2004 CollabNet. All rights reserved.\0"
+            VALUE "OriginalFilename", "svnpath.exe\0"
+            VALUE "ProductName", "Subversion Windows Distribution\0"
+            VALUE "ProductVersion", "1.00\0"
+        }
+    }
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x0, 1200
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON    DISCARDABLE     "..\\..\\..\\..\\notes\\logo\\subversion_logo.ico"

@@ -1,0 +1,455 @@
+A UI Specification for "Locking"
+
+This document describes a user interface of a new locking system for
+Subversion.  It implements the set of features described in the
+associated functional spec.
+
+I. Introduction
+
+   A. Goals/Audience
+
+      There are two audiences we need to consider for a locking UI:
+
+      1. The enlightened software developer
+
+         - understands general VC concepts (required for job)
+         - understands concurrency model
+         - has already embraced Subversion (or at least CVS)
+
+         - ITCH: Some files aren't mergeable, like image files or
+                 spreadsheets.  Need to force serialized edits on such
+                 things, as an occasional exception to concurrency.
+
+      2. The reluctant user of version control
+
+         - bright people, but no time or interest in learning VC concepts
+         - doesn't understand concurrency
+         - doesn't understand "out-of-dateness" or merging procedures
+
+         - typical examples:
+            - coder who has only used VSS or Clearcase with 100% locking
+            - website developer being forced to use VC
+            - manager being forced to use VC
+
+         - ITCH: VC system should be effortless, transparent, and
+                 idiot proof.  VC system should prevent people from
+                 wasting editing time, destroying each others
+                 changes, all while avoiding concurrency concepts such
+                 as "merging" and "out of dateness".
+
+
+   B. The "Hijack" Scenario
+
+       This is specific use-case which is particularly important to
+       making version control usable by the second type of user
+       described above.
+
+       In this scenario, the user has a tool that circumvents whatever
+       system is in place to enforce serialized editing.  In systems
+       like VSS or Clearcase 'copy' views, this usually means an
+       editor that ignores the read-only attribute on a file.  When
+       the user goes to commit, they discover that they were supposed
+       to lock the file, and the repository version has changed.  What
+       now?
+
+       The power-svn user would certainly have no problem knowing what
+       to do seeing an error that "the file must be locked to commit",
+       nor would such a user be confused by seeing a subsequent error
+       that the "file is out-of-date".  The power user would run 'svn
+       update', resolve conflicts, then lock the file and commit.
+
+       But the reluctant or ignorant svn user shouldn't (and doesn't
+       need to) be forced to deal with merging and out-of-dateness
+       when working in an "all locking" environment.  Here are a few
+       usability case-studies:
+
+         - Clearcase dynamic views
+
+             The workspace is always up-to-date, all of the time.  And
+             it's impossible to circumvent the read-only bit.  So the
+             hijack scenario can't happen at all.
+
+         - Clearcase copy-based views
+ 
+             In the hijack scenario, the user attempts to commit and
+             the client responds by attempting an interactive
+             contextual merge.  If not possible, the whole commit
+             fails and a guru is phoned to fix the situation.
+
+         - Visual Source Safe
+
+             in the hijack scenario, the user remembers to lock the
+             file long after editing it;  VSS asks whether to use the
+             server version or local version of the file.  Somebody's
+             edits are lost.
+
+       It is the recommendation of this document that the command line
+       client produce normal conflicts when 'svn up' is run on a
+       hijacked file;  but that for a GUI such as TortoiseSVN, a more
+       friendly (or interactive) procedure is followed -- perhaps one
+       that allows the user to choose between versions of flies.
+
+
+II. New Client Behaviors
+
+   A. Overview
+
+      This section describes a user interface to accomplish "locking",
+      as described in the functional spec.  A new property is used to
+      enforce locking and prevent people from wasting time; lock
+      tokens are objects, stored in the working copy, that represent a
+      lock; and two new subcommands (lock/unlock) are described.
+
+   B. The "svn:needs-lock" property
+
+      Create a new "svn:needs-lock" property to indicate that a file
+      should be locked before committing.  Just like "svn:executable",
+      the value of the property is irrelevant and the property can be
+      created (or deleted) by any user or administrator.
+
+      Note that this property doesn't enforce locking.
+
+      When the Subversion client encounters the "svn:needs-lock"
+      property on a path (on checkout or update), it sets the
+      working-copy path to a read-only state by default.  This
+      serves as a reminder to the user that she should lock this
+      path before editing it.  When a user locks the path, the
+      Subversion client makes the working-copy path read-write.
+      When the user releases the lock, or if the lock is found to
+      be defunct (see next section), the Subversion client makes
+      the path read-only again.
+
+   C. Lock manipulation via client
+
+      1. Lock Tokens
+
+         When a user successfully locks a path, the working copy
+         receives a "lock token" from the server.  This token is an
+         object that connects your exclusive right to commit to a path
+         with your working copy.
+
+         You can think of a lock token as a form of authentication for
+         a certain working copy.  Why is it important or useful for
+         lock tokens to be attached to only one working copy?
+
+         [An example: you might lock an unmergeable file using a
+         computer at your office, perhaps as part of a changeset in
+         progress.  It should not be possible for a working copy on
+         your home computer to accidentally commit a change to that
+         same file, just because you've authenticated as the user
+         which owns the lock.  If you really want to change the file
+         from home, you'd have to "steal" the lock from your other
+         working copy, which is discussed later in this document.]
+
+         Because locks can be broken or stolen, it is possible for a
+         lock token to become "defunct".  A defunct lock cannot be
+         used or released--it is useless and is cleaned up when you
+         next run 'svn update'.
+
+      2. New client subcommands
+          
+         Summary:
+
+              svn lock   [--force]:   lock (or steal)
+              svn unlock [--force]:   release (or break)
+
+
+         a. Creating a lock
+
+            To lock a path, use the 'svn lock' command:
+
+              $ svn lock foo.c
+              username: harry
+              password: XXXXX
+              [...]
+              'foo.c' locked by user 'harry'.
+        
+            In order for this command to work,
+
+               - You *must* provide a username to the server.
+                 'anonymous' locks are not allowed.
+               - The path must not already be locked.
+               - The path must not be out-of-date.  
+
+            The lock command accepts -m or -F to add a lock comment, so
+            others can see why the file was locked.  The lock comment
+            is optional.
+
+         b. Using a lock
+
+            A lock can be used to make an exclusive commit to a path.
+            Also, if you have a lock, you can opt to "release"
+            (destroy) it when you're done.
+
+            To make use of a lock, two forms of authentication must be
+            provided to the server:
+
+               - The authenticated username that owns the lock
+               - A non-defunct lock token
+
+            If either of these forms of authentication are missing or
+            incorrect, the lock cannot be used.
+
+            1. Using a lock to Commit
+
+               $ svn commit foo.c
+               
+               Upon successful commit, a locked path is released by
+               default.  The Subversion client provides an option to
+               retain the lock after commit:
+
+               $ svn commit foo.c --no-unlock
+
+               If --no-unlock is not specified, even unmodified files
+               will be considered part of the commit and shown to the
+               user in the list of files to commit.  Such files will
+               also be unlocked after the commit.
+
+            2. Releasing a lock
+ 
+               $ svn unlock foo.c
+               Lock on 'foo.c' has been released.
+
+               After successful release, the working copy's lock token
+               is gone.
+
+         c. Breaking a lock
+
+            "Breaking" a lock is a means of releasing a lock when:
+
+               - The authenticated username is not the same as the
+                 lock owner, or
+               - The working-copy lock representation is unavailable.
+
+             Use the --force option to the unlock subcommand to
+             break a lock.  For example:
+
+             $ svn unlock foo.c
+             username:  sally
+             password:  XXXX
+             svn:  error:  'foo.c' is locked by user 'harry'.
+
+             $ svn unlock foo.c --force
+             username:  sally
+             password:  XXXX
+             Lock on 'foo.c' has been broken.
+
+             The --force option also accepts a URL, so that the lock
+             can be
+             released without a working copy.
+
+         d. Stealing a lock
+
+            "Stealing" a lock is a means of creating a lock when:
+
+               - The path is locked by you, but you don't have a
+                 representation of the lock in your current working
+                 copy, or
+               - The path is locked by someone else.
+
+            In order to steal a lock, a user must be authenticated to
+            the server.
+
+            Use the --force option to the lock command to steal a
+            lock.  For example:
+
+              $ svn lock foo.c
+              username:  sally
+              password:  XXXX
+              svn:  error:  'foo.c' is locked by user 'harry'.
+
+              $ svn lock foo.c --force
+              username:  sally
+              password:  XXXX
+              'foo.c' locked by user 'sally'.
+
+              Remember that the 'svn lock' command still requires that the
+              target be up-to-date to succeed.
+
+
+         e. Discovering/examining locks
+
+            1. seeing lock tokens in a working copy
+
+               'svn status' considers a lock token "interesting", and
+               displays it using some new symbol, in a new column:
+
+                   $ svn status
+                   M      foo.c
+                   M    K bar.c
+                   A      baz.c 
+
+               Note that K (locKed) is used instead of the more
+               intuitive L, since L is already in use for another purpose.
+
+            2. seeing locks in a repository.
+
+               'svn status -u' adds out-of-date information from the
+               server;  in a similar manner, this command shows any
+               locks that exist on the server:
+
+                  $ svn status -u
+                  M                   foo.c
+                  M    K              bar.c
+                  A      *            baz.c
+                         *            file1
+                       O              file2
+                  M    B             file3
+                   M   T             file42
+
+               As with "svn status", the sixth column indicates lock
+               state.  The letters have the following meanings:
+               ' ': No lock in either WC or repository.
+               'K': Locked in the WC and lock token valid in
+                    repository.
+               'O': No lock in WC, lock in repository. (Locked in
+                    Other WC.)
+               'B': Lock in WC, but no lock in repository. (Lock
+                    Broken.)
+               'T': Locked in WC, but locked with another token in
+                    repository.  (Lock was sTolen.)
+            
+            3.  'svn info', describes the attributes of a lock-token,
+                if attached to a working object.  If invoked on a URL,
+                it displays information about any remote lock
+                attached. 
+
+                   $ svn info foo.c
+                   Path: foo.c
+                   Name: foo.c
+                   URL: http://..../
+                   [...]
+                   Lock Token: 465610b1-33eb-0310-8a02-cae41507c13a
+                   Lock Owner: lundblad
+                   Lock Comment: Refactoring.
+                   Lock Creation Date: 2004-12-14 14:49:36 +0100 (Tue, 14 Dec 2004)
+                 
+
+                   $ svn info http://host/repos/file2
+                   Path: /file2
+                   Name: file2
+                   URL: http://..../
+                   [...]
+                   Lock Token: 465610b1-33eb-0310-8a02-cae41507c13b
+                   Lock Owner: fitz
+                   Lock Comment: Don't touch my file!
+                   Lock Creation Date: 2004-12-25 14:49:36 +0100 (Tue, 14 Dec 2004)
+
+            4. 'svn update' changes
+
+                At the start of an update, the client reports any
+                lock-tokens to the server.  If a lock token has become
+                "defunct", the client is instructed to destroy the lock
+                token.
+
+                A new column will be added to the update output to indicate
+                removed lock tokens:
+
+                svn up
+                U     path1
+                 U    path2
+                  B   path3
+                C B   path4
+
+                In the above example, lock tokens for path3 and path4
+                were removed.  Note that 'B' is used even if there is
+                a new lock in the repository.
+
+III. New Server Behaviors
+
+   A. Overview
+
+      This section describes new server UIs for locking:  two new hook
+      scripts, a new 'svnlook' subcommand, and a new 'svnadmin' subcommand.
+
+   B. Tracking locks
+
+      The Subversion server holds the master list of all locks for a
+      repository.  It responds to client requests to create, release,
+      break and steal locks.  
+
+   C. Enforcement
+
+      During a commit, the server checks for locks the same way that
+      it checks for out-of-dateness:
+
+        $ svn commit
+        Sending foo.c
+        Sending bar.c
+        svn: error:  'bar.c' is locked by user 'harry'.
+
+
+   D. Configurable Mechanisms
+
+      1. New "pre-" hook scripts
+
+        a. pre-lock
+
+           Used to authorize lock creation.  Invoked whenever a user
+           creates a lock ('svn lock') or steals a lock ('svn lock
+           --force').  If an administrator wants the locking feature
+           completely disabled, just set this hook to always return failure.
+
+             - input: REPOS, PATH, USER
+             - successful exit means lock is allowed, else deny lock creation.
+             - if path is already locked, hook script can deduce 
+               that USER is "stealing" the lock and decide what to do.
+
+        b. pre-unlock
+
+           Used to authorize lock releasing.  Invoked whenever a user
+           releases a lock ('svn unlock) or breaks a lock ('svn
+           unlock' --force).
+
+             - input: REPOS, PATH, USER
+             - successful exit means release is allowed, else deny.
+             - if path is already locked, hook script can deduce 
+               that USER is "breaking" the lock and decide what to do.
+
+      2. New "post-" hook scripts
+
+        a. post-lock
+
+           Used to report lock creation.  Invoked whenever a user
+           creates a lock ('svn lock') or steals a lock ('svn lock
+           --force'). 
+
+             - input: REPOS, PATH, USER
+             - exit code ignored
+             - can be used to send email, collect statistics, etc.
+
+        b. post-unlock
+
+           Used to report lock release.  Invoked whenever a user
+           releases a lock ('svn unlock') or breaks a lock ('svn unlock
+           --force').
+
+             - input: REPOS, PATH, USER
+             - exit code ignored
+             - can be used to send email, collect statistics, etc.
+
+
+   E. Lock manipulation with svnadmin
+
+      1. Discovering locks
+
+         A new 'svnlook listlocks' subcommand shows all current locks
+         in a repository:
+
+           $ svnlook listlocks /usr/local/svn/repos
+            #     harry    Aug 16 15:13   /trunk/bar.c
+            #     sally    Sep 07 09:30   /trunk/doc/foo.doc
+
+
+      2. Unconditional release of locks
+
+         A new 'svnadmin unlock' subcommand to unconditionally
+         release a lock.  Note that this command circumvents hook
+         scripts, much like other svnadmin actions:
+
+           $ svnadmin unlock /usr/local/svn/repos /trunk/doc/foo.doc
+           Lock on '/trunk/doc/foo.doc' has been released.
+
+
+
+
