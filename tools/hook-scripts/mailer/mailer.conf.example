@@ -246,6 +246,12 @@ show_nonmatching_paths = yes
 # is then passed through the map. If a map entry is not available for
 # the value, then it will be used unchanged.
 #
+# NOTES: - Avoid using map substitution names which differ only in case.
+#          Unexpected results may occur.
+#        - A colon ':' is also considered as separator between option and
+#          value (keep this in mind when trying to map a file path under
+#          windows).
+#
 # The format to declare a map is:
 #
 #   option_name_to_remap = mapping_specification
