@@ -39,163 +39,156 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
 }
 
+/* Verify that INPUT is parsed properly, and returns an error if
+   parsing fails, or incorret parsing is detected.  Assumes that INPUT
+   contains only one path -> ranges mapping, and that FIRST_RANGE is
+   the first range in the set. */
 static svn_error_t *
-test_mergeinfo_parse(const char **msg,
-                     svn_boolean_t msg_only,
-                     svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+verify_mergeinfo_parse(const char *input,
+                       const char *expected_path,
+                       const svn_merge_range_t *first_range,
+                       apr_pool_t *pool)
 {
-  int i;
-#define NBR_MERGEINFO_LINES 2
-#define BOGUS_MERGEINFO_LINE "/missing-revs"
+  svn_error_t *err;
+  apr_hash_t *path_to_merge_ranges;
+  apr_hash_index_t *hi;
 
-  static const char * const mergeinfo_lines[NBR_MERGEINFO_LINES] =
+  /* Test valid input. */
+  err = svn_mergeinfo_parse(input, &path_to_merge_ranges, pool);
+  if (err || apr_hash_count(path_to_merge_ranges) != 1)
+      return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                               "svn_mergeinfo_parse (%s) failed "
+                               "unexpectedly", input);
+  for (hi = apr_hash_first(pool, path_to_merge_ranges); hi;
+       hi = apr_hash_next(hi))
     {
-      "/trunk:1",
-      "/trunk/foo:1-6"
-    };
-  static const char * const mergeinfo_paths[NBR_MERGEINFO_LINES] =
-    {
-      "/trunk",
-      "/trunk/foo"
-    };
-  static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_LINES] =
-    {
-      { 1, 1 },
-      { 1, 6 }
-    };
-  
-  *msg = "test svn_mergeinfo_parse";
+      const void *path;
+      void *ranges;
+      svn_merge_range_t *range;
 
-  if (msg_only)
-    return SVN_NO_ERROR;
+      apr_hash_this(hi, &path, NULL, &ranges);
+      if (strcmp((const char *) path, expected_path) != 0)
+        return fail(pool, "svn_mergeinfo_parse (%s) failed to parse the "
+                    "correct path (%s)", input, expected_path);
 
-  for (i = 0; i < NBR_MERGEINFO_LINES; i++)
-    {
-      svn_error_t *err;
-      apr_hash_t *path_to_merge_ranges;
-      apr_hash_index_t *hi;
-
-      /* Trigger some error(s) with mal-formed input. */
-      err = svn_mergeinfo_parse(BOGUS_MERGEINFO_LINE, &path_to_merge_ranges,
-                                pool);
-      if (!err)
-        {
-          svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                   "svn_mergeinfo_parse (%s) succeeded "
-                                   "unexpectedly", BOGUS_MERGEINFO_LINE);
-        }
-
-      /* Test valid input. */
-      err = svn_mergeinfo_parse(mergeinfo_lines[i], &path_to_merge_ranges,
-                                pool);
-      if (err || apr_hash_count(path_to_merge_ranges) != 1)
-        return svn_error_createf(SVN_ERR_TEST_FAILED, err,
-                                 "svn_mergeinfo_parse (%s) failed "
-                                 "unexpectedly", mergeinfo_lines[i]);
-      for (hi = apr_hash_first(pool, path_to_merge_ranges); hi;
-           hi = apr_hash_next(hi))
-        {
-          const void *path;
-          void *val;
-          apr_array_header_t *ranges;
-
-          apr_hash_this(hi, &path, NULL, &val);
-          if (strcmp((const char *) path, mergeinfo_paths[i]) != 0)
-            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                     "svn_mergeinfo_parse (%s) failed to "
-                                     "parse the correct path (%s)",
-                                     mergeinfo_lines[i], mergeinfo_paths[i]);
-
-          /* Test ranges.  For now, assume only 1 range. */
-          ranges = (apr_array_header_t *) val;
-          if (APR_ARRAY_IDX(ranges, 0, svn_merge_range_t *)->start
-              != mergeinfo_ranges[i].start ||
-              APR_ARRAY_IDX(ranges, 0, svn_merge_range_t *)->end
-              != mergeinfo_ranges[i].end)
-            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                     "svn_mergeinfo_parse (%s) failed to "
-                                     "parse the correct range",
-                                     mergeinfo_lines[i]);
-        }
+      /* Test ranges.  For now, assume only 1 range. */
+      range = APR_ARRAY_IDX((apr_array_header_t *) ranges, 0,
+                            svn_merge_range_t *);
+      if (range->start != first_range->start ||
+          range->end != first_range->end)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_mergeinfo_parse (%s) failed to "
+                                 "parse the correct range",
+                                 input);
     }
-#undef BOGUS_MERGEINFO_LINE
-#undef NBR_MERGEINFO_LINES
   return SVN_NO_ERROR;
 }
 
 
-/* Some of our own global variables, for simplicity.  Yes,
-   simplicity. */
-apr_hash_t *info1, *info2, *info3;
-const char *mergeinfo1 = "/trunk: 5,7-9,10,11,13,14";
-const char *brokenmergeinfo1 = "/trunk: 5,7-9,10,11,13,14,";
-const char *brokenmergeinfo2 = "/trunk 5,7-9,10,11,13,14";
-const char *brokenmergeinfo3 = "/trunk:5 7--9 10 11 13 14";
-const char *mergeinfo2 = "/trunk: 5,7-9,10,11,13,14,3\n/fred:8-10";
-const char *mergeinfo3 = "/trunk: 1-4,6,3\n/fred:9-12";
+/* Some of our own global variables (for simplicity), which map paths
+   -> merge ranges. */
+static apr_hash_t *info1, *info2, *info3;
+
+#define NBR_MERGEINFO_VALS 3
+/* Valid merge info values. */
+static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
+  {
+    "/trunk:1",
+    "/trunk/foo:1-6",
+    "/trunk: 5,7-9,10,11,13,14"
+  };
+/* Paths corresponding to mergeinfo_vals. */
+static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
+  {
+    "/trunk",
+    "/trunk/foo",
+    "/trunk"
+  };
+/* First ranges from the paths identified by mergeinfo_paths. */
+static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS] =
+  {
+    { 1, 1 },
+    { 1, 6 },
+    { 5, 5 }
+  };
 
 static svn_error_t *
-test1(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test_parse_single_line_mergeinfo(const char **msg,
+                                 svn_boolean_t msg_only,
+                                 svn_test_opts_t *opts,
+                                 apr_pool_t *pool)
 {
+  int i;
   *msg = "parse single line mergeinfo";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  for (i = 0; i < NBR_MERGEINFO_VALS; i++)
+    verify_mergeinfo_parse(mergeinfo_vals[i], mergeinfo_paths[i],
+                           &mergeinfo_ranges[i], pool);
+
 
   return SVN_NO_ERROR;
 }
 
+#define NBR_BROKEN_MERGEINFO_VALS 4
+/* Invalid merge info values. */
+static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
+  {
+    "/missing-revs",
+    "/trunk: 5,7-9,10,11,13,14,",
+    "/trunk 5,7-9,10,11,13,14",
+    "/trunk:5 7--9 10 11 13 14"
+  };
+
 static svn_error_t *
-test2(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test_parse_broken_mergeinfo(const char **msg,
+                            svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
+                            apr_pool_t *pool)
 {
+  int i;
   *msg = "parse broken single line mergeinfo";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  if (svn_mergeinfo_parse(brokenmergeinfo1, &info1, pool) == SVN_NO_ERROR)
-    return fail(pool, "Failed to detect error in brokenmergeinfo1");
-
-  if (svn_mergeinfo_parse(brokenmergeinfo2, &info1, pool) == SVN_NO_ERROR)
-    return fail(pool, "Failed to detect error in brokenmergeinfo2");
-
-  if (svn_mergeinfo_parse(brokenmergeinfo3, &info1, pool) == SVN_NO_ERROR)
-    return fail(pool, "Failed to detect error in brokenmergeinfo3");
+  /* Trigger some error(s) with mal-formed input. */
+  for (i = 0; i < NBR_BROKEN_MERGEINFO_VALS; i++)
+    if (svn_mergeinfo_parse(broken_mergeinfo_vals[i], &info1, pool) ==
+        SVN_NO_ERROR)
+        return fail(pool, "svn_mergeinfo_parse (%s) failed to detect an error",
+                    broken_mergeinfo_vals[i]);
 
   return SVN_NO_ERROR;
 }
 
+
+static const char *mergeinfo1 = "/trunk: 5,7-9,10,11,13,14,3\n/fred:8-10";
+static const char *mergeinfo2 = "/trunk: 1-4,6,3\n/fred:9-12";
+
 static svn_error_t *
-test3(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test_parse_multi_line_mergeinfo(const char **msg,
+                                svn_boolean_t msg_only,
+                                svn_test_opts_t *opts,
+                                apr_pool_t *pool)
 {
   *msg = "parse multi line mergeinfo";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo2, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-test4(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test_merge_mergeinfo(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   apr_array_header_t *result;
   svn_merge_range_t *resultrange;
@@ -204,8 +197,8 @@ test4(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo2, &info1, pool));
-  SVN_ERR(svn_mergeinfo_parse(mergeinfo3, &info2, pool));
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo2, &info2, pool));
 
   SVN_ERR(svn_mergeinfo_merge(&info3, info1, info2, pool));
 
@@ -254,10 +247,9 @@ test4(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_mergeinfo_parse),
-    SVN_TEST_PASS(test1),
-    SVN_TEST_PASS(test2),
-    SVN_TEST_PASS(test3),
-    SVN_TEST_PASS(test4),
+    SVN_TEST_PASS(test_parse_single_line_mergeinfo),
+    SVN_TEST_PASS(test_parse_broken_mergeinfo),
+    SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
+    SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_NULL
   };
