@@ -1,3 +1,183 @@
+Version 1.4.0
+(?? July 2006, from /branches/1.4.x)
+http://svn.collab.net/repos/svn/tags/1.4.0
+
+ User-visible-changes:
+  - Client:
+    * new 'svnsync' commandline tool for repository replication
+    * numerous working copy improvements (WARNING! upgrades to new format!):
+      - improved performance when detecting modified files (r18628 -56)
+      - new property storage is faster and uses less disk space (r17583)
+      - internal wcprops take up less space (r19433 -37)
+      - large file commit speedups (r17861 -73 18867 -918 -29 -44 -45 -48 -49)
+      - reduce memory usage for large working copies (r19183 -538)
+      - increased working copy stability with merge, copy and move:
+            (fixes issues #845, #1516, #1553, #2135, #2144, #2148)
+    * new switches added:
+      - 'svn blame --force' (issue #2509)
+      - 'svn diff/merge -c/--change' (r17054 -6 -68 18568 -741)
+      - 'svn diff --summarize' (issue #2015)
+      - 'svn merge/blame -x' (r18716 -20) (r18602 -857)
+    * 'svn log' now supports peg revisions (issue #2287)
+    * use switch/relocate when svn:externals updated (issue #2209)
+    * internal diff can ignore whitespace and eol style changes (issue #2121)
+    * conflict markers now match the file's eol style (issue #1325)
+    * new svn2cl, svn-viewdiff and svn-resolve contrib scripts
+    * numerous improvements to svnmerge.py, vc-svn and psvn
+    * translation updates for all languages
+    * Mac OS X: store cached passwords encrypted in Keychain (r17619 -43)
+    * fixed: 'svn ls' slow over ra_dav (issue #2151)
+    * fixed: 'svn import' not handling eol-style correctly (issue #2433)
+    * fixed: 'svn blame' should default operative rev range to peg rev (r18400)
+    * fixed: 'svn blame' ignores eol-style (issue #2431)
+    * fixed: 'svn checkout' should default operative rev to peg rev (r18422)
+    * fixed: 'svn diff' supports all eol styles (r17624 -8 -61 18195 -392)
+    * fixed: 'svn diff' multi-target memory leak (r17518)
+    * fixed: 'svn rm' of non-existent item should fail (issue #2440)
+    * fixed: 'svn status' should skip unversioned files (issue #2030)
+    * fixed: 'svn switch --relocate' may set wrong repos root (r17031)
+    * fixed: 'svn switch --relocate' memory leak (r19535)
+    * fixed: 'svn switch --relocate' not caching passwords (issue #2360)
+    * fixed: 'svn info' not showing locks sometimes (r19777)
+    * fixed: incorrect merge of add of binary file already in WC (issue #2403)
+    * fixed: lots of diff wc<->repos bugs
+    * fixed: unfriendly error message on propget on nonexistent path (r19399)
+    * fixed: spurious revert report after manual conflict removal (issue #2517)
+    * fixed: don't allow -rPREV on schedule add path (issue #2315)
+    * fixed: keywords with dollar signs cause badness (issue #1780)
+    * fixed: really revert file with locally modified keywords (issue #1663)
+    * fixed: deleting schedule add file leaves working props file (issue #2419)
+    * fixed: svn:needs-lock and read-only-ness not always in sync (issue #2306)
+    * fixed: post-commit error output not sent to the client (issue #443)
+    * fixed: not locked error on commit of switched path (issue #2353)
+
+  - Server:
+    * support for new 'svnsync' repository mirroring utility
+    * support for BDB 4.4, including automatic recovery (issue #2449)
+    * new contrib hook scripts:
+      - enforcer
+      - detect-merge-conflict.sh
+      - svn-backup-dumps.py
+      - log-policy.py
+      - case-insensitive.py
+    * svnserve improvements:
+      - can now run as a native Windows service (r18855)
+      - new option --pid-file (r17836)
+      - allow the password database to be read-only (r16840)
+    * mod_dav_svn improvements:
+      - fixed: error conversion crash (r19516)
+      - fixed: unfriendly error when locking already locked path (issue #2275)
+      - fixed: xml escaping bugs (r19760 -85 -86)
+    * authorization improvements:
+      - new mod_dontdothat apache module (r19531)
+      - new mod_authz_svn directive AuthzSVNNoAuthWhenAnonymousAllowed (r18680)
+      - error out when authz rules don't contain unexpected characters (r19471)
+    * support .wsf hook scripts on Windows (r18972, 19076)
+    * lots of improvements to mailer.py and commit-email.pl
+    * FSFS back-end performance improvements (r17125 19119 -456 -58 -59)
+    * fixed: 'svnadmin verify' output not in native encoding (issue #1997)
+    * fixed: uuid file in FSFS could be destroyed on write error (issue #2193)
+    * fixed: FSFS path encoding bug (r17774)
+    * fixed: don't crash on corrupt repositories (r17625)
+    * fixed: expect error output from hook scripts in native encoding (r17101)
+    * fixed: catch errors starting hook scripts (r16891 17041 -81)
+
+  - Both:
+    * delta compression improvements:
+       - new delta encoding reduces size (r18363 -94 -66 -78 -98 -99 -457 -950)
+       - xdelta algorithm speed improvements (r18986, 19047)
+    * don't bail on invalid locale (r19445)
+    * improve speed of non-verbose svn ls (r17067 -71)
+    * fixed: delta combiner reading past EOF (r17743)
+
+Developer-visible-changes:
+* numerous improvements to gen-make.py build system, especially on win32
+* numerous improvements to the test suite
+* new public APIs:
+  - keyword and eol translation helpers and generic streams (see svn_subst.h)
+  - new generic stream helpers (see svn_io.h)
+  - authentication providers made available to other clients (see svn_auth.h)
+  - svn_cmdline_setup_auth_baton
+  - svn_client_diff_summarize and svn_client_diff_summarize_peg
+  - svn_client_list
+  - svn_config_has_section
+  - svn_txdelta_compose_windows and svn_txdelta_apply_instructions
+  - svn_txdelta_stream_create
+  - svn_diff_file_options_create and svn_diff_file_options_parse
+  - svn_err_best_message
+  - svn_compat_wrap_commit_callback
+  - svn_uuid_generate
+  - svn_user_get_name and svn_user_get_homedir
+  - svn_io_get_dir_filenames
+  - svn_ra_reparent
+  - svn_ra_replay
+  - svn_wc_revision_status
+  - several rev'd APIs, see doxygen docs
+* flush stdout after each status/notification line (r19476 -656)
+* new (experimental) ra_serf repository access module for pipelined DAV
+* .svn/entries use a less verbose non-xml format (r19420)
+* make recursive 'svn ls' streamy (issue #1809)
+* remove svn-config script
+* empty-file and README.txt removed from WC admin areas (r17181 -268 -364)
+* replace cmdline client XML DTDs with RNG schemas (r16379 -80 -93 -571 17248)
+* fixed: log --limit against old svnserve leaves unusable session (r19638)
+* fixed: Solaris build problems (r19636)
+* fixed: blame of WORKING revision shouldn't give BASE (r19558)
+* fixed: svn_client_copy and _move should fail if target exists (issue #2188)
+* fixed: svn_io_file_rename and readonlyness on Windows and UNIX (r17366 -69)
+* fixed: ra_dav memory leak when reusing session (issue #2247)
+* SWIG bindings:
+    - SWIG/python bindings:
+      - new support for svn_client_info (r19413)
+    - SWIG/ruby bindings:
+      - full support for Subversion 1.4 APIs, including :
+        svn_ra_replay and svn_diff_summarize
+      - numerous bug fixes
+    - SWIG/perl bindings:
+      - new support for svn_client_info (r18758)
+      - minor corrections to SVN::Fs (r19312)
+* javahl bindings:
+    - APIs to get version info for the native libraries  (r17604 -07)
+    - API for path validation (r18989, r19079)
+    - C++/Java code refactoring, cleanup, and consolidation
+    - fixed: handle possible errors from date/time conversions (r17213)
+    - fixed: SVNClient username()/password() JVM crash on null input (r19825)
+    - fixed: specify default UUID load action (r18030)
+    - fixed: compile error on Visual Studio 2005 (r18054)
+
+
+Version 1.3.2
+(23 May 2006, from /branches/1.3.x)
+http://svn.collab.net/repos/svn/tags/1.3.2
+
+ User-visible-changes:
+  - Client:
+    * fixed: 'svn st -u' crash on missing subdirs (r19348, -71, issue #2551)
+    * fixed: leaving stray working copy locks on cancellation (r18893)
+    * fixed: svn_load_dirs.pl trying to import .svn and _svn dirs (r18549)
+    * svn_load_dirs.pl symlink support (issue #2478)
+    * translation updates to Japanese, Traditional Chinese.
+
+  - Server:
+    * fixed: mod_dav_svn memory leak when listing large dirs (r19528)
+    * fixed: mod_dav_svn crash on valid request (r19520)
+    * fixed: svnserve protocol error in lock, causing client hang (issue #2548)
+    * mailer.py: add Content-Transfer-Encoding header (r19319)
+    * mailer.py: fixed: named substitutions incorrectly ignored (r18114, -681)
+    * fixed: authz requires read access for root for writes (issue #2486)
+    * svnauthz-validate: add config file validation tool (r18504, -09)
+
+Developer-visible-changes:
+* fixed: tests don't catch repository creation failure properly (r19149,-51)
+* support SWIG 1.3.28
+* support APR 0.9.x >= 0.9.10 (r19039, -57, -60)
+* python bindings:
+      - fixed: link error on OpenBSD (r18983)
+* ruby bindings:
+      - fixed: memory leak (r19493)
+      - fixed: NULL argument conversion bug (r19543)
+
+
 Version 1.3.1
 (25 March 2006, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.1
