@@ -75,8 +75,8 @@ spacetest = abc = def ; ghi = ; = j
 def create_test_file(dir, name):
   "create a test file"
 
-  fd = open(os.path.join(dir, name), 'w')
-  fd.write('foo\nbar\nbaz\n')
+  fd = open(os.path.join(dir, name), 'wb')
+  fd.write('foo\nbar\nbaz\n'.encode('utf-8'))
   fd.close()
 
 #----------------------------------------------------------------------

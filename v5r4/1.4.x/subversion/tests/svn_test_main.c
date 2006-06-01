@@ -33,6 +33,11 @@
 #include "svn_test.h"
 #include "svn_io.h"
 #include "svn_path.h"
+
+#ifdef AS400_UTF8
+#include "svn_utf.h"
+#endif
+
 #include "svn_private_config.h"
 
 
@@ -253,6 +258,14 @@ main(int argc, const char *argv[])
   /* set up the global pool */
   pool = svn_pool_create(NULL);
 
+  /* Remember the command line */
+  test_argc = argc;
+  test_argv = argv;
+
+  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, prog_name);
+  
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr(argv[0], '/');
   if (prog_name)
@@ -268,13 +281,6 @@ main(int argc, const char *argv[])
         prog_name = argv[0];
     }
 
-  /* Remember the command line */
-  test_argc = argc;
-  test_argv = argv;
-
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, prog_name);
   while (1)
     {
       const char *opt_arg;

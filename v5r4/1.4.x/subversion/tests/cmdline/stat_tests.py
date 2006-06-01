@@ -324,13 +324,27 @@ def status_for_unignored_file(sbox):
     svntest.main.run_svn(None, 'propset', 'svn:ignore', '-F', 'proptmp', '.')
     os.remove('proptmp')
 
-    # status on the directory with --no-ignore
-    svntest.actions.run_and_verify_svn(None,
-                                       ['I      newdir\n',
-                                        'I      newfile\n',
-                                        ' M     .\n'],
-                                       [],
-                                       'status', '--no-ignore', '.')
+    # apr_dir_open on the iSeries returns a apr_dir_t structure which is
+    # operated on by apr_dir_read to get the contents of the directory.
+    # Problem is that, as the header comment says "...No ordering is
+    # guaranteed for the entries read".  And you guessed it, the iSeries
+    # differs from apparently every other platform on earth.
+    if not sys.platform == 'AS/400':
+      # status on the directory with --no-ignore
+      svntest.actions.run_and_verify_svn(None,
+                                         ['I      newdir\n',
+                                          'I      newfile\n',
+                                          ' M     .\n'],
+                                         [],
+                                         'status', '--no-ignore', '.')
+    else:
+      # status on the directory with --no-ignore
+      svntest.actions.run_and_verify_svn(None,
+                                         ['I      newfile\n',
+                                          'I      newdir\n',
+                                          ' M     .\n'],
+                                         [],
+                                         'status', '--no-ignore', '.')
 
     # status specifying the file explicitly on the command line
     svntest.actions.run_and_verify_svn(None,
@@ -777,28 +791,62 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\"?>\n",
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   item=\"modified\"\n",
-              "   revision=\"1\">\n",
-              "<commit\n",
-              "   revision=\"1\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              time_str,
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-              "<against\n",
-              "   revision=\"1\"/>\n",
-              "</target>\n",
-              "</status>\n",
-             ]
+  if sys.platform != 'AS/400':
+    template = ["<?xml version=\"1.0\"?>\n",
+                "<status>\n",
+                "<target\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<entry\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<wc-status\n",
+                "   props=\"none\"\n",
+                "   item=\"modified\"\n",
+                "   revision=\"1\">\n",
+                "<commit\n",
+                "   revision=\"1\">\n",
+                "<author>%s</author>\n" % svntest.main.wc_author,
+                time_str,
+                "</commit>\n",
+                "</wc-status>\n",
+                "</entry>\n",
+                "<against\n",
+                "   revision=\"1\"/>\n",
+                "</target>\n",
+                "</status>\n",
+               ]
+  else:
+    # Due to APR hashing differences on the iSeries the order of the items in
+    # the wc-status element vary from other platforms and the expected output
+    # template below reflects these differences.  Also, due to various AS/400
+    # workarounds, the output returned by svntest.actions.run_and_verify_svn
+    # always has an empty string as the last line, which also need to be
+    # accounted for.
+    template = ["<?xml version=\"1.0\"?>\n",
+                "<status>\n",
+                "<target\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<entry\n",
+                "   path=\"%s\">\n" % (file_path),
+                "<wc-status\n",
+                "   revision=\"1\"\n",
+                "   item=\"modified\"\n",
+                "   props=\"none\">\n",
+                "<commit\n",
+                "   revision=\"1\">\n",
+                "<author>%s</author>\n" % svntest.main.wc_author,
+                time_str,
+                "</commit>\n",
+                "</wc-status>\n",
+                "</entry>\n",
+                "<against\n",
+                "   revision=\"1\"/>\n",
+                "</target>\n",
+                "</status>\n",
+                "",
+               ]
+
+#  for i in range(0, len(template)):
+#    template[i] = template[i].encode('utf-8')
 
   output, error = svntest.actions.run_and_verify_svn (None, None, [],
                                                       'status', file_path,
@@ -809,7 +857,7 @@ def status_in_xml(sbox):
       print "ERROR: expected:", template[i], "actual:", output[i]
       raise svntest.Failure
 
-#----------------------------------------------------------------------  
+#----------------------------------------------------------------------
 
 def status_ignored_dir(sbox):
   "status on ignored directory"
@@ -853,12 +901,20 @@ def status_dash_u_missing_dir(sbox):
   # ok, blow away the A/D/G directory
   svntest.main.safe_rmtree(a_d_g)
 
-  xout = ["       *            " + os.path.join(a_d_g, "pi") + "\n",
-          "       *            " + os.path.join(a_d_g, "rho") + "\n",
-          "       *            " + os.path.join(a_d_g, "tau") + "\n",
-          "!      *       ?    " + a_d_g + "\n",
-          "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
-          "Status against revision:      1\n" ]
+  if sys.platform != 'AS/400':
+    xout = ["       *            " + os.path.join(a_d_g, "pi") + "\n",
+            "       *            " + os.path.join(a_d_g, "rho") + "\n",
+            "       *            " + os.path.join(a_d_g, "tau") + "\n",
+            "!      *       ?    " + a_d_g + "\n",
+            "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
+            "Status against revision:      1\n" ]
+  else:
+    xout = ["       *            " + os.path.join(a_d_g, "tau") + "\n",
+            "       *            " + os.path.join(a_d_g, "pi") + "\n",
+            "       *            " + os.path.join(a_d_g, "rho") + "\n",
+            "!      *       ?    " + a_d_g + "\n",
+            "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
+            "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
   svntest.actions.run_and_verify_svn(None,

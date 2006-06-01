@@ -23,6 +23,9 @@ import string, sys, re, os.path
 import svntest
 from svntest import SVNAnyOutput
 
+if sys.platform == 'AS/400':
+  import ebcdic
+
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
@@ -148,8 +151,7 @@ def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
 
 def update_a_file():
   "update a file"
-  open(os.path.join('A', 'B', 'E', 'alpha'), 'w').write("new atext")
-  # svntest.main.file_append(, "new atext")
+  open(os.path.join('A', 'B', 'E', 'alpha'), 'wb').write("new atext".encode('utf-8'))
   return 0
 
 def check_update_a_file(diff_output):
@@ -271,9 +273,9 @@ def check_replace_a_file(diff_output):
 
 def update_three_files():
   "update three files"
-  open(os.path.join('A', 'D', 'gamma'), 'w').write("new gamma")
-  open(os.path.join('A', 'D', 'G', 'tau'), 'w').write("new tau")
-  open(os.path.join('A', 'D', 'H', 'psi'), 'w').write("new psi")
+  open(os.path.join('A', 'D', 'gamma'), 'wb').write("new gamma".encode('utf-8'))
+  open(os.path.join('A', 'D', 'G', 'tau'), 'wb').write("new tau".encode('utf-8'))
+  open(os.path.join('A', 'D', 'H', 'psi'), 'wb').write("new psi".encode('utf-8'))
   return 0
 
 def check_update_three_files(diff_output):
@@ -700,12 +702,12 @@ def dont_diff_binary_file(sbox):
   wc_dir = sbox.wc_dir
   
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
+  fp = open(theta_path, 'wb')
   fp.write(theta_contents)    # write png filedata into 'A/theta'
   fp.close()
   
@@ -880,7 +882,7 @@ def diff_base_to_repos(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak ('iota',
                        contents=\
-                       "This is the file 'iota'.\nsome rev2 iota text.\n")
+                       "This is the file 'iota'.\nsome rev2 iota text.\n".encode('utf-8'))
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -1026,9 +1028,9 @@ def diff_base_to_repos(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
-                      contents="This is the file 'iota'.\n" + \
-                      "some rev2 iota text.\nan iota local mod.\n")
-  expected_disk.add({'A/D/newfile' : Item("Contents of newfile\n")})
+                      contents="This is the file 'iota'.\n".encode('utf-8') + \
+                      "some rev2 iota text.\nan iota local mod.\n".encode('utf-8'))
+  expected_disk.add({'A/D/newfile' : Item("Contents of newfile\n".encode('utf-8'))})
   expected_disk.remove ('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
@@ -1096,7 +1098,7 @@ def diff_deleted_in_head(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak ('A/mu',
-                       contents="This is the file 'mu'.\nsome rev2 mu text.\n")
+                       contents="This is the file 'mu'.\nsome rev2 mu text.\n".encode('utf-8'))
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -1270,7 +1272,7 @@ def diff_branches(sbox):
 
   # Compare identical files on different branches
   diff_output, err = svntest.actions.run_and_verify_svn(
-    None, [], [],
+    None, None, [],
     'diff', A_url + '/B/E/alpha@2', A2_url + '/B/E/alpha@3')
 
 
@@ -1440,8 +1442,8 @@ def check_for_omitted_prefix_in_path_component(sbox):
 
 
   file_path = os.path.join(prefix_path, "test.txt")
-  f = open(file_path, "w")
-  f.write("Hello\nThere\nIota\n")
+  f = open(file_path, "wb")
+  f.write("Hello\nThere\nIota\n".encode('utf-8'))
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1457,8 +1459,8 @@ def check_for_omitted_prefix_in_path_component(sbox):
                                      'cp', '-m', 'log msg', prefix_url,
                                      other_prefix_url)
 
-  f = open(file_path, "w")
-  f.write("Hello\nWorld\nIota\n")
+  f = open(file_path, "wb")
+  f.write("Hello\nWorld\nIota\n".encode('utf-8'))
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1475,8 +1477,14 @@ def check_for_omitted_prefix_in_path_component(sbox):
   good_dest = ".../prefix_other/mytag"
 
   if ((src != good_src) or (dest != good_dest)):
-    print("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
-          (src, good_src, dest, good_dest))
+    if sys.platform('AS/400'):
+      print("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
+            (src, good_src, dest, good_dest))
+    else:
+      ebcdic.os400_spool_print("src is '" + src +
+                               "' instead of '" + good_src +
+                               "' and dest is '" + dest +
+                               "' instead of '" + good_dest + "'")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1491,7 +1499,7 @@ def diff_renamed_file(sbox):
   try:
     pi_path = os.path.join('A', 'D', 'G', 'pi')
     pi2_path = os.path.join('A', 'D', 'pi2')
-    open(pi_path, 'w').write("new pi")
+    open(pi_path, 'wb').write("new pi".encode("utf-8"))
 
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log msg')
@@ -1572,7 +1580,7 @@ def diff_within_renamed_dir(sbox):
     svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
                                      os.path.join('A', 'D', 'I'))
     # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
-    open(os.path.join('A', 'D', 'I', 'pi'), 'w').write("new pi")
+    open(os.path.join('A', 'D', 'I', 'pi'), 'wb').write("new pi".encode('utf-8'))
 
     # Check a repos->wc diff
     diff_output, err_output = svntest.main.run_svn(None, 'diff',
@@ -1658,13 +1666,13 @@ def diff_keywords(sbox):
                                      'Id Rev Date',
                                      iota_path)
 
-  fp = open(iota_path, 'w')
-  fp.write("$Date$\n")
-  fp.write("$Id$\n")
-  fp.write("$Rev$\n")
-  fp.write("$Date::%s$\n" % (' ' * 80))
-  fp.write("$Id::%s$\n"   % (' ' * 80))
-  fp.write("$Rev::%s$\n"  % (' ' * 80))
+  fp = open(iota_path, 'wb')
+  fp.write("$Date$\n".encode('utf-8'))
+  fp.write("$Id$\n".encode('utf-8'))
+  fp.write("$Rev$\n".encode('utf-8'))
+  fp.write(("$Date::%s$\n" % (' ' * 80)).encode('utf-8'))
+  fp.write(("$Id::%s$\n"   % (' ' * 80)).encode('utf-8'))
+  fp.write(("$Rev::%s$\n"  % (' ' * 80)).encode('utf-8'))
   fp.close()
   
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1697,13 +1705,13 @@ def diff_keywords(sbox):
 
   # Check fixed length keywords will show up
   # when the length of keyword has changed
-  fp = open(iota_path, 'w')
-  fp.write("$Date$\n")
-  fp.write("$Id$\n")
-  fp.write("$Rev$\n")
-  fp.write("$Date::%s$\n" % (' ' * 79))
-  fp.write("$Id::%s$\n"   % (' ' * 79))
-  fp.write("$Rev::%s$\n"  % (' ' * 79))
+  fp = open(iota_path, 'wb')
+  fp.write("$Date$\n".encode('utf-8'))
+  fp.write("$Id$\n".encode('utf-8'))
+  fp.write("$Rev$\n".encode('utf-8'))
+  fp.write(("$Date::%s$\n" % (' ' * 79)).encode('utf-8'))
+  fp.write(("$Id::%s$\n"   % (' ' * 79)).encode('utf-8'))
+  fp.write(("$Rev::%s$\n"  % (' ' * 79)).encode('utf-8'))
   fp.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -2133,25 +2141,46 @@ def diff_prop_change_local_propmod(sbox):
 
   sbox.build()
 
-  expected_output_r2_wc = [
-    "\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Name: dirprop\n",
-    "   - r2value\n",
-    "   + workingvalue\n",
-    "Name: newdirprop\n",
-    "   + newworkingvalue\n",
-    "\n",
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Name: fileprop\n",
-    "   - r2value\n",
-    "   + workingvalue\n",
-    "Name: newfileprop\n",
-    "   + newworkingvalue\n",
-    "\n" ]
+  if sys.platform != 'AS/400':
+    expected_output_r2_wc = [
+      "\n",
+      "Property changes on: A\n",
+      "___________________________________________________________________\n",
+      "Name: dirprop\n",
+      "   - r2value\n",
+      "   + workingvalue\n",
+      "Name: newdirprop\n",
+      "   + newworkingvalue\n",
+      "\n",
+      "\n",
+      "Property changes on: iota\n",
+      "___________________________________________________________________\n",
+      "Name: fileprop\n",
+      "   - r2value\n",
+      "   + workingvalue\n",
+      "Name: newfileprop\n",
+      "   + newworkingvalue\n",
+      "\n" ]
+  else:
+    expected_output_r2_wc = [
+      "\n",
+      "Property changes on: A\n",
+      "___________________________________________________________________\n",
+      "Name: dirprop\n",
+      "   - r2value\n",
+      "   + workingvalue\n",
+      "Name: newdirprop\n",
+      "   + newworkingvalue\n",
+      "\n",
+      "\n",
+      "Property changes on: iota\n",
+      "___________________________________________________________________\n",
+      "Name: newfileprop\n",
+      "   + newworkingvalue\n",
+      "Name: fileprop\n",
+      "   - r2value\n",
+      "   + workingvalue\n",
+      "\n" ]
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -2214,41 +2243,108 @@ def diff_repos_wc_add_with_props(sbox):
 
   sbox.build()
 
-  expected_output_r1_r3 = [
-    "Index: foo\n",
-    "===================================================================\n",
-    "--- foo\t(revision 0)\n",
-    "+++ foo\t(revision 3)\n",
-    "@@ -0,0 +1 @@\n",
-    "+content\n",
-    "\n",
-    "Property changes on: foo\n",
-    "___________________________________________________________________\n",
-    "Name: propname\n",
-    "   + propvalue\n",
-    "\n",
-    "\n",
-    "Property changes on: X\n",
-    "___________________________________________________________________\n",
-    "Name: propname\n",
-    "   + propvalue\n",
-    "\n",
-    "Index: X/bar\n",
-    "===================================================================\n",
-    "--- X/bar\t(revision 0)\n",
-    "+++ X/bar\t(revision 3)\n",
-    "@@ -0,0 +1 @@\n",
-    "+content\n",
-    "\n",
-    "Property changes on: " + os.path.join('X', 'bar') + "\n",
-    "___________________________________________________________________\n",
-    "Name: propname\n",
-    "   + propvalue\n",
-    "\n" ]
+  if sys.platform != 'AS/400':
+    expected_output_r1_r3 = [
+      "Index: foo\n",
+      "===================================================================\n",
+      "--- foo\t(revision 0)\n",
+      "+++ foo\t(revision 3)\n",
+      "@@ -0,0 +1 @@\n",
+      "+content\n",
+      "\n",
+      "Property changes on: foo\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n",
+      "\n",
+      "Property changes on: X\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n",
+      "Index: X/bar\n",
+      "===================================================================\n",
+      "--- X/bar\t(revision 0)\n",
+      "+++ X/bar\t(revision 3)\n",
+      "@@ -0,0 +1 @@\n",
+      "+content\n",
+      "\n",
+      "Property changes on: " + os.path.join('X', 'bar') + "\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n" ]
+  else:
+    expected_output_r1_r3 = [
+      "\n",
+      "Property changes on: X\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n",
+      "Index: X/bar\n",
+      "===================================================================\n",
+      "--- X/bar\t(revision 0)\n",
+      "+++ X/bar\t(revision 3)\n",
+      "@@ -0,0 +1 @@\n",
+      "+content\n",
+      "\n",
+      "Property changes on: " + os.path.join('X', 'bar') + "\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n",
+      "Index: foo\n",
+      "===================================================================\n",
+      "--- foo\t(revision 0)\n",
+      "+++ foo\t(revision 3)\n",
+      "@@ -0,0 +1 @@\n",
+      "+content\n",
+      "\n",
+      "Property changes on: foo\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n" ] 
+
   # The output from the BASE->repos diff is the same content, but in a
   # different order.
-  expected_output_r1_r3_a = expected_output_r1_r3[:12] + \
-    expected_output_r1_r3[18:] + expected_output_r1_r3[12:18]
+  if sys.platform != 'AS/400':
+    expected_output_r1_r3_a = expected_output_r1_r3[:12] + \
+      expected_output_r1_r3[18:] + expected_output_r1_r3[12:18]
+  else:
+    expected_output_r1_r3_a = [
+      "Index: X/bar\n",
+      "===================================================================\n",
+      "--- X/bar\t(revision 0)\n",
+      "+++ X/bar\t(revision 3)\n",
+      "@@ -0,0 +1 @@\n",
+      "+content\n",
+      "\n",
+      "Property changes on: " + os.path.join('X', 'bar') + "\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n",
+      "\n",
+      "Property changes on: X\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n",
+      "Index: foo\n",
+      "===================================================================\n",
+      "--- foo\t(revision 0)\n",
+      "+++ foo\t(revision 3)\n",
+      "@@ -0,0 +1 @@\n",
+      "+content\n",
+      "\n",
+      "Property changes on: foo\n",
+      "___________________________________________________________________\n",
+      "Name: propname\n",
+      "   + propvalue\n",
+      "\n" ] 
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -2389,7 +2485,7 @@ def diff_base_repos_moved(sbox):
 
     # Move, modify and commit a file
     svntest.main.run_svn(None, 'mv', oldfile, newfile)
-    open(newfile, 'w').write("new content\n")
+    open(newfile, 'wb').write("new content\n".encode("utf-8"))
     svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '')
 
     # Check that a base->repos diff shows deleted and added lines.
@@ -2502,7 +2598,7 @@ def diff_weird_author(sbox):
 
   svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
 
-  open(os.path.join(sbox.wc_dir, 'A', 'mu'), 'w').write("new content\n")
+  open(os.path.join(sbox.wc_dir, 'A', 'mu'), 'wb').write("new content\n".encode("utf-8"))
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'A/mu': Item(verb='Sending'),
@@ -2590,3 +2686,4 @@ if __name__ == '__main__':
 
 
 ### End of file.
+

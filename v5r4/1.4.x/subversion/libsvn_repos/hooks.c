@@ -302,7 +302,11 @@ run_hook_cmd(const char *name,
       /* If read() returned 0 then EOF was found and we are done reading
        * stderr. */
       if (rc == 0)
-        break;
+        {
+          /* Null terminate the stringbuf. */
+          script_output->data[script_output->len] = '\0';
+          break;
+        }
     }
 
   /* Close the read end of the stderr pipe. */

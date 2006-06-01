@@ -22,6 +22,8 @@ import shutil, string, sys, stat, re, os
 # Our testing module
 import svntest
 from svntest import wc
+if sys.platform == 'AS/400':
+  import ebcdic
 
 
 # (abbreviation)
@@ -106,7 +108,7 @@ def revert_replacement_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'pi'.\n",
+                      contents="This is the file 'pi'.\n".encode('utf-8'),
                       props={ 'phony-prop': '*' })
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
@@ -242,37 +244,43 @@ def revert_reexpand_keyword(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   newfile_path = os.path.join(wc_dir, "newfile")
-  unexpanded_contents = "This is newfile: $Rev$.\n"
-
+  unexpanded_contents = "This is newfile: $Rev$.\n".encode("utf-8")
+  
   # Put an unexpanded keyword into iota.
-  fp = open(newfile_path, 'w')
+  fp = open(newfile_path, 'wb')
   fp.write(unexpanded_contents)
   fp.close()
+  if sys.platform == 'AS/400':
+    ebcdic.os400_tagtree(newfile_path, 1208, 1)
 
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None, 'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
-  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Rev', newfile_path)
   svntest.main.run_svn(None, 'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
   def check_expanded(path):
-    fp = open(path, 'r')
+    fp = open(path, 'rb')
     lines = fp.readlines()
     fp.close()
-    if lines[0] != "This is newfile: $Rev: 3 $.\n":
-      raise svntest.Failure
+    if sys.platform != 'AS/400':
+      if lines[0] != "This is newfile: $Rev: 3 $.\n":
+        raise svntest.Failure
+    else:
+      if lines[0] != "This is newfile: $Rev: 3 $.\n".encode("utf-8"):
+        raise svntest.Failure
 
   check_expanded(newfile_path)
 
   # Now un-expand the keyword again.
-  fp = open(newfile_path, 'w')
+  fp = open(newfile_path, 'wb')
   fp.write(unexpanded_contents)
   fp.close()
 
-  fp = open(newfile_path, 'r')
+  fp = open(newfile_path, 'rb')
   lines = fp.readlines()
   fp.close()
 
@@ -401,8 +409,8 @@ def revert_file_merge_replace_with_history(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
   # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
+  fp = open(rho_path, 'wb')
+  fp.write("new rho\n".encode("utf-8"))
   fp.close()
 
   # Add the new file
@@ -426,7 +434,7 @@ def revert_file_merge_replace_with_history(sbox):
   # Update working copy
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk   = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho', contents='new rho\n' )
+  expected_disk.tweak('A/D/G/rho', contents='new rho\n'.encode('utf-8'))
   expected_status.tweak(wc_rev='3')
   expected_status.tweak('A/D/G/rho', status='  ')
 
@@ -441,7 +449,7 @@ def revert_file_merge_replace_with_history(sbox):
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
-  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n".encode('utf-8'))
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -459,7 +467,7 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  expected_disk.tweak('A/D/G/rho', contents="new rho\n")
+  expected_disk.tweak('A/D/G/rho', contents="new rho\n".encode("utf-8"))
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
 
@@ -541,13 +549,13 @@ def revert_after_manual_conflict_resolution__text(sbox):
   # Cause a (text) conflict
   iota_path_1 = os.path.join(wc_dir_1, 'iota')
   iota_path_2 = os.path.join(wc_dir_2, 'iota')
-  svntest.main.file_write(iota_path_1, 'Modified iota text')
-  svntest.main.file_write(iota_path_2, 'Conflicting iota text')
+  svntest.main.file_write(iota_path_1, 'Modified iota text'.encode('utf-8'))
+  svntest.main.file_write(iota_path_2, 'Conflicting iota text'.encode('utf-8'))
   svntest.main.run_svn(None, 'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None, 'update', wc_dir_2)
 
   # Resolve the conflict "manually"
-  svntest.main.file_write(iota_path_2, 'Modified iota text')
+  svntest.main.file_write(iota_path_2, 'Modified iota text'.encode('utf-8'))
   os.remove(iota_path_2 + '.mine')
   os.remove(iota_path_2 + '.r1')
   os.remove(iota_path_2 + '.r2')

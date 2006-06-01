@@ -22,6 +22,8 @@ import string, sys, re, os.path, shutil
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -770,7 +772,7 @@ def prop_value_conversions(sbox):
   def set_prop(name, value, path, valf=propval_file, valp=propval_path):
     valf.seek(0)
     valf.truncate(0)
-    valf.write(value)
+    valf.write(value.encode('utf-8'))
     valf.flush()
     svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
 
@@ -810,7 +812,8 @@ def prop_value_conversions(sbox):
 
   # Close and remove the prop value file
   propval_file.close()
-  os.unlink(propval_path)
+  if sys.platform != 'AS/400':
+    os.unlink(propval_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
   # client converts to local encoding and local eoln style.
@@ -993,7 +996,11 @@ def recursive_base_wc_ops(sbox):
       if ((line.find(expected_out[ln]) == -1) or
           (line != '' and expected_out[ln] == '')):
         print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
+        if sys.platform != 'AS/400':
+          print '       actual full output:', output
+        else:
+          print '       actual full output:'
+          ebcdic.os400_spool_print(output)
         raise svntest.Failure
       ln = ln + 1
 
@@ -1009,11 +1016,18 @@ def recursive_base_wc_ops(sbox):
   
   # Test recursive propget
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir,
-                                        '-rBASE') 
-  verify_output([ 'old-del', 'old-keep' ], output, errput)
-  
+                                        '-rBASE')
+
+  if sys.platform != 'AS/400':
+    verify_output([ 'old-del', 'old-keep' ], output, errput)
+  else:
+    verify_output([ 'old-keep', 'old-del' ], output, errput)
+
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir)
-  verify_output([ 'new-add', 'new-keep' ], output, errput)
+  if sys.platform != 'AS/400':
+    verify_output([ 'new-add', 'new-keep' ], output, errput)
+  else:
+    verify_output([ 'new-keep', 'new-add' ], output, errput)
 
   # Test recursive propset (issue 1794)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1076,7 +1090,11 @@ def url_props_ops(sbox):
       if ((line.find(expected_out[ln]) == -1) or
           (line != '' and expected_out[ln] == '')):
         print 'Error: expected keywords: ', expected_out
-        print '       actual full output:', output
+        if sys.platform != 'AS/400':
+          print '       actual full output:', output
+        else:
+          print '       actual full output:'
+          ebcdic.os400_spool_print(output)
         raise svntest.Failure
       ln = ln + 1
 

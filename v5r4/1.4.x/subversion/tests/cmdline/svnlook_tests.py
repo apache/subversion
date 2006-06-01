@@ -22,6 +22,8 @@ import string, sys, re, os.path
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -85,9 +87,10 @@ def test_misc(sbox):
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
   svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 1,
-                           ["SVN-fs-dump-format-version: 2\n",
-                            "\n",
-                            "UUID: ", uuid, "\n",
+                           ["SVN-fs-dump-format-version: 2\n".encode('utf-8'),
+                            "\n".encode('utf-8'),
+                            "UUID: ".encode('utf-8'), uuid.encode('utf-8'),
+                            "\n".encode('utf-8'),
                            ],
                            'load', '--force-uuid', repo_dir)
 
@@ -302,7 +305,7 @@ PROPS-END
 text
 
 
-"""
+""".encode('utf-8')
 
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)

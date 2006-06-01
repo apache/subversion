@@ -4,7 +4,7 @@
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -20,6 +20,8 @@
 import shutil, string, sys, re, os
 
 # Our testing module
+if sys.platform == 'AS/400':
+  import ebcdic
 import svntest
 from svntest import wc, SVNAnyOutput
 
@@ -201,6 +203,7 @@ def textual_merges_galore(sbox):
   other_tau_text = ""
   for x in range(2,11):
     other_tau_text = other_tau_text + 'Conflicting line ' + `x` + ' in tau\n'
+
   svntest.main.file_append(other_tau_path, other_tau_text)
 
   # Do the first merge, revs 1:3.  This tests all the cases except
@@ -214,23 +217,23 @@ def textual_merges_galore(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
-                      + mu_text)
+                      + mu_text.encode('utf-8'))
   expected_disk.tweak('A/B/lambda',
                       contents=expected_disk.desc['A/B/lambda'].contents
-                      + lambda_text)
+                      + lambda_text.encode('utf-8'))
   expected_disk.tweak('A/D/G/rho',
                       contents=expected_disk.desc['A/D/G/rho'].contents
-                      + rho_text + additional_rho_text)
+                      + rho_text.encode('utf-8') + additional_rho_text.encode('utf-8'))
   expected_disk.tweak('A/D/G/pi',
                       contents=expected_disk.desc['A/D/G/pi'].contents
-                      + pi_text)
+                      + pi_text.encode('utf-8'))
   expected_disk.tweak('A/D/G/tau',
                       contents=expected_disk.desc['A/D/G/tau'].contents
-                      + "<<<<<<< .working\n"
-                      + other_tau_text
-                      + "=======\n"
-                      + tau_text
-                      + ">>>>>>> .merge-right.r3\n")
+                      + "<<<<<<< .working\n".encode('utf-8')
+                      + other_tau_text.encode('utf-8')
+                      + "=======\n".encode('utf-8')
+                      + tau_text.encode('utf-8')
+                      + ">>>>>>> .merge-right.r3\n".encode('utf-8'))
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
   expected_status.tweak('A/mu', wc_rev=2)
@@ -286,11 +289,12 @@ def textual_merges_galore(sbox):
   other_rho_text = ""
   for x in range(1,10):
     other_rho_text = other_rho_text + 'Unobtrusive line ' + `x` + ' in rho\n'
-  fp = open(other_rho_path, "r")
+
+  fp = open(other_rho_path, "rb")
   current_other_rho_text = fp.read()
   fp.close()
-  fp = open(other_rho_path, 'w')
-  fp.write(other_rho_text + current_other_rho_text)
+  fp = open(other_rho_path, 'wb')
+  fp.write(other_rho_text.encode('utf-8') + current_other_rho_text)
   fp.close()
 
   # We expect pi and tau to merge and conflict respectively, but
@@ -303,29 +307,29 @@ def textual_merges_galore(sbox):
                                })
   
   expected_disk = wc.State("", {
-    'pi'    : wc.StateItem("This is the file 'pi'.\n"),
-    'rho'   : wc.StateItem("This is the file 'rho'.\n"),
-    'tau'   : wc.StateItem("This is the file 'tau'.\n"),
+    'pi'    : wc.StateItem("This is the file 'pi'.\n".encode('utf-8')),
+    'rho'   : wc.StateItem("This is the file 'rho'.\n".encode('utf-8')),
+    'tau'   : wc.StateItem("This is the file 'tau'.\n".encode('utf-8')),
     })
-  expected_disk.tweak('rho', contents=other_rho_text
+  expected_disk.tweak('rho', contents=other_rho_text.encode('utf-8')
                       + expected_disk.desc['rho'].contents
-                      + rho_text
-                      + additional_rho_text)
+                      + rho_text.encode('utf-8')
+                      + additional_rho_text.encode('utf-8'))
   expected_disk.tweak('pi',
                       contents=expected_disk.desc['pi'].contents
-                      + pi_text)
+                      + pi_text.encode('utf-8'))
   expected_disk.tweak('tau',
                       # Ouch, mom, I've got conflicts on my conflicts!
                       contents=expected_disk.desc['tau'].contents
-                      + "<<<<<<< .working\n"
-                      + "<<<<<<< .working\n"
-                      + other_tau_text
-                      + "=======\n"
-                      + tau_text
-                      + ">>>>>>> .merge-right.r3\n"
-                      + "=======\n"
-                      + tau_text
-                      + ">>>>>>> .merge-right.r3\n"
+                      + "<<<<<<< .working\n".encode('utf-8')
+                      + "<<<<<<< .working\n".encode('utf-8')
+                      + other_tau_text.encode('utf-8')
+                      + "=======\n".encode('utf-8')
+                      + tau_text.encode('utf-8')
+                      + ">>>>>>> .merge-right.r3\n".encode('utf-8')
+                      + "=======\n".encode('utf-8')
+                      + tau_text.encode('utf-8')
+                      + ">>>>>>> .merge-right.r3\n".encode('utf-8')
                       )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
@@ -454,10 +458,10 @@ def add_with_history(sbox):
   expected_disk = wc.State('', {
     'Q'      : Item(),
     'Q2'     : Item(props={'x' : 'x'}),
-    'Q/bar'  : Item("bar"),
-    'Q/bar2' : Item("bar2", props={'z' : 'z'}),
-    'foo'    : Item("foo"),
-    'foo2'   : Item("foo2", props={'y' : 'y'}),
+    'Q/bar'  : Item("bar".encode('utf-8')),
+    'Q/bar2' : Item("bar2".encode('utf-8'), props={'z' : 'z'}),
+    'foo'    : Item("foo".encode('utf-8')),
+    'foo2'   : Item("foo2".encode('utf-8'), props={'y' : 'y'}),
     })
   expected_status = wc.State(short_C_path, {
     ''       : Item(status='  ', wc_rev=1),
@@ -591,10 +595,10 @@ def delete_file_and_dir(sbox):
   expected_output = wc.State(B2_path, { })
   expected_disk = wc.State('', {
     'E'       : Item(),
-    'E/alpha' : Item("This is the file 'alpha'.\n"),
-    'E/beta'  : Item("This is the file 'beta'.\n"),
+    'E/alpha' : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'E/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F'       : Item(),
-    'lambda'  : Item("This is the file 'lambda'.\n"),
+    'lambda'  : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = wc.State(B2_path, {
     ''        : Item(status='  '),
@@ -656,9 +660,17 @@ def simple_property_merges(sbox):
                                      'propset', 'foo', 'foo_val',
                                      alpha_path)
   # A binary, non-UTF8 property value
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'foo', 'foo\201val',
-                                     beta_path)
+  if sys.platform != 'AS/400':
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'foo', 'foo\201val',
+                                       beta_path)
+  else:
+    # The ebcdic port doesn't currently support non-utf8
+    # binary properties.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'foo', 'foo*val',
+                                       beta_path) 
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val',
                                      E_path)
@@ -694,10 +706,17 @@ def simple_property_merges(sbox):
                                      'propset', 'foo', 'mod_foo', alpha_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'bar', 'bar_val', alpha_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'foo', 'mod\201foo', beta_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'bar', 'bar\201val', beta_path)
+  if sys.platform != 'AS/400':
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'foo', 'mod\201foo', beta_path)
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'bar', 'bar\201val', beta_path)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'foo', 'mod*foo', beta_path)
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'bar', 'bar*val', beta_path)
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'mod_foo', E_path)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -733,15 +752,20 @@ def simple_property_merges(sbox):
     })
   expected_disk = wc.State('', {
     'E'        : Item(),
-    'E/alpha'  : Item("This is the file 'alpha'.\n"),
-    'E/beta'   : Item("This is the file 'beta'.\n"),
+    'E/alpha'  : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'E/beta'   : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F'        : Item(),
-    'lambda'   : Item("This is the file 'lambda'.\n"),
+    'lambda'   : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_disk.tweak('E', 'E/alpha', 
                       props={'foo' : 'mod_foo', 'bar' : 'bar_val'})
-  expected_disk.tweak('E/beta', 
-                      props={'foo' : 'mod\201foo', 'bar' : 'bar\201val'})
+  if sys.platform != 'AS/400':
+    expected_disk.tweak('E/beta',
+                        props={'foo' : 'mod\201foo', 'bar' : 'bar\201val'})
+  else:
+    expected_disk.tweak('E/beta',
+                        props={'foo' : 'mod*foo', 'bar' : 'bar*val'})
+
   expected_status = wc.State(B2_path, {
     ''        : Item(status='  '),
     'E'       : Item(status=' M'),
@@ -774,20 +798,38 @@ def simple_property_merges(sbox):
                                        None, None, None, None, None, 1)
 
   # Merge B 3:4 into B2 now causes a conflict
-  expected_disk.add({
-    'E/dir_conflicts.prej'
-    : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist."),    
-    'E/alpha.prej'
-    : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist."),
-    'E/beta.prej'
-    : Item("Trying to change property 'foo' from 'foo?\\129val' to"
-           + " 'mod?\\129foo',\n"
-           + "but the property does not exist."),
-    })
+  if sys.platform != 'AS/400':
+    expected_disk.add({
+      'E/dir_conflicts.prej'
+      : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n".encode('utf-8')
+             + "but the property does not exist.".encode('utf-8')),
+      'E/alpha.prej'
+      : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n".encode('utf-8')
+             + "but the property does not exist.".encode('utf-8')),
+      'E/beta.prej'
+      : Item("Trying to change property 'foo' from 'foo?\\129val' to".encode('utf-8')
+             + " 'mod?\\129foo',\n".encode('utf-8')
+             + "but the property does not exist.".encode('utf-8')),
+      })
+  else:
+    expected_disk.add({
+      'E/dir_conflicts.prej'
+      : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n".encode('utf-8')
+             + "but the property does not exist.".encode('utf-8')),
+      'E/alpha.prej'
+      : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n".encode('utf-8')
+             + "but the property does not exist.".encode('utf-8')),
+      'E/beta.prej'
+      : Item("Trying to change property 'foo' from 'foo*val' to".encode('utf-8')
+             + " 'mod*foo',\n".encode('utf-8')
+             + "but the property does not exist.".encode('utf-8')),
+      })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
-  expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
+  if sys.platform != 'AS/400':
+    expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
+  else:
+    expected_disk.tweak('E/beta', props={'bar' : 'bar*val'})
+
   expected_status.tweak('E', 'E/alpha', 'E/beta', status=' C')
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
                                        expected_output,
@@ -858,7 +900,7 @@ def merge_catches_nonexistent_target(sbox):
   Q_url = svntest.main.current_repo_url + '/A/D/Q'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, Q_path)
-  
+
   svntest.main.file_append(newfile_path, 'This is newfile.\n')
   svntest.actions.run_and_verify_svn(None, None, [], 'add', newfile_path)
   
@@ -904,9 +946,9 @@ def merge_catches_nonexistent_target(sbox):
       })
     expected_status.tweak(status='  ', wc_rev=1)
     expected_disk = wc.State('', {
-      'pi'   : Item("This is the file 'pi'.\n"),
-      'rho'  : Item("This is the file 'rho'.\n"),
-      'tau'  : Item("This is the file 'tau'.\n"),
+      'pi'   : Item("This is the file 'pi'.\n".encode('utf-8')),
+      'rho'  : Item("This is the file 'rho'.\n".encode('utf-8')),
+      'tau'  : Item("This is the file 'tau'.\n".encode('utf-8')),
       })
     expected_skip = wc.State('', {
       'newfile' :Item(),
@@ -958,7 +1000,7 @@ def merge_tree_deleted_in_target(sbox):
     })
   expected_disk = wc.State('', {
     'F'       : Item(),
-    'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n"),
+    'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n".encode('utf-8')),
     })
   expected_status = wc.State(I_path, {
     ''        : Item(status='  '),
@@ -1116,7 +1158,7 @@ def merge_one_file_helper(sbox, arg_flav):
 
   # Inspect rho, make sure it's right.
   rho_text = svntest.tree.get_text(rho_path)
-  if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
+  if rho_text != "This is the file 'rho'.\nA new line in rho.\n".encode('utf-8'):
     print "Unexpected text in merged '" + rho_path + "'"
     raise svntest.Failure
 
@@ -1144,7 +1186,7 @@ def merge_one_file_helper(sbox, arg_flav):
 
     # Inspect rho, make sure it's right.
     rho_text = svntest.tree.get_text('rho')
-    if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
+    if rho_text != "This is the file 'rho'.\nA new line in rho.\n".encode('utf-8'):
       print "Unexpected text merging to 'rho' in '" + G_path + "'"
       raise svntest.Failure
   finally:
@@ -1232,7 +1274,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
       raise svntest.Failure
 
     # sanity-check resulting file
-    if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
+    if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text.encode('utf-8')):
       raise svntest.Failure
 
   finally:
@@ -1261,11 +1303,15 @@ def merge_with_prev (sbox):
   for x in range(2,11):
     added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
   added_mu_text += "\n"
+
+  if sys.platform == 'AS/400':
+    added_mu_text = added_mu_text.encode('utf-8')
+
   svntest.main.file_append(mu_path, added_mu_text)
 
   zot_path = os.path.join(wc_dir, 'A', 'zot')
-  
-  svntest.main.file_append(zot_path, "bar")
+
+  svntest.main.file_append(zot_path, "bar".encode('utf-8'))
   svntest.main.run_svn(None, 'add', zot_path)
 
   # Create expected output tree for initial commit
@@ -1355,12 +1401,12 @@ def merge_binary_file (sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
+  fp = open(theta_path, 'wb')
   fp.write(theta_contents)    # write png filedata into 'A/theta'
   fp.close()
   
@@ -1410,7 +1456,7 @@ def merge_binary_file (sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/theta' : Item(theta_contents + "some extra junk",
+    'A/theta' : Item(theta_contents + "some extra junk".encode('utf-8'),
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(short_other_wc, 3)
@@ -1452,12 +1498,12 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                      "-m", "Creating copy-of-A")
 
   # Add a binary file to the WC.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), "rb")
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
   theta_path = os.path.join(wc_dir, "A", "theta")
-  fp = open(theta_path, "w")
+  fp = open(theta_path, "wb")
   fp.write(theta_contents)    # write png filedata into 'A/theta'
   fp.close()
   
@@ -1543,8 +1589,8 @@ def merge_in_new_file_and_diff(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
   new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
-  fp = open(new_file_path, 'w')
-  fp.write("newfile\n")
+  fp = open(new_file_path, 'wb')
+  fp.write("newfile\n".encode('utf-8'))
   fp.close()
 
   # Add the new file, and commit revision 3.
@@ -1563,9 +1609,9 @@ def merge_in_new_file_and_diff(sbox):
     'newfile' : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    'alpha'   : Item("This is the file 'alpha'.\n"),
-    'beta'    : Item("This is the file 'beta'.\n"),
-    'newfile' : Item("newfile\n"),
+    'alpha'   : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'beta'    : Item("This is the file 'beta'.\n".encode('utf-8')),
+    'newfile' : Item("newfile\n".encode('utf-8')),
     })
   expected_status = wc.State(short_branch_path, {
     ''        : Item(status='  ', wc_rev=2),
@@ -1588,7 +1634,7 @@ def merge_in_new_file_and_diff(sbox):
     os.chdir(saved_cwd)
 
   # Finally, run diff.  This diff produces no output!
-  svntest.actions.run_and_verify_svn(None, [], [], 'diff', branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff', branch_path)
 
 
 #----------------------------------------------------------------------
@@ -1652,8 +1698,8 @@ def merge_skips_obstructions(sbox):
     })
   expected_disk = wc.State('', {
     'Q'      : Item(),
-    'Q/bar'  : Item("bar"),
-    'foo'    : Item("foo"),
+    'Q/bar'  : Item("bar".encode('utf-8')),
+    'foo'    : Item("foo".encode('utf-8')),
     })
   expected_status = wc.State(short_C_path, {
     ''       : Item(status='  ', wc_rev=1),
@@ -1696,8 +1742,8 @@ def merge_skips_obstructions(sbox):
     'foo'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    'Q'      : Item("foo"),
-    'foo'    : Item("foo"),
+    'Q'      : Item("foo".encode('utf-8')),
+    'foo'    : Item("foo".encode('utf-8')),
     })
   expected_status = wc.State(short_C_path, {
     ''     : Item(status='  ', wc_rev=1),
@@ -1758,10 +1804,10 @@ def merge_skips_obstructions(sbox):
   expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_disk.add({
     'A/B/F/Q'      : Item(),
-    'A/B/F/Q/bar'  : Item("bar"),
-    'A/B/F/foo'    : Item("foo"),
-    'iota'         : Item("foo"),
-    'A/C/Q'        : Item("foo"),
+    'A/B/F/Q/bar'  : Item("bar".encode('utf-8')),
+    'A/B/F/foo'    : Item("foo".encode('utf-8')),
+    'iota'         : Item("foo".encode('utf-8')),
+    'A/C/Q'        : Item("foo".encode('utf-8')),
     })
   expected_skip = wc.State(short_wc_dir, {
     'A/D/G'  : Item(),
@@ -1821,7 +1867,7 @@ def merge_skips_obstructions(sbox):
   # this file, to understand why we shorten and chdir() below.
   expected_output = wc.State(short_wc_dir, { })
   expected_disk.add({
-    'A/B/lambda'      : Item("foo"),
+    'A/B/lambda'      : Item("foo".encode('utf-8')),
     })
   expected_disk.remove('A/D/G', 'iota')
   expected_skip = wc.State(short_wc_dir, {
@@ -2034,7 +2080,7 @@ def dry_run_adds_file_with_prop(sbox):
     'zig'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    'zig'      : Item("zig contents", {'foo':'foo_val'}),
+    'zig'      : Item("zig contents".encode('utf-8'), {'foo':'foo_val'}),
     })
   expected_skip = wc.State('', { })
   expected_status = None  # status is optional
@@ -2069,11 +2115,11 @@ def merge_binary_with_common_ancestry(sbox):
   svntest.main.run_svn(None, 'mkdir', I_path)
 
   # Add a binary file to the common ancestry path
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_contents = fp.read()
   fp.close()
   theta_I_path = os.path.join(wc_dir, 'I', 'theta')
-  fp = open(theta_I_path, 'w')
+  fp = open(theta_I_path, 'wb')
   fp.write(theta_contents)
   fp.close()
   svntest.main.run_svn(None, 'add', theta_I_path)
@@ -2245,7 +2291,7 @@ def merge_funny_chars_on_path(sbox):
       os.mkdir(target_dir)
       if target[2]:
         target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1], target[2])
-        svntest.main.file_append(target_path, "%s/%s" % (target[1], target[2]))
+        svntest.main.file_append(target_path, "%s%s%s" % (target[1], "/", target[2]))
       svntest.actions.run_and_verify_svn(None, None, [], 'add', target_dir)
     elif target[0] == 'f':
         target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1])
@@ -2261,7 +2307,7 @@ def merge_funny_chars_on_path(sbox):
       svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', target_dir)
       if target[2]:
         target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1], target[2])
-        svntest.main.file_append(target_path, "%s/%s" % (target[1], target[2]))
+        svntest.main.file_append(target_path, "%s%s%s" % (target[1], "/", target[2]))
         svntest.actions.run_and_verify_svn(None, None, [], 'add', target_path)
 
   expected_output_dic = {}
@@ -2304,13 +2350,13 @@ def merge_funny_chars_on_path(sbox):
       if target[0] == 'd':
         expected_disk_dic[key] = Item(None, {})
       elif target[0] == 'f':
-        expected_disk_dic[key] = Item("%s" % target[1], {})
+        expected_disk_dic[key] = Item("%s" % target[1].encode('utf-8'), {})
       else:
         raise svntest.Failure
       if target[2]:
         key = '%s/%s' % (target[1], target[2])
         expected_output_dic[key] = Item(status='A ')
-        expected_disk_dic[key] = Item('%s/%s' % (target[1], target[2]), {})
+        expected_disk_dic[key] = Item('%s%s%s' % (target[1].encode('utf-8'), "/".encode('utf-8'), target[2].encode('utf-8')), {})
 
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
@@ -2416,9 +2462,14 @@ def merge_keyword_expansions(sbox):
   expected_output = wc.State(short_bpath, {
     'f'  : Item(status='A '),
     })
-  expected_disk = wc.State('', {
-    'f'      : Item("$Revision: 4 $"),
-    })
+  if sys.platform != 'AS/400':
+    expected_disk = wc.State('', {
+      'f'      : Item("$Revision: 4 $"),
+      })
+  else:
+    expected_disk = wc.State('', {
+      'f'      : Item("$Revision: 4 $".encode("utf-8")),
+      })
   expected_status = wc.State(short_bpath, {
     ''       : Item(status='  ', wc_rev=4),
     'f'      : Item(status='A ', wc_rev='-', copied='+'),
@@ -2620,7 +2671,7 @@ def merge_file_with_space_in_its_name(sbox):
   new_file = os.path.join(wc_dir, "new file")
 
   # Make r2.
-  svntest.main.file_append(new_file, "Initial text in the file.\n")
+  svntest.main.file_append(new_file, "Initial text in the file.\n".encode('utf-8'))
   svntest.main.run_svn(None, "add", new_file)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "ci", "-m", "r2", wc_dir)
@@ -2810,10 +2861,10 @@ def safe_property_merge(sbox):
 
   expected_disk = wc.State('', {
     'E'        : Item(),
-    'E/alpha'  : Item("This is the file 'alpha'.\n"),
-    'E/beta'   : Item("This is the file 'beta'.\n"),
+    'E/alpha'  : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'E/beta'   : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F'        : Item(),
-    'lambda'   : Item("This is the file 'lambda'.\n"),
+    'lambda'   : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_disk.tweak('E', 'E/alpha', 'E/beta',
                       props={'foo' : 'branchval'}) # local mods still present
@@ -2937,10 +2988,10 @@ def property_merge_from_branch(sbox):
 
   expected_disk = wc.State('', {
     'E'        : Item(),
-    'E/alpha'  : Item("This is the file 'alpha'.\n"),
-    'E/beta'   : Item("This is the file 'beta'.\n"),
+    'E/alpha'  : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'E/beta'   : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F'        : Item(),
-    'lambda'   : Item("This is the file 'lambda'.\n"),
+    'lambda'   : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_disk.tweak('E', 'E/alpha', 
                       props={'foo' : 'branchval'})  
@@ -3083,44 +3134,44 @@ def cherry_pick_text_conflict(sbox):
     'mu'       : Item(status='C '),
     })
   expected_disk = wc.State('', {
-    'mu'        : Item("This is the file 'mu'.\n"
-                       + "<<<<<<< .working\n"
-                       + "=======\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r3\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + "r4\n"
-                       + ">>>>>>> .merge-right.r4\n"
+    'mu'        : Item("This is the file 'mu'.\n".encode('utf-8')
+                       + "<<<<<<< .working\n".encode('utf-8')
+                       + "=======\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r3\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + "r4\n".encode('utf-8')
+                       + ">>>>>>> .merge-right.r4\n".encode('utf-8')
                        ),
     'B'         : Item(),
-    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n".encode('utf-8')),
     'B/E'       : Item(),
-    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'B/E/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     'B/F'       : Item(),
     'C'         : Item(),
     'D'         : Item(),
-    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n".encode('utf-8')),
     'D/H'       : Item(),
-    'D/H/chi'   : Item("This is the file 'chi'.\n"),
-    'D/H/psi'   : Item("This is the file 'psi'.\n"),
-    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    'D/H/chi'   : Item("This is the file 'chi'.\n".encode('utf-8')),
+    'D/H/psi'   : Item("This is the file 'psi'.\n".encode('utf-8')),
+    'D/H/omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
     'D/G'       : Item(),
-    'D/G/pi'    : Item("This is the file 'pi'.\n"),
-    'D/G/rho'   : Item("This is the file 'rho'.\n"),
-    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/G/pi'    : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'D/G/rho'   : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'D/G/tau'   : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
   expected_status = wc.State(A_path, {
     ''          : Item(status='  '),
@@ -3189,8 +3240,8 @@ def merge_file_replace(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
   # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
+  fp = open(rho_path, 'wb')
+  fp.write("new rho\n".encode('utf-8'))
   fp.close()
 
   # Add the new file
@@ -3214,7 +3265,7 @@ def merge_file_replace(sbox):
   # Update working copy
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk   = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho', contents='new rho\n' )
+  expected_disk.tweak('A/D/G/rho', contents='new rho\n'.encode('utf-8') )
   expected_status.tweak(wc_rev='3')
   expected_status.tweak('A/D/G/rho', status='  ')
   
@@ -3229,7 +3280,7 @@ def merge_file_replace(sbox):
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
-  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n".encode('utf-8'))
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -3289,8 +3340,8 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                         expected_status)
 
   # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
+  fp = open(rho_path, 'wb')
+  fp.write("new rho\n".encode("utf-8"))
   fp.close()
 
   # Add the new file
@@ -3305,7 +3356,7 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
     'A/D/G/rho': Item(verb='Adding'),
     })
 
-  expected_disk.add({'A/D/G/rho' : Item(contents='new rho\n')} )
+  expected_disk.add({'A/D/G/rho' : Item(contents='new rho\n'.encode("utf-8"))} )
   expected_status.tweak(wc_rev='2')
   expected_status.tweak('A/D/G/rho', status='  ', wc_rev='3')
 
@@ -3322,7 +3373,8 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
-  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\n".encode("utf-8"))
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
                                        svntest.main.current_repo_url,
                                        expected_output,

@@ -20,6 +20,8 @@
 import stat, string, sys, os, shutil, re
 
 # Our testing module
+if sys.platform == 'AS/400':
+  import ebcdic
 import svntest
 from svntest import SVNAnyOutput
 
@@ -165,7 +167,7 @@ or a url (when false) copy source is used."""
 
   # Verify both content and props have been copied
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'pi'.\n",
+                      contents="This is the file 'pi'.\n".encode("utf-8"),
                       props={ 'phony-prop': '*' })
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
@@ -489,9 +491,9 @@ def receive_copy_in_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/B/newG' : Item(),
-    'A/B/newG/pi' : Item("This is the file 'pi'.\n"),
-    'A/B/newG/rho' : Item("This is the file 'rho'.\n"),
-    'A/B/newG/tau' : Item("This is the file 'tau'.\n"),
+    'A/B/newG/pi' : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'A/B/newG/rho' : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'A/B/newG/tau' : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -956,13 +958,13 @@ def wc_to_repos(sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/omega',
-                      contents="This is the file 'omega'.\nnew otext\n")
+                      contents="This is the file 'omega'.\nnew otext\n".encode('utf-8'))
   expected_disk.add({
-    'A/B/E/beta2'  : Item("This is the file 'beta'.\n"),
-    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
-    'A/D/H2/omega' : Item("This is the file 'omega'.\nnew otext\n"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
-    'A/D/H2/beta'  : Item("This is the file 'beta'.\n"),
+    'A/B/E/beta2'  : Item("This is the file 'beta'.\n".encode('utf-8')),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n".encode('utf-8')),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\nnew otext\n".encode('utf-8')),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n".encode('utf-8')),
+    'A/D/H2/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
   expected_status.add({
@@ -1032,7 +1034,12 @@ def repos_to_wc(sbox):
     if line == '+zig\n': # Crude check for diff-like output
       break
   else:
-    print "diff output incorrect", out
+    if sys.platform != 'AS/400':
+      print "diff output incorrect", out
+    else:
+      print "diff output incorrect "
+      for line in out:
+        ebcdic.os400_spool_print(line)
     raise svntest.Failure
   
   # Revert everything and verify.
@@ -1133,10 +1140,10 @@ def url_copy_parent_into_child(sbox):
   expected_disk.add({
     'A/B/F/B'         : Item(),
     'A/B/F/B/E'       : Item(),
-    'A/B/F/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'A/B/F/B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'A/B/F/B/E/alpha' : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'A/B/F/B/E/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     'A/B/F/B/F'       : Item(),
-    'A/B/F/B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'A/B/F/B/lambda'  : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
@@ -1197,16 +1204,16 @@ def wc_copy_parent_into_child(sbox):
     })
   expected_disk = svntest.wc.State('', {
     'E'           : Item(),
-    'E/alpha'     : Item("This is the file 'alpha'.\n"),
-    'E/beta'      : Item("This is the file 'beta'.\n"),
+    'E/alpha'     : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'E/beta'      : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F'           : Item(),
-    'lambda'      : Item("This is the file 'lambda'.\n"),
+    'lambda'      : Item("This is the file 'lambda'.\n".encode('utf-8')),
     'F/B'         : Item(),
     'F/B/E'       : Item(),
-    'F/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'F/B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'F/B/E/alpha' : Item("This is the file 'alpha'.\n".encode('utf-8')),
+    'F/B/E/beta'  : Item("This is the file 'beta'.\n".encode('utf-8')),
     'F/B/F'       : Item(),
-    'F/B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'F/B/lambda'  : Item("This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.wc.State(wc_dir, {
     ''            : Item(status='  ', wc_rev=2),
@@ -1307,7 +1314,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
 
   # Modify iota to make it checkworthy.
   f = open(iota_wc_path, "ab")
-  f.write("Hello\nSubversion\n$LastChangedRevision$\n")
+  f.write("Hello\nSubversion\n$LastChangedRevision$\n".encode("utf-8"))
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1343,6 +1350,11 @@ def repos_to_wc_copy_eol_keywords(sbox):
   line_contents = f.readlines()
   f.close()
 
+  if sys.platform == 'AS/400':
+    line_contents = ebcdic.os400_split_utf8_lines(line_contents)
+    raw_contents = raw_contents.decode('utf-8').encode('cp037')
+    line_contents[3] = line_contents[3].decode('utf-8').encode('cp037')
+
   if re.match('[^\\r]\\n', raw_contents):
     raise svntest.Failure
 
@@ -1373,10 +1385,10 @@ def revision_kinds_local_source(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', mu_path)
   svntest.main.file_append(mu_path, "Working copy.\n")
 
-  r1 = "This is the file 'mu'.\n"
-  r2 = r1 + "New r2 text.\n"
-  r3 = r2 + "New r3 text.\n"
-  rWC = r2 + "Working copy.\n"
+  r1 = "This is the file 'mu'.\n".encode('utf-8')
+  r2 = r1 + "New r2 text.\n".encode('utf-8')
+  r3 = r2 + "New r3 text.\n".encode('utf-8')
+  rWC = r2 + "Working copy.\n".encode('utf-8')
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=rWC)
@@ -1797,9 +1809,12 @@ def mixed_wc_to_url(sbox):
   if os.path.exists(os.path.join(wc_dir, 'pi')):
     raise svntest.Failure
 
-  fp = open(os.path.join(wc_dir, 'rho'), 'r')
+  fp = open(os.path.join(wc_dir, 'rho'), 'rb')
+  lines = fp.readlines()
+  if sys.platform == 'AS/400':
+    lines = lines[0].decode('utf-8').encode('cp037').split('\n')
   found_it = 0
-  for line in fp.readlines():
+  for line in lines:
     if re.match("^Second modification to rho.", line):
       found_it = 1
   if not found_it:
@@ -1886,17 +1901,21 @@ def force_move(sbox):
   file_path = os.path.join(wc_dir, file_name)
   
   # modify the content
-  file_handle = file(file_path, "a")
-  file_handle.write("Added contents\n")
+  file_handle = file(file_path, "ab")
+  file_handle.write("Added contents\n".encode("utf-8"))
   file_handle.close()
-  expected_file_content = [ "This is the file 'iota'.\n",
-                            "Added contents\n",
+  expected_file_content = [ "This is the file 'iota'.\n".encode("utf-8"),
+                            "Added contents\n".encode("utf-8"),
                           ]
 
   # check for the new content
-  file_handle = file(file_path, "r")
+  file_handle = file(file_path, "rb")
   modified_file_content = file_handle.readlines()
   file_handle.close()
+
+  if sys.platform == 'AS/400':
+    modified_file_content = ebcdic.os400_split_utf8_lines(modified_file_content) 
+
   if modified_file_content != expected_file_content:
     raise svntest.Failure("Test setup failed. Incorrect file contents.")
 
@@ -1915,9 +1934,13 @@ def force_move(sbox):
     os.chdir(was_cwd)
 
   # check for the new content
-  file_handle = file(os.path.join(sbox.wc_dir, "dest"), "r")
+  file_handle = file(os.path.join(sbox.wc_dir, "dest"), "rb")
   modified_file_content = file_handle.readlines()
   file_handle.close()
+
+  if sys.platform == 'AS/400':
+    modified_file_content = ebcdic.os400_split_utf8_lines(modified_file_content)  
+
   # Error if we dont find the modified contents...
   if modified_file_content != expected_file_content:
     raise svntest.Failure("File modifications were lost on 'move --force'")
@@ -1939,6 +1962,11 @@ def force_move(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         wc_dir)
+
+  if sys.platform == 'AS/400':
+    for i in range(len(expected_file_content)):
+      expected_file_content[i] = expected_file_content[i].decode('utf-8').encode('cp037')  
+
   svntest.actions.run_and_verify_svn('Cat file', expected_file_content, [],
                                      'cat',
                                      svntest.main.current_repo_url + '/dest')
@@ -1994,4 +2022,5 @@ if __name__ == '__main__':
   # NOTREACHED
 
 
-### End of file.
+### End of file. 
+

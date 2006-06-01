@@ -23,6 +23,9 @@ import string, sys, os.path, re
 import svntest
 from svntest import wc
 
+if sys.platform == 'AS/400':
+  import ebcdic
+
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
@@ -265,8 +268,13 @@ def keywords_from_birth(sbox):
                                          None, None, None, None, wc_dir)
 
   # Make sure the unexpanded URL keyword got expanded correctly.
-  fp = open(url_unexp_path, 'r')
+  fp = open(url_unexp_path, 'rb')
   lines = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines)
+    lines[0] = lines[0].decode('utf-8').encode('cp037')
+
   if not ((len(lines) == 1)
           and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
     print "URL expansion failed for", url_unexp_path
@@ -274,8 +282,13 @@ def keywords_from_birth(sbox):
   fp.close()
 
   # Make sure the preexpanded URL keyword got reexpanded correctly.
-  fp = open(url_exp_path, 'r')
+  fp = open(url_exp_path, 'rb')
   lines = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines)
+    lines[0] = lines[0].decode('utf-8').encode('cp037')
+
   if not ((len(lines) == 1)
           and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
     print "URL expansion failed for", url_exp_path
@@ -283,8 +296,13 @@ def keywords_from_birth(sbox):
   fp.close()
 
   # Make sure the unexpanded Id keyword got expanded correctly.
-  fp = open(id_unexp_path, 'r')
+  fp = open(id_unexp_path, 'rb')
   lines = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines)
+    lines[0] = lines[0].decode('utf-8').encode('cp037')
+
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_unexp", lines[0]))):
     print "Id expansion failed for", id_exp_path
@@ -292,8 +310,13 @@ def keywords_from_birth(sbox):
   fp.close()
 
   # Make sure the preexpanded Id keyword got reexpanded correctly.
-  fp = open(id_exp_path, 'r')
+  fp = open(id_exp_path, 'rb')
   lines = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines)
+    lines[0] = lines[0].decode('utf-8').encode('cp037')
+
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_exp", lines[0]))):
     print "Id expansion failed for", id_exp_path
@@ -315,8 +338,13 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
   ]
 
-  fp = open(fixed_length_keywords_path, 'r')
+  fp = open(fixed_length_keywords_path, 'rb')
   actual_workingcopy_kw = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    actual_workingcopy_kw = ebcdic.os400_split_utf8_lines(actual_workingcopy_kw)
+    actual_workingcopy_kw = ebcdic.os400_list_from_utf8(actual_workingcopy_kw)
+
   fp.close()
   check_keywords(actual_workingcopy_kw, kw_workingcopy, "working copy")
 
@@ -336,14 +364,24 @@ def keywords_from_birth(sbox):
     ]
   
   fp = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
-                         'text-base', 'fixed_length_keywords.svn-base'), 'r')
+                         'text-base', 'fixed_length_keywords.svn-base'), 'rb')
   actual_textbase_kw = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    actual_textbase_kw = ebcdic.os400_split_utf8_lines(actual_textbase_kw)
+    actual_textbase_kw = ebcdic.os400_list_from_utf8(actual_textbase_kw)
+
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
-  
+
   # Check the Id keyword for filename with spaces.
-  fp = open(id_with_space_path, 'r')
+  fp = open(id_with_space_path, 'rb')
   lines = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines)
+    lines = ebcdic.os400_list_from_utf8(lines)
+
   if not ((len(lines) == 1)
           and (re.match("\$Id: .*id with space", lines[0]))):
     print "Id expansion failed for", id_with_space_path
@@ -392,8 +430,8 @@ def update_modified_with_translation(sbox):
 
   # Replace contents of rho and set eol translation to 'native'
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  f = open(rho_path, "w")
-  f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n")
+  f = open(rho_path, "wb")
+  f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n".encode('utf-8'))
   f.close()
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:eol-style', 'native',
@@ -417,8 +455,8 @@ def update_modified_with_translation(sbox):
                                          rho_path)
 
   # Change rho again
-  f = open(rho_path, "w")
-  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
+  f = open(rho_path, "wb")
+  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n".encode('utf-8'))
   f.close()
 
   # Commit revision 3 
@@ -433,8 +471,8 @@ def update_modified_with_translation(sbox):
                                          rho_path)
 
   # Locally modify rho again.
-  f = open(rho_path, "w")
-  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
+  f = open(rho_path, "wb")
+  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n".encode('utf-8'))
   f.close()
 
   # Prepare trees for an update to rev 1.
@@ -458,7 +496,7 @@ def update_modified_with_translation(sbox):
 =======
 This is the file 'rho'.
 >>>>>>> .r1
-""")
+""".encode('utf-8'))
 
   # Updating back to revision 1 should not error; the merge should
   # work, with eol-translation turned on.
@@ -495,7 +533,7 @@ def eol_change_is_text_mod(sbox):
   if svntest.main.windows:
     f.write("1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n")
   else:
-    f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n")
+    f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n".encode('utf-8'))
   f.close()
 
   # commit the file
@@ -525,7 +563,7 @@ def eol_change_is_text_mod(sbox):
     if contents != "1\n2\n3\n4\n5\n6\n7\n8\n9\n":
       raise svntest.Failure
   else:
-    if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
+    if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n".encode('utf-8'):
       raise svntest.Failure
   f = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
                         'text-base', 'foo.svn-base'), 'rb')
@@ -568,8 +606,13 @@ def keyword_expanded_on_checkout(sbox):
 
   # Check keyword got expanded (and thus the mkdir, add, ps, commit
   # etc. worked)
-  fp = open(other_url_path, 'r')
+  fp = open(other_url_path, 'rb')
   lines = fp.readlines()
+
+  if sys.platform == 'AS/400':
+    lines = ebcdic.os400_split_utf8_lines(lines)
+    lines[0] = lines[0].decode('utf-8').encode('cp037')
+
   if not ((len(lines) == 1)
           and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
     print "URL expansion failed for", other_url_path
@@ -587,7 +630,8 @@ def cat_keyword_expansion(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
 
   # Set up A/mu to do $Rev$ keyword expansion
-  svntest.main.file_append (mu_path , "$Rev$\n$Author$")
+  svntest.main.file_append (mu_path, "$Rev$\n$Author$")
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Rev Author',
                                      mu_path)
@@ -717,8 +761,11 @@ def propset_commit_checkout_nocrash(sbox):
                                       svntest.main.current_repo_url,
                                       other_wc_dir)
 
-  mu_other_contents = open(mu_other_path).read()
-  if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
+  mu_other_contents = open(mu_other_path, 'rb').read()
+
+  mu_other_contents_expected = "This is the file 'mu'.\n$Rev: 3 $".encode('utf-8')
+
+  if mu_other_contents != mu_other_contents_expected:
     print "'%s' does not have the expected contents" % mu_other_path
     raise svntest.Failure
 

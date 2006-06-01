@@ -17,7 +17,10 @@
 ######################################################################
 
 # General modules
-import os
+import os, sys
+
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # Our testing module
 import svntest
@@ -207,7 +210,8 @@ def blame_on_unknown_revision(sbox):
   file_path = os.path.join(wc_dir, file_name)
 
   for i in range (1,3):
-    svntest.main.file_append(file_path, "\nExtra line %d" % (i))
+    line_to_append = "\nExtra line %d" % (i)
+    svntest.main.file_append(file_path, line_to_append)
     expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
       })
@@ -248,7 +252,7 @@ def blame_peg_rev(sbox):
   os.chdir(sbox.wc_dir)
   try:
     # Modify iota and commit it (r2).
-    open('iota', 'w').write("This is no longer the file 'iota'.\n")
+    open('iota', 'wb').write("This is no longer the file 'iota'.\n".encode("utf-8"))
 
     expected_output = svntest.wc.State('.', {
       'iota' : Item(verb='Sending'),

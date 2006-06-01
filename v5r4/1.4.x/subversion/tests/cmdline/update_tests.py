@@ -23,6 +23,8 @@ import shutil, string, sys, re, os
 import svntest
 from svntest import wc, SVNAnyOutput
 
+if sys.platform == 'AS/400':
+  import ebcdic
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -62,7 +64,7 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        fp = open(os.path.join (wc_dir, node.path))
+        fp = open(os.path.join (wc_dir, node.path), 'rb')
         real_contents = fp.read()  # suck up contents of a test .png file
         fp.close()
         if real_contents == contents:
@@ -81,12 +83,12 @@ def update_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
+  fp = open(theta_path, 'wb')
   fp.write(theta_contents)    # write png filedata into 'A/theta'
   fp.close()
   
@@ -116,7 +118,7 @@ def update_binary_file(sbox):
 
   # Make a change to the binary file in the original working copy
   svntest.main.file_append(theta_path, "revision 3 text")
-  theta_contents_r3 = theta_contents + "revision 3 text"
+  theta_contents_r3 = theta_contents + "revision 3 text".decode('cp037').encode('utf-8')
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -139,7 +141,7 @@ def update_binary_file(sbox):
 
   # Make a local mod to theta
   svntest.main.file_append(theta_backup_path, "extra theta text")
-  theta_contents_local = theta_contents + "extra theta text"
+  theta_contents_local = theta_contents + "extra theta text".decode('cp037').encode('utf-8')
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -195,7 +197,7 @@ def update_binary_file_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
-  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"), 'rb')
   theta_contents = fp.read()  
   fp.close()
 
@@ -211,11 +213,11 @@ def update_binary_file_2(sbox):
 
   # Write our two files' contents out to disk, in A/theta and A/zeta.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    
+  fp = open(theta_path, 'wb')
+  fp.write(theta_contents)
   fp.close()
   zeta_path = os.path.join(wc_dir, 'A', 'zeta')
-  fp = open(zeta_path, 'w')
+  fp = open(zeta_path, 'wb')
   fp.write(zeta_contents)
   fp.close()
 
@@ -387,11 +389,11 @@ def update_ignores_added(sbox):
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/B/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/B/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
-  expected_disk.tweak('A/D/gamma', contents="This is a new 'gamma' now.\n")
+  expected_disk.tweak('A/D/gamma', contents="This is a new 'gamma' now.\n".encode('utf-8'))
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nMore stuff in rho.\n")
+                      contents="This is the file 'rho'.\nMore stuff in rho.\n".encode('utf-8'))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -493,7 +495,7 @@ def receive_overlapping_same_change(sbox):
   # Expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
-                      contents="This is the file 'iota'.\nA change to iota.\n")
+                      contents="This is the file 'iota'.\nA change to iota.\n".encode('utf-8'))
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
@@ -580,14 +582,14 @@ Conflicting appended text for mu
 =======
 Original appended text for mu
 >>>>>>> .r2
-""")
+""".encode('utf-8'))
   expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
 <<<<<<< .mine
 Conflicting appended text for rho
 =======
 Original appended text for rho
 >>>>>>> .r2
-""")
+""".encode('utf-8'))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -684,10 +686,10 @@ def update_delete_modified_files(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/B/E/alpha',
                       contents=\
-                      "This is the file 'alpha'.\nappended alpha text\n")
+                      "This is the file 'alpha'.\nappended alpha text\n".encode('utf-8'))
   expected_disk.tweak('A/D/G/pi',
                       contents=\
-                      "This is the file 'pi'.\nappended pi text\n")
+                      "This is the file 'pi'.\nappended pi text\n".encode('utf-8'))
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -1273,7 +1275,7 @@ def non_recursive_update(sbox):
     'A/mu' : Item(status='U '),
     })
   expected_status.tweak('A', 'A/mu', wc_rev=2)
-  expected_disk.tweak('A/mu', contents="This is the file 'mu'.\nnew")
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.\nnew".encode('utf-8'))
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         None, None, None, None, None, 0,
@@ -1463,7 +1465,7 @@ def update_to_future_add(sbox):
     'iota' : Item(status='A '),
     })
   expected_disk = svntest.wc.State('', {
-   'iota' : Item("This is the file 'iota'.\n")
+   'iota' : Item("This is the file 'iota'.\n".encode('utf-8'))
    })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1572,9 +1574,9 @@ def nested_in_read_only(sbox):
       'E/alpha' : Item(status='D '),
       })
     expected_disk = wc.State('', {
-      'lambda'  : wc.StateItem("This is the file 'lambda'.\n"),
+      'lambda'  : wc.StateItem("This is the file 'lambda'.\n".encode('utf-8')),
       'E'       : wc.StateItem(),
-      'E/beta'  : wc.StateItem("This is the file 'beta'.\n"),
+      'E/beta'  : wc.StateItem("This is the file 'beta'.\n".encode('utf-8')),
       'F'       : wc.StateItem(),
       })
     expected_status.remove('E/alpha')
@@ -1667,7 +1669,7 @@ def checkout_broken_eol(sbox):
     })
                                      
   expected_wc = svntest.wc.State('', {
-    'file': Item(contents='line\nline2\n'),
+    'file': Item(contents='line\nline2\n'.encode('utf-8')),
     })
   svntest.actions.run_and_verify_checkout(URL,
                                           sbox.wc_dir,

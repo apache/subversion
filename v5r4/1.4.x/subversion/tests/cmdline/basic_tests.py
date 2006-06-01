@@ -202,10 +202,10 @@ def basic_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
+                      + 'appended mu text'.encode('utf-8'))
   expected_disk.tweak('A/D/G/rho',
                       contents=expected_disk.desc['A/D/G/rho'].contents
-                      + 'new appended text for rho')
+                      + 'new appended text for rho'.encode('utf-8'))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -312,8 +312,16 @@ def basic_corruption(sbox):
   os.chmod (mu_tb_path, 0666)   # ### Would rather not use hardcoded numbers.
   shutil.copyfile (mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append (mu_tb_path, 'Aaagggkkk, corruption!')
-  os.chmod (tb_dir_path, tb_dir_saved_mode)
-  os.chmod (mu_tb_path, mu_tb_saved_mode)
+  if sys.platform != 'AS/400':
+    os.chmod (tb_dir_path, tb_dir_saved_mode)
+    os.chmod (mu_tb_path, mu_tb_saved_mode)
+  else:
+    # iSeries Python's os.chmod(path, mode) can only handle the mode bits
+    # e.g. 00 - 04000, greater than that range causes the error
+    #      OSError: [Errno 3021] The value specified for the argument is
+    #               not correct.
+    os.chmod (tb_dir_path, tb_dir_saved_mode & 07777)
+    os.chmod (mu_tb_path, mu_tb_saved_mode & 07777)
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -325,8 +333,12 @@ def basic_corruption(sbox):
   os.chmod (mu_tb_path, 0666)
   os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
-  os.chmod (tb_dir_path, tb_dir_saved_mode)
-  os.chmod (mu_tb_path, mu_tb_saved_mode)
+  if sys.platform != 'AS/400':
+    os.chmod (tb_dir_path, tb_dir_saved_mode)
+    os.chmod (mu_tb_path, mu_tb_saved_mode)
+  else:
+    os.chmod (tb_dir_path, tb_dir_saved_mode & 07777)
+    os.chmod (mu_tb_path, mu_tb_saved_mode & 07777)
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -342,7 +354,7 @@ def basic_corruption(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
+                      + 'appended mu text'.encode('utf-8'))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
@@ -359,8 +371,12 @@ def basic_corruption(sbox):
   os.chmod (mu_tb_path, 0666)
   shutil.copyfile (mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append (mu_tb_path, 'Aiyeeeee, corruption!\nHelp!\n')
-  os.chmod (tb_dir_path, tb_dir_saved_mode)
-  os.chmod (mu_tb_path, mu_tb_saved_mode)
+  if sys.platform != 'AS/400':
+    os.chmod (tb_dir_path, tb_dir_saved_mode)
+    os.chmod (mu_tb_path, mu_tb_saved_mode)
+  else:
+    os.chmod (tb_dir_path, tb_dir_saved_mode & 07777)
+    os.chmod (mu_tb_path, mu_tb_saved_mode & 07777)
 
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(other_wc,
@@ -374,8 +390,12 @@ def basic_corruption(sbox):
   os.chmod (mu_tb_path, 0666)
   os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
-  os.chmod (tb_dir_path, tb_dir_saved_mode)
-  os.chmod (mu_tb_path, mu_tb_saved_mode)
+  if sys.platform != 'AS/400':
+    os.chmod (tb_dir_path, tb_dir_saved_mode)
+    os.chmod (mu_tb_path, mu_tb_saved_mode)
+  else:
+    os.chmod (tb_dir_path, tb_dir_saved_mode & 07777)
+    os.chmod (mu_tb_path, mu_tb_saved_mode & 07777)
 
   # This update should succeed.  (Actually, I'm kind of astonished
   # that this works without even an intervening "svn cleanup".)
@@ -453,19 +473,24 @@ def basic_merging_update(sbox):
   # Make local mods to wc_backup by recreating mu and rho
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  fp_mu = open(mu_path_backup, 'w+')
+  if sys.platform != 'AS/400':
+    fp_mu = open(mu_path_backup, 'w+')
+  else:
+    fp_mu = open(mu_path_backup, 'wb+')
 
   # open in 'truncate to zero then write" mode
   backup_mu_text='This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
     backup_mu_text = backup_mu_text + '\nThis is line ' + `x` + ' in mu'
+  backup_mu_text = backup_mu_text.encode('utf-8')
   fp_mu.write(backup_mu_text)
   fp_mu.close()
   
-  fp_rho = open(rho_path_backup, 'w+') # now open rho in write mode
+  fp_rho = open(rho_path_backup, 'wb+') # now open rho in write mode
   backup_rho_text='This is the new line 1 in the backup copy of rho'
   for x in range(2,11):
     backup_rho_text = backup_rho_text + '\nThis is line ' + `x` + ' in rho'
+  backup_rho_text = backup_rho_text.encode('utf-8')
   fp_rho.write(backup_rho_text)
   fp_rho.close()
   
@@ -478,9 +503,9 @@ def basic_merging_update(sbox):
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
-                      contents=backup_mu_text + ' Appended to line 10 of mu')
+                      contents=backup_mu_text + ' Appended to line 10 of mu'.encode('utf-8'))
   expected_disk.tweak('A/D/G/rho',
-                      contents=backup_rho_text + ' Appended to line 10 of rho')
+                      contents=backup_rho_text + ' Appended to line 10 of rho'.encode('utf-8'))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
@@ -515,9 +540,9 @@ def basic_conflict(sbox):
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append (mu_path_backup,
-                             'Conflicting appended text for mu\n')
+                            'Conflicting appended text for mu\n')
   svntest.main.file_append (rho_path_backup,
-                             'Conflicting appended text for rho\n')
+                            'Conflicting appended text for rho\n')
 
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
@@ -550,14 +575,14 @@ Conflicting appended text for mu
 =======
 Original appended text for mu
 >>>>>>> .r2
-""")
+""".encode('utf-8'))
   expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
 <<<<<<< .mine
 Conflicting appended text for rho
 =======
 Original appended text for rho
 >>>>>>> .r2
-""")
+""".encode('utf-8'))
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
@@ -700,31 +725,31 @@ def basic_revert(sbox):
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
   # Now, really make sure the contents are back to their original state.
-  fp = open(beta_path, 'r')
+  fp = open(beta_path, 'rb')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n")):
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n".encode('utf-8'))):
     print "Revert failed to restore original text."
     raise svntest.Failure
-  fp = open(iota_path, 'r')
+  fp = open(iota_path, 'rb')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n")):
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n".encode('utf-8'))):
     print "Revert failed to restore original text."
     raise svntest.Failure
-  fp = open(rho_path, 'r')
+  fp = open(rho_path, 'rb')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n")):
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n".encode('utf-8'))):
     print "Revert failed to restore original text."
     raise svntest.Failure
-  fp = open(zeta_path, 'r')
+  fp = open(zeta_path, 'rb')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "Added some text to 'zeta'.\n")):
+  if not ((len (lines) == 1) and (lines[0] == "Added some text to 'zeta'.\n".encode('utf-8'))):
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
   # Finally, check that reverted file is not readonly
   os.remove(beta_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', beta_path)
-  if not (open(beta_path, 'rw+')):
+  if not (open(beta_path, 'ab')):
     raise svntest.Failure
 
   # Check that a directory scheduled to be added, but physically
@@ -865,9 +890,9 @@ def basic_switch(sbox):
                       contents=expected_disk.desc['A/D/gamma'].contents)
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/H/pi' : Item("This is the file 'pi'.\n"),
-    'A/D/H/rho' : Item("This is the file 'rho'.\n"),
-    'A/D/H/tau' : Item("This is the file 'tau'.\n"),
+    'A/D/H/pi' : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'A/D/H/rho' : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'A/D/H/tau' : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
 
   # Create expected status
@@ -892,7 +917,7 @@ def basic_switch(sbox):
 
 def verify_file_deleted(message, path):
   try:
-    open(path, 'r')
+    open(path, 'rb')
   except IOError:
     return
   if message is not None:
@@ -1235,7 +1260,7 @@ def basic_import(sbox):
   # Create expected disk tree for the update (disregarding props)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'dirA/dirB/new_file' : Item('some text'),
+    'dirA/dirB/new_file' : Item('some text'.encode('utf-8')),
     })
 
   # Create expected status tree for the update (disregarding props).
@@ -1440,8 +1465,8 @@ def basic_add_ignores(sbox):
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
   os.mkdir(dir_path, 0755)
-  open(foo_c_path, 'w')
-  open(foo_o_path, 'w')
+  open(foo_c_path, 'wb')
+  open(foo_o_path, 'wb')
 
   output, err = svntest.actions.run_and_verify_svn(
     "No output where some expected", SVNAnyOutput, [],
@@ -1470,7 +1495,7 @@ def basic_add_local_ignores(sbox):
   svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'mkdir', dir_path)
   svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', dir_path) 
-  open(file_path, 'w')
+  open(file_path, 'wb')
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'add', '--force', dir_path)
 

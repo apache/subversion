@@ -1,0 +1,51 @@
+#!/bin/sh
+
+# QSH utility script for creating the symbolic links required to run the
+# subversion test suite on the iSeries.
+#
+# usage: make_links pgm_lib svn_root_dir
+#        Where pgm_lib is the ifs path to the library containing the
+#        subversion programs to be tested and svn_root_dir is the root
+#        directory of the subversion soruce code tree.
+
+PGMLIB=$1
+ROOTDIR=$2
+
+mklnk()
+{
+  PGM=$1
+  DEST=$2
+  if attr $PGM > /dev/null
+    then
+      if ln -s -f $PGM $DEST > /dev/null
+        then
+          echo Created link $DEST "-->" $PGM
+      else          
+        echo Error creating link for $PGM in $DEST
+      fi
+  else
+    echo Can\'t find program $PGM 
+  fi
+}
+
+mklnk $PGMLIB/SVN.PGM        $ROOTDIR/svn
+mklnk $PGMLIB/SVNADMIN.PGM   $ROOTDIR/svnadmin
+mklnk $PGMLIB/SVNVERSION.PGM $ROOTDIR/svnversion
+mklnk $PGMLIB/SVNLOOK.PGM    $ROOTDIR/svnlook
+mklnk $PGMLIB/SVNSERVE.PGM   $ROOTDIR/svnserve
+mklnk $PGMLIB/TEST_RAND.PGM  $ROOTDIR/subversion/tests/libsvn_delta/TEST_RAND
+mklnk $PGMLIB/TEST_DIFF3.PGM $ROOTDIR/subversion/tests/libsvn_diff/TEST_DIFF3
+mklnk $PGMLIB/TEST_LOCKS.PGM $ROOTDIR/subversion/tests/libsvn_fs/TEST_LOCKS
+mklnk $PGMLIB/TEST_RALOC.PGM $ROOTDIR/subversion/tests/libsvn_ra_local/TEST_RALOC
+mklnk $PGMLIB/TEST_REPOS.PGM $ROOTDIR/subversion/tests/libsvn_repos/TEST_REPOS
+mklnk $PGMLIB/TEST_COMP.PGM  $ROOTDIR/subversion/tests/libsvn_subr/TEST_COMP
+mklnk $PGMLIB/TEST_CONF.PGM  $ROOTDIR/subversion/tests/libsvn_subr/TEST_CONF
+mklnk $PGMLIB/TEST_HASH.PGM  $ROOTDIR/subversion/tests/libsvn_subr/TEST_HASH
+mklnk $PGMLIB/TEST_OPT.PGM   $ROOTDIR/subversion/tests/libsvn_subr/TEST_OPT
+mklnk $PGMLIB/TEST_PATH.PGM  $ROOTDIR/subversion/tests/libsvn_subr/TEST_PATH
+mklnk $PGMLIB/TEST_STR.PGM   $ROOTDIR/subversion/tests/libsvn_subr/TEST_STR
+mklnk $PGMLIB/TEST_STRM.PGM  $ROOTDIR/subversion/tests/libsvn_subr/TEST_STRM
+mklnk $PGMLIB/TEST_TARGT.PGM $ROOTDIR/subversion/tests/libsvn_subr/TEST_TARGT
+mklnk $PGMLIB/TEST_TIME.PGM  $ROOTDIR/subversion/tests/libsvn_subr/TEST_TIME
+mklnk $PGMLIB/TEST_UTF.PGM   $ROOTDIR/subversion/tests/libsvn_subr/TEST_UTF
+mklnk $PGMLIB/TEST_XLATE.PGM $ROOTDIR/subversion/tests/libsvn_wc/TEST_XLATE

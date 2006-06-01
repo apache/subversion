@@ -22,6 +22,9 @@ import shutil, string, sys, re, os
 # Our testing module
 import svntest
 
+if sys.platform == 'AS/400':
+  import ebcdic   
+
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
@@ -76,9 +79,9 @@ def get_routine_disk_state(wc_dir):
   # A/B/* no longer exist, but have been replaced by copies of A/D/G/*
   disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   disk.add({
-    'A/B/pi' : Item("This is the file 'pi'.\n"),
-    'A/B/rho' : Item("This is the file 'rho'.\n"),
-    'A/B/tau' : Item("This is the file 'tau'.\n"),
+    'A/B/pi' : Item("This is the file 'pi'.\n".encode('utf-8')),
+    'A/B/rho' : Item("This is the file 'rho'.\n".encode('utf-8')),
+    'A/B/tau' : Item("This is the file 'tau'.\n".encode('utf-8')),
     })
 
   return disk
@@ -289,15 +292,15 @@ def full_update(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n".encode('utf-8')),
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -398,12 +401,11 @@ def update_switched_things(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
-
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
 
   # Create expected status tree for the update.
@@ -456,11 +458,11 @@ def rev_update_switched_things(sbox):
 
   # Create expected disk tree
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple".encode('utf-8'))
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon".encode('utf-8'))
   expected_disk.add({
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n"),
+    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n".encode('utf-8')),
     })
     
   # Create expected status tree for the update.
@@ -568,9 +570,9 @@ def relocate_deleted_missing_copied(sbox):
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D/H2'       : Item(),
-    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
-    'A/D/H2/omega' : Item("This is the file 'omega'.\n"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n".encode('utf-8')),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\n".encode('utf-8')),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n".encode('utf-8')),
     })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
@@ -899,10 +901,10 @@ def commit_mods_below_switch(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/C/E'       : Item(),
-    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
-    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n".encode('utf-8')),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n".encode('utf-8')),
     'A/C/F'       : Item(),
-    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n".encode('utf-8')),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/C', switched='S')
@@ -1014,9 +1016,20 @@ def refresh_read_only_attribute(sbox):
                                         mu_path)
 
   # The file on which svn:needs-lock was set is now expected to be read-only.
-  if os.access(mu_path, os.W_OK):
-    raise svntest.Failure("'%s' expected to be read-only after having had "
-                          "its svn:needs-lock property set" % mu_path)
+  if sys.platform != 'AS/400':
+    if os.access(mu_path, os.W_OK):
+      raise svntest.Failure("'%s' expected to be read-only after having had "
+                            "its svn:needs-lock property set" % mu_path)
+  else:
+    out, err, out_file, err_file = ebcdic.os400_run_cmd_va('ls', None, 0, 0,
+                                                           '-la',
+                                                           os.path.join(wc_dir,
+                                                                        'A',
+                                                                        'mu'))
+    ro_re = re.compile(r'-.-..-..-..*')
+    if not ro_re.match(out[0]):
+      raise svntest.Failure("'%s' expected to be read-only after having had "
+                            "its svn:needs-lock property set" % mu_path)
 
   # Switch to the branch with the WC state from before the propset of
   # svn:needs-lock.
@@ -1035,10 +1048,22 @@ def refresh_read_only_attribute(sbox):
 
   # The file with we set svn:needs-lock on should now be writable, but
   # is still read-only!
-  if not os.access(mu_path, os.W_OK):
-    raise svntest.Failure("'%s' expected to be writable after being switched "
-                          "to a branch on which its svn:needs-lock property "
-                          "is not set" % mu_path)
+  if sys.platform != 'AS/400':
+    if not os.access(mu_path, os.W_OK):
+      raise svntest.Failure("'%s' expected to be writable after being switched "
+                            "to a branch on which its svn:needs-lock property "
+                            "is not set" % mu_path)
+  else:
+    out, err, out_file, err_file = ebcdic.os400_run_cmd_va('ls', None, 0, 0,
+                                                           '-la',
+                                                           os.path.join(wc_dir,
+                                                                        'A',
+                                                                        'mu'))  
+    ro_re = re.compile(r'-.w..w..w..*')
+    if not ro_re.match(out[0]):
+      raise svntest.Failure("'%s' expected to be writable after being switched "
+                            "to a branch on which its svn:needs-lock property "
+                            "is not set" % mu_path)     
 
 # Check that switch can't change the repository root.
 def switch_change_repos_root(sbox):
