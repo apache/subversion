@@ -55,13 +55,14 @@ SVN_FIND_APACHE(20020903)
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-dnl The specific reasons we require APR 0.9.5-final are:
-dnl   - APR_LARGEFILE added
-dnl   - APR_GSETID added
-dnl   - bug in apr_temp_dir_get() fixed
+dnl The specific reason we require APR 0.9.7 is:
+dnl   It contains fixes to its file writing routines
+dnl   now generating errors instead of silently ignoring
+dnl   them.  Only .7 and later can guarantee repository
+dnl   integrety with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
-APU_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
