@@ -132,7 +132,7 @@ parse_pathname(const char **input, const char *end,
 /* revisionlist -> (revisionrange | REVISION)(COMMA revisioneelement)*
    revisionrange -> REVISION "-" REVISION
    revisioneelement -> revisionrange | REVISION
- */
+*/
 static svn_error_t *
 parse_revlist(const char **input, const char *end,
               apr_array_header_t *revlist, apr_pool_t *pool)
@@ -200,7 +200,6 @@ parse_revlist(const char **input, const char *end,
 }
 
 /* revisionline -> PATHNAME COLON revisionlist */
-
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
                     apr_pool_t *pool)
@@ -226,6 +225,8 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
   if (*input != end)
     *input = *input + 1;
 
+  qsort(revlist->elts, revlist->nelts, revlist->elt_size,
+        svn_sort_compare_ranges);
   apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, revlist);
 
   return SVN_NO_ERROR;
@@ -424,5 +425,83 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
       apr_hash_set(*output, elt.key, elt.klen, elt.value);
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* Convert a single svn_merge_range_t * back into a svn_stringbuf_t.  */
+static svn_error_t *
+svn_range_to_string(svn_stringbuf_t **result, svn_merge_range_t *range,
+                    apr_pool_t *pool)
+{
+  if (range->start == range->end)
+    *result = svn_stringbuf_createf(pool, "%" SVN_REVNUM_T_FMT,
+                                    range->start);
+  else
+    *result = svn_stringbuf_createf(pool, "%" SVN_REVNUM_T_FMT "-%" SVN_REVNUM_T_FMT,
+                                    range->start, range->end);
+  return SVN_NO_ERROR;
+}
+
+/* Take an array of svn_merge_range_t *'s in INPUT, and convert it
+   back to a text format rangelist in OUTPUT.  */
+svn_error_t *
+svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
+                         apr_pool_t *pool)
+{
+  int i;
+  svn_merge_range_t *range;
+  svn_stringbuf_t *toappend;
+
+  *output = svn_stringbuf_create("", pool);
+  /* Handle the elements that need commas at the end.  */
+
+  for (i = 0; i < input->nelts - 1; i++)
+    {
+
+      range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
+      SVN_ERR(svn_range_to_string(&toappend, range, pool));
+      svn_stringbuf_appendstr(*output, toappend);
+      svn_stringbuf_appendcstr(*output,",");
+    }
+
+  /* Now handle the last element, which needs no comma.  */
+  range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
+  SVN_ERR(svn_range_to_string(&toappend, range, pool));
+  svn_stringbuf_appendstr(*output, toappend);
+
+  return SVN_NO_ERROR;
+}
+
+/* Take a mergeinfo hash and turn it back into a string.  */
+svn_error_t *
+svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
+                        apr_pool_t *pool)
+{
+  apr_array_header_t *sorted1;
+  svn_sort__item_t elt;
+  svn_stringbuf_t *revlist, *combined;
+  int i;
+
+  *output = svn_stringbuf_create("", pool);
+  sorted1 = svn_sort__hash(input, svn_sort_compare_items_as_paths, pool);
+
+  /* Handle the elements that need newlines at the end.  */
+  for (i = 0; i < sorted1->nelts -1; i++)
+    {
+      elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
+
+      SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
+      combined = svn_stringbuf_createf(pool, "%s:%s\n", elt.key,
+                                       revlist->data);
+      svn_stringbuf_appendstr(*output, combined);
+    }
+
+  /* Now handle the last element, which is not newline terminated.  */
+  elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
+
+  SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
+  combined = svn_stringbuf_createf(pool, "%s:%s", elt.key,
+                                   revlist->data);
+  svn_stringbuf_appendstr(*output, combined);
   return SVN_NO_ERROR;
 }

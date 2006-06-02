@@ -55,17 +55,29 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a in1 and @a in2, and place the result in @a output.
  *
- * @since New in 1.5
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
                      apr_array_header_t *in2, apr_pool_t *pool);
 
-/** Take an array of svn_merge_info_t *'s in @a input, and convert it back to a
-    text format rangelist in @a output.  */
+/** Take an array of svn_merge_range_t *'s in @a input, and convert it
+ * back to a text format rangelist in @a output.
+ *
+ * @since New in 1.5.
+ */
 svn_error_t *
 svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
                          apr_pool_t *pool);
+
+/** Take a hash of mergeinfo in @a input, and convert it
+ * back to a text format mergeinfo in @a output.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
+                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

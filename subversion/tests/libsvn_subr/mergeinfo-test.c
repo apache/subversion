@@ -131,11 +131,32 @@ test_parse_single_line_mergeinfo(const char **msg,
     verify_mergeinfo_parse(mergeinfo_vals[i], mergeinfo_paths[i],
                            &mergeinfo_ranges[i], pool);
 
+  return SVN_NO_ERROR;
+}
+
+const char *single_mergeinfo = "/trunk: 5,7-9,10,11,13,14";
+
+static svn_error_t *
+test_parse_combine_rangeinfo(const char **msg,
+                             svn_boolean_t msg_only,
+                             svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  apr_array_header_t *result;
+  svn_merge_range_t *resultrange;
+  int i;
+  
+  *msg = "parse single line mergeinfo and combine ranges";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_mergeinfo_parse(single_mergeinfo, &info1, pool));
 
   if (apr_hash_count(info1) != 1)
     return fail(pool, "Wrong number of paths in parsed mergeinfo");
 
-  result = apr_hash_get(info1, "/trunk", -1);
+  result = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!result)
     return fail(pool, "Missing path in parsed mergeinfo");
 
@@ -160,6 +181,7 @@ test_parse_single_line_mergeinfo(const char **msg,
 
   return SVN_NO_ERROR;
 }
+
 
 #define NBR_BROKEN_MERGEINFO_VALS 4
 /* Invalid merge info values. */
@@ -234,7 +256,7 @@ test_merge_mergeinfo(const char **msg,
   if (apr_hash_count(info3) != 2)
     return fail(pool, "Wrong number of paths in merged mergeinfo");
 
-  result = apr_hash_get(info3, "/fred", -1);
+  result = apr_hash_get(info3, "/fred", APR_HASH_KEY_STRING);
   if (!result)
     return fail(pool, "Missing path in merged mergeinfo");
 
@@ -247,7 +269,7 @@ test_merge_mergeinfo(const char **msg,
   if (resultrange->start != 8 || resultrange->end != 12)
     return fail(pool, "Range combining produced wrong result");
 
-  result = apr_hash_get(info3, "/trunk", -1);
+  result = apr_hash_get(info3, "/trunk", APR_HASH_KEY_STRING);
   if (!result)
     return fail(pool, "Missing path in merged mergeinfo");
 
@@ -269,6 +291,59 @@ test_merge_mergeinfo(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_rangelist_to_string(const char **msg,
+                         svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  apr_array_header_t *result;
+  svn_stringbuf_t *output;
+  svn_stringbuf_t *expected = svn_stringbuf_create("3,5,7-11,13-14", pool);
+
+  *msg = "turning rangelist back into a string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  
+  result = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
+  if (!result)
+    return fail(pool, "Missing path in parsed mergeinfo");
+  
+  SVN_ERR(svn_rangelist_to_string(&output, result, pool));
+
+  if (svn_stringbuf_compare(expected, output) != TRUE)
+    fail(pool, "Rangelist string not what we expected");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_mergeinfo_to_string(const char **msg,
+                         svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *output;
+  svn_stringbuf_t *expected;
+  expected = svn_stringbuf_create("/fred:8-11\n/trunk:3,5,7-11,13-14", pool);
+
+  *msg = "turning mergeinfo back into a string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  
+  SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
+
+  if (svn_stringbuf_compare(expected, output) != TRUE)
+    fail(pool, "Mergeinfo string not what we expected");
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -277,8 +352,11 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_parse_single_line_mergeinfo),
+    SVN_TEST_PASS(test_parse_combine_rangeinfo),
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
+    SVN_TEST_PASS(test_rangelist_to_string),
+    SVN_TEST_PASS(test_mergeinfo_to_string),
     SVN_TEST_NULL
   };
