@@ -257,6 +257,9 @@ class Httpd:
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
     self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                              'httpd')
+    self.authz_file = os.path.join(abs_builddir,
+                                   CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                   'svn-test-work', 'authz')
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
@@ -343,6 +346,7 @@ class Httpd:
       '<Location ' + location + '>\n' \
       '  DAV             svn\n' \
       '  SVNParentPath   ' + self._quote(path) + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
       '  AuthType        Basic\n' \
       '  AuthName        "Subversion Repository"\n' \
       '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \

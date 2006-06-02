@@ -11,10 +11,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r19601, r19837
-    Fix tests on Win32.
-    Justification:
-      Very low impact (just updates tests) and fixes tests on Win32.
-    Votes:
-      +1: djh
-      +0: lundblad
