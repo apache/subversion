@@ -58,8 +58,14 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
  * @since New in 1.5
  */
 svn_error_t *
-svn_rangelists_merge(apr_array_header_t **output, apr_array_header_t *in1,
+svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
                      apr_array_header_t *in2, apr_pool_t *pool);
+
+/** Take an array of svn_merge_info_t *'s in @a input, and convert it back to a
+    text format rangelist in @a output.  */
+svn_error_t *
+svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -118,7 +118,10 @@ test_parse_single_line_mergeinfo(const char **msg,
                                  svn_test_opts_t *opts,
                                  apr_pool_t *pool)
 {
+  apr_array_header_t *result;
+  svn_merge_range_t *resultrange;
   int i;
+  
   *msg = "parse single line mergeinfo";
 
   if (msg_only)
@@ -128,6 +131,32 @@ test_parse_single_line_mergeinfo(const char **msg,
     verify_mergeinfo_parse(mergeinfo_vals[i], mergeinfo_paths[i],
                            &mergeinfo_ranges[i], pool);
 
+
+  if (apr_hash_count(info1) != 1)
+    return fail(pool, "Wrong number of paths in parsed mergeinfo");
+
+  result = apr_hash_get(info1, "/trunk", -1);
+  if (!result)
+    return fail(pool, "Missing path in parsed mergeinfo");
+
+  /* /trunk should have three ranges, 5-5, 7-11, 13-14 */
+  if (result->nelts != 3)
+    return fail(pool, "Parsing failed to combine ranges");
+
+  resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
+  
+  if (resultrange->start != 5 || resultrange->end != 5)
+    return fail(pool, "Range combining produced wrong result");
+
+  resultrange = APR_ARRAY_IDX(result, 1, svn_merge_range_t *);
+  
+  if (resultrange->start != 7 || resultrange->end != 11)
+    return fail(pool, "Range combining produced wrong result");
+  
+  resultrange = APR_ARRAY_IDX(result, 2, svn_merge_range_t *);
+  
+  if (resultrange->start != 13 || resultrange->end != 14)
+    return fail(pool, "Range combining produced wrong result");
 
   return SVN_NO_ERROR;
 }

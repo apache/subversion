@@ -32,6 +32,66 @@
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #endif
 
+/* Attempt to combine two ranges, IN1 and IN2, and put the result in
+   OUTPUT.
+   If they could be combined, return TRUE. If they could not, return FALSE  */
+static svn_boolean_t
+svn_combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
+                   svn_merge_range_t *in2)
+{
+  if (in1->start == in2->start)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = MAX(in1->end, in2->end);
+      return TRUE;
+    }
+  /* [1,4] U [5,9] = [1,9] in subversion revisions */
+  else if (in2->start == in1->end
+           || in2->start == in1->end + 1)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = in2->end;
+      return TRUE;
+    }
+  else if (in1->start == in2->end
+           || in1->start == in2->end + 1)
+    {
+      (*output)->start = in2->start;
+      (*output)->end = in1->end;
+      return TRUE;
+    }
+  else if (in1->start <= in2->start
+           && in1->end >= in2->start)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = MAX(in1->end, in2->end);
+      return TRUE;
+    }
+  else if (in2->start <= in1->start
+           && in2->end >= in1->start)
+    {
+      (*output)->start = in2->start;
+      (*output)->end = MAX(in1->end, in2->end);
+      return TRUE;
+    }
+  else if (in1->start >= in2->start
+           && in1->end <= in2->end)
+    {
+      (*output)->start = in2->start;
+      (*output)->end = in2->end;
+      return TRUE;
+    }
+  else if (in2->start >= in1->start
+           && in2->end <= in1->end)
+    {
+      (*output)->start = in1->start;
+      (*output)->end = in1->end;
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 static svn_error_t *
 parse_revision(const char **input, const char *end, svn_revnum_t *revision)
 {
@@ -78,6 +138,7 @@ parse_revlist(const char **input, const char *end,
               apr_array_header_t *revlist, apr_pool_t *pool)
 {
   const char *curr = *input;
+  svn_merge_range_t *lastrange = NULL;
 
   if (curr == end)
     return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
@@ -107,13 +168,21 @@ parse_revlist(const char **input, const char *end,
       /* XXX: Watch empty revision list problem */
       if (*curr == '\n' || curr == end)
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, mrange))
+            {
+              APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+              lastrange = mrange;
+            }
           *input = curr;
           return SVN_NO_ERROR;
         }
       else if (*curr == ',')
         {
-          APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, mrange))
+            {
+              APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
+              lastrange = mrange;
+            }
           curr++;
         }
       else
@@ -183,71 +252,11 @@ svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
 }
 
 
-/* Attempt to combine two ranges, IN1 and IN2, and put the result in
-   OUTPUT.
-   If they could be combined, return TRUE. If they could not, return FALSE  */
-static svn_boolean_t
-svn_combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
-                   svn_merge_range_t *in2)
-{
-  if (in1->start == in2->start)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = MAX(in1->end, in2->end);
-      return TRUE;
-    }
-  /* [1,4] U [5,9] = [1,9] in subversion revisions */
-  else if (in2->start == in1->end
-           || in2->start == in1->end + 1)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = in2->end;
-      return TRUE;
-    }
-  else if (in1->start == in2->end
-           || in1->start == in2->end + 1)
-    {
-      (*output)->start = in2->start;
-      (*output)->end = in1->end;
-      return TRUE;
-    }
-  else if (in1->start <= in2->start
-           && in1->end >= in2->start)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = MAX(in1->end, in2->end);
-      return TRUE;
-    }
-  else if (in2->start <= in1->start
-           && in2->end >= in1->start)
-    {
-      (*output)->start = in2->start;
-      (*output)->end = MAX(in1->end, in2->end);
-      return TRUE;
-    }
-  else if (in1->start >= in2->start
-           && in1->end <= in2->end)
-    {
-      (*output)->start = in2->start;
-      (*output)->end = in2->end;
-      return TRUE;
-    }
-  else if (in2->start >= in1->start
-           && in2->end <= in1->end)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = in1->end;
-      return TRUE;
-    }
-
-  return FALSE;
-}
-
 /* Merge two revision lists IN1 and IN2 and place the result in
    OUTPUT.  We do some trivial attempts to combine ranges as we go.  */
 svn_error_t *
-svn_rangelists_merge(apr_array_header_t **output, apr_array_header_t *in1,
-                     apr_array_header_t *in2, apr_pool_t *pool)
+svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
+                    apr_array_header_t *in2, apr_pool_t *pool)
 {
   int i, j;
   svn_merge_range_t *lastrange = NULL;
@@ -381,7 +390,7 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
         {
           apr_array_header_t *merged;
 
-          SVN_ERR(svn_rangelists_merge(&merged, elt1.value, elt2.value, pool));
+          SVN_ERR(svn_rangelist_merge(&merged, elt1.value, elt2.value, pool));
           apr_hash_set(*output, elt1.key, elt1.klen, merged);
           i++;
           j++;
