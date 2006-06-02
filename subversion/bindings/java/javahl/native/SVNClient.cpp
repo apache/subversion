@@ -381,12 +381,12 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
 
 void SVNClient::username(const char *pi_username)
 {
-    m_userName = pi_username;
+    m_userName = (pi_username == NULL ? "" : pi_username);
 }
 
 void SVNClient::password(const char *pi_password)
 {
-    m_passWord = pi_password;
+    m_passWord = (pi_password == NULL ? "" : pi_password);
 }
 
 void SVNClient::setPrompt(Prompter *prompter)

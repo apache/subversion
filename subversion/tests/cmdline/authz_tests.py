@@ -130,7 +130,7 @@ def authz_open_directory(sbox):
 
 def broken_authz_file(sbox):
   "broken authz files cause errors"
-  sbox.build()
+  sbox.build(create_wc = False)
   
   skip_test_when_no_authz_available()
   
@@ -157,8 +157,7 @@ def authz_read_access(sbox):
   
   skip_test_when_no_authz_available()
 
-  sbox.build("authz_read_access")
-  wc_dir = sbox.wc_dir
+  sbox.build("authz_read_access", create_wc = False)
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -313,8 +312,7 @@ def authz_write_access(sbox):
   
   skip_test_when_no_authz_available()
   
-  sbox.build("authz_write_access")
-  wc_dir = sbox.wc_dir
+  sbox.build("authz_write_access", create_wc = False)
   
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -436,7 +434,19 @@ def authz_write_access(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'logmsg',
                                      B_url, D_url)
-                                     
+
+  if sbox.repo_url.startswith('svn'):
+    expected_err = ".*svn: Authorization failed.*"
+    
+  # lock a file, target is readonly: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'lock msg',
+                                     iota_url)
+
 #----------------------------------------------------------------------
 
 def authz_checkout_test(sbox):
@@ -444,8 +454,8 @@ def authz_checkout_test(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build("authz_checkout_test")
-  wc_dir = sbox.wc_dir
+  sbox.build("authz_checkout_test", create_wc = False)
+  local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -465,11 +475,9 @@ def authz_checkout_test(sbox):
          
   fp.close()
   
-  # checkout a second working copy, should fail
-  wc2_dir = sbox.wc_dir + '2'
-  
+  # checkout a working copy, should fail
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'co', sbox.repo_url, wc2_dir)
+                                     'co', sbox.repo_url, local_dir)
                           
   # 2nd part: now enable read access
   
@@ -487,23 +495,23 @@ def authz_checkout_test(sbox):
          
   fp.close()
   
-  # checkout a second working copy, should succeed because we have read
+  # checkout a working copy, should succeed because we have read
   # access
   expected_output = svntest.main.greek_state.copy()
-  expected_output.wc_dir = wc2_dir
+  expected_output.wc_dir = local_dir
   expected_output.tweak(status='A ', contents=None)
 
   expected_wc = svntest.main.greek_state
   
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
-                          wc2_dir,
+                          local_dir,
                           expected_output,
                           expected_wc)
 
 #----------------------------------------------------------------------
 
-def authz_log_test(sbox):
-  "test authz for log"
+def authz_log_and_tracing_test(sbox):
+  "test authz for log and tracing path changes"
 
   skip_test_when_no_authz_available()
 
@@ -526,14 +534,31 @@ def authz_log_test(sbox):
          
   fp.close()
   
+  root_url = svntest.main.current_repo_url
+  D_url = root_url + '/A/D'
+  G_url = D_url + '/G'
+  
   # check if log doesn't spill any info on which you don't have read access
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.main.file_append (rho_path, 'new appended text for rho')
   
   svntest.actions.run_and_verify_svn(None, None, [],
-                                 'ci', '-m', 'test commit', sbox.wc_dir)
+                                 'ci', '-m', 'add file rho', sbox.wc_dir)
 
-  # now disable read access on that folder
+  svntest.main.file_append (rho_path, 'extra change in rho')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                 'ci', '-m', 'changed file rho', sbox.wc_dir)
+  
+  # copy a remote file
+  svntest.actions.run_and_verify_svn("", None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     rho_path, D_url,
+                                     '-m', 'copy rho to readable area')
+                                                                                                       
+  # now disable read access on the first version of rho, keep the copy in 
+  # /A/D readable.
   fp = open(sbox.authz_file, 'w')
 
   if sbox.repo_url.startswith('http'):
@@ -541,22 +566,66 @@ def authz_log_test(sbox):
              "* = rw\n" +
              "[authz_log_test:/A/D/G]\n" +
              "* =\n")
+    expected_err = ".*403 Forbidden.*"
   else:
     fp.write("[/]\n" +
              "* = rw\n" +
              "[/A/D/G]\n" +
              "* =\n")
-         
+    expected_err = ".*svn: Authorization failed.*"
+     
   fp.close()
+  
+  ## log
   
   # changed file in this rev. is not readable anymore, so author and date
   # should be hidden, like this:
   # r2 | (no author) | (no date) | 1 line 
-  
-  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
-                                     'log', '-r', 'HEAD', '--limit', '1',
-                                     sbox.wc_dir)
+  svntest.actions.run_and_verify_svn("", ".*(no author).*(no date).*", [],
+                                     'log', '-r', '2', '--limit', '1',
+                                     wc_dir)
 
+  if sbox.repo_url.startswith('http'):
+    expected_err2 = expected_err
+  else:
+    expected_err2 = ".*svn: Item is not readable.*"
+
+  # if we do the same thing directly on the unreadable file, we get:
+  # svn: Item is not readable
+  svntest.actions.run_and_verify_svn("", None, expected_err2,
+                                     'log', rho_path)
+                                     
+  # while the HEAD rev of the copy is readable in /A/D, its parent in 
+  # /A/D/G is not, so don't spill any info there either.
+  svntest.actions.run_and_verify_svn("", ".*(no author).*(no date).*", [],
+                                    'log', '-r', '2', '--limit', '1', D_url)
+
+  ## cat
+  
+  # now see if we can look at the older version of rho
+  svntest.actions.run_and_verify_svn("", None, expected_err,
+                                    'cat', '-r', '2', D_url+'/rho')
+
+  if sbox.repo_url.startswith('http'):
+    expected_err2 = expected_err
+  else:
+    expected_err2 = ".*svn: Unreadable path encountered; access denied.*"
+
+  svntest.actions.run_and_verify_svn("", None, expected_err2,
+                                    'cat', '-r', '2', G_url+'/rho')  
+  
+  ## diff
+  
+  # we shouldn't see the diff of a file in an unreadable path
+  svntest.actions.run_and_verify_svn("", None, expected_err,
+                                    'diff', '-r', 'HEAD', G_url+'/rho')
+
+  svntest.actions.run_and_verify_svn("", None, expected_err,
+                                    'diff', '-r', '2', D_url+'/rho')  
+
+  svntest.actions.run_and_verify_svn("", None, expected_err,
+                                    'diff', '-r', '2:4', D_url+'/rho')  
+  
 ########################################################################
 # Run the tests
 
@@ -571,7 +640,7 @@ test_list = [ None,
               authz_read_access,
               authz_write_access,
               authz_checkout_test,
-              authz_log_test
+              authz_log_and_tracing_test
              ]
 
 if __name__ == '__main__':

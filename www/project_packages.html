@@ -18,7 +18,7 @@
 <h1 style="text-align: center;">Subversion Packages</h1>
 
 <p>The best available version of Subversion is:&nbsp;<a
-   href="svn_1.3_releasenotes.html">1.3.1</a></p>
+   href="svn_1.3_releasenotes.html">1.3.2</a></p>
 
 <p>You can install Subversion by compiling its <a
 href="#source-release">source code release</a> directly, or you can
@@ -183,7 +183,7 @@ href="http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/"
 >http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/</a></p>
 
 <p>Assuming your ports tree is up-to-date, just do:</p>
-<pre>cd /usr/ports/devel/; subversion; make install</pre>
+<pre>cd /usr/ports/devel/subversion; make install</pre>
 
 </div>
 
@@ -257,7 +257,9 @@ href="http://metissian.com/projects/macosx/subversion/"
 found in <a
 href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
 >this directory</a> of the file-sharing area.  The packages are ".zip"
-files.</p>
+files.  Note that the <tt>mod_dav_svn</tt> module included in this
+package was compiled against Apache httpd 2.0, and thus will
+<em>not</em> work with Apache httpd 2.2.</p>
 
 <div style="background-color: yellow; color: red;">
 <p>Please do not ask about <strong>Python 2.4</strong> bindings for Windows.
@@ -277,7 +279,7 @@ href="http://subversion.tigris.org/faq.html#bdb43-upgrade">FAQ</a>.</p>
 </div>
 
 <p><em>Maintainer:
-<a href="mailto:jostein@josander.net">Jostein Andersen</a></em></p>
+<a href="mailto:troy@ebswift.com">Troy Simpson</a></em></p>
 
 <p>The same command-line binaries and libraries, but packaged within a
 friendly Installer program, are in <a

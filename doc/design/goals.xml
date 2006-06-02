@@ -190,7 +190,7 @@
           linkend="model.merging-and-ancestry"/>.</para>
     </sect2>
 
-    <sect2 id="goals.conflicts">
+    <sect2 id="goals.misc.conflicts">
       <title>Conflicts resolution</title>
 
       <para>For text files, Subversion resolves conflicts similarly to CVS, by

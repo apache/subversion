@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # mlpatch.py: Run with no arguments for usage
 

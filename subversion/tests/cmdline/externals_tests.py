@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -68,9 +68,10 @@ def externals_test_setup(sbox):
   remove a previous incarnation of the other repository.
   """
 
-  sbox.build()
+  # The test itself will create a working copy
+  sbox.build(create_wc = False)
 
-  svntest.main.safe_rmtree(sbox.wc_dir) # The test itself will recreate this
+  svntest.main.safe_rmtree(sbox.wc_dir)
 
   wc_init_dir    = sbox.add_wc_path('init')  # just for setting up props
   repo_dir       = sbox.repo_dir

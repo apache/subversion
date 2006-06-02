@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # ====================================================================
 # Copyright (c) 2000-2005 CollabNet.  All rights reserved.
 #

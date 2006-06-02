@@ -2,7 +2,7 @@
  * notify.c:  feedback handlers for cmdline client.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -367,10 +367,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
     }
 
-  return;
-
   if ((err = svn_cmdline_fflush(stdout)))
     goto print_error;
+
+  return;
 
  print_error:
   /* If we had no errors before, print this error to stderr. Else, don't print

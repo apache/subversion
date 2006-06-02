@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -77,6 +77,17 @@ class State:
     for path, item in self.desc.items():
       if filter(path, item):
         apply(item.tweak, (), kw)
+
+  def subtree(self, subtree_path):
+    """Return a State object which is a deep copy of the sub-tree
+    identified by SUBTREE_PATH (which is assumed to contain only one
+    element rooted at the tree of this State object's WC_DIR)."""
+    desc = { }
+    for path, item in self.desc.items():
+      path_elements = path.split("/")
+      if len(path_elements) > 1 and path_elements[0] == subtree_path:
+        desc["/".join(path_elements[1:])] = item.copy()
+    return State(self.wc_dir, desc)
 
   def write_to_disk(self, target_dir):
     """Construct a directory structure on disk, matching our state.
@@ -170,6 +181,6 @@ class StateItem:
   def tweak(self, **kw):
     for name, value in kw.items():
       ### refine the revision args (for now) to ensure they are strings
-      if name == 'wc_rev':
+      if value is not None and name == 'wc_rev':
         value = str(value)
       setattr(self, name, value)
