@@ -75,6 +75,14 @@ Candidate changes:
     Votes:
       +1 brane
 
+ * r19915
+   Require APR 0.9.7
+   Justification:
+     Older APR versions didn't return errors upon failed writes
+     with buffered files: Potential repository corruption with FSFS.
+   Votes:
+     +1: dionisos
+
 Approved changes (further review is welcome, but not required):
 
   * r15807
