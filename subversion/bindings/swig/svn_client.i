@@ -71,6 +71,16 @@
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+
+/* members of svn_client_ctx_t */
+%apply void *PY_AS_VOID {
+    void *notify_baton,
+    void *log_msg_baton,
+    void *cancel_baton,
+    void *notify_baton2,
+    void *log_msg_baton2,
+    void *progress_baton
+};
 #endif
 
 /* -----------------------------------------------------------------------
@@ -557,6 +567,15 @@
 
 %include svn_time_h.swg
 %include svn_client_h.swg
+
+#ifdef SWIGPYTHON
+
+/* provide Python with access to some thunks. */
+%constant svn_cancel_func_t svn_swig_py_cancel_func;
+%constant svn_client_get_commit_log2_t svn_swig_py_get_commit_log_func;
+%constant svn_wc_notify_func2_t svn_swig_py_notify_func;
+
+#endif
 
 #ifdef SWIGRUBY
 %inline %{

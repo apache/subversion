@@ -600,6 +600,25 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Mapper to automatically turn Python objects into void* batons on assignment
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in) void *PY_AS_VOID (PyObject *newRef) {
+  newRef = $input;
+  if ($input == Py_None) {
+    $1 = newRef = NULL;
+  } else {
+    newRef = $input;
+    $1 = (void *)$input;
+  }
+  if (svn_swig_py_pool_set_owned_ref(obj0, (PyObject *)arg1->$1_name, newRef)) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Wrap the digest output for functions populating digests.
 */
 
