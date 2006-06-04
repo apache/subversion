@@ -254,6 +254,8 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
 
+SVN_LIB_SASL
+
 dnl Mac OS KeyChain -------------------
 
 AC_ARG_ENABLE(keychain,
