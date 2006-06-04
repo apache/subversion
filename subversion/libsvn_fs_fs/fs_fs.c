@@ -2606,8 +2606,6 @@ svn_fs_fs__get_txn(transaction_t **txn_p,
   txn->base_id = svn_fs_fs__id_copy(noderev->predecessor_id, pool);
   txn->copies = NULL;
 
-  txn->kind = transaction_kind_normal;
-
   *txn_p = txn;
 
   return SVN_NO_ERROR;

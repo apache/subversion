@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -79,22 +79,9 @@ const char *
 svn_fs_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
 
-/*** Transaction Kind ***/
-typedef enum
-{
-  transaction_kind_normal = 1,  /* normal, uncommitted */
-  transaction_kind_committed,   /* committed */
-  transaction_kind_dead         /* uncommitted and dead */
-
-} transaction_kind_t;
-
-
 /*** Filesystem Transaction ***/
 typedef struct
 {
-  /* kind of transaction. */
-  transaction_kind_t kind;
-
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */
   apr_hash_t *proplist;
