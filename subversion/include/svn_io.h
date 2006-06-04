@@ -305,7 +305,8 @@ svn_error_t *svn_io_set_file_read_write(const char *path,
                                         apr_pool_t *pool);
 
 
-/** Minimally change the read-write permissions of a file.
+/** Similar to svn_io_set_file_read_* functions.
+ * Change the read-write permissions of a file.
  * @since New in 1.1.
  *
  * When making @a path read-write on operating systems with unix style
@@ -321,8 +322,10 @@ svn_error_t *svn_io_set_file_read_write(const char *path,
  *
  * @a path is the utf8-encoded path to the file.  If @a enable_write
  * is @c TRUE, then make the file read-write.  If @c FALSE, make it
- * write-only.  If @a ignore_enoent is @c TRUE, don't fail if the target
+ * read-only.  If @a ignore_enoent is @c TRUE, don't fail if the target
  * file doesn't exist.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *svn_io_set_file_read_write_carefully(const char *path,
                                                   svn_boolean_t enable_write,

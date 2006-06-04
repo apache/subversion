@@ -1598,8 +1598,7 @@ svn_wc_prop_set2(const char *name,
          to read-write */
       if (value == NULL)
         {
-          SVN_ERR(svn_io_set_file_read_write_carefully(path, TRUE, 
-                                                       FALSE, pool));
+          SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
         }
       else
         {
