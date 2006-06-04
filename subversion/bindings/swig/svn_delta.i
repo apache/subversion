@@ -71,11 +71,14 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              apr_pool_t *pool);
 #endif
 
-%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton) {
+#ifdef SWIGPERL
+%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
+#endif
 
-%typemap(ruby, in) (const svn_delta_editor_t *EDITOR, void *BATON)
+#ifdef SWIGRUBY
+%typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON)
 {
   if (RTEST(rb_obj_is_kind_of($input,
                               svn_swig_rb_svn_delta_editor()))) {
@@ -88,6 +91,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_swig_rb_make_delta_editor(&$1, &$2, $input, _global_pool);
   }
 }
+#endif
 
 %apply (const svn_delta_editor_t *EDITOR, void *BATON)
 {
@@ -98,7 +102,8 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
    handle svn_txdelta_window_handler_t/baton pair.
 */
 
-%typemap(ruby, in) (svn_txdelta_window_handler_t handler,
+#ifdef SWIGRUBY
+%typemap(in) (svn_txdelta_window_handler_t handler,
                     void *handler_baton)
 {
   if (RTEST(rb_obj_is_kind_of($input,
@@ -113,22 +118,25 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
+#endif
 
 /* -----------------------------------------------------------------------
    handle svn_delta_path_driver().
 */
 
-%typemap(ruby, in) apr_array_header_t *paths
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *paths
 {
   $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
 }
 
-%typemap(ruby, in) (svn_delta_path_driver_cb_func_t callback_func,
+%typemap(in) (svn_delta_path_driver_cb_func_t callback_func,
                     void *callback_baton)
 {
   $1 = svn_swig_rb_delta_path_driver_cb_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
+#endif
 
 /* ----------------------------------------------------------------------- */
 
@@ -254,5 +262,7 @@ svn_txdelta_md5_digest_as_cstring(svn_txdelta_stream_t *stream,
 
 /* Cancel the typemap as they aren't returned valued in member functions
    if editor. */
-%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton);
+#ifdef SWIGPERL
+%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton);
+#endif
 
