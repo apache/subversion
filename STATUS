@@ -27,6 +27,15 @@ Candidate changes:
    Votes:
      +1: maxb
 
+ * r19924
+   Deprecate svn_io_set_file_read_write_carefully and update the
+   svn_io_set_file_read* functions to deal with perms and attributes
+   correctly on unix and Win32.
+   Justification:
+     Needed for Win32 with APR > 0.9.x.
+   Votes:
+     +1: djh
+
 
 Approved changes:
 
