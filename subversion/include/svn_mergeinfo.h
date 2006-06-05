@@ -35,8 +35,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Parse the mergeinfo from @a input into @a hash, mapping from paths
- * to arrays of svn_merge_range_t.  Perform temporary allocations in
- * @a pool.
+ * to arrays of @c svn_merge_range_t.  Perform temporary allocations
+ * in @a pool.
  *
  * @since New in 1.5.
  */
