@@ -721,11 +721,10 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 
 svn_error_t *
 svn_fs_change_merge_info(svn_fs_root_t *root, const char *path, 
-                         const char *from,
-                         apr_array_header_t *info,
+                         apr_hash_t *minfo,
                          apr_pool_t *pool)
 {
-  return root->vtable->change_merge_info(root, path, from, info, pool);
+  return root->vtable->change_merge_info(root, path, minfo, pool);
 }
 
 svn_error_t *

@@ -289,8 +289,7 @@ typedef struct root_vtable_t
                         const char *ancestor_path,
                         apr_pool_t *pool);
   svn_error_t *(*change_merge_info)(svn_fs_root_t *root, const char *path,
-                                    const char *from, 
-                                    apr_array_header_t *info,
+                                    apr_hash_t *info,
                                     apr_pool_t *pool);
   svn_error_t *(*get_merge_info)(svn_fs_root_t *root, 
                                  apr_array_header_t *paths,

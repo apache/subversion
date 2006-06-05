@@ -1133,17 +1133,14 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  * - @a root and @a path indicate the node whose property should change.
  *   @a root must be the root of a transaction, not the root of a
  *   revision.
- * - @a from is the path the merge is a merge from.
- * - @a info is the new value of the merge info for @a from. This must
- *   be an array of merge_info_t structures, or NULL if the merge info
- *   for that path should be removed altogether.
+ * - @a hash is the new value of the mergeinfo for PATH, or NULL if
+ *   the merge info for that path should be removed altogether.
  *
  * Do any necessary temporary allocation in @a pool.
  */
 svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
                                       const char *path,
-                                      const char *from,
-                                      apr_array_header_t *info,
+                                      apr_hash_t *hash,
                                       apr_pool_t *pool);
 
 /** Retrieve multiple nodes merge info

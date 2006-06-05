@@ -71,6 +71,13 @@ typedef struct
 #endif
 } fs_fs_data_t;
 
+/* Transactions need their own private opened copy of the mergeinfo
+   database so that their sql commands are not shared between each other. */
+typedef struct
+{
+  /* Merge tracking database. */
+  sqlite3 *mtd;
+} fs_txn_data_t;
 
 /* Return a canonicalized version of a filesystem PATH, allocated in
    POOL.  While the filesystem API is pretty flexible about the
@@ -218,6 +225,16 @@ typedef struct
    argument given to callback.  */
 svn_error_t *fs_sqlite_exec(sqlite3 *db , const char *sql, 
                             sqlite3_callback cb, void *data);
+
+/* SQLITE->SVN quick error wrap, much like SVN_ERR. 
+   XXX: This macro probably belongs elsehwere, like svn_sqlite.h or
+   something.  Later. */
+#define SQLITE_ERR(x, db) do                                    \
+{                                                               \
+  if ((x) != SQLITE_OK)                                         \
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,      \
+                            sqlite3_errmsg((db)));              \
+ } while (0)
 
 #ifdef __cplusplus
 }
