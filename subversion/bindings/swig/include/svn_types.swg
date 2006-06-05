@@ -604,6 +604,7 @@
 */
 
 #ifdef SWIGPYTHON
+
 %typemap(in) void *PY_AS_VOID (PyObject *newRef) {
   newRef = $input;
   if ($input == Py_None) {
@@ -612,10 +613,29 @@
     newRef = $input;
     $1 = (void *)$input;
   }
-  if (svn_swig_py_pool_set_owned_ref(obj0, (PyObject *)arg1->$1_name, newRef)) {
+}
+
+
+%typemap(memberin) void *PY_AS_VOID {
+
+  PyObject *ownerObj = obj0,
+           *prevRef = (PyObject *) $1,
+           *newRef = $input;
+
+  /*
+   * Mark the new input value as owned by the current pool, and mark
+   * any previous values as unowned. We look in 'ownerObj' for the
+   * current pool to work around a bug in our automatic memory management
+   * implementation where _global_svn_swig_py_pool is not set correctly.
+   */
+  if (svn_swig_py_pool_set_owned_ref(ownerObj, prevRef, newRef)) {
     SWIG_fail;
   }
+
+  /* Copy the new input value into the struct */
+  $1 = ($1_ltype) $input;
 }
+
 #endif
 
 /* -----------------------------------------------------------------------
