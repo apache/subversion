@@ -2348,8 +2348,7 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
     SVN_ERR(svn_wc_prop_get(&needs_lock, SVN_PROP_NEEDS_LOCK, 
                             path, adm_access, pool));
     if (needs_lock)
-      SVN_ERR(svn_io_set_file_read_write_carefully(path, TRUE, 
-                                                   FALSE, pool));
+      SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
   }
 
   return SVN_NO_ERROR;
@@ -2382,8 +2381,7 @@ svn_error_t *svn_wc_remove_lock(const char *path,
     SVN_ERR(svn_wc_prop_get(&needs_lock, SVN_PROP_NEEDS_LOCK, 
                             path, adm_access, pool));
     if (needs_lock)
-      SVN_ERR(svn_io_set_file_read_write_carefully(path, FALSE, 
-                                                   FALSE, pool));
+      SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
   }
 
   return SVN_NO_ERROR;
