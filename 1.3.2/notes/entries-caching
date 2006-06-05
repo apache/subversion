@@ -1,0 +1,190 @@
+
+                    "I have a cunning plan"
+
+                             or
+
+             Entries Caching in the Access Batons
+
+
+
+0. Preamble
+   --------
+
+Issue 749 provides some history.  The access batons now cache the
+parsed entries file, as repeatedly reading, parsing and writing the
+file proved to be a bottleneck.
+
+
+1. Caching Interface
+   -----------------
+
+The basic functions to retrieve entries are svn_wc_entries_read and
+svn_wc_entry.  The function svn_wc__entries_write is used to update
+the entries file on disk.  The function svn_wc__entry_modify is
+implemented in terms of entries_read and entries_write.
+
+1.1 Write Caching Overview
+
+An overview of the update process.
+
+   1. Lock the directory
+   2. Read the entries file and cache in memory
+   3. Start the wc update
+      3.1  Start a directory update
+         3.1.1 Start file update
+            3.1.1.1 Write a log file specific to this item
+         3.1.3 Finish file update
+      3.2. Finish directory update
+      3.3. Run log files
+         3.3.1. Log file commands modify entries in memory
+      3.4  Finish log files
+      3.5. Flush entries to disk
+      3.6. Remove log files
+   4. Finish update
+   5. Unlock directory
+
+Each directory update may contain multiple file updates so when the
+directory update is complete there may be multiple log files.  While
+the log files are being run the entries modifications are cached in
+memory and written once when the log files are complete.  The reason
+for accumulating multiple log files is that flushing the entries to
+disk involves writing the entire entries file, if it were done after
+each file then the total amount of entries data written would grow
+exponentially during a checkout.
+
+
+2. Interface Enhancements
+   ----------------------
+
+2.1 Entries Interface
+
+A lot of the entries interface has remained unchanged since the
+pre-caching days, and it shows.  Of particular concern is the
+svn_wc_entries_read function, as this provides access to the raw data
+within the cache.  If the application carelessly modifies the data
+things may go wrong.  I would like to remove this function.
+
+One use of svn_wc_entries_read is in svn_wc__entry_modify, this is
+"within the entries code" and so is not a problem.
+
+Of the other uses of svn_wc_entries_read the most common is where the
+application wants to iterate over all the entries in a directory. I
+would like to see an interface something like
+
+  typedef struct svn_wc_entry_iterator_t svn_wc_entry_iterator_t;
+
+  svn_wc_entry_iterator_t *
+  svn_wc_entry_first(svn_wc_adm_access_t *adm_access,
+                     apr_pool_t *pool);
+
+  svn_wc_entry_iterator_t *
+  svn_wc_entry_next(svn_wc_entry_iterator_t *entry_iterator);
+
+  const svn_wc_entry_t *
+  svn_wc_entry_iterator_entry(svn_wc_entry_iterator_t *entry_iterator);
+
+Note that this provides only const access to the entries, the
+application cannot modify the cached data.  All modifications would go
+through svn_wc__entry_modify, and the access batons could keep track
+of whether modifications have been made and not yet written to disk.
+
+The other uses of svn_wc_entries_read tend to extract a single entry.
+I hope these can be converted to use svn_wc_entry.  One slight problem
+is the use of svn_wc_entries_read to intentionally extract a
+directory's entry from its parent.  This is done because that's where
+the "deleted" state is stored.  I think the entry returned by
+svn_wc_entry could contain this state.  Why doesn't it?  I don't know,
+possibly it's an accident, or possibly it's intentional as in the past
+parsing two entries files would have been expensive.
+
+2.2 Access Baton Interface
+
+I would also like to modify the access baton interface.  At present
+the open function detects and skips missing directories when opening a
+directory hierarchy.  I would like to record this information in the
+access baton set, and modify the retrieve functions to include an
+svn_boolean_t* parameter that gets set TRUE when a request for a
+missing directory is made.  The advantage of doing this is that the
+application could avoid making svn_io_check_path and svn_wc_check_wc
+calls when the access baton already has the information.  The function
+prop_path_internal looks like a good candidate for this optimisation.
+
+
+3. Access Baton Sets
+   -----------------
+
+Each access baton represents a directory.  Access batons can associate
+together in sets.  Given an access baton in a set, it possible to
+retrieve any other access baton in the set.  When an access baton in a
+set is closed, all other access batons in the set that represent
+subdirectories are also closed.  The set is implemented as a hash
+table "owned" by the one baton in any set, but shared by all batons in
+the set.
+
+At present in the code, access batons are opened in a parent->child
+order.  This works well with the shared hash being owned by the first
+baton in each set.  There is code to detect if closing a baton will
+destroy the hash while other batons are using it, as far as I know it
+doesn't currently trigger.  If it turns out that this needs to be
+supported it should be possible to transfer the hash information to
+another baton.
+
+
+4. Access Baton Conversion
+   -----------------------
+
+Given a function
+  svn_error_t *foo (const char *path);
+if PATH is always a directory then the change that gets made is usually
+  svn_error_t *foo (svn_wc_adm_access_t *adm_access);
+Within foo, the original const char* can be obtained using
+  const char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access);
+
+The above case sometimes occurs as
+  svn_error_t *foo(const char *name, const char *dir);
+where NAME is a single path component, and DIR is a directory. Conversion
+is again simply in this case
+  svn_error_t *foo (const char *name, svn_wc_adm_access_t *adm_access);
+
+The more difficult case is
+  svn_error_t *foo (const char *path);
+where PATH can be a file or a directory.  This occurs a lot in the
+current code. In the long term these may get converted to
+  svn_error_t *foo (const char *name, svn_wc_adm_access_t *adm_access);
+where NAME is a single path component.  However this involves more
+changes to the code calling foo than are strictly necessary, so
+initially they get converted to
+  svn_error_t *foo (const char *path, svn_wc_adm_access_t *adm_access);
+where PATH is passed unchanged and an additional access baton is
+passed.  This interface is less than ideal, since there is duplicate
+information in the path and baton, but since it involves fewer changes
+in the calling code it makes a reasonable intermediate step.
+
+
+5. Logging
+   -------
+
+As well as caching the other problem that needs to be addressed is the
+issue of logging.  Modifications to the working copy are supposed to
+use the log file mechanism to ensure that multiple changes that need
+to be atomic cannot be partially completed.  If the individual changes
+that may need to be logged are all forced to use an access baton, then
+the access baton may be able to identify when the log file mechanism
+should be used.  Combine this with an access baton state that tracks
+whether a log file is being run and we may be able to automatically
+identify those places that are failing to use the log file mechanism.
+
+
+6. Status
+   ------
+
+Entries caching has been implemented.
+
+The interface changes (section 2) have not been started.
+
+The access baton conversion is complete in so far as passing batons is
+concerned.  The path->name signature changes (section 4) have not been
+made.
+
+Automatic detection of failure to use a log file (section 5) has not
+been started.

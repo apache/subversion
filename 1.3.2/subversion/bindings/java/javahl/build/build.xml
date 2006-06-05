@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="svnjavahl" default="build" basedir="..">
+    <target name="javah">
+        <javah classpath="classes" verbose="yes" destdir="include">
+            <class name="org.tigris.subversion.javahl.CommitItemStateFlags"/>
+            <class name="org.tigris.subversion.javahl.NodeKind"/>
+            <class name="org.tigris.subversion.javahl.NotifyAction"/>
+            <class name="org.tigris.subversion.javahl.NotifyStatus"/>
+            <class name="org.tigris.subversion.javahl.PromptUserPassword2"/>
+            <class name="org.tigris.subversion.javahl.Revision"/>
+            <class name="org.tigris.subversion.javahl.RevisionKind"/>
+            <class name="org.tigris.subversion.javahl.ScheduleKind"/> 
+            <class name="org.tigris.subversion.javahl.StatusKind"/>
+            <class name="org.tigris.subversion.javahl.SVNAdmin"/>
+            <class name="org.tigris.subversion.javahl.SVNClient"/>
+            <class name="org.tigris.subversion.javahl.SVNClientLogLevel"/>
+        </javah>
+    </target>
+    <target name="javac" unless="junit.path">
+        <javac compiler="modern" destdir="classes">
+            <src path="src"/>
+            <exclude name="org/tigris/subversion/javahl/tests/**"/>
+        </javac>
+    </target>
+    <target name="javac-tests" if="junit.path">
+        <javac compiler="modern" destdir="classes">
+            <src path="src"/>
+            <classpath path="${junit.path}"/>
+        </javac>
+    </target>
+    <target name="build">
+        <antcall target="javac"/>
+        <antcall target="javac-tests"/>
+        <antcall target="javah"/>
+    </target>
+    <target name="javadoc">
+        <javadoc sourcepath="src" destdir="javadoc" windowtitle="Subversion java high level binding" >
+            <classpath path="${junit.path}"/>
+            <fileset dir="src"/>
+        </javadoc>
+    </target>
+</project>

@@ -1,0 +1,155 @@
+\input texinfo  @c -*-texinfo-*-
+
+@comment Subversion Handbook
+@comment Copyright (C) 2000-2004 CollabNet
+
+@c  ================================================================
+@c  Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+@c  
+@c  Redistribution and use in source and binary forms, with or without
+@c  modification, are permitted provided that the following conditions are
+@c  met:
+@c  
+@c  1. Redistributions of source code must retain the above copyright
+@c  notice, this list of conditions and the following disclaimer.
+@c  
+@c  2. Redistributions in binary form must reproduce the above copyright
+@c  notice, this list of conditions and the following disclaimer in the
+@c  documentation and/or other materials provided with the distribution.
+@c  
+@c  3. The end-user documentation included with the redistribution, if
+@c  any, must include the following acknowledgment: ``This product includes
+@c  software developed by CollabNet (uref{http://www.Collab.Net/}).''
+@c  Alternately, this acknowledgment may appear in the software itself, if
+@c  and wherever such third-party acknowledgments normally appear.
+@c  
+@c  4. The hosted project names must not be used to endorse or promote
+@c  products derived from this software without prior written
+@c  permission. For written permission, please contact info@collab.net.
+@c  
+@c  5. Products derived from this software may not use the ``Tigris'' name
+@c  nor may ``Tigris'' appear in their names without prior written
+@c  permission of CollabNet.
+@c  
+@c  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+@c  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+@c  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+@c  IN NO EVENT SHALL COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+@c  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+@c  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+@c  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+@c  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+@c  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+@c  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+@c  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@c 
+@c  ====================================================================
+@c  
+@c  This software consists of voluntary contributions made by many
+@c  individuals on behalf of CollabNet.
+
+@c Note du traducteur :
+@c
+@c * Cette traduction est un traduction qui suit au plus près la version
+@c   anglaise.
+@c * Je ne connais pas le format .texi. Il doit donc y avoir des erreurs.
+@c
+@c * Cette traduction s'est appuiée sur la version 2576 de Subversion.
+@c
+@c * voici certaine correspondance anglais-français.
+@c   - handbook => manuel
+@c   - revision control system => système de contrôle de version
+@c   - commit => requête de prise en compte de changement.
+@c   - commit => requête de changement.
+@c   - commit => souvent considéré comme "check in"
+@c   - hackability => capacité d'adaptation.
+@c   - pristine version => version de référence.
+@c   - check out => descendre
+@c   - check in => remonter
+@c   - out-of-date => dépassé
+@c   - current => actuel
+@c   - log message => description de modification
+@c   - time machine => rien. Les phrases qui utilise çà ont été zappées.
+
+@c %**start of header
+@setfilename svn-handbook-french.info
+@settitle Le guide de Subversion
+@setchapternewpage odd
+
+@c for dvi, ps, ... print on A4 format.
+@afourpaper
+@c doesn't work
+@c @documentlanguage fr
+
+@c use for html output
+@documentencoding ISO-8859-1
+@c %**end of header
+
+@paragraphindent 0
+
+@c @finalout
+
+@c Browser defaults lose.  Let's go for black text on white background.
+@ifhtml
+@html
+<body bgcolor="#FFFFFF" fgcolor="#000000">
+@end html
+@end ifhtml
+
+@c -----------------------------------------------------------------
+@titlepage
+@title @titlefont{Le guide de Subversion}
+@author Subversion Development Project @uref{http://subversion.tigris.org/}
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2000-2003 CollabNet, Inc. @*
+See @ref{License} for details. @*
+First version: June 2002. @*
+$LastChangedDate: 2002-07-30 04:23:44 -0400 (mar, 30 jui 2002) $
+
+@end titlepage
+@c -----------------------------------------------------------------
+
+@summarycontents
+@contents
+
+@ifnottex
+@node Top
+@top
+
+Ce manuel est un guide du système de contrôle de version Subverion.
+
+Ndt: C'est la traduction du manual en anglais de la révision 2752
+(post version 0.14.0).
+Je n'ai pas fait cette traduction pour devenir un ``fork'' de la version
+anglaise. Ainsi, les erreurs/manques de la version anglaise sont dans
+cette traduction. Les corrections seront faites (peut-être) lorsque la
+version anglaise sera corrigée. Ceci pour des raisons évidentes de
+maintenance de cette traduction.
+Je ne suis pas très satisfait de la traduction des parties très
+techniques. J'espère néanmoins qu'elle vous sera utile.
+
+@end ifnottex
+
+@iftex
+Ndt: La version dvi et ps n'a pas d'accents. C'est une limitation de
+makeinfo qui ne permet pas d'avoir simplement les accents dans les version
+info/html et dans les version dvi/ps.
+@end iftex
+
+@c Here is our logical table of contents.
+
+@menu
+* Débuter avec Subversion::   Historique, installation et vue d'ensemble de Subversion.
+* Utilisation des clients::   Utilisation des clients de subversion.
+* Administration des Dépôts:: Gestion des dépôts.
+* Appendices::                D'autres documents et références.
+@end menu
+
+@include getting_started.texi
+@include client.texi
+@include repos_admin.texi
+@include appendices.texi
+
+@bye
