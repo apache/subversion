@@ -15,7 +15,7 @@ Candidate changes:
      Older APR versions didn't return errors upon failed writes
      with buffered files: Potential repository corruption with FSFS.
    Votes:
-     +1: dionisos
+     +1: dionisos, brane
 
 
  * r19919
@@ -34,7 +34,7 @@ Candidate changes:
    Justification:
      Needed for Win32 with APR > 0.9.x.
    Votes:
-     +1: djh
+     +1: djh, brane
 
 
 Approved changes:
