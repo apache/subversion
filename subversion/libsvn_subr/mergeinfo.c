@@ -485,11 +485,10 @@ svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
   svn_stringbuf_t *toappend;
 
   *output = svn_stringbuf_create("", pool);
-  /* Handle the elements that need commas at the end.  */
 
+  /* Handle the elements that need commas at the end.  */
   for (i = 0; i < input->nelts - 1; i++)
     {
-
       range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
       SVN_ERR(svn_range_to_string(&toappend, range, pool));
       svn_stringbuf_appendstr(*output, toappend);
