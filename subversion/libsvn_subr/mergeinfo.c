@@ -491,7 +491,7 @@ svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
       elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
 
       SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
-      combined = svn_stringbuf_createf(pool, "%s:%s\n", elt.key,
+      combined = svn_stringbuf_createf(pool, "%s:%s\n", (char *) elt.key,
                                        revlist->data);
       svn_stringbuf_appendstr(*output, combined);
     }
@@ -500,7 +500,7 @@ svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
   elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
 
   SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
-  combined = svn_stringbuf_createf(pool, "%s:%s", elt.key,
+  combined = svn_stringbuf_createf(pool, "%s:%s", (char *) elt.key,
                                    revlist->data);
   svn_stringbuf_appendstr(*output, combined);
   return SVN_NO_ERROR;
