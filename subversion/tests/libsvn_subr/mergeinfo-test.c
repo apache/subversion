@@ -118,8 +118,6 @@ test_parse_single_line_mergeinfo(const char **msg,
                                  svn_test_opts_t *opts,
                                  apr_pool_t *pool)
 {
-  apr_array_header_t *result;
-  svn_merge_range_t *resultrange;
   int i;
   
   *msg = "parse single line mergeinfo";
@@ -144,7 +142,6 @@ test_parse_combine_rangeinfo(const char **msg,
 {
   apr_array_header_t *result;
   svn_merge_range_t *resultrange;
-  int i;
   
   *msg = "parse single line mergeinfo and combine ranges";
 
