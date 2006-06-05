@@ -149,9 +149,6 @@ def blame_in_xml(sbox):
   date1 = None
   date2 = None
 
-  if sys.platform == 'AS/400':
-    line = ebcdic.os400_split_utf8_lines(line)
-
   for line in output:
     if line.find("<date>".encode('utf-8')) >= 0:
       if date1 is None:
@@ -162,6 +159,10 @@ def blame_in_xml(sbox):
         break
   else:
     raise svntest.Failure
+
+  if sys.platform == 'AS/400':
+    date1 = date1.decode('utf-8').encode('cp037')
+    date2 = date2.decode('utf-8').encode('cp037')
 
   template = ['<?xml version="1.0" encoding="utf-8"?>\n',
               '<blame>\n',
@@ -192,8 +193,9 @@ def blame_in_xml(sbox):
     #as the last line, which also need to be accounted for.
     template.append("")
 
-  for i in range(0, len(template)):
-    template[i] = template[i].encode('utf-8')
+  if sys.platform == 'AS/400':
+    for i in range(0, len(template)):
+      template[i] = template[i].encode('utf-8')
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'blame', file_path,

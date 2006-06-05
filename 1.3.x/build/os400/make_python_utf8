@@ -43,6 +43,7 @@ convert_file subversion/tests/clients/cmdline/svntest/main.py
 convert_file subversion/tests/clients/cmdline/svntest/testcase.py
 convert_file subversion/tests/clients/cmdline/svntest/tree.py
 convert_file subversion/tests/clients/cmdline/svntest/wc.py
+convert_file subversion/tests/clients/cmdline/authz_tests.py 
 convert_file subversion/tests/clients/cmdline/autoprop_tests.py 
 convert_file subversion/tests/clients/cmdline/basic_tests.py    
 convert_file subversion/tests/clients/cmdline/blame_tests.py    
