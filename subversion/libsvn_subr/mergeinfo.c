@@ -362,6 +362,29 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
+                     apr_array_header_t *whiteboard, apr_pool_t *pool)
+{
+  /* ### TODO: Implement me!  dberlin suggests: Walk the sorted list
+     ### like svn_rangelist_merge() does, doing subtraction instead of
+     ### a union.  For the equals case, do nothing and increment i +
+     ### j.  For the other two cases, subtract the range.  If it has
+     ### become disjoint, add the two ranges to the list. */
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
+                   apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool)
+{
+  *deleted = apr_hash_make(pool);
+  *added = apr_hash_make(pool);
+
+  /* ### TODO: Implement me! */
+
+  return SVN_NO_ERROR;
+}
 
 /* Merge two sets of merge info IN1 and IN2 and place the result in
    OUTPUT */
@@ -424,6 +447,15 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
       svn_sort__item_t elt = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
       apr_hash_set(*output, elt.key, elt.klen, elt.value);
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
+                     apr_hash_t *whiteboard, apr_pool_t *pool)
+{
+  /* ### TODO: Implement me! */
 
   return SVN_NO_ERROR;
 }

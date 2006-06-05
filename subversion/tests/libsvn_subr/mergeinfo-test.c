@@ -289,6 +289,22 @@ test_merge_mergeinfo(const char **msg,
 }
 
 static svn_error_t *
+test_remove_mergeinfo(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  *msg = "remove of mergeinfo";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* ### TODO: Implement me! */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_rangelist_to_string(const char **msg,
                          svn_boolean_t msg_only,
                          svn_test_opts_t *opts,
@@ -353,6 +369,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
+    SVN_TEST_PASS(test_remove_mergeinfo),
     SVN_TEST_PASS(test_rangelist_to_string),
     SVN_TEST_PASS(test_mergeinfo_to_string),
     SVN_TEST_NULL

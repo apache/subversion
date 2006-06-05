@@ -43,6 +43,17 @@ extern "C" {
 svn_error_t *
 svn_mergeinfo_parse(const char *input, apr_hash_t **hash, apr_pool_t *pool);
 
+/** Calculate the delta between two hashes of merge info, @a from and
+ * @a to, and place the result in @a deleted and @a added (neither
+ * output argument will ever be @c NULL), stored as the usual mapping
+ * of paths to arrays of @c svn_merge_range_t.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
+                   apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool);
+
 /** Merge two hashes of merge info, @a in1 and @a in2,
  * and place the result in @a output.  
  *
@@ -52,6 +63,15 @@ svn_error_t *
 svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
                     apr_pool_t *pool);
 
+/** Removes @a eraser (the subtrahend) from @a whiteboard (the
+ * minuend), and places the resulting difference in @a output.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
+                     apr_hash_t *whiteboard, apr_pool_t *pool);
+
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a in1 and @a in2, and place the result in @a output.
  *
@@ -60,6 +80,15 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
                      apr_array_header_t *in2, apr_pool_t *pool);
+
+/** Removes @a eraser (the subtrahend) from @a whiteboard (the
+ * minuend), and places the resulting difference in @a output.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
+                     apr_array_header_t *whiteboard, apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a input, and convert it
  * back to a text format rangelist in @a output.
