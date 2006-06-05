@@ -862,7 +862,7 @@ get_dump_editor(const svn_delta_editor2_t **editor,
      Set it up for the directory baton we create here, which is the
      root baton. */
   struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
-  svn_delta_editor2_t *dump_editor = svn_delta_default_editor2(pool);
+  svn_delta_editor2_t *dump_editor = svn_delta_editor_create(pool);
 
   /* Set up the edit baton. */
   eb->stream = stream;

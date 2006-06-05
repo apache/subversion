@@ -191,7 +191,7 @@ static const svn_delta_editor2_t default_editor2 =
 };
 
 svn_delta_editor2_t *
-svn_delta_default_editor2(apr_pool_t *pool)
+svn_delta_editor_create(apr_pool_t *pool)
 {
   return apr_pmemdup(pool, &default_editor2, sizeof(default_editor2));
 }
@@ -200,7 +200,7 @@ svn_delta_editor2_t *
 svn_delta_editor_to_editor2(const svn_delta_editor_t *editor,
                             apr_pool_t *pool)
 {
-  svn_delta_editor2_t *editor2 = svn_delta_default_editor2(pool);
+  svn_delta_editor2_t *editor2 = svn_delta_editor_create(pool);
 
   editor2->set_target_revision = editor->set_target_revision;
   editor2->open_root = editor->open_root;

@@ -516,7 +516,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *
  * XXX document use of rename functions XXX
  *
- * @note You <em>MUST</em> use @c svn_delta_default_editor2 to create
+ * @note You <em>MUST</em> use @c svn_delta_editor_create to create
  *       this structure, as it may be extended in the future which will
  *       result in a change in its size.
  *
@@ -972,7 +972,7 @@ typedef struct {
  *
  * @since New in XXX.
  */
-svn_delta_editor2_t *svn_delta_default_editor2(apr_pool_t *pool);
+svn_delta_editor2_t *svn_delta_editor_create(apr_pool_t *pool);
 
 /**
  * Like @c svn_delta_editor2_t, but without the ability to express move
