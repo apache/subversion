@@ -209,6 +209,16 @@ def run_and_verify_load(repo_dir, dump_file_content):
       "Standard error output", "STDERR", expected_stderr, errput)
 
 
+def run_and_verify_dump(repo_dir):
+  "Runs 'svnadmin dump' and reports any errors, returning the dump content."
+  output, errput = main.run_svnadmin('dump', repo_dir)
+  if not output:
+    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+  if not errput:
+    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
+
+  return output
+
 ######################################################################
 # Subversion Actions
 #
