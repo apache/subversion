@@ -46,19 +46,6 @@ def build_repos(sbox):
   svntest.main.set_repos_paths(sbox.repo_dir)
 
 
-def run_and_verify_load(repo_dir, dump_file_content):
-  "Runs 'svnadmin load' and reports any errors."
-  expected_stderr = []
-  output, errput = \
-          svntest.main.run_command_stdin(
-    "%s load --force-uuid --quiet %s" % (svntest.main.svnadmin_binary,
-                                         repo_dir),
-    expected_stderr, 1, dump_file_content)
-  if expected_stderr:
-    svntest.actions.compare_and_display_lines(
-      "Standard error output", "STDERR", expected_stderr, errput)
-
-
 def run_sync(url):
   "Synchronize the mirror repository with the master"
   output, errput = svntest.main.run_svnsync(
@@ -95,7 +82,7 @@ def run_test(sbox, dump_file_name):
   # Load the specified dump file into the master repository.
   master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
                                                dump_file_name)).readlines()
-  run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
+  svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
   # Create the empty destination repository.
   dest_sbox = sbox.clone_dependent()
@@ -106,7 +93,7 @@ def run_test(sbox, dump_file_name):
   mirror_cfg = ["SVN-fs-dump-format-version: 2\n",
                 "UUID: " + output[0],
                 ]
-  run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
+  svntest.actions.run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
