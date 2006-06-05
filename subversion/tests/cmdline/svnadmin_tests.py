@@ -357,7 +357,60 @@ def hotcopy_format(sbox):
     raise svntest.Failure
   
 
+def build_repos(path):
+  "Helper function for creating an empty repository"
+  svntest.main.safe_rmtree(path)
+  svntest.main.create_repos(path)
+  svntest.main.set_repos_paths(path)
 
+
+def run_dumpfile_test(sbox, dump_file_name):
+  '''Run a test that loads an existing dumpfile, then dumps and reloads it
+  to verify that we get out what we put in'''
+
+  build_repos(sbox.repo_dir)
+
+  svnadmin_data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data')
+
+  master_dumpfile_contents = file(os.path.join(svnadmin_data_dir,
+                                               dump_file_name)).readlines()
+
+  svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox.repo_dir)
+
+  # Setup the mirror repository.  Feed it the UUID of the source repository.
+  output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  mirror_cfg = ["SVN-fs-dump-format-version: 2\n",
+                "UUID: " + output[0],
+                ]
+  svntest.actions.run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
+
+  src_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+
+  svntest.actions.run_and_verify_load(dest_sbox.repo_dir, src_dump)
+
+  dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
+
+  # Compare the original dump file (used to create the master
+  # repository) with the dump produced by the mirror repository.
+  svntest.actions.compare_and_display_lines(
+    "Dump files", "DUMP", master_dumpfile_contents, dest_dump)
+
+
+def basic_move(sbox):
+  "basic moves"
+  run_dumpfile_test(sbox, "basic-move.dump")
+
+def move_plus_copy(sbox):
+  "moves plus copies"
+  run_dumpfile_test(sbox, "move-plus-copy.dump")
+
+def move_plus_delete(sbox):
+  "moves plus deletes"
+  run_dumpfile_test(sbox, "move-plus-delete.dump")
 
 ########################################################################
 # Run the tests
@@ -373,6 +426,9 @@ test_list = [ None,
               dump_quiet,
               hotcopy_dot,
               hotcopy_format,
+              basic_move,
+              move_plus_copy,
+              move_plus_delete,
              ]
 
 if __name__ == '__main__':
