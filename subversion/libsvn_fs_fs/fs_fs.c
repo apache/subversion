@@ -471,7 +471,7 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
       
       /* Create a 'name' string and point to it. */
       header_str[i] = '\0';
-      name=header_str;
+      name = header_str;
 
       /* Skip over the NULL byte and the space following it. */
       i += 2;
@@ -2774,9 +2774,9 @@ unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
 }
 
 /* Given a hash ENTRIES of dirent structions, return a hash in
- *STR_ENTRIES_P, that has svn_string_t as the values in the format
- specified by the fs_fs directory contents file.  Perform
- allocations in POOL. */
+   *STR_ENTRIES_P, that has svn_string_t as the values in the format
+   specified by the fs_fs directory contents file.  Perform
+   allocations in POOL. */
 static svn_error_t *
 unparse_dir_entries(apr_hash_t **str_entries_p,
                     apr_hash_t *entries,
@@ -2932,7 +2932,7 @@ write_change_entry(apr_file_t *file,
   if (change->node_rev_id)
     idstr = svn_fs_fs__id_unparse(change->node_rev_id, pool)->data;
   else
-      idstr = ACTION_RESET;
+    idstr = ACTION_RESET;
   
   buf = apr_psprintf(pool, "%s %s %s %s %s\n",
                      idstr, change_string,
