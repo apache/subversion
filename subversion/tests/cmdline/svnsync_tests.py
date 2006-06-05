@@ -112,12 +112,7 @@ def run_test(sbox, dump_file_name):
       prop_name, dest_sbox.repo_url)
 
   # Create a dump file from the mirror repository.
-  output, errput = svntest.main.run_svnadmin("dump", dest_sbox.repo_dir)
-  if not output:
-    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
-  if not errput:
-    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
-  dest_dump = output
+  dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
 
   # Compare the original dump file (used to create the master
   # repository) with the dump produced by the mirror repository.
