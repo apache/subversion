@@ -234,7 +234,7 @@ This can be toggled with \\[svn-status-toggle-hide-unmodified]."
 (defcustom svn-status-sort-status-buffer t
   "*Whether to sort the `svn-status-buffer-name' buffer.
 
-Setting this variable to nil speeds up \[M-x svn-status], however the
+Setting this variable to nil speeds up \\[M-x svn-status], however the
 listing may then become incorrect.
 
 This can be toggled with \\[svn-status-toggle-sort-status-buffer]."
@@ -609,6 +609,17 @@ See `svn-status--line-info->directory-p' for what counts as a directory."
 See `svn-status--line-info->directory-p' for what counts as a directory."
   :group 'psvn-faces)
 
+;not based on anything, may be horribly ugly!
+(defface svn-status-symlink-face
+  '((((class color) (background light)) (:foreground "cornflower blue"))
+    (((class color) (background dark)) (:foreground "cyan")))
+  "Face for symlinks in *svn-status* buffers.
+
+This is the face given to the actual link (i.e., the versioned item),
+the target of the link gets either `svn-status-filename-face' or
+`svn-status-directory-face'."
+  :group 'psvn-faces)
+
 ;based on font-lock-warning-face
 (defface svn-status-locked-face
   '((t
@@ -846,7 +857,8 @@ If there is no .svn directory, examine if there is SVN and run
   (setq dir (file-name-as-directory dir))
   (when svn-status-load-state-before-svn-status
     (unless (string= dir (car svn-status-directory-history))
-      (svn-status-load-state t)))
+      (let ((default-directory dir))    ;otherwise svn-status-base-dir looks in the wrong place
+        (svn-status-load-state t))))
   (setq svn-status-directory-history (delete dir svn-status-directory-history))
   (add-to-list 'svn-status-directory-history dir)
   (if (string= (buffer-name) svn-status-buffer-name)
@@ -1007,8 +1019,9 @@ can edit ARGLIST before running svn."
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
                   (svn-process-sentinel-fixup-path-seperators)
+                  (svn-status-apply-elide-list)
                   (svn-parse-status-result)
-                  (set-buffer act-buf)
+                  ;(set-buffer act-buf) ; THIS LINE NOT NEEDED? s-s-u-b does (set-buffer *svn-status*)
                   (svn-status-update-buffer)
                   (when svn-status-update-previous-process-output
                     (set-buffer (process-buffer process))
@@ -1206,8 +1219,16 @@ The results are used to build the `svn-status-info' variable."
           ;; [ie the directory in (match-string 1)]
           ;; we should parse it, and merge the info with what we have already know
           ;; but for now just ignore the line completely
-          (forward-line)
-          )
+          ; (forward-line)
+          ;;  Actually, this seems to not always be the case
+          ;;  I have an example where we are in an svn:external which
+          ;;  is itself inside a svn:external, this need not be true:
+          ;;  the next line is not 'X dir' but just 'dir', so we
+          ;;  actually need to parse that line, or the results will
+          ;;  not contain dir!
+          ;; so we should merge lines 'X dir' with ' dir', but for now
+          ;; we just leave both in the results
+          nil)
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))
                 svn-file-mark (elt svn-marks 0)         ; 1st column - M,A,C,D,G,? etc
@@ -2113,27 +2134,28 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                         (make-string (* 2 (svn-status-count-/
                                            (svn-status-line-info->filename line-info)))
                                      32))
-                      (svn-status-choose-face-to-add
-                       (svn-status-line-info->directory-p line-info)
-                       (svn-status-line-info->filename-nondirectory line-info)
-                       'svn-status-directory-face
-                       'svn-status-filename-face)
-                      ;; if it's a symlkink, add '-> target'
+                      ;;symlinks get a different face
                       (let ((target (svn-status-line-info->symlink-p line-info)))
-                        (when target
-                          (concat " -> "
-                                  ;; add face to target: could maybe
-                                  ;; use different faces for
-                                  ;; unversioned targets?
-                                  (svn-status-choose-face-to-add
-                                   (file-directory-p target)
-                                   (file-relative-name
-                                    target
-                                    (svn-status-line-info->directory-containing-line-info
-                                     line-info t)); name relative to dir of line-info, not '.'
-                                   'svn-status-directory-face
-                                   'svn-status-filename-face)
-                                  )))
+                        (if target
+                            ;; name -> trget
+                            ;; name gets symlink-face, target gets file/directory face
+                            (concat
+                             (svn-add-face (svn-status-line-info->filename-nondirectory line-info)
+                                           'svn-status-symlink-face)
+                             " -> "
+                             (svn-status-choose-face-to-add
+                              ;; TODO: could use different faces for
+                              ;; unversioned targets and broken symlinks?
+                              (svn-status-line-info->directory-p line-info)
+                              target
+                              'svn-status-directory-face
+                              'svn-status-filename-face))
+                          ;; else target is not a link
+                          (svn-status-choose-face-to-add
+                           (svn-status-line-info->directory-p line-info)
+                           (svn-status-line-info->filename-nondirectory line-info)
+                           'svn-status-directory-face
+                           'svn-status-filename-face)))
                       ))
         (elide-hint (if (svn-status-line-info->show-user-elide-continuation line-info) " ..." "")))
     (svn-puthash (svn-status-line-info->filename line-info)
@@ -4003,6 +4025,7 @@ Return nil, if not in a svn working copy."
   (interactive)
   (let ((buf (find-file (concat (svn-status-base-dir) "++psvn.state"))))
     (erase-buffer)        ;Widen, because we'll save the whole buffer.
+    ;; TO CHECK: why is svn-status-options a global variable??
     (setq svn-status-options
           (list
            (list "svn-trac-project-root" svn-trac-project-root)
@@ -4031,12 +4054,16 @@ Return nil, if not in a svn working copy."
                 (nth 1 (assoc "module-name" svn-status-options)))
           (when (and (interactive-p) svn-status-elided-list (svn-status-apply-elide-list)))
           (message "psvn.el: loaded %s" file))
-      (unless no-error (error "psvn.el: %s is not readable." file)))))
+      (if no-error
+          (setq svn-trac-project-root nil
+                svn-status-elided-list nil
+                svn-status-module-name nil)
+        (error "psvn.el: %s is not readable." file)))))
 
 (defun svn-status-toggle-sort-status-buffer ()
   "Toggle sorting of the *svn-status* buffer.
 
-If you turn off sorting, you can speed up \[svn-status].  However,
+If you turn off sorting, you can speed up \\[svn-status].  However,
 the buffer is not correctly sorted then.  This function will be
 removed again, when a faster parsing and display routine for
 `svn-status' is available."
