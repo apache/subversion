@@ -1922,6 +1922,11 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <replaced>"))
           ((equal action 'updated)
            (setq tag-string " <updated>"))
+          ((equal action 'conflicted)
+           (setq tag-string " <conflicted>")
+           (svn-status-line-info->set-filemark line-info ?C))
+          ((equal action 'merged)
+           (setq tag-string " <merged>"))
           ((equal action 'propset)
            ;;(setq tag-string " <propset>")
            (svn-status-line-info->set-propmark line-info svn-status-file-modified-after-save-flag))
@@ -1932,7 +1937,7 @@ When called with the prefix argument 0, use the full path name."
            (svn-status-line-info->set-filemark line-info ?D))
           (t
            (error "Unknown action '%s for %s" action (svn-status-line-info->filename line-info))))
-    (when tag-string
+    (when (and tag-string (not (member action '(conflicted merged))))
       (svn-status-line-info->set-filemark line-info ? )
       (svn-status-line-info->set-propmark line-info ? ))
     (let ((buffer-read-only nil))
@@ -2048,6 +2053,11 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
               ((looking-at "D")
                (setq skip t))
                ;;(setq action 'deleted)) ;;deleted files are not displayed in the svn status output.
+              ((looking-at "C")
+               (setq action 'conflicted))
+              ((looking-at "G")
+               (setq action 'merged))
+
               (t ;; this should never be needed(?)
                (setq action 'unknown)))
         (unless skip ;found an interesting line
