@@ -37,6 +37,7 @@
 #include "svn_props.h"
 #include "svn_io.h"
 #include "svn_hash.h"
+#include "svn_mergeinfo.h"
 #include "svn_wc.h"
 #include "svn_utf.h"
 
@@ -456,6 +457,65 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
 /*** Merging propchanges into the working copy ***/
 
 
+/* Parse FROM_PROP_VAL and TO_PROP_VAL into merge info hashes, and
+   calculate the deltas between them. */
+static svn_error_t *
+diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
+                     const svn_string_t *from_prop_val,
+                     const svn_string_t *to_prop_val, apr_pool_t *pool)
+{
+  /* ### This check only seems to be necessary in one spot.  Dump it? */
+  if (svn_string_compare(from_prop_val, to_prop_val))
+    {
+      /* Don't bothering parsing identical merge info. */
+      *deleted = apr_hash_make(pool);
+      *added = apr_hash_make(pool);
+    }
+  else
+    {
+      apr_hash_t *from, *to;
+      SVN_ERR(svn_mergeinfo_parse(from_prop_val->data, &from, pool));
+      SVN_ERR(svn_mergeinfo_parse(to_prop_val->data, &to, pool));
+      SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Transform MERGEINFO into a textual representation, and store in
+   *OUTPUT. */
+static svn_error_t *
+mergeinfo_to_string(const svn_string_t **output, apr_hash_t *mergeinfo,
+                    apr_pool_t *pool)
+{
+  svn_stringbuf_t *prop_val;
+  SVN_ERR(svn_mergeinfo_to_string(&prop_val, mergeinfo, pool));
+  /* ### This conversion is somewhat wasteful.  It might be avoided by
+     ### restructuring the arguments of the callers, or the
+     ### svn_mergeinfo.h API. */
+  *output = svn_string_create_from_buf(prop_val, pool);
+  return SVN_NO_ERROR;
+}
+
+/* Parse the merge info from PROP_VAL1 and PROP_VAL2, combine it, then
+   reconstitute it into *OUTPUT.  Call when the WC's merge info has
+   been modified to combine it with incoming merge info from the
+   repos. */
+static svn_error_t *
+combine_mergeinfo_props(const svn_string_t **output,
+                        const svn_string_t *prop_val1,
+                        const svn_string_t *prop_val2,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *mergeinfo1, *mergeinfo2, *combined_mergeinfo;
+  SVN_ERR(svn_mergeinfo_parse(prop_val1->data, &mergeinfo1, pool));
+  SVN_ERR(svn_mergeinfo_parse(prop_val2->data, &mergeinfo2, pool));
+  SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, mergeinfo1, mergeinfo2,
+                              pool));
+  SVN_ERR(mergeinfo_to_string(output, combined_mergeinfo, pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,
                    const char *path,
@@ -622,12 +682,20 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
               else
                 {
-                  conflict =
-                    svn_string_createf 
-                    (pool, 
-                     _("Trying to add new property '%s' with value '%s',\n"
-                       "but property already exists with value '%s'."),
-                     propname, to_val->data, working_val->data);
+                  /* The WC difference doesn't match the new value. */
+                  if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+                    {
+                      SVN_ERR(combine_mergeinfo_props(&to_val, working_val,
+                                                      to_val, pool));
+                    }
+                  else
+                    {
+                        conflict = svn_string_createf(pool, 
+                            _("Trying to add new property '%s' with value "
+                              "'%s',\nbut property already exists with value "
+                              "'%s'."), propname, to_val->data,
+                              working_val->data);
+                    }
                 }
             }
           
@@ -645,12 +713,25 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
             {
               if (to_val)
                 {
-                  conflict =
-                    svn_string_createf 
-                    (pool, 
-                     _("Trying to change property '%s' from '%s' to '%s',\n"
-                       "but the property does not exist."),
-                     propname, from_val->data, to_val->data);
+                  if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+                    {
+                      /* Discover any merge info additions in the
+                         incoming value relative to the base, and
+                         "combine" those with the empty WC value. */
+                      apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
+                      SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
+                                                   &added_mergeinfo,
+                                                   from_val, to_val, pool));
+                      SVN_ERR(mergeinfo_to_string(&to_val, added_mergeinfo,
+                                                  pool));
+                    }
+                  else
+                    {
+                      conflict = svn_string_createf(pool,
+                        _("Trying to change property '%s' from '%s' to '%s',"
+                          "\nbut the property does not exist."),
+                        propname, from_val->data, to_val->data);
+                    }
                 }
               else
                 {
@@ -674,11 +755,26 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
               else if (!to_val && !svn_string_compare(from_val, working_val))
                 {
-                  conflict =
-                    svn_string_createf
-                    (pool, _("Trying to delete property '%s' but value"
-                             " has been modified from '%s' to '%s'."),
-                     propname, from_val->data, working_val->data);
+                  if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+                    {
+                        /* Discover any merge info additions in the WC
+                           value relative to the base, and "combine"
+                           those with the empty incoming value. */
+                        apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
+                        SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
+                                                     &added_mergeinfo,
+                                                     from_val, working_val,
+                                                     pool));
+                        SVN_ERR(mergeinfo_to_string(&to_val, added_mergeinfo,
+                                                    pool));
+                      }
+                    else
+                      {
+                        conflict = svn_string_createf(pool,
+                          _("Trying to delete property '%s' but value"
+                            " has been modified from '%s' to '%s'."),
+                          propname, from_val->data, working_val->data);
+                      }
                 }
 
               else if (svn_string_compare(working_val, to_val))
@@ -691,12 +787,49 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                 }
               else /* property has some random value */
                 {
-                  conflict =
-                    svn_string_createf 
-                    (pool, 
-                     _("Trying to change property '%s' from '%s' to '%s',\n"
-                       "but property already exists with value '%s'."),
-                     propname, from_val->data, to_val->data, working_val->data);
+                  if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+                    {
+                      /* We have base, WC, and new values.  Discover
+                        deltas between base <-> WC, and base <->
+                        incoming.  Combine those deltas, and apply
+                        them to base to get the new value. */
+                      apr_hash_t *combined_mergeinfo, *from_mergeinfo,
+                        *l_deleted, *l_added, *r_deleted, *r_added,
+                        *deleted, *added;
+
+                      /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
+                      SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added,
+                                                   from_val, working_val,
+                                                   pool));
+                      SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added,
+                                                   from_val, to_val,
+                                                   pool));
+                      SVN_ERR(svn_mergeinfo_merge(&deleted, l_deleted,
+                                                  r_deleted, pool));
+                      SVN_ERR(svn_mergeinfo_merge(&added, l_added,
+                                                  r_added, pool));
+
+                      /* Apply the combined deltas to the base. */
+                      SVN_ERR(svn_mergeinfo_parse(from_val->data,
+                                                  &from_mergeinfo, pool));
+                      SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo,
+                                                  from_mergeinfo, added,
+                                                  pool));
+                      SVN_ERR(svn_mergeinfo_remove(&combined_mergeinfo,
+                                                   deleted, combined_mergeinfo,
+                                                   pool));
+
+                      SVN_ERR(mergeinfo_to_string(&to_val, combined_mergeinfo,
+                                                  pool));
+                    }
+                  else
+                    {
+                      conflict = svn_string_createf(pool, 
+                        _("Trying to change property '%s' from '%s' to '%s',\n"
+                          "but property already exists with value '%s'."),
+                        propname, from_val->data, to_val->data,
+                        working_val->data);
+                    }
                 }
             }
         }
