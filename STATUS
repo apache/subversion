@@ -4,7 +4,7 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.3.2:
+Status of 1.3.3:
 ================
 
 Candidate changes:
@@ -40,6 +40,13 @@ Candidate changes:
      with buffered files: Potential repository corruption with FSFS.
    Votes:
      +1: dionisos
+
+  * r19968
+    Widen SWIG requirement to 1.3.29.
+    Justification:
+      It seems to work, according to the testsuites.
+    Votes:
+      +1: maxb
 
 Approved changes:
 
