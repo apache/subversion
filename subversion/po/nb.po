@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-05-31 12:25+0200\n"
-"PO-Revision-Date: 2006-03-15 22:21+0100\n"
+"PO-Revision-Date: 2006-06-06 12:22+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -880,7 +880,7 @@ msgstr "Kan ikke beregne «blame»-informasjon for binær fil «%s»"
 
 #: libsvn_client/blame.c:567
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "«blame» for ARBEID-revisjonen er ikke støttet"
 
 #: libsvn_client/blame.c:580
 msgid "Start revision must precede end revision"
@@ -1295,9 +1295,9 @@ msgid "Cannot read entry for '%s'"
 msgstr "Kan ikke lese post for «%s»"
 
 #: libsvn_client/info.c:379 libsvn_client/info.c:404 libsvn_client/info.c:414
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' non-existent in revision %ld"
-msgstr "URLen «%s» finnes ikke i revisjon «%ld»"
+msgstr "URLen «%s» finnes ikke i revisjon %ld"
 
 #: libsvn_client/list.c:225
 #, c-format
@@ -1335,7 +1335,7 @@ msgstr "Mangler påkrevet revisjonsspesifikasjon"
 
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
-msgstr ""
+msgstr "Revisjonstype krever en sti i arbeidskopien, ikke en URL"
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
@@ -1374,9 +1374,9 @@ msgid "Value will not be set unless forced"
 msgstr "Verdien blir ikke satt uten tvang"
 
 #: libsvn_client/prop_commands.c:499
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' does not exist in revision %ld"
-msgstr "Filstien «%s» finnes ikke i revisjon %ld"
+msgstr "«%s» finnes ikke i revisjon %ld"
 
 #: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:765
 #, c-format
@@ -2969,49 +2969,42 @@ msgid "File doesn't exist on HEAD"
 msgstr "Filen finnes ikke i HEAD-revisjonen"
 
 #: libsvn_ra_serf/locks.c:354
-#, fuzzy, c-format
+#, c-format
 msgid "Lock request failed: %d %s"
-msgstr "Låseforespørsel feilet"
+msgstr "Låseforespørsel feilet: %d %s"
 
 #: libsvn_ra_serf/locks.c:703
-#, fuzzy, c-format
+#, c-format
 msgid "Unlock request failed: %d %s"
-msgstr "«Lås opp»-forespørsel feilet"
+msgstr "«Lås opp»-forespørsel feilet: %d %s"
 
 #: libsvn_ra_serf/replay.c:204
-#, fuzzy
 msgid "Missing revision attr in delete-entry element"
 msgstr "Mangler revisjonsattributt i «delete-entry»-element"
 
 #: libsvn_ra_serf/replay.c:224
-#, fuzzy
 msgid "Missing path attr in open-directory element"
-msgstr "Mangler navnattributt i «open-directory»-element"
+msgstr "Mangler stiattributt i «open-directory»-element"
 
 #: libsvn_ra_serf/replay.c:230
-#, fuzzy
 msgid "Missing revision attr in open-directory element"
-msgstr "Mangler revisjonsattributt i «open-root»-element"
+msgstr "Mangler revisjonsattributt i «open-directory»-element"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing path attr in add-directory element"
-msgstr "Mangler navnattributt i «open-directory»-element"
+msgstr "Mangler stiattributt i «add-directory»-element"
 
 #: libsvn_ra_serf/replay.c:285
-#, fuzzy
 msgid "Missing name attr in open-file element"
-msgstr "Mangler navnattributt i «open-directory»-element"
+msgstr "Mangler navnattributt i «open-file»-element"
 
 #: libsvn_ra_serf/replay.c:291
-#, fuzzy
 msgid "Missing revision attr in open-file element"
-msgstr "Mangler revisjonsattributt i «open-root»-element"
+msgstr "Mangler revisjonsattributt i «open-file»-element"
 
 #: libsvn_ra_serf/replay.c:311
-#, fuzzy
 msgid "Missing name attr in add-file element"
-msgstr "Mangler navnattributt i «%s»-element"
+msgstr "Mangler navnattributt i «add-file»-element"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -3028,13 +3021,13 @@ msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versjonen av RA-lasteren (%d) for ra_serf støttes ikke"
 
 #: libsvn_ra_serf/update.c:2111
-#, fuzzy, c-format
+#, c-format
 msgid "Error retrieving REPORT (%d)"
-msgstr "Feil under henting av REPORT"
+msgstr "Feil under henting av REPORT (%d)"
 
 #: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
-msgstr ""
+msgstr "For tidlig filslutt mottatt fra tjener"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -4649,25 +4642,23 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "Oppføringen «%s» har ugyldig «%s»-verdi"
 
 #: libsvn_wc/entries.c:111
-#, fuzzy
 msgid "Invalid escape sequence"
-msgstr "Ugyldig klargjøring"
+msgstr "Ugyldig escape-sekvens"
 
+# ### FIXME: Find a proper translation for “escaped”.
 #: libsvn_wc/entries.c:118
-#, fuzzy
 msgid "Invalid escaped character"
-msgstr "Ugyldig endringstype"
+msgstr "Ugyldig beskyttet («escaped») tegn"
 
 #: libsvn_wc/entries.c:136 libsvn_wc/entries.c:165 libsvn_wc/entries.c:191
 #: libsvn_wc/entries.c:203
-#, fuzzy
 msgid "Unexpected end of entry"
-msgstr "Uventet slutt på svndiff-inndata"
+msgstr "Uventet slutt på post"
 
 #: libsvn_wc/entries.c:225
 #, c-format
 msgid "Invalid value for field '%s'"
-msgstr ""
+msgstr "Ugyldig verdi i felt «%s»"
 
 #: libsvn_wc/entries.c:307 libsvn_wc/entries.c:533
 #, c-format
@@ -4697,24 +4688,22 @@ msgid "Default entry is missing URL"
 msgstr "Standardoppføringen mangler adresse"
 
 #: libsvn_wc/entries.c:1076
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "Feil under skriving av postfil for «%s»"
+msgstr "Ugyldig versjonslinje i «entries»-fil for «%s»"
 
 #: libsvn_wc/entries.c:1093
-#, fuzzy
 msgid "Missing entry terminator"
-msgstr "Mangler standardoppføring"
+msgstr "Mangler postavslutning"
 
 #: libsvn_wc/entries.c:1096
-#, fuzzy
 msgid "Invalid entry terminator"
-msgstr "Ugyldig forflytning"
+msgstr "Ugyldig postavslutning"
 
 #: libsvn_wc/entries.c:1100
-#, fuzzy, c-format
+#, c-format
 msgid "Error at entry %d in entries file for '%s':"
-msgstr "Feil under skriving av postfil for «%s»"
+msgstr "Feil i post %d i «entries»-fil for «%s»:"
 
 #: libsvn_wc/entries.c:1196
 #, c-format
@@ -4978,9 +4967,8 @@ msgid "Error modifying entry of '%s'"
 msgstr "Feil under endring av oppføringen på «%s»"
 
 #: libsvn_wc/log.c:1423
-#, fuzzy
 msgid "Invalid 'format' attribute"
-msgstr "Ugyldig verdi i innstilling"
+msgstr "Ugyldig «format»-attributt"
 
 #: libsvn_wc/log.c:1458
 #, c-format
@@ -5068,9 +5056,9 @@ msgstr ""
 "men egenskapen finnes allerede med verdien «%s»."
 
 #: libsvn_wc/props.c:880
-#, fuzzy, c-format
+#, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "Mangler «revisjon»-attributt for «%s»"
+msgstr "Mangler linjeslutt i «wcprops»-fil for «%s»"
 
 #: libsvn_wc/props.c:1064 libsvn_wc/props.c:1100 libsvn_wc/props.c:1370
 #: libsvn_wc/props.c:1627
@@ -5289,9 +5277,8 @@ msgid "Can't open stderr"
 msgstr "Kan ikke åpne for standardfeil"
 
 #: svn/diff-cmd.c:184
-#, fuzzy
 msgid "'--new' option only valid with '--old' option"
-msgstr "«new»-valget er bare gyldig sammen med «old»-valget"
+msgstr "«--new»-valget er bare gyldig sammen med «--old»-valget"
 
 #: svn/diff-cmd.c:214
 #, c-format
@@ -5953,7 +5940,6 @@ msgstr ""
 "     umiddelbar innsending.\n"
 
 #: svn/main.c:294
-#, fuzzy
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5983,8 +5969,8 @@ msgid ""
 msgstr ""
 "Vis forskjellene mellom to revisjoner eller stier.\n"
 "bruk: 1. diff [-c M | -r N[:M]] [MÅL[@REV]...]\n"
-"      2. diff [-c M | -r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL"
-"[@NYREV]] \\\n"
+"      2. diff [-r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] "
+"\\\n"
 "              [STI...]\n"
 "      3. diff GML-URL[@GMLREV] NY-URL[@NYREV]\n"
 "\n"
@@ -6003,8 +5989,7 @@ msgstr ""
 "     NYTT-MÅL kan være arbeidskopi-stier eller URL[@REV]. NYTT-MÅL sin\n"
 "     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV sin\n"
 "     standardverdi til N, -r N:M setter GMLREV sin standardverdi til N\n"
-"     og NYREV sin til M, -c M setter GMLREV til M-1 som standard og NYREV\n"
-"     til M. -c -M setter standardverdien for GMLREV til M og NYREV til M-1.\n"
+"     og NYREV sin til M.\n"
 "\n"
 "  3. Kortform for «svn diff --old=GML-URL[@GMLREV] --new=NY-URL[@NYREV]».\n"
 "\n"
@@ -6078,7 +6063,6 @@ msgstr ""
 "  under URL.\n"
 
 #: svn/main.c:369
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -6088,10 +6072,11 @@ msgid ""
 "  determines in which revision the target is first looked up.\n"
 msgstr ""
 "Viser informasjon om et lokalt eller fjerntliggende element.\n"
-"bruk: info [MÅL...]\n"
+"bruk: info [MÅL[@REV]...]\n"
 "\n"
 "  Viser informasjon om hvert MÅL («.» er standard).\n"
-"  MÅL kan enten være en sti i arbeidskopien eller en URL.\n"
+"  MÅL kan enten være en sti i arbeidskopien eller en URL. Hvis spesifisert,\n"
+"  avgjør REV i hvilken revisjon målet først blir letet opp.\n"
 
 #: svn/main.c:379
 msgid ""
@@ -6157,7 +6142,6 @@ msgid "specify lock comment ARG"
 msgstr "angi låsekommentar ARG"
 
 #: svn/main.c:413
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6187,13 +6171,14 @@ msgid ""
 msgstr ""
 "Viser loggmeldinger for revisjoner og/eller filer.\n"
 "bruk: 1. log [STI]\n"
-"      2. log URL [STI...]\n"
+"      2. log URL[@REV] [STI...]\n"
 "\n"
 "  1. Viser loggmelding for en lokal filsti («.» er standard).\n"
 "     Standard revisjonsområde er BASE:1.\n"
 "\n"
 "  2. Viser loggmeldinger for STIene («.» er standard) under URL.\n"
-"     Standard revisjonsområde er HEAD:1.\n"
+"     Hvis spesifisert, angir REV i hvilken revisjon URLen først blir\n"
+"     letet opp. Standard revisjonsområde er HEAD:1.\n"
 "\n"
 "  Hvis -v brukes, vises alle berørte filstier med hver sin loggmelding.\n"
 "  Hvis -q brukes, skrives ikke loggmelding (kan brukes sammen med -v).\n"
@@ -6771,9 +6756,8 @@ msgid "Non-numeric limit argument given"
 msgstr "Ikke-numerisk begrensningsargument angitt"
 
 #: svn/main.c:900
-#, fuzzy
 msgid "Argument to --limit must be positive"
-msgstr "Argumentet til -c må være et positivt tall"
+msgstr "Argumentet til --limit må være et positivt tall"
 
 #: svn/main.c:920
 msgid ""
@@ -6785,7 +6769,7 @@ msgstr ""
 
 #: svn/main.c:928 svn/main.c:1120
 msgid "Can't specify -c with --old"
-msgstr ""
+msgstr "Kan ikke spesifisere -c med --old"
 
 #: svn/main.c:935
 msgid "Non-numeric change argument given to -c"
@@ -8343,13 +8327,12 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "Skriv «%s --help» for bruk.\n"
 
 #: svnserve/main.c:186
-#, fuzzy
 msgid ""
 "usage: svnserve [options]\n"
 "\n"
 "Valid options:\n"
 msgstr ""
-"Bruk: svnserve [valg]\n"
+"bruk: svnserve [valg]\n"
 "\n"
 "Lovlige valg:\n"
 
@@ -8423,13 +8406,13 @@ msgid "Failed to connect to Service Control Manager"
 msgstr "Klarte ikke å koble til Service Control Manager"
 
 #: svnserve/winservice.c:411
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service"
 msgstr ""
 "Tjenesten klarte ikke å starte; en intern feil oppsto under oppstart av "
-"tjenesten."
+"tjenesten"
 
 #: svnsync/main.c:64
 msgid ""
