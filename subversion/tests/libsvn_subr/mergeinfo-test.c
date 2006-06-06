@@ -132,7 +132,7 @@ test_parse_single_line_mergeinfo(const char **msg,
   return SVN_NO_ERROR;
 }
 
-const char *single_mergeinfo = "/trunk: 5,7-9,10,11,13,14";
+static const char *single_mergeinfo = "/trunk: 5,7-9,10,11,13,14";
 
 static svn_error_t *
 test_parse_combine_rangeinfo(const char **msg,
