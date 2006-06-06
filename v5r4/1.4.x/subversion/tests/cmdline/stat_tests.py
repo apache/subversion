@@ -909,9 +909,9 @@ def status_dash_u_missing_dir(sbox):
             "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
             "Status against revision:      1\n" ]
   else:
-    xout = ["       *            " + os.path.join(a_d_g, "tau") + "\n",
+    xout = ["       *            " + os.path.join(a_d_g, "rho") + "\n",
             "       *            " + os.path.join(a_d_g, "pi") + "\n",
-            "       *            " + os.path.join(a_d_g, "rho") + "\n",
+            "       *            " + os.path.join(a_d_g, "tau") + "\n",
             "!      *       ?    " + a_d_g + "\n",
             "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
             "Status against revision:      1\n" ]

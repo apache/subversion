@@ -1097,7 +1097,7 @@ def repos_to_wc(sbox):
 def copy_to_root(sbox):
   'copy item to root of repository'
 
-  sbox.build()
+  sbox.build(create_wc = False)
 
   root = svntest.main.current_repo_url
   mu = root + '/A/mu'
@@ -1509,7 +1509,7 @@ def double_uri_escaping_1814(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-
+  
   base_url = svntest.main.current_repo_url + '/base'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'mybase',
@@ -1669,8 +1669,7 @@ def wc_to_wc_copy_deleted(sbox):
 def url_to_non_existent_url_path(sbox):
   "svn cp src-URL non-existent-URL-path"
 
-  sbox.build()
-  wc_dir = sbox.wc_dir
+  sbox.build(create_wc = False)
 
   dirURL1 = svntest.main.current_repo_url + "/A/B/E"
   dirURL2 = svntest.main.current_repo_url + "/G/C/E/I"
@@ -1700,7 +1699,7 @@ def url_to_non_existent_url_path(sbox):
 def non_existent_url_to_url(sbox):
   "svn cp oldrev-of-deleted-URL URL"
 
-  sbox.build()
+  sbox.build(create_wc = False)
 
   adg_url = svntest.main.current_repo_url + '/A/D/G'
   pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
@@ -1717,7 +1716,7 @@ def non_existent_url_to_url(sbox):
 def old_dir_url_to_url(sbox):
   "test URL to URL copying edge case"
 
-  sbox.build()
+  sbox.build(create_wc = False)
 
   adg_url = svntest.main.current_repo_url + '/A/D/G'
   pi_url = svntest.main.current_repo_url + '/A/D/G/pi'

@@ -41,7 +41,7 @@ Item = svntest.wc.StateItem
 
 def export_empty_directory(sbox):
   "export an empty directory"
-  sbox.build()
+  sbox.build(create_wc = False)
   
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir
@@ -52,7 +52,7 @@ def export_empty_directory(sbox):
 
 def export_greek_tree(sbox):
   "export the greek tree"
-  sbox.build()
+  sbox.build(create_wc = False)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir

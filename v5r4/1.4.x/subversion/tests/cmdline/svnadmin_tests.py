@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -299,7 +299,7 @@ def dump_move_dir_modify_child(sbox):
 def dump_quiet(sbox):
   "'svnadmin dump --quiet'"
 
-  sbox.build()
+  sbox.build(create_wc = False)
 
   output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
   svntest.actions.compare_and_display_lines(

@@ -40,6 +40,7 @@ convert_file subversion/tests/cmdline/svntest/main.py
 convert_file subversion/tests/cmdline/svntest/testcase.py
 convert_file subversion/tests/cmdline/svntest/tree.py
 convert_file subversion/tests/cmdline/svntest/wc.py
+convert_file subversion/tests/cmdline/authz_tests.py
 convert_file subversion/tests/cmdline/autoprop_tests.py 
 convert_file subversion/tests/cmdline/basic_tests.py    
 convert_file subversion/tests/cmdline/blame_tests.py    
