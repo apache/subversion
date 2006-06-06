@@ -112,7 +112,7 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(self.log_message, "More directories.")    
     self.assertEqual(len(self.changed_paths), 3)
     for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
-      self.assertTrue(self.changed_paths.has_key(dir))
+      self.assert_(self.changed_paths.has_key(dir))
       self.assertEqual(self.changed_paths[dir].action, 'A')
 
 def suite():
