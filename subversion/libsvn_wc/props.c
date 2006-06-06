@@ -515,6 +515,36 @@ combine_mergeinfo_props(const svn_string_t **output,
   return SVN_NO_ERROR;
 }
 
+/* Perform a 3-way merge operation on merge info. */
+static svn_error_t *
+combine_forked_mergeinfo_props(const svn_string_t **output,
+                               const svn_string_t *from_prop_val,
+                               const svn_string_t *working_prop_val,
+                               const svn_string_t *to_prop_val,
+                               apr_pool_t *pool)
+{
+  apr_hash_t *combined_mergeinfo, *from_mergeinfo,
+    *l_deleted, *l_added, *r_deleted, *r_added, *deleted, *added;
+
+  /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
+  SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
+                               working_prop_val, pool));
+  SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added, from_prop_val,
+                               to_prop_val, pool));
+  SVN_ERR(svn_mergeinfo_merge(&deleted, l_deleted, r_deleted, pool));
+  SVN_ERR(svn_mergeinfo_merge(&added, l_added, r_added, pool));
+
+  /* Apply the combined deltas to the base. */
+  SVN_ERR(svn_mergeinfo_parse(from_prop_val->data, &from_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, from_mergeinfo, added,
+                              pool));
+  SVN_ERR(svn_mergeinfo_remove(&combined_mergeinfo, deleted,
+                               combined_mergeinfo, pool));
+
+  SVN_ERR(mergeinfo_to_string(output, combined_mergeinfo, pool));
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,
@@ -793,34 +823,9 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                         deltas between base <-> WC, and base <->
                         incoming.  Combine those deltas, and apply
                         them to base to get the new value. */
-                      apr_hash_t *combined_mergeinfo, *from_mergeinfo,
-                        *l_deleted, *l_added, *r_deleted, *r_added,
-                        *deleted, *added;
-
-                      /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
-                      SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added,
-                                                   from_val, working_val,
-                                                   pool));
-                      SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added,
-                                                   from_val, to_val,
-                                                   pool));
-                      SVN_ERR(svn_mergeinfo_merge(&deleted, l_deleted,
-                                                  r_deleted, pool));
-                      SVN_ERR(svn_mergeinfo_merge(&added, l_added,
-                                                  r_added, pool));
-
-                      /* Apply the combined deltas to the base. */
-                      SVN_ERR(svn_mergeinfo_parse(from_val->data,
-                                                  &from_mergeinfo, pool));
-                      SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo,
-                                                  from_mergeinfo, added,
-                                                  pool));
-                      SVN_ERR(svn_mergeinfo_remove(&combined_mergeinfo,
-                                                   deleted, combined_mergeinfo,
-                                                   pool));
-
-                      SVN_ERR(mergeinfo_to_string(&to_val, combined_mergeinfo,
-                                                  pool));
+                      combine_forked_mergeinfo_props(&to_val, from_val,
+                                                     working_val, to_val,
+                                                     pool);
                     }
                   else
                     {
