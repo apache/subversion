@@ -36,6 +36,13 @@ Candidate changes:
    Votes:
      +1: djh, brane
 
+ * r19963
+   Fix multiple definitions of copy test mv_unversioned_file.
+   Justification:
+     Corrects expected regression test suite coverage.
+   Votes:
+     +1: dlr
+
 
 Approved changes:
 
