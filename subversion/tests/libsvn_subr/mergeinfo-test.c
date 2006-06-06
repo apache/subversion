@@ -233,6 +233,66 @@ test_parse_multi_line_mergeinfo(const char **msg,
 
 
 static svn_error_t *
+test_diff_mergeinfo(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *rangelist;
+  svn_merge_range_t *range;
+  apr_hash_t *deleted, *added, *from, *to;
+  svn_merge_range_t expected_deletions[2] = { {1, 2}, {4, 4} };
+  svn_merge_range_t expected_additions[2] = { {5, 5}, {7, 8} };
+
+  *msg = "diff of mergeinfo";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  from = apr_hash_make(pool);
+  to = apr_hash_make(pool);
+  /* On /trunk: deleted (1, 2, 4) and added (5, 7, 8) */
+  apr_hash_set(from, "/trunk", APR_HASH_KEY_STRING, "1-4");
+  apr_hash_set(to, "/trunk", APR_HASH_KEY_STRING, "3,5,7-8");
+
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
+
+  if (apr_hash_count(deleted) != 1 || apr_hash_count(added) != 1)
+    return fail(pool, "svn_mergeinfo_diff failed to calculate the "
+                "correct number of path deltas");
+
+  /* Verify calculation of deletion deltas. */
+  rangelist = apr_hash_get(deleted, "/trunk", APR_HASH_KEY_STRING);
+  if (rangelist->nelts != 2)
+    return fail(pool, "svn_mergeinfo_diff failed to calculate the "
+                "correct number of revision deletions");
+  for (i = 0; i < rangelist->nelts - 1; i++)
+    {
+      range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      if (range->start != expected_deletions[i].start ||
+          range->end != expected_deletions[i].end)
+        return fail(pool, "svn_mergeinfo_diff failed to calculate the "
+                    "correct merge range");
+    }
+
+  /* Verify calculation of addition deltas. */
+  rangelist = apr_hash_get(added, "/trunk", APR_HASH_KEY_STRING);
+  if (rangelist->nelts != 2)
+    return fail(pool, "svn_mergeinfo_diff failed to calculate the "
+                "correct number of revision additions");
+  for (i = 0; i < rangelist->nelts - 1; i++)
+    {
+      range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      if (range->start != expected_additions[i].start ||
+          range->end != expected_additions[i].end)
+        return fail(pool, "svn_mergeinfo_diff failed to calculate the "
+                    "correct merge range");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_merge_mergeinfo(const char **msg,
                      svn_boolean_t msg_only,
                      svn_test_opts_t *opts,
@@ -368,6 +428,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_combine_rangeinfo),
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
+    SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_remove_mergeinfo),
     SVN_TEST_PASS(test_rangelist_to_string),
