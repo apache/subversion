@@ -374,14 +374,105 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
   return SVN_NO_ERROR;
 }
 
+
+/* Output deltas via *DELETED and *ADDED, which will never be @c NULL.
+
+   The following diagrams illustrate some common range delta scenarios:
+
+    (from)           deleted
+    r0 <===========(=========)============[=========]===========> rHEAD
+    [to]                                    added
+
+    (from)           deleted                deleted
+    0 <===========(=========[============]=========)===========> rHEAD
+    [to]
+
+    (from)           deleted
+    r0 <===========(=========[============)=========]===========> rHEAD
+    [to]                                    added
+
+    (from)                                  deleted
+    r0 <===========[=========(============]=========)===========> rHEAD
+    [to]             added
+
+    (from)
+    r0 <===========[=========(============)=========]===========> rHEAD
+    [to]             added                  added
+*/
+static svn_error_t *
+svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
+                   apr_array_header_t *from, apr_array_header_t *to,
+                   apr_pool_t *pool)
+{
+  int i;
+
+  *deleted = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *added = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+
+  /* ### TODO */
+
+  return SVN_NO_ERROR;
+}
+
+/* ### TODO: Merge implementation with
+   ### libsvn_subr/sorts.c:svn_prop_diffs().  Factor out a generic
+   ### hash diffing function for addition to APR's apr_hash.h API. */
 svn_error_t *
 svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool)
 {
+  apr_hash_index_t *hi;
+
+  const void *key;
+  void *val;
+  const char *path;
+  apr_array_header_t *from_rangelist, *to_rangelist;
+
   *deleted = apr_hash_make(pool);
   *added = apr_hash_make(pool);
 
-  /* ### TODO: Implement me! */
+  /* Handle path deletions and differences. */
+  for (hi = apr_hash_first(pool, from); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      from_rangelist = val;
+
+      /* If the path is not present at all in the "to" hash, the
+         entire "from" rangelist is a deletion.  Paths which are
+         present in the "to" hash require closer scrutiny. */
+      to_rangelist = apr_hash_get(to, path, APR_HASH_KEY_STRING);
+      if (to_rangelist)
+        {
+          /* Record any deltas (additions or deletions). */
+          apr_array_header_t *deleted_rangelist, *added_rangelist;
+          svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
+                             from_rangelist, to_rangelist, pool);
+          if (deleted_rangelist->nelts > 0)
+            apr_hash_set(*deleted, apr_pstrdup(pool, path),
+                         APR_HASH_KEY_STRING, deleted_rangelist);
+          if (added_rangelist->nelts > 0)
+            apr_hash_set(*added, apr_pstrdup(pool, path),
+                         APR_HASH_KEY_STRING, added_rangelist);
+        }
+      else
+        apr_hash_set(*deleted, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
+                     apr_array_copy(pool, from_rangelist));
+    }
+
+  /* Handle path additions. */
+  for (hi = apr_hash_first(pool, to); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      to_rangelist = val;
+
+      /* If the path is not present in the "from" hash, the entire
+         "to" rangelist is an addition. */
+      if (apr_hash_get(from, path, APR_HASH_KEY_STRING) == NULL)
+        apr_hash_set(*added, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
+                     apr_array_copy(pool, to_rangelist));
+    }
 
   return SVN_NO_ERROR;
 }

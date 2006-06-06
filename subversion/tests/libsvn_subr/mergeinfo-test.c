@@ -257,9 +257,12 @@ test_diff_mergeinfo(const char **msg,
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
 
-  if (apr_hash_count(deleted) != 1 || apr_hash_count(added) != 1)
-    return fail(pool, "svn_mergeinfo_diff failed to calculate the "
-                "correct number of path deltas");
+  if (apr_hash_count(deleted) != 1)
+    return fail(pool, "svn_mergeinfo_diff should report 1 path deletion, "
+                "but found %d", apr_hash_count(deleted));
+  else if (apr_hash_count(added) != 1)
+    return fail(pool, "svn_mergeinfo_diff should report 1 path addition, "
+                "but found %d", apr_hash_count(added));
 
   /* Verify calculation of deletion deltas. */
   rangelist = apr_hash_get(deleted, "/trunk", APR_HASH_KEY_STRING);
