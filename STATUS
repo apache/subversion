@@ -17,7 +17,6 @@ Candidate changes:
    Votes:
      +1: dionisos, brane
 
-
  * r19919
    Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
    which clobber configure arguments in AC_INIT. 
@@ -43,6 +42,12 @@ Candidate changes:
    Votes:
      +1: dlr, pburba
 
+  * r19968
+    Widen SWIG requirement to 1.3.29.
+    Justification:
+      It seems to work, according to the testsuites.
+    Votes:
+      +1: maxb
 
 Approved changes:
 
