@@ -234,7 +234,7 @@ test_parse_multi_line_mergeinfo(const char **msg,
 }
 
 
-#define NBR_RANGELIST_DELTAS 2
+#define NBR_RANGELIST_DELTAS 4
 
 /* Helper routine for test_diff_mergeinfo(). */
 static svn_error_t *
@@ -251,7 +251,7 @@ verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
 
   rangelist = apr_hash_get(deltas, "/trunk", APR_HASH_KEY_STRING);
   if (rangelist->nelts != NBR_RANGELIST_DELTAS)
-    return fail(pool, "svn_mergeinfo_diff should report %d revision %ss, "
+    return fail(pool, "svn_mergeinfo_diff should report %d range %ss, "
                 "but found %d", NBR_RANGELIST_DELTAS, type, rangelist->nelts);
   for (i = 0; i < rangelist->nelts - 1; i++)
     {
@@ -259,8 +259,9 @@ verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
                                                svn_merge_range_t *);
       if (range->start != expected_deltas[i].start ||
           range->end != expected_deltas[i].end)
-        return fail(pool, "svn_mergeinfo_diff failed to calculate the "
-                    "correct merge range");
+        return fail(pool, "svn_mergeinfo_diff should report range %ld-%ld, "
+                    "but found %ld-%ld", expected_deltas[i].start,
+                    expected_deltas[i].end, range->start, range->end);
     }
   return SVN_NO_ERROR;
 }
@@ -273,17 +274,17 @@ test_diff_mergeinfo(const char **msg,
 {
   apr_hash_t *deleted, *added, *from, *to;
   svn_merge_range_t expected_rangelist_deletions[NBR_RANGELIST_DELTAS] =
-    { {1, 2}, {4, 4} };
+    { {7, 7}, {9, 9}, {11, 11}, {33, 34} };
   svn_merge_range_t expected_rangelist_additions[NBR_RANGELIST_DELTAS] =
-    { {5, 5}, {7, 8} };
+    { {2, 2}, {5, 6}, {13, 16}, {30, 30} };
 
   *msg = "diff of mergeinfo";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  svn_mergeinfo_parse("/trunk: 1-4", &from, pool);
-  svn_mergeinfo_parse("/trunk: 3,5,7-8", &to, pool);
-  /* On /trunk: deleted (1, 2, 4) and added (5, 7, 8) */
+  svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &from, pool);
+  svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &to, pool);
+  /* On /trunk: deleted (7, 9, 11, 33-34) and added (2, 5-6, 13-16, 30) */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
 
   /* Verify calculation of range list deltas. */
