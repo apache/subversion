@@ -981,8 +981,8 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (! keep_locks && lock_tokens && lock_tokens->nelts)
         SVN_ERR(unlock_paths(lock_tokens, b, pool));
 
-         SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)(?c)",
-                                        new_rev, date, author, post_commit_err));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)(?c)",
+                                     new_rev, date, author, post_commit_err));
 
       if (! b->tunnel)
         SVN_ERR(svn_fs_deltify_revision(b->fs, new_rev, pool));
