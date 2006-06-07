@@ -253,7 +253,7 @@ verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
   if (rangelist->nelts != NBR_RANGELIST_DELTAS)
     return fail(pool, "svn_mergeinfo_diff should report %d range %ss, "
                 "but found %d", NBR_RANGELIST_DELTAS, type, rangelist->nelts);
-  for (i = 0; i < rangelist->nelts - 1; i++)
+  for (i = 0; i < rangelist->nelts; i++)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                svn_merge_range_t *);
