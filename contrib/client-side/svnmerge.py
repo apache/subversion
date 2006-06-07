@@ -1015,17 +1015,19 @@ def action_avail(branch_dir, branch_props):
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
+    report_msg = "revisions available to be merged are:"
     if "avail" in opts["avail-showwhat"]:
         revs |= avail_revs
     if "blocked" in opts["avail-showwhat"]:
         revs |= blocked_revs
+        report_msg = "revisions blocked are:"
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
         revs = revs & RevisionSet(opts["revision"])
 
     display_revisions(revs, opts["avail-display"],
-                      "revisions available to be merged are:",
+                      report_msg,
                       opts["head-url"])
 
 def action_integrated(branch_dir, branch_props):
