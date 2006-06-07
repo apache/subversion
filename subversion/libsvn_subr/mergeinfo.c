@@ -560,7 +560,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
     [to]                                    added
 
     (from)           deleted                deleted
-    0 <===========(=========[============]=========)===========> rHEAD
+    r0 <===========(=========[============]=========)===========> rHEAD
     [to]
 
     (from)           deleted
@@ -574,8 +574,12 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
     (from)
     r0 <===========[=========(============)=========]===========> rHEAD
     [to]             added                  added
+
+    (from)  d                                  d             d
+    r0 <===(=[=)=]=[==]=[=(=)=]=[=]=[=(===|===(=)==|=|==[=(=]=)=> rHEAD
+    [to]        a   a    a   a   a   a                   a
 */
-static svn_error_t *
+svn_error_t *
 svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_array_header_t *from, apr_array_header_t *to,
                    apr_pool_t *pool)
@@ -590,6 +594,9 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
   return SVN_NO_ERROR;
 }
 
+/* Record deletions and additions of entire range lists (by path
+   presence), and delegate to svn_rangelist_diff() for delta
+   calculations on a specific path. */
 /* ### TODO: Merge implementation with
    ### libsvn_subr/sorts.c:svn_prop_diffs().  Factor out a generic
    ### hash diffing function for addition to APR's apr_hash.h API. */
@@ -680,17 +687,17 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
       if (res == 0)
         {
           apr_array_header_t *merged;
-          apr_array_header_t *in1, *in2;
+          apr_array_header_t *rl1, *rl2;
 
-          in1 = elt1.value;
-          in2 = elt2.value;
+          rl1 = elt1.value;
+          rl2 = elt2.value;
 
           /* XXX: Move out of here tomorrow when svn_mergeinfo_sort is
              introduced. */
-          qsort(in1->elts, in1->nelts, in1->elt_size, svn_sort_compare_ranges);
-          qsort(in2->elts, in2->nelts, in2->elt_size, svn_sort_compare_ranges);
+          qsort(rl1->elts, rl1->nelts, rl1->elt_size, svn_sort_compare_ranges);
+          qsort(rl2->elts, rl2->nelts, rl2->elt_size, svn_sort_compare_ranges);
 
-          SVN_ERR(svn_rangelist_merge(&merged, in1, in2, pool));
+          SVN_ERR(svn_rangelist_merge(&merged, rl1, rl2, pool));
           apr_hash_set(*output, elt1.key, elt1.klen, merged);
           i++;
           j++;
