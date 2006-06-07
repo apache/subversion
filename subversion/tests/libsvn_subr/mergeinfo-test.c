@@ -234,90 +234,67 @@ test_parse_multi_line_mergeinfo(const char **msg,
 }
 
 
+#define NBR_RANGELIST_DELTAS 2
+
+/* Helper routine for test_diff_mergeinfo(). */
+static svn_error_t *
+verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
+                        const char *type, apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *rangelist;
+
+  if (apr_hash_count(deltas) != 1)
+    /* Deltas on "/trunk" expected. */
+    return fail(pool, "svn_mergeinfo_diff should report 1 path %s, "
+                "but found %d", type, apr_hash_count(deltas));
+
+  rangelist = apr_hash_get(deltas, "/trunk", APR_HASH_KEY_STRING);
+  if (rangelist->nelts != NBR_RANGELIST_DELTAS)
+    return fail(pool, "svn_mergeinfo_diff should report %d revision %ss, "
+                "but found %d", NBR_RANGELIST_DELTAS, type, rangelist->nelts);
+  for (i = 0; i < rangelist->nelts - 1; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      if (range->start != expected_deltas[i].start ||
+          range->end != expected_deltas[i].end)
+        return fail(pool, "svn_mergeinfo_diff failed to calculate the "
+                    "correct merge range");
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_diff_mergeinfo(const char **msg,
                     svn_boolean_t msg_only,
                     svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-  int i;
-  apr_array_header_t *rangelist;
-  svn_merge_range_t *range;
   apr_hash_t *deleted, *added, *from, *to;
-  svn_merge_range_t expected_deletions[2] = { {1, 2}, {4, 4} };
-  svn_merge_range_t expected_additions[2] = { {5, 5}, {7, 8} };
+  svn_merge_range_t expected_rangelist_deletions[NBR_RANGELIST_DELTAS] =
+    { {1, 2}, {4, 4} };
+  svn_merge_range_t expected_rangelist_additions[NBR_RANGELIST_DELTAS] =
+    { {5, 5}, {7, 8} };
 
   *msg = "diff of mergeinfo";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  from = apr_hash_make(pool);
-  to = apr_hash_make(pool);
-
-  /* 'from' range: "1-4" */
-  rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  range = apr_pcalloc(pool, sizeof(*range));
-  range->start = 1;
-  range->end = 4;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  apr_hash_set(from, "/trunk", APR_HASH_KEY_STRING, rangelist);
-
-  /* 'to' range: "3,5,7-8" */
-  rangelist = apr_array_make(pool, 3, sizeof(svn_merge_range_t *));
-  range = apr_pcalloc(pool, sizeof(*range));
-  range->start = 3;
-  range->end = 3;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  range = apr_pcalloc(pool, sizeof(*range));
-  range->start = 5;
-  range->end = 5;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  range = apr_pcalloc(pool, sizeof(*range));
-  range->start = 7;
-  range->end = 8;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  apr_hash_set(to, "/trunk", APR_HASH_KEY_STRING, rangelist);
-
+  svn_mergeinfo_parse("/trunk: 1-4", &from, pool);
+  svn_mergeinfo_parse("/trunk: 3,5,7-8", &to, pool);
   /* On /trunk: deleted (1, 2, 4) and added (5, 7, 8) */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
 
-  if (apr_hash_count(deleted) != 1)
-    return fail(pool, "svn_mergeinfo_diff should report 1 path deletion, "
-                "but found %d", apr_hash_count(deleted));
-  else if (apr_hash_count(added) != 1)
-    return fail(pool, "svn_mergeinfo_diff should report 1 path addition, "
-                "but found %d", apr_hash_count(added));
-
-  /* Verify calculation of deletion deltas. */
-  rangelist = apr_hash_get(deleted, "/trunk", APR_HASH_KEY_STRING);
-  if (rangelist->nelts != 2)
-    return fail(pool, "svn_mergeinfo_diff failed to calculate the "
-                "correct number of revision deletions");
-  for (i = 0; i < rangelist->nelts - 1; i++)
-    {
-      range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      if (range->start != expected_deletions[i].start ||
-          range->end != expected_deletions[i].end)
-        return fail(pool, "svn_mergeinfo_diff failed to calculate the "
-                    "correct merge range");
-    }
-
-  /* Verify calculation of addition deltas. */
-  rangelist = apr_hash_get(added, "/trunk", APR_HASH_KEY_STRING);
-  if (rangelist->nelts != 2)
-    return fail(pool, "svn_mergeinfo_diff failed to calculate the "
-                "correct number of revision additions");
-  for (i = 0; i < rangelist->nelts - 1; i++)
-    {
-      range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      if (range->start != expected_additions[i].start ||
-          range->end != expected_additions[i].end)
-        return fail(pool, "svn_mergeinfo_diff failed to calculate the "
-                    "correct merge range");
-    }
+  /* Verify calculation of range list deltas. */
+  SVN_ERR(verify_mergeinfo_deltas(deleted, expected_rangelist_deletions,
+                                  "deletion", pool));
+  SVN_ERR(verify_mergeinfo_deltas(added, expected_rangelist_additions,
+                                  "addition", pool));
 
   return SVN_NO_ERROR;
 }
+#undef NBR_RANGELIST_DELTAS
 
 static svn_error_t *
 test_merge_mergeinfo(const char **msg,
