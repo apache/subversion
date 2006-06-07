@@ -440,8 +440,6 @@ test_remove_rangelist(const char **msg,
   if (svn_stringbuf_compare(expected2, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
 
-  /* ### TODO: Implement me! */
-
   return SVN_NO_ERROR;
 }
 
