@@ -426,7 +426,7 @@ test_mergeinfo_to_string(const char **msg,
 {
   svn_stringbuf_t *output;
   svn_stringbuf_t *expected;
-  expected = svn_stringbuf_create("/fred:8-11\n/trunk:3,5,7-11,13-14", pool);
+  expected = svn_stringbuf_create("/fred:8-10\n/trunk:3,5,7-11,13-14", pool);
 
   *msg = "turning mergeinfo back into a string";
 
@@ -438,7 +438,7 @@ test_mergeinfo_to_string(const char **msg,
   SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
 
   if (svn_stringbuf_compare(expected, output) != TRUE)
-    fail(pool, "Mergeinfo string not what we expected");
+    return fail(pool, "Mergeinfo string not what we expected");
 
   return SVN_NO_ERROR;
 }
