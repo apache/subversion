@@ -413,7 +413,7 @@ test_rangelist_to_string(const char **msg,
   SVN_ERR(svn_rangelist_to_string(&output, result, pool));
 
   if (svn_stringbuf_compare(expected, output) != TRUE)
-    fail(pool, "Rangelist string not what we expected");
+    return fail(pool, "Rangelist string not what we expected");
 
   return SVN_NO_ERROR;
 }
