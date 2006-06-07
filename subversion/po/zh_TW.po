@@ -1949,7 +1949,7 @@ msgid ""
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
 "options"
 msgstr ""
-"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用 --"
+"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用--"
 "message (-m) 或 --file (-F) 選項"
 
 #: clients/cmdline/util.c:623
@@ -6658,8 +6658,7 @@ msgstr ""
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
-msgstr ""
-"預計刪除性質 '%s', 但是其值已自 '%s' 變更為 '%s'."
+msgstr "預計刪除性質 '%s', 但是其值已自 '%s' 變更為 '%s'."
 
 #: libsvn_wc/props.c:530
 #, c-format
@@ -7976,6 +7975,8 @@ msgstr ""
 "\n"
 "  如果在非工作複本的目錄中, 例如匯出的目錄執行的話, 那麼\n"
 "  這個程式會輸出 '已匯出'.\n"
+"\n"
+"  如果執行時未指定引數, WC_PATH 為目前的目錄.\n"
 "\n"
 "有效選項:\n"
 
