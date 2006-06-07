@@ -48,6 +48,7 @@ Candidate changes:
       It seems to work, according to the testsuites.
     Votes:
       +1: maxb
+      +0: nori
 
   * r19971
     Don't error out during status due to inconsistent EOL styles in working
