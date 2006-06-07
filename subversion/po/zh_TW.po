@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-04-26 21:30+0800\n"
+"POT-Creation-Date: 2006-06-08 00:09+0800\n"
 "PO-Revision-Date: 2004-09-12 22:05+0800\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
@@ -829,21 +829,25 @@ msgstr "進行 '%s' 的遞迴式新增時發生錯誤"
 msgid "Can't close directory '%s'"
 msgstr "無法關閉目錄 '%s'"
 
-#: libsvn_client/blame.c:392 libsvn_client/blame.c:826
+#: libsvn_client/blame.c:392 libsvn_client/blame.c:831
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "無法為二進制檔案 '%s' 計算譴責資訊"
 
-#: libsvn_client/blame.c:575
+#: libsvn_client/blame.c:567
+msgid "blame of the WORKING revision is not supported"
+msgstr "不支援 WORKING 修訂版的 blame 功能"
+
+#: libsvn_client/blame.c:580
 msgid "Start revision must precede end revision"
 msgstr "起始修訂版必須大於結束修訂版"
 
-#: libsvn_client/blame.c:713 libsvn_client/cat.c:208
+#: libsvn_client/blame.c:718 libsvn_client/cat.c:208
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL '%s' 指向一個目錄"
 
-#: libsvn_client/blame.c:786
+#: libsvn_client/blame.c:791
 #, c-format
 msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr "修訂版動作 '%c' 對修訂版 %ld 於 '%s' 缺少前一個修訂版"
@@ -907,7 +911,7 @@ msgid "Path '%s' does not exist"
 msgstr "路徑 '%s' 不存在"
 
 #: libsvn_client/commit.c:735 libsvn_client/copy.c:85 libsvn_client/copy.c:399
-#: libsvn_client/copy.c:609 libsvn_client/copy.c:767
+#: libsvn_client/copy.c:608 libsvn_client/copy.c:758
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "路徑 '%s' 已存在"
@@ -976,22 +980,22 @@ msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "送交項目 '%s' 有複製旗標, 但是沒有 copyfrom URL"
 
 #: libsvn_client/commit_util.c:686 libsvn_client/commit_util.c:816
-#: libsvn_client/copy.c:1011 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1384 libsvn_client/diff.c:2110
-#: libsvn_client/diff.c:2705 libsvn_client/diff.c:2833
-#: libsvn_client/locking_commands.c:259 libsvn_client/log.c:126
+#: libsvn_client/copy.c:1002 libsvn_client/delete.c:67
+#: libsvn_client/diff.c:1409 libsvn_client/diff.c:2135
+#: libsvn_client/diff.c:2730 libsvn_client/diff.c:2859
+#: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
 #: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:958
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:106
 #: libsvn_wc/adm_crawler.c:471 libsvn_wc/adm_crawler.c:764
 #: libsvn_wc/adm_ops.c:1021 libsvn_wc/adm_ops.c:2305 libsvn_wc/adm_ops.c:2331
-#: libsvn_wc/adm_ops.c:2368 libsvn_wc/copy.c:349 libsvn_wc/copy.c:430
-#: libsvn_wc/copy.c:437 libsvn_wc/diff.c:1765 libsvn_wc/entries.c:2225
+#: libsvn_wc/adm_ops.c:2367 libsvn_wc/copy.c:349 libsvn_wc/copy.c:430
+#: libsvn_wc/copy.c:437 libsvn_wc/diff.c:1790 libsvn_wc/entries.c:2225
 #: libsvn_wc/entries.c:2780 libsvn_wc/props.c:479 libsvn_wc/props.c:1088
-#: libsvn_wc/props.c:1506 libsvn_wc/questions.c:182 libsvn_wc/questions.c:291
-#: libsvn_wc/status.c:723 libsvn_wc/translate.c:193
-#: libsvn_wc/update_editor.c:2064 libsvn_wc/update_editor.c:2854
+#: libsvn_wc/props.c:1506 libsvn_wc/questions.c:182 libsvn_wc/questions.c:292
+#: libsvn_wc/status.c:722 libsvn_wc/translate.c:193
+#: libsvn_wc/update_editor.c:2065 libsvn_wc/update_editor.c:2855
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' 尚未納入版本控制"
@@ -1034,7 +1038,7 @@ msgstr "無法送交 '%s' 與 '%s', 因為它們都指向同一個 URL"
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "送交項目 '%s' 有複製旗標, 但是修訂版無效"
 
-#: libsvn_client/copy.c:95 libsvn_client/copy.c:778
+#: libsvn_client/copy.c:95 libsvn_client/copy.c:769
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "路徑 '%s' 不是目錄"
@@ -1060,46 +1064,46 @@ msgstr "無法移動 URL '%s' 至本身"
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "路徑 '%s' 不存在於修訂版 %ld"
 
-#: libsvn_client/copy.c:754
+#: libsvn_client/copy.c:745
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "路徑 '%s' 於修訂版 %ld 中找不到"
 
-#: libsvn_client/copy.c:759
+#: libsvn_client/copy.c:750
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "路徑 '%s' 於 HEAD 修訂版中找不到"
 
-#: libsvn_client/copy.c:796
+#: libsvn_client/copy.c:787
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "存在 '%s' 的項目 (不過工作檔案已消失)"
 
-#: libsvn_client/copy.c:887
+#: libsvn_client/copy.c:878
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr "來源 URL '%s' 來自其它的檔案庫; 把它當作是脫離的 WC"
 
-#: libsvn_client/copy.c:966
+#: libsvn_client/copy.c:957
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "無法複製路徑 '%s' 至其子目錄 '%s' 中"
 
-#: libsvn_client/copy.c:977
+#: libsvn_client/copy.c:968
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "無法移動路徑 '%s' 至其本身"
 
-#: libsvn_client/copy.c:985
+#: libsvn_client/copy.c:976
 msgid "No support for repos <--> working copy moves"
 msgstr "不支援檔案庫 <--> 工作複本移動"
 
-#: libsvn_client/copy.c:1017
+#: libsvn_client/copy.c:1008
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' 似乎沒有關聯的 URL"
 
-#: libsvn_client/copy.c:1214 svn/move-cmd.c:72
+#: libsvn_client/copy.c:1205 svn/move-cmd.c:72
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移動動作不可指定修訂版 (HEAD 除外)"
 
@@ -1158,59 +1162,60 @@ msgid "Cannot display: file marked as a binary type.%s"
 msgstr "無法顯示: 檔案標示為二進制類型. %s"
 
 # as-is
-#. xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
-#. strings are used to tag onto a filename in case of a merge conflict
-#: libsvn_client/diff.c:764
+#. xgettext: the '.working', '.merge-left.r%ld' and
+#. '.merge-right.r%ld' strings are used to tag onto a file
+#. name in case of a merge conflict
+#: libsvn_client/diff.c:860
 msgid ".working"
 msgstr ".working"
 
 # as-is
-#: libsvn_client/diff.c:766
+#: libsvn_client/diff.c:862
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
 # as-is
-#: libsvn_client/diff.c:769
+#: libsvn_client/diff.c:865
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1449 libsvn_client/diff.c:1655
+#: libsvn_client/diff.c:1474 libsvn_client/diff.c:1680
 msgid "Not all required revisions are specified"
 msgstr "並未提供全部所需的修訂版"
 
-#: libsvn_client/diff.c:1464
+#: libsvn_client/diff.c:1489
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "對於 peg 差異, 必須至少有一個非本地端的修訂版"
 
-#: libsvn_client/diff.c:1576 libsvn_client/diff.c:1588
+#: libsvn_client/diff.c:1601 libsvn_client/diff.c:1613
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "'%s' 於檔案庫的修訂版 %ld 找不到"
 
-#: libsvn_client/diff.c:1930
+#: libsvn_client/diff.c:1955
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr "抱歉, svn_client_diff3 以尚不支援的方式被叫用"
 
-#: libsvn_client/diff.c:1969
+#: libsvn_client/diff.c:1994
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
 msgstr "目前只支援路徑的文件參考基礎與其工作檔案之間的檔案差異"
 
-#: libsvn_client/diff.c:2114 libsvn_client/switch.c:110
+#: libsvn_client/diff.c:2139 libsvn_client/switch.c:110
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "目錄 '%s' 沒有 URL"
 
 # as-is
-#: libsvn_client/diff.c:2321
+#: libsvn_client/diff.c:2346
 msgid "Summarizing diff can only compare repository to repository"
 msgstr "Summarizing diff can only compare repository to repository"
 
-#: libsvn_client/diff.c:2678 libsvn_client/diff.c:2684
-#: libsvn_client/diff.c:2818 libsvn_client/locking_commands.c:263
+#: libsvn_client/diff.c:2703 libsvn_client/diff.c:2709
+#: libsvn_client/diff.c:2844 libsvn_client/locking_commands.c:263
 #: libsvn_client/ra.c:372 libsvn_client/ra.c:738 libsvn_client/ra.c:875
 #, c-format
 msgid "'%s' has no URL"
@@ -1236,20 +1241,20 @@ msgid "'%s' already exists"
 msgstr "'%s' 已存在"
 
 #: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1601
-#: libsvn_wc/update_editor.c:2207
+#: libsvn_wc/update_editor.c:2208
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s' 的總和檢查值不符合; 預期: '%s', 實際: '%s'"
 
-#: libsvn_client/info.c:241
+#: libsvn_client/info.c:243
 #, c-format
 msgid "Cannot read entry for '%s'"
 msgstr "無法讀取項目 '%s'"
 
-#: libsvn_client/info.c:377 libsvn_client/info.c:402 libsvn_client/info.c:412
+#: libsvn_client/info.c:379 libsvn_client/info.c:404 libsvn_client/info.c:414
 #, c-format
-msgid "URL '%s' non-existent in revision '%ld'"
-msgstr "URL '%s' 並不存在於該修訂版 '%ld' 中"
+msgid "URL '%s' non-existent in revision %ld"
+msgstr "URL '%s' 並不存在於修訂版 %ld 中"
 
 #: libsvn_client/list.c:225
 #, c-format
@@ -1283,13 +1288,17 @@ msgstr "鎖定註解含有不合法的字元"
 msgid "Missing required revision specification"
 msgstr "未提供要求的修訂版規格"
 
-#: libsvn_client/log.c:132 libsvn_client/status.c:261
+#: libsvn_client/log.c:86
+msgid "Revision type requires a working copy path, not a URL"
+msgstr "修訂版類別使用工作複本路徑, 而非 URL"
+
+#: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "項目 '%s' 沒有 URL"
 
-#: libsvn_client/log.c:349
+#: libsvn_client/log.c:370
 msgid "No commits in repository"
 msgstr "檔案庫中沒有任何送交"
 
@@ -1319,8 +1328,8 @@ msgstr "除非強迫為之, 否則其值不會被設定"
 
 #: libsvn_client/prop_commands.c:499
 #, c-format
-msgid "'%s' does not exist in revision '%ld'"
-msgstr "'%s' 不存在於修訂版 '%ld'"
+msgid "'%s' does not exist in revision %ld"
+msgstr "'%s' 不存在於修訂版 %ld"
 
 #: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:765
 #, c-format
@@ -1544,15 +1553,15 @@ msgstr "建立更動"
 msgid "deleting changes"
 msgstr "刪除更動"
 
-#: libsvn_fs_base/bdb/changes-table.c:145 libsvn_fs_fs/fs_fs.c:1915
+#: libsvn_fs_base/bdb/changes-table.c:145 libsvn_fs_fs/fs_fs.c:2017
 msgid "Missing required node revision ID"
 msgstr "未提供必須的節點修訂版 ID"
 
-#: libsvn_fs_base/bdb/changes-table.c:156 libsvn_fs_fs/fs_fs.c:1925
+#: libsvn_fs_base/bdb/changes-table.c:156 libsvn_fs_fs/fs_fs.c:2027
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "無效的更動順序: 有新的節點修訂版 ID 而沒刪除"
 
-#: libsvn_fs_base/bdb/changes-table.c:166 libsvn_fs_fs/fs_fs.c:1936
+#: libsvn_fs_base/bdb/changes-table.c:166 libsvn_fs_fs/fs_fs.c:2038
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "無效的更動順序: 對刪除路徑進行非新增的更動"
 
@@ -2003,7 +2012,6 @@ msgstr ""
 "Corruption detected whilst reading delta chain from representation '%s' to '%"
 "s'"
 
-
 #: libsvn_fs_base/reps-strings.c:780
 #, c-format
 msgid "Rep contents are too large: got %s, limit is %s"
@@ -2053,12 +2061,12 @@ msgstr "嘗試要對 '%s' deltify 自己"
 msgid "Failed to calculate MD5 digest for '%s'"
 msgstr "無法計算 '%s' 的 MD5"
 
-#: libsvn_fs_base/revs-txns.c:65 libsvn_fs_fs/revs-txns.c:58
+#: libsvn_fs_base/revs-txns.c:65
 #, c-format
 msgid "Transaction is not dead: '%s'"
 msgstr "異動未終結: '%s'"
 
-#: libsvn_fs_base/revs-txns.c:68 libsvn_fs_fs/revs-txns.c:61
+#: libsvn_fs_base/revs-txns.c:68
 #, c-format
 msgid "Transaction is dead: '%s'"
 msgstr "異動已終結: '%s'"
@@ -2172,7 +2180,7 @@ msgstr "'%s' 不是檔案"
 msgid "Can't get entries of non-directory"
 msgstr "無法取得非目錄的項目"
 
-#: libsvn_fs_fs/dag.c:883
+#: libsvn_fs_fs/dag.c:914
 #, c-format
 msgid ""
 "Checksum mismatch, file '%s':\n"
@@ -2237,7 +2245,7 @@ msgstr "node-rev 中的 copyroot 列有缺陷"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "node-rev 中的 copyfrom 列有缺陷"
 
-#: libsvn_fs_fs/fs_fs.c:883 libsvn_fs_fs/fs_fs.c:3141
+#: libsvn_fs_fs/fs_fs.c:883 libsvn_fs_fs/fs_fs.c:3241
 msgid "Attempted to write to non-transaction"
 msgstr "企圖寫至非異動"
 
@@ -2273,28 +2281,28 @@ msgstr "修訂版檔案的最後一列少掉空白字元"
 msgid "No such revision %ld"
 msgstr "沒有這個修訂版 %ld"
 
-#: libsvn_fs_fs/fs_fs.c:1231
+#: libsvn_fs_fs/fs_fs.c:1216
 msgid "Malformed svndiff data in representation"
 msgstr "svndiff 資料的表現有缺陷"
 
 # as-is
-#: libsvn_fs_fs/fs_fs.c:1341 libsvn_fs_fs/fs_fs.c:1354
+#: libsvn_fs_fs/fs_fs.c:1359 libsvn_fs_fs/fs_fs.c:1372
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr "Reading one svndiff window read beyond the end of the representation"
 
-#: libsvn_fs_fs/fs_fs.c:1490
+#: libsvn_fs_fs/fs_fs.c:1508
 msgid "svndiff data requested non-existent source"
 msgstr "svndiff 資料要求不存在的來源"
 
-#: libsvn_fs_fs/fs_fs.c:1496
+#: libsvn_fs_fs/fs_fs.c:1514
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff 要求的位置超出了串流的結尾"
 
-#: libsvn_fs_fs/fs_fs.c:1519 libsvn_fs_fs/fs_fs.c:1536
+#: libsvn_fs_fs/fs_fs.c:1537 libsvn_fs_fs/fs_fs.c:1554
 msgid "svndiff window length is corrupt"
 msgstr "svndiff 的窗格長度已毀損"
 
-#: libsvn_fs_fs/fs_fs.c:1584
+#: libsvn_fs_fs/fs_fs.c:1602
 #, c-format
 msgid ""
 "Checksum mismatch while reading representation:\n"
@@ -2305,86 +2313,86 @@ msgstr ""
 "     預期的:  %s\n"
 "     實際的:  %s\n"
 
-#: libsvn_fs_fs/fs_fs.c:1723 libsvn_fs_fs/fs_fs.c:1736
-#: libsvn_fs_fs/fs_fs.c:1742
+#: libsvn_fs_fs/fs_fs.c:1825 libsvn_fs_fs/fs_fs.c:1838
+#: libsvn_fs_fs/fs_fs.c:1844
 msgid "Directory entry corrupt"
 msgstr "目錄項目損毀"
 
-#: libsvn_fs_fs/fs_fs.c:2078 libsvn_fs_fs/fs_fs.c:2086
-#: libsvn_fs_fs/fs_fs.c:2118 libsvn_fs_fs/fs_fs.c:2138
-#: libsvn_fs_fs/fs_fs.c:2172 libsvn_fs_fs/fs_fs.c:2177
+#: libsvn_fs_fs/fs_fs.c:2180 libsvn_fs_fs/fs_fs.c:2188
+#: libsvn_fs_fs/fs_fs.c:2220 libsvn_fs_fs/fs_fs.c:2240
+#: libsvn_fs_fs/fs_fs.c:2274 libsvn_fs_fs/fs_fs.c:2279
 msgid "Invalid changes line in rev-file"
 msgstr "rev-file 中有無效的更動列"
 
-#: libsvn_fs_fs/fs_fs.c:2111
+#: libsvn_fs_fs/fs_fs.c:2213
 msgid "Invalid change kind in rev file"
 msgstr "rev 檔案中有無效的更動種類"
 
-#: libsvn_fs_fs/fs_fs.c:2131
+#: libsvn_fs_fs/fs_fs.c:2233
 msgid "Invalid text-mod flag in rev-file"
 msgstr "rev-file 中有無效的 text-mod 旗標"
 
-#: libsvn_fs_fs/fs_fs.c:2151
+#: libsvn_fs_fs/fs_fs.c:2253
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "rev-file 中有無效的 prop-mod 旗標"
 
-#: libsvn_fs_fs/fs_fs.c:2334
+#: libsvn_fs_fs/fs_fs.c:2436
 msgid "Copying from transactions not allowed"
 msgstr "自異動進行複製是不被允許的"
 
-#: libsvn_fs_fs/fs_fs.c:2390
+#: libsvn_fs_fs/fs_fs.c:2492
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "無法在 '%s' 建立更動目錄於修訂版 %ld"
 
-#: libsvn_fs_fs/fs_fs.c:2569 libsvn_fs_fs/fs_fs.c:2576
+#: libsvn_fs_fs/fs_fs.c:2669 libsvn_fs_fs/fs_fs.c:2676
 msgid "next-id file corrupt"
 msgstr "next-id 檔案損毀"
 
-#: libsvn_fs_fs/fs_fs.c:2661
+#: libsvn_fs_fs/fs_fs.c:2761
 msgid "Transaction cleanup failed"
 msgstr "異動清除失敗"
 
-#: libsvn_fs_fs/fs_fs.c:2829
+#: libsvn_fs_fs/fs_fs.c:2929
 msgid "Invalid change type"
 msgstr "無效的更動類型"
 
-#: libsvn_fs_fs/fs_fs.c:3160
+#: libsvn_fs_fs/fs_fs.c:3260
 msgid "Can't set text contents of a directory"
 msgstr "無法設定目錄的文字內容"
 
-#: libsvn_fs_fs/fs_fs.c:3250 libsvn_fs_fs/fs_fs.c:3255
-#: libsvn_fs_fs/fs_fs.c:3262
+#: libsvn_fs_fs/fs_fs.c:3350 libsvn_fs_fs/fs_fs.c:3355
+#: libsvn_fs_fs/fs_fs.c:3362
 msgid "Corrupt current file"
 msgstr "目前檔案損毀"
 
 # as-is
-#: libsvn_fs_fs/fs_fs.c:3552 libsvn_subr/io.c:2683 svn/util.c:236
+#: libsvn_fs_fs/fs_fs.c:3652 libsvn_subr/io.c:2658 svn/util.c:236
 #: svn/util.c:260
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Can't stat '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3556
+#: libsvn_fs_fs/fs_fs.c:3656
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "無法 chmod '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3695
+#: libsvn_fs_fs/fs_fs.c:3795
 #, c-format
 msgid "Can't grab FSFS repository mutex"
 msgstr "無法取得 FSFS 檔案庫 mutex"
 
-#: libsvn_fs_fs/fs_fs.c:3709
+#: libsvn_fs_fs/fs_fs.c:3809
 #, c-format
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "無法釋放 FSFS 檔案庫 mutex"
 
-#: libsvn_fs_fs/fs_fs.c:3826
+#: libsvn_fs_fs/fs_fs.c:3926
 msgid "Transaction out of date"
 msgstr "異動過時"
 
-#: libsvn_fs_fs/fs_fs.c:4123
+#: libsvn_fs_fs/fs_fs.c:4223
 msgid "No such transaction"
 msgstr "無此異動"
 
@@ -2672,53 +2680,53 @@ msgid "Missing revision attr in target-revision element"
 msgstr "Missing revision attr in target-revision element"
 
 # as-is
-#: libsvn_ra_dav/replay.c:153 libsvn_ra_serf/replay.c:179
+#: libsvn_ra_dav/replay.c:151 libsvn_ra_serf/replay.c:179
 msgid "Missing revision attr in open-root element"
 msgstr "Missing revision attr in open-root element"
 
 # as-is
-#: libsvn_ra_dav/replay.c:171 libsvn_ra_serf/replay.c:198
+#: libsvn_ra_dav/replay.c:172 libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
 msgstr "Missing name attr in delete-entry element"
 
 # as-is
-#: libsvn_ra_dav/replay.c:175
+#: libsvn_ra_dav/replay.c:176
 msgid "Missing rev attr in delete-entry element"
 msgstr "Missing rev attr in delete-entry element"
 
 # as-is
-#: libsvn_ra_dav/replay.c:195
+#: libsvn_ra_dav/replay.c:196
 msgid "Missing name attr in open-directory element"
 msgstr "Missing name attr in open-directory element"
 
 # as-is
-#: libsvn_ra_dav/replay.c:247 libsvn_ra_dav/replay.c:350
+#: libsvn_ra_dav/replay.c:248 libsvn_ra_dav/replay.c:351
 #: libsvn_ra_serf/replay.c:371
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "Missing name attr in %s element"
 
 # as-is
-#: libsvn_ra_dav/replay.c:287
+#: libsvn_ra_dav/replay.c:288
 msgid "Got apply-textdelta element without preceding add-file or open-file"
 msgstr "Got apply-textdelta element without preceding add-file or open-file"
 
 # as-is
-#: libsvn_ra_dav/replay.c:313
+#: libsvn_ra_dav/replay.c:314
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr "Got close-file element without preceding add-file or open-file"
 
 # as-is
-#: libsvn_ra_dav/replay.c:328
+#: libsvn_ra_dav/replay.c:329
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Got close-directory element without ever opening a directory"
 
-#: libsvn_ra_dav/replay.c:455 libsvn_ra_serf/replay.c:492
+#: libsvn_ra_dav/replay.c:456 libsvn_ra_serf/replay.c:492
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "寫入串流時發生錯誤: 無預期的 EOF"
 
-#: libsvn_ra_dav/replay.c:462
+#: libsvn_ra_dav/replay.c:463
 #, c-format
 msgid "Got cdata content for a prop delete"
 msgstr "性質刪除得到 cdata 內容"
@@ -2855,7 +2863,7 @@ msgid "%s request failed on '%s'"
 msgstr "%s 要求於 '%s' 的失敗"
 
 #: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:587
-#: libsvn_wc/update_editor.c:2368
+#: libsvn_wc/update_editor.c:2369
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3109,87 +3117,87 @@ msgid "Changed-path entry not a list"
 msgstr "Changed-path entry not a list"
 
 # as-is
-#: libsvn_ra_svn/client.c:1327
+#: libsvn_ra_svn/client.c:1324
 msgid "'stat' not implemented"
 msgstr "'stat' not implemented"
 
 # as-is
-#: libsvn_ra_svn/client.c:1384
+#: libsvn_ra_svn/client.c:1381
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' not implemented"
 
 # as-is
-#: libsvn_ra_svn/client.c:1396
+#: libsvn_ra_svn/client.c:1393
 msgid "Location entry not a list"
 msgstr "Location entry not a list"
 
 # as-is
-#: libsvn_ra_svn/client.c:1446
+#: libsvn_ra_svn/client.c:1443
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' not implemented"
 
 # as-is
-#: libsvn_ra_svn/client.c:1459
+#: libsvn_ra_svn/client.c:1456
 msgid "Revision entry not a list"
 msgstr "Revision entry not a list"
 
-#: libsvn_ra_svn/client.c:1472 libsvn_ra_svn/client.c:1497
+#: libsvn_ra_svn/client.c:1469 libsvn_ra_svn/client.c:1494
 msgid "Text delta chunk not a string"
 msgstr "文字差異區段並非字串"
 
-#: libsvn_ra_svn/client.c:1509
+#: libsvn_ra_svn/client.c:1506
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs 命令沒有傳回任何修訂版"
 
-#: libsvn_ra_svn/client.c:1557
+#: libsvn_ra_svn/client.c:1554
 msgid "Server doesn't support the lock command"
 msgstr "伺服器不支援 lock 命令"
 
-#: libsvn_ra_svn/client.c:1621
+#: libsvn_ra_svn/client.c:1618
 msgid "Server doesn't support the unlock command"
 msgstr "伺服器不支援 unlock 命令"
 
 # as-is
-#: libsvn_ra_svn/client.c:1718
+#: libsvn_ra_svn/client.c:1715
 msgid "Lock response not a list"
 msgstr "Lock response not a list"
 
-#: libsvn_ra_svn/client.c:1732
+#: libsvn_ra_svn/client.c:1729
 msgid "Unknown status for lock command"
 msgstr "鎖定命令的未知狀態"
 
-#: libsvn_ra_svn/client.c:1754
+#: libsvn_ra_svn/client.c:1751
 msgid "Didn't receive end marker for lock responses"
 msgstr "未收到鎖定回應的結束標記"
 
 # as-is
-#: libsvn_ra_svn/client.c:1841
+#: libsvn_ra_svn/client.c:1838
 msgid "Unlock response not a list"
 msgstr "Unlock response not a list"
 
-#: libsvn_ra_svn/client.c:1855
+#: libsvn_ra_svn/client.c:1852
 msgid "Unknown status for unlock command"
 msgstr "解鎖命令的未知狀態"
 
-#: libsvn_ra_svn/client.c:1876
+#: libsvn_ra_svn/client.c:1873
 msgid "Didn't receive end marker for unlock responses"
 msgstr "未收到解鎖回應的結束標記"
 
-#: libsvn_ra_svn/client.c:1900 libsvn_ra_svn/client.c:1928
+#: libsvn_ra_svn/client.c:1897 libsvn_ra_svn/client.c:1925
 msgid "Server doesn't support the get-lock command"
 msgstr "伺服器不支援 get-lock 命令"
 
 # as-is
-#: libsvn_ra_svn/client.c:1941
+#: libsvn_ra_svn/client.c:1938
 msgid "Lock element not a list"
 msgstr "Lock element not a list"
 
-#: libsvn_ra_svn/client.c:1964
+#: libsvn_ra_svn/client.c:1961
 msgid "Server doesn't support the replay command"
 msgstr "伺服器不支援 replay 命令"
 
 # as-is
-#: libsvn_ra_svn/client.c:2028
+#: libsvn_ra_svn/client.c:2025
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Unsupported RA loader version (%d) for ra_svn"
@@ -3199,7 +3207,7 @@ msgstr "Unsupported RA loader version (%d) for ra_svn"
 msgid "Invalid file or dir token during edit"
 msgstr "Invalid file or dir token during edit"
 
-#: libsvn_ra_svn/editor.c:619
+#: libsvn_ra_svn/editor.c:620
 msgid "Non-string as part of text delta"
 msgstr "檔案差異的一部份不是字串"
 
@@ -3348,7 +3356,7 @@ msgstr "* Dumped revision %ld.\n"
 msgid "* Verified revision %ld.\n"
 msgstr "* Verified revision %ld.\n"
 
-#: libsvn_repos/fs-wrap.c:57 libsvn_repos/load.c:1207
+#: libsvn_repos/fs-wrap.c:57 libsvn_repos/load.c:1211
 msgid "Commit succeeded, but post-commit hook failed"
 msgstr "送交成功, 但是 post-commit 掛勾失敗"
 
@@ -3429,12 +3437,12 @@ msgstr "關閉標準錯誤管道的讀取端時發生錯誤"
 msgid "Error closing null file"
 msgstr "關閉 null 檔案時發生錯誤"
 
-#: libsvn_repos/hooks.c:461
+#: libsvn_repos/hooks.c:464
 #, c-format
 msgid "Failed to run '%s' hook; broken symlink"
 msgstr "無法執行 '%s' 掛勾: 壞掉的符號連結"
 
-#: libsvn_repos/hooks.c:602
+#: libsvn_repos/hooks.c:605
 msgid ""
 "Repository has not been enabled to accept revision propchanges;\n"
 "ask the administrator to create a pre-revprop-change hook"
@@ -3462,78 +3470,78 @@ msgstr "傾印串流在 '%.20s' 處有一個缺陷檔頭 (沒有 ':')"
 msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
 msgstr "傾印串流在 '%.20s' 處有一個缺陷檔頭 (沒有值)"
 
-#: libsvn_repos/load.c:270
+#: libsvn_repos/load.c:273
 msgid "Incomplete or unterminated property block"
 msgstr "不完全或未結束的性質區塊"
 
-#: libsvn_repos/load.c:407
+#: libsvn_repos/load.c:411
 msgid "Unexpected EOF writing contents"
 msgstr "寫入資料時發生未預期的檔尾符號"
 
-#: libsvn_repos/load.c:436
+#: libsvn_repos/load.c:440
 msgid "Malformed dumpfile header"
 msgstr "有缺陷的傾印檔頭"
 
-#: libsvn_repos/load.c:442 libsvn_repos/load.c:484
+#: libsvn_repos/load.c:446 libsvn_repos/load.c:488
 #, c-format
 msgid "Unsupported dumpfile version: %d"
 msgstr "不支援的傾印檔版號: %d"
 
-#: libsvn_repos/load.c:587
+#: libsvn_repos/load.c:591
 msgid "Unrecognized record type in stream"
 msgstr "串流中有無法辨識的紀錄種類"
 
-#: libsvn_repos/load.c:699
+#: libsvn_repos/load.c:703
 msgid "Sum of subblock sizes larger than total block content length"
 msgstr "子區塊大小的總和大於總區塊的內容長度"
 
 # as-is
-#: libsvn_repos/load.c:880
+#: libsvn_repos/load.c:884
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Started new transaction, based on original revision %ld\n"
 
-#: libsvn_repos/load.c:925
+#: libsvn_repos/load.c:929
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "相對來源修訂版 %ld 不存在於目前檔案庫之中"
 
-#: libsvn_repos/load.c:974
+#: libsvn_repos/load.c:978
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "有缺陷的傾印串流: 修訂版 0 不可包含節點紀錄"
 
-#: libsvn_repos/load.c:984
+#: libsvn_repos/load.c:988
 #, c-format
 msgid "     * editing path : %s ..."
 msgstr "     * 編輯路徑 : %s ..."
 
-#: libsvn_repos/load.c:991
+#: libsvn_repos/load.c:995
 #, c-format
 msgid "     * deleting path : %s ..."
 msgstr "     * 刪除路徑 : %s ..."
 
-#: libsvn_repos/load.c:999
+#: libsvn_repos/load.c:1003
 #, c-format
 msgid "     * adding path : %s ..."
 msgstr "     * 新增路徑 : %s ..."
 
-#: libsvn_repos/load.c:1008
+#: libsvn_repos/load.c:1012
 #, c-format
 msgid "     * replacing path : %s ..."
 msgstr "     * 取代路徑 : %s ..."
 
 # as-is
-#: libsvn_repos/load.c:1018
+#: libsvn_repos/load.c:1022
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
 msgstr "無法辨識路徑 '%s' 的路徑動作"
 
-#: libsvn_repos/load.c:1154
+#: libsvn_repos/load.c:1158
 msgid " done.\n"
 msgstr " 完成.\n"
 
 # as-is
-#: libsvn_repos/load.c:1229
+#: libsvn_repos/load.c:1233
 #, c-format
 msgid ""
 "\n"
@@ -3545,7 +3553,7 @@ msgstr ""
 "\n"
 
 # as-is
-#: libsvn_repos/load.c:1235
+#: libsvn_repos/load.c:1239
 #, c-format
 msgid ""
 "\n"
@@ -3561,35 +3569,35 @@ msgstr ""
 msgid "'%s' not found in filesystem"
 msgstr "檔案系統中找不到 '%s'"
 
-#: libsvn_repos/replay.c:322
+#: libsvn_repos/replay.c:359
 #, c-format
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "檔案系統路徑 '%s' 不是檔案或目錄"
 
-#: libsvn_repos/reporter.c:603
+#: libsvn_repos/reporter.c:602
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
 msgstr "路徑 '%s' 不存在於檔案庫中"
 
 # as-is
-#: libsvn_repos/reporter.c:824
+#: libsvn_repos/reporter.c:823
 msgid "Not authorized to open root of edit operation"
 msgstr "Not authorized to open root of edit operation"
 
-#: libsvn_repos/reporter.c:843
+#: libsvn_repos/reporter.c:842
 msgid "Target path does not exist"
 msgstr "目標路徑不存在"
 
-#: libsvn_repos/reporter.c:850
+#: libsvn_repos/reporter.c:849
 msgid "Cannot replace a directory from within"
 msgstr "無法在目錄中取代它"
 
-#: libsvn_repos/reporter.c:893
+#: libsvn_repos/reporter.c:892
 msgid "Invalid report for top level of working copy"
 msgstr "這個回報對工作複本的最上層目錄無效"
 
 # as-is
-#: libsvn_repos/reporter.c:908
+#: libsvn_repos/reporter.c:907
 msgid "Two top-level reports with no target"
 msgstr "Two top-level reports with no target"
 
@@ -3811,14 +3819,14 @@ msgstr "目標 p'%s' 不是目錄"
 msgid "Destination '%s' already exists"
 msgstr "目標 '%s' 已存在"
 
-#: libsvn_subr/io.c:923 libsvn_subr/io.c:1841 libsvn_subr/io.c:1892
-#: libsvn_subr/io.c:1955
+#: libsvn_subr/io.c:923 libsvn_subr/io.c:1816 libsvn_subr/io.c:1867
+#: libsvn_subr/io.c:1930
 #, c-format
 msgid "Can't read directory '%s'"
 msgstr "無法讀取目錄 '%s'"
 
-#: libsvn_subr/io.c:928 libsvn_subr/io.c:1846 libsvn_subr/io.c:1897
-#: libsvn_subr/io.c:1960 libsvn_subr/io.c:3007
+#: libsvn_subr/io.c:928 libsvn_subr/io.c:1821 libsvn_subr/io.c:1872
+#: libsvn_subr/io.c:1935 libsvn_subr/io.c:2982
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "無法關閉目錄 '%s'"
@@ -3833,178 +3841,173 @@ msgstr "無法建立目錄 '%s'"
 msgid "Can't set access time of '%s'"
 msgstr "無法設定 '%s' 的存取時間"
 
-#: libsvn_subr/io.c:1156
-#, c-format
-msgid "Can't set file '%s' read-only"
-msgstr "無法設定檔案 '%s' 為唯讀"
-
 #: libsvn_subr/io.c:1181
-#, c-format
-msgid "Can't set file '%s' read-write"
-msgstr "無法設定檔案 '%s' 為讀寫"
-
-#: libsvn_subr/io.c:1229
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "無法取得 '%s' 的預設檔案權限 (檔案 stat 錯誤)"
 
-#: libsvn_subr/io.c:1240
+#: libsvn_subr/io.c:1192
 #, c-format
 msgid "Can't open file at '%s'"
 msgstr "無法於 '%s' 開啟檔案"
 
-#: libsvn_subr/io.c:1244
+#: libsvn_subr/io.c:1196
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "無法於 '%s' 取得檔案的權限 (檔案 stat 錯誤)"
 
-#: libsvn_subr/io.c:1277 libsvn_subr/io.c:1337
+#: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
 #, c-format
-msgid "Can't change read-write perms of file '%s'"
-msgstr "無法變更檔案 '%s' 的讀寫權限"
+msgid "Can't change perms of file '%s'"
+msgstr "無法變更檔案 '%s' 的權限"
 
-#: libsvn_subr/io.c:1376 libsvn_subr/io.c:1420 libsvn_subr/io.c:1444
+#: libsvn_subr/io.c:1370
 #, c-format
-msgid "Can't change executability of file '%s'"
-msgstr "無法變更檔案 '%s' 的執行權限"
+msgid "Can't set file '%s' read-only"
+msgstr "無法設定檔案 '%s' 為唯讀"
 
-#: libsvn_subr/io.c:1471
+#: libsvn_subr/io.c:1402
+#, c-format
+msgid "Can't set file '%s' read-write"
+msgstr "無法設定檔案 '%s' 為讀寫"
+
+#: libsvn_subr/io.c:1446
 #, c-format
 msgid "Error getting UID of process"
 msgstr "取得行程的 UID 時發生錯誤"
 
-#: libsvn_subr/io.c:1552
+#: libsvn_subr/io.c:1527
 #, c-format
 msgid "Can't get shared lock on file '%s'"
 msgstr "無法取得檔案 '%s' 的共享鎖定"
 
-#: libsvn_subr/io.c:1556
+#: libsvn_subr/io.c:1531
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "無法取得檔案 '%s' 的獨佔鎖定"
 
 # as-is
-#: libsvn_subr/io.c:1587
+#: libsvn_subr/io.c:1562
 #, c-format
 msgid "Can't flush file '%s'"
 msgstr "無法清空檔案 '%s'"
 
-#: libsvn_subr/io.c:1588
+#: libsvn_subr/io.c:1563
 #, c-format
 msgid "Can't flush stream"
 msgstr "無法清空串流"
 
-#: libsvn_subr/io.c:1600 libsvn_subr/io.c:1617
+#: libsvn_subr/io.c:1575 libsvn_subr/io.c:1592
 #, c-format
 msgid "Can't flush file to disk"
 msgstr "無法將檔案清空至磁碟"
 
 # as-is
-#: libsvn_subr/io.c:1638
+#: libsvn_subr/io.c:1613
 msgid "Reading from stdin is currently broken, so disabled"
 msgstr "Reading from stdin is currently broken, so disabled"
 
-#: libsvn_subr/io.c:1659
+#: libsvn_subr/io.c:1634
 #, c-format
 msgid "Can't get file name"
 msgstr "無法取得檔案名稱"
 
 # as-is
-#: libsvn_subr/io.c:1727
+#: libsvn_subr/io.c:1702
 #, c-format
 msgid "Can't remove file '%s'"
 msgstr "無法移除檔案 '%s'"
 
 # as-is
-#: libsvn_subr/io.c:1756
+#: libsvn_subr/io.c:1731
 #, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "Can't rewind directory '%s'"
 
-#: libsvn_subr/io.c:1791 libsvn_subr/io.c:2858 libsvn_subr/io.c:2944
+#: libsvn_subr/io.c:1766 libsvn_subr/io.c:2833 libsvn_subr/io.c:2919
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "無法開啟目錄 '%s'"
 
-#: libsvn_subr/io.c:1830 libsvn_subr/io.c:1852
+#: libsvn_subr/io.c:1805 libsvn_subr/io.c:1827
 #, c-format
 msgid "Can't remove '%s'"
 msgstr "無法移除 '%s'"
 
 # as-is
-#: libsvn_subr/io.c:2024
+#: libsvn_subr/io.c:1999
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "Can't create process '%s' attributes"
 
 # as-is
-#: libsvn_subr/io.c:2030
+#: libsvn_subr/io.c:2005
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "Can't set process '%s' cmdtype"
 
 # as-is
-#: libsvn_subr/io.c:2042
+#: libsvn_subr/io.c:2017
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "Can't set process '%s' directory"
 
 # as-is
-#: libsvn_subr/io.c:2055
+#: libsvn_subr/io.c:2030
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "Can't set process '%s' child input"
 
 # as-is
-#: libsvn_subr/io.c:2062
+#: libsvn_subr/io.c:2037
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "Can't set process '%s' child outfile"
 
 # as-is
-#: libsvn_subr/io.c:2069
+#: libsvn_subr/io.c:2044
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "Can't set process '%s' child errfile"
 
 # as-is
-#: libsvn_subr/io.c:2076
+#: libsvn_subr/io.c:2051
 #, c-format
 msgid "Can't set process '%s' child errfile for error handler"
 msgstr "Can't set process '%s' child errfile for error handler"
 
 # as-is
-#: libsvn_subr/io.c:2082
+#: libsvn_subr/io.c:2057
 #, c-format
 msgid "Can't set process '%s' error handler"
 msgstr "Can't set process '%s' error handler"
 
-#: libsvn_subr/io.c:2105
+#: libsvn_subr/io.c:2080
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "無法啟動行程 '%s'"
 
-#: libsvn_subr/io.c:2129
+#: libsvn_subr/io.c:2104
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "等待行程 '%s' 時發生錯誤"
 
-#: libsvn_subr/io.c:2137
+#: libsvn_subr/io.c:2112
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "行程 '%s' 失敗 (exitwhy %d)"
 
-#: libsvn_subr/io.c:2144
+#: libsvn_subr/io.c:2119
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "行程 '%s' 傳回錯誤結束代碼 %d"
 
-#: libsvn_subr/io.c:2255
+#: libsvn_subr/io.c:2230
 #, c-format
 msgid "'%s' returned %d"
 msgstr "'%s' 傳回 %d"
 
-#: libsvn_subr/io.c:2378
+#: libsvn_subr/io.c:2353
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -4019,126 +4022,126 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: libsvn_subr/io.c:2431
+#: libsvn_subr/io.c:2406
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "無法偵測非檔案的 '%s' 的 MIME 類別"
 
-#: libsvn_subr/io.c:2498
+#: libsvn_subr/io.c:2473
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "無法開啟檔案 '%s'"
 
-#: libsvn_subr/io.c:2534
+#: libsvn_subr/io.c:2509
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "無法關閉檔案 '%s'"
 
-#: libsvn_subr/io.c:2535
+#: libsvn_subr/io.c:2510
 #, c-format
 msgid "Can't close stream"
 msgstr "無法開啟串流"
 
-#: libsvn_subr/io.c:2545 libsvn_subr/io.c:2569 libsvn_subr/io.c:2582
+#: libsvn_subr/io.c:2520 libsvn_subr/io.c:2544 libsvn_subr/io.c:2557
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "無法讀取檔案 '%s'"
 
-#: libsvn_subr/io.c:2546 libsvn_subr/io.c:2570 libsvn_subr/io.c:2583
+#: libsvn_subr/io.c:2521 libsvn_subr/io.c:2545 libsvn_subr/io.c:2558
 #, c-format
 msgid "Can't read stream"
 msgstr "無法讀取串流"
 
-#: libsvn_subr/io.c:2557
+#: libsvn_subr/io.c:2532
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "無法自檔案 '%s' 取得屬性資訊"
 
-#: libsvn_subr/io.c:2558
+#: libsvn_subr/io.c:2533
 #, c-format
 msgid "Can't get attribute information from stream"
 msgstr "無法自串流取得屬性資訊"
 
-#: libsvn_subr/io.c:2594
+#: libsvn_subr/io.c:2569
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "無法於檔案 '%s' 中設定位置指標"
 
-#: libsvn_subr/io.c:2595
+#: libsvn_subr/io.c:2570
 #, c-format
 msgid "Can't set position pointer in stream"
 msgstr "無法於串流中設定位置指標"
 
-#: libsvn_subr/io.c:2606 libsvn_subr/io.c:2619
+#: libsvn_subr/io.c:2581 libsvn_subr/io.c:2594
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "無法寫入至檔案 '%s'"
 
-#: libsvn_subr/io.c:2607 libsvn_subr/io.c:2620
+#: libsvn_subr/io.c:2582 libsvn_subr/io.c:2595
 #, c-format
 msgid "Can't write to stream"
 msgstr "無法寫入至串流"
 
-#: libsvn_subr/io.c:2660
+#: libsvn_subr/io.c:2635
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "無法讀取檔案 '%s' 中的長度列"
 
-#: libsvn_subr/io.c:2664
+#: libsvn_subr/io.c:2639
 msgid "Can't read length line in stream"
 msgstr "無法讀取串流中的長度列"
 
-#: libsvn_subr/io.c:2711
+#: libsvn_subr/io.c:2686
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "無法搬移 '%s' 至 '%s'"
 
-#: libsvn_subr/io.c:2789
+#: libsvn_subr/io.c:2764
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "無法建立目錄 '%s'"
 
-#: libsvn_subr/io.c:2800 libsvn_wc/copy.c:204
+#: libsvn_subr/io.c:2775 libsvn_wc/copy.c:204
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "無法隱藏目錄 '%s'"
 
-#: libsvn_subr/io.c:2812
+#: libsvn_subr/io.c:2787
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "無法 stat 目錄 '%s'"
 
-#: libsvn_subr/io.c:2876
+#: libsvn_subr/io.c:2851
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "無法移除目錄 '%s'"
 
-#: libsvn_subr/io.c:2894
+#: libsvn_subr/io.c:2869
 #, c-format
 msgid "Can't read directory"
 msgstr "無法讀取目錄"
 
-#: libsvn_subr/io.c:2963
+#: libsvn_subr/io.c:2938
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "無法於 '%s' 中讀取目錄項目"
 
-#: libsvn_subr/io.c:3088
+#: libsvn_subr/io.c:3063
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "無法檢查目錄 '%s'"
 
-#: libsvn_subr/io.c:3110
+#: libsvn_subr/io.c:3085
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "版號 %d 不是非負數"
 
-#: libsvn_subr/io.c:3160
+#: libsvn_subr/io.c:3135
 #, c-format
 msgid "Reading '%s'"
 msgstr "讀取 '%s' 中"
 
-#: libsvn_subr/io.c:3176
+#: libsvn_subr/io.c:3151
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "'%s' 的第一行包含非數字字元"
@@ -4225,7 +4228,7 @@ msgstr ""
 "Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:1010 libsvn_subr/opt.c:1053
+#: libsvn_subr/opt.c:1008 libsvn_subr/opt.c:1049
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "請使用 '%s help' 以了解用法.\n"
@@ -4250,7 +4253,7 @@ msgstr "無法決定原生的路徑編碼"
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "無效的控制字元 '0x%02x' 出現在路徑 '%s'"
 
-#: libsvn_subr/prompt.c:97 svnserve/main.c:475
+#: libsvn_subr/prompt.c:97 svnserve/main.c:490
 #, c-format
 msgid "Can't open stdin"
 msgstr "無法開啟標準輸入"
@@ -4477,7 +4480,7 @@ msgid ""
 "again"
 msgstr "你的 .svn/tmp 目錄可能不見或損毀; 請執行 'svn cleanup', 然後再試一次"
 
-#: libsvn_wc/adm_files.c:687 libsvn_wc/lock.c:568 libsvn_wc/lock.c:830
+#: libsvn_wc/adm_files.c:687 libsvn_wc/lock.c:592 libsvn_wc/lock.c:855
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' 不是工作複本"
@@ -4796,62 +4799,62 @@ msgstr "'%s' 的節點種類無法辨識"
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "不預期地找到了 '%s': 路徑已被標示為 '遺漏'"
 
-#: libsvn_wc/lock.c:333 libsvn_wc/lock.c:538
+#: libsvn_wc/lock.c:356 libsvn_wc/lock.c:562
 #, c-format
 msgid "Working copy '%s' locked"
 msgstr "工作複本 '%s' 被鎖定了"
 
-#: libsvn_wc/lock.c:458
+#: libsvn_wc/lock.c:481
 #, c-format
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路徑 '%s' 以 '%s' 結束, 本動作不支援"
 
-#: libsvn_wc/lock.c:902 libsvn_wc/lock.c:932
+#: libsvn_wc/lock.c:927 libsvn_wc/lock.c:957
 #, c-format
 msgid "Unable to check path existence for '%s'"
 msgstr "無法檢查路徑 '%s' 是否存在"
 
-#: libsvn_wc/lock.c:912
+#: libsvn_wc/lock.c:937
 #, c-format
 msgid "Expected '%s' to be a directory but found a file"
 msgstr "'%s' 預期為目錄, 但是結果為檔案"
 
-#: libsvn_wc/lock.c:919
+#: libsvn_wc/lock.c:944
 #, c-format
 msgid "Expected '%s' to be a file but found a directory"
 msgstr "'%s' 預期為檔案, 但是結果為目錄"
 
-#: libsvn_wc/lock.c:938
+#: libsvn_wc/lock.c:963
 #, c-format
 msgid "Directory '%s' is missing"
 msgstr "找不到目錄 '%s'"
 
-#: libsvn_wc/lock.c:943
+#: libsvn_wc/lock.c:968
 #, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
 msgstr "找不到包含工作複本管理區塊的目錄 '%s'"
 
-#: libsvn_wc/lock.c:948
+#: libsvn_wc/lock.c:973
 #, c-format
 msgid "Unable to lock '%s'"
 msgstr "無法鎖定 '%s'"
 
-#: libsvn_wc/lock.c:953
+#: libsvn_wc/lock.c:978
 #, c-format
 msgid "Working copy '%s' is not locked"
 msgstr "工作複本 '%s' 未被鎖定了"
 
-#: libsvn_wc/lock.c:1346
+#: libsvn_wc/lock.c:1371
 #, c-format
 msgid "Write-lock stolen in '%s'"
 msgstr "'%s' 中的寫入鎖定被偷走了"
 
-#: libsvn_wc/lock.c:1354
+#: libsvn_wc/lock.c:1379
 #, c-format
 msgid "No write-lock in '%s'"
 msgstr "'%s' 中沒有寫入鎖定"
 
-#: libsvn_wc/lock.c:1376
+#: libsvn_wc/lock.c:1401
 #, c-format
 msgid "Lock file '%s' is not a regular file"
 msgstr "鎖定檔 '%s' 不是一般的檔案"
@@ -4860,120 +4863,120 @@ msgstr "鎖定檔 '%s' 不是一般的檔案"
 msgid "Can't move source to dest"
 msgstr "無法移動來源至目的"
 
-#: libsvn_wc/log.c:465
+#: libsvn_wc/log.c:464
 #, c-format
 msgid "In directory '%s'"
 msgstr "在目錄 '%s' 中"
 
-#: libsvn_wc/log.c:492
+#: libsvn_wc/log.c:491
 #, c-format
 msgid "Missing 'left' attribute in '%s'"
 msgstr "'%s' 遺漏了 'left' 屬性"
 
-#: libsvn_wc/log.c:499
+#: libsvn_wc/log.c:498
 #, c-format
 msgid "Missing 'right' attribute in '%s'"
 msgstr "'%s' 遺漏了 'right' 屬性"
 
-#: libsvn_wc/log.c:550
+#: libsvn_wc/log.c:549
 #, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "'%s' 遺漏了 'dest' 屬性"
 
-#: libsvn_wc/log.c:616
+#: libsvn_wc/log.c:615
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "'%s' 遺漏 'timestamp' 屬性"
 
-#: libsvn_wc/log.c:712 libsvn_wc/log.c:752
+#: libsvn_wc/log.c:711 libsvn_wc/log.c:751
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "取得 '%s' 的 'affected time' 時發生錯誤"
 
-#: libsvn_wc/log.c:763
+#: libsvn_wc/log.c:762
 #, c-format
 msgid "Error modifying entry for '%s'"
 msgstr "修改 '%s' 的項目時發生錯誤"
 
-#: libsvn_wc/log.c:789
+#: libsvn_wc/log.c:788
 #, c-format
 msgid "Error removing lock from entry for '%s'"
 msgstr "移除 '%s' 的鎖定時發生錯誤"
 
-#: libsvn_wc/log.c:919
+#: libsvn_wc/log.c:918
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
 msgstr "'%s' 遺漏了 'revision' 屬性"
 
-#: libsvn_wc/log.c:943
+#: libsvn_wc/log.c:942
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
 msgstr "對目錄 '%s' 的紀錄命令被錯置"
 
-#: libsvn_wc/log.c:1118 libsvn_wc/log.c:1194
+#: libsvn_wc/log.c:1117 libsvn_wc/log.c:1193
 #, c-format
 msgid "Error checking existence of '%s'"
 msgstr "檢查 '%s' 是否存在時發生錯誤"
 
-#: libsvn_wc/log.c:1128 libsvn_wc/log.c:1134
+#: libsvn_wc/log.c:1127 libsvn_wc/log.c:1133
 #, c-format
 msgid "Error getting 'affected time' for '%s'"
 msgstr "取得 '%s' 的 'affected time' 時發生錯誤"
 
-#: libsvn_wc/log.c:1144
+#: libsvn_wc/log.c:1143
 #, c-format
 msgid "Error comparing '%s' and '%s'"
 msgstr "比較 '%s' 與 '%s' 時發生錯誤"
 
-#: libsvn_wc/log.c:1254
+#: libsvn_wc/log.c:1253
 #, c-format
 msgid "Error replacing text-base of '%s'"
 msgstr "取代 '%s' 的文件參考基礎時發生錯誤"
 
-#: libsvn_wc/log.c:1263
+#: libsvn_wc/log.c:1262
 #, c-format
 msgid "Error getting 'affected time' of '%s'"
 msgstr "取得 '%s' 的 'affected time' 時發生錯誤"
 
-#: libsvn_wc/log.c:1301 libsvn_wc/log.c:1368
+#: libsvn_wc/log.c:1300 libsvn_wc/log.c:1367
 #, c-format
 msgid "Error modifying entry of '%s'"
 msgstr "修改 '%s' 的項目時發生錯誤"
 
-#: libsvn_wc/log.c:1423
+#: libsvn_wc/log.c:1422
 msgid "Invalid 'format' attribute"
 msgstr "無效的 'format' 屬性"
 
-#: libsvn_wc/log.c:1458
+#: libsvn_wc/log.c:1457
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr "紀錄檔項目遺漏 'name' 屬性 (項目 '%s' 對應至目錄 '%s')"
 
-#: libsvn_wc/log.c:1523
+#: libsvn_wc/log.c:1522
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "無法確認的紀錄檔元素 '%s' 於 '%s' 中"
 
-#: libsvn_wc/log.c:1534
+#: libsvn_wc/log.c:1533
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "處理命令 '%s' 於 '%s' 中時發生錯誤"
 
-#: libsvn_wc/log.c:1665
+#: libsvn_wc/log.c:1664
 msgid "Couldn't open log"
 msgstr "無法開啟紀錄檔"
 
-#: libsvn_wc/log.c:1676
+#: libsvn_wc/log.c:1675
 #, c-format
 msgid "Error reading administrative log file in '%s'"
 msgstr "於 '%s' 中讀取管理紀錄檔時發生錯誤"
 
-#: libsvn_wc/log.c:2268
+#: libsvn_wc/log.c:2267
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "為 '%s' 寫入紀錄時發生錯誤"
 
-#: libsvn_wc/log.c:2316
+#: libsvn_wc/log.c:2315
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s' 並不是工作複本目錄"
@@ -5015,8 +5018,7 @@ msgstr ""
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
-msgstr ""
-"預計刪除性質 '%s', 但是其值已自 '%s' 變更為 '%s'."
+msgstr "預計刪除性質 '%s', 但是其值已自 '%s' 變更為 '%s'."
 
 #: libsvn_wc/props.c:697
 #, c-format
@@ -5033,7 +5035,7 @@ msgid "Missing end of line in wcprops file for '%s'"
 msgstr "'%s' 的 wcprops 檔案缺少換列符號"
 
 #: libsvn_wc/props.c:1064 libsvn_wc/props.c:1100 libsvn_wc/props.c:1370
-#: libsvn_wc/props.c:1627
+#: libsvn_wc/props.c:1626
 msgid "Failed to load properties from disk"
 msgstr "無法自磁碟載入性質"
 
@@ -5067,12 +5069,12 @@ msgstr "'%s' 不是檔案或目錄"
 msgid "File '%s' has binary mime type property"
 msgstr "檔案 '%s' 有二進制的 mime 型別性質"
 
-#: libsvn_wc/props.c:2111
+#: libsvn_wc/props.c:2101
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "剖析 %s 性質於 '%s' 發生錯誤: '%s'"
 
-#: libsvn_wc/props.c:2124
+#: libsvn_wc/props.c:2114
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
@@ -5094,7 +5096,7 @@ msgid ""
 msgstr ""
 "本用戶端已過時, 無法存取工作複本 '%s'; 請取得更新版的 Subversion 用戶端"
 
-#: libsvn_wc/questions.c:337
+#: libsvn_wc/questions.c:345
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -5105,7 +5107,7 @@ msgstr ""
 "       預期:  %s\n"
 "       實際:  %s\n"
 
-#: libsvn_wc/relocate.c:68
+#: libsvn_wc/relocate.c:69
 msgid "Relocate can only change the repository part of an URL"
 msgstr "重新安置只能能變更一個 URL 的檔案庫部份"
 
@@ -5181,12 +5183,12 @@ msgstr "檔案 '%s' 於目錄 '%s' 中的並不是納入版本控制的資源"
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "'%s' 的總和檢查值不符合; 紀錄: '%s', 實際: '%s'"
 
-#: libsvn_wc/update_editor.c:2699
+#: libsvn_wc/update_editor.c:2700
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' 沒有演進歷程資訊"
 
-#: libsvn_wc/update_editor.c:2862
+#: libsvn_wc/update_editor.c:2863
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url '%s' 與 '%s' 的檔案庫根目錄不同"
@@ -5218,21 +5220,21 @@ msgstr "'%s' 不像是 URL"
 msgid "Local, non-commit operations do not take a log message"
 msgstr "本地非送交的動作不需要送交訊息"
 
-#: svn/diff-cmd.c:115 svnserve/main.c:484
+#: svn/diff-cmd.c:117 svnserve/main.c:499
 #, c-format
 msgid "Can't open stdout"
 msgstr "無法開啟標準輸出 (stdout)"
 
-#: svn/diff-cmd.c:117
+#: svn/diff-cmd.c:119
 #, c-format
 msgid "Can't open stderr"
 msgstr "無法開啟標準錯誤 (stderr)"
 
-#: svn/diff-cmd.c:182
+#: svn/diff-cmd.c:184
 msgid "'--new' option only valid with '--old' option"
 msgstr "'--new' 選項只有與 '--old' 選項併用才有效"
 
-#: svn/diff-cmd.c:212
+#: svn/diff-cmd.c:214
 #, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr "差異比較目標不可同時包含工作複本路徑與 URL"
@@ -5274,7 +5276,7 @@ msgstr ""
 "Subversion 是個版本控制系統的工具.\n"
 "欲取得詳細資料, 請參考 http://subversion.tigris.org/\n"
 
-#: svn/help-cmd.c:63 svnsync/main.c:1141
+#: svn/help-cmd.c:63 svnsync/main.c:1140
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5510,11 +5512,11 @@ msgstr "Changed paths:\n"
 msgid " (from %s:%ld)"
 msgstr " (from %s:%ld)"
 
-#: svn/log-cmd.c:448
+#: svn/log-cmd.c:450
 msgid "When specifying working copy paths, only one target may be given"
 msgstr "指定工作複本路徑時, 只可提供一個目標"
 
-#: svn/log-cmd.c:460
+#: svn/log-cmd.c:462
 msgid "Only relative paths can be specified after a URL"
 msgstr "在 URL 之後只可指定相對路徑"
 
@@ -5528,7 +5530,7 @@ msgstr "強制將記錄訊息視為有效"
 
 #: svn/main.c:63 svn/main.c:64 svnadmin/main.c:227 svnadmin/main.c:230
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
-#: svnlook/main.c:93 svnsync/main.c:104 svnsync/main.c:106
+#: svnlook/main.c:93 svnsync/main.c:103 svnsync/main.c:105
 msgid "show help on a subcommand"
 msgstr "顯示子命令的輔助說明"
 
@@ -5601,11 +5603,11 @@ msgstr "輸出詳細資料"
 msgid "display update information"
 msgstr "顯示更新資料"
 
-#: svn/main.c:95 svnsync/main.c:94
+#: svn/main.c:95 svnsync/main.c:93
 msgid "specify a username ARG"
 msgstr "指定使用者名稱 ARG"
 
-#: svn/main.c:97 svnsync/main.c:96
+#: svn/main.c:97 svnsync/main.c:95
 msgid "specify a password ARG"
 msgstr "指定密碼 ARG"
 
@@ -5633,11 +5635,11 @@ msgstr "收集歷史記錄時, 不溯及複製點之前"
 msgid "disregard default and svn:ignore property ignores"
 msgstr "無視預設與 svn:ignore 性質的忽略設定"
 
-#: svn/main.c:111 svnsync/main.c:92
+#: svn/main.c:111 svnsync/main.c:91
 msgid "do not cache authentication tokens"
 msgstr "不記憶認證符"
 
-#: svn/main.c:113 svnsync/main.c:90
+#: svn/main.c:113 svnsync/main.c:89
 msgid "do no interactive prompting"
 msgstr "無互動式提示"
 
@@ -5689,7 +5691,7 @@ msgstr "操作修訂版性質 (與 -r 一同使用)"
 msgid "relocate via URL-rewriting"
 msgstr "透過改寫 URL 以進行工作複本重新安置"
 
-#: svn/main.c:141 svnadmin/main.c:269 svnsync/main.c:98
+#: svn/main.c:141 svnadmin/main.c:269 svnsync/main.c:97
 msgid "read user configuration files from directory ARG"
 msgstr "自目錄 ARG 讀取使用者設定檔"
 
@@ -5903,8 +5905,7 @@ msgid ""
 msgstr ""
 "顯示兩個路徑之間的差異.\n"
 "用法: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
-"      2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] "
-"\\\n"
+"      2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
 "              [PATH...]\n"
 "      3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
@@ -5990,18 +5991,20 @@ msgstr ""
 #: svn/main.c:369
 msgid ""
 "Display information about a local or remote item.\n"
-"usage: info [TARGET...]\n"
+"usage: info [TARGET[@REV]...]\n"
 "\n"
 "  Print information about each TARGET (default: '.')\n"
-"  TARGET may be either a working-copy path or URL.\n"
+"  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+"  determines in which revision the target is first looked up.\n"
 msgstr ""
 "顯示本地或遠端項目的資訊.\n"
 "用法: info [TARGET...]\n"
 "\n"
 "  顯示每個 TARGET 的資訊 (預設: '.').\n"
-"  TARGET 可為工作複本路徑或是 URL.\n"
+"  TARGET 可為工作複本路徑或是 URL. 如果指定 REV 的話,\n"
+"  它會用來決定從哪個修訂版開始檢閱目標.\n"
 
-#: svn/main.c:378
+#: svn/main.c:379
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -6039,7 +6042,7 @@ msgstr ""
 "    大小 (以位元組為單位)\n"
 "    前次送交的日期與時間\n"
 
-#: svn/main.c:400
+#: svn/main.c:401
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -6053,25 +6056,26 @@ msgstr ""
 "\n"
 "  用 --force, 從其它使用者或工作複本偷走鎖定.\n"
 
-#: svn/main.c:408
+#: svn/main.c:409
 msgid "read lock comment from file ARG"
 msgstr "從檔案 ARG 讀取鎖定註解"
 
-#: svn/main.c:409
+#: svn/main.c:410
 msgid "specify lock comment ARG"
 msgstr "指定送交鎖定註解 ARG"
 
-#: svn/main.c:412
+#: svn/main.c:413
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
-"       2. log URL [PATH...]\n"
+"       2. log URL[@REV] [PATH...]\n"
 "\n"
 "  1. Print the log messages for a local PATH (default: '.').\n"
 "     The default revision range is BASE:1.\n"
 "\n"
 "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-"     The default revision range is HEAD:1.\n"
+"     If specified, REV determines in which revision the URL is first\n"
+"     looked up.  The default revision range is HEAD:1.\n"
 "\n"
 "  With -v, also print all affected paths with each log message.\n"
 "  With -q, don't print the log message body itself (note that this is\n"
@@ -6090,13 +6094,14 @@ msgid ""
 msgstr ""
 "顯示一組修訂版與/或檔案的送交紀錄訊息.\n"
 "用法: 1. log [PATH]\n"
-"      2. log URL [PATH...]\n"
+"      2. log URL[@REV] [PATH...]\n"
 "\n"
 "  1. 顯示本地 PATH (預設: '.') 的紀錄訊息. 預設的修訂版範圍為\n"
 "     BASE:1.\n"
 "\n"
-"  2. 顯示 URL 下的 PATH (預設: '.') 的紀錄訊息. 預設的修訂版範圍為\n"
-"     HEAD:1.\n"
+"  2. 顯示 URL 下的 PATH (預設: '.') 的紀錄訊息. 如果指定 REV\n"
+"     的話, 它會用來決定該 URL 先從哪一個修訂版開始檢閱. 預設的\n"
+"     修訂版範圍為 HEAD:1.\n"
 "\n"
 "  使用 -v 時, 一併於每個紀錄訊息中顯示受影響的路徑.\n"
 "  使用 -q 時, 不顯示紀錄訊息本體 (請注意, 這可和 -v 並存).\n"
@@ -6111,7 +6116,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: svn/main.c:441
+#: svn/main.c:443
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6159,7 +6164,7 @@ msgstr ""
 "  '.', 除非來源的主檔名符合 '.' 裡的某個檔案; 在這種情況下, 檔案\n"
 "  差異將會直接套用至該檔案去.\n"
 
-#: svn/main.c:470
+#: svn/main.c:472
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -6188,7 +6193,7 @@ msgstr ""
 "\n"
 "  在這兩個情況下, 所有的中介目錄都必須事先存在.\n"
 
-#: svn/main.c:487
+#: svn/main.c:489
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -6210,7 +6215,7 @@ msgstr ""
 "    WC  -> WC:   移動並排入新增時程 (連同歷史紀錄)\n"
 "    URL -> URL:  完全是伺服器端的更名.\n"
 
-#: svn/main.c:500
+#: svn/main.c:502
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6228,7 +6233,7 @@ msgstr ""
 "  2. 移除無版本控制的遠端檔案庫修訂版性質.\n"
 "     TARGET 只是用來決定存在哪個檔案庫\n"
 
-#: svn/main.c:512
+#: svn/main.c:514
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6246,7 +6251,7 @@ msgstr ""
 "  2. 編輯無版本控制的遠端檔案庫修訂版性質更動.\n"
 "     TARGET 只是用來決定要存取哪一個檔案庫.\n"
 
-#: svn/main.c:525
+#: svn/main.c:527
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6278,7 +6283,7 @@ msgstr ""
 "  所對應到的路徑. 使用 --strict 選項以關閉這項美化行為 (舉例來說,\n"
 "  將二進制性質內容重導至一個檔案時就很有用).\n"
 
-#: svn/main.c:544
+#: svn/main.c:546
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6298,7 +6303,7 @@ msgstr ""
 "  2. 列出無版本控制的遠端檔案庫修訂版性質更動.\n"
 "     TARGET 只是用來決定要存取哪一個檔案庫.\n"
 
-#: svn/main.c:556
+#: svn/main.c:558
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6376,11 +6381,11 @@ msgstr ""
 "  svn:needs-lock 性質都不可對目錄設定. 非遞迴式的設定會失敗, 而\n"
 "  遞迴式的設定只會對目錄的子檔案產生效果.\n"
 
-#: svn/main.c:598
+#: svn/main.c:600
 msgid "read property value from file ARG"
 msgstr "從檔案 ARG 讀取性質內容"
 
-#: svn/main.c:601
+#: svn/main.c:603
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -6395,7 +6400,7 @@ msgstr ""
 "  注意: 本子命令不會依語法來解決衝突或是移除衝突標記; 它只是移除衝突的\n"
 "        相關檔案, 然後讓 PATH 可以再度送交.\n"
 
-#: svn/main.c:610
+#: svn/main.c:612
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -6409,7 +6414,7 @@ msgstr ""
 "  注意: 本子命令不會存取網路, 並且會解除衝突的狀況. 但是它不會復原\n"
 "        被刪除的目錄\n"
 
-#: svn/main.c:618
+#: svn/main.c:620
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -6555,7 +6560,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Status against revision:   981\n"
 
-#: svn/main.c:694
+#: svn/main.c:696
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -6581,7 +6586,7 @@ msgstr ""
 "     URL 變動 (像是綱要或是主機名稱變動), 但是工作複本仍舊對映到同一\n"
 "     檔案庫的同一目錄時用之.\n"
 
-#: svn/main.c:710
+#: svn/main.c:712
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -6593,7 +6598,7 @@ msgstr ""
 "\n"
 "  使用 --force 以打破該鎖定.\n"
 
-#: svn/main.c:718
+#: svn/main.c:720
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -6633,33 +6638,37 @@ msgstr ""
 "  第一欄的字元表示實際檔案的更新, 而檔案性質顯示在第二欄.\n"
 "  第三欄的 'B' 表示該檔案的鎖定已經打破或被偷走.\n"
 
-#: svn/main.c:780 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:137
+#: svn/main.c:782 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
 msgid "Caught signal"
 msgstr "捕捉到信號"
 
-#: svn/main.c:892
+#: svn/main.c:894
 msgid "Non-numeric limit argument given"
 msgstr "使用了非數字的限制引數"
 
-#: svn/main.c:912
+#: svn/main.c:900
+msgid "Argument to --limit must be positive"
+msgstr "--limit 的引數必須為正數"
+
+#: svn/main.c:920
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
 msgstr "遇到了多個修訂版引數; 不可指定兩個 -c, 或同時指定 -c 與 -r"
 
-#: svn/main.c:920 svn/main.c:1112
+#: svn/main.c:928 svn/main.c:1120
 msgid "Can't specify -c with --old"
 msgstr "--old 無法與 -c 一同使用"
 
-#: svn/main.c:927
+#: svn/main.c:935
 msgid "Non-numeric change argument given to -c"
 msgstr "對 -c 使用了非數字的更動引數"
 
-#: svn/main.c:933
+#: svn/main.c:941
 msgid "There is no change 0"
 msgstr "沒有更動 0"
 
-#: svn/main.c:960
+#: svn/main.c:968
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -6667,32 +6676,32 @@ msgstr ""
 "遇到了多個修訂版引數; 無法指定 -r 與 -c, 或請試著指定 '-r N:M' 而非 '-r N -r "
 "M'"
 
-#: svn/main.c:973 svnadmin/main.c:1243
+#: svn/main.c:981 svnadmin/main.c:1243
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "修訂版引數 '%s' 中有語法錯誤"
 
-#: svn/main.c:1128 svn/main.c:1138
+#: svn/main.c:1136 svn/main.c:1146
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 與 --no-auto-props 是互相排斥的"
 
-#: svn/main.c:1154
+#: svn/main.c:1162
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "原生換列符號引數 '%s' 中有語法錯誤"
 
-#: svn/main.c:1204 svndumpfilter/main.c:1194 svnlook/main.c:2025
+#: svn/main.c:1212 svndumpfilter/main.c:1194 svnlook/main.c:2025
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "必須提供子命令引數\n"
 
-#: svn/main.c:1222 svnadmin/main.c:1354 svndumpfilter/main.c:1212
+#: svn/main.c:1230 svnadmin/main.c:1354 svndumpfilter/main.c:1212
 #: svnlook/main.c:2043
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知的命令: '%s'\n"
 
-#: svn/main.c:1256
+#: svn/main.c:1264
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -6701,29 +6710,29 @@ msgstr ""
 "子命令 '%s' 不接受選項 '%s'\n"
 "請輸入 'svn help %s' 以取得用法.\n"
 
-#: svn/main.c:1293
+#: svn/main.c:1301
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "紀錄訊息檔是一個版本控制中的檔案; 請使用 '--force-log' 以略過此限制"
 
-#: svn/main.c:1300
+#: svn/main.c:1308
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "鎖定註解檔是一個版本控制中的檔案; 請使用 '--force-log' 以略過此限制"
 
-#: svn/main.c:1321
+#: svn/main.c:1329
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "紀錄訊息是一個路徑名稱 (確定要用 -F?); 請使用 '--force-log' 以略過此限制"
 
-#: svn/main.c:1328
+#: svn/main.c:1336
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "鎖定註解是一個路徑名稱 (確定要用 -F?); 請使用 '--force-log' 以略過此限制"
 
-#: svn/main.c:1453
+#: svn/main.c:1461
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -6900,12 +6909,12 @@ msgstr "取代           %s\n"
 msgid "Transmitting file data "
 msgstr "傳送檔案資料"
 
-#: svn/notify.c:351
+#: svn/notify.c:350
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
 msgstr "'%s' 被使用者 '%s' 鎖定.\n"
 
-#: svn/notify.c:357
+#: svn/notify.c:356
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "'%s' 解除鎖定.\n"
@@ -7026,7 +7035,7 @@ msgstr "性質 '%s' 設定於 '%s'\n"
 msgid "Try 'svn revert --recursive' instead?"
 msgstr "請改試 'svn revert --recursive'?"
 
-#: svn/status.c:261
+#: svn/status.c:263
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
 msgstr "'%s' 的鎖定被拿走了, 但是沒有鎖定擁有者"
@@ -7105,8 +7114,8 @@ msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
 msgstr ""
-"OS400 無法使用外部編輯器來取得紀錄訊息; 請考慮使用 --message (-m)"
-"或 --file (-F) 選項"
+"OS400 無法使用外部編輯器來取得紀錄訊息; 請考慮使用 --message (-m)或 --file (-"
+"F) 選項"
 
 #: svn/util.c:592
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -7118,8 +7127,8 @@ msgid ""
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
 "options"
 msgstr ""
-"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用"
-"--message (-m) 或 --file (-F) 選項"
+"無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用--"
+"message (-m) 或 --file (-F) 選項"
 
 #: svn/util.c:641
 msgid ""
@@ -7150,7 +7159,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' 是 URL, 但是應該是路徑"
 
 #: svnadmin/main.c:233 svndumpfilter/main.c:786 svnlook/main.c:96
-#: svnserve/main.c:149 svnsync/main.c:102 svnversion/main.c:124
+#: svnserve/main.c:149 svnsync/main.c:101 svnversion/main.c:124
 msgid "show version information"
 msgstr "顯示版本資訊"
 
@@ -7750,7 +7759,7 @@ msgstr ""
 "子命令 '%s' 不接受選項 '%s'\n"
 "請使用 'svndumpfilter help %s' 以了解用法.\n"
 
-#: svnlook/main.c:99 svnsync/main.c:100
+#: svnlook/main.c:99 svnsync/main.c:99
 msgid "specify revision number ARG"
 msgstr "指定修訂版編號 ARG"
 
@@ -8087,7 +8096,7 @@ msgstr "未提供性質名稱與檔案庫路徑引數"
 msgid "Missing propname or repository path argument"
 msgstr "未提供性質名稱或檔案庫路徑引數"
 
-#: svnlook/main.c:1945 svnsync/main.c:1266
+#: svnlook/main.c:1945 svnsync/main.c:1265
 msgid "Invalid revision number supplied"
 msgstr "提供了無效的版本號碼"
 
@@ -8186,56 +8195,55 @@ msgstr ""
 "\n"
 "有效選項:\n"
 
-#: svnserve/main.c:453
+#: svnserve/main.c:468
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "你必須指定 -d, -i, -t 或 -X 其中之一.\n"
 
-#: svnserve/main.c:463
+#: svnserve/main.c:478
 #, c-format
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "選項 --tunnel-user 只有在 tunnel 模式才可以使用\n"
 
-#: svnserve/main.c:532
+#: svnserve/main.c:547
 #, c-format
 msgid ""
 "svnserve: The --service flag is only valid if the process is started by the "
 "Service Control Manager.\n"
-msgstr ""
-"svnserve: --service 只有在行程以服務控制管理員起動時才有效.\n"
+msgstr "svnserve: --service 只有在行程以服務控制管理員起動時才有效.\n"
 
-#: svnserve/main.c:568
+#: svnserve/main.c:583
 #, c-format
 msgid "Can't get address info"
 msgstr "無法取得位址資訊"
 
-#: svnserve/main.c:584
+#: svnserve/main.c:599
 #, c-format
 msgid "Can't create server socket"
 msgstr "無法建立伺服器 socket"
 
-#: svnserve/main.c:597
+#: svnserve/main.c:612
 #, c-format
 msgid "Can't bind server socket"
 msgstr "無法繫結伺服器 socket"
 
-#: svnserve/main.c:665
+#: svnserve/main.c:680
 #, c-format
 msgid "Can't accept client connection"
 msgstr "無法接受用戶連線"
 
 # as-is
-#: svnserve/main.c:719
+#: svnserve/main.c:734
 #, c-format
 msgid "Can't create threadattr"
 msgstr "Can't create threadattr"
 
 # as-is
-#: svnserve/main.c:727
+#: svnserve/main.c:742
 #, c-format
 msgid "Can't set detached state"
 msgstr "Can't set detached state"
 
-#: svnserve/main.c:740
+#: svnserve/main.c:755
 #, c-format
 msgid "Can't create thread"
 msgstr "無法建立執行緒"
@@ -8260,10 +8268,9 @@ msgstr "無法連上服務控制管理員"
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service"
-msgstr ""
-"服務無法啟動; 啟動時發生內部錯誤"
+msgstr "服務無法啟動; 啟動時發生內部錯誤"
 
-#: svnsync/main.c:65
+#: svnsync/main.c:64
 msgid ""
 "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
 "Initialize a destination repository.\n"
@@ -8271,7 +8278,7 @@ msgstr ""
 "用法: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
 "初始化一個目標檔案庫.\n"
 
-#: svnsync/main.c:70
+#: svnsync/main.c:69
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "Transfer all pending revisions from source to destination.\n"
@@ -8279,7 +8286,7 @@ msgstr ""
 "用法: svnsync synchronize DEST_URL\n"
 "將所有擱置的修訂版自來源傳送至目標.\n"
 
-#: svnsync/main.c:74
+#: svnsync/main.c:73
 msgid ""
 "usage: svnsync copy-revprops DEST_URL --revision REV\n"
 "Copy all revision properties for revision REV from source to\n"
@@ -8288,7 +8295,7 @@ msgstr ""
 "用法: svnsync copy-revprops DEST_URL --revision REV\n"
 "將所有修訂版 REV 的修訂版性質自來源複製至目標\n"
 
-#: svnsync/main.c:79
+#: svnsync/main.c:78
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "Describe the usage of this program or its subcommands.\n"
@@ -8296,66 +8303,65 @@ msgstr ""
 "用法: svnadmin help [子命令...]\n"
 "顯示本程式或其子命令的用法.\n"
 
-#: svnsync/main.c:88
+#: svnsync/main.c:87
 msgid "The url to synchronize from"
 msgstr "同步來源 URL"
 
-#: svnsync/main.c:169
+#: svnsync/main.c:168
 #, c-format
 msgid "Can't get local hostname"
 msgstr "無法取得本機名稱"
 
-#: svnsync/main.c:192
+#: svnsync/main.c:191
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr "無法取得目標檔案庫的鎖定, 目前被 '%s' 持有\n"
 
-#: svnsync/main.c:275
+#: svnsync/main.c:274
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "Session 的根目錄為 '%s', 但是檔案庫的根目錄為 '%s'"
 
-#: svnsync/main.c:305
+#: svnsync/main.c:304
 msgid "Cannot initialize a repository with content in it"
 msgstr "無法初始一個有內容的檔案庫"
 
-#: svnsync/main.c:315
+#: svnsync/main.c:314
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "目標檔案庫已經自 '%s' 同步了"
 
-#: svnsync/main.c:426
+#: svnsync/main.c:425
 #, c-format
 msgid "Committing rev %ld\n"
 msgstr "送交修訂版 %ld\n"
 
-#: svnsync/main.c:855
+#: svnsync/main.c:854
 msgid "Destination repository has not been initialized"
 msgstr "目標檔案庫尚未被初始"
 
-#: svnsync/main.c:870
+#: svnsync/main.c:869
 #, c-format
 msgid "UUID of destination repository (%s) does not match expected UUID (%s)"
 msgstr "目標檔案庫的 UUID (%s) 不符合預期的 UUID (%s)"
 
-#: svnsync/main.c:931
+#: svnsync/main.c:930
 #, c-format
 msgid ""
 "Currently copying rev %ld in source is less than latest rev in destination (%"
 "ld)"
-msgstr ""
-"目前來源的複製修訂版號 %ld 比目標的最新修訂版號 (%ld) 還小"
+msgstr "目前來源的複製修訂版號 %ld 比目標的最新修訂版號 (%ld) 還小"
 
-#: svnsync/main.c:1003
+#: svnsync/main.c:1002
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "送交產生修訂版 %ld, 但應該是 %ld"
 
-#: svnsync/main.c:1085
+#: svnsync/main.c:1084
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "無法複製尚未同步的修訂版性質"
 
-#: svnsync/main.c:1135
+#: svnsync/main.c:1134
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8367,7 +8373,7 @@ msgstr ""
 "\n"
 "可用的子命令:\n"
 
-#: svnsync/main.c:1324
+#: svnsync/main.c:1323
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -8454,9 +8460,6 @@ msgstr "已匯出%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 未納入版本控制, 並未匯出\n"
-
-#~ msgid "Finished"
-#~ msgstr "結束"
 
 #~ msgid "Node with dropped parent sneaked in"
 #~ msgstr "其父節點已捨棄的節點偷跑進來"
@@ -8569,17 +8572,11 @@ msgstr "'%s' 未納入版本控制, 並未匯出\n"
 #~ msgid "Can't recode string"
 #~ msgstr "無法對字串進行解碼"
 
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr "'svn info' 只處理工作複本路徑, 不處理 URL"
-
 #~ msgid "repository argument required\n"
 #~ msgstr "需有檔案庫引數\n"
 
 #~ msgid "unknown command: '%s'\n"
 #~ msgstr "未知的命令: '%s'\n"
-
-#~ msgid "Argument to -c must be positive"
-#~ msgstr "-c 的引數必須為正數"
 
 # as-is
 #~ msgid "Can't seek in '%s'"
@@ -8661,3 +8658,9 @@ msgstr "'%s' 未納入版本控制, 並未匯出\n"
 #~ "  anon-access = read|write|none (default read)\n"
 #~ "  auth-access = read|write|none (default write)\n"
 #~ "強迫所有的存取都變成唯讀\n"
+
+#~ msgid "Finished"
+#~ msgstr "結束"
+
+#~ msgid "Can't change executability of file '%s'"
+#~ msgstr "無法變更檔案 '%s' 的執行權限"
