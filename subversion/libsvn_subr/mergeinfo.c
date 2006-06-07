@@ -265,9 +265,6 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
 
   *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-  qsort(in1->elts, in1->nelts, in1->elt_size, svn_sort_compare_ranges);
-  qsort(in2->elts, in2->nelts, in2->elt_size, svn_sort_compare_ranges);
-
   i = 0;
   j = 0;
   while (i < in1->nelts && j < in2->nelts)
@@ -366,11 +363,190 @@ svn_error_t *
 svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard, apr_pool_t *pool)
 {
-  /* ### TODO: Implement me!  dberlin suggests: Walk the sorted list
-     ### like svn_rangelist_merge() does, doing subtraction instead of
-     ### a union.  For the equals case, do nothing and increment i +
-     ### j.  For the other two cases, subtract the range.  If it has
-     ### become disjoint, add the two ranges to the list. */
+  /* We need a copy of eraser we can destructively modify, so we can
+     do this in a single walk. */
+  apr_array_header_t *erasercopy = apr_array_copy(pool, eraser);
+  int i, j;
+  svn_merge_range_t *lastrange = NULL;
+  svn_merge_range_t *newrange;
+
+  *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+
+  /* The general scheme here is to make a walk over the sorted lists,
+     removing ranges from whiteboard as they intersect with ranges in
+     eraser.  You end up with a few possible outcomes, although they
+     can occur in a variety of ways.
+     1. The whiteboard range is completely contained in the current
+     eraser range.  In this case, you just move the whiteboard forward.
+
+     2. The whiteboard range ends up being larger or smaller than
+     eraser in a way that does not require two ranges to represent
+     IE whiteboard: 1-5, eraser: 3-6.
+     or whiteboard: 4-7 eraser: 3-6
+     In this case, you need to subtract the appropriate part of eraser
+     from whiteboard, change eraser to the remainder of the range, and
+     advance whiteboard.
+
+     3. The whiteboard range ends up being larger than eraser in a way
+     that does require two ranges to represent.
+     IE whiteboard: 4-9: eraser: 5-6
+     In this case, you need to generate the two ranges, which will be
+     [whiteboard->start, eraser->start - 1] and
+     [eraser->end+1, whiteboard->end].
+   */
+  i = 0;
+  j = 0;
+  while (i < whiteboard->nelts && j < erasercopy->nelts)
+    {
+      svn_merge_range_t *elt1, *elt2;
+      int res;
+
+      elt1 = APR_ARRAY_IDX(whiteboard, i, svn_merge_range_t *);
+      elt2 = APR_ARRAY_IDX(erasercopy, j, svn_merge_range_t *);
+
+      res = svn_sort_compare_ranges(&elt1, &elt2);
+      if (res == 0)
+        {
+          i++;
+          j++;
+        }
+      else if (res < 0)
+        {
+          svn_merge_range_t temprange;
+
+          /* If the element is completely before the start of the next
+             range to erase, we can skip it. */
+          if (elt1->end < elt2->start)
+            {
+              i++;
+              continue;
+            }
+
+          /* See if we need the first part of the range. It is
+             possible the elements are equal.  */
+          if (elt1->start < elt2->start)
+            {
+
+              temprange.start = elt1->start;
+              temprange.end = elt2->start - 1;
+
+              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                    &temprange))
+                {
+                  newrange = apr_pcalloc(pool, sizeof(*newrange));
+                  newrange->start = temprange.start;
+                  newrange->end = temprange.end;
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+                  lastrange = newrange;
+                }
+            }
+          /* See if the eraser range ends before or at the whiteboard
+             range we are starting at.
+
+             If it doesn't, we have to place the remainder of the
+             range back into the erase.
+
+             For example, if whiteboard has 1-4, 6 and eraser has 3-7
+
+             Then when staring at 1-4, we need to remove 3-4 and
+             change eraser's element to 5-7.
+          */
+          if (elt2->end + 1 <= elt1->end)
+            {
+              temprange.start = elt2->end + 1;
+              temprange.end = elt1->end;
+              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                    &temprange))
+                {
+                  newrange = apr_pcalloc(pool, sizeof(*newrange));
+                  newrange->start = temprange.start;
+                  newrange->end = temprange.end;
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+
+                  lastrange = newrange;
+                }
+              i++;
+              j++;
+            }
+          else
+            {
+              newrange = apr_pcalloc(pool, sizeof(*newrange));
+              newrange->start = elt1->end + 1;
+              newrange->end = elt2->end;
+              APR_ARRAY_IDX(erasercopy, j, svn_merge_range_t *) = newrange;
+              i++;
+            }
+        }
+      else
+        {
+          svn_merge_range_t temprange;
+
+          /* If the element is completely after the end of the next
+             range to erase, we can skip the erasing range. */
+          if (elt2->end < elt1->start)
+            {
+              j++;
+              continue;
+            }
+
+          /* Unlike the other case, it is impossible for elt1->start
+             to be < elt2->start, or else svn_sort_compare_ranges
+             wouldn't have said elt1 > elt2.  */
+
+          /* See if the range ends before or at the range of the
+             whiteboard we are staring at.
+             If it doesn't, we have to place the remainder of the
+             range back into the erase.
+             For example, if whiteboard has 1-4, 6
+             and eraser has 3-7
+             then when staring at 1-4, we need to remove 3-4 and
+             change eraser's element to 5-7 */
+          if (elt2->end +1 <= elt1->end)
+            {
+              temprange.start = elt2->end + 1;
+              temprange.end = elt1->end;
+              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                    &temprange))
+                {
+                  newrange = apr_pcalloc(pool, sizeof(*newrange));
+                  newrange->start = temprange.start;
+                  newrange->end = temprange.end;
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+
+                  lastrange = newrange;
+                }
+              i++;
+              j++;
+            }
+          else
+            {
+              newrange = apr_pcalloc(pool, sizeof(*newrange));
+              newrange->start = elt1->end + 1;
+              newrange->end = elt2->end;
+              APR_ARRAY_IDX(erasercopy, j, svn_merge_range_t *) = newrange;
+              i++;
+            }
+
+        }
+    }
+
+  /* Copy any remaining whiteboard elements.  */
+  for (; i < whiteboard->nelts; i++)
+    {
+      svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
+                                             svn_merge_range_t *);
+
+      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+        {
+          newrange = apr_pcalloc(pool, sizeof(*newrange));
+          newrange->start = elt->start;
+          newrange->end = elt->end;
+
+          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+          lastrange = newrange;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -504,8 +680,17 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
       if (res == 0)
         {
           apr_array_header_t *merged;
+          apr_array_header_t *in1, *in2;
 
-          SVN_ERR(svn_rangelist_merge(&merged, elt1.value, elt2.value, pool));
+          in1 = elt1.value;
+          in2 = elt2.value;
+
+          /* XXX: Move out of here tomorrow when svn_mergeinfo_sort is
+             introduced. */
+          qsort(in1->elts, in1->nelts, in1->elt_size, svn_sort_compare_ranges);
+          qsort(in2->elts, in2->nelts, in2->elt_size, svn_sort_compare_ranges);
+
+          SVN_ERR(svn_rangelist_merge(&merged, in1, in2, pool));
           apr_hash_set(*output, elt1.key, elt1.klen, merged);
           i++;
           j++;

@@ -75,6 +75,9 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a in1 and @a in2, and place the result in @a output.
  *
+ * Note: @a in1 and @a in2 must be sorted as said by
+ * svn_sort_compare_ranges. @a output is guaranteed to be in sorted
+ * order.
  * @since New in 1.5.
  */
 svn_error_t *
@@ -84,6 +87,9 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
  * minuend), and places the resulting difference in @a output.
  *
+ * Note: @a in1 and @a in2 must be sorted as said by
+ * svn_sort_compare_ranges.  @a output is guaranteed to be in sorted
+ * order.
  * @since New in 1.5.
  */
 svn_error_t *

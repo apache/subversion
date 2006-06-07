@@ -215,6 +215,8 @@ test_parse_broken_mergeinfo(const char **msg,
 
 static const char *mergeinfo1 = "/trunk: 5,7-9,10,11,13,14,3\n/fred:8-10";
 static const char *mergeinfo2 = "/trunk: 1-4,6,3\n/fred:9-12";
+static const char *mergeinfo3 = "/trunk: 3-7, 13\n/fred:9";
+static const char *mergeinfo4 = "/trunk: 5-8, 13\n/fred:9";
 
 static svn_error_t *
 test_parse_multi_line_mergeinfo(const char **msg,
@@ -390,6 +392,60 @@ test_remove_mergeinfo(const char **msg,
 }
 
 static svn_error_t *
+test_remove_rangelist(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  apr_array_header_t *whiteboard;
+  apr_array_header_t *eraser;
+  apr_array_header_t *result;
+  svn_stringbuf_t *outputstring;
+  svn_stringbuf_t *expected1 = svn_stringbuf_create("8-11,14", pool);
+  svn_stringbuf_t *expected2 = svn_stringbuf_create("8", pool);
+  *msg = "remove of rangelist";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
+  
+  whiteboard = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
+  if (!whiteboard)
+    return fail(pool, "Missing path in parsed mergeinfo");
+
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo3, &info2, pool));
+  
+  eraser = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
+  if (!eraser)
+    return fail(pool, "Missing path in parsed mergeinfo");
+
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
+  
+  SVN_ERR(svn_rangelist_to_string(&outputstring, result, pool));
+
+  if (svn_stringbuf_compare(expected1, outputstring) != TRUE)
+    return fail(pool, "Rangelist string not what we expected");
+
+  SVN_ERR(svn_mergeinfo_parse(mergeinfo4, &info1, pool));
+  
+  whiteboard = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
+  if (!whiteboard)
+    return fail(pool, "Missing path in parsed mergeinfo");
+
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
+  
+  SVN_ERR(svn_rangelist_to_string(&outputstring, result, pool));
+
+  if (svn_stringbuf_compare(expected2, outputstring) != TRUE)
+    return fail(pool, "Rangelist string not what we expected");
+
+  /* ### TODO: Implement me! */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_rangelist_to_string(const char **msg,
                          svn_boolean_t msg_only,
                          svn_test_opts_t *opts,
@@ -456,6 +512,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_remove_mergeinfo),
+    SVN_TEST_PASS(test_remove_rangelist),
     SVN_TEST_PASS(test_rangelist_to_string),
     SVN_TEST_PASS(test_mergeinfo_to_string),
     SVN_TEST_NULL
