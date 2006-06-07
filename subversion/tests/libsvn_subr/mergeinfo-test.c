@@ -251,10 +251,32 @@ test_diff_mergeinfo(const char **msg,
 
   from = apr_hash_make(pool);
   to = apr_hash_make(pool);
-  /* On /trunk: deleted (1, 2, 4) and added (5, 7, 8) */
-  apr_hash_set(from, "/trunk", APR_HASH_KEY_STRING, "1-4");
-  apr_hash_set(to, "/trunk", APR_HASH_KEY_STRING, "3,5,7-8");
 
+  /* 'from' range: "1-4" */
+  rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start = 1;
+  range->end = 4;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  apr_hash_set(from, "/trunk", APR_HASH_KEY_STRING, rangelist);
+
+  /* 'to' range: "3,5,7-8" */
+  rangelist = apr_array_make(pool, 3, sizeof(svn_merge_range_t *));
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start = 3;
+  range->end = 3;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start = 5;
+  range->end = 5;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start = 7;
+  range->end = 8;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  apr_hash_set(to, "/trunk", APR_HASH_KEY_STRING, rangelist);
+
+  /* On /trunk: deleted (1, 2, 4) and added (5, 7, 8) */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
 
   if (apr_hash_count(deleted) != 1)
