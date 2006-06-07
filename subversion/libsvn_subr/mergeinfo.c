@@ -551,6 +551,186 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
 }
 
 
+/* The state necessary for traversing a range list. */
+struct rangelist_iterator
+{
+  /* The list of svn_merge_range_t *'s being traversed. */
+  apr_array_header_t *rangelist;
+
+  /* How far we traveled along RANGELIST. */
+  int index;
+};
+
+/* Return the next range in the list (and increment ITER->INDEX), or
+   return NULL if none remain. */
+static svn_merge_range_t *
+next_range(struct rangelist_iterator *iter)
+{
+    if (iter->index < iter->rangelist->nelts)
+      return APR_ARRAY_IDX(iter->rangelist, iter->index++,
+                           svn_merge_range_t *);
+    else
+      return NULL;
+}
+
+/* The state necessary for traversing "from" and "to" range lists in
+   search of differences. */
+struct rangelist_delta_explorer
+{
+  /* The lists of svn_merge_range_t *'s being compared for deltas. */
+  struct rangelist_iterator *from_iter;
+  struct rangelist_iterator *to_iter;
+
+  /* Any differences we've detected between FROM_ITER and TO_ITER. */
+  apr_array_header_t *deletions;
+  apr_array_header_t *additions;
+};
+
+static struct rangelist_delta_explorer *
+rangelist_delta_explorer_create(apr_array_header_t *from,
+                                apr_array_header_t *to, apr_pool_t *pool)
+{
+  struct rangelist_delta_explorer *delta_explorer =
+    apr_pcalloc(pool, sizeof(*delta_explorer));
+
+  delta_explorer->from_iter = 
+    apr_pcalloc(pool, sizeof(*delta_explorer->from_iter));
+  delta_explorer->from_iter->rangelist = from;
+  delta_explorer->to_iter =
+    apr_pcalloc(pool, sizeof(*delta_explorer->to_iter));
+  delta_explorer->to_iter->rangelist = to;
+
+  delta_explorer->deletions =
+    apr_array_make(pool, 0, sizeof(*delta_explorer->deletions));
+  delta_explorer->additions =
+    apr_array_make(pool, 0, sizeof(*delta_explorer->additions));
+
+  return delta_explorer;
+}
+
+/* Return whether FROM and TO overlap at all. */
+static svn_boolean_t
+ranges_overlap_p(svn_merge_range_t *from, svn_merge_range_t *to)
+{
+    /* from range: 1-4, to range: 3-3 */
+    return (from != NULL && to != NULL) &&
+        ((to->start <= from->start && from->start <= to->end) ||
+         (to->start <= from->end && from->end <= to->end) ||
+         (from->start <= to->start && to->end <= from->end));
+}
+
+/* Walk all ranges in DELTA_EXPLORER, using it to record any deltas
+   encountered.  Strategy:
+
+   1. Attempt to match up "from" and "to" ranges which contain
+   overlapping revisions.
+
+   2. For ranges that describe overlapping revisions, record any
+   deltas.
+
+   3. For ranges that don't overlap, treat them as deletes (when the
+   "from" window comes before the "to") or adds (if vice-versa). */
+static void
+walk_rangelists(struct rangelist_delta_explorer *delta_explorer,
+                apr_pool_t *pool)
+{
+  svn_merge_range_t *from = NULL, *to = NULL;
+  do
+    {
+      /* Walk forward along each rangelist as necessary. */
+      if (from == NULL)
+        from = next_range(delta_explorer->from_iter);
+      if (to == NULL)
+        to = next_range(delta_explorer->to_iter);
+
+      if (from == NULL && to == NULL)
+        /* No ranges remain, we're done. */
+        break;
+
+      if (ranges_overlap_p(from, to))
+        {
+          if (from->start != to->start && from->end != to->end)
+            {
+              /* When the overlapping ranges aren't an exact match,
+                 discover and record the delta. */
+              svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
+
+              /* Handle any delta between left edges of the ranges. */
+              if (from->start < to->start)
+                {
+                  /* Lost revs from the left edge of the FROM range. */
+                  range->start = from->start;
+                  range->end = to->start - 1;
+                  APR_ARRAY_PUSH(delta_explorer->deletions,
+                                 svn_merge_range_t *) = range;
+                  range = NULL;
+                }
+              else  /* from->start > to->start */
+                {
+                  /* Gained revs from the left edge of the TO range. */
+                  range->start = to->start;
+                  range->end = from->start - 1;
+                  APR_ARRAY_PUSH(delta_explorer->additions,
+                                 svn_merge_range_t *) = range;
+                  range = NULL;
+                }
+
+              /* Handle any delta between right edges of the ranges. */
+              if (from->end > to->end)
+                {
+                  /* Lost revs from the right edge of the FROM range. */
+                  if (range == NULL)
+                    range = apr_pcalloc(pool, sizeof(*range));
+                  range->start = to->end + 1;
+                  range->end = from->end;
+                  APR_ARRAY_PUSH(delta_explorer->deletions,
+                                 svn_merge_range_t *) = range;
+                }
+              else  /* from->end < to->end */
+                {
+                  /* Gained revs from the right edge of the TO range. */
+                  if (range == NULL)
+                    range = apr_pcalloc(pool, sizeof(*range));
+                  range->start = from->end + 1;
+                  range->end = to->end;
+                  APR_ARRAY_PUSH(delta_explorer->additions,
+                                 svn_merge_range_t *) = range;
+                }
+            }
+          /* else no delta to record */
+
+          /* We'll want new FROM and TO ranges for our next iteration. */
+          from = to = NULL;
+        }
+      else
+        {
+          /* A FROM and TO range with no overlap between them
+             indicates a complete removal or addition (respectively)
+             of the first range encountered. */
+          if (from != NULL && (to == NULL || from->end < to->start))
+            {
+              /* FROM range encountered first (a delete). */
+              APR_ARRAY_PUSH(delta_explorer->deletions,
+                             svn_merge_range_t *) = from;
+
+              /* We'll re-use our TO range, and see if it overlaps
+                 with the next FROM range. */
+              from = NULL;
+            }
+          else
+            {
+              /* TO range encountered first (an add). */
+              APR_ARRAY_PUSH(delta_explorer->additions,
+                             svn_merge_range_t *) = to;
+
+              /* We'll re-use our FROM range, and see if it overlaps
+                 with the next TO range. */
+              to = NULL;
+            }
+        }
+    } while (TRUE);
+}
+
 /* Output deltas via *DELETED and *ADDED, which will never be @c NULL.
 
    The following diagrams illustrate some common range delta scenarios:
@@ -584,13 +764,15 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_array_header_t *from, apr_array_header_t *to,
                    apr_pool_t *pool)
 {
-  int i;
+  /* ### Avoid having memory for delta_explorer stick around
+     ### (e.g. thru use of sub-pool)? */
+  struct rangelist_delta_explorer *delta_explorer =
+    rangelist_delta_explorer_create(from, to, pool);
 
-  *deleted = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  *added = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  walk_rangelists(delta_explorer, pool);
 
-  /* ### TODO */
-
+  *deleted = delta_explorer->deletions;
+  *added = delta_explorer->additions;
   return SVN_NO_ERROR;
 }
 
