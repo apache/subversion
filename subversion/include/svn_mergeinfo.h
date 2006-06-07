@@ -38,6 +38,8 @@ extern "C" {
  * to arrays of @c svn_merge_range_t.  Perform temporary allocations
  * in @a pool.
  *
+ * Note: @a hash will contain rangelists that are guaranteed to be
+ * sorted.
  * @since New in 1.5.
  */
 svn_error_t *
@@ -57,6 +59,9 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
 /** Merge two hashes of merge info, @a in1 and @a in2,
  * and place the result in @a output.  
  *
+ * Note: @a in1 and @a in2 must have rangelists that are sorted as said by
+ * svn_sort_compare_ranges.  @a output will have rangelists that are
+ * guaranteed to be in sorted order.
  * @since New in 1.5.
  */
 svn_error_t *
@@ -125,6 +130,15 @@ svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
 svn_error_t *
 svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
                         apr_pool_t *pool);
+
+/** Take a hash of mergeinfo in @a input, and sort the rangelists
+ * associated with each key.
+ * Note: This does not sort the hash, only the range lists in the
+ * hash.
+ * @since New in 1.5
+ */
+svn_error_t *
+svn_mergeinfo_sort(apr_hash_t *input, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
