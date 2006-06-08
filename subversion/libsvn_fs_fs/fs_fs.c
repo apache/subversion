@@ -3983,7 +3983,6 @@ generate_mergeinfo_sql(svn_fs_txn_t *txn, const char *path,
 {
   apr_hash_t *minfo;
   apr_hash_index_t *hi;
-  fs_fs_data_t *ffd;
   sqlite3_stmt *stmt;
   fs_txn_data_t *ftd;
   
@@ -4114,7 +4113,6 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  fs_fs_data_t *ffd = cb->fs->fsap_data;
   fs_txn_data_t *ftd = cb->txn->fsap_data;
   svn_boolean_t contains_merge_info = FALSE;
   
