@@ -56,7 +56,7 @@ Candidate changes:
     Justification:
       Regression from 1.3.x.
     Concerns:
-      See thread at http://svn.haxx.se/dev/archive-2006-06/0525.shtml.
+      See thread at http://svn.haxx.se/dev/archive-2006-06/0252.shtml.
     Votes:
       +1: rooneg, dlr
       -1: lundblad
