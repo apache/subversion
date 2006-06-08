@@ -109,7 +109,7 @@ Tools for Subversion.
 - Added needed 'gettext' BuildPreReq.
   Thanks go to Francis Giraldeau <francis.giraldeau@revolutionlinux.com>.
 
-* Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r18013
+* Sat Jan 07 2006 David Summers <david@summersoft.fay.ar.us> r18013
 - Simplify apache regression testing.
 
 * Sat Dec 17 2005 David Summers <david@summersoft.fay.ar.us> r17832
@@ -119,24 +119,65 @@ Tools for Subversion.
 - Fixed Subversion bug # 1456: Subversion RedHat RPMs have bad interaction with
   NFS server/client.
 
+* Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16237
+- [RHL8, RHL9] Updated to swig 1.3.25 to get rid of run-time dependencies on
+  swig package.  With this update, only the developer/packager needs to install
+  swig.
+
+* Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16236
+- [RHL7] Update do swig-1.3.25.  This makes it so that only the
+  packager/developer needs to install the swig package.
+
+* Fri Sep 23 2005 David Summers <david@summersoft.fay.ar.us> r16222
+- [RHEL3] Update to SWIG 1.3.25.  This makes it so that only the
+  developer/packager needs the SWIG package installed.
+
 * Wed Aug 31 2005 David Summers <david@summersoft.fay.ar.us> r16011
-- Update to SWIG 1.3.25.  This makes it so that only the developer/packager
-  needs the SWIG package installed.
+- [RHEL4] Update to SWIG 1.3.25.  This makes it so that only the
+  developer/packager needs the SWIG package installed.
 
 * Sun Aug 07 2005 David Summers <david@summersoft.fay.ar.us> r15615
-- Fix bug where RHEL4 version can't find Python bindings.
+- [RHEL4] Fix bug where RHEL4 version can't find Python bindings.
   RHEL4 uses python 2.3 instead of python 2.2.
 
+* Mon Jun 13 2005 David Summers <david@summersoft.fay.ar.us> r15049
+- [RHL7, RHL8, RHL9] Fix breakage that *only* occurs during release build
+  (noticed on 1.2.0).
+
 * Sat Apr 30 2005 David Summers <david@summersoft.fay.ar.us> r14530
-- Make backend regression tests explicit and make sure we do them for both BDB
-  and FSFS backends.
+- [!RHEL3] Make backend regression tests explicit and make sure we do them for
+  both BDB and FSFS backends.
 
 * Sun Apr 24 2005 David Summers <david@summersoft.fay.ar.us> r14429
-- Add build for RHEL4 for both BDB and FSFS back-ends.
+- [RHEL4] Add build for RHEL4 for both BDB and FSFS back-ends.
+
+* Sun Apr 17 2005 David Summers <david@summersoft.fay.ar.us> r14276
+- [RHEL3] *** WARNING: This version drops support for Berkeley BDB.
+
+  *** WARNING ***: If you have previously used the Berkeley BDB back-end
+  you must do a svnadmin dump BEFORE installing this package and a svnadmin
+  load AFTER installing it.  I'm hoping this will be not be too much of a
+  hassle because to implement the new subversion 1.2 xdelta compression you
+  will need to do a dump/load anyway.
+
+  *** Note: This is not a requirement/problem of Subversion but of my previous
+  subversion packages where I tried to back-port/forward-port required packages
+  that came with the distribution.
+
+- [RHEL3] Finally gave up trying to integrate manually with forward ported and
+  back ported packages.  There are just too many interdependencies between
+  APR, BDB, APACHE, PHP, etc.
+
+- [RHEL3] Changed subversion-server package name to mod_dav_svn.
 
 * Thu Mar 31 2005 David Summers <david@summersoft.fay.ar.us> r13821
 - Greatly reduce disk usage by telling each test pass to cleanup after
   successful tests.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13716
+- [RHL7] Fixed dependencies to use libtool and autoconf253 that already comes
+  with RedHat 7.3.  I obviously didn't do my homework a couple of years ago.
+  No need to support updated/custom versions of these.
 
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13714
 - Make use of the new swig-1.3.19-3 package which allows swig-1.3.19 to
@@ -149,11 +190,11 @@ Tools for Subversion.
 - Fix http tests to work with new locking feature which now requires
   authentication.
 
-* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13417
+* Tue Mar 15 2005 David Summers <david@summersoft.fay.ar.us> r13417
 - Supplementary: Take out documentation patch altogether.
-- Turn testing back on, it was accidentally turned off.
+- [RHEL3, RHEL4] Turn testing back on, it was accidentally turned off.
 
-* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13132
+* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13202
 - Bye bye book;  it is now no longer a part of the Subversion repository but
   is at the http://svn.red-bean.com/svnbook/ URL.
   I will probably create a separate RPM package for it now...stay tuned.
@@ -170,15 +211,24 @@ Tools for Subversion.
 * Wed Jul 07 2004 David Summers <david@summersoft.fay.ar.us> 1.1.0-10174
 - Require neon-0.24.7 to fix invalid XML (compression) bug.
 
+* Thu May 20 2004 Ben Reser <ben@reser.org> 1.1.0-9807
+- [RHL7, RHL8, RHL9] Require neon 0.24.6 to fix a security bug.
+  (CAN-2004-0398).
+
 * Wed May 05 2004 David Summers <david@summersoft.fay.ar.us> 1.1.0-9628
-- Track changes to perl binding compile and install.
+- [!RHL7] Track changes to perl binding compile and install.
 - Locale files now installed.
 
+* Mon Apr 19 2004 Blair Zajac <blair@orcaware.com> 1.1.0-9438
+- [RHL7, RHL8, RHL9] Require neon 0.24.5 to fix format string vulnerabilities
+  in XML/207 response handling.  See
+  http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
+
 * Wed Mar 10 2004 David Summers <david@summersoft.fay.ar.us> 1.0.0-8983
-- Fedora-1 and WBEL-3 require db42-4.2.52 or greater.
+- [RHEL3, RHEL4] Fedora-1 and WBEL-3 require db42-4.2.52 or greater.
 
 * Tue Feb 24 2004 David Summers <david@summersoft.fay.ar.us> 1.0.0-8823
-- cvs2svn moved to separate project/package.
+- [!RHL7] cvs2svn moved to separate project/package.
 
 * Thu Feb 19 2004 David Summers <david@summersoft.fay.ar.us> 0.37.0-8770
 - cvs2svn.1 man page taken out of distribution.  Change RPM so that if it
@@ -192,17 +242,26 @@ Tools for Subversion.
 - Switched to the Redhat way of doing the "swig" package where it is not
   separated into "swig" and "swig-runtime".
 - Added subversion-perl package to support Perl (SWIG) bindings.
+  [RHL7] *** Note: Made it conditional as RedHat 7.x doesn't have the
+                   required perl-5.8.0.
 
 * Sat Jan 17 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8362
 - Now requires swig-1.3.19 so we can build the upcoming perl bindings.
 
+* Sat Dec 27 2003 David Summers <david@summersoft.fay.ar.us> 0.35.1-8104
+- [RHL7] Patch by Ben Reser <ben@reser.org> to get documentation to build
+  again.
+- [RHL7] Updated to apache 2.0.48 (apr/apr-util 0.9.5).
+- [RHL7] Added svnserve and svnserve.conf man pages.
+
 * Thu Dec 25 2003 David Summers <david@summersoft.fay.ar.us> 0.35.1-8085
-- Patch by Ben Reser <ben@reser.org> to get documentation to build again.
-- svnserve.conf and svnserve manual pages added.
+- [!RHL7] Patch by Ben Reser <ben@reser.org> to get documentation to build
+  again.
+- [!RHL7] svnserve.conf and svnserve manual pages added.
 
 * Fri Dec 19 2003 David Summers <david@summersoft.fay.ar.us> 0.35.0-8054
 - Require httpd-2.0.48.  *** Note: I don't yet have packages for httpd-2.0.48.
-- Require apr-0.9.5.
+- [!RHL7] Require apr-0.9.5.
 
 * Tue Oct 25 2003 Blair Zajac <blair@orcaware.com> 0.32.1-7520
 - Require neon 0.24.4.
@@ -216,7 +275,8 @@ Tools for Subversion.
 * Sat Jul 19 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6514
 - PORTING file no longer exists.
 - Thanks to Ralph Loader <suckfish@ihug.co.nz> for the following changes:
-- Get rid of extraneous perl module dependencies via filter-requires.sh script.
+- [!RHL7] Get rid of extraneous perl module dependencies via filter-requires.sh
+  script.
 - gdbm-devel is not a build pre-req for subversion but APR/APR-UTIL.
 - LDFLAGS no longer needed when compiling without subversion-devel installed.
 - Use %configure instead of ./configure.
@@ -239,10 +299,10 @@ Tools for Subversion.
 - Apache 2.0.47 now recommended because of security issues.
 
 * Sat Jun 28 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6365
-- RedHat decided to break out apr and apr-util separately from apache
+- [!RHL7] RedHat decided to break out apr and apr-util separately from apache
   (httpd package).
-- This also now builds on RedHat 9.0 because the new apr/apu-config correctly
-  picks up the openssl include files.
+- [!RHL7] This also now builds on RedHat 9.0 because the new apr/apu-config
+  correctly picks up the openssl include files.
 
 * Tue Jun 24 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6334
 - Now requires apache 2.0.46.
@@ -270,7 +330,7 @@ Tools for Subversion.
 
 * Sat May 10 2003 David Summers <david@summersoft.fay.ar.us> 0.22.1-5879
 - svn-config has been taken back out of the distribution.
-- cvs2svn no longer requires SWIG, so rename the subversion-cvs2svn package to 
+- cvs2svn no longer requires SWIG, so rename the subversion-cvs2svn package to
   subversion-python and move the cvs2svn and RCS parser into the subversion
   package.
 - Added cvs2svn man page.
@@ -279,8 +339,12 @@ Tools for Subversion.
 - Added svndumpfilter.
 
 * Fri Apr 04 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5549
-- Updated to Apache 2.0.45.
-- Took out libsvn_auth as it is no longer needed or used.
+- [!RHL7] Updated to Apache 2.0.45.
+- [!RHL7] Took out libsvn_auth as it is no longer needed or used.
+
+* Thu Apr 03 2003 David Summers <david@summersoft.fay.ar.us> 0.20.1-5542
+- [RHL7] Updated to apache-2.0.45-0.1.
+- [RHL7] Took out libsvn_auth as it is no longer generated or used.
 
 * Sat Mar 01 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5173
 - Enabled RA_DAV checking.
@@ -290,14 +354,19 @@ Tools for Subversion.
 - Created tools package to hold the tools.
 
 * Thu Jan 16 2003 David Summers <david@summersoft.fay.ar.us> 0.16.1-4405
-- Now requires httpd >= 2.0.44-0.1 (APACHE_2_0_BRANCH) which contains the new
-  version of APR/APR-UTILS as of 2003.01.15.
+- Now requires Apache HTTPD >= 2.0.44-0.1 (APACHE_2_0_BRANCH) which contains
+  the new version of APR/APR-UTILS as of 2003.01.15.
 - Added svnversion command.
 
 * Tue Dec 31 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4218
 - Create a svnadmin.static which is copied to svnadmin-version-release
   when the package is erased, so users can still dump/load their repositories
   even after they have upgraded the RPM package.
+
+* Sun Dec 29 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4206
+- [RHL7] Switched to new db4 package to be more like RedHat 8.0.
+- [RHL7] Switched to new version of apache that combines APR and APRUTILS into
+  one package.
 
 * Sat Dec 14 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4128
 - SWIG now builds so we can use cvs2svn.
@@ -355,7 +424,7 @@ Tools for Subversion.
 - Updated to apache-2.0.32-0.2. (Requires apache-libapr and apache-libapr-util).
 - Took out a (now non-existant) documentation file.
 - Moved SPEC file changelog to after all package definitions.
-  
+
 * Sun Feb 03 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1153
 - Updated to neon-0.18.5.
 - Broke up apache and apache-devel into apache-apr, apache-apr-devel,
