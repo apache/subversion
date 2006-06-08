@@ -1135,55 +1135,7 @@ svn_io_file_checksum(unsigned char digest[],
 
 /*** Permissions and modes. ***/
 
-svn_error_t *
-svn_io_set_file_read_only(const char *path,
-                          svn_boolean_t ignore_enoent,
-                          apr_pool_t *pool)
-{
-  apr_status_t status;
-  const char *path_apr;
-
-  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
-
-  status = apr_file_attrs_set(path_apr,
-                              APR_FILE_ATTR_READONLY,
-                              APR_FILE_ATTR_READONLY,
-                              pool);
-
-  if (status && status != APR_ENOTIMPL)
-    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
-      return svn_error_wrap_apr(status,
-                                _("Can't set file '%s' read-only"),
-                                svn_path_local_style(path, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_io_set_file_read_write(const char *path,
-                           svn_boolean_t ignore_enoent,
-                           apr_pool_t *pool)
-{
-  apr_status_t status;
-  const char *path_apr;
-
-  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
-
-  status = apr_file_attrs_set(path_apr,
-                              0,
-                              APR_FILE_ATTR_READONLY,
-                              pool);
-
-  if (status && status != APR_ENOTIMPL)
-    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
-      return svn_error_wrap_apr(status,
-                                _("Can't set file '%s' read-write"),
-                                svn_path_local_style(path, pool));
-
-  return SVN_NO_ERROR;
-}
-
+#ifndef WIN32
 /* Given the file specified by PATH_APR, attempt to create an
    identical version of it owned by the current user.  This is done by
    moving it to a temporary location, copying the file back to its old
@@ -1250,11 +1202,17 @@ get_default_file_perms(const char *path, apr_fileperms_t *perms,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_io_set_file_read_write_carefully(const char *path,
-                                     svn_boolean_t enable_write,
-                                     svn_boolean_t ignore_enoent,
-                                     apr_pool_t *pool)
+/* This is a helper function for the svn_io_set_file_read* functions
+   that attempts to honor the users umask when dealing with
+   permission changes. */
+static svn_error_t *
+io_set_file_perms(const char *path,
+                  svn_boolean_t change_readwrite,
+                  svn_boolean_t enable_write,
+                  svn_boolean_t change_executable,
+                  svn_boolean_t executable,
+                  svn_boolean_t ignore_enoent,
+                  apr_pool_t *pool)
 {
   apr_status_t status;
   const char *path_apr;
@@ -1264,9 +1222,9 @@ svn_io_set_file_read_write_carefully(const char *path,
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
 
   /* Try to change only a minimal amount of the perms first 
-     by getting the current perms and adding execute bits
+     by getting the current perms and adding bits
      only on where read perms are granted.  If this fails
-     fall through to the svn_io_set_file* calls. */
+     fall through to just setting file attributes. */
   status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
   if (status)
     {
@@ -1274,17 +1232,17 @@ svn_io_set_file_read_write_carefully(const char *path,
         return SVN_NO_ERROR;
       else if (status != APR_ENOTIMPL)
         return svn_error_wrap_apr(status,
-                                  _("Can't change read-write perms of "
-                                    "file '%s'"),
+                                  _("Can't change perms of file '%s'"),
                                   svn_path_local_style(path, pool));
-    } 
-  else
+      return SVN_NO_ERROR;
+    }
+
+  perms_to_set = finfo.protection;
+  if (change_readwrite)
     {
-      perms_to_set = finfo.protection;
       if (enable_write) /* Make read-write. */
-        SVN_ERR(get_default_file_perms(path, &perms_to_set, 
-                                       pool));
-      else /* Make read-only. */
+        SVN_ERR(get_default_file_perms(path, &perms_to_set, pool));
+      else
         {
           if (finfo.protection & APR_UREAD)
             perms_to_set &= ~APR_UWRITE;
@@ -1293,57 +1251,159 @@ svn_io_set_file_read_write_carefully(const char *path,
           if (finfo.protection & APR_WREAD)
             perms_to_set &= ~APR_WWRITE;
         }
+    }
 
-      /* If we aren't changing anything then just return, this save
-         some system calls and helps with shared working copies */
-      if (perms_to_set == finfo.protection)
-        return SVN_NO_ERROR;
-
-      status = apr_file_perms_set(path_apr, perms_to_set);
-      if (status)
+  if (change_executable)
+    {
+      if (executable)
         {
-          if (APR_STATUS_IS_EPERM(status))
-            {
-              /* We don't have permissions to change the
-                 permissions!  Try a move, copy, and delete
-                 workaround to see if we can get the file owned by
-                 us.  If these succeed, try the permissions set
-                 again.
-
-                 Note that we only attempt this in the
-                 stat-available path.  This assumes that the
-                 move-copy workaround will only be helpful on
-                 platforms that implement apr_stat. */
-              SVN_ERR(reown_file(path_apr, pool));
-              status = apr_file_perms_set(path_apr, perms_to_set);
-            }
-
-          if (status)
-            {
-              if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
-                return SVN_NO_ERROR;
-              else if (status == APR_ENOTIMPL) /* on win32, for example. */
-                {
-                  if (enable_write)
-                    SVN_ERR(svn_io_set_file_read_write(path, ignore_enoent,
-                                                       pool));
-
-                  else
-                    SVN_ERR(svn_io_set_file_read_only(path, ignore_enoent,
-                                                      pool));
-                }
-              else
-                return svn_error_wrap_apr
-                  (status, _("Can't change read-write perms of file '%s'"),
-                   svn_path_local_style(path, pool));
-            }
-          else
-            return SVN_NO_ERROR;
+          if (finfo.protection & APR_UREAD)
+            perms_to_set |= APR_UEXECUTE;
+          if (finfo.protection & APR_GREAD)
+            perms_to_set |= APR_GEXECUTE;
+          if (finfo.protection & APR_WREAD)
+            perms_to_set |= APR_WEXECUTE;
         }
       else
-        return SVN_NO_ERROR;
-    } 
+        {
+          if (finfo.protection & APR_UREAD)
+            perms_to_set &= ~APR_UEXECUTE;
+          if (finfo.protection & APR_GREAD)
+            perms_to_set &= ~APR_GEXECUTE;
+          if (finfo.protection & APR_WREAD)
+            perms_to_set &= ~APR_WEXECUTE;
+        }
+    }
+
+  /* If we aren't changing anything then just return, this saves
+     some system calls and helps with shared working copies */
+  if (perms_to_set == finfo.protection)
+    return SVN_NO_ERROR;
+
+  status = apr_file_perms_set(path_apr, perms_to_set);
+  if (!status)
+    return SVN_NO_ERROR;
+
+  if (APR_STATUS_IS_EPERM(status))
+    {
+      /* We don't have permissions to change the
+         permissions!  Try a move, copy, and delete
+         workaround to see if we can get the file owned by
+         us.  If these succeed, try the permissions set
+         again.
+
+         Note that we only attempt this in the
+         stat-available path.  This assumes that the
+         move-copy workaround will only be helpful on
+         platforms that implement apr_stat. */
+      SVN_ERR(reown_file(path_apr, pool));
+      status = apr_file_perms_set(path_apr, perms_to_set);
+    }
+
+  if (!status)
+    return SVN_NO_ERROR;
+
+  if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
+    return SVN_NO_ERROR;
+  else if (status == APR_ENOTIMPL)
+    {
+      /* At least try to set the attributes. */
+      apr_fileattrs_t attrs = 0;
+      apr_fileattrs_t attrs_values = 0;
+
+      if (change_readwrite)
+        {
+          attrs = APR_FILE_ATTR_READONLY;
+          if (!enable_write)
+            attrs_values = APR_FILE_ATTR_READONLY;
+        }
+      if (change_executable)
+        {
+          attrs = APR_FILE_ATTR_EXECUTABLE;
+          if (executable)
+            attrs_values = APR_FILE_ATTR_EXECUTABLE;
+        }
+      status = apr_file_attrs_set(path_apr, attrs, attrs_values, pool);
+    }
+
+  return svn_error_wrap_apr(status,
+                            _("Can't change perms of file '%s'"),
+                            svn_path_local_style(path, pool));
+}
+#endif
+
+svn_error_t *
+svn_io_set_file_read_write_carefully(const char *path,
+                                     svn_boolean_t enable_write,
+                                     svn_boolean_t ignore_enoent,
+                                     apr_pool_t *pool)
+{
+  if (enable_write)
+    return svn_io_set_file_read_write(path, ignore_enoent, pool);
+  return svn_io_set_file_read_only(path, ignore_enoent, pool);
+}
+
+svn_error_t *
+svn_io_set_file_read_only(const char *path,
+                          svn_boolean_t ignore_enoent,
+                          apr_pool_t *pool)
+{
+  /* On Windows, just set the file attributes -- on unix call
+     our internal function which attempts to honor the umask. */
+#ifndef WIN32
+  return io_set_file_perms(path, TRUE, FALSE, FALSE, FALSE,
+                           ignore_enoent, pool);
+#else
+  apr_status_t status;
+  const char *path_apr;
+
+  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
+
+  status = apr_file_attrs_set(path_apr,
+                              APR_FILE_ATTR_READONLY,
+                              APR_FILE_ATTR_READONLY,
+                              pool);
+
+  if (status && status != APR_ENOTIMPL)
+    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+      return svn_error_wrap_apr(status,
+                                _("Can't set file '%s' read-only"),
+                                svn_path_local_style(path, pool));
+
   return SVN_NO_ERROR;
+#endif
+}
+
+
+svn_error_t *
+svn_io_set_file_read_write(const char *path,
+                           svn_boolean_t ignore_enoent,
+                           apr_pool_t *pool)
+{
+  /* On Windows, just set the file attributes -- on unix call
+     our internal function which attempts to honor the umask. */
+#ifndef WIN32
+  return io_set_file_perms(path, TRUE, TRUE, FALSE, FALSE,
+                           ignore_enoent, pool);
+#else
+  apr_status_t status;
+  const char *path_apr;
+
+  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
+
+  status = apr_file_attrs_set(path_apr,
+                              0,
+                              APR_FILE_ATTR_READONLY,
+                              pool);
+
+  if (status && status != APR_ENOTIMPL)
+    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+      return svn_error_wrap_apr(status,
+                                _("Can't set file '%s' read-write"),
+                                svn_path_local_style(path, pool));
+
+  return SVN_NO_ERROR;
+#endif
 }
 
 svn_error_t *
@@ -1352,99 +1412,14 @@ svn_io_set_file_executable(const char *path,
                            svn_boolean_t ignore_enoent,
                            apr_pool_t *pool)
 {
-  apr_status_t status;
-  const char *path_apr;
-
-  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
-
-  if (executable)
-    {
-      apr_finfo_t finfo;
-      apr_fileperms_t perms_to_set;
-
-      /* Try to change only a minimal amount of the perms first 
-         by getting the current perms and adding execute bits
-         only on where read perms are granted.  If this fails
-         fall through to the apr_file_perms_set() call. */
-      status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
-      if (status)
-        {
-          if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
-            return SVN_NO_ERROR;
-          else if (status != APR_ENOTIMPL)
-            return svn_error_wrap_apr(status,
-                                      _("Can't change executability of "
-                                        "file '%s'"),
-                                      svn_path_local_style(path, pool));
-        } 
-      else
-        {
-          perms_to_set = finfo.protection;
-          if (finfo.protection & APR_UREAD)
-            perms_to_set |= APR_UEXECUTE;
-          if (finfo.protection & APR_GREAD)
-            perms_to_set |= APR_GEXECUTE;
-          if (finfo.protection & APR_WREAD)
-            perms_to_set |= APR_WEXECUTE;
-
-          /* If we aren't changing anything then just return, this save
-             some system calls and helps with shared working copies */
-          if (perms_to_set == finfo.protection)
-            return SVN_NO_ERROR;
-
-          status = apr_file_perms_set(path_apr, perms_to_set);
-          if (status)
-            {
-              if (APR_STATUS_IS_EPERM(status))
-                {
-                  /* We don't have permissions to change the
-                     permissions!  Try a move, copy, and delete
-                     workaround to see if we can get the file owned by
-                     us.  If these succeed, try the permissions set
-                     again.
-
-                     Note that we only attempt this in the
-                     stat-available path.  This assumes that the
-                     move-copy workaround will only be helpful on
-                     platforms that implement apr_stat. */
-                  SVN_ERR(reown_file(path_apr, pool));
-                  status = apr_file_perms_set(path_apr, perms_to_set);
-                }
-
-              if (status)
-                {
-                  if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
-                    return SVN_NO_ERROR;
-                  else if (status != APR_ENOTIMPL)
-                    return svn_error_wrap_apr
-                      (status, _("Can't change executability of file '%s'"),
-                       svn_path_local_style(path, pool));
-                }
-              else
-                return SVN_NO_ERROR;
-            }
-          else
-            return SVN_NO_ERROR;
-        } 
- 
-      status = apr_file_attrs_set(path_apr,
-                                  APR_FILE_ATTR_EXECUTABLE,
-                                  APR_FILE_ATTR_EXECUTABLE,
-                                  pool);
-    }
-  else
-    status = apr_file_attrs_set(path_apr,
-                                0,
-                                APR_FILE_ATTR_EXECUTABLE,
-                                pool);
-    
-  if (status && status != APR_ENOTIMPL)
-    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
-      return svn_error_wrap_apr(status,
-                                _("Can't change executability of file '%s'"),
-                                svn_path_local_style(path, pool));
-  
+  /* On Windows, just exit -- on unix call our internal function
+  which attempts to honor the umask. */
+#ifndef WIN32
+  return io_set_file_perms(path, FALSE, FALSE, TRUE, executable,
+                           ignore_enoent, pool);
+#else
   return SVN_NO_ERROR;
+#endif
 }
 
 

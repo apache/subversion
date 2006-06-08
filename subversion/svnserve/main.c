@@ -708,6 +708,22 @@ int main(int argc, const char *argv[])
               apr_socket_close(sock);
               svn_error_clear(serve(conn, &params, connection_pool));
               apr_socket_close(usock);
+
+              /* NOTE: We're explicitly destroying the connection pool
+                       so that BDB environments that were opened in it
+                       are safely closed.  If we wait for apr_terminate
+                       to do it for us the global bdb cache pool will
+                       be destroyed first (because it was created last)
+                       and that'll result in paniced environments.
+                
+                       This isnt a big deal most of the time, since 
+                       usually any committed transactions will have been
+                       written to disk already, but if you're using the
+                       --bdb-txn-nosync flag, like we do in the tests,
+                       it won't be, which means commits appear to work,
+                       but really don't.  */
+              svn_pool_destroy(connection_pool);
+
               exit(0);
             }
           else if (status == APR_INPARENT)

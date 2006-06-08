@@ -154,10 +154,10 @@ svn_error_t *svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 /* Create a new transaction in filesystem FS, based on revision REV,
    and store it in *TXN_P.  Allocate all necessary variables from
    POOL. */
-svn_error_t *svn_fs_fs__create_txn  (svn_fs_txn_t **txn_p,
-                                     svn_fs_t *fs,
-                                     svn_revnum_t rev,
-                                     apr_pool_t *pool);
+svn_error_t *svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *pool);
 
 /* Set the transaction property NAME to the value VALUE in transaction
    TXN.  Perform temporary allocations from POOL. */

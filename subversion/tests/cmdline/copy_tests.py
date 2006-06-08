@@ -350,75 +350,6 @@ def basic_copy_and_move_files(sbox):
                                          None, None,
                                          wc_dir)
 
-#----------------------------------------------------------------------
-
-def mv_unversioned_file(sbox):
-  "test fix for 'svn mv unversioned_file some_dst'"
-
-  ##################### Here is the bug Lars saw ######################
-  #
-  # From: Lars Kellogg-Stedman <lars@larsshack.org>
-  # Subject:  svn mv segfault
-  # To: dev@subversion.tigris.org
-  # Date: Tue, 29 Jan 2002 15:40:00 -0500
-  # 
-  # Here's a new one.  And this one's reliable :).
-  # 
-  # I tried performing the following operation:
-  # 
-  #    $ svn mv src/config.h.in .
-  # 
-  # But src/config.h.in wasn't in the repository.  This should have
-  # generated an error, right around line 141 in libsvn_wc/copy.c.  But
-  # instead it's segfaulting.
-  # 
-  # This is in copy_file_administratively(), in the following section:
-  # 
-  #    SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
-  #    if ((src_entry->schedule == svn_wc_schedule_add)
-  #        || (! src_entry->url))
-  #      return svn_error_createf
-  #        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-  #        "Not allowed to copy or move '%s' -- it's not in the
-  # repository yet.\n"
-  #         "Try committing first.",
-  #         src_path->data);
-  # 
-  # The first thing svn_wc_entry() does is set src_entry to NULL, so upon
-  # our return from svn_wc_entry(), when we try to look at
-  # src_entry->schedule, we're attempting to dereference a NULL pointer.
-  # Ouch!
-  # 
-  # It looks like the real failure may be in svn_wc_entry(), here:
-  # 
-  #        /* ### it would be nice to avoid reading all of these. or maybe read
-  #           ### them into a subpool and copy the one that we need up to the
-  #           ### specified pool. */
-  #        SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
-  # 
-  #        *entry = apr_hash_get (entries, basename->data, basename->len);
-  # 
-  # Since the file isn't under revision control, that hash lookup is
-  # probably going to fail, so src_entry never gets set to anything but
-  # NULL.
-  # 
-  # Cheers,
-  # 
-  # -- Lars
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  unver_path = os.path.join(wc_dir, 'A', 'unversioned')
-  dst_path = os.path.join(wc_dir, 'A', 'hypothetical-dest')
-  svntest.main.file_append(unver_path, "an unversioned file")
-  output, errput = svntest.main.run_svn(1, 'mv', unver_path, dst_path)
-
-  for line in errput:
-    if string.find(line, "not under version control") != -1:
-      break
-  else:
-    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -1868,13 +1799,25 @@ def mv_unversioned_file(sbox):
   # Issue #2436: Attempting to move an unversioned file would seg fault.
   sbox.build()
   wc_dir = sbox.wc_dir
-  fish_path = os.path.join(wc_dir, 'fish')
-  dest_path = os.path.join(wc_dir, 'dest')
-  file(fish_path, "w").close()
+
+  unver_path_1 = os.path.join(wc_dir, 'unversioned1')
+  dest_path_1 = os.path.join(wc_dir, 'dest')
+  svntest.main.file_append(unver_path_1, "an unversioned file")
+  
+  unver_path_2 = os.path.join(wc_dir, 'A', 'unversioned2')
+  dest_path_2 = os.path.join(wc_dir, 'A', 'dest_forced')
+  svntest.main.file_append(unver_path_2, "another unversioned file")
+
+  # Try to move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*fish.* is not under version control.*",
+                                     ".*unversioned1.* is not under version control.*",
+                                     'mv', unver_path_1, dest_path_1)
+
+  # Try to forcibly move an unversioned file.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*unversioned2.* is not under version control.*",
                                      'mv', '--force',
-                                     fish_path, dest_path)
+                                     unver_path_2, dest_path_2)
 
 def force_move(sbox):
   "'move --force' should not lose local mods"
@@ -1949,7 +1892,6 @@ def force_move(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               basic_copy_and_move_files,
-              mv_unversioned_file,
               receive_copy_in_update,
               resurrect_deleted_dir,
               no_copy_overwrites,

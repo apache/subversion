@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  tree.py: tools for comparing directory trees
 #

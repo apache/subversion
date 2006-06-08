@@ -44,6 +44,7 @@ SVN_DB_LIBS =
 SVN_KEYCHAIN_LIBS = @SVN_KEYCHAIN_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
+SVN_SASL_LIBS = @SVN_SASL_LIBS@
 
 LIBS = @LIBS@
 
@@ -100,7 +101,8 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_NEON_INCLUDES@ @SVN_KEYCHAIN_INCLUDES@ \
-           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@
+           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@ \
+           @SVN_SASL_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -163,8 +165,8 @@ LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
 
 # Compilation of SWIG-generated C source code
-COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
-COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
+COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
@@ -521,7 +523,6 @@ doc-design-ps:
 
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
-	cd $(top_srcdir)/doc/design && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
 
 # Converting from the .rnc XML shcemas to various other schema formats.

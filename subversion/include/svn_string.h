@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -314,8 +314,6 @@ void svn_cstring_split_append(apr_array_header_t *array,
 
 /** Return @c TRUE iff @a str matches any of the elements of @a list, a list 
  * of zero or more glob patterns.
- *
- * Use @a pool for temporary allocation.
  */
 svn_boolean_t svn_cstring_match_glob_list(const char *str,
                                           apr_array_header_t *list);

@@ -104,6 +104,8 @@ static apr_pool_t *_global_pool = NULL;
 static PyObject *_global_svn_swig_py_pool = NULL;
 static char assertValid[] = "assert_valid";
 static char parentPool[] = "_parent_pool";
+static char addOwnedRef[] = "_add_owned_ref";
+static char removeOwnedRef[] = "_remove_owned_ref";
 static char wrap[] = "_wrap";
 static char unwrap[] = "_unwrap";
 static char setParentPool[] = "set_parent_pool";
@@ -164,6 +166,47 @@ static int proxy_set_pool(PyObject **proxy, PyObject *pool)
     }
   }
 
+  return 0;
+}
+
+/* Get the parent pool of a proxy object, or return the global application
+ * pool if one is not set.  Returns a BORROWED reference! */
+static PyObject *proxy_get_pool(PyObject *proxy)
+{
+  PyObject *result;
+  if (PyObject_HasAttrString(proxy, parentPool)) {
+    result = PyObject_GetAttrString(proxy, parentPool);
+    Py_DECREF(result);
+  } else {
+    result = _global_svn_swig_py_pool;
+  }
+  return result;
+}
+
+/* Change an 'owned reference' allocated in a pool from oldRef to newRef.
+ * If oldRef is non-NULL and present in the parent pool of proxy, it is removed.
+ */
+int svn_swig_py_pool_set_owned_ref(PyObject *proxy, PyObject *oldRef, PyObject *newRef)
+{
+  PyObject *temp;
+  PyObject *py_pool = proxy_get_pool(proxy);
+  
+  if (oldRef != NULL) {
+    temp = PyObject_CallMethod(py_pool, removeOwnedRef, objectTuple, oldRef);
+    if (temp == NULL) {
+      return 1;
+    } else {
+      Py_DECREF(temp);
+    }
+  }
+  if (newRef != NULL) {
+    temp = PyObject_CallMethod(py_pool, addOwnedRef, objectTuple, newRef);
+    if (temp == NULL) {
+      return 1;
+    } else {
+      Py_DECREF(temp);
+    }
+  }
   return 0;
 }
 
@@ -240,12 +283,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
     Py_DECREF(result);
   }
   if (py_pool != NULL) {
-    if (PyObject_HasAttrString(input, parentPool)) {
-      *py_pool = PyObject_GetAttrString(input, parentPool);
-      Py_DECREF(*py_pool);
-    } else {
-      *py_pool = _global_svn_swig_py_pool;
-    }
+    *py_pool = proxy_get_pool((PyObject *) input);
   }
   if (PyObject_HasAttrString(input, unwrap)) {
     input = PyObject_CallMethod(input, unwrap, emptyTuple);

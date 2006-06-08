@@ -443,7 +443,7 @@ def update_while_needing_lock(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '*', iota_path)
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
   svntest.main.run_svn(None, 'commit', '-m', 'log msg', iota_path)
   svntest.main.run_svn(None, 'up', wc_dir)
 
