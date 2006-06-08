@@ -1096,7 +1096,8 @@ fs_change_merge_info(svn_fs_root_t *root,
   SVN_ERR(svn_mergeinfo_to_string(&minfostr, mergeinfo, pool));
   SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, 
                                           path,
-                                          svn_string_create_from_buf(minfostr, pool),
+                                          svn_string_create_from_buf(minfostr,
+                                                                     pool),
                                           pool));
 
   SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
