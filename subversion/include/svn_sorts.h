@@ -103,7 +103,7 @@ int svn_sort_compare_paths(const void *a, const void *b);
 
 /**
  * Compare two @c svn_merge_range_t *'s, returning an integer greater
- * than, equal to, or less than 0 if the first range is great than,
+ * than, equal to, or less than 0 if the first range is greater than,
  * equal to, or less than, the second range.
  * @since New in 1.5
  */
