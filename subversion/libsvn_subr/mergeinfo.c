@@ -389,7 +389,6 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
   while (i < whiteboard->nelts && j < eraser->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
-      int res;
 
       elt2 = APR_ARRAY_IDX(eraser, j, svn_merge_range_t *);
 
@@ -465,8 +464,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
              If it is on past the whiteboard on the right side, we
              need to output the whiteboard and increment the
              whiteboard.  */
-          res = svn_sort_compare_ranges(&elt2, &elt1);
-          if (res < 0)
+          if (svn_sort_compare_ranges(&elt2, &elt1) < 0)
             j++;
           else
             {
@@ -482,7 +480,6 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
               i++;
             }
         }
-
     }
 
   /* Copy the current whiteboard element if we didn't hit the end of the
