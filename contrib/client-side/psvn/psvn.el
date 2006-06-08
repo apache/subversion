@@ -136,7 +136,7 @@
 ;; * add                       implemented
 ;; * blame                     implemented
 ;; * cat                       implemented
-;; * checkout (co)
+;; * checkout (co)             implemented
 ;; * cleanup                   implemented
 ;; * commit (ci)               implemented
 ;; * copy (cp)
@@ -144,7 +144,7 @@
 ;; * diff (di)                 implemented
 ;; * export                    implemented
 ;; * help (?, h)
-;; * import
+;; * import                    used         (in svn-admin-create-trunk-directory)
 ;; * info                      implemented
 ;; * list (ls)                 implemented
 ;; * lock
@@ -154,9 +154,9 @@
 ;; * move (mv, rename, ren)    implemented
 ;; * propdel (pdel)            implemented
 ;; * propedit (pedit, pe)      not needed
-;; * propget (pget, pg)        used
+;; * propget (pget, pg)        used         (in svn-status-property-edit)
 ;; * proplist (plist, pl)      implemented
-;; * propset (pset, ps)        used
+;; * propset (pset, ps)        used         (in svn-prop-edit-do-it)
 ;; * resolved                  implemented
 ;; * revert                    implemented
 ;; * status (stat, st)         implemented
@@ -467,6 +467,11 @@ If t, their full path name will be displayed, else only the filename."
           (set var value)
           (global-set-key (symbol-value var) 'svn-global-keymap)))
 
+(defcustom svn-admin-default-create-directory "~/"
+  "*The default directory that is suggested for `svn-admin-create'."
+  :type 'string
+  :group 'psvn)
+
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
 
@@ -535,6 +540,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-transient-buffers)
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
+(defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 
 ;; Emacs 21 defines these in ediff-init.el but it seems more robust
 ;; to just declare the variables here than try to load that file.
@@ -809,7 +815,12 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
-
+;;;###autoload
+(defun svn-checkout (repos-url path)
+  "Run svn checkout REPOS-URL PATH."
+  (interactive (list (read-string "Checkout from repository Url: ")
+                     (svn-read-directory-name "Checkout to directory: ")))
+  (svn-run t t 'checkout "checkout" repos-url (expand-file-name path)))
 
 ;;;###autoload (defalias 'svn-examine 'svn-status)
 (defalias 'svn-examine 'svn-status)
@@ -1102,6 +1113,8 @@ can edit ARGLIST before running svn."
                  ((eq svn-process-cmd 'proplist)
                   (svn-status-show-process-output 'proplist t)
                   (message "svn proplist finished"))
+                 ((eq svn-process-cmd 'checkout)
+                  (svn-status default-directory))
                  ((eq svn-process-cmd 'proplist-parse)
                   (svn-status-property-parse-property-names))
                  ((eq svn-process-cmd 'propset)
@@ -4235,6 +4248,51 @@ The conflicts must be marked with rcsmerge conflict markers."
              (svn-resolve-conflicts
               (svn-status-line-info->full-path file-info)))
         (error "can not resolve conflicts at this point"))))
+
+;; --------------------------------------------------------------------------------
+;; svnadmin interface
+;; --------------------------------------------------------------------------------
+(defun svn-admin-create (dir)
+  "Run svnadmin create DIR."
+  (interactive (list (expand-file-name
+                      (svn-read-directory-name "Create a svn repository at: "
+                                               svn-admin-default-create-directory nil nil))))
+  (shell-command-to-string (concat "svnadmin create " dir))
+  (setq svn-admin-last-repository-dir (concat "file://" dir))
+  (message "Svn repository created at %s" dir)
+  (run-hooks 'svn-admin-create-hook))
+
+;; - Import an empty directory
+;;   cd to an empty directory
+;;   svn import -m "Initial import" . file:///home/stefan/svn_repos/WaldiConfig/trunk
+(defun svn-admin-create-trunk-directory ()
+  "Import an empty trunk directory to `svn-admin-last-repository-dir'.
+Set `svn-admin-last-repository-dir' to the new created trunk url."
+  (interactive)
+  (let ((empty-temp-dir-name (make-temp-name svn-status-temp-dir)))
+    (make-directory empty-temp-dir-name t)
+    (setq svn-admin-last-repository-dir (concat svn-admin-last-repository-dir "/trunk"))
+    (svn-run nil t 'import "import" "-m" "Created trunk directory"
+                             empty-temp-dir-name svn-admin-last-repository-dir)
+    (delete-directory empty-temp-dir-name)))
+
+(defun svn-admin-start-import ()
+  "Start to import the current working directory in a subversion repository.
+The user is asked to perform the following two steps:
+1. Create a local repository
+2. Add a trunk directory to that repository
+
+After that step the empty base directory (either the root directory or
+the trunk directory of the selected repository) is checked out in the current
+working directory."
+  (interactive)
+  (if (y-or-n-p "Create local repository? ")
+      (progn
+        (call-interactively 'svn-admin-create)
+        (when (y-or-n-p "Add a trunk directory? ")
+          (svn-admin-create-trunk-directory)))
+    (setq svn-admin-last-repository-dir (read-string "Repository Url: ")))
+  (svn-checkout svn-admin-last-repository-dir "."))
 
 ;; --------------------------------------------------------------------------------
 ;; svn status profiling
