@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,6 +42,7 @@ extern "C" {
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
+#define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.

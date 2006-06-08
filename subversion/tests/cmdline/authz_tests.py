@@ -495,8 +495,7 @@ def authz_checkout_test(sbox):
          
   fp.close()
   
-  # checkout a working copy, should succeed because we have read
-  # access
+  # checkout a working copy, should succeed because we have read access
   expected_output = svntest.main.greek_state.copy()
   expected_output.wc_dir = local_dir
   expected_output.tweak(status='A ', contents=None)
@@ -508,6 +507,86 @@ def authz_checkout_test(sbox):
                           expected_output,
                           expected_wc)
 
+def authz_checkout_and_update_test(sbox):
+  "test authz for checkout and update"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("authz_checkout_and_update_test", create_wc = False)
+  local_dir = sbox.wc_dir
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  # 1st part: disable read access on folder A/B, checkout should not
+  # download this folder
+  
+  # write an authz file with *= on /A/B
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_and_update_test:/]\n" +
+             "* = r\n" +
+             "[authz_checkout_and_update_test:/A/B]\n" +
+             "* =\n")
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* =\n")
+         
+  fp.close()
+  
+  # checkout a working copy, should not dl /A/B
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = local_dir
+  expected_output.tweak(status='A ', contents=None)
+  expected_output.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
+                         'A/B/E/beta', 'A/B/F')
+  
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
+                     'A/B/E/beta', 'A/B/F')
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url, local_dir, 
+                                          expected_output,
+                                          expected_wc)
+  
+  # 2nd part: now enable read access
+  
+  # write an authz file with *=r on /
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_and_update_test:/]\n" +
+             "* = r\n")
+  else:
+    fp.write("[/]\n" +
+             "* = r\n")
+         
+  fp.close()
+  
+  # update the working copy, should download /A/B because we now have read
+  # access
+  expected_output = svntest.wc.State(local_dir, {
+    'A/B' : Item(status='A '),
+    'A/B/lambda' : Item(status='A '),
+    'A/B/E' : Item(status='A '),
+    'A/B/E/alpha' : Item(status='A '),
+    'A/B/E/beta' : Item(status='A '),
+    'A/B/F' : Item(status='A '),
+    })
+
+  expected_wc = svntest.main.greek_state
+  expected_status = svntest.actions.get_virginal_state(local_dir, 1)
+
+  svntest.actions.run_and_verify_update(local_dir,
+                                        expected_output,
+                                        expected_wc,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None, 1)
+                          
 #----------------------------------------------------------------------
 
 def authz_log_and_tracing_test(sbox):
@@ -640,7 +719,8 @@ test_list = [ None,
               authz_read_access,
               authz_write_access,
               authz_checkout_test,
-              authz_log_and_tracing_test
+              authz_log_and_tracing_test,
+              authz_checkout_and_update_test,
              ]
 
 if __name__ == '__main__':
