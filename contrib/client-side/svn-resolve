@@ -77,25 +77,36 @@ if ! type opendiff >& /dev/null || [ "${TERM_PROGRAM:=}" != "Apple_Terminal" ]; 
     exit $?;
 fi;
 
+find_ancestor ()
+{
+    local conflict="$1";
+    local    which="$2";
+
+    n=$(ls -1 "${conflict}.merge-${which}.r"* 2>/dev/null | wc -l);
+
+    if [ "${n}" -eq 0 ]; then
+        echo "ERROR: No ${which} ancenstor found."
+        return 1;
+    fi;
+
+    if [ "${n}" -gt 1 ]; then
+        echo "ERROR: Multible ${which} ancenstors found:"
+        ls -1 "${conflict}.merge-left.r"*
+        return 1;
+    fi;
+
+    ls "${conflict}.merge-${which}.r"*
+}
+
 resolve ()
 {
     local conflict="$1";
 
-    local revision=$(svn info "${conflict}" | grep '^Revision: ' | sed 's|^Revision: ||');
+    local revision="$(svn info "${conflict}" | grep '^Revision: ' | sed 's|^Revision: ||')";
 
-    local     left="${conflict}.mine";
-    local    right="${conflict}.r${revision}";
-    local ancestor="";
-
-    for file in $(ls "${conflict}".r*); do
-        if [ "${file}" != "${right}" ]; then
-            if [ -n "${ancestor}" ]; then
-                echo "ERROR: Multiple possible ancestor files exist for file: ${conflict}";
-                return 1;
-            fi;
-            ancestor="${file}";
-        fi;
-    done;
+    local     left="${conflict}.working";
+    local    right="$(find_ancestor "${conflict}" right)";
+    local ancestor="$(find_ancestor "${conflict}" left )";
 
     for file in "${left}" "${right}" "${ancestor}"; do
         if [ ! -f "${file}" ]; then
