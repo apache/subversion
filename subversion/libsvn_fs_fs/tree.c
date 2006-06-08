@@ -3220,7 +3220,7 @@ static root_vtable_t root_vtable = {
   fs_get_file_delta_stream,
   fs_merge,
   fs_change_merge_info, 
-  NULL
+  NULL  /* ### fs_get_merge_info() not yet implemented */
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */
