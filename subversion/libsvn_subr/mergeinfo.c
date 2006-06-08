@@ -359,182 +359,151 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
   return SVN_NO_ERROR;
 }
 
+static svn_boolean_t
+range_intersect(svn_merge_range_t *first, svn_merge_range_t *second)
+{
+  return (first->start <= second->end) && (second->start <= first->end);
+}
+
+static svn_boolean_t
+range_contains(svn_merge_range_t *first, svn_merge_range_t *second)
+{
+  return (first->start <= second->start) && (second->end <= first->end);
+}
+
 svn_error_t *
 svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard, apr_pool_t *pool)
 {
-  int i, j, lastj;
+  int i, j, lasti;
   svn_merge_range_t *lastrange = NULL;
   svn_merge_range_t *newrange;
-  svn_merge_range_t eraserelt;
+  svn_merge_range_t wboardelt;
 
   *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-  /* The general scheme here is to make a walk over the sorted lists,
-     removing ranges from whiteboard as they intersect with ranges in
-     eraser.  You end up with a few possible outcomes, although they
-     can occur in a variety of ways.
-     1. The whiteboard range is completely contained in the current
-     eraser range.  In this case, you just move the whiteboard forward.
-
-     2. The whiteboard range ends up being larger or smaller than
-     eraser in a way that does not require two ranges to represent
-     IE whiteboard: 1-5, eraser: 3-6.
-     or whiteboard: 4-7 eraser: 3-6
-     In this case, you need to subtract the appropriate part of eraser
-     from whiteboard, change eraser to the remainder of the range, and
-     advance whiteboard.
-
-     3. The whiteboard range ends up being larger than eraser in a way
-     that does require two ranges to represent.
-     IE whiteboard: 4-9: eraser: 5-6
-     In this case, you need to generate the two ranges, which will be
-     [whiteboard->start, eraser->start - 1] and
-     [eraser->end+1, whiteboard->end].
-   */
   i = 0;
   j = 0;
-  lastj = -1;
+  lasti = -1;
+
   while (i < whiteboard->nelts && j < eraser->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
       int res;
 
-      elt1 = APR_ARRAY_IDX(whiteboard, i, svn_merge_range_t *);
+      elt2 = APR_ARRAY_IDX(eraser, j, svn_merge_range_t *);
 
-      /* Instead of making a copy of the entire array of eraser
-         elements, we just keep a copy of the current eraser element
+      /* Instead of making a copy of the entire array of whiteboard
+         elements, we just keep a copy of the current whiteboard element
          that needs to be used, and modify our copy if necessary. */
-      if (j != lastj)
+      if (i != lasti)
         {
-          eraserelt = *(APR_ARRAY_IDX(eraser, j, svn_merge_range_t *));
-          elt2 = &eraserelt;
-          lastj = j;
+          wboardelt = *(APR_ARRAY_IDX(whiteboard, i, svn_merge_range_t *));
+          elt1 = &wboardelt;
+          lasti = i;
         }
 
-      res = svn_sort_compare_ranges(&elt1, &elt2);
-      if (res == 0)
+      /* If the whiteboard range is contained completely in the
+         eraser, we increment the whiteboard.
+         If the ranges intersect, and match exactly, we increment both
+         eraser and whiteboard.
+         Otherwise, we have to generate a range for the left part of
+         the removal of eraser from whiteboard, and possibly change
+         the whiteboard to the remaining portion of the right part of
+         the removal, to test against. */
+      if (range_contains(elt2, elt1))
         {
           i++;
-          j++;
         }
-      else if (res < 0)
+      else if (range_intersect(elt2, elt1))
         {
-          svn_merge_range_t temprange;
-
-          /* If the element is completely before the start of the next
-             range to erase, we can skip it. */
-          if (elt1->end < elt2->start)
+          /* If they match exactly, we just move on.  */
+          if (elt1->start == elt2->start && elt1->end == elt2->end)
             {
-              i++;
-              continue;
-            }
-
-          /* See if we need the first part of the range. It is
-             possible the elements are equal.  */
-          if (elt1->start < elt2->start)
-            {
-
-              temprange.start = elt1->start;
-              temprange.end = elt2->start - 1;
-
-              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    &temprange))
-                {
-                  newrange = apr_pcalloc(pool, sizeof(*newrange));
-                  newrange->start = temprange.start;
-                  newrange->end = temprange.end;
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-                  lastrange = newrange;
-                }
-            }
-          /* See if the eraser range ends before or at the whiteboard
-             range we are starting at.
-
-             If it doesn't, we have to place the remainder of the
-             range back into the erase.
-
-             For example, if whiteboard has 1-4, 6 and eraser has 3-7
-
-             Then when staring at 1-4, we need to remove 3-4 and
-             change eraser's element to 5-7.
-          */
-          if (elt2->end + 1 <= elt1->end)
-            {
-              temprange.start = elt2->end + 1;
-              temprange.end = elt1->end;
-              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    &temprange))
-                {
-                  newrange = apr_pcalloc(pool, sizeof(*newrange));
-                  newrange->start = temprange.start;
-                  newrange->end = temprange.end;
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-
-                  lastrange = newrange;
-                }
               i++;
               j++;
             }
           else
             {
-              elt2->start = elt1->end + 1;
-              elt2->end = elt2->end;
-              i++;
+              svn_merge_range_t temprange;
+              /* If the whiteboard range starts before the eraser
+                 range, we need to output the range that falls before
+                 the eraser start.  */
+
+              if (elt1->start < elt2->start)
+                {
+                  temprange.start = elt1->start;
+                  temprange.end = elt2->start - 1;
+                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                        &temprange))
+                    {
+                      newrange = apr_pcalloc(pool, sizeof(*newrange));
+                      newrange->start = temprange.start;
+                      newrange->end = temprange.end;
+                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+                      lastrange = newrange;
+                    }
+                }
+              /* Set up the rest of the whiteboard range for further
+                 processing.  */
+              if (elt1->end > elt2->end)
+                {
+                  wboardelt.start = elt2->end + 1;
+                  wboardelt.end = elt1->end;
+                }
+              else
+                {
+                  i++;
+                }
             }
         }
       else
         {
-          svn_merge_range_t temprange;
-
-          /* If the element is completely after the end of the next
-             range to erase, we can skip the erasing range. */
-          if (elt2->end < elt1->start)
+          /* If they don't intersect, see which side of the whiteboard
+             the eraser is on.  If it is on the left side, we need to
+             move the eraser.
+             If it is on past the whiteboard on the right side, we
+             need to output the whiteboard and increment the
+             whiteboard.  */
+          res = svn_sort_compare_ranges(&elt2, &elt1);
+          if (res < 0)
+            j++;
+          else
             {
-              j++;
-              continue;
-            }
-
-          /* Unlike the other case, it is impossible for elt1->start
-             to be < elt2->start, or else svn_sort_compare_ranges
-             wouldn't have said elt1 > elt2.  */
-
-          /* See if the range ends before or at the range of the
-             whiteboard we are staring at.
-             If it doesn't, we have to place the remainder of the
-             range back into the erase.
-             For example, if whiteboard has 1-4, 6
-             and eraser has 3-7
-             then when staring at 1-4, we need to remove 3-4 and
-             change eraser's element to 5-7 */
-          if (elt2->end +1 <= elt1->end)
-            {
-              temprange.start = elt2->end + 1;
-              temprange.end = elt1->end;
               if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    &temprange))
+                                                    elt1))
                 {
                   newrange = apr_pcalloc(pool, sizeof(*newrange));
-                  newrange->start = temprange.start;
-                  newrange->end = temprange.end;
+                  newrange->start = elt1->start;
+                  newrange->end = elt1->end;
                   APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-
                   lastrange = newrange;
                 }
               i++;
-              j++;
             }
-          else
-            {
-              elt2->start = elt1->end + 1;
-              elt2->end = elt2->end;
-              i++;
-            }
-
         }
+
     }
 
-  /* Copy any remaining whiteboard elements.  */
+  /* Copy the current whiteboard element if we didn't hit the end of the
+     whiteboard.  This element may have been touched, so we can't just
+     walk the whiteboard array, we have to use our copy.  */
+  if (i < whiteboard->nelts)
+    {
+      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                            &wboardelt))
+        {
+          newrange = apr_pcalloc(pool, sizeof(*newrange));
+          newrange->start = wboardelt.start;
+          newrange->end = wboardelt.end;
+          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+
+          lastrange = newrange;
+        }
+      i++;
+    }
+
+  /* Copy any other remaining untouched whiteboard elements.  */
   for (; i < whiteboard->nelts; i++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
