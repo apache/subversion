@@ -1,5 +1,19 @@
 #!/usr/bin/env python
 
+"""Usage: svn2rss.py [OPTION...]
+
+ -h | --help         Show this help message
+ -P | --svn-path=    path where svn binaries are installed
+ -r | --revision=    svn revision
+ -p | --repos-path=  svn repository to generate RSS 2.0 feed
+ -u | --url=         link to appear in the rss item
+ -f | --rss-file=    filename to store the rss feed
+
+Generates a RSS 2.0 file containing commit information.  Once the
+maximum number of items is reached, older elements are removed.  The
+item title is the revision number, and the item description contains
+the author, date, log messages and changed paths."""
+
 import sys, getopt, os, popen2
 import pickle
 from StringIO import StringIO
@@ -15,52 +29,41 @@ import datetime
 try:
     import PyRSS2Gen
 except ImportError:
-    sys.stderr.write("Please install PyRSS2Gen before running this script\n")
-    sys.stderr.write("PyRSS2Gen can be downloaded from: \n")
-    sys.stderr.write("http://www.dalkescientific.com/Python/PyRSS2Gen.html\n")
+    print >> sys.stderr, "Please install PyRSS2Gen before running this script"
+    print >> sys.stderr, "PyRSS2Gen can be downloaded from:"
+    print >> sys.stderr, "http://www.dalkescientific.com/Python/PyRSS2Gen.html"
+    print >> sys.stderr, ""
 
-def usage():
-    print "Usage: svn2rss.py [-h|--help] [--svn-path] --revision <rev> "
-    print "                  --repos-path <path> "
-    print "                  --url <url> --rss-file <file>"
-    print "       svn-path : path where svn binaries are installed"
-    print "       url      : link in the rss item that points to the"
-    print "                  viewcvs page for the revision"
-    print ""
-    print "Generates a RSS 2.0 file containing commit information."
-    print "Once the maximum number of items is reached, the oldest element"
-    print "is removed.  The item title is the Revision number and the item"
-    print "description contains the author, date, log messages and changed"
-    print "paths."
-    
+def usage(stream):
+    print >> stream, __doc__
 
 if len(sys.argv) == 1:
-    usage()
+    usage(sys.stderr)
     sys.exit(2)
-   
 try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:],"h", ["help", "svn-path=",
+    opts, args = getopt.gnu_getopt(sys.argv[1:],"hP:r:p:u:f:", [
+                                                      "help", "svn-path=",
                                                       "revision=",
                                                       "repos-path=", "url=",
                                                       "rss-file="])
 except getopt.GetoptError, msg:
-    print msg
-    sys.stderr.write(usage())
+    print >> sys.stderr, msg
+    usage(sys.stderr)
     sys.exit(2)
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
-        usage()
+        usage(sys.stdout)
         sys.exit(0)
-    elif opt == "--svn-path":
+    elif opt in ("-P", "--svn-path"):
         svn_path = arg
-    elif opt == "--revision":
+    elif opt in ("-r", "--revision"):
         commit_rev = arg
-    elif opt == "--repos-path":
+    elif opt in ("-p", "--repos-path"):
         repos_path = arg
-    elif opt == "--url":
+    elif opt in ("-u", "--url"):
         url = arg
-    elif opt == "--rss-file":
+    elif opt in ("-f", "--rss-file"):
         rss_file = arg
 
 class SVN2RSS:
