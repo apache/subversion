@@ -469,22 +469,6 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-# Figure out version and release number for command and documentation display.
-case "%{release}" in
-   1)
-      # Build an official release
-      RELEASE_NAME="%{version}"
-      ;;
-   alpha*|beta*|gamma*)
-      # Build an alpha, beta, gamma release.
-      RELEASE_NAME="%{version} (%{release})"
-      ;;
-   *)
-      # Build a working copy release
-      RELEASE_NAME="%{version} (dev build, r%{release})"
-      ;;
-esac
-
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
