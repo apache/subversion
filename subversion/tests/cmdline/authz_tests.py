@@ -586,7 +586,52 @@ def authz_checkout_and_update_test(sbox):
                                         None,
                                         None, None,
                                         None, None, 1)
-                          
+     
+def authz_partial_export_test(sbox):
+  "test authz for export with unreadable subfolder"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("authz_partial_export_test", create_wc = False)
+  local_dir = sbox.wc_dir
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  # 1st part: disable read access on folder A/B, export should not
+  # download this folder
+  
+  # write an authz file with *= on /A/B
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_partial_export_test:/]\n" +
+             "* = r\n" +
+             "[authz_partial_export_test:/A/B]\n" +
+             "* =\n")
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* =\n")
+         
+  fp.close()
+  
+  # export a working copy, should not dl /A/B
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = local_dir
+  expected_output.desc[''] = Item()
+  expected_output.tweak(status='A ', contents=None)
+  expected_output.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
+                         'A/B/E/beta', 'A/B/F')
+  
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha', 
+                     'A/B/E/beta', 'A/B/F')
+  
+  svntest.actions.run_and_verify_export(sbox.repo_url, local_dir, 
+                                        expected_output,
+                                        expected_wc)
+
 #----------------------------------------------------------------------
 
 def authz_log_and_tracing_test(sbox):
@@ -721,6 +766,7 @@ test_list = [ None,
               authz_checkout_test,
               authz_log_and_tracing_test,
               authz_checkout_and_update_test,
+              authz_partial_export_test,
              ]
 
 if __name__ == '__main__':
