@@ -508,6 +508,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
 %if %{make_ra_dav_bdb_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
