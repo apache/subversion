@@ -412,6 +412,10 @@ def move_plus_delete(sbox):
   "moves plus deletes"
   run_dumpfile_test(sbox, "move-plus-delete.dump")
 
+def move_from_deleted(sbox):
+  "move from deleted dir"
+  run_dumpfile_test(sbox, "move-from-deleted.dump")
+
 ########################################################################
 # Run the tests
 
@@ -429,6 +433,7 @@ test_list = [ None,
               basic_move,
               move_plus_copy,
               move_plus_delete,
+              move_from_deleted,
              ]
 
 if __name__ == '__main__':
