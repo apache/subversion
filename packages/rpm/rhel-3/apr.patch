@@ -1,13 +1,13 @@
 Index: configure.in
 ===================================================================
---- configure.in	(revision 17608)
+--- configure.in	(revision 20033)
 +++ configure.in	(working copy)
-@@ -52,8 +52,8 @@
- dnl   - APR_GSETID added
- dnl   - bug in apr_temp_dir_get() fixed
+@@ -61,8 +61,8 @@
+ dnl   them.  Only .7 and later can guarantee repository
+ dnl   integrety with FSFS.
  
--APR_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
--APU_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+-APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 +APR_VER_REGEXES=["0\.9\.[4-9] 0\.9\.1[0-9] 1\."]
 +APU_VER_REGEXES=["0\.9\.[4-9] 0\.9\.1[0-9] 1\."]
  
