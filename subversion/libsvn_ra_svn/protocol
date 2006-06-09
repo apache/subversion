@@ -278,6 +278,11 @@ second place for auth-request point as noted below.
                 [ last-author:string ] )
     New in svn 1.2.  If path is non-existent, an empty response is returned.
 
+  get-merge-info
+    params:   ( ( path:string ) rev:number )
+    response: ( merge-info:string )
+    New in svn 1.5.  If no paths are specified, an empty response is returned.
+
   update
     params:   ( [ rev:number ] target:string recurse:bool )
     Client switches to report command set.
