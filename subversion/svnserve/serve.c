@@ -597,14 +597,14 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    apr_hash_t *props)
 {
-  apr_hash_index_t *hi;
-  const void *namevar;
-  void *valuevar;
-  const char *name;
-  svn_string_t *value;
-
   if (props)
     {
+      apr_hash_index_t *hi;
+      const void *namevar;
+      void *valuevar;
+      const char *name;
+      svn_string_t *value;
+
       for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
         {
           apr_hash_this(hi, &namevar, NULL, &valuevar);
