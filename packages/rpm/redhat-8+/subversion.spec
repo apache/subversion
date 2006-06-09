@@ -3,6 +3,7 @@
 %define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
+%define pyver 2.2
 # If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_bdb_check 1
 %define make_ra_svn_bdb_check 1
@@ -475,7 +476,7 @@ rm -rf apr apr-util neon
 %configure \
 	--disable-mod-activation \
 	--with-swig=/usr/bin/swig \
-	--with-python=/usr/bin/python2.2 \
+	--with-python=/usr/bin/python%{pyver} \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
@@ -546,8 +547,8 @@ cp packages/rpm/redhat-8+/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
-mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mkdir -p $RPM_BUILD_ROOT/usr/lib/python%{pyver}/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python%{pyver}/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Install PERL SWIG bindings.
@@ -636,8 +637,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files python
 %defattr(-,root,root)
-/usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/libsvn
+/usr/lib/python%{pyver}/site-packages/svn
+/usr/lib/python%{pyver}/site-packages/libsvn
 /usr/lib/libsvn_swig_py*so*
 
 %files tools
