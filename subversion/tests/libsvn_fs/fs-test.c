@@ -4795,7 +4795,7 @@ move_plus_delete_test(const char **msg,
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
 
-  /* Revision 2: Move A to Z and delete A/A/gamma in one txn. */
+  /* Revision 2: Move A/D to A/Q and delete A/Q/gamma in one txn. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
@@ -4818,7 +4818,55 @@ move_plus_delete_test(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_plus_delete_test2(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  const char *path;
+  svn_revnum_t after_rev, rev;
 
+  *msg = "make moves and deletes play nicely, again";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-move-delete2", 
+                              opts->fs_type, pool));
+
+  /* Revision 1: Create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Revision 2: Move A/B to Z and delete A in one txn. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_move(rev_root, "A/B", txn_root, "Z", pool));
+  SVN_ERR(svn_fs_delete(txn_root, "A", pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "Z", pool));
+
+  if (! path || strcmp(path, "/A/B") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A/D'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 1)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
+
+  return SVN_NO_ERROR;
+}
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4862,5 +4910,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(move_plus_copy_test),
     SVN_TEST_PASS(move_copied_from_test),
     SVN_TEST_PASS(move_plus_delete_test),
+    SVN_TEST_PASS(move_plus_delete_test2),
     SVN_TEST_NULL
   };
