@@ -1147,11 +1147,14 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
  *
  * - @a root indicates the fs root to use when looking up paths.
  * - @a paths indicate the paths you are requesting information for
+ * - @a revnum indicates the revision number you are requesting
+ *   information for.
  * - @a info is filled with merge info for each of the @a paths.
  * Do any necessary temporary allocation in @a pool.
  */
 svn_error_t *svn_fs_get_merge_info(svn_fs_root_t *root,
                                    apr_array_header_t *paths,
+                                   svn_revnum_t revnum,
                                    apr_hash_t **info,
                                    apr_pool_t *pool);
 
