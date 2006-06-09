@@ -38,6 +38,7 @@
 #include "svn_md5.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "svn_user.h"
 
 #include "server.h"
@@ -1334,6 +1335,35 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                        text_deltas, recurse, ignore_ancestry);
 }
 
+/* ASSUMPTION: When performing a 'merge' with two URLs, the client
+   will call this command more than once. */
+static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                   apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  apr_array_header_t *paths;
+  apr_hash_t *mergeinfo;
+  int i;
+  svn_stringbuf_t *value;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l?r", &paths, &rev));
+  for (i = 0; i < paths->nelts; i++)
+    APR_ARRAY_IDX(paths, i, const char *) =
+      svn_path_canonicalize(APR_ARRAY_IDX(paths, i, const char *), pool);
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos, paths, rev,
+                                          authz_check_access_cb_func(b), b,
+                                          pool));
+  if (mergeinfo != NULL)
+    SVN_ERR(svn_mergeinfo_to_string(&value, mergeinfo, pool));
+  else
+    value = NULL;
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c",
+                                        value ? value->data : ""));
+  return SVN_NO_ERROR;
+}
+
 /* Send a log entry to the client. */
 static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
                                  svn_revnum_t rev, const char *author,
@@ -2007,6 +2037,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "switch",          switch_cmd },
   { "status",          status },
   { "diff",            diff },
+  { "get-merge-info",  get_merge_info },
   { "log",             log_cmd },
   { "check-path",      check_path },
   { "stat",            stat },
