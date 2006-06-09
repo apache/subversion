@@ -1733,6 +1733,36 @@ def checkout_creates_intermediate_folders(sbox):
                           expected_output,
                           expected_wc)
 
+# Test that, if a peg revision is provided without an explicit revision, 
+# svn will checkout the directory as it was at rPEG, rather than at HEAD.
+def checkout_peg_rev(sbox):
+  "checkout with peg revision"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  # create a new revision
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'ci', '-m', 'changed file mu', wc_dir)
+
+  # now checkout the repo@1 in another folder, this should create our initial
+  # wc without the change in mu.
+  checkout_target = sbox.add_wc_path('checkout')
+  os.mkdir(checkout_target)
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+  
+  expected_wc = svntest.main.greek_state.copy()
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + '@1',
+                                          checkout_target, 
+                                          expected_output,
+                                          expected_wc)
+  
 ########################################################################
 # Run the tests
 
@@ -1770,6 +1800,7 @@ test_list = [ None,
               ls_nonhead,
               cat_added_PREV,
               checkout_creates_intermediate_folders,
+              checkout_peg_rev,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
