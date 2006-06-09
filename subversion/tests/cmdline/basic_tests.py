@@ -1713,6 +1713,26 @@ def cat_added_PREV(sbox):
                                      None, ".*has no committed revision.*",
                                      'cat', '-rPREV', f_path)
 
+def checkout_creates_intermediate_folders(sbox):
+  "checkout and create some intermediate folders"
+
+  sbox.build(create_wc = False)
+
+  checkout_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')
+  
+  # checkout a working copy in a/b/c, should create these intermediate 
+  # folders
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+
+  expected_wc = svntest.main.greek_state
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                          checkout_target,
+                          expected_output,
+                          expected_wc)
+
 ########################################################################
 # Run the tests
 
@@ -1749,6 +1769,7 @@ test_list = [ None,
               info_nonhead,
               ls_nonhead,
               cat_added_PREV,
+              checkout_creates_intermediate_folders,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
