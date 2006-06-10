@@ -253,7 +253,10 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   args = ''
   for arg in varargs:                   # build the command string
-    args = args + ' "' + str(arg) + '"'
+    arg = str(arg)
+    if os.name != 'nt':
+      arg = arg.replace('$', '\$')
+    args = args + ' "' + arg + '"'
 
   # Log the command line
   if verbose_mode:
