@@ -17,11 +17,11 @@ URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
 Patch0: apr.patch
+Patch1: subversion-0.31.0-rpath.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
-BuildPreReq: chrpath >= 0.11
 BuildPreReq: db4-devel
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
@@ -96,6 +96,12 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Jun 11 2006 David Summers <david@summersoft.fay.ar.us> r20040
+- Figured out another (better) way to fix Subversion bug #1456 instead of
+  depending on a third program (chrpath); Used Fedora Core RPATH patch to
+  change the build procedure to eliminate the wierd RPATH in the Subversion
+  Apache modules.
+
 * Sat Jun 10 2006 David Summers <david@summersoft.fay.ar.us> r20038
 - Changed /usr/lib to %{_libdir} and /usr/bin to %{_bindir} to help out
   people compiling 64-bit versions.  More needs to be done.
@@ -457,6 +463,9 @@ Tools for Subversion.
 # Patch for APR
 %patch0 -p0
 
+# Patch for RPATH
+%patch1 -p1
+
 if [ -f /usr/bin/autoconf-2.53 ]; then
    AUTOCONF="autoconf-2.53"
    AUTOHEADER="autoheader-2.53"
@@ -544,10 +553,6 @@ cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
-
-# Fix RPATH
-chrpath -r %{_libdir} $RPM_BUILD_ROOT/%{_libdir}/httpd/modules/mod_authz_svn.so
-chrpath -r %{_libdir} $RPM_BUILD_ROOT/%{_libdir}/httpd/modules/mod_dav_svn.so
 
 %post -n mod_dav_svn
 # Restart apache server if needed.
