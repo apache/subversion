@@ -96,6 +96,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 10 2006 David Summers <david@summersoft.fay.ar.us> r20038
+- Changed /usr/lib to %{_libdir} and /usr/bin to %{_bindir} to help out
+  people compiling 64-bit versions.  More needs to be done.
+
 * Mon Mar 20 2006 David Summers <david@summersoft.fay.ar.us> r18962
 - Added needed 'gettext' BuildPreReq.
   Thanks go to Francis Giraldeau <francis.giraldeau@revolutionlinux.com>.
@@ -468,8 +472,8 @@ rm -rf apr apr-util neon
 %configure \
 	--disable-mod-activation \
 	--without-berkeley-db \
-	--with-swig=/usr/bin/swig \
-	--with-python=/usr/bin/python%{pyver} \
+	--with-swig=%{_bindir}/swig \
+	--with-python=%{_bindir}/python%{pyver} \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
@@ -518,9 +522,9 @@ cp packages/rpm/rhel-3/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/lib/python%{pyver}/site-packages
-mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python%{pyver}/site-packages
-rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
+mkdir -p $RPM_BUILD_ROOT/%{_libdir}/python%{pyver}/site-packages
+mv $RPM_BUILD_ROOT/%{_libdir}/svn-python/* $RPM_BUILD_ROOT/%{_libdir}/python%{pyver}/site-packages
+rmdir $RPM_BUILD_ROOT/%{_libdir}/svn-python
 
 # Install PERL SWIG bindings.
 (cd subversion/bindings/swig/perl/native
@@ -529,21 +533,21 @@ perl Makefile.PL PREFIX=$RPM_BUILD_ROOT
 make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 
 # Clean up.
-mv $RPM_BUILD_ROOT/lib/perl5 $RPM_BUILD_ROOT/usr/lib/perl5
+mv $RPM_BUILD_ROOT/lib/perl5 $RPM_BUILD_ROOT/%{_libdir}/perl5
 mv $RPM_BUILD_ROOT/share/man/man3 $RPM_BUILD_ROOT/usr/share/man/man3
 rm -rf $RPM_BUILD_ROOT/lib $RPM_BUILD_ROOT/share
-rm -rf $RPM_BUILD_ROOT/usr/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi/perllocal.pod
+rm -rf $RPM_BUILD_ROOT/%{_libdir}/perl5/site_perl/5.8.0/i386-linux-thread-multi/perllocal.pod
 
 # Set up tools package files.
-mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
-cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
+mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
+cp -r tools $RPM_BUILD_ROOT/%{_libdir}/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
 # Fix RPATH
-chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_authz_svn.so
-chrpath -r /usr/lib $RPM_BUILD_ROOT/usr/lib/httpd/modules/mod_dav_svn.so
+chrpath -r %{_libdir} $RPM_BUILD_ROOT/%{_libdir}/httpd/modules/mod_authz_svn.so
+chrpath -r %{_libdir} $RPM_BUILD_ROOT/%{_libdir}/httpd/modules/mod_dav_svn.so
 
 %post -n mod_dav_svn
 # Restart apache server if needed.
@@ -566,21 +570,21 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc BUGS CHANGES COMMITTERS COPYING HACKING INSTALL README
 %doc subversion/LICENSE
-/usr/bin/svn
-/usr/bin/svnadmin
-/usr/bin/svndumpfilter
-/usr/bin/svnlook
-/usr/bin/svnserve
-/usr/bin/svnsync
-/usr/bin/svnversion
-/usr/lib/libsvn_client*so*
-/usr/lib/libsvn_delta*so*
-/usr/lib/libsvn_diff*so*
-/usr/lib/libsvn_fs*so*
-/usr/lib/libsvn_ra*so*
-/usr/lib/libsvn_repos*so*
-/usr/lib/libsvn_subr*so*
-/usr/lib/libsvn_wc*so*
+%{_bindir}/svn
+%{_bindir}/svnadmin
+%{_bindir}/svndumpfilter
+%{_bindir}/svnlook
+%{_bindir}/svnserve
+%{_bindir}/svnsync
+%{_bindir}/svnversion
+%{_libdir}/libsvn_client*so*
+%{_libdir}/libsvn_delta*so*
+%{_libdir}/libsvn_diff*so*
+%{_libdir}/libsvn_fs*so*
+%{_libdir}/libsvn_ra*so*
+%{_libdir}/libsvn_repos*so*
+%{_libdir}/libsvn_subr*so*
+%{_libdir}/libsvn_wc*so*
 /usr/share/locale/*/*/*
 /usr/share/man/man1/*
 /usr/share/man/man5/*
@@ -589,8 +593,8 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 %defattr(-,root,root)
 %doc doc/doxygen/html/*
-/usr/lib/libsvn*.a
-/usr/lib/libsvn*.la
+%{_libdir}/libsvn*.a
+%{_libdir}/libsvn*.la
 /usr/include/subversion-1
 
 %files -n mod_dav_svn
@@ -603,15 +607,15 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %{perl_sitearch}/SVN
 %{perl_sitearch}/auto/SVN
-/usr/lib/libsvn_swig_perl*so*
+%{_libdir}/libsvn_swig_perl*so*
 /usr/share/man/man3/SVN*
 
 %files python
 %defattr(-,root,root)
-/usr/lib/python%{pyver}/site-packages/svn
-/usr/lib/python%{pyver}/site-packages/libsvn
-/usr/lib/libsvn_swig_py*so*
+%{_libdir}/python%{pyver}/site-packages/svn
+%{_libdir}/python%{pyver}/site-packages/libsvn
+%{_libdir}/libsvn_swig_py*so*
 
 %files tools
 %defattr(-,root,root)
-/usr/lib/subversion/tools
+%{_libdir}/subversion/tools
