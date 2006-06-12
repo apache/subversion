@@ -305,6 +305,16 @@ class RevisionLog:
             elif srcdir_change_re.match(line):
                 self.propchange_revs.append(rev)
 
+        # Save the range of the log
+        self.begin = int(begin)
+        if end == "HEAD":
+            # If end is not provided, we do not know which is the latest
+            # revision in the repository. So we set 'end' to the latest
+            # known revision.
+            self.end = log.revs[-1]
+        else:
+            self.end = int(end)
+
         self._merges = None
 
     def merge_metadata(self):
@@ -369,25 +379,43 @@ class VersionedProperty:
         self.revs = [0]
         self.values = [None]
 
+        # We don't have any revisions cached
+        self._changed_revs = []
+
     def load(self, log):
         """
         Load the history of property changes from the specified
         RevisionLog object.
         """
 
-        # Cache the value of the property over the range of the log.
-        old_value = None
+        # Get the property value before the range of the log
+        if log.begin > 1:
+            self.revs.append(log.begin-1)
+            try:
+                old_value = self.raw_get(log.begin-1)
+            except LaunchError:
+                # The specified URL might not exist before the
+                # range of the log. If so, we can safely assume
+                # that the property was empty at that time.
+                old_value = { }
+            self.values.append(old_value)
+        else:
+            old_value = { }
+            self.values[0] = { }
+
+        # Cache the property values in the log range
         for rev in log.propchange_revs:
-           new_value = self.raw_get(rev)
-           if new_value != old_value:
-               self.revs.append(rev)
-               self.values.append(new_value)
-               new_value = old_value
+            new_value = self.raw_get(rev)
+            if new_value != old_value:
+                self._changed_revs.append(rev)
+                self.revs.append(rev)
+                self.values.append(new_value)
+                new_value = old_value
 
         # Indicate that we know nothing about the value of the property
         # after the range of the log.
         if log.revs:
-            self.revs.append(log.revs[-1])
+            self.revs.append(log.end+1)
             self.values.append(None)
 
     def raw_get(self, rev=None):
@@ -419,7 +447,7 @@ class VersionedProperty:
         """
         Get a list of the revisions in which this property changed.
         """
-        return self.revs[1:-1]
+        return self._changed_revs
 
 class RevisionSet:
     """
@@ -876,8 +904,8 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         report("checking for reflected changes in %d revision(s)"
                % len(merge_metadata.changed_revs()))
 
-        old_revs = None
         for rev in merge_metadata.changed_revs():
+            old_revs = merge_metadata.get(rev-1).get(target_dir)
             new_revs = merge_metadata.get(rev).get(target_dir)
             if new_revs != old_revs:
                 reflected_revs.append("%s" % rev)
