@@ -17,7 +17,7 @@ Candidate changes:
      We'll have to wait for another revision of svn_client_blame to fix
      the definition of the 'line' argument.
    Votes:
-     +1: dionisos
+     +1: dionisos, rooneg
 
  * r19919
    Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
