@@ -1347,7 +1347,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   int i;
   svn_stringbuf_t *value;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l?r", &paths, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)", &paths, &rev));
   for (i = 0; i < paths->nelts; i++)
     APR_ARRAY_IDX(paths, i, const char *) =
       svn_path_canonicalize(APR_ARRAY_IDX(paths, i, const char *), pool);

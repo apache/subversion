@@ -1113,7 +1113,7 @@ static svn_error_t *ra_svn_get_merge_info(svn_ra_session_t *session,
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)?r)", revision));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r))", revision));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c", &to_parse));
