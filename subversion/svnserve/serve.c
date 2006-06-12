@@ -754,6 +754,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *name;
   svn_string_t *value;
 
+  /* Because the revprop value was at one time mandatory, the usual
+     optional element pattern "(?s)" isn't used. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
   SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
@@ -1383,7 +1385,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_uint64_t limit;
   log_baton_t lb;
 
-  /* Parse the arguments. */
+  /* Parse the arguments.  The usual optional element pattern "(?n)"
+     isn't used for the limit argument because pre-1.3 clients don't
+     know to send it. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit));
