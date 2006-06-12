@@ -68,7 +68,7 @@ Candidate changes:
       Involves protocol change that's good to have in 1.4, allowing
       the client to behave correctly with authz and ra_svn.
     Votes:
-      +1: lundblad
+      +1: lundblad, malcolm
 
   * r20042
     Improve usability for Svn::Core::Dirent#time in the SWIG/Ruby bindings
