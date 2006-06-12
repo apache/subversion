@@ -416,6 +416,10 @@ def move_from_deleted(sbox):
   "move from deleted dir"
   run_dumpfile_test(sbox, "move-from-deleted.dump")
 
+def multiple_moves(sbox):
+  "dump and load more than one nested move"
+  run_dumpfile_test(sbox, "multiple-moves.dump")
+
 ########################################################################
 # Run the tests
 
@@ -434,6 +438,7 @@ test_list = [ None,
               move_plus_copy,
               move_plus_delete,
               move_from_deleted,
+              XFail(multiple_moves),
              ]
 
 if __name__ == '__main__':
