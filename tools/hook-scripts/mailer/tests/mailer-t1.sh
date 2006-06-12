@@ -20,12 +20,16 @@ fi
 glom=mailer-t1.current
 rm -f $glom
 
+export TZ=GST
+
 youngest="`svnlook youngest $1`"
 for rev in `python -c "import string; print string.join(map(str, range(1,$youngest+1)))"`; do
   $2 commit $1 $rev mailer.conf >> $glom
 done
 
 echo "current mailer.py output in: $glom"
+
+dos2unix $glom
 
 echo diff -q mailer-t1.output $glom
 diff -q mailer-t1.output $glom && echo "SUCCESS: no differences detected"

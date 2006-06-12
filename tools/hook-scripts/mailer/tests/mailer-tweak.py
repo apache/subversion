@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 #
-# mailer-tweak.py: tweak the svn:date properties on all revisions
+# mailer-tweak.py: tweak the svn:date and svn:author properties
+#                  on all revisions
 #
-# We need constant dates for the revisions so that we can consistently
-# compare an output against a known quantity.
+# We need constant dates and authors for the revisions so that we can
+# consistently compare an output against a known quantity.
 #
 # USAGE: ./mailer-tweak.py REPOS
 #
@@ -32,6 +33,7 @@ def tweak_dates(pool, home='.'):
     date = core.svn_time_to_cstring((DATE_BASE+i*DATE_INCR) * 1000000L, pool)
     #print date
     fs.change_rev_prop(fsob, i+1, core.SVN_PROP_REVISION_DATE, date, pool)
+    fs.change_rev_prop(fsob, i+1, core.SVN_PROP_REVISION_AUTHOR, 'mailer test', pool)
 
 def main():
   if len(sys.argv) != 2:
