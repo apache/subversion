@@ -193,7 +193,32 @@ TODO (LIKELY INCOMPLETE)
 
     * Dump/Load support needs to be finished.  It sort of works, but
       there are edge cases related to nested moves (see the multiple
-      moves test in svnadmin_tests.py).
+      moves test in svnadmin_tests.py) and moves that replace items.
+
+      * Need to make sure that ops are ordered by the associated paths.
+        Renames by their source paths, adds and modifications by their
+        path.  Deletes can still go at the end, since it's not like the
+        order of deletes actually matter.
+
+      * This will be something like how we handle deletes.  Keep a hash
+        of renames from a directory as we hit them and run the renames
+        at the end, ordered by their source path, deeper paths go first.
+
+      * Note that order of destination paths for renames also matters
+        with regard to deletes, we'll need to check that deletes happen
+        before renames to the path that was deleted.
+
+      * This is starting to look like it needs two passes, one to get
+        the deletes, and then one to do the actual operations, since at
+        least some of the operations need to know about the deletes
+        potentially earlier than they can actually know about them via
+        the editor drive.
+
+      * Alternatively, we've got a situation where we're recording the
+        renames as we go, and we run them later after we've confirmed
+        that there's no delete involved in making it possible.  I'm not
+        sure I like that, because it means holding potentially a lot of
+        stuff in RAM, but I might like it more than two passes.
 
     * History tracing doesn't seem to be interacting well with copies,
       see copy_then_moves_test in fs-test.c).
