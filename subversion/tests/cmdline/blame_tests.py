@@ -268,6 +268,42 @@ def blame_peg_rev(sbox):
   finally:
     os.chdir(current_dir)
 
+def blame_eol_styles(sbox):
+  "blame with different eol styles"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # CR
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  open(file_path, 'w').write("This is no longer the file 'iota'.\n")
+
+  for i in range (1,3):
+    svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          None, None, None, None,
+                                          None, None, wc_dir)
+
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'CR',
+                       file_path)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+                                     
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', file_path,
+                                                     '-r1:HEAD')
+
+  # output is a list of lines, there should be 3 lines
+  if len(output) != 3:
+    raise svntest.Failure ('Expected 3 lines in blame output but got %d\n' %
+                           len(output))
 
 ########################################################################
 # Run the tests
@@ -281,6 +317,7 @@ test_list = [ None,
               blame_in_xml,
               blame_on_unknown_revision,
               blame_peg_rev,
+              blame_eol_styles,
              ]
 
 if __name__ == '__main__':
