@@ -9,6 +9,16 @@ Status of 1.4.0:
 
 Candidate changes:
 
+ * r20052, r20053
+   Fix slew of blame issues (including insufficiently defined 'line'
+   argument of svn_blame_receiver_t in svn_client_blame3).
+   Justification:
+     Eliminates blame slowdown on systems/files which required translation.
+     We'll have to wait for another revision of svn_client_blame to fix
+     the definition of the 'line' argument.
+   Votes:
+     +1: dionisos
+
  * r19919
    Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
    which clobber configure arguments in AC_INIT. 
@@ -60,7 +70,7 @@ Candidate changes:
     Justification:
       Wouldn't it be nice if the svnserve tests worked on unix?
     Votes:
-      +1: rooneg
+      +1: rooneg, dionisos
 
   * r20008
     Fix issue #2566: svnserve can cause broken WCs.
