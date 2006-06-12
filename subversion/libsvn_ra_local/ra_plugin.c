@@ -636,6 +636,7 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 svn_ra_local__do_update(svn_ra_session_t *session,
                         const svn_ra_reporter2_t **reporter,
