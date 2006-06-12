@@ -77,5 +77,13 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r20042
+    Improve usability for Svn::Core::Dirent#time in the SWIG/Ruby bindings
+    by converting its returned value from a Integer to a Time.
+    Justification:
+      Improves usability for the bindings.
+    Votes:
+      +1: nori
+
 Approved changes:
 
