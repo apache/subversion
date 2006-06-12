@@ -704,6 +704,21 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
+ * Fetch the merge info for @a paths at @rev, and save it to @a
+ * mergeinfo (a mapping of char * paths to apr_array_header_t *'s of
+ * svn_merge_range_t * elements).
+ *
+ * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
+                                   apr_hash_t **mergeinfo,
+                                   const apr_array_header_t *paths,
+                                   svn_revnum_t revision,
+                                   apr_pool_t *pool);
+
+/**
  * Ask the RA layer to update a working copy.
  *
  * The client initially provides an @a update_editor/@a baton to the 

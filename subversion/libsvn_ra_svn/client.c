@@ -1093,6 +1093,19 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
+   server, which defaults to youngest. */
+static svn_error_t *ra_svn_get_merge_info(svn_ra_session_t *session,
+                                          apr_hash_t **mergeinfo,
+                                          const apr_array_header_t *paths,
+                                          svn_revnum_t revision,
+                                          apr_pool_t *pool)
+{
+  /* ### TODO: Implement me! */
+  abort();
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   const svn_ra_reporter2_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
@@ -1984,6 +1997,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_commit,
   ra_svn_get_file,
   ra_svn_get_dir,
+  ra_svn_get_merge_info,
   ra_svn_update,
   ra_svn_switch,
   ra_svn_status,
