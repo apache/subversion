@@ -2321,8 +2321,8 @@ Put the found values in `svn-status-base-info'."
       (let ((case-fold-search t))
         (search-forward "url: ")
         (setq url (buffer-substring-no-properties (point) (svn-point-at-eol)))
-        (search-forward "repository root: ")
-        (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol)))))
+        (when (search-forward "repository root: " nil t)
+          (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol))))))
     (setq svn-status-base-info `((url ,url) (repository-root ,repository-root)))))
 
 (defun svn-status-base-info->url ()
