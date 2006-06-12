@@ -930,7 +930,7 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
     base = 1
     r = opts["merged-revs"].normalized()
     if r and r[0][0] == 1:
-        base = r[0][1]
+        base = r[0][1] + 1
 
     # See if the user filtered the revision set. If so, we are not
     # interested in something outside that range.
