@@ -587,7 +587,7 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, pool));
-  readable_paths = apr_array_make(pool, paths->nelts, sizeof(*readable_paths));
+  readable_paths = apr_array_make(pool, paths->nelts, sizeof(char *));
   subpool = svn_pool_create(pool);
 
   /* Filter out unreadable paths before divining merge tracking info. */
