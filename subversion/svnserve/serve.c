@@ -1341,7 +1341,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  svn_revnum_t rev;
   apr_array_header_t *paths;
   apr_hash_t *mergeinfo;
   int i;
