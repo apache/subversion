@@ -123,14 +123,15 @@ blame_receiver(void *baton,
              abbreviations for the month and weekday names.  Else, the
              line contents will be misaligned. */
           time_stdout = "                                           -";
-      return svn_stream_printf(out, pool, "%s %10s %s %s\n", rev_str, 
+      return svn_stream_printf(out, pool, "%s %10s %s %s%s", rev_str, 
                                author ? author : "         -", 
-                               time_stdout , line);
+                               time_stdout , line, APR_EOL_STR);
     }
   else
     {
-      return svn_stream_printf(out, pool, "%s %10s %s\n", rev_str, 
-                               author ? author : "         -", line);
+      return svn_stream_printf(out, pool, "%s %10s %s%s", rev_str, 
+                               author ? author : "         -",
+                               line, APR_EOL_STR);
     }
 }
  
@@ -206,21 +207,10 @@ svn_cl__blame(apr_getopt_t *os,
       opt_state->start_revision.value.number = 1;
     }
 
-  /* A comment about the use of svn_stream_t for column-based output,
-     and stdio for XML output:
-
-     stdio does newline translations for us.  Since our XML routines
-     from svn_xml.h produce text separated with \n, we want that
-     translation to happen, making the XML more readable on some
-     platforms.
-
-     For the column-based output, we output contents from the file, so
-     we don't want stdio to mess with the newlines.  We finish lines
-     by \n, but the file might contain \r characters at the end of
-     lines, since svn_client_blame() splits lines at \n characters.
-     That would lead to CRCRLF line endings on platforms with CRLF
-     line endings. */
-
+  /* The final conclusion from issue #2431 is that blame info
+     is client output (unlike 'svn cat' which plainly cats the file),
+     so the EOL style should be the platform local one.
+  */
   if (! opt_state->xml)
     SVN_ERR(svn_stream_for_stdout(&bl.out, pool));
   else
