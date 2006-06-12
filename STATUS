@@ -87,13 +87,3 @@ Approved changes:
      with buffered files: Potential repository corruption with FSFS.
    Votes:
      +1: dionisos, brane, malcolm
-
- * r20052, r20053, r20057
-   Fix slew of blame issues (including insufficiently defined 'line'
-   argument of svn_blame_receiver_t in svn_client_blame3).
-   Justification:
-     Eliminates blame slowdown on systems/files which required translation.
-     We'll have to wait for another revision of svn_client_blame to fix
-     the definition of the 'line' argument.
-   Votes:
-     +1: dionisos, rooneg, dlr
