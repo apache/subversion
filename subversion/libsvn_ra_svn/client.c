@@ -40,6 +40,7 @@
 #include "svn_ra_svn.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 
 #include "ra_svn.h"
 
@@ -1101,8 +1102,22 @@ static svn_error_t *ra_svn_get_merge_info(svn_ra_session_t *session,
                                           svn_revnum_t revision,
                                           apr_pool_t *pool)
 {
-  /* ### TODO: Implement me! */
-  abort();
+  ra_svn_session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  int i;
+  const char *to_parse, *path;
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-merge-info"));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      path = APR_ARRAY_IDX(paths, i, const char *);
+      SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)?r)", revision));
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c", &to_parse));
+  SVN_ERR(svn_mergeinfo_parse(to_parse, mergeinfo, pool));
   return SVN_NO_ERROR;
 }
 
