@@ -9,14 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
- * r19915
-   Require APR 0.9.7
-   Justification:
-     Older APR versions didn't return errors upon failed writes
-     with buffered files: Potential repository corruption with FSFS.
-   Votes:
-     +1: dionisos, brane
-
  * r19919
    Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
    which clobber configure arguments in AC_INIT. 
@@ -86,4 +78,12 @@ Candidate changes:
       +1: nori
 
 Approved changes:
+
+ * r19915
+   Require APR 0.9.7
+   Justification:
+     Older APR versions didn't return errors upon failed writes
+     with buffered files: Potential repository corruption with FSFS.
+   Votes:
+     +1: dionisos, brane, malcolm
 
