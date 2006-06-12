@@ -4858,11 +4858,138 @@ move_plus_delete_test2(const char **msg,
   SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "Z", pool));
 
   if (! path || strcmp(path, "/A/B") != 0)
-    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A/D'\n",
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A/B'\n",
                              path);
 
   if (! SVN_IS_VALID_REVNUM(rev) || rev != 1)
     return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
+
+  return SVN_NO_ERROR;
+}
+  
+static svn_error_t *
+multiple_moves_test(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  const char *path;
+  svn_revnum_t after_rev, rev;
+
+  *msg = "make sure multiple nested moves work";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-multiple-move", 
+                              opts->fs_type, pool));
+
+  /* Revision 1: Create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Revision 2: Move A/B to X and A to Q in one txn. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_move(rev_root, "A/B", txn_root, "X", pool));
+  SVN_ERR(svn_fs_move(rev_root, "A", txn_root, "Q", pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "X", pool));
+
+  if (! path || strcmp(path, "/A/B") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A/B'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 1)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
+
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "Q", pool));
+
+  if (! path || strcmp(path, "/A") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/A'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 1)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '1'\n",
+                             rev);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+copy_then_moves_test(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  const char *path;
+  svn_revnum_t after_rev, rev;
+
+  *msg = "make sure copies and moves don't screw up history";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-copy-then-move", 
+                              opts->fs_type, pool));
+
+  /* Revision 1: Create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Revision 2: Copy A to Z */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_copy(rev_root, "A", txn_root, "Z", pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  /* Revision 3: Move Z/B to X and Z to Q in one txn. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool)); 
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_move(rev_root, "Z/B", txn_root, "X", pool));
+  SVN_ERR(svn_fs_move(rev_root, "Z", txn_root, "Q", pool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, pool));
+
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "X", pool));
+
+  if (! path || strcmp(path, "/Z/B") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/Z/B'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 2)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '2'\n",
+                             rev);
+
+  SVN_ERR(svn_fs_copied_from(&rev, &path, rev_root, "Q", pool));
+
+  if (! path || strcmp(path, "/Z") != 0)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%s' expected '/Z'\n",
+                             path);
+
+  if (! SVN_IS_VALID_REVNUM(rev) || rev != 2)
+    return svn_error_createf(APR_EINVAL, NULL, "Got '%ld' expected '2'\n",
                              rev);
 
   return SVN_NO_ERROR;
@@ -4911,5 +5038,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(move_copied_from_test),
     SVN_TEST_PASS(move_plus_delete_test),
     SVN_TEST_PASS(move_plus_delete_test2),
+    SVN_TEST_PASS(multiple_moves_test),
+    SVN_TEST_XFAIL(copy_then_moves_test),
     SVN_TEST_NULL
   };
