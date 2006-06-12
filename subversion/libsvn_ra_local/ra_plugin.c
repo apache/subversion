@@ -628,8 +628,11 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
                              svn_revnum_t revision,
                              apr_pool_t *pool)
 {
-  /* ### TODO: Implement me! */
-  abort();
+  svn_ra_local__session_baton_t *baton = session->priv;
+
+  SVN_ERR(svn_repos_fs_get_merge_info(mergeinfo, baton->repos, paths,
+                                      revision, NULL, NULL, pool));
+
   return SVN_NO_ERROR;
 }
 
