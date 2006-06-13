@@ -380,7 +380,9 @@ class VersionedProperty:
         self.values = [None]
 
         # We don't have any revisions cached
+        self._initial_value = None
         self._changed_revs = []
+        self._changed_values = []
 
     def load(self, log):
         """
@@ -392,22 +394,24 @@ class VersionedProperty:
         if log.begin > 1:
             self.revs.append(log.begin-1)
             try:
-                old_value = self.raw_get(log.begin-1)
+                self._initial_value = self.raw_get(log.begin-1)
             except LaunchError:
                 # The specified URL might not exist before the
                 # range of the log. If so, we can safely assume
                 # that the property was empty at that time.
-                old_value = { }
-            self.values.append(old_value)
+                self._initial_value = { }
+            self.values.append(self._initial_value)
         else:
-            old_value = { }
-            self.values[0] = { }
+            self._initial_value = { }
+            self.values[0] = self._initial_value
 
         # Cache the property values in the log range
+        old_value = self._initial_value
         for rev in log.propchange_revs:
             new_value = self.raw_get(rev)
             if new_value != old_value:
                 self._changed_revs.append(rev)
+                self._changed_values.append(new_value)
                 self.revs.append(rev)
                 self.values.append(new_value)
                 new_value = old_value
@@ -443,11 +447,22 @@ class VersionedProperty:
         # Get the current value of the property
         return self.raw_get(rev)
 
-    def changed_revs(self):
+    def changed_revs(self, key=None):
         """
-        Get a list of the revisions in which this property changed.
+        Get a list of the revisions in which the specified dictionary
+        key was changed in this property. If key is not specified,
+        return a list of revisions in which any key was changed.
         """
-        return self._changed_revs
+        if key is None:
+            return self._changed_revs
+        else:
+            changed_revs = []
+            old_val = self._initial_value
+            for rev, val in zip(self._changed_revs, self._changed_values):
+                if val.get(key) != old_val.get(key):
+                    changed_revs.append(rev)
+                    old_val = val
+            return changed_revs
 
 class RevisionSet:
     """
@@ -896,20 +911,11 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         end = str(list(revs)[-1])
 
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
-    reflected_revs = []
 
     if find_reflected:
-        merge_metadata = logs[url].merge_metadata()
-
-        report("checking for reflected changes in %d revision(s)"
-               % len(merge_metadata.changed_revs()))
-
-        for rev in merge_metadata.changed_revs():
-            old_revs = merge_metadata.get(rev-1).get(target_dir)
-            new_revs = merge_metadata.get(rev).get(target_dir)
-            if new_revs != old_revs:
-                reflected_revs.append("%s" % rev)
-            old_revs = new_revs
+        reflected_revs = logs[url].merge_metadata().changed_revs(target_dir)
+    else:
+        reflected_revs = []
 
     reflected_revs = RevisionSet(reflected_revs)
 
