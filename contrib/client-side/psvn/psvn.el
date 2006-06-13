@@ -248,7 +248,7 @@ Possible values are: commit, revert."
               (const revert))
   :group 'psvn)
 
-(defcustom svn-status-preserve-window-configuration nil
+(defcustom svn-status-preserve-window-configuration t
   "*Try to preserve the window configuration."
   :type 'boolean
   :group 'psvn)
@@ -2757,15 +2757,17 @@ if no files have been marked."
     (insert postfix))))
 
 (defun svn-status-show-process-buffer-internal (&optional scroll-to-top)
-  (when (string= (buffer-name) svn-status-buffer-name)
-    (delete-other-windows))
-  (pop-to-buffer "*svn-process*")
-  (svn-process-mode)
-  (when svn-status-wash-control-M-in-process-buffers
-    (svn-status-remove-control-M))
-  (when scroll-to-top
-    (goto-char (point-min)))
-  (other-window 1))
+  (let ((cur-buff (current-buffer)))
+    (unless svn-status-preserve-window-configuration
+      (when (string= (buffer-name) svn-status-buffer-name)
+        (delete-other-windows)))
+    (pop-to-buffer "*svn-process*")
+    (svn-process-mode)
+    (when svn-status-wash-control-M-in-process-buffers
+      (svn-status-remove-control-M))
+    (when scroll-to-top
+      (goto-char (point-min)))
+    (pop-to-buffer cur-buff)))
 
 (defun svn-status-show-process-output (cmd &optional scroll-to-top)
   "Display the result of a svn command.
