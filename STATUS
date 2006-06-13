@@ -77,6 +77,14 @@ Candidate changes:
     Votes:
       +1: nori
 
+  * r20078
+    Improve usability for Svn::Core::LogChangedPath in the SWIG/Ruby bindings
+    by adding a method.
+    Justification:
+      Improves usability for the bindings.
+    Votes:
+      +1: nori
+
 Approved changes:
 
  * r19915
