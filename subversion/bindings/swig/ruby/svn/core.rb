@@ -456,5 +456,11 @@ module Svn
         __date && Time.from_svn_format(__date)
       end
     end
+
+    class LogChangedPath
+      def copied?
+        Util.copy?(copyfrom_path, copyfrom_rev)
+      end
+    end
   end
 end
