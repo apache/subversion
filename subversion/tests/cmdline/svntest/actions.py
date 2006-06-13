@@ -782,6 +782,37 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     display_trees(None, 'DIFF OUTPUT TREE', output_tree, mytree)
     raise
 
+def run_and_validate_lock(path, username, password):
+  """`svn lock' the given path and validate the contents of the lock.
+     Use the given username. This is important because locks are
+     user specific."""
+
+  comment = "Locking path:%s." % path
+
+  # lock the path
+  run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                     '--username', username,
+                     '--password', password,
+                     '-m', comment, path)
+
+  # Run info and check that we get the lock fields.
+  output, err = run_and_verify_svn(None, None, [],
+                                   'info','-R', 
+                                   path)
+
+  # prepare the regexs to compare against
+  token_re = re.compile (".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
+  author_re = re.compile (".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
+  created_re = re.compile (".*?Lock Created:.*?", re.DOTALL)
+  comment_re = re.compile (".*?%s\n.*?" % comment, re.DOTALL)
+  # join all output lines into one
+  output = "".join(output)
+  # Fail even if one regex does not match
+  if ( not (token_re.match(output) and \
+            author_re.match(output) and \
+            created_re.match(output) and \
+            comment_re.match(output))):
+    raise Failure
 
 ######################################################################
 # Displaying expected and actual output
