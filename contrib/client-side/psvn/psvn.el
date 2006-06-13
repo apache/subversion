@@ -509,6 +509,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-edit-svn-command nil)
 (defvar svn-status-update-previous-process-output nil)
 (defvar svn-pre-run-asynch-recent-keys nil)
+(defvar svn-pre-run-mode-line-process nil)
 (defvar svn-status-temp-dir
   (expand-file-name
    (or
@@ -878,7 +879,8 @@ If there is no .svn directory, examine if there is SVN and run
     ;;(message "psvn: Saving initial window configuration")
     (setq svn-status-initial-window-configuration
           (current-window-configuration)))
-  (let* ((status-buf (get-buffer-create svn-status-buffer-name))
+  (let* ((cur-buf (current-buffer))
+         (status-buf (get-buffer-create svn-status-buffer-name))
          (proc-buf (get-buffer-create "*svn-process*"))
          (want-edit (eq arg '-))
          (status-option (if want-edit
@@ -894,6 +896,7 @@ If there is no .svn directory, examine if there is SVN and run
       (set-buffer proc-buf)
       (setq default-directory dir
             svn-status-remote (when arg t))
+      (set-buffer cur-buf)
       (svn-run t t 'status "status" status-option))))
 
 (defun svn-status-this-directory (arg)
@@ -963,6 +966,10 @@ can edit ARGLIST before running svn."
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run %s: %S" cmdtype arglist))
+        (unless (eq mode-line-process 'svn-status-mode-line-process)
+          (setq svn-pre-run-mode-line-process mode-line-process)
+          (setq mode-line-process 'svn-status-mode-line-process))
+        (setq svn-status-pre-run-svn-buffer (current-buffer))
         (let* ((proc-buf (get-buffer-create "*svn-process*"))
                (svn-exe svn-status-svn-executable)
                (svn-proc))
@@ -1006,8 +1013,10 @@ can edit ARGLIST before running svn."
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)))
-          (setq svn-status-pre-run-svn-buffer (current-buffer))))
+              (svn-status-update-mode-line)
+              (when svn-pre-run-mode-line-process
+                (setq mode-line-process svn-pre-run-mode-line-process)
+                (setq svn-pre-run-mode-line-process nil))))))
     (error "You can only run one svn process at once!")))
 
 (defun svn-process-sentinel-fixup-path-seperators ()
@@ -1023,6 +1032,10 @@ can edit ARGLIST before running svn."
   ;;(princ (format "Process: %s had the event `%s'" process event)))
   ;;(save-excursion
   (let ((act-buf (current-buffer)))
+    (when svn-pre-run-mode-line-process
+      (with-current-buffer svn-status-pre-run-svn-buffer
+        (setq mode-line-process svn-pre-run-mode-line-process))
+      (setq svn-pre-run-mode-line-process nil))
     (set-buffer (process-buffer process))
     (setq svn-status-mode-line-process-status "")
     (svn-status-update-mode-line)
