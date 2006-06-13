@@ -16,8 +16,7 @@ Candidate changes:
      Developer convenience throughout the lifetime of 1.4.x.
      Note that affected versions are already packaged within Debian etch.
    Votes:
-     +1: maxb
-     +0: malcolm (http://svn.haxx.se/dev/archive-2006-06/0386.shtml)
+     +1: maxb, malcolm
 
  * r19924
    Deprecate svn_io_set_file_read_write_carefully and update the
