@@ -986,6 +986,59 @@ def merge_tree_deleted_in_target(sbox):
                                        0, 0)
 
 #----------------------------------------------------------------------
+# Issue #2515
+
+def merge_added_dir_to_deleted_in_target(sbox):
+  "merge an added dir on a deleted dir in target"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # copy B to a new directory, I.
+  # delete F in I.
+  # add J to B/F.
+  # merge add to I.
+
+  B_url = svntest.main.current_repo_url + '/A/B'
+  I_url = svntest.main.current_repo_url + '/A/I'
+  F_url = svntest.main.current_repo_url + '/A/I/F'
+  J_url = svntest.main.current_repo_url + '/A/B/F/J'
+  I_path = os.path.join(wc_dir, 'A', 'I')
+
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', B_url, I_url, '-m', 'rev 2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', F_url, '-m', 'rev 3')
+                                     
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'rev 4', J_url)
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'up', os.path.join(wc_dir,'A'))
+
+  expected_output = wc.State(I_path, {})
+  expected_disk = wc.State('', {
+    'E'       : Item(),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item("This is the file 'beta'.\n"),
+    'lambda'  : Item("This is the file 'lambda'.\n"),
+    })
+  expected_skip = wc.State(I_path, {
+    'F/J' : Item(),
+    'F'   : Item(),
+    })
+
+  svntest.actions.run_and_verify_merge(I_path, '2', '4', B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       None,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       0, 0)
+
+#----------------------------------------------------------------------
 # This is a regression for issue #1176.
 
 def merge_similar_unrelated_trees(sbox):
@@ -3386,6 +3439,7 @@ test_list = [ None,
               merge_file_replace,
               merge_dir_replace,
               merge_file_replace_to_mixed_rev_wc,
+              merge_added_dir_to_deleted_in_target,
              ]
 
 if __name__ == '__main__':
