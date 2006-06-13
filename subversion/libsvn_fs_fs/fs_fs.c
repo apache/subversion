@@ -4074,7 +4074,7 @@ update_mergeinfo_index (svn_fs_txn_t *txn, svn_revnum_t new_rev,
     }
   
   SQLITE_ERR(sqlite3_prepare(ftd->mtd, 
-                             "INSERT INTO mergeinfo_uuid (uuid, revision) VALUES (?, ?);", 
+                             "INSERT OR REPLACE INTO mergeinfo_uuid (uuid, revision) VALUES (?, ?);", 
                              -1, &stmt, NULL), ftd->mtd);
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, txn->id, -1, 
                                SQLITE_TRANSIENT), ftd->mtd);
@@ -4217,11 +4217,16 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Do mergeinfo indexing.  */
   if (contains_merge_info)
     {
+      svn_string_t *st;
+      
       SQLITE_ERR(sqlite3_open(svn_path_join(cb->fs->path, "mergeinfo.db", 
                                             pool), &ftd->mtd), ftd->mtd);
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
-      
-      SVN_ERR (update_mergeinfo_index(cb->txn, new_rev, pool));
+      st = svn_string_createf(pool, 
+	                      "delete from mergeinfo_uuid where revision = %" 
+			      SVN_REVNUM_T_FMT ";", new_rev);
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, st->data, NULL, NULL));
+      SVN_ERR(update_mergeinfo_index(cb->txn, new_rev, pool));
       
       /* This is moved here from commit_txn, because we don't want to
          write the final current file if the sqlite commit fails.
@@ -4231,6 +4236,21 @@ commit_body(void *baton, apr_pool_t *pool)
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
       SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
     }
+  else
+    {
+      svn_string_t *st;
+      
+      st = svn_string_createf(pool, 
+	                      "delete from mergeinfo_uuid where revision = %" 
+			      SVN_REVNUM_T_FMT ";", new_rev);
+      SQLITE_ERR(sqlite3_open(svn_path_join(cb->fs->path, "mergeinfo.db", 
+                                            pool), &ftd->mtd), ftd->mtd);
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, st->data, NULL, NULL));
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
+      SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
+    }
+
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
