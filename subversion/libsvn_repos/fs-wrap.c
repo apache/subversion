@@ -580,26 +580,41 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
                             apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  apr_array_header_t *readable_paths;
+  apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
   int i;
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, pool));
-  readable_paths = apr_array_make(pool, paths->nelts, sizeof(char *));
   subpool = svn_pool_create(pool);
 
   /* Filter out unreadable paths before divining merge tracking info. */
-  for (i = 0; i < paths->nelts; i++)
+  if (authz_read_func)
     {
-      svn_boolean_t readable;
-      const char *path = APR_ARRAY_IDX(paths, i, char *);
-      svn_pool_clear(subpool);
-      SVN_ERR(authz_read_func(&readable, root, path, authz_read_baton,
-                              subpool));
-      if (readable)
-        APR_ARRAY_PUSH(readable_paths, const char *) = path;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          svn_boolean_t readable;
+          const char *path = APR_ARRAY_IDX(paths, i, char *);
+          svn_pool_clear(subpool);
+          SVN_ERR(authz_read_func(&readable, root, path, authz_read_baton,
+                                  subpool));
+          if (readable && readable_paths != paths)
+            APR_ARRAY_PUSH(readable_paths, const char *) = path;
+          else if (!readable && readable_paths == paths)
+            {
+              /* Requested paths differ from readable paths.  Fork
+                 list of readable paths from requested paths. */
+              int j;
+              readable_paths = apr_array_make(pool, paths->nelts - 1,
+                                              sizeof(char *));
+              for (j = 0; j < i; j++)
+                {
+                  path = APR_ARRAY_IDX(paths, j, char *);
+                  APR_ARRAY_PUSH(readable_paths, const char *) = path;
+                }
+            }
+        }
     }
 
   /* We consciously do not perform authz checks on the paths returned
