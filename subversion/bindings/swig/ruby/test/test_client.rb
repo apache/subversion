@@ -558,6 +558,75 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_log
+    log1 = "sample log1"
+    log2 = "sample log2"
+    log3 = "sample log3"
+    src1 = "source1\n"
+    src2 = "source2\n"
+    src3 = "source3\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    file3 = "sample3.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    path3 = File.join(@wc_path, file3)
+    abs_path1 = File.join('', file1)
+    abs_path2 = File.join('', file2)
+    abs_path3 = File.join('', file3)
+
+    ctx = make_context(log1)
+    File.open(path1, "w") {|f| f.print(src1)}
+    ctx.add(path1)
+    rev1 = ctx.ci(@wc_path).revision
+
+    ctx = make_context(log2)
+    ctx.cp(path1, path2)
+    rev2 = ctx.ci(@wc_path).revision
+
+    ctx = make_context(log3)
+    ctx.cp(path1, path3)
+    File.open(path1, "w") {|f| f.print(src2)}
+    File.open(path3, "w") {|f| f.print(src3)}
+    rev3 = ctx.ci(@wc_path).revision
+
+    changed_paths_lists = {}
+    revs = {}
+    messages = {}
+    keys = [@wc_path, path1, path2, path3]
+    keys.each do |key|
+      revs[key] = []
+      changed_paths_lists[key] = []
+      messages[key] = []
+      args = [key, 1, "HEAD", 0, true, nil]
+      ctx.log(*args) do |changed_paths, rev, author, date, message|
+        revs[key] << rev
+        changed_paths_lists[key] << changed_paths
+        messages[key] << message
+      end
+    end
+    changed_paths_list = changed_paths_lists[@wc_path]
+
+    assert_equal([rev1, rev2, rev3], revs[@wc_path])
+    assert_equal([rev1, rev3], revs[path1])
+    assert_equal([rev1, rev2], revs[path2])
+    assert_equal([rev1, rev3], revs[path3])
+    assert_equal([log1, log2, log3], messages[@wc_path])
+
+    expected = [[abs_path1], [abs_path2], [abs_path1, abs_path3]]
+    actual = changed_paths_list.collect {|changed_paths| changed_paths.keys}
+    assert_nested_sorted_array(expected, actual)
+
+    assert_equal('A', changed_paths_list[0][abs_path1].action)
+    assert_false(changed_paths_list[0][abs_path1].copied?)
+    assert_equal('A', changed_paths_list[1][abs_path2].action)
+    assert_true(changed_paths_list[1][abs_path2].copied?)
+    assert_equal(abs_path1, changed_paths_list[1][abs_path2].copyfrom_path)
+    assert_equal(rev1, changed_paths_list[1][abs_path2].copyfrom_rev)
+    assert_equal('M', changed_paths_list[2][abs_path1].action)
+    assert_equal('A', changed_paths_list[2][abs_path3].action)
+  end
+
+  def test_log_message
     log = "sample log"
     file = "hello.txt"
     path = File.join(@wc_path, file)
