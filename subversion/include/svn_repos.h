@@ -1036,10 +1036,11 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /**
  * Fetch the merge info for @a paths at @rev, and save it to @a
- * mergeinfo (a mapping of char * paths to apr_array_header_t *'s of
- * svn_merge_range_t * elements).
+ * mergeinfo.  @a mergeinfo is a mapping of @c char * target paths
+ * (from @a paths) to textual (@c char *) representations of merge
+ * info (as managed by svn_mergeinfo.h).
  *
- * If @a rev is @c SVN_INVALID_REVNUM, it defaults to youngest.
+ * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
@@ -1054,7 +1055,7 @@ svn_error_t *
 svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
                             svn_repos_t *repos,
                             const apr_array_header_t *paths,
-                            svn_revnum_t rev,
+                            svn_revnum_t revision,
                             svn_repos_authz_func_t authz_read_func,
                             void *authz_read_baton,
                             apr_pool_t *pool);

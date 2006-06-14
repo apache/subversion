@@ -1335,8 +1335,8 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                        text_deltas, recurse, ignore_ancestry);
 }
 
-/* ASSUMPTION: When performing a 'merge' with two URLs, the client
-   will call this command more than once. */
+/* ASSUMPTION: When performing a 'merge' with two URLs at different
+   revisions, the client will call this command more than once. */
 static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    apr_array_header_t *params, void *baton)
 {
@@ -1345,7 +1345,8 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_array_header_t *paths;
   apr_hash_t *mergeinfo;
   int i;
-  svn_stringbuf_t *value;
+  apr_hash_index_t *hi;
+  const char *path, *info;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)", &paths, &rev));
   for (i = 0; i < paths->nelts; i++)
@@ -1355,12 +1356,24 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos, paths, rev,
                                           authz_check_access_cb_func(b), b,
                                           pool));
-  if (mergeinfo != NULL)
-    SVN_ERR(svn_mergeinfo_to_string(&value, mergeinfo, pool));
+  if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
+    {
+      /* response: ( ( ( path:string merge-info:string) ... ) ) */
+      const void *key;
+      void *value;
+
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          info = value;
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cc", path, info));
+        }
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+    }
   else
-    value = NULL;
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c",
-                                        value ? value->data : ""));
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "()"));
   return SVN_NO_ERROR;
 }
 

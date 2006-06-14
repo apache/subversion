@@ -705,8 +705,11 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
 
 /**
  * Fetch the merge info for @a paths at @rev, and save it to @a
- * mergeinfo (a mapping of char * paths to apr_array_header_t *'s of
- * svn_merge_range_t * elements).
+ * mergeinfo.  @a mergeinfo is a mapping of @c char * target paths
+ * (from @a paths) to hashes mapping merged-from paths (of @c char *)
+ * to revision range lists (of @c apr_array_header_t * with @c
+ * svn_merge_range_t * elements), or @c NULL if there is no merge
+ * info available.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
