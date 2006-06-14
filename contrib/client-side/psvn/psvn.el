@@ -816,6 +816,14 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
+;; no idea, if there is a simpler way to achieve this...
+(defun svn-status-window-line-position ()
+  "Return the window line at point."
+  (let ((edges (window-inside-edges))
+	(x-y (posn-x-y (posn-at-point))))
+    (+ (car (cdr edges))
+       (/ (or (cdr x-y) 0) (frame-char-height)))))
+
 ;;;###autoload
 (defun svn-checkout (repos-url path)
   "Run svn checkout REPOS-URL PATH."
@@ -2236,6 +2244,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (first-line t)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
+        (window-line-pos (svn-status-window-line-position))
         (header-line-string)
         (column (current-column)))
     (delete-region (point-min) (point-max))
@@ -2304,7 +2313,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (progn
           (goto-char fname-pos)
           (svn-status-goto-file-name fname)
-          (goto-char (+ column (svn-point-at-bol))))
+          (goto-char (+ column (svn-point-at-bol)))
+          (recenter window-line-pos))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
 
 (defun svn-status-parse-info (arg)
@@ -4116,7 +4126,7 @@ removed again, when a faster parsing and display routine for
   (setq svn-status-display-full-path (not svn-status-display-full-path))
   (message "The %s buffer will%s use full path names." svn-status-buffer-name
            (if svn-status-display-full-path "" " not"))
-  (svn-status-update))
+  (svn-status-update-buffer))
 
 (defun svn-status-set-trac-project-root ()
   (interactive)
