@@ -308,6 +308,70 @@ def blame_eol_styles(sbox):
       raise svntest.Failure ('Expected 3 lines in blame output but got %d: \n' %
                              len(output) + str(output))
 
+def blame_ignore_whitespace(sbox):
+  "ignore whitespace when blaming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only whitespace changes
+  open(file_path, 'w').write(" A  a   \n"
+                             "   B b  \n"
+                             "    C    c    \n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # match the blame output, as defined in the blame code:
+  # "%6ld %10s %s %s%s", rev, author ? author : "         -", 
+  #                      time_stdout , line, APR_EOL_STR
+  expected_output = [                                  
+    "     2    jrandom  A  a   \n",
+    "     2    jrandom    B b  \n",
+    "     2    jrandom     C    c    \n",
+    ]
+
+  output, error = svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-x', '-w', file_path)
+
+  # commit some changes
+  open(file_path, 'w').write(" A  a   \n"
+                             "Xxxx X\n"
+                             "   Bb b  \n"
+                             "    C    c    \n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  expected_output = [                                  
+    "     2    jrandom  A  a   \n",
+    "     4    jrandom Xxxx X\n",
+    "     4    jrandom    Bb b  \n",
+    "     2    jrandom     C    c    \n",
+    ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-x', '-w', file_path)
+
 ########################################################################
 # Run the tests
 
@@ -321,6 +385,7 @@ test_list = [ None,
               blame_on_unknown_revision,
               blame_peg_rev,
               blame_eol_styles,
+              blame_ignore_whitespace,
              ]
 
 if __name__ == '__main__':
