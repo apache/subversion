@@ -1078,6 +1078,248 @@ fs_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+/* #define SQLITE3_DEBUG 1 */
+#ifdef SQLITE3_DEBUG
+static void
+sqlite_tracer (void *data, const char *sql)
+{
+  /*  sqlite3 *db = data; */
+  fprintf (stderr, "SQLITE SQL is \"%s\"\n", sql);
+}
+#endif
+
+#define NEGATIVE_CACHE_RESULT ((void*)(-1))
+
+static svn_error_t *
+parse_mergeinfo_from_db(sqlite3 *db,
+                        const char *path,
+                        svn_revnum_t rev,
+                        apr_hash_t **result,
+                        apr_pool_t *pool)
+{
+  sqlite3_stmt *stmt;
+  long long int lastchanged_rev;
+  int sqlite_result;
+
+  SQLITE_ERR(sqlite3_prepare(db, "SELECT MAX(revision) from mergeinfo_changed"
+                             " where path = ? and revision <= ?;",
+                             -1, &stmt, NULL), db);
+  SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+  sqlite_result = sqlite3_step(stmt);
+  if (sqlite_result != SQLITE_ROW)
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            sqlite3_errmsg(db));
+      
+  lastchanged_rev = sqlite3_column_int64(stmt, 0);
+  
+  SQLITE_ERR(sqlite3_finalize(stmt), db);  
+  
+  SQLITE_ERR(sqlite3_prepare(db, 
+                             "SELECT mergedfrom, mergedrevstart,"
+                             "mergedrevend from mergeinfo "
+                             "where mergedto = ? and revision = ? "
+                             "group by mergedfrom;",
+                             -1, &stmt, NULL), db);
+  SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastchanged_rev), db);
+  sqlite_result = sqlite3_step(stmt);
+  
+  /* It is possible the mergeinfo changed because of a delete, and
+     that the mergeinfo is now gone. If this is the case, we want
+     to do nothing but fallthrough into the count == 0 case */
+  if (sqlite_result == SQLITE_DONE)
+    {
+      *result = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (sqlite_result == SQLITE_ROW)
+    {
+      apr_array_header_t *pathranges;
+      const char *mergedfrom;
+      svn_revnum_t startrev;
+      svn_revnum_t endrev;
+      const char *lastmergedfrom = NULL;
+      
+      *result = apr_hash_make(pool);
+      pathranges = apr_array_make(pool, 1, sizeof (svn_merge_range_t *));
+      
+      while (sqlite_result == SQLITE_ROW)
+        {
+          svn_merge_range_t *temprange;
+          
+          mergedfrom = sqlite3_column_text(stmt, 0);
+          startrev = sqlite3_column_int64(stmt, 1);
+          endrev = sqlite3_column_int64(stmt, 2);
+          if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
+            {
+              apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, 
+                           pathranges);
+              pathranges = apr_array_make(pool, 1, 
+                                          sizeof (svn_merge_range_t *));
+            }
+          temprange = apr_pcalloc(pool, sizeof(*temprange));
+          temprange->start = startrev;
+          temprange->end = endrev;
+          APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = temprange;
+          sqlite_result = sqlite3_step(stmt);
+        }
+      apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, pathranges);
+      
+      if (sqlite_result != SQLITE_DONE)
+        return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                                sqlite3_errmsg(db));
+      
+      apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, 
+                   pathranges);
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                              sqlite3_errmsg(db));
+    }
+  SQLITE_ERR(sqlite3_finalize(stmt), db);
+  
+  return SVN_NO_ERROR;
+}
+
+                        
+static svn_error_t *
+get_merge_info_for_path(sqlite3 *db,
+                        const char *path,
+                        svn_revnum_t rev,
+                        apr_hash_t *result,
+                        apr_hash_t *cache,
+                        svn_boolean_t setresult,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *cacheresult;
+  sqlite3_stmt *stmt;
+  int sqlite_result;
+  long long int count;
+  svn_boolean_t has_no_mergeinfo = FALSE;
+  
+  cacheresult = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
+  if (cacheresult != 0)
+    {
+      if (cacheresult != NEGATIVE_CACHE_RESULT && setresult)
+        apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
+      return SVN_NO_ERROR;
+    }
+  
+  /* See if we have a mergeinfo_changed record for this path. If not,
+     then it can't have mergeinfo.  */
+  SQLITE_ERR(sqlite3_prepare(db, "SELECT COUNT(*) from mergeinfo_changed"
+                             " where path = ? and revision <= ?;",
+                             -1, &stmt, NULL), db);
+
+  SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+  sqlite_result = sqlite3_step(stmt);
+  if (sqlite_result != SQLITE_ROW)
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            sqlite3_errmsg(db));
+
+  count = sqlite3_column_int64(stmt, 0);
+  SQLITE_ERR(sqlite3_finalize(stmt), db);
+
+  /* If we've got mergeinfo data, transform it from the db into a
+     mergeinfo hash */  
+  if (count > 0)
+    {
+      apr_hash_t *pathresult = NULL;
+      
+      SVN_ERR(parse_mergeinfo_from_db(db, path, rev, &pathresult, pool));
+      if (pathresult)
+        {
+          if (setresult)
+            apr_hash_set(result, path, APR_HASH_KEY_STRING, pathresult);
+          apr_hash_set(cache, path, APR_HASH_KEY_STRING, pathresult);
+        }
+    }
+
+  /* If this path has no mergeinfo, check our parent */
+  if (count == 0 || has_no_mergeinfo)
+    {
+      svn_stringbuf_t *parentpath;
+      
+      apr_hash_set(cache, path, APR_HASH_KEY_STRING, NEGATIVE_CACHE_RESULT);
+          
+      /* It is possible we are already at the root.  */
+      if (strcmp (path, "") == 0)
+        return SVN_NO_ERROR;
+      
+      parentpath = svn_stringbuf_create(path, pool);
+      svn_path_remove_component(parentpath);
+
+      /* The repository, and the mergeinfo index, internally refer to
+         "/" as "" */
+      if (strcmp(parentpath->data, "/") == 0)
+        parentpath->data = "";
+      
+      SVN_ERR(get_merge_info_for_path(db, parentpath->data, rev,
+                                      result, cache, FALSE, pool));
+
+      /* Now copy the result for our parent to our path */
+      cacheresult = apr_hash_get(cache, parentpath->data, APR_HASH_KEY_STRING);
+      if (cacheresult == NEGATIVE_CACHE_RESULT)
+        apr_hash_set(result, path, APR_HASH_KEY_STRING, "");
+      else if (cacheresult)
+        apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
+    }
+  return SVN_NO_ERROR;
+}
+
+                        
+/* Get the merge info for a set of paths.  */
+static svn_error_t *
+fs_get_merge_info(svn_fs_root_t *root,
+                  apr_array_header_t *paths,
+                  svn_revnum_t rev,
+                  apr_hash_t **mergeinfo,
+                  apr_pool_t *pool)
+{
+  apr_hash_t *mergeinfo_cache = apr_hash_make (pool);
+  sqlite3 *db;
+  int i;
+
+  /* We require a revision root. */
+  if (root->is_txn_root)
+    return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+
+  SQLITE_ERR(sqlite3_open(svn_path_join(root->fs->path, "mergeinfo.db", pool),
+                          &db), db);
+#ifdef SQLITE3_DEBUG
+  sqlite3_trace (db, sqlite_tracer, db);
+#endif
+  
+  *mergeinfo = apr_hash_make (pool);
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      SVN_ERR (get_merge_info_for_path (db, path, rev, *mergeinfo, 
+                                        mergeinfo_cache, TRUE, pool));
+    }
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      svn_stringbuf_t *mergestring;
+      apr_hash_t *currhash;
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      currhash = apr_hash_get(*mergeinfo, path, APR_HASH_KEY_STRING);
+      if (currhash)
+        {
+          SVN_ERR (svn_mergeinfo_sort(currhash, pool));
+          SVN_ERR (svn_mergeinfo_to_string(&mergestring, currhash, pool)); 
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, mergestring->data);
+        }
+    }
+  SQLITE_ERR(sqlite3_close(db), db);
+  return SVN_NO_ERROR;
+}
+
 /* Change the merge info for a given path.  */
 static svn_error_t *
 fs_change_merge_info(svn_fs_root_t *root,
@@ -3221,7 +3463,7 @@ static root_vtable_t root_vtable = {
   fs_get_file_delta_stream,
   fs_merge,
   fs_change_merge_info, 
-  NULL  /* ### fs_get_merge_info() not yet implemented */
+  fs_get_merge_info
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */
