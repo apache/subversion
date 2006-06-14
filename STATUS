@@ -33,6 +33,7 @@ Candidate changes:
      Corrects expected regression test suite coverage.
    Votes:
      +1: dlr, pburba
+     +0: nori
 
   * r19968
     Widen SWIG requirement to 1.3.29.
