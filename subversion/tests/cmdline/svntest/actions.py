@@ -804,7 +804,7 @@ def run_and_validate_lock(path, username, password):
   token_re = re.compile (".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
   author_re = re.compile (".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
   created_re = re.compile (".*?Lock Created:.*?", re.DOTALL)
-  comment_re = re.compile (".*?%s\n.*?" % comment, re.DOTALL)
+  comment_re = re.compile (".*?%s\n.*?" % re.escape(comment), re.DOTALL)
   # join all output lines into one
   output = "".join(output)
   # Fail even if one regex does not match
