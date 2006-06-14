@@ -579,7 +579,6 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
                             void *authz_read_baton,
                             apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
   int i;
@@ -587,11 +586,12 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, pool));
-  subpool = svn_pool_create(pool);
 
   /* Filter out unreadable paths before divining merge tracking info. */
   if (authz_read_func)
     {
+      apr_pool_t *subpool = svn_pool_create(pool);
+
       for (i = 0; i < paths->nelts; i++)
         {
           svn_boolean_t readable;
@@ -615,6 +615,8 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
                 }
             }
         }
+
+      apr_pool_destroy(subpool);
     }
 
   /* We consciously do not perform authz checks on the paths returned
@@ -626,7 +628,6 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
   else
     *mergeinfo = NULL;
 
-  apr_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
