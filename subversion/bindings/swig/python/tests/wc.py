@@ -2,6 +2,7 @@ import unittest, os, tempfile
 
 from svn import core, repos, wc, client
 from libsvn.core import SubversionException
+import types
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH
@@ -47,22 +48,22 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       self.assertEqual(self.path, wc.adm_access_path(self.wc))
 
   def test_is_adm_dir(self):
-      self.assertTrue(wc.is_adm_dir(".svn"))
-      self.assertFalse(wc.is_adm_dir(".foosvn"))
+      self.assert_(wc.is_adm_dir(".svn"))
+      self.failIf(wc.is_adm_dir(".foosvn"))
 
   def test_get_adm_dir(self):
-      self.assertTrue(isinstance(wc.get_adm_dir(), basestring))
+      self.assert_(isinstance(wc.get_adm_dir(), types.StringTypes))
 
   def test_set_adm_dir(self):
       self.assertRaises(SubversionException, wc.set_adm_dir, ".foobar")
-      self.assertTrue(wc.is_adm_dir(".svn"))
-      self.assertFalse(wc.is_adm_dir("_svn"))
-      self.assertFalse(wc.is_adm_dir(".foobar"))
+      self.assert_(wc.is_adm_dir(".svn"))
+      self.failIf(wc.is_adm_dir("_svn"))
+      self.failIf(wc.is_adm_dir(".foobar"))
       wc.set_adm_dir("_svn")
-      self.assertTrue(wc.is_adm_dir("_svn"))
+      self.assert_(wc.is_adm_dir("_svn"))
       self.assertEqual("_svn", wc.get_adm_dir())
       wc.set_adm_dir(".svn")
-      self.assertFalse(wc.is_adm_dir("_svn"))
+      self.failIf(wc.is_adm_dir("_svn"))
       self.assertEqual(".svn", wc.get_adm_dir())
 
   def test_init_traversal_info(self):
@@ -72,7 +73,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       wc.create_notify(self.path, wc.notify_add)
 
   def test_check_wc(self):
-      self.assertTrue(wc.check_wc(self.path) > 0)
+      self.assert_(wc.check_wc(self.path) > 0)
 
   def tearDown(self):
       wc.adm_close(self.wc)
