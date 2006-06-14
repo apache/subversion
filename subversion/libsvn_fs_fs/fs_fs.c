@@ -4204,7 +4204,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Do mergeinfo indexing.  */
   if (contains_merge_info)
     {
-      svn_string_t *st;
+      const char *deletestring;
       
       SQLITE_ERR(sqlite3_open(svn_path_join(cb->fs->path, "mergeinfo.db", 
                                             pool), &ftd->mtd), ftd->mtd);
@@ -4212,14 +4212,14 @@ commit_body(void *baton, apr_pool_t *pool)
       sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
 #endif     
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
-      st = svn_string_createf(pool, 
-	                      "delete from mergeinfo_changed where revision = %" 
-			      SVN_REVNUM_T_FMT ";", new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, st->data, NULL, NULL));
-      st = svn_string_createf(pool, 
-	                      "delete from mergeinfo where revision = %" 
-			      SVN_REVNUM_T_FMT ";", new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, st->data, NULL, NULL));
+      deletestring = apr_psprintf(pool, 
+                                  "delete from mergeinfo_changed where revision = %" 
+                                  SVN_REVNUM_T_FMT ";", new_rev);
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
+      deletestring = apr_psprintf(pool, 
+                                  "delete from mergeinfo where revision = %" 
+                                  SVN_REVNUM_T_FMT ";", new_rev);
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
       SVN_ERR(update_mergeinfo_index(cb->txn, new_rev, pool));
       
       /* This is moved here from commit_txn, because we don't want to
@@ -4232,7 +4232,7 @@ commit_body(void *baton, apr_pool_t *pool)
     }
   else
     {
-      svn_string_t *st;
+      const char *deletestring;
       
       SQLITE_ERR(sqlite3_open(svn_path_join(cb->fs->path, "mergeinfo.db", 
                                             pool), &ftd->mtd), ftd->mtd);
@@ -4240,14 +4240,14 @@ commit_body(void *baton, apr_pool_t *pool)
       sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
 #endif
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
-      st = svn_string_createf(pool, 
-	                      "delete from mergeinfo_changed where revision = %" 
-			      SVN_REVNUM_T_FMT ";", new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, st->data, NULL, NULL));
-      st = svn_string_createf(pool, 
-	                      "delete from mergeinfo where revision = %" 
-			      SVN_REVNUM_T_FMT ";", new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, st->data, NULL, NULL));
+      deletestring = apr_psprintf(pool, 
+                                  "delete from mergeinfo_changed where revision = %" 
+                                  SVN_REVNUM_T_FMT ";", new_rev);
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
+      deletestring = apr_psprintf(pool, 
+                                  "delete from mergeinfo where revision = %" 
+                                  SVN_REVNUM_T_FMT ";", new_rev);
+      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
       SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
     }

@@ -1088,6 +1088,8 @@ sqlite_tracer (void *data, const char *sql)
 }
 #endif
 
+/* We want to cache that we saw no mergeinfo for a path as well, 
+   so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void*)(-1))
 
 static svn_error_t *
