@@ -49,6 +49,10 @@
 
 #include "svn_private_config.h"
 
+/* An arbitrary maximum path length, so clients can't run us out of memory
+ * by giving us arbitrarily large paths. */
+#define FSFS_MAX_PATH_LEN 4096
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 
@@ -434,6 +438,10 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
+/* HEADER_CPATH lines need to be long enough to hold FSFS_MAX_PATH_LEN
+ * bytes plus the stuff around them. */
+#define MAX_HEADERS_STR_LEN FSFS_MAX_PATH_LEN + sizeof(HEADER_CPATH ": \n") - 1
+
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
@@ -446,7 +454,7 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
   
   while (1)
     {
-      char header_str[1024];
+      char header_str[MAX_HEADERS_STR_LEN];
       const char *name, *value;
       apr_size_t i = 0, header_len;
       apr_size_t limit;
@@ -2138,6 +2146,9 @@ fold_change(apr_hash_t *changes,
   return SVN_NO_ERROR;
 }
 
+/* The 256 is an arbitrary size large enough to hold the node id and the
+ * various flags. */
+#define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
 
 /* Read the next entry in the changes record from file FILE and store
    the resulting change in *CHANGE_P.  If there is no next record,
@@ -2147,7 +2158,7 @@ read_change(change_t **change_p,
             apr_file_t *file,
             apr_pool_t *pool)
 {
-  char buf[4096];
+  char buf[MAX_CHANGE_LINE_LEN];
   apr_size_t len = sizeof(buf);
   change_t *change;
   char *str, *last_str;
