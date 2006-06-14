@@ -78,15 +78,6 @@ Candidate changes:
       +1: nori
       +0: blair
 
-  * r20078
-    Improve usability for Svn::Core::LogChangedPath in the SWIG/Ruby bindings
-    by adding a method.
-    Justification:
-      Improves usability for the bindings.
-    Votes:
-      +1: nori
-      +0: blair
-
 Approved changes:
 
  * r19915
@@ -96,3 +87,12 @@ Approved changes:
      with buffered files: Potential repository corruption with FSFS.
    Votes:
      +1: dionisos, brane, malcolm
+
+  * r20078
+    Improve usability for Svn::Core::LogChangedPath in the SWIG/Ruby bindings
+    by adding a method.
+    Justification:
+      Improves usability for the bindings.
+    Votes:
+      +1: nori, dlr
+      +0: blair
