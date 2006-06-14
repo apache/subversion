@@ -75,6 +75,36 @@ class SubversionRepositoryTestCase(unittest.TestCase):
   def test_check_wc(self):
       self.assert_(wc.check_wc(self.path) > 0)
 
+  def test_get_ancestry(self):
+      self.assertEqual([self.repos_url, 12], 
+                       wc.get_ancestry(self.path, self.wc))
+
+  def test_status(self):
+      wc.status2(self.path, self.wc)
+
+  def test_is_normal_prop(self):
+      self.failIf(wc.is_normal_prop('svn:wc:foo:bar'))
+      self.failIf(wc.is_normal_prop('svn:entry:foo:bar'))
+      self.assert_(wc.is_normal_prop('svn:foo:bar'))
+      self.assert_(wc.is_normal_prop('foreign:foo:bar'))
+
+  def test_is_wc_prop(self):
+      self.assert_(wc.is_wc_prop('svn:wc:foo:bar'))
+      self.failIf(wc.is_wc_prop('svn:entry:foo:bar'))
+      self.failIf(wc.is_wc_prop('svn:foo:bar'))
+      self.failIf(wc.is_wc_prop('foreign:foo:bar'))
+
+  def test_is_entry_prop(self):
+      self.assert_(wc.is_entry_prop('svn:entry:foo:bar'))
+      self.failIf(wc.is_entry_prop('svn:wc:foo:bar'))
+      self.failIf(wc.is_entry_prop('svn:foo:bar'))
+      self.failIf(wc.is_entry_prop('foreign:foo:bar'))
+
+  def test_get_pristine_copy_path(self):
+      self.assertEqual(
+        wc.get_pristine_copy_path(os.path.join(self.path, 'foo')),
+        os.path.join(self.path, wc.get_adm_dir(), 'text-base', 'foo.svn-base'))
+
   def tearDown(self):
       wc.adm_close(self.wc)
 
