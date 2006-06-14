@@ -25,6 +25,7 @@
 #endif
 
 %include typemaps.i
+%include constraints.i
 
 %include svn_global.swg
 %import core.i
@@ -47,6 +48,11 @@
   svn_client_commit_info_t **,
   svn_auth_provider_object_t **,
   svn_client_ctx_t **
+};
+
+%apply Pointer NONNULL { 
+  const svn_opt_revision_t *revision,
+  const svn_opt_revision_t *peg_revision
 };
 
 %apply const apr_array_header_t *STRINGLIST {
