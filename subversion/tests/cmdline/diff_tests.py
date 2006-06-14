@@ -2560,8 +2560,8 @@ def diff_ignore_whitespace(sbox):
 
   # only whitespace changes, should return no changes
   open(file_path, 'w').write(" A  a   \n"
-                       	   "   B b  \n"
-                       	   "    C    c    \n")
+                             "   B b  \n"
+                             "    C    c    \n")
 
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'diff', '-x', '-w', file_path)
@@ -2569,19 +2569,19 @@ def diff_ignore_whitespace(sbox):
   # some changes + whitespace
   open(file_path, 'w').write(" A  a   \n"
                              "Xxxx X\n"
-                       	     "   Bb b  \n"
-                       	     "    C    c    \n")
+                             "   Bb b  \n"
+                             "    C    c    \n")
   expected_output = [
-  "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
-  "===================================================================\n",
-  "--- svn-test-work/working_copies/diff_tests-39/iota\t(revision 2)\n",
-  "+++ svn-test-work/working_copies/diff_tests-39/iota\t(working copy)\n",
-  "@@ -1,3 +1,4 @@\n",
-  " Aa\n",
-  "-Bb\n",
-  "+Xxxx X\n",
-  "+   Bb b  \n",
-  " Cc\n" ]
+    "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-39/iota\t(revision 2)\n",
+    "+++ svn-test-work/working_copies/diff_tests-39/iota\t(working copy)\n",
+    "@@ -1,3 +1,4 @@\n",
+    " Aa\n",
+    "-Bb\n",
+    "+Xxxx X\n",
+    "+   Bb b  \n",
+    " Cc\n" ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-x', '-w', file_path)
