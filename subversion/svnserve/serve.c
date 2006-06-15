@@ -1358,7 +1358,6 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                           pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
     {
-      /* response: ( ( ( path:string merge-info:string) ... ) ) */
       const void *key;
       void *value;
 
