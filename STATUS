@@ -15,8 +15,11 @@ Candidate changes:
    Justification:
      Developer convenience throughout the lifetime of 1.4.x.
      Note that affected versions are already packaged within Debian etch.
+   Concerns:
+     Adds a config.nice.old file that has no relevance to this fix.
    Votes:
      +1: maxb, malcolm
+     -1: jerenkrantz
 
  * r19924
    Deprecate svn_io_set_file_read_write_carefully and update the
@@ -27,20 +30,12 @@ Candidate changes:
    Votes:
      +1: djh, brane
 
- * r19963
-   Fix multiple definitions of copy test mv_unversioned_file.
-   Justification:
-     Corrects expected regression test suite coverage.
-   Votes:
-     +1: dlr, pburba
-     +0: nori
-
   * r19968
     Widen SWIG requirement to 1.3.29.
     Justification:
       It seems to work, according to the testsuites.
     Votes:
-      +1: maxb
+      +1: maxb, jerenkrantz
       +0: nori
 
   * r19971
@@ -53,14 +48,6 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
       -1: lundblad
-
-  * r19992
-    Explicitly destroy the svnserve connection pool in forking mode, so that
-    commits on bdb 4.4 repositories with --bdb-txn-nosync turned on work.
-    Justification:
-      Wouldn't it be nice if the svnserve tests worked on unix?
-    Votes:
-      +1: rooneg, dionisos
 
   * r20008
     Fix issue #2566: svnserve can cause broken WCs.
@@ -79,13 +66,13 @@ Candidate changes:
       +1: nori
       +0: blair
 
- * r20108
-   Fix input/output encoding when building with VC2005.
-   Justification:
-     Low impact and required for multilanguage support on Win32 when building
-     with VC2005.
-   Votes:
-     +1: djh, dlr
+  * r20125
+    ra_serf: Be more tolerant when updating a WC file without a delta base.
+    Justification:
+      Certain operations (switch) will cause a WC to invalidate the version-url
+      parameter and causes ra_serf to crash on a subsequent update to that file.
+    Votes:
+      +1: jerenkrantz
 
 Approved changes:
 
@@ -114,3 +101,28 @@ Approved changes:
      in failing.
    Votes:
     +1: dberlin, rooneg, nori, dlr
+
+ * r19963
+   Fix multiple definitions of copy test mv_unversioned_file.
+   Justification:
+     Corrects expected regression test suite coverage.
+   Votes:
+     +1: dlr, pburba, jerenkrantz
+     +0: nori
+
+  * r19992
+    Explicitly destroy the svnserve connection pool in forking mode, so that
+    commits on bdb 4.4 repositories with --bdb-txn-nosync turned on work.
+    Justification:
+      Wouldn't it be nice if the svnserve tests worked on unix?
+    Votes:
+      +1: rooneg, dionisos, jerenkrantz
+
+ * r20108
+   Fix input/output encoding when building with VC2005.
+   Justification:
+     Low impact and required for multilanguage support on Win32 when building
+     with VC2005.
+   Votes:
+     +1: djh, dlr, jerenkrantz
+
