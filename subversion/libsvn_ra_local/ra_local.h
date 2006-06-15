@@ -68,11 +68,13 @@ typedef struct svn_ra_local__session_baton_t
 
 
 /* Given a `file://' URL, figure out which portion specifies a
-   repository on local disk, and return in REPOS_URL; URI-decode and
-   return the remainder (the path *within* the repository's
-   filesystem) in FS_PATH.  Allocate the return values in POOL.
+   repository on local disk, and return that in REPOS_URL (if not
+   NULL); URI-decode and return the remainder (the path *within* the
+   repository's filesystem) in FS_PATH.  Open REPOS to the repository
+   root (if not NULL).  Allocate the return values in POOL.
    Currently, we are not expecting to handle `file://hostname/'-type
-   URLs; hostname, in this case, is expected to be the empty string. */
+   URLs; hostname, in this case, is expected to be the empty string or
+   "localhost". */
 svn_error_t *
 svn_ra_local__split_URL(svn_repos_t **repos,
                         const char **repos_url,

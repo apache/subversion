@@ -33,7 +33,6 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   svn_error_t *err = SVN_NO_ERROR;
   const char *repos_root;
   const char *hostname, *path;
-  svn_stringbuf_t *urlbuf;
 
   /* Verify that the URL is well-formed (loosely) */
 
@@ -126,12 +125,15 @@ svn_ra_local__split_URL(svn_repos_t **repos,
       (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, NULL,
        _("Unable to open repository '%s'"), URL);
 
-  /* Attempt to open a repository at URL. */
-  err = svn_repos_open(repos, repos_root, pool);
-  if (err)
-    return svn_error_createf 
-      (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
-       _("Unable to open repository '%s'"), URL);
+  if (repos != NULL)
+    {
+      /* Attempt to open a repository at URL. */
+      err = svn_repos_open(repos, repos_root, pool);
+      if (err)
+        return svn_error_createf 
+          (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
+           _("Unable to open repository '%s'"), URL);
+    }
 
   /* What remains of URL after being hacked at in the previous step is
      REPOS_URL.  FS_PATH is what we've hacked off in the process.
@@ -144,12 +146,14 @@ svn_ra_local__split_URL(svn_repos_t **repos,
     + (strlen(repos_root)
        - (hostname ? strlen(hostname) + 2 : 0));
 
-  /* Remove the path components in *fs_path from the original URL, to get
-     the URL to the repository root. */
-  urlbuf = svn_stringbuf_create(URL, pool);
-  svn_path_remove_components(urlbuf,
-                             svn_path_component_count(*fs_path));
-  *repos_url = urlbuf->data;
+  if (repos_url != NULL)
+    {
+      /* Remove the path components in *fs_path from the original URL,
+         to get the URL to the repository root. */
+      svn_stringbuf_t *urlbuf = svn_stringbuf_create(URL, pool);
+      svn_path_remove_components(urlbuf, svn_path_component_count(*fs_path));
+      *repos_url = urlbuf->data;
+    }
 
   return SVN_NO_ERROR;
 }
