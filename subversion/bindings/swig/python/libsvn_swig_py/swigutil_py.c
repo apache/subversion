@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_auth.h"
 #include "svn_pools.h"
+#include "svn_mergeinfo.h"
 
 #include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
@@ -524,6 +525,47 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_svn_string_t, NULL, NULL);
 }
 
+static PyObject *convert_string(void *value, void *ctx,
+                                PyObject *py_pool)
+{
+  /* ### gotta cast this thing cuz Python doesn't use "const" */
+  return PyString_FromString((const char *)value); 
+}
+
+PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
+{
+  return convert_hash(hash, convert_string, NULL, NULL);
+}
+
+static PyObject *convert_mergeinfo_array(void *value, void *ctx, 
+                                         PyObject *py_pool)
+{
+  int i;
+  PyObject *list;
+  apr_array_header_t *array = value;
+
+  list = PyList_New(0);
+  for (i = 0; i < array->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(array, i, svn_merge_range_t *);
+      if (PyList_Append(list, convert_to_swigtype(range, ctx, py_pool)) == -1)
+        {
+          goto error;
+        }
+      
+    }
+  return list;
+ error:
+  Py_DECREF(list);
+  return NULL;
+}
+
+PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash, 
+                                        swig_type_info *type,
+                                        PyObject *py_pool)
+{
+  return convert_hash(hash, convert_mergeinfo_array, type, py_pool);
+}
 
 PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash)
 {

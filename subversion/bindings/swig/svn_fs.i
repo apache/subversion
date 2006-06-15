@@ -167,6 +167,19 @@
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
+/* -----------------------------------------------------------------------
+   svn_fs_get_merge_info
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in, numinputs=0) apr_hash_t **minfohash = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **minfohash
+{
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_stringhash_to_dict(*$1));
+}
+#endif
 
 /* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is

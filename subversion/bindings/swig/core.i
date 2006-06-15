@@ -491,6 +491,22 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   svn_mergeinfo_parse()
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in, numinputs=0) apr_hash_t **mergehash = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **mergehash
+{
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_mergeinfo_to_dict(*$1,
+				      $descriptor(svn_merge_range_t *),
+				      _global_svn_swig_py_pool));
+}
+#endif
+
+/* -----------------------------------------------------------------------
    svn_config_read_auth_data()
 */
 #ifdef SWIGRUBY
