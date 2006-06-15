@@ -1265,7 +1265,7 @@ get_merge_info_for_path(sqlite3 *db,
       /* Now copy the result for our parent to our path */
       cacheresult = apr_hash_get(cache, parentpath->data, APR_HASH_KEY_STRING);
       if (cacheresult == NEGATIVE_CACHE_RESULT)
-        apr_hash_set(result, path, APR_HASH_KEY_STRING, "");
+        apr_hash_set(result, path, APR_HASH_KEY_STRING, NULL);
       else if (cacheresult)
         apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
     }
