@@ -629,7 +629,15 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
+  int i;
 
+  /* Transform local WC paths into repository-relative paths. */
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char **path = &(APR_ARRAY_IDX(paths, 0, const char *));
+      SVN_ERR(svn_ra_local__split_URL(&(baton->repos), &(baton->repos_url),
+                                      path, *path, session->pool));
+    }
   SVN_ERR(svn_repos_fs_get_merge_info(mergeinfo, baton->repos, paths,
                                       revision, NULL, NULL, pool));
 
