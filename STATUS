@@ -85,7 +85,7 @@ Candidate changes:
      Low impact and required for multilanguage support on Win32 when building
      with VC2005.
    Votes:
-     +1: djh
+     +1: djh, dlr
 
 
 Approved changes:
