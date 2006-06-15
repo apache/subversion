@@ -87,6 +87,14 @@ Candidate changes:
    Votes:
      +1: djh, dlr
 
+ * r20115
+   Fix configure to fail if zlib header is not found (previously only failed
+   if header existed but library did not).
+   Justification:
+     zlib is now a requirement of svn, so the check for it should be correct
+     in failing.
+   Votes:
+    +1: dberlin
 
 Approved changes:
 
