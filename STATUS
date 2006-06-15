@@ -76,14 +76,6 @@ Candidate changes:
 
 Approved changes:
 
- * r19915
-   Require APR 0.9.7
-   Justification:
-     Older APR versions didn't return errors upon failed writes
-     with buffered files: Potential repository corruption with FSFS.
-   Votes:
-     +1: dionisos, brane, malcolm
-
   * r20078
     Improve usability for Svn::Core::LogChangedPath in the SWIG/Ruby bindings
     by adding a method.
