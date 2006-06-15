@@ -94,14 +94,6 @@ Approved changes:
    Votes:
     +1: dberlin, rooneg, nori, dlr
 
- * r19963
-   Fix multiple definitions of copy test mv_unversioned_file.
-   Justification:
-     Corrects expected regression test suite coverage.
-   Votes:
-     +1: dlr, pburba, jerenkrantz
-     +0: nori
-
   * r19992
     Explicitly destroy the svnserve connection pool in forking mode, so that
     commits on bdb 4.4 repositories with --bdb-txn-nosync turned on work.
