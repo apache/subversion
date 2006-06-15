@@ -94,7 +94,7 @@ Candidate changes:
      zlib is now a requirement of svn, so the check for it should be correct
      in failing.
    Votes:
-    +1: dberlin
+    +1: dberlin, rooneg
 
 Approved changes:
 
