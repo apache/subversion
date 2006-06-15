@@ -94,14 +94,6 @@ Approved changes:
    Votes:
     +1: dberlin, rooneg, nori, dlr
 
-  * r19992
-    Explicitly destroy the svnserve connection pool in forking mode, so that
-    commits on bdb 4.4 repositories with --bdb-txn-nosync turned on work.
-    Justification:
-      Wouldn't it be nice if the svnserve tests worked on unix?
-    Votes:
-      +1: rooneg, dionisos, jerenkrantz
-
  * r20108
    Fix input/output encoding when building with VC2005.
    Justification:
