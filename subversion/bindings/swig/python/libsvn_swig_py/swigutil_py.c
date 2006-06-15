@@ -549,10 +549,7 @@ static PyObject *convert_mergeinfo_array(void *value, void *ctx,
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(array, i, svn_merge_range_t *);
       if (PyList_Append(list, convert_to_swigtype(range, ctx, py_pool)) == -1)
-        {
-          goto error;
-        }
-      
+        goto error;
     }
   return list;
  error:
@@ -661,6 +658,46 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
     return NULL;
 }
 
+apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
+                                                   apr_pool_t *pool)
+{
+  int targlen;
+  apr_array_header_t *temp;
+  
+  if (!PySequence_Check(list)) {
+    PyErr_SetString(PyExc_TypeError, "not a sequence");
+    return NULL;
+  }
+  targlen = PySequence_Length(list);
+  temp = apr_array_make(pool, targlen, sizeof(svn_merge_range_t *));
+  /* APR_ARRAY_IDX doesn't actually increment the array item count
+     (like, say, apr_array_push would). */
+  temp->nelts = targlen;
+  while (targlen--) {
+      PyObject *o = PySequence_GetItem(list, targlen);
+      svn_merge_range_t *range;
+      svn_merge_range_t *newrange;
+
+      if (o == NULL)
+        return NULL;
+      if (svn_swig_ConvertPtrString(o, (void **)&range, 
+                                    "svn_merge_range_t *"))
+        {
+          PyErr_SetString(PyExc_TypeError, 
+                          "list values are not svn_merge_range_t *'s");
+          Py_DECREF(list);
+          return NULL;
+        }
+      newrange = apr_pcalloc(pool, sizeof(svn_merge_range_t));
+      newrange->start = range->start;
+      newrange->end = range->end;
+
+      APR_ARRAY_IDX(temp, targlen, svn_merge_range_t *) = newrange;
+      Py_DECREF(o);
+  }
+  return temp;
+}
+
 apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
                                              apr_pool_t *pool)
 {
@@ -700,6 +737,43 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
   return hash;
 }
 
+apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
+                                            apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+  
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict)) {
+    PyErr_SetString(PyExc_TypeError, "not a dictionary");
+    return NULL;
+  }
+
+  hash = apr_hash_make(pool);  
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *pathname = make_string_from_ob(key, pool);
+      apr_array_header_t *ranges = svn_swig_py_rangelist_to_array(value, pool);
+
+      if (! (pathname && ranges))
+        {
+          PyErr_SetString(PyExc_TypeError, 
+                          "dictionary keys aren't strings or values aren't svn_merge_range_t *'s");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, pathname, APR_HASH_KEY_STRING, ranges);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
 
 apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
                                            apr_pool_t *pool)

@@ -174,6 +174,18 @@
 #endif
 
 
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *RANGELIST {
+    $1 = svn_swig_py_rangelist_to_array ($input, _global_pool);
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *MERGEINFO {
+    $1 = svn_swig_py_mergeinfo_from_dict ($input, _global_pool);
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.

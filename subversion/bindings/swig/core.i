@@ -263,6 +263,20 @@
 }
 
 /* -----------------------------------------------------------------------
+   input rangelist to svn_rangelist_to_string
+*/
+%apply apr_array_header_t *RANGELIST {
+   apr_array_header_t *rangeinput
+}
+
+/* -----------------------------------------------------------------------
+   input mergeinfo hash to svn_mergeinfo_to_string
+*/
+%apply apr_array_header_t *MERGEINFO {
+   apr_hash_t *mergeinput
+}
+
+/* -----------------------------------------------------------------------
    handle the MIME type return value of svn_io_detect_mimetype()
 */
 %apply const char **OUTPUT { const char ** };

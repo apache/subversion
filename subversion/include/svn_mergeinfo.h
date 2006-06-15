@@ -120,7 +120,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
+svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *rangeinput,
                          apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a input, and convert it
@@ -129,7 +129,7 @@ svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
+svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *mergeinput,
                         apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a input, and sort the rangelists
