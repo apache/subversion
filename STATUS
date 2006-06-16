@@ -76,11 +76,3 @@ Candidate changes:
 
 Approved changes:
 
- * r20108
-   Fix input/output encoding when building with VC2005.
-   Justification:
-     Low impact and required for multilanguage support on Win32 when building
-     with VC2005.
-   Votes:
-     +1: djh, dlr, jerenkrantz
-
