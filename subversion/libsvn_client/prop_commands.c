@@ -612,15 +612,9 @@ svn_client_propget2(apr_hash_t **props,
       SVN_ERR(svn_client__get_revision_number
               (&revnum, NULL, revision, target, pool));
 
-      if ((revision->kind == svn_opt_revision_committed)
-          || (revision->kind == svn_opt_revision_base))
-        {
-          pristine = TRUE;
-        }
-      else  /* must be the working revision */
-        {
-          pristine = FALSE;
-        }
+      /* If FALSE, we must want the working revision. */
+      pristine = (revision->kind == svn_opt_revision_committed
+                  || revision->kind == svn_opt_revision_base);
 
       wb.base_access = adm_access;
       wb.props = *props;
@@ -637,9 +631,7 @@ svn_client_propget2(apr_hash_t **props,
         }
       else
         {
-          const svn_wc_entry_t *entry;
-          SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, pool));
-          SVN_ERR(walk_callbacks.found_entry(target, entry, &wb, pool));
+          SVN_ERR(walk_callbacks.found_entry(target, node, &wb, pool));
         }
       
       SVN_ERR(svn_wc_adm_close(adm_access));
