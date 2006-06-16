@@ -273,7 +273,13 @@
    input mergeinfo hash to svn_mergeinfo_to_string
 */
 %apply apr_array_header_t *MERGEINFO {
-   apr_hash_t *mergeinput
+   apr_hash_t *mergeinput,
+   apr_hash_t *mergefrom,
+   apr_hash_t *mergeto,
+   apr_hash_t *mergein1,
+   apr_hash_t *mergein2,
+   apr_hash_t *eraser,
+   apr_hash_t *whiteboard
 }
 
 /* -----------------------------------------------------------------------
@@ -508,17 +514,12 @@
    svn_mergeinfo_parse()
 */
 
-#ifdef SWIGPYTHON
-%typemap(in, numinputs=0) apr_hash_t **mergehash = apr_hash_t **OUTPUT;
-%typemap(argout) apr_hash_t **mergehash
-{
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_mergeinfo_to_dict(*$1,
-				      $descriptor(svn_merge_range_t *),
-				      _global_svn_swig_py_pool));
+%apply apr_hash_t **MERGEHASH {
+    apr_hash_t **mergehash,
+    apr_hash_t **deleted,
+    apr_hash_t **added,
+    apr_hash_t **mergeoutput
 }
-#endif
 
 /* -----------------------------------------------------------------------
    svn_config_read_auth_data()

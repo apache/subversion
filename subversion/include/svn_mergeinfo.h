@@ -34,40 +34,41 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Parse the mergeinfo from @a input into @a hash, mapping from paths
+/** Parse the mergeinfo from @a input into @a mergehash, mapping from paths
  * to arrays of @c svn_merge_range_t.  Perform temporary allocations
  * in @a pool.
  *
- * Note: @a hash will contain rangelists that are guaranteed to be
+ * Note: @a mergehash will contain rangelists that are guaranteed to be
  * sorted.
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(const char *input, apr_hash_t **mergehash, 
+svn_mergeinfo_parse(const char *input, apr_hash_t **mergehash,
                     apr_pool_t *pool);
 
-/** Calculate the delta between two hashes of merge info, @a from and
- * @a to, and place the result in @a deleted and @a added (neither
- * output argument will ever be @c NULL), stored as the usual mapping
- * of paths to arrays of @c svn_merge_range_t.
+/** Calculate the delta between two hashes of merge info, @a mergefrom
+ * and @a mergeto, and place the result in @a deleted and @a added
+ * (neither output argument will ever be @c NULL), stored as the usual
+ * mapping of paths to arrays of @c svn_merge_range_t.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
-                   apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool);
+                   apr_hash_t *mergefrom, apr_hash_t *mergeto,
+                   apr_pool_t *pool);
 
-/** Merge two hashes of merge info, @a in1 and @a in2,
- * and place the result in @a output.  
+/** Merge two hashes of merge info, @a mergein1 and @a mergein2,
+ * and place the result in @a output.
  *
- * Note: @a in1 and @a in2 must have rangelists that are sorted as said by
- * svn_sort_compare_ranges.  @a output will have rangelists that are
+ * Note: @a mergein1 and @a mergein2 must have rangelists that are sorted as said by
+ * svn_sort_compare_ranges.  @a mergeoutput will have rangelists that are
  * guaranteed to be in sorted order.
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
-                    apr_pool_t *pool);
+svn_mergeinfo_merge(apr_hash_t **mergeoutput, apr_hash_t *mergein1,
+                    apr_hash_t *mergein2, apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
  * minuend), and places the resulting difference in @a output.
@@ -75,7 +76,7 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
+svn_mergeinfo_remove(apr_hash_t **mergeoutput, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool);
 
 /** Calculate the delta between two rangelists consisting of @c
@@ -105,7 +106,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
  * minuend), and places the resulting difference in @a output.
  *
- * Note: @a in1 and @a in2 must be sorted as said by
+ * Note: @a eraser and @a whiteboard must be sorted as said by
  * svn_sort_compare_ranges.  @a output is guaranteed to be in sorted
  * order.
  * @since New in 1.5.
@@ -123,7 +124,7 @@ svn_error_t *
 svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *rangeinput,
                          apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a input, and convert it
+/** Take a hash of mergeinfo in @a mergeinput, and convert it
  * back to a text format mergeinfo in @a output.
  *
  * @since New in 1.5.
@@ -132,14 +133,14 @@ svn_error_t *
 svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *mergeinput,
                         apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a input, and sort the rangelists
+/** Take a hash of mergeinfo in @a mergeinput, and sort the rangelists
  * associated with each key.
  * Note: This does not sort the hash, only the range lists in the
  * hash.
  * @since New in 1.5
  */
 svn_error_t *
-svn_mergeinfo_sort(apr_hash_t *input, apr_pool_t *pool);
+svn_mergeinfo_sort(apr_hash_t *mergeinput, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

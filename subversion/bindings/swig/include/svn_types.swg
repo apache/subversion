@@ -185,7 +185,17 @@
     $1 = svn_swig_py_mergeinfo_from_dict ($input, _global_pool);
 }
 #endif
-
+#ifdef SWIGPYTHON
+%typemap(in, numinputs=0) apr_hash_t **MERGEHASH = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_mergeinfo_to_dict(*$1,
+				      $descriptor(svn_merge_range_t *),
+				      _global_svn_swig_py_pool));
+}
+#endif
 /* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
