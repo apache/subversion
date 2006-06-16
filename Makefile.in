@@ -486,7 +486,7 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-design doc-misc-docs doc-api
+doc: doc-misc-docs doc-api
 
 # Generate API documentation for the C libraries.
 ### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
@@ -497,12 +497,11 @@ doc-api:
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
-doc-design: doc-design-html doc-design-pdf doc-design-ps
 
 # Build all docs of a certain type.
-doc-all-html: doc-design-html doc-misc-docs-html
-doc-all-pdf: doc-design-pdf doc-misc-docs-pdf
-doc-all-ps: doc-design-ps doc-misc-docs-ps
+doc-all-html: doc-misc-docs-html
+doc-all-pdf: doc-misc-docs-pdf
+doc-all-ps: doc-misc-docs-ps
 
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
@@ -511,14 +510,6 @@ doc-misc-docs-pdf:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) pdf
 doc-misc-docs-ps:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) ps
-
-doc-design-html:
-	cd $(top_srcdir)/doc/design && $(MAKE) all-html
-doc-design-pdf:
-	cd $(top_srcdir)/doc/design && $(MAKE) pdf
-doc-design-ps:
-	cd $(top_srcdir)/doc/design && $(MAKE) ps
-
 
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
