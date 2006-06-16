@@ -14,18 +14,15 @@ maximum number of items is reached, older elements are removed.  The
 item title is the revision number, and the item description contains
 the author, date, log messages and changed paths."""
 
-import sys, getopt, os, popen2
-import pickle
-from StringIO import StringIO
+import sys
 
 # Python 2.3 is required by PyRSS2Gen
 py_version  = sys.version_info
 if sys.version_info[0:2] < (2,3):
     sys.stderr.write("Error: Python 2.3 or higher required.")
     sys.exit(1)
-    
-import datetime
 
+# And Py2RSSGen is required by this script
 try:
     import PyRSS2Gen
 except ImportError:
@@ -34,6 +31,11 @@ except ImportError:
     print >> sys.stderr, "http://www.dalkescientific.com/Python/PyRSS2Gen.html"
     print >> sys.stderr, ""
     sys.exit(1)
+
+# All clear on the custom module checks.  Import some standard stuff.    
+import getopt, os, popen2, pickle, datetime
+from StringIO import StringIO
+
 
 def usage_and_exit(errmsg=None):
     """Print a usage message, plus an ERRMSG (if provided), then exit.
