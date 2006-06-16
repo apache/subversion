@@ -9,8 +9,8 @@
                     <prog ...>
 
 The optional base-url, fs-type, verbose, and cleanup options, and
-the first four parameters are passed unchanged to the TestHarness
-constuctor.  All other parameters are names of test programs.
+the first two parameters are passed unchanged to the TestHarness
+constructor.  All other parameters are names of test programs.
 '''
 
 import os, sys
