@@ -1422,7 +1422,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           }
       }
 
-  /* Try to deduce what sort of client command is being run,, then
+  /* Try to deduce what sort of client command is being run, then
      make this guess available to apache's logging subsystem. */
   {
     const char *action, *spath;

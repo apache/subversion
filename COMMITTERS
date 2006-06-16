@@ -97,6 +97,7 @@ Commit access for specific areas:
            lgo   Lieven Govaerts <lgo@mobsol.be>             (svntest)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
+    jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (python tests)
 
   Translation of message files:
 

@@ -1,6 +1,7 @@
-import unittest, os, weakref
+import unittest, os, weakref, tempfile, types
 
-from svn import core, repos, fs, delta, client
+from svn import core, repos, fs, delta, client, wc
+from libsvn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH
@@ -75,6 +76,21 @@ class SubversionClientTestCase(unittest.TestCase):
     pool.destroy()
     self.assertEqual(test_object2(), None)
 
+  def test_checkout(self):
+    """Test svn_client_checkout2."""
+
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_head
+
+    path = os.path.join(tempfile.gettempdir(), 'checkout')
+
+    self.assertRaises(ValueError, client.checkout2, 
+                      self.repos_url, path, None, None, True, True, 
+                      self.client_ctx)
+
+    client.checkout2(self.repos_url, path, rev, rev, True, True, 
+            self.client_ctx)
+
   def test_info(self):
     """Test svn_client_info on an empty repository"""
 
@@ -114,6 +130,48 @@ class SubversionClientTestCase(unittest.TestCase):
     for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
       self.assert_(self.changed_paths.has_key(dir))
       self.assertEqual(self.changed_paths[dir].action, 'A')
+
+  def test_uuid_from_url(self):
+    """Test svn_client_uuid_from_url on a file:// URL"""
+    self.assert_(isinstance(
+                 client.uuid_from_url(self.repos_url, self.client_ctx),
+                 types.StringTypes))
+
+  def test_url_from_path(self):
+    """Test svn_client_url_from_path for a file:// URL"""
+    self.assertEquals(client.url_from_path(self.repos_url), self.repos_url)
+
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_head
+
+    path = os.path.join(tempfile.gettempdir(), 'url_from_path')
+
+    client.checkout2(self.repos_url, path, rev, rev, True, True, 
+                     self.client_ctx)
+
+    self.assertEquals(client.url_from_path(path), self.repos_url)
+
+  def test_uuid_from_path(self):
+    """Test svn_client_uuid_from_path."""
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_head
+
+    path = os.path.join(tempfile.gettempdir(), 'uuid_from_path')
+
+    client.checkout2(self.repos_url, path, rev, rev, True, True, 
+                     self.client_ctx)
+
+    wc_adm = wc.adm_open3(None, path, False, 0, None)
+
+    self.assertEquals(client.uuid_from_path(path, wc_adm, self.client_ctx), 
+                      client.uuid_from_url(self.repos_url, self.client_ctx))
+
+    self.assert_(isinstance(client.uuid_from_path(path, wc_adm, 
+                            self.client_ctx), types.StringTypes))
+
+  def test_open_ra_session(self):
+      """Test svn_client_open_ra_session()."""
+      client.open_ra_session(self.repos_url, self.client_ctx)
 
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',

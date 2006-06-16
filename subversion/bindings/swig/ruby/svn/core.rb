@@ -335,6 +335,12 @@ module Svn
       def unknown?
         kind == NODE_UNKNOWN
       end
+
+      alias _time time
+      def time
+        __time = _time
+        __time && Time.from_apr_time(__time)
+      end
     end
 
     Config = SWIG::TYPE_p_svn_config_t
@@ -448,6 +454,12 @@ module Svn
       def date
         __date = _date
         __date && Time.from_svn_format(__date)
+      end
+    end
+
+    class LogChangedPath
+      def copied?
+        Util.copy?(copyfrom_path, copyfrom_rev)
       end
     end
   end

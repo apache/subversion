@@ -57,9 +57,9 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * new contrib hook scripts:
       - enforcer
       - detect-merge-conflict.sh
-      - svn-backup-dumps.py
-      - log-policy.py
       - case-insensitive.py
+    * new tools script svn-backup-dumps.py
+    * new tools hook script log-police.py
     * svnserve improvements:
       - can now run as a native Windows service (r18855)
       - new option --pid-file (r17836)

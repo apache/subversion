@@ -136,7 +136,7 @@
 ;; * add                       implemented
 ;; * blame                     implemented
 ;; * cat                       implemented
-;; * checkout (co)
+;; * checkout (co)             implemented
 ;; * cleanup                   implemented
 ;; * commit (ci)               implemented
 ;; * copy (cp)
@@ -144,7 +144,7 @@
 ;; * diff (di)                 implemented
 ;; * export                    implemented
 ;; * help (?, h)
-;; * import
+;; * import                    used         (in svn-admin-create-trunk-directory)
 ;; * info                      implemented
 ;; * list (ls)                 implemented
 ;; * lock
@@ -154,9 +154,9 @@
 ;; * move (mv, rename, ren)    implemented
 ;; * propdel (pdel)            implemented
 ;; * propedit (pedit, pe)      not needed
-;; * propget (pget, pg)        used
+;; * propget (pget, pg)        used         (in svn-status-property-edit)
 ;; * proplist (plist, pl)      implemented
-;; * propset (pset, ps)        used
+;; * propset (pset, ps)        used         (in svn-prop-edit-do-it)
 ;; * resolved                  implemented
 ;; * revert                    implemented
 ;; * status (stat, st)         implemented
@@ -248,7 +248,7 @@ Possible values are: commit, revert."
               (const revert))
   :group 'psvn)
 
-(defcustom svn-status-preserve-window-configuration nil
+(defcustom svn-status-preserve-window-configuration t
   "*Try to preserve the window configuration."
   :type 'boolean
   :group 'psvn)
@@ -467,6 +467,11 @@ If t, their full path name will be displayed, else only the filename."
           (set var value)
           (global-set-key (symbol-value var) 'svn-global-keymap)))
 
+(defcustom svn-admin-default-create-directory "~/"
+  "*The default directory that is suggested for `svn-admin-create'."
+  :type 'string
+  :group 'psvn)
+
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
 
@@ -504,6 +509,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-edit-svn-command nil)
 (defvar svn-status-update-previous-process-output nil)
 (defvar svn-pre-run-asynch-recent-keys nil)
+(defvar svn-pre-run-mode-line-process nil)
 (defvar svn-status-temp-dir
   (expand-file-name
    (or
@@ -535,6 +541,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-transient-buffers)
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
+(defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 
 ;; Emacs 21 defines these in ediff-init.el but it seems more robust
 ;; to just declare the variables here than try to load that file.
@@ -809,7 +816,20 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
+;; no idea, if there is a simpler way to achieve this...
+(defun svn-status-window-line-position ()
+  "Return the window line at point."
+  (let ((edges (window-inside-edges))
+	(x-y (posn-x-y (posn-at-point))))
+    (+ (car (cdr edges))
+       (/ (or (cdr x-y) 0) (frame-char-height)))))
 
+;;;###autoload
+(defun svn-checkout (repos-url path)
+  "Run svn checkout REPOS-URL PATH."
+  (interactive (list (read-string "Checkout from repository Url: ")
+                     (svn-read-directory-name "Checkout to directory: ")))
+  (svn-run t t 'checkout "checkout" repos-url (expand-file-name path)))
 
 ;;;###autoload (defalias 'svn-examine 'svn-status)
 (defalias 'svn-examine 'svn-status)
@@ -867,7 +887,8 @@ If there is no .svn directory, examine if there is SVN and run
     ;;(message "psvn: Saving initial window configuration")
     (setq svn-status-initial-window-configuration
           (current-window-configuration)))
-  (let* ((status-buf (get-buffer-create svn-status-buffer-name))
+  (let* ((cur-buf (current-buffer))
+         (status-buf (get-buffer-create svn-status-buffer-name))
          (proc-buf (get-buffer-create "*svn-process*"))
          (want-edit (eq arg '-))
          (status-option (if want-edit
@@ -883,6 +904,7 @@ If there is no .svn directory, examine if there is SVN and run
       (set-buffer proc-buf)
       (setq default-directory dir
             svn-status-remote (when arg t))
+      (set-buffer cur-buf)
       (svn-run t t 'status "status" status-option))))
 
 (defun svn-status-this-directory (arg)
@@ -952,6 +974,10 @@ can edit ARGLIST before running svn."
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run %s: %S" cmdtype arglist))
+        (unless (eq mode-line-process 'svn-status-mode-line-process)
+          (setq svn-pre-run-mode-line-process mode-line-process)
+          (setq mode-line-process 'svn-status-mode-line-process))
+        (setq svn-status-pre-run-svn-buffer (current-buffer))
         (let* ((proc-buf (get-buffer-create "*svn-process*"))
                (svn-exe svn-status-svn-executable)
                (svn-proc))
@@ -995,8 +1021,10 @@ can edit ARGLIST before running svn."
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)))
-          (setq svn-status-pre-run-svn-buffer (current-buffer))))
+              (svn-status-update-mode-line)
+              (when svn-pre-run-mode-line-process
+                (setq mode-line-process svn-pre-run-mode-line-process)
+                (setq svn-pre-run-mode-line-process nil))))))
     (error "You can only run one svn process at once!")))
 
 (defun svn-process-sentinel-fixup-path-seperators ()
@@ -1012,6 +1040,10 @@ can edit ARGLIST before running svn."
   ;;(princ (format "Process: %s had the event `%s'" process event)))
   ;;(save-excursion
   (let ((act-buf (current-buffer)))
+    (when svn-pre-run-mode-line-process
+      (with-current-buffer svn-status-pre-run-svn-buffer
+        (setq mode-line-process svn-pre-run-mode-line-process))
+      (setq svn-pre-run-mode-line-process nil))
     (set-buffer (process-buffer process))
     (setq svn-status-mode-line-process-status "")
     (svn-status-update-mode-line)
@@ -1102,6 +1134,8 @@ can edit ARGLIST before running svn."
                  ((eq svn-process-cmd 'proplist)
                   (svn-status-show-process-output 'proplist t)
                   (message "svn proplist finished"))
+                 ((eq svn-process-cmd 'checkout)
+                  (svn-status default-directory))
                  ((eq svn-process-cmd 'proplist-parse)
                   (svn-status-property-parse-property-names))
                  ((eq svn-process-cmd 'propset)
@@ -2210,6 +2244,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (first-line t)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
+        (window-line-pos (svn-status-window-line-position))
         (header-line-string)
         (column (current-column)))
     (delete-region (point-min) (point-max))
@@ -2278,7 +2313,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (progn
           (goto-char fname-pos)
           (svn-status-goto-file-name fname)
-          (goto-char (+ column (svn-point-at-bol))))
+          (goto-char (+ column (svn-point-at-bol)))
+          (recenter window-line-pos))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
 
 (defun svn-status-parse-info (arg)
@@ -2308,8 +2344,8 @@ Put the found values in `svn-status-base-info'."
       (let ((case-fold-search t))
         (search-forward "url: ")
         (setq url (buffer-substring-no-properties (point) (svn-point-at-eol)))
-        (search-forward "repository root: ")
-        (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol)))))
+        (when (search-forward "repository root: " nil t)
+          (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol))))))
     (setq svn-status-base-info `((url ,url) (repository-root ,repository-root)))))
 
 (defun svn-status-base-info->url ()
@@ -2744,15 +2780,17 @@ if no files have been marked."
     (insert postfix))))
 
 (defun svn-status-show-process-buffer-internal (&optional scroll-to-top)
-  (when (string= (buffer-name) svn-status-buffer-name)
-    (delete-other-windows))
-  (pop-to-buffer "*svn-process*")
-  (svn-process-mode)
-  (when svn-status-wash-control-M-in-process-buffers
-    (svn-status-remove-control-M))
-  (when scroll-to-top
-    (goto-char (point-min)))
-  (other-window 1))
+  (let ((cur-buff (current-buffer)))
+    (unless svn-status-preserve-window-configuration
+      (when (string= (buffer-name) svn-status-buffer-name)
+        (delete-other-windows)))
+    (pop-to-buffer "*svn-process*")
+    (svn-process-mode)
+    (when svn-status-wash-control-M-in-process-buffers
+      (svn-status-remove-control-M))
+    (when scroll-to-top
+      (goto-char (point-min)))
+    (pop-to-buffer cur-buff)))
 
 (defun svn-status-show-process-output (cmd &optional scroll-to-top)
   "Display the result of a svn command.
@@ -4088,7 +4126,7 @@ removed again, when a faster parsing and display routine for
   (setq svn-status-display-full-path (not svn-status-display-full-path))
   (message "The %s buffer will%s use full path names." svn-status-buffer-name
            (if svn-status-display-full-path "" " not"))
-  (svn-status-update))
+  (svn-status-update-buffer))
 
 (defun svn-status-set-trac-project-root ()
   (interactive)
@@ -4235,6 +4273,51 @@ The conflicts must be marked with rcsmerge conflict markers."
              (svn-resolve-conflicts
               (svn-status-line-info->full-path file-info)))
         (error "can not resolve conflicts at this point"))))
+
+;; --------------------------------------------------------------------------------
+;; svnadmin interface
+;; --------------------------------------------------------------------------------
+(defun svn-admin-create (dir)
+  "Run svnadmin create DIR."
+  (interactive (list (expand-file-name
+                      (svn-read-directory-name "Create a svn repository at: "
+                                               svn-admin-default-create-directory nil nil))))
+  (shell-command-to-string (concat "svnadmin create " dir))
+  (setq svn-admin-last-repository-dir (concat "file://" dir))
+  (message "Svn repository created at %s" dir)
+  (run-hooks 'svn-admin-create-hook))
+
+;; - Import an empty directory
+;;   cd to an empty directory
+;;   svn import -m "Initial import" . file:///home/stefan/svn_repos/WaldiConfig/trunk
+(defun svn-admin-create-trunk-directory ()
+  "Import an empty trunk directory to `svn-admin-last-repository-dir'.
+Set `svn-admin-last-repository-dir' to the new created trunk url."
+  (interactive)
+  (let ((empty-temp-dir-name (make-temp-name svn-status-temp-dir)))
+    (make-directory empty-temp-dir-name t)
+    (setq svn-admin-last-repository-dir (concat svn-admin-last-repository-dir "/trunk"))
+    (svn-run nil t 'import "import" "-m" "Created trunk directory"
+                             empty-temp-dir-name svn-admin-last-repository-dir)
+    (delete-directory empty-temp-dir-name)))
+
+(defun svn-admin-start-import ()
+  "Start to import the current working directory in a subversion repository.
+The user is asked to perform the following two steps:
+1. Create a local repository
+2. Add a trunk directory to that repository
+
+After that step the empty base directory (either the root directory or
+the trunk directory of the selected repository) is checked out in the current
+working directory."
+  (interactive)
+  (if (y-or-n-p "Create local repository? ")
+      (progn
+        (call-interactively 'svn-admin-create)
+        (when (y-or-n-p "Add a trunk directory? ")
+          (svn-admin-create-trunk-directory)))
+    (setq svn-admin-last-repository-dir (read-string "Repository Url: ")))
+  (svn-checkout svn-admin-last-repository-dir "."))
 
 ;; --------------------------------------------------------------------------------
 ;; svn status profiling

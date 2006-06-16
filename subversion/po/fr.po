@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-06-07 10:28+0200\n"
+"POT-Creation-Date: 2006-06-13 11:43+0200\n"
 "PO-Revision-Date: 2006-06-07 10:30+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
@@ -935,25 +935,25 @@ msgstr "Erreur lors de l'ajout récursif de '%s'"
 msgid "Can't close directory '%s'"
 msgstr "Le répertoire '%s' ne peut être fermé"
 
-#: libsvn_client/blame.c:392 libsvn_client/blame.c:831
+#: libsvn_client/blame.c:368 libsvn_client/blame.c:838
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "Blame non calculable sur le fichier binaire '%s'"
 
-#: libsvn_client/blame.c:567
+#: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
 msgstr "blame de la révision courante non supporté"
 
-#: libsvn_client/blame.c:580
+#: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
 msgstr "La révision de début doit précéder la révision de fin"
 
-#: libsvn_client/blame.c:718 libsvn_client/cat.c:208
+#: libsvn_client/blame.c:725 libsvn_client/cat.c:208
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "L'URL '%s' référence un répertoire"
 
-#: libsvn_client/blame.c:791
+#: libsvn_client/blame.c:798
 #, c-format
 msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr ""
@@ -2690,7 +2690,7 @@ msgstr "Échec de la requête GET pour '%s'"
 msgid "Could not save file"
 msgstr "Impossible de sauvegarder le fichier"
 
-#: libsvn_ra_dav/fetch.c:906 libsvn_ra_svn/client.c:1000
+#: libsvn_ra_dav/fetch.c:906 libsvn_ra_svn/client.c:1002
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -3186,166 +3186,166 @@ msgstr "L'élément 'prop diffs' n'est pas une liste"
 msgid "Unrecognized node kind '%s' from server"
 msgstr "Type de noeud '%s' non reconnu retourné par le serveur"
 
-#: libsvn_ra_svn/client.c:272 libsvn_ra_svn/client.c:326
+#: libsvn_ra_svn/client.c:273 libsvn_ra_svn/client.c:327
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Erreur d'authentification du serveur : %s"
 
-#: libsvn_ra_svn/client.c:275 libsvn_ra_svn/cram.c:194
+#: libsvn_ra_svn/client.c:276 libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
 msgid "Unexpected server response to authentication"
 msgstr "Réponse inattendue du serveur lors de l'authentification"
 
-#: libsvn_ra_svn/client.c:313 libsvn_subr/prompt.c:156
+#: libsvn_ra_svn/client.c:314 libsvn_subr/prompt.c:156
 #, c-format
 msgid "Can't get password"
 msgstr "Impossible d'obtenir le mot de passe"
 
-#: libsvn_ra_svn/client.c:333
+#: libsvn_ra_svn/client.c:334
 msgid "Cannot negotiate authentication mechanism"
 msgstr "Impossible de négocier de mécanisme d'authentification"
 
-#: libsvn_ra_svn/client.c:465
+#: libsvn_ra_svn/client.c:466
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "Schéma de tunnel '%s' non définit"
 
-#: libsvn_ra_svn/client.c:482
+#: libsvn_ra_svn/client.c:483
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr "Le schéma de tunnel '%s' requiert la variable d'environnement %s"
 
-#: libsvn_ra_svn/client.c:493
+#: libsvn_ra_svn/client.c:494
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "Impossible de découper la commande '%s'"
 
-#: libsvn_ra_svn/client.c:524
+#: libsvn_ra_svn/client.c:525
 #, c-format
 msgid "Error in child process: %s"
 msgstr "Erreur du processus fils : %s"
 
-#: libsvn_ra_svn/client.c:548
+#: libsvn_ra_svn/client.c:549
 #, c-format
 msgid "Can't create tunnel"
 msgstr "Impossible de créer le tunnel"
 
-#: libsvn_ra_svn/client.c:587
+#: libsvn_ra_svn/client.c:588
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "URL de dépôt svn illégale '%s'"
 
-#: libsvn_ra_svn/client.c:626
+#: libsvn_ra_svn/client.c:627
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "Le serveur requiert au minimum la version %d"
 
-#: libsvn_ra_svn/client.c:680
+#: libsvn_ra_svn/client.c:682
 msgid "Impossibly long repository root from server"
 msgstr "Racine du dépôt du serveur trop longue"
 
-#: libsvn_ra_svn/client.c:691
+#: libsvn_ra_svn/client.c:693
 msgid "Module for accessing a repository using the svn network protocol."
 msgstr "Module d'accès à un dépôt avec le protocole réseau propre de svn."
 
-#: libsvn_ra_svn/client.c:839
+#: libsvn_ra_svn/client.c:841
 msgid "Server did not send repository root"
 msgstr "Le serveur n'a pas envoyé la racine du dépôt"
 
-#: libsvn_ra_svn/client.c:980
+#: libsvn_ra_svn/client.c:982
 msgid "Non-string as part of file contents"
 msgstr "Partie non chaîne comme contenu de fichier"
 
-#: libsvn_ra_svn/client.c:1078
+#: libsvn_ra_svn/client.c:1080
 msgid "Dirlist element not a list"
 msgstr "L'élément 'dirlist' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1235
+#: libsvn_ra_svn/client.c:1237
 msgid "Log entry not a list"
 msgstr "L'entrée 'log' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1248
+#: libsvn_ra_svn/client.c:1250
 msgid "Changed-path entry not a list"
 msgstr "L'entrée 'changed-path' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1324
+#: libsvn_ra_svn/client.c:1326
 msgid "'stat' not implemented"
 msgstr "'stat' non implémenté"
 
-#: libsvn_ra_svn/client.c:1381
+#: libsvn_ra_svn/client.c:1383
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' non implémenté"
 
-#: libsvn_ra_svn/client.c:1393
+#: libsvn_ra_svn/client.c:1395
 msgid "Location entry not a list"
 msgstr "L'entrée 'location' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1443
+#: libsvn_ra_svn/client.c:1445
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' non implémenté"
 
-#: libsvn_ra_svn/client.c:1456
+#: libsvn_ra_svn/client.c:1458
 msgid "Revision entry not a list"
 msgstr "L'entrée 'revision' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1469 libsvn_ra_svn/client.c:1494
+#: libsvn_ra_svn/client.c:1471 libsvn_ra_svn/client.c:1496
 msgid "Text delta chunk not a string"
 msgstr "La différence de texte n'est pas une chaîne de caractères"
 
-#: libsvn_ra_svn/client.c:1506
+#: libsvn_ra_svn/client.c:1508
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "La commande 'get-file-revs' n'a retourné aucune révision"
 
-#: libsvn_ra_svn/client.c:1554
+#: libsvn_ra_svn/client.c:1556
 msgid "Server doesn't support the lock command"
 msgstr "Commande lock non supportée par le serveur"
 
-#: libsvn_ra_svn/client.c:1618
+#: libsvn_ra_svn/client.c:1620
 msgid "Server doesn't support the unlock command"
 msgstr "Commande unlock non supportée par le serveur"
 
-#: libsvn_ra_svn/client.c:1715
+#: libsvn_ra_svn/client.c:1717
 msgid "Lock response not a list"
 msgstr "La réponse au verrouillage (lock) n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1729
+#: libsvn_ra_svn/client.c:1731
 msgid "Unknown status for lock command"
 msgstr "État inconnu pour la commande de verrouillage (lock)"
 
-#: libsvn_ra_svn/client.c:1751
+#: libsvn_ra_svn/client.c:1753
 msgid "Didn't receive end marker for lock responses"
 msgstr "Aucun marqueur de fin reçu dans les réponses aux verrouillages"
 
-#: libsvn_ra_svn/client.c:1838
+#: libsvn_ra_svn/client.c:1840
 msgid "Unlock response not a list"
 msgstr "La réponse au déverrouillage n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1852
+#: libsvn_ra_svn/client.c:1854
 msgid "Unknown status for unlock command"
 msgstr "État inconnu pour la commande de déverrouillage (unlock)"
 
-#: libsvn_ra_svn/client.c:1873
+#: libsvn_ra_svn/client.c:1875
 msgid "Didn't receive end marker for unlock responses"
 msgstr "Aucun marqueur de fin reçu dans les réponses aux déverrouillages"
 
-#: libsvn_ra_svn/client.c:1897 libsvn_ra_svn/client.c:1925
+#: libsvn_ra_svn/client.c:1899 libsvn_ra_svn/client.c:1927
 msgid "Server doesn't support the get-lock command"
 msgstr "Le serveur ne supporte pas la commande 'get-lock'"
 
-#: libsvn_ra_svn/client.c:1938
+#: libsvn_ra_svn/client.c:1940
 msgid "Lock element not a list"
 msgstr "L'élément 'lock' n'est pas une liste"
 
-#: libsvn_ra_svn/client.c:1961
+#: libsvn_ra_svn/client.c:1963
 msgid "Server doesn't support the replay command"
 msgstr "Le serveur ne supporte pas la commande 'replay'"
 
-#: libsvn_ra_svn/client.c:2025
+#: libsvn_ra_svn/client.c:2027
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Version %d du chargeur RA (accès dépôt) non supporté pour ra_svn"
 
-#: libsvn_ra_svn/editor.c:386 libsvn_ra_svn/editorp.c:421
+#: libsvn_ra_svn/editor.c:386 libsvn_ra_svn/editorp.c:455
 msgid "Invalid file or dir token during edit"
 msgstr "Élément fichier ou répertoire invalide durant une édition"
 
@@ -3357,15 +3357,15 @@ msgstr "Partie non chaîne dans une différence de texte"
 msgid "Successful edit status returned too soon"
 msgstr "Retour positif prématuré de l'édition"
 
-#: libsvn_ra_svn/editorp.c:612
+#: libsvn_ra_svn/editorp.c:664
 msgid "Apply-textdelta already active"
 msgstr "'Apply-textdelta' en cours"
 
-#: libsvn_ra_svn/editorp.c:634 libsvn_ra_svn/editorp.c:652
+#: libsvn_ra_svn/editorp.c:686 libsvn_ra_svn/editorp.c:704
 msgid "Apply-textdelta not active"
 msgstr "'Apply-textdelta' non actif"
 
-#: libsvn_ra_svn/editorp.c:800 libsvn_ra_svn/marshal.c:842
+#: libsvn_ra_svn/editorp.c:872 libsvn_ra_svn/marshal.c:842
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "Commande '%s' inconnue"
@@ -5401,16 +5401,16 @@ msgstr "L'URL source '%s' concerne un dépôt différent de '%s'"
 msgid "Unable to make any directories"
 msgstr "Impossible de créer des répertoires"
 
-#: svn/blame-cmd.c:244 svn/list-cmd.c:252
+#: svn/blame-cmd.c:234 svn/list-cmd.c:252
 msgid "'verbose' option invalid in XML mode"
 msgstr "Option 'verbose' invalide en mode XML"
 
-#: svn/blame-cmd.c:256 svn/info-cmd.c:473 svn/list-cmd.c:264
+#: svn/blame-cmd.c:246 svn/info-cmd.c:473 svn/list-cmd.c:264
 #: svn/status-cmd.c:219
 msgid "'incremental' option only valid in XML mode"
 msgstr "Option 'incremental' valide seulement en mode XML"
 
-#: svn/blame-cmd.c:323
+#: svn/blame-cmd.c:313
 #, c-format
 msgid "Skipping binary file: '%s'\n"
 msgstr "Omission du fichier binaire : '%s'\n"
@@ -8494,17 +8494,17 @@ msgstr "Impossible de lier (bind) le 'socket' serveur"
 msgid "Can't accept client connection"
 msgstr "Impossible d'accepter une connexion d'un client"
 
-#: svnserve/main.c:734
+#: svnserve/main.c:750
 #, c-format
 msgid "Can't create threadattr"
 msgstr "Impossible de créer un attribut de thread (threadattr)"
 
-#: svnserve/main.c:742
+#: svnserve/main.c:758
 #, c-format
 msgid "Can't set detached state"
 msgstr "Impossible de détacher la thread"
 
-#: svnserve/main.c:755
+#: svnserve/main.c:771
 #, c-format
 msgid "Can't create thread"
 msgstr "Impossible de créer une thread"

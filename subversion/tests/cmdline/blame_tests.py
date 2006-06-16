@@ -268,6 +268,148 @@ def blame_peg_rev(sbox):
   finally:
     os.chdir(current_dir)
 
+def blame_eol_styles(sbox):
+  "blame with different eol styles"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # CR
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+
+  # do the test for each eol-style
+  for eol in ['CR', 'LF', 'CRLF', 'native']:
+    open(file_path, 'w').write("This is no longer the file 'iota'.\n")
+
+    for i in range (1,3):
+      svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
+      svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                            None, None, None, None,
+                                            None, None, wc_dir)
+
+    svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol,
+                         file_path)
+
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          None, None, None, None,
+                                          None, None, wc_dir)
+                                     
+    output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                       'blame', file_path,
+                                                       '-r1:HEAD')
+
+    # output is a list of lines, there should be 3 lines
+    if len(output) != 3:
+      raise svntest.Failure ('Expected 3 lines in blame output but got %d: \n' %
+                             len(output) + str(output))
+
+def blame_ignore_whitespace(sbox):
+  "ignore whitespace when blaming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only whitespace changes
+  open(file_path, 'w').write(" A  a   \n"
+                             "   B b  \n"
+                             "    C    c    \n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # match the blame output, as defined in the blame code:
+  # "%6ld %10s %s %s%s", rev, author ? author : "         -", 
+  #                      time_stdout , line, APR_EOL_STR
+  expected_output = [                                  
+    "     2    jrandom  A  a   \n",
+    "     2    jrandom    B b  \n",
+    "     2    jrandom     C    c    \n",
+    ]
+
+  output, error = svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-x', '-w', file_path)
+
+  # commit some changes
+  open(file_path, 'w').write(" A  a   \n"
+                             "Xxxx X\n"
+                             "   Bb b  \n"
+                             "    C    c    \n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  expected_output = [                                  
+    "     2    jrandom  A  a   \n",
+    "     4    jrandom Xxxx X\n",
+    "     4    jrandom    Bb b  \n",
+    "     2    jrandom     C    c    \n",
+    ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-x', '-w', file_path)
+
+def blame_ignore_eolstyle(sbox):
+  "ignore eol styles when blaming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only eol changes
+  open(file_path, 'w').write("Aa\r"
+                             "Bb\r"
+                             "Cc")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  expected_output = [                                  
+    "     2    jrandom Aa\n",
+    "     2    jrandom Bb\n",
+    "     3    jrandom Cc\n",
+    ]
+
+  output, error = svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-x', '--ignore-eol-style', file_path)
 
 ########################################################################
 # Run the tests
@@ -281,6 +423,9 @@ test_list = [ None,
               blame_in_xml,
               blame_on_unknown_revision,
               blame_peg_rev,
+              blame_eol_styles,
+              blame_ignore_whitespace,
+              blame_ignore_eolstyle
              ]
 
 if __name__ == '__main__':
