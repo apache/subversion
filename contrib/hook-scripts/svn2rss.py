@@ -8,6 +8,7 @@
  -p | --repos-path=  svn repository to generate RSS 2.0 feed
  -u | --url=         link to appear in the rss item
  -f | --rss-file=    filename to store the rss feed
+ -m | --max-items=   maximum items to store in the rss feed
 
 Generates a RSS 2.0 file containing commit information.  Once the
 maximum number of items is reached, older elements are removed.  The
@@ -53,13 +54,16 @@ def usage_and_exit(errmsg=None):
 if len(sys.argv) == 1:
     usage_and_exit("Not enough arguments provided.")
 try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:],"hP:r:p:u:f:", [
+    opts, args = getopt.gnu_getopt(sys.argv[1:],"hP:r:p:u:f:m:", [
                                                       "help", "svn-path=",
                                                       "revision=",
                                                       "repos-path=", "url=",
-                                                      "rss-file="])
+                                                      "rss-file=",
+                                                      "max-items="])
 except getopt.GetoptError, msg:
     usage_and_exit(msg)
+
+max_items = 20
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
@@ -74,15 +78,23 @@ for opt, arg in opts:
         url = arg
     elif opt in ("-f", "--rss-file"):
         rss_file = arg
+    elif opt in ("-m", "--max-items"):
+        try:
+           max_items = int(arg)
+        except ValueError, msg:
+           usage_and_exit("Invalid value '%s' for --max-items." % (arg))
+        if max_items < 1:
+           usage_and_exit("Value for --max-items must be a positive integer.")
 
 class SVN2RSS:
-    def __init__(self, svn_path, revision, repos_path, url, rss_file):
-        self.max_items = 20
+    def __init__(self, svn_path, revision, repos_path, url, rss_file, max_items):
         self.svn_path = svn_path
         self.revision = revision
         self.repos_path = repos_path
         self.url = url
         self.rss_file = rss_file
+        self.max_items = max_items
+
         self.rss_item_desc = self.make_rss_item_desc()
         self.svnlook = os.path.join(self.svn_path, "svnlook")
         (file, ext) = os.path.splitext(self.rss_file)
@@ -154,7 +166,7 @@ class SVN2RSS:
 
         return rss
 
-svn2rss = SVN2RSS(svn_path, commit_rev, repos_path, url, rss_file)
+svn2rss = SVN2RSS(svn_path, commit_rev, repos_path, url, rss_file, max_items)
 rss = svn2rss.rss
 svn2rss.pickle()
 rss.write_xml(open(rss_file, "w"))
