@@ -21,7 +21,7 @@ from StringIO import StringIO
 # Python 2.3 is required by PyRSS2Gen
 py_version  = sys.version_info
 if sys.version_info[0:2] < (2,3):
-    sys.stderr.write("Error: Python 2.3 or higher required")
+    sys.stderr.write("Error: Python 2.3 or higher required.")
     sys.exit(1)
     
 import datetime
@@ -29,10 +29,11 @@ import datetime
 try:
     import PyRSS2Gen
 except ImportError:
-    print >> sys.stderr, "Please install PyRSS2Gen before running this script"
+    print >> sys.stderr, "Error: Required PyRSS2Gen module not found."
     print >> sys.stderr, "PyRSS2Gen can be downloaded from:"
     print >> sys.stderr, "http://www.dalkescientific.com/Python/PyRSS2Gen.html"
     print >> sys.stderr, ""
+    sys.exit(1)
 
 def usage_and_exit(errmsg=None):
     """Print a usage message, plus an ERRMSG (if provided), then exit.
