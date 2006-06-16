@@ -76,15 +76,6 @@ Candidate changes:
 
 Approved changes:
 
- * r20115
-   Fix configure to fail if zlib header is not found (previously only failed
-   if header existed but library did not).
-   Justification:
-     zlib is now a requirement of svn, so the check for it should be correct
-     in failing.
-   Votes:
-    +1: dberlin, rooneg, nori, dlr
-
  * r20108
    Fix input/output encoding when building with VC2005.
    Justification:
