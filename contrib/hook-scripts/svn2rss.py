@@ -34,12 +34,21 @@ except ImportError:
     print >> sys.stderr, "http://www.dalkescientific.com/Python/PyRSS2Gen.html"
     print >> sys.stderr, ""
 
-def usage(stream):
+def usage_and_exit(errmsg=None):
+    """Print a usage message, plus an ERRMSG (if provided), then exit.
+    If ERRMSG is provided, the usage message is printed to stderr and
+    the script exits with a non-zero error code.  Otherwise, the usage
+    message goes to stdout, and the script exits with a zero
+    errorcode."""
+    stream = errmsg is not None and sys.stderr or sys.stdout
     print >> stream, __doc__
+    if errmsg:
+        print >> stream, "\nError: %s" % (errmsg)
+        sys.exit(2)
+    sys.exit(0)
 
 if len(sys.argv) == 1:
-    usage(sys.stderr)
-    sys.exit(2)
+    usage_and_exit("Not enough arguments provided.")
 try:
     opts, args = getopt.gnu_getopt(sys.argv[1:],"hP:r:p:u:f:", [
                                                       "help", "svn-path=",
@@ -47,14 +56,11 @@ try:
                                                       "repos-path=", "url=",
                                                       "rss-file="])
 except getopt.GetoptError, msg:
-    print >> sys.stderr, msg
-    usage(sys.stderr)
-    sys.exit(2)
+    usage_and_exit(msg)
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
-        usage(sys.stdout)
-        sys.exit(0)
+        usage_and_exit()
     elif opt in ("-P", "--svn-path"):
         svn_path = arg
     elif opt in ("-r", "--revision"):
