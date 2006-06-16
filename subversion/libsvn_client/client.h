@@ -199,6 +199,16 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *pool);
 
 
+/* Return the property value for any PROPNAME set on TARGET in *PROPS. */
+svn_error_t *
+svn_client__get_prop_from_wc(apr_hash_t **props, const char *propname,
+                             const char *target, svn_boolean_t pristine,
+                             const svn_wc_entry_t *entry,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/
