@@ -1276,7 +1276,7 @@ get_merge_info_for_path(sqlite3 *db,
 /* Get the merge info for a set of paths.  */
 static svn_error_t *
 fs_get_merge_info(svn_fs_root_t *root,
-                  apr_array_header_t *paths,
+                  const apr_array_header_t *paths,
                   svn_revnum_t rev,
                   apr_hash_t **mergeinfo,
                   apr_pool_t *pool)

@@ -181,7 +181,7 @@
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *MERGEINFO {
+%typemap(in) apr_hash_t *MERGEINFO {
     $1 = svn_swig_py_mergeinfo_from_dict ($input, _global_pool);
 }
 #endif

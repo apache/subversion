@@ -180,6 +180,7 @@
         svn_swig_py_stringhash_to_dict(*$1));
 }
 #endif
+%apply apr_hash_t *MERGEINFO { apr_hash_t *mergeinhash };
 
 /* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is

@@ -272,7 +272,7 @@
 /* -----------------------------------------------------------------------
    input mergeinfo hash to svn_mergeinfo_to_string
 */
-%apply apr_array_header_t *MERGEINFO {
+%apply apr_hash_t *MERGEINFO {
    apr_hash_t *mergeinput,
    apr_hash_t *mergefrom,
    apr_hash_t *mergeto,
