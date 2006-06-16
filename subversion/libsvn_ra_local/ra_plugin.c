@@ -624,23 +624,12 @@ make_reporter(svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__get_merge_info(svn_ra_session_t *session,
                              apr_hash_t **mergeinfo,
-                             const apr_array_header_t *urls,
+                             const apr_array_header_t *paths,
                              svn_revnum_t revision,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
-  const apr_array_header_t *paths = apr_array_make(pool, urls->nelts,
-                                                   sizeof(char *));
-  int i;
 
-  /* Transform URLs into repository-relative paths. */
-  for (i = 0; i < paths->nelts; i++)
-    {
-      SVN_ERR(svn_ra_local__split_URL(NULL, NULL,
-                                      &(APR_ARRAY_IDX(paths, i, const char *)),
-                                      APR_ARRAY_IDX(urls, i, const char *),
-                                      pool));
-    }
   SVN_ERR(svn_repos_fs_get_merge_info(mergeinfo, baton->repos, paths,
                                       revision, NULL, NULL, pool));
 
