@@ -1,4 +1,5 @@
 import unittest, os, tempfile
+import shutil
 
 from svn import core, repos, wc, client
 from libsvn.core import SubversionException
@@ -20,7 +21,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    self.path = os.path.join(tempfile.gettempdir(), 'wc')
+    self.path = tempfile.mktemp()
 
     client_ctx = client.create_context()
     
@@ -107,6 +108,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
   def tearDown(self):
       wc.adm_close(self.wc)
+      shutil.rmtree(self.path)
 
 def suite():
     return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
