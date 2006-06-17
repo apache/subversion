@@ -3376,6 +3376,15 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
+/** Return @c TRUE iff @a STR matches any of the elements of @a LIST, a
+ * list of zero or more ignore patterns.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
+                         apr_pool_t *pool);
+
 
 /** Add @a lock to the working copy for @a path.  @a adm_access must contain
  * a write lock for @a path.  If @a path is read-only, due to locking
