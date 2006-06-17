@@ -75,6 +75,7 @@
 ;; * M   - svn-status-mark-modified
 ;; * D   - svn-status-mark-deleted
 ;; * *   - svn-status-mark-changed
+;; * %   - svn-status-mark-filename-regexp
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
@@ -1468,6 +1469,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
   (define-key svn-status-mode-mark-map (kbd "D") 'svn-status-mark-deleted)
   (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
+  (define-key svn-status-mode-mark-map (kbd "%") 'svn-status-mark-filename-regexp)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
@@ -1578,6 +1580,7 @@ A and B must be line-info's."
      ["Mark/Unmark modified" svn-status-mark-modified t]
      ["Mark/Unmark deleted" svn-status-mark-deleted t]
      ["Mark/Unmark modified/added/deleted" svn-status-mark-changed t]
+     ["Mark/Unmark filename by regexp" svn-status-mark-filename-regexp t]
      )
     ["Hide Unknown" svn-status-toggle-hide-unknown
      :style toggle :selected svn-status-hide-unknown]
@@ -2677,6 +2680,22 @@ If called with a prefix ARG, unmark all such files."
 (defun svn-status-unset-all-usermarks ()
   (interactive)
   (svn-status-apply-usermark-checked '(lambda (info) t) nil))
+
+(defvar svn-status-regexp-history nil
+  "History list of regular expressions used in svn status commands.")
+
+(defun svn-status-read-regexp (prompt)
+  (read-from-minibuffer prompt nil nil nil 'svn-status-regexp-history))
+
+(defun svn-status-mark-filename-regexp (regexp &optional unmark)
+  "Mark all files matching REGEXP.
+If the function is called with a prefix arg, unmark all these files."
+  (interactive
+   (list (svn-status-read-regexp (concat (if current-prefix-arg "Unmark" "Mark")
+                                         " files (regexp): "))
+         (if current-prefix-arg t nil)))
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (string-match regexp (svn-status-line-info->filename-nondirectory info))) (not unmark)))
 
 (defun svn-status-toggle-hide-unknown ()
   (interactive)
