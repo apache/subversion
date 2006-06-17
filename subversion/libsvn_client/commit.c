@@ -358,7 +358,8 @@ import_dir(const svn_delta_editor_t *editor,
       if (apr_hash_get(excludes, abs_path, APR_HASH_KEY_STRING))
         continue;
 
-      if ((!no_ignore) && svn_cstring_match_glob_list(filename, ignores))
+      if ((!no_ignore) && svn_wc_match_ignore_list(filename, ignores,
+                                                   subpool))
         continue;
 
       /* We only import subdirectories when we're doing a regular
@@ -526,7 +527,7 @@ import(const char *path,
       if (!no_ignore)
         {
           SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-          ignores_match = svn_cstring_match_glob_list(path, ignores);
+          ignores_match = svn_wc_match_ignore_list(path, ignores, pool);
         }
       if (!ignores_match) 
         SVN_ERR(import_file(editor, root_baton, path, edit_path,
