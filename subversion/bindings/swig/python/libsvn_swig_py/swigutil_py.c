@@ -524,6 +524,51 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_svn_string_t, NULL, NULL);
 }
 
+static PyObject *proparray_to_dict(const apr_array_header_t *array)
+{
+    PyObject *dict = PyDict_New();
+    int i;
+
+    if (dict == NULL)
+      return NULL;
+
+    for (i = 0; i < array->nelts; ++i)
+      {
+        svn_prop_t prop;
+        PyObject *py_key, *py_value;
+
+        prop = APR_ARRAY_IDX(array, i, svn_prop_t);
+
+        py_key = PyString_FromString(prop.name);
+        if (py_key == NULL)
+          goto error;
+
+        if (prop.value == NULL)
+          {
+             py_value = Py_None;
+             Py_INCREF(Py_None);
+          }
+        else
+          {
+             py_value = PyString_FromStringAndSize((void *)prop.value->data,
+                                                   prop.value->len);
+             if (py_value == NULL) {
+                Py_DECREF(py_key);
+                goto error;
+             }
+          }
+
+        PyDict_SetItem(dict, py_key, py_value);
+    }
+
+    return dict;
+
+  error:
+    Py_DECREF(dict);
+    return NULL;
+
+}
+
 
 PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash)
 {
@@ -2230,5 +2275,70 @@ svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
 
   return err;
 }
+
+svn_error_t *svn_swig_py_ra_file_rev_handler_func(
+                    void *baton,
+                    const char *path,
+                    svn_revnum_t rev,
+                    apr_hash_t *rev_props,
+                    svn_txdelta_window_handler_t *delta_handler,
+                    void **delta_baton,
+                    apr_array_header_t *prop_diffs,
+                    apr_pool_t *pool)
+{
+  PyObject *handler = baton;
+  PyObject *result, *py_rev_props = NULL, *py_prop_diffs = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((handler == NULL) || (handler == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_rev_props = svn_swig_py_prophash_to_dict(rev_props);
+  if (py_rev_props == NULL)
+    {
+      err = type_conversion_error("apr_hash_t *");
+      goto error;
+    }
+
+  py_prop_diffs = proparray_to_dict(prop_diffs);
+
+  if (py_prop_diffs == NULL)
+    {
+      err = type_conversion_error("apr_array_header_t *");
+      goto error;
+    }
+
+  if ((result = PyObject_CallFunction(handler,
+                                      (char *)"slOOO&",
+                                      path, rev, py_rev_props, py_prop_diffs,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+
+      /* FIXME: Support returned TxDeltaWindow object and
+       * set delta_handler and delta_baton */
+      *delta_handler = NULL;
+      *delta_baton = NULL;
+
+      Py_XDECREF(result);
+    }
+
+error:
+
+  Py_XDECREF(py_rev_props);
+  Py_XDECREF(py_prop_diffs);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
 
 

@@ -67,6 +67,27 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     child = delta.editor_invoke_add_directory(editor, "bla", root, None, 0)
     delta.editor_invoke_close_edit(editor, edit_baton)
 
+  def test_get_file_revs(self):
+    def rev_handler(path, rev, rev_props, prop_diffs, pool):
+        self.assert_(rev == 2 or rev == 3)
+        self.assertEqual(path, "/trunk/README.txt")
+        if rev == 2:
+            self.assertEqual(rev_props, {
+              'svn:log': 'Added README.',
+              'svn:author': 'john',
+              'svn:date': '2005-04-01T13:12:18.216267Z'
+            })
+            self.assertEqual(prop_diffs, {})
+        elif rev == 3:
+            self.assertEqual(rev_props, {
+              'svn:log': 'Fixed README.\n',
+              'svn:author': 'kate',
+              'svn:date': '2005-04-01T13:24:58.234643Z'
+            })
+            self.assertEqual(prop_diffs, {'svn:mime-type': 'text/plain', 'svn:eol-style': 'native'})
+
+    ra.get_file_revs(self.ra_ctx, "trunk/README.txt", 0, 10, rev_handler)
+
   def test_update(self):
     class TestEditor(delta.Editor):
         pass

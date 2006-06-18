@@ -166,6 +166,14 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+{
+   $1 = svn_swig_py_ra_file_rev_handler_func;
+   $2 = (void *)$input;
+}
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
