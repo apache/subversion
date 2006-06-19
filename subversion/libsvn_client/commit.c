@@ -932,7 +932,7 @@ have_processed_parent(apr_array_header_t *commit_items,
 
 
 /* Remove redundancies by removing duplicates from NONRECURSIVE_TARGETS,
- * and removing any target that either is, a descendant of, a path in
+ * and removing any target that either is, or is a descendant of, a path in
  * RECURSIVE_TARGETS.  Return the result in *PUNIQUE_TARGETS.
  */
 static svn_error_t *

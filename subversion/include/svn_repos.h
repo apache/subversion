@@ -845,7 +845,7 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
 /**
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
- * youngest of @a end and @ start to the oldest.  Only cross
+ * youngest of @a end and @a start to the oldest.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
  *
@@ -1032,7 +1032,7 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
-/* Retreiving multiple revisions of a file. */
+/* Retrieving multiple revisions of a file. */
 
 /**
  * Retrieve a subset of the interesting revisions of a file @a path in
