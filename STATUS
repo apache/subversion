@@ -55,7 +55,7 @@ Candidate changes:
       Certain operations (switch) will cause a WC to invalidate the version-url
       parameter and causes ra_serf to crash on a subsequent update to that file.
     Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, rooneg
 
   * r20170
     Don't carry around our own Visual Studio project files for Apache/APR --
@@ -63,7 +63,7 @@ Candidate changes:
     Justification:
       Low impact and needed for Apache 2.2 compatibility.
     Votes:
-      +1: djh
+      +1: djh, rooneg
 
 Approved changes:
 
