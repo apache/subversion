@@ -2722,7 +2722,7 @@ svn_boolean_t svn_wc_is_entry_prop(const char *name);
  * the working copy's text-base files, rather than the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
- * If @ reverse_order is true, then show working_copy->repository diffs.
+ * If @a reverse_order is true, then show working_copy->repository diffs.
  *
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.

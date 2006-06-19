@@ -129,8 +129,8 @@ store_locks_callback(void *baton,
  * targets (as opposed to the common local path).
  *
  * If all the targets are local paths within the same wc, i.e., they
- * share a common parent at some level, set and *PARENT_ADM_ACCESS_P
- * to and adm_access of that common parent.  *PARENT_ADM_ACCESS_P will
+ * share a common parent at some level, set *PARENT_ADM_ACCESS_P
+ * to the adm_access of that common parent.  *PARENT_ADM_ACCESS_P will
  * be associated with adm_access objects for all the other paths,
  * which are locked in the working copy while we lock them in the
  * repository.

@@ -1,5 +1,5 @@
 /*
- * ls-cmd.c -- list a URL
+ * list-cmd.c -- list a URL
  *
  * ====================================================================
  * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
