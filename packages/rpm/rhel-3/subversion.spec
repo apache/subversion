@@ -76,7 +76,7 @@ Requires: subversion = %{version}-%{release}
 Requires: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
 %description -n mod_dav_svn
-The subversion-server package adds the Subversion server Apache module to
+The mod_dav_svn package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %package perl
