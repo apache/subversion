@@ -804,7 +804,17 @@ II.   INSTALLATION
         above this has been done for you).
       * If you are using Visual Studio .NET change -t dsw into -t vcproj on
         the gen-make.py command.  In this case you will also have to
-        distribute the C runtime dll with the binaries.
+        distribute the C runtime dll with the binaries.  Also, since
+        Apache/APR do not provide .vcproj files, you will need to convert
+        the Apache/APR .dsp files to .vcproj files with Visual Studio.
+        Just open the Apache .dsw file and answer 'Yes To All' when the
+        conversion dialog pops up, or you can open the individual .dsp files
+        and convert them one at a time.  The Apache/APR projects required by
+        Subversion are: apr-util\libaprutil.dsp, apr\libapr.dsp,
+        apr-iconv\libapriconv.dsp, apr-util\xml\expat\lib\xml.dsp,
+        apr-util\uri\gen_uri_delims.dsp (for APR 0.9.x),
+        apr-iconv\ccs\libapriconv_ccs_modules.dsp, and
+        apr-iconv\ces\libapriconv_ces_modules.dsp.
       * If the server dso modules are being built and tested Apache must not
         be running or the copy of the dso modules will fail.
 

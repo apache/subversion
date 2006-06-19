@@ -96,19 +96,8 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self):
     "Write a Solution (.sln)"
 
-    # apr doesn't supply vcproj files, so move our pre-defined ones
-    # over if they don't match
-    self.move_proj_file(self.apr_path, 'libapr.vcproj')
-    self.move_proj_file(self.apr_iconv_path, 'libapriconv.vcproj')
-    self.move_proj_file(os.path.join(self.apr_iconv_path,'ccs'),
-                        'libapriconv_ccs_modules.vcproj')
-    self.move_proj_file(os.path.join(self.apr_iconv_path,'ces'),
-                        'libapriconv_ces_modules.vcproj')
-    self.move_proj_file(self.apr_util_path, 'libaprutil.vcproj')
-    self.move_proj_file(os.path.join(self.apr_util_path,'uri'),
-                        'gen_uri_delims.vcproj')
-    self.move_proj_file(os.path.join(self.apr_util_path,'xml', 'expat',
-                        'lib'), 'xml.vcproj')
+    # apr doesn't supply vcproj files, the user must convert them
+    # manually before loading the generated solution
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj')
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
     self.write_zlib_project_file('zlib.vcproj')
