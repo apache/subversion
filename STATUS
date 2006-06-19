@@ -49,6 +49,13 @@ Candidate changes:
       +1: nori
       +0: blair
 
+  * r20077
+    Fix merge failure when target of an add has been deleted.
+    Justification:
+      Simple fix, reported multiple times.
+    Votes:
+      +1: rooneg
+
   * r20125
     ra_serf: Be more tolerant when updating a WC file without a delta base.
     Justification:
