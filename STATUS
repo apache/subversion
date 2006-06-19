@@ -57,6 +57,14 @@ Candidate changes:
     Votes:
       +1: jerenkrantz
 
+  * r20170
+    Don't carry around our own Visual Studio project files for Apache/APR --
+    they only worked for APR 0.9.x and the user can manually convert them.
+    Justification:
+      Low impact and needed for Apache 2.2 compatibility.
+    Votes:
+      +1: djh
+
 Approved changes:
 
   * r19924
