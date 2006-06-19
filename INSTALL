@@ -697,7 +697,7 @@ II.   INSTALLATION
         SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
         your path.
 
-      * Extract Apache source into SVN\http-2.0.54 if you wish to build the
+      * Extract Apache source into SVN\httpd-2.0.54 if you wish to build the
         server dso modules.
       * If you are building from a checkout of Subversion, and you are NOT
         building Apache, then you will need the APR libraries.  Depending
