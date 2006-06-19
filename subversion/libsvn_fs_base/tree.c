@@ -3182,6 +3182,8 @@ txn_body_copied_from(void *baton, trail_t *trail)
 
           args->result_path = copy->src_path;
           args->result_rev = copy->src_rev;
+
+          return SVN_NO_ERROR;
         }
     }
 
