@@ -4,9 +4,13 @@
 %define apache_dir /usr
 %define pyver 2.2
 # If you don't want to take time for the tests then set make_*_check to 0.
-%define make_ra_local_check 1
-%define make_ra_svn_check 1
-%define make_ra_dav_check 1
+# RHEL 3 doesn't build BDB, so don't try to check it
+%define make_ra_local_bdb_check 0
+%define make_ra_svn_bdb_check 0
+%define make_ra_dav_bdb_check 0
+%define make_ra_local_fsfs_check 1
+%define make_ra_svn_fsfs_check 1
+%define make_ra_dav_fsfs_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -498,25 +502,47 @@ make swig-py
 make swig-pl DESTDIR=$RPM_BUILD_ROOT
 make check-swig-pl
 
-%if %{make_ra_local_check}
+%if %{make_ra_local_bdb_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check CLEANUP=true
+make check CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
-%if %{make_ra_svn_check}
+%if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true
+make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
-%if %{make_ra_dav_check}
+%if %{make_ra_dav_bdb_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-make davautocheck CLEANUP=true
+make davautocheck CLEANUP=true FS_TYPE=bdb
+echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
+%endif
+
+%if %{make_ra_local_fsfs_check}
+echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+make check CLEANUP=true FS_TYPE=fsfs
+echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+%endif
+
+%if %{make_ra_svn_fsfs_check}
+echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
+killall lt-svnserve || true
+sleep 1
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
+make svncheck CLEANUP=true FS_TYPE=fsfs
+killall lt-svnserve
+echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
+%endif
+
+%if %{make_ra_dav_fsfs_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
