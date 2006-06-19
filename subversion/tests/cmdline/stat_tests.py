@@ -371,6 +371,61 @@ def status_for_nonexistent_file(sbox):
 
 #----------------------------------------------------------------------
 
+def status_nonrecursive_update_different_cwd(sbox):
+  "status -v -N -u from different current directories"
+
+  # check combination of status -u and -N
+  # create A/C/J in repository
+  # create A/C/K in working copy
+  # check status output with -u and -N on target C
+  # check status output with -u and -N on target . (in C)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  J_url  = svntest.main.current_repo_url + '/A/C/J'
+  K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'rev 2', J_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', K_path)
+
+  os.chdir(wc_dir)
+  try:
+    expected_output = [
+      '       *                                C/J\n'
+      'A               0       ?   ?           C/K\n'
+      '                1        1 jrandom      C\n',
+      'Status against revision:      2\n' ]
+
+    os.chdir('A')
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_output,
+                                       [],
+                                       'status', '-v', '-N', '-u', 'C')
+
+    expected_output = [
+      '       *                                J\n',
+      'A               0       ?   ?           K\n',
+      '                1        1 jrandom      .\n',
+      'Status against revision:      2\n']
+
+    os.chdir('C')
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_output,
+                                       [],
+                                       'status', '-v', '-N', '-u', '.')
+
+  finally:
+    os.chdir(was_cwd)
+
+
+
+#----------------------------------------------------------------------
+
 def status_file_needs_update(sbox):
   "status -u indicates out-of-dateness"
 
@@ -894,6 +949,7 @@ test_list = [ None,
               status_ignored_dir,
               status_unversioned_dir,
               status_dash_u_missing_dir,
+              XFail(status_nonrecursive_update_different_cwd),
              ]
 
 if __name__ == '__main__':
