@@ -111,7 +111,7 @@ Tools for Subversion.
 %changelog
 * Sun Jun 11 2006 David Summers <david@summersoft.fay.ar.us> r20040
 - Figured out another (better) way to fix Subversion bug #1456 instead of
-  depending on a third program (chrpath); Used Fedora Core RPATH patch to 
+  depending on a third program (chrpath); Used Fedora Core RPATH patch to
   change the build procedure to eliminate the wierd RPATH in the Subversion
   Apache modules.
 
