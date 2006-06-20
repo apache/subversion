@@ -54,6 +54,14 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r20030
+    Fix svn export so it creates intermediate local folders if needed,
+    thereby making it consistent with svn checkout.
+    Justification:
+      Improves consistency for users.
+    Votes:
+      +1: lgo    (non-binding)
+
   * r20032      
     Python test that validates that checkout uses the peg rev if provided.
     Justification:
