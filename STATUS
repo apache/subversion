@@ -83,7 +83,7 @@ Candidate changes:
     Votes:
       +1: djh, rooneg
 
-  * r20180
+  * r20180, r20187
     Finish Apache 2.2/APR 1.x build/test support for Win32.
     Justification:
       Low impact and fixes some build and test issues with Win32 and Apache 2.2.
