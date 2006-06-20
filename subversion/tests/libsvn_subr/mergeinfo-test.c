@@ -428,7 +428,7 @@ test_remove_mergeinfo(const char **msg,
 
   /* Verify calculation of range list remainder. */
   return verify_mergeinfo_deltas(output, expected_rangelist_remainder,
-                                 "deletion", pool);
+                                 "leftover", pool);
 }
 #undef NBR_RANGELIST_DELTAS
 
