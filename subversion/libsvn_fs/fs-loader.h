@@ -293,7 +293,6 @@ typedef struct root_vtable_t
                                     apr_pool_t *pool);
   svn_error_t *(*get_merge_info)(svn_fs_root_t *root, 
                                  const apr_array_header_t *paths,
-                                 svn_revnum_t revnum,
                                  apr_hash_t **info, apr_pool_t *pool);
 } root_vtable_t;
 

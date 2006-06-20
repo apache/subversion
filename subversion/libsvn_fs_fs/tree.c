@@ -1092,6 +1092,8 @@ sqlite_tracer (void *data, const char *sql)
    so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void *)(-1))
 
+/* Helper for get_merge_info that retrieves merge info for a single
+   revision from the database and puts it into a mergeinfo hash.  */
 static svn_error_t *
 parse_mergeinfo_from_db(sqlite3 *db,
                         const char *path,
@@ -1185,7 +1187,37 @@ parse_mergeinfo_from_db(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-                        
+/* Helper for get_merge_info_for_path that will append a string to each
+   path that exists in the mergeinfo hash.  */
+static svn_error_t *
+append_component_to_paths(apr_hash_t **output,
+                          apr_hash_t *input,
+                          const char *toappend,
+                          apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  *output = apr_hash_make (pool);
+
+  for (hi = apr_hash_first(pool, input); 
+       hi; 
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t klen;
+      char *newpath;
+      
+
+      apr_hash_this(hi, &key, &klen, &val);
+      newpath = svn_path_join((const char *)key, toappend, pool);
+      apr_hash_set(*output, newpath, APR_HASH_KEY_STRING, val);
+    }
+  
+  return SVN_NO_ERROR;
+}  
+
+/* Helper for get_merge_info that will recursively get merge info for
+   a single path.  */
 static svn_error_t *
 get_merge_info_for_path(sqlite3 *db,
                         const char *path,
@@ -1261,13 +1293,32 @@ get_merge_info_for_path(sqlite3 *db,
       
       SVN_ERR(get_merge_info_for_path(db, parentpath->data, rev,
                                       result, cache, FALSE, pool));
+      if (setresult)
+        {
+          /* Now translate the result for our parent to our path */
+          cacheresult = apr_hash_get(cache, parentpath->data, 
+                                     APR_HASH_KEY_STRING);
+          if (cacheresult == NEGATIVE_CACHE_RESULT)
+            apr_hash_set(result, path, APR_HASH_KEY_STRING, NULL);
+          else if (cacheresult)
+            {
+              const char *p;
+              int i;
+              apr_hash_t *translatedhash;
+              char *toappend;
 
-      /* Now copy the result for our parent to our path */
-      cacheresult = apr_hash_get(cache, parentpath->data, APR_HASH_KEY_STRING);
-      if (cacheresult == NEGATIVE_CACHE_RESULT)
-        apr_hash_set(result, path, APR_HASH_KEY_STRING, NULL);
-      else if (cacheresult)
-        apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
+              /* We want to append from the part after the / to the end of the
+                 path string.  */
+              toappend = apr_pcalloc(pool, 
+                                     (strlen(path) - parentpath->len) + 1);
+              for (i = 0, p = &path[parentpath->len + 1]; *p; i++, p++)
+                *(toappend + i) = *p;
+              append_component_to_paths(&translatedhash, cacheresult,
+                                        toappend, pool);
+              apr_hash_set(result, path, APR_HASH_KEY_STRING, 
+                           translatedhash);
+            }
+        }
     }
   return SVN_NO_ERROR;
 }
@@ -1277,17 +1328,18 @@ get_merge_info_for_path(sqlite3 *db,
 static svn_error_t *
 fs_get_merge_info(svn_fs_root_t *root,
                   const apr_array_header_t *paths,
-                  svn_revnum_t rev,
                   apr_hash_t **mergeinfo,
                   apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo_cache = apr_hash_make (pool);
   sqlite3 *db;
   int i;
+  svn_revnum_t rev;
 
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+  rev = svn_fs_revision_root_revision(root);
 
   SQLITE_ERR(sqlite3_open(svn_path_join(root->fs->path, "mergeinfo.db", pool),
                           &db), db);
