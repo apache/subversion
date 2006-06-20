@@ -58,6 +58,7 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
+    self.have_gen_uri = None
 
     # NLS options
     self.enable_nls = None
@@ -146,6 +147,11 @@ class WinGeneratorBase(GeneratorBase):
     # Find neon version
     if self.neon_path:
       self._find_neon()
+      
+    # Check for gen_uri_delims project in apr-util
+    gen_uri_path = os.path.join(self.apr_util_path, "uri\\gen_uri_delims.dsp")
+    if (os.path.exists(gen_uri_path)):
+      self.have_gen_uri = 1
 
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
@@ -233,6 +239,9 @@ class WinGeneratorBase(GeneratorBase):
                              install_targets)
 
     for target in install_targets:
+      # drop the gen_uri_delims target unless we're on an old apr-util
+      if not self.have_gen_uri and target.name == 'gen_uri_delims':
+        install_targets.remove(target)
       if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
         install_targets.append(self.create_fake_target(target))
 
