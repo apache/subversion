@@ -52,7 +52,7 @@ Candidate changes:
     Get rid of requirement for another RPM package (chrpath) to build the
     Linux RPM packages.
     Justification:
-      Usinge Fedora Core as an example, I figured out a better
+      Using Fedora Core as an example, I figured out a better
       way to simplfy build package requirements with patch instead of package.
     Votes:
       +1: david
