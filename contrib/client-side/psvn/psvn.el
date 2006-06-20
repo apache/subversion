@@ -820,10 +820,11 @@ inside loops."
 ;; no idea, if there is a simpler way to achieve this...
 (defun svn-status-window-line-position ()
   "Return the window line at point."
-  (let ((edges (window-inside-edges))
-	(x-y (posn-x-y (posn-at-point))))
-    (+ (car (cdr edges))
-       (/ (or (cdr x-y) 0) (frame-char-height)))))
+  (when (fboundp 'window-inside-edges)
+    (let ((edges (window-inside-edges))
+          (x-y (posn-x-y (posn-at-point))))
+      (+ (car (cdr edges))
+         (/ (or (cdr x-y) 0) (frame-char-height))))))
 
 ;;;###autoload
 (defun svn-checkout (repos-url path)
@@ -2317,7 +2318,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
           (goto-char fname-pos)
           (svn-status-goto-file-name fname)
           (goto-char (+ column (svn-point-at-bol)))
-          (recenter window-line-pos))
+          (when window-line-pos
+            (recenter window-line-pos)))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
 
 (defun svn-status-parse-info (arg)
