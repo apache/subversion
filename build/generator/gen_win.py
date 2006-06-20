@@ -149,7 +149,8 @@ class WinGeneratorBase(GeneratorBase):
       self._find_neon()
       
     # Check for gen_uri_delims project in apr-util
-    gen_uri_path = os.path.join(self.apr_util_path, "uri\\gen_uri_delims.dsp")
+    gen_uri_path = os.path.join(self.apr_util_path, 'uri',
+                                'gen_uri_delims.dsp')
     if (os.path.exists(gen_uri_path)):
       self.have_gen_uri = 1
 
