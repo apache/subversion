@@ -102,6 +102,7 @@ Candidate changes:
       Simple fix, reported multiple times.
     Votes:
       +1: rooneg
+      +0: lgo
 
   * r20101
     Python test for blame eol-style handling
