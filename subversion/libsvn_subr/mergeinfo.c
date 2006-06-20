@@ -608,7 +608,7 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
         }
       else
         apr_hash_set(*deleted, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     apr_array_copy(pool, from_rangelist));
+                     svn_rangelist_dup(from_rangelist, pool));
     }
 
   /* Handle path additions. */
@@ -622,7 +622,7 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
          "to" rangelist is an addition. */
       if (apr_hash_get(from, path, APR_HASH_KEY_STRING) == NULL)
         apr_hash_set(*added, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     apr_array_copy(pool, to_rangelist));
+                     svn_rangelist_dup(to_rangelist, pool));
     }
 
   return SVN_NO_ERROR;
@@ -735,7 +735,7 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
         }
       else
         apr_hash_set(*output, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     apr_array_copy(pool, whiteboard_rangelist));
+                     svn_rangelist_dup(whiteboard_rangelist, pool));
     }
 
   return SVN_NO_ERROR;
@@ -836,4 +836,21 @@ svn_mergeinfo_sort(apr_hash_t *input, apr_pool_t *pool)
       qsort(rl->elts, rl->nelts, rl->elt_size, svn_sort_compare_ranges);
     }
   return SVN_NO_ERROR;
+}
+
+apr_array_header_t *
+svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
+{
+  apr_array_header_t *new_rl = apr_array_make(pool, rangelist->nelts,
+                                              sizeof(svn_merge_range_t *));
+  int i;
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
+      *range = *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      APR_ARRAY_PUSH(new_rl, svn_merge_range_t *) = range;
+    }
+
+  return new_rl;
 }

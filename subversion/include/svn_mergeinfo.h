@@ -142,6 +142,13 @@ svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *mergeinput,
 svn_error_t *
 svn_mergeinfo_sort(apr_hash_t *mergeinput, apr_pool_t *pool);
 
+/** Return a deep copy of @a rangelist, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+apr_array_header_t *
+svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
