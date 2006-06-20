@@ -40,6 +40,34 @@ Candidate changes:
       +1: rooneg, dlr
       -1: lundblad
 
+  * r20011
+    Extra python tests for authz validation: export
+    Justification:
+      Tests how secure Subversion is.
+    Votes:
+      +1: lgo
+
+  * r20029
+    Python test for checkout creating intermediate local folders
+    Justification:
+      Test for current (longtime presumably) behaviour.
+    Votes:
+      +1: lgo
+
+  * r20032      
+    Python test that validates that checkout uses the peg rev if provided.
+    Justification:
+      Change is already included in 1.4.x (r18422)  
+    Votes:
+      +1: lgo
+
+  * r20036, r20037
+    Python test for fix for issue 1780
+    Justification:
+      Fix is already included in 1.4.x (r18465)
+    Votes:
+      +1: lgo
+
   * r20041
     Get rid of requirement for another RPM package (chrpath) to build the
     Linux RPM packages.
@@ -67,6 +95,20 @@ Candidate changes:
     Votes:
       +1: rooneg
 
+  * r20101
+    Python test for blame eol-style handling
+    Justification:
+      Fixes and partial test are already included in 1.4.x (r20059)
+    Votes:
+      +1: lgo
+
+  * r20104, r20105, r20106
+    Python tests for diff and blame ignoring whitespaces (-x -w option)
+    Justification:
+      New feature in 1.4.x (r18487)  
+    Votes:
+      +1: lgo
+
   * r20125
     ra_serf: Be more tolerant when updating a WC file without a delta base.
     Justification:
@@ -74,6 +116,14 @@ Candidate changes:
       parameter and causes ra_serf to crash on a subsequent update to that file.
     Votes:
       +1: jerenkrantz, rooneg
+
+  * r20127, r20128
+    Python tests for diff and blame ignoring eol style 
+     (-x --ignore-eol-style option)
+    Justification:
+      New feature in 1.4.x (r18602)  
+    Votes:
+      +1: lgo  
 
   * r20170
     Don't carry around our own Visual Studio project files for Apache/APR --
@@ -91,6 +141,13 @@ Candidate changes:
     Votes:
       +1: djh
       +0: dlr
+
+  * r20179, r20191
+    Python tests for fix for issue 2433
+    Justification:
+      Fix is already included in 1.4.x (r17321)
+    Votes:
+      +1: lgo
 
 Approved changes:
 
