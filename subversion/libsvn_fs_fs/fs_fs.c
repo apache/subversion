@@ -4061,8 +4061,6 @@ static svn_error_t *
 update_mergeinfo_index (svn_fs_txn_t *txn, svn_revnum_t new_rev, 
                         apr_pool_t *pool)
 {
-  fs_txn_data_t *ftd = txn->fsap_data;
-  sqlite3_stmt *stmt;
   apr_hash_t *minfoprops;
   
   SVN_ERR(svn_fs_fs__txn_mergeinfo(&minfoprops, txn, pool));
