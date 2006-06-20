@@ -697,11 +697,46 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
   return SVN_NO_ERROR;
 }
 
+/* ### This function's internal structure largely overlaps with
+   ### svn_mergeinfo_diff().  Can they share code? */
 svn_error_t *
 svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool)
 {
-  /* ### TODO: Implement me! */
+  apr_hash_index_t *hi;
+
+  const void *key;
+  void *val;
+  const char *path;
+  apr_array_header_t *whiteboard_rangelist, *eraser_rangelist;
+
+  *output = apr_hash_make(pool);
+
+  /* Handle path deletions and differences. */
+  for (hi = apr_hash_first(pool, whiteboard); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      whiteboard_rangelist = val;
+
+      /* If the path is not present at all in the "eraser" hash, put
+         the entire "whiteboard" rangelist in OUTPUT.  Paths which are
+         present in the "eraser" hash require closer scrutiny. */
+      eraser_rangelist = apr_hash_get(eraser, path, APR_HASH_KEY_STRING);
+      if (eraser_rangelist)
+        {
+          /* Record any deltas (additions or deletions). */
+          apr_array_header_t *output_rangelist;
+          svn_rangelist_remove(&output_rangelist, eraser_rangelist,
+                               whiteboard_rangelist, pool);
+          if (output_rangelist->nelts > 0)
+            apr_hash_set(*output, apr_pstrdup(pool, path),
+                         APR_HASH_KEY_STRING, output_rangelist);
+        }
+      else
+        apr_hash_set(*output, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
+                     apr_array_copy(pool, whiteboard_rangelist));
+    }
 
   return SVN_NO_ERROR;
 }

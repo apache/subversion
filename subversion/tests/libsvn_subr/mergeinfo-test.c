@@ -295,7 +295,6 @@ test_diff_mergeinfo(const char **msg,
 
   return SVN_NO_ERROR;
 }
-#undef NBR_RANGELIST_DELTAS
 
 static svn_error_t *
 test_merge_mergeinfo(const char **msg,
@@ -354,22 +353,6 @@ test_merge_mergeinfo(const char **msg,
 }
 
 static svn_error_t *
-test_remove_mergeinfo(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
-{
-  *msg = "remove of mergeinfo";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* ### TODO: Implement me! */
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_remove_rangelist(const char **msg,
                       svn_boolean_t msg_only,
                       svn_test_opts_t *opts,
@@ -420,6 +403,34 @@ test_remove_rangelist(const char **msg,
 
   return SVN_NO_ERROR;
 }
+
+/* ### Share code with test_diff_mergeinfo() and test_remove_rangelist(). */
+static svn_error_t *
+test_remove_mergeinfo(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *output, *whiteboard, *eraser;
+  svn_merge_range_t expected_rangelist_remainder[NBR_RANGELIST_DELTAS] =
+    { {7, 7}, {9, 9}, {11, 11}, {33, 34} };
+
+  *msg = "remove of mergeinfo";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &whiteboard,
+                              pool));
+  SVN_ERR(svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &eraser, pool));
+
+  /* Leftover on /trunk should be the set (7, 9, 11, 33-34) */
+  SVN_ERR(svn_mergeinfo_remove(&output, eraser, whiteboard, pool));
+
+  /* Verify calculation of range list remainder. */
+  return verify_mergeinfo_deltas(output, expected_rangelist_remainder,
+                                 "deletion", pool);
+}
+#undef NBR_RANGELIST_DELTAS
 
 static svn_error_t *
 test_rangelist_to_string(const char **msg,
@@ -485,10 +496,10 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_combine_rangeinfo),
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
+    SVN_TEST_PASS(test_remove_rangelist),
+    SVN_TEST_PASS(test_remove_mergeinfo),
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
-    SVN_TEST_PASS(test_remove_mergeinfo),
-    SVN_TEST_PASS(test_remove_rangelist),
     SVN_TEST_PASS(test_rangelist_to_string),
     SVN_TEST_PASS(test_mergeinfo_to_string),
     SVN_TEST_NULL
