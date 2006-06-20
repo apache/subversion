@@ -337,14 +337,21 @@ enable-auto-props = yes
   # -This is file test.dsp.
   # +This is file test.dsp.
   # +Extra line
+  
+  # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we 
+  # define CRLF in a platform independent way.
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
   expected_output = [
   "Index: svn-test-work/working_copies/import_tests-5/test.dsp\n",
   "===================================================================\n",
   "--- svn-test-work/working_copies/import_tests-5/test.dsp\t(revision 2)\n",
   "+++ svn-test-work/working_copies/import_tests-5/test.dsp\t(working copy)\n",
   "@@ -1 +1,2 @@\n",
-  " This is file test.dsp.\n",
-  "+Extra line\n" 
+  " This is file test.dsp." + crlf,
+  "+Extra line" + crlf
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
