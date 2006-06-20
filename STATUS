@@ -53,7 +53,8 @@ Candidate changes:
     Linux RPM packages.
     Justification:
       Using Fedora Core as an example, I figured out a better
-      way to simplfy build package requirements with patch instead of package.
+      way to simplify build package requirements with patch instead of
+      package.
     Votes:
       +1: david
 
