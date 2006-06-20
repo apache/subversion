@@ -282,8 +282,8 @@ test_diff_mergeinfo(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &from, pool);
-  svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &to, pool);
+  SVN_ERR(svn_mergeinfo_parse("/trunk: 1,3-4,7,9,11-12,31-34", &from, pool));
+  SVN_ERR(svn_mergeinfo_parse("/trunk: 1-6,12-16,30-32", &to, pool));
   /* On /trunk: deleted (7, 9, 11, 33-34) and added (2, 5-6, 13-16, 30) */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
 
