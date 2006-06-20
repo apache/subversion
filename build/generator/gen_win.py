@@ -151,7 +151,7 @@ class WinGeneratorBase(GeneratorBase):
     # Check for gen_uri_delims project in apr-util
     gen_uri_path = os.path.join(self.apr_util_path, 'uri',
                                 'gen_uri_delims.dsp')
-    if (os.path.exists(gen_uri_path)):
+    if os.path.exists(gen_uri_path):
       self.have_gen_uri = 1
 
     # Run apr-util's w32locatedb.pl script
@@ -874,13 +874,13 @@ class WinGeneratorBase(GeneratorBase):
     infp.close()
     try:
       txt = outfp.read()
-      if (txt):
+      if txt:
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
       else:
         vermatch = None
 
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
@@ -940,7 +940,7 @@ class WinGeneratorBase(GeneratorBase):
       vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
   
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
