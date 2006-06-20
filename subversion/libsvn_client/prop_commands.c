@@ -612,7 +612,7 @@ svn_client_propget2(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_client__get_prop_from_wc(props, propname, target, pristine,
+      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, target, pristine,
                                            node, adm_access, recurse, ctx,
                                            pool));
       
@@ -623,7 +623,7 @@ svn_client_propget2(apr_hash_t **props,
 }
 
 svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t **props, const char *propname,
+svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              const char *target, svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
@@ -631,7 +631,7 @@ svn_client__get_prop_from_wc(apr_hash_t **props, const char *propname,
                              apr_pool_t *pool)
 {
   static const svn_wc_entry_callbacks_t walk_callbacks = { propget_walk_cb };
-  struct propget_walk_baton wb = { propname, pristine, adm_access, *props };
+  struct propget_walk_baton wb = { propname, pristine, adm_access, props };
 
   /* Fetch the property, recursively or for a single resource. */
   if (recurse && entry->kind == svn_node_dir)
