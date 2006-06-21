@@ -170,9 +170,3 @@ Approved changes:
     Votes:
       +1: lundblad, malcolm, rooneg
 
-  * r20029
-    Python test for checkout creating intermediate local folders
-    Justification:
-      Test for current (longtime presumably) behaviour.
-    Votes:
-      +1: lgo, lundblad
