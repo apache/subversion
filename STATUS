@@ -47,13 +47,6 @@ Candidate changes:
     Votes:
       +1: lgo
 
-  * r20029
-    Python test for checkout creating intermediate local folders
-    Justification:
-      Test for current (longtime presumably) behaviour.
-    Votes:
-      +1: lgo
-
   * r20030
     Fix svn export so it creates intermediate local folders if needed,
     thereby making it consistent with svn checkout.
@@ -176,3 +169,10 @@ Approved changes:
       the client to behave correctly with authz and ra_svn.
     Votes:
       +1: lundblad, malcolm, rooneg
+
+  * r20029
+    Python test for checkout creating intermediate local folders
+    Justification:
+      Test for current (longtime presumably) behaviour.
+    Votes:
+      +1: lgo, lundblad
