@@ -162,11 +162,3 @@ Approved changes:
     Votes:
       +1: djh, brane, rooneg
 
-  * r20008
-    Fix issue #2566: svnserve can cause broken WCs.
-    Justification:
-      Involves protocol change that's good to have in 1.4, allowing
-      the client to behave correctly with authz and ra_svn.
-    Votes:
-      +1: lundblad, malcolm, rooneg
-

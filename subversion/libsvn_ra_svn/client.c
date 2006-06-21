@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -253,10 +253,11 @@ static svn_error_t *auth_response(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_boolean_t compat)
 {
   if (compat)
-    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(ww)", (apr_uint64_t) 1,
+    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(www)", (apr_uint64_t) 1,
                                   mech, mech_arg,
                                   SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                  SVN_RA_SVN_CAP_SVNDIFF1);
+                                  SVN_RA_SVN_CAP_SVNDIFF1,
+                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES);
   else
     return svn_ra_svn_write_tuple(conn, pool, "w(?c)", mech, mech_arg);
 }
@@ -657,9 +658,10 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(ww)c", (apr_uint64_t) 2,
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(www)c", (apr_uint64_t) 2,
                                      SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                     SVN_RA_SVN_CAP_SVNDIFF1, url));
+                                     SVN_RA_SVN_CAP_SVNDIFF1,
+                                     SVN_RA_SVN_CAP_ABSENT_ENTRIES, url));
       SVN_ERR(handle_auth_request(sess, pool));
     }
 
