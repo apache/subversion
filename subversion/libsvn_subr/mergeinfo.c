@@ -725,7 +725,6 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
       eraser_rangelist = apr_hash_get(eraser, path, APR_HASH_KEY_STRING);
       if (eraser_rangelist)
         {
-          /* Record any deltas (additions or deletions). */
           apr_array_header_t *output_rangelist;
           svn_rangelist_remove(&output_rangelist, eraser_rangelist,
                                whiteboard_rangelist, pool);
