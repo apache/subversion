@@ -790,32 +790,36 @@ svn_error_t *
 svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
                         apr_pool_t *pool)
 {
-  apr_array_header_t *sorted1;
-  svn_sort__item_t elt;
-  svn_stringbuf_t *revlist, *combined;
-  int i;
-
   *output = svn_stringbuf_create("", pool);
-  sorted1 = svn_sort__hash(input, svn_sort_compare_items_as_paths, pool);
 
-  /* Handle the elements that need newlines at the end.  */
-  for (i = 0; i < sorted1->nelts -1; i++)
+  if (apr_hash_count(input) > 0)
     {
-      elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
+        apr_array_header_t *sorted =
+          svn_sort__hash(input, svn_sort_compare_items_as_paths, pool);
+        svn_sort__item_t elt;
+        svn_stringbuf_t *revlist, *combined;
+        int i;
+
+      /* Handle the elements that need newlines at the end.  */
+      for (i = 0; i < sorted->nelts - 1; i++)
+        {
+          elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
+
+          SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
+          combined = svn_stringbuf_createf(pool, "%s:%s\n", (char *) elt.key,
+                                           revlist->data);
+          svn_stringbuf_appendstr(*output, combined);
+        }
+
+      /* Now handle the last element, which is not newline terminated.  */
+      elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
 
       SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
-      combined = svn_stringbuf_createf(pool, "%s:%s\n", (char *) elt.key,
+      combined = svn_stringbuf_createf(pool, "%s:%s", (char *) elt.key,
                                        revlist->data);
       svn_stringbuf_appendstr(*output, combined);
     }
 
-  /* Now handle the last element, which is not newline terminated.  */
-  elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
-
-  SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
-  combined = svn_stringbuf_createf(pool, "%s:%s", (char *) elt.key,
-                                   revlist->data);
-  svn_stringbuf_appendstr(*output, combined);
   return SVN_NO_ERROR;
 }
 
