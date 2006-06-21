@@ -715,6 +715,7 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
   /* Handle path deletions and differences. */
   for (hi = apr_hash_first(pool, whiteboard); hi; hi = apr_hash_next(hi))
     {
+      apr_array_header_t *output_rangelist = NULL;
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
       whiteboard_rangelist = val;
@@ -724,17 +725,14 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
          present in the "eraser" hash require closer scrutiny. */
       eraser_rangelist = apr_hash_get(eraser, path, APR_HASH_KEY_STRING);
       if (eraser_rangelist)
-        {
-          apr_array_header_t *output_rangelist;
-          svn_rangelist_remove(&output_rangelist, eraser_rangelist,
-                               whiteboard_rangelist, pool);
-          if (output_rangelist->nelts > 0)
-            apr_hash_set(*output, apr_pstrdup(pool, path),
-                         APR_HASH_KEY_STRING, output_rangelist);
-        }
-      else
+        svn_rangelist_remove(&output_rangelist, eraser_rangelist,
+                             whiteboard_rangelist, pool);
+      else if (whiteboard_rangelist->nelts > 0)
+        output_rangelist = svn_rangelist_dup(whiteboard_rangelist, pool);
+
+      if (output_rangelist && output_rangelist->nelts > 0)
         apr_hash_set(*output, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     svn_rangelist_dup(whiteboard_rangelist, pool));
+                     output_rangelist);
     }
 
   return SVN_NO_ERROR;
