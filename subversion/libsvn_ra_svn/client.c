@@ -1119,7 +1119,7 @@ static svn_error_t *ra_svn_get_merge_info(svn_ra_session_t *session,
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?rb))", revision,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)b)", revision,
                                  include_parents));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));

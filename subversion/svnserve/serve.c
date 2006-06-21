@@ -1351,7 +1351,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path, *info;
   svn_boolean_t include_parents;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?rb)", &paths, &rev, 
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)b", &paths, &rev, 
                                  &include_parents));
   for (i = 0; i < paths->nelts; i++)
     APR_ARRAY_IDX(paths, i, const char *) =
