@@ -116,13 +116,15 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard, apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a input, and convert it
- * back to a text format rangelist in @a output.
+ * back to a text format rangelist in @a output.  If @a input is
+ * empty, return the empty string.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *rangeinput,
-                         apr_pool_t *pool);
+svn_rangelist_to_string(svn_stringbuf_t **output,
+                        apr_array_header_t *rangeinput,
+                        apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a mergeinput, and convert it
  * back to a text format mergeinfo in @a output.
