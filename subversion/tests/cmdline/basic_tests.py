@@ -1729,9 +1729,9 @@ def checkout_creates_intermediate_folders(sbox):
   expected_wc = svntest.main.greek_state
   
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
-                          checkout_target,
-                          expected_output,
-                          expected_wc)
+                                          checkout_target,
+                                          expected_output,
+                                          expected_wc)
 
 # Test that, if a peg revision is provided without an explicit revision, 
 # svn will checkout the directory as it was at rPEG, rather than at HEAD.
