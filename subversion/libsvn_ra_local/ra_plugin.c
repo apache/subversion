@@ -626,12 +626,14 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
                              apr_hash_t **mergeinfo,
                              const apr_array_header_t *paths,
                              svn_revnum_t revision,
+                             svn_boolean_t include_parents,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
 
   SVN_ERR(svn_repos_fs_get_merge_info(mergeinfo, baton->repos, paths,
-                                      revision, NULL, NULL, pool));
+                                      revision, include_parents,
+                                      NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

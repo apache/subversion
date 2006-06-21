@@ -1056,6 +1056,7 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
                             svn_repos_t *repos,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
+                            svn_boolean_t include_parents,
                             svn_repos_authz_func_t authz_read_func,
                             void *authz_read_baton,
                             apr_pool_t *pool);

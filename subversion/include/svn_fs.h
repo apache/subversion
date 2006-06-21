@@ -1154,6 +1154,7 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
 svn_error_t *svn_fs_get_merge_info(svn_fs_root_t *root,
                                    const apr_array_header_t *paths,
                                    apr_hash_t **minfohash,
+                                   svn_boolean_t include_parents,
                                    apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.

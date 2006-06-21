@@ -1349,13 +1349,16 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   int i;
   apr_hash_index_t *hi;
   const char *path, *info;
+  svn_boolean_t include_parents;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)", &paths, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?rb)", &paths, &rev, 
+                                 &include_parents));
   for (i = 0; i < paths->nelts; i++)
     APR_ARRAY_IDX(paths, i, const char *) =
       svn_path_canonicalize(APR_ARRAY_IDX(paths, i, const char *), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos, paths, rev,
+                                          include_parents,
                                           authz_check_access_cb_func(b), b,
                                           pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)

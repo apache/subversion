@@ -3279,6 +3279,7 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
                                          apr_hash_t **mergeinfo,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
+                                         svn_boolean_t include_parents,
                                          apr_pool_t *pool)
 {
   /* ### TODO: Implement me! */

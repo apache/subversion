@@ -730,9 +730,12 @@ svn_fs_change_merge_info(svn_fs_root_t *root, const char *path,
 svn_error_t *
 svn_fs_get_merge_info(svn_fs_root_t *root,
                       const apr_array_header_t *paths,
-                      apr_hash_t **info, apr_pool_t *pool)
+                      apr_hash_t **info, 
+                      svn_boolean_t include_parents,
+                      apr_pool_t *pool)
 {
-  return root->vtable->get_merge_info(root, paths, info, pool);
+  return root->vtable->get_merge_info(root, paths, info, include_parents,
+                                      pool);
 }
 
 svn_error_t *

@@ -1225,6 +1225,7 @@ get_merge_info_for_path(sqlite3 *db,
                         apr_hash_t *result,
                         apr_hash_t *cache,
                         svn_boolean_t setresult,
+                        svn_boolean_t include_parents,
                         apr_pool_t *pool)
 {
   apr_hash_t *cacheresult;
@@ -1272,13 +1273,13 @@ get_merge_info_for_path(sqlite3 *db,
         }
     }
 
-  /* If this path has no mergeinfo, check our parent */
-  if (count == 0 || has_no_mergeinfo)
+  /* If this path has no mergeinfo, and we are asked to, check our parent */
+  if ((count == 0 || has_no_mergeinfo) && include_parents)
     {
       svn_stringbuf_t *parentpath;
       
       apr_hash_set(cache, path, APR_HASH_KEY_STRING, NEGATIVE_CACHE_RESULT);
-          
+      
       /* It is possible we are already at the root.  */
       if (strcmp (path, "") == 0)
         return SVN_NO_ERROR;
@@ -1292,7 +1293,8 @@ get_merge_info_for_path(sqlite3 *db,
         parentpath->data = "";
       
       SVN_ERR(get_merge_info_for_path(db, parentpath->data, rev,
-                                      result, cache, FALSE, pool));
+                                      result, cache, FALSE, include_parents,
+                                      pool));
       if (setresult)
         {
           /* Now translate the result for our parent to our path */
@@ -1329,6 +1331,7 @@ static svn_error_t *
 fs_get_merge_info(svn_fs_root_t *root,
                   const apr_array_header_t *paths,
                   apr_hash_t **mergeinfo,
+                  svn_boolean_t include_parents,
                   apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo_cache = apr_hash_make (pool);
@@ -1353,7 +1356,8 @@ fs_get_merge_info(svn_fs_root_t *root,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       SVN_ERR (get_merge_info_for_path (db, path, rev, *mergeinfo, 
-                                        mergeinfo_cache, TRUE, pool));
+                                        mergeinfo_cache, TRUE, 
+                                        include_parents, pool));
     }
 
   for (i = 0; i < paths->nelts; i++)
