@@ -794,11 +794,11 @@ svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
 
   if (apr_hash_count(input) > 0)
     {
-        apr_array_header_t *sorted =
-          svn_sort__hash(input, svn_sort_compare_items_as_paths, pool);
-        svn_sort__item_t elt;
-        svn_stringbuf_t *revlist, *combined;
-        int i;
+      apr_array_header_t *sorted =
+        svn_sort__hash(input, svn_sort_compare_items_as_paths, pool);
+      svn_sort__item_t elt;
+      svn_stringbuf_t *revlist, *combined;
+      int i;
 
       /* Handle the elements that need newlines at the end.  */
       for (i = 0; i < sorted->nelts - 1; i++)
