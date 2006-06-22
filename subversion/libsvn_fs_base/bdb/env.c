@@ -214,7 +214,6 @@ convert_bdb_error(bdb_env_t *bdb, int db_err)
       bdb_baton.env = bdb->env;
       bdb_baton.bdb = bdb;
       bdb_baton.error_info = get_error_info(bdb);
-      bdb_baton.valid = TRUE;
       SVN_BDB_ERR(&bdb_baton, db_err);
     }
   return SVN_NO_ERROR;
@@ -249,11 +248,19 @@ bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 static apr_status_t
 cleanup_env(void *data)
 {
-#if APR_HAS_THREADS
   bdb_env_t *bdb = data;
-
+  bdb->pool = NULL;
+  bdb->dbconfig_file = NULL;   /* will be closed during pool destruction */
+#if APR_HAS_THREADS
   apr_threadkey_private_delete(bdb->error_info);
 #endif /* APR_HAS_THREADS */
+
+  /* If there are no references to this descriptor, free its memory here,
+     so that we don't leak it if create_env returns an error.
+     See bdb_close, which takes care of freeing this memory if the
+     environment is still open when the cache is destroyed. */
+  if (!bdb->refcount)
+    free(data);
 
   return APR_SUCCESS;
 }
@@ -264,23 +271,34 @@ static svn_error_t *
 create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
 {
   int db_err;
-  bdb_env_t *bdb = apr_pcalloc(pool, sizeof(*bdb));
+  bdb_env_t *bdb;
+  const char *path_bdb;
+  char *tmp_path, *tmp_path_bdb;
+  apr_size_t path_size, path_bdb_size;
+
+#if SVN_BDB_PATH_UTF8
+  path_bdb = svn_path_local_style(path, pool);
+#else
+  SVN_ERR(svn_utf_cstring_from_utf8(&path_bdb,
+                                    svn_path_local_style(path, pool),
+                                    pool));
+#endif
+  
+  /* Allocate the whole structure, including strings, from the heap,
+     because it must survive the cache pool cleanup. */
+  path_size = strlen(path) + 1;
+  path_bdb_size = strlen(path_bdb) + 1;
+  bdb = calloc(1, sizeof(*bdb) + path_size + path_bdb_size);
 
   /* We must initialize this now, as our callers may assume their bdb
      pointer is valid when checking for errors.  */
   apr_pool_cleanup_register(pool, bdb, cleanup_env, apr_pool_cleanup_null);
   apr_cpystrn(bdb->errpfx_string, BDB_ERRPFX_STRING,
               sizeof(bdb->errpfx_string));
-
-  bdb->path = apr_pstrdup(pool, path);
-#if SVN_BDB_PATH_UTF8
-  bdb->path_bdb = svn_path_local_style(bdb->path, pool);
-#else
-  SVN_ERR(svn_utf_cstring_from_utf8(&bdb->path_bdb,
-                                    svn_path_local_style(bdb->path, pool),
-                                    pool));
-#endif
-
+  bdb->path = tmp_path = (char*)(bdb + 1);
+  bdb->path_bdb = tmp_path_bdb = tmp_path + path_size;
+  apr_cpystrn(tmp_path, path, path_size);
+  apr_cpystrn(tmp_path_bdb, path_bdb, path_bdb_size);
   bdb->pool = pool;
   *bdbp = bdb;
 
@@ -506,40 +524,21 @@ bdb_close(bdb_env_t *bdb)
   if (db_err && (!SVN_BDB_AUTO_RECOVER || db_err != DB_RUNRECOVERY))
     err = convert_bdb_error(bdb, db_err);
 
-  apr_pool_destroy(bdb->pool);
+  /* Free the environment descriptor. The pool cleanup will do this unless
+     the cache has already been destroyed. */
+  if (bdb->pool)
+    apr_pool_destroy(bdb->pool);
+  else
+    free(bdb);
   return err;
 }
 
-
-/* Pool cleanup that invalidates the environment baton.
-   This pool cleanup is registered in the environment descriptor's pool.
-   The cleanup can be run in one of two cases:
-    - Explicitly during svn_fs_bdb__close, in the context of the baton
-      owner's thread, and with the global cache mutex locked.
-      This will happen either after an explicit call to svn_fs_bdb__close,
-      or during cleanup of the baton's pool.  In both cases, the baton
-      is considered dead afterwards.
-    - Implicitly during apr_terminate, when the cache is destroyed; this
-      is guaranteed to happen in a single-threaded context.
-*/
-static apr_status_t
-invalidate_env_baton(void *data)
-{
-  bdb_env_baton_t *bdb_baton = data;
-  bdb_baton->valid = FALSE;
-  return APR_SUCCESS;
-}
 
 svn_error_t *
 svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 {
   svn_error_t *err = SVN_NO_ERROR;
   bdb_env_t *bdb = bdb_baton->bdb;
-
-  /* Don't do anything if the BDB baton has been invalidated; if it
-     has been, then the environment is already closed. */
-  if (!bdb_baton->valid)
-    return SVN_NO_ERROR;
 
   assert(bdb_baton->env == bdb_baton->bdb->env);
 
@@ -549,6 +548,9 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 
   if (0 == --bdb_baton->error_info->refcount)
     {
+      /* ###
+         Oh bother, this is another potential pool-cleanup-ordering bug.
+         Should we just skip this line if bdb->pool==0? See cleanup_env. */
       svn_error_clear(bdb_baton->error_info->pending_errors);
 #if APR_HAS_THREADS
       free(bdb_baton->error_info);
@@ -557,8 +559,6 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
     }
 
   acquire_cache_mutex();
-  apr_pool_cleanup_run(bdb->pool, bdb_baton, invalidate_env_baton);
-
   if (--bdb->refcount != 0)
     {
       release_cache_mutex();
@@ -612,7 +612,7 @@ cleanup_env_baton(void *data)
 {
   bdb_env_baton_t *bdb_baton = data;
 
-  if (bdb_baton->valid && bdb_baton->bdb)
+  if (bdb_baton->bdb)
     svn_error_clear(svn_fs_bdb__close(bdb_baton));
 
   return APR_SUCCESS;
@@ -706,11 +706,8 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
       (*bdb_batonp)->env = bdb->env;
       (*bdb_batonp)->bdb = bdb;
       (*bdb_batonp)->error_info = get_error_info(bdb);
-      (*bdb_batonp)->valid = TRUE;
       ++(*bdb_batonp)->error_info->refcount;
       apr_pool_cleanup_register(pool, *bdb_batonp, cleanup_env_baton,
-                                apr_pool_cleanup_null);
-      apr_pool_cleanup_register(bdb->pool, *bdb_batonp, invalidate_env_baton,
                                 apr_pool_cleanup_null);
     }
 
@@ -724,7 +721,7 @@ svn_fs_bdb__get_panic(bdb_env_baton_t *bdb_baton)
 {
   /* An invalid baton is equivalent to a panicked environment; in both
      cases, database cleanups should be skipped. */
-  if (!bdb_baton->valid)
+  if (!bdb_baton->bdb)
     return TRUE;
 
   assert(bdb_baton->env == bdb_baton->bdb->env);
@@ -734,7 +731,7 @@ svn_fs_bdb__get_panic(bdb_env_baton_t *bdb_baton)
 void
 svn_fs_bdb__set_panic(bdb_env_baton_t *bdb_baton)
 {
-  if (!bdb_baton->valid)
+  if (!bdb_baton->bdb)
     return;
 
   assert(bdb_baton->env == bdb_baton->bdb->env);
