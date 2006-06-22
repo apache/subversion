@@ -34,7 +34,7 @@ some contact is acceptable, asking the server about each file is not).
 3. To be able to edit merge information in a human editable form.
 
 4. For the information to be stored in a space efficient manner, and to
-be able to determine the revisions merged into a given file/director in
+be able to determine the revisions merged into a given file/directory in
 a time efficient manner.
 
 5. Still getting a conservatively correct answer (not worse than what we
@@ -274,7 +274,7 @@ variant that represents the same information).
 Repeated merge with indirect info: 
 Assume the repository is in the state it would be after the "Repeated
 merge" example.
-Assume additionally, we onw have a branch /branches/next-release, with
+Assume additionally, we now have a branch /branches/next-release, with
 revisions 20-24 on it.
 
 We wish to merge /branches/release into /branches/next-release.
@@ -355,7 +355,7 @@ Yes.  Depending on the urls and target you specify for merges, I
 believe it is possible to end up with merge info in different places,
 or with slightly different revision lines that have the same semantic
 effect (IE info like /trunk:1-9 vs /trunk:1-8<newline>/trunk/bar:9
-when revision 9 on /trunk only affected /trunk/bar) posyou can end up
+when revision 9 on /trunk only affected /trunk/bar), so you can end up
 with merge info in different places, even though the semantic result
 will be the same in all cases.
 
