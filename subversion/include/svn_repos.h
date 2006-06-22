@@ -428,7 +428,7 @@ svn_repos_begin_report(void **report_baton,
  * drive.
  *
  * If @a start_empty is true and @a path is a directory, then require the
- * caller to explicitly provide all the children of @path - do not assume
+ * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a path at @a revision.
  * This is for 'low confidence' client reporting.
  * 
@@ -459,7 +459,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
 
 /**
  * Given a @a report_baton constructed by svn_repos_begin_report(), 
- * record the presence of @path in the current tree, containing the contents
+ * record the presence of @a path in the current tree, containing the contents
  * of @a link_path at @a revision.
  *
  * Note that while @a path is relative to the anchor/target used in the
@@ -467,7 +467,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  * path!
  *
  * If @a start_empty is true and @a path is a directory, then require the
- * caller to explicitly provide all the children of @path - do not assume
+ * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a link_path at
  * @a revision.  This is for 'low confidence' client reporting.
  *
