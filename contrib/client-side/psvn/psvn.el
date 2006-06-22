@@ -79,6 +79,7 @@
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
+;; C-o   - svn-status-find-file-other-window-noselect
 ;; v     - svn-status-view-file-other-window
 ;; I     - svn-status-parse-info
 ;; V     - svn-status-svnversion
@@ -93,6 +94,7 @@
 ;; P y   - svn-status-property-set-eol-style
 ;; P x   - svn-status-property-set-executable
 ;; h     - svn-status-use-history
+;; x     - svn-status-update-buffer
 ;; q     - svn-status-bury-buffer
 
 ;; C-x C-j - svn-status-dired-jump
@@ -841,9 +843,11 @@ inside loops."
   "Examine the status of Subversion working copy in directory DIR.
 If ARG is -, allow editing of the parameters. One could add -N to
 run svn status non recursively to make it faster.
-For every other non nil ARG pass the -u argument to `svn status'.
+For every other non nil ARG pass the -u argument to `svn status', which
+asks svn to connect to the repository and check to see if there are updates
+there.
 
-If there is no .svn directory, examine if there is SVN and run
+If there is no .svn directory, examine if there is CVS and run
 `cvs-examine'. Otherwise ask if to run `dired'."
   (interactive (list (svn-read-directory-name "SVN status directory: "
                                               nil default-directory nil)
@@ -1397,11 +1401,13 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "s") 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map (kbd "f") 'svn-status-find-files)
   (define-key svn-status-mode-map (kbd "o") 'svn-status-find-file-other-window)
+  (define-key svn-status-mode-map (kbd "C-o") 'svn-status-find-file-other-window-noselect)
   (define-key svn-status-mode-map (kbd "v") 'svn-status-view-file-other-window)
   (define-key svn-status-mode-map (kbd "e") 'svn-status-toggle-edit-cmd-flag)
   (define-key svn-status-mode-map (kbd "g") 'svn-status-update)
   (define-key svn-status-mode-map (kbd "M-s") 'svn-status-update) ;; PCL-CVS compatibility
   (define-key svn-status-mode-map (kbd "q") 'svn-status-bury-buffer)
+  (define-key svn-status-mode-map (kbd "x") 'svn-status-update-buffer)
   (define-key svn-status-mode-map (kbd "h") 'svn-status-use-history)
   (define-key svn-status-mode-map (kbd "m") 'svn-status-set-user-mark)
   (define-key svn-status-mode-map (kbd "u") 'svn-status-unset-user-mark)
@@ -1713,6 +1719,14 @@ See `svn-status-marked-files' for what counts as selected."
   (svn-status-ensure-cursor-on-file)
   (find-file-other-window (svn-status-line-info->filename
                            (svn-status-get-line-information))))
+
+(defun svn-status-find-file-other-window-noselect ()
+  "Open the file in the other window for editing, but don't select it."
+  (interactive)
+  (svn-status-ensure-cursor-on-file)
+  (display-buffer
+   (find-file-noselect (svn-status-line-info->filename
+                        (svn-status-get-line-information)))))
 
 (defun svn-status-view-file-other-window ()
   "Open the file in the other window for viewing."
@@ -2230,7 +2244,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
             "\n")))
 
 (defun svn-status-update-buffer ()
-  "Update the `svn-status-buffer-name' buffer, using `svn-status-info'."
+  "Update the `svn-status-buffer-name' buffer, using `svn-status-info'.
+  This function does not access the repository."
   (interactive)
   ;(message "buffer-name: %s" (buffer-name))
   (unless (string= (buffer-name) svn-status-buffer-name)
