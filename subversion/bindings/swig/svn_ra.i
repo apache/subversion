@@ -174,6 +174,14 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) (const svn_ra_reporter2_t *reporter, void *report_baton)
+{
+  $1 = (svn_ra_reporter2_t *)&swig_py_ra_reporter2;
+  $2 = (void *)$input;
+}
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
