@@ -906,6 +906,10 @@ def make_repo_and_wc(sbox, create_wc = True):
   guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
+    # this dir doesn't exist out of the box, so we may have to make it
+    if not os.path.exists(main.general_wc_dir):
+      os.makedirs(main.general_wc_dir)
+        
     # copy the pristine wc and relocate it to our new repository.
     duplicate_dir(main.pristine_wc_dir, sbox.wc_dir)
 
