@@ -447,6 +447,12 @@ svn_wc_crawl_revisions2(const char *path,
                            svn_path_dirname(path, pool),
                            adm_access,
                            FALSE, pool));
+
+      if (! parent_entry) 
+        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
+
       base_rev = parent_entry->revision;
       SVN_ERR(reporter->set_path(report_baton, "", base_rev,
                                  entry ? entry->incomplete : TRUE, 
