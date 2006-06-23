@@ -6,7 +6,7 @@ from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH
 from urllib import pathname2url
 
-class SubversionRepositoryTestCase(unittest.TestCase):
+class SubversionRepositoryAccessTestCase(unittest.TestCase):
   """Test cases for the Subversion repository layer"""
 
   def setUp(self):
@@ -110,7 +110,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     ra.reporter2_invoke_finish_report(reporter, reporter_baton)
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
+    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test',
                               suiteClass=SubversionRepositoryTestSetup)
 
 if __name__ == '__main__':
