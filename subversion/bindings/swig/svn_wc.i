@@ -253,6 +253,11 @@
   $1 = svn_swig_py_notify_func;
   $2 = $input; /* our function is the baton. */
 }
+
+%typemap(in) (svn_wc_notify_func2_t notify_func, void *notify_baton) {
+  $1 = svn_swig_py_notify_func2;
+  $2 = $input; /* our function is the baton. */
+}
 #endif
 
 /* -----------------------------------------------------------------------

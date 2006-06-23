@@ -31,7 +31,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     client.checkout2(self.repos_url, self.path, rev, rev, True, True, 
             client_ctx)
 
-    self.wc = wc.adm_open3(None, self.path, True, 0, None)
+    self.wc = wc.adm_open3(None, self.path, True, -1, None)
 
   def test_entry(self):
       wc_entry = wc.entry(self.path, self.wc, True)
@@ -69,6 +69,55 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
   def test_init_traversal_info(self):
       wc.init_traversal_info()
+
+  def test_crawl_revisions2(self):
+      infos = []
+      set_paths = []
+
+      def notify(info, pool):
+          infos.append(info)
+
+      class MyReporter:
+          def __init__(self):
+              self._finished_report = False
+
+          def abort_report(self, pool):
+              pass
+
+          def finish_report(self, pool):
+              self._finished_report = True
+
+          def set_path(self, path, revision, start_empty, lock_token, pool):
+              set_paths.append(path)
+
+          def link_path(self, path, url, revision, start_empty, lock_token,
+                        pool):
+              pass
+
+          def delete_path(self, path, pool):
+              pass
+
+      # Remove trunk/README.txt
+      readme_path = os.path.join(self.path, "trunk", "README.txt")
+      self.assert_(os.path.exists(readme_path))
+      os.remove(readme_path)
+
+      # Restore trunk/README.txt using crawl_revision2
+      info = wc.init_traversal_info()
+      reporter = MyReporter()
+      wc.crawl_revisions2(self.path, self.wc, reporter,
+                          True, True, False, notify, info)
+
+      # Check that the report finished
+      self.assert_(reporter._finished_report)
+      self.assertEqual([''], set_paths)
+      self.assertEqual(1, len(infos))
+
+      # Check content of infos object
+      [info] = infos
+      self.assertEqual(readme_path, info.path)
+      self.assertEqual(core.svn_node_file, info.kind)
+      self.assertEqual(core.svn_invalid_revnum, info.revision)
 
   def test_create_notify(self):
       wc.create_notify(self.path, wc.notify_add)

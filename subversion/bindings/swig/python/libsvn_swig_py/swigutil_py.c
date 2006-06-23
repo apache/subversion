@@ -658,6 +658,7 @@ DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
     svn_auth_ssl_server_cert_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(info, svn_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(commit_info, svn_commit_info_dup)
+DECLARE_SWIG_CONSTRUCTOR(wc_notify, svn_wc_dup_notify)
 
 static PyObject *convert_log_changed_path(void *value, void *ctx,
                                           PyObject *py_pool)
@@ -1628,6 +1629,41 @@ void svn_swig_py_notify_func(void *baton,
 }
 
 
+void svn_swig_py_notify_func2(void *baton,
+                              const svn_wc_notify_t *notify,
+                              apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"(O&O&)",
+                                      make_ob_wc_notify, notify,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  /* Our error has no place to go. :-( */
+  if (err)
+    svn_error_clear(err);
+
+  svn_swig_py_release_py_lock();
+}
+
 void svn_swig_py_status_func(void *baton,
                              const char *path,
                              svn_wc_status_t *status)
@@ -2379,5 +2415,177 @@ error:
   return err;
 }
 
+static svn_error_t *reporter_set_path(void *report_baton,
+                           const char *path,
+                           svn_revnum_t revision,
+                           svn_boolean_t start_empty,
+                           const char *lock_token,
+                           apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_reporter = report_baton, *result;
 
+  if (py_reporter == NULL || py_reporter == Py_None)
+    return SVN_NO_ERROR;
 
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallMethod(py_reporter,
+                                    (char *)"set_path",
+                                    (char *)"slbsO&",
+                                    path, revision,
+                                    start_empty, lock_token,
+                                    make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+static svn_error_t *reporter_delete_path(void *report_baton,
+                         const char *path,
+                        apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_reporter = report_baton, *result;
+
+  if (py_reporter == NULL || py_reporter == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallMethod(py_reporter,
+                                    (char *)"delete_path",
+                                    (char *)"sO&",
+                                    path, 
+                                    make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+    
+static svn_error_t *reporter_link_path(void *report_baton,
+                            const char *path,
+                            const char *url,
+                            svn_revnum_t revision,
+                            svn_boolean_t start_empty,
+                            const char *lock_token,
+                            apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_reporter = report_baton, *result;
+
+  if (py_reporter == NULL || py_reporter == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallMethod(py_reporter,
+                                    (char *)"link_path",
+                                    (char *)"sslbsO&",
+                                    path, url, revision,
+                                    start_empty, lock_token,
+                                    make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+static svn_error_t *reporter_finish_report(void *report_baton,
+                                apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  PyObject *py_reporter = report_baton, *result;
+
+  if (py_reporter == NULL || py_reporter == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallMethod(py_reporter,
+                                    (char *)"finish_report",
+                                    (char *)"O&",
+                                    make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+static svn_error_t *reporter_abort_report(void *report_baton,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  PyObject *py_reporter = report_baton, *result;
+
+  if (py_reporter == NULL || py_reporter == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallMethod(py_reporter,
+                                    (char *)"abort_report",
+                                    (char *)"O&",
+                                    make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+const svn_ra_reporter2_t swig_py_ra_reporter2 = {
+    reporter_set_path,
+    reporter_delete_path,
+    reporter_link_path,
+    reporter_finish_report,
+    reporter_abort_report
+};
