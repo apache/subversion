@@ -53,6 +53,8 @@
 ;; R     - svn-status-mv                    run 'svn mv'
 ;; D     - svn-status-rm                    run 'svn rm'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
+;; k     - svn-status-lock                  run 'svn lock'
+;; K     - svn-status-unlock                run 'svn unlock'
 ;; b     - svn-status-blame                 run 'svn blame'
 ;; X e   - svn-status-export                run 'svn export'
 ;; RET   - svn-status-find-file-or-examine-directory
@@ -150,7 +152,7 @@
 ;; * import                    used         (in svn-admin-create-trunk-directory)
 ;; * info                      implemented
 ;; * list (ls)                 implemented
-;; * lock
+;; * lock                      implemented
 ;; * log                       implemented
 ;; * merge
 ;; * mkdir                     implemented
@@ -164,7 +166,7 @@
 ;; * revert                    implemented
 ;; * status (stat, st)         implemented
 ;; * switch (sw)
-;; * unlock
+;; * unlock                    implemented
 ;; * update (up)               implemented
 
 ;; For the not yet implemented commands you should use the command line
@@ -1118,6 +1120,12 @@ can edit ARGLIST before running svn."
                  ((eq svn-process-cmd 'add)
                   (svn-status-update-with-command-list (svn-status-parse-ar-output))
                   (message "svn add finished"))
+                 ((eq svn-process-cmd 'lock)
+                  (svn-status-update)
+                  (message "svn lock finished"))
+                 ((eq svn-process-cmd 'unlock)
+                  (svn-status-update)
+                  (message "svn unlock finished"))
                  ((eq svn-process-cmd 'mkdir)
                   (svn-status-update)
                   (message "svn mkdir finished"))
@@ -1229,7 +1237,8 @@ The results are used to build the `svn-status-info' variable."
           (svn-marks)
           (svn-file-mark)
           (svn-property-mark)
-          (svn-locked-mark)
+          (svn-wc-locked-mark)
+          (svn-repo-locked-mark)
           (svn-with-history-mark)
           (svn-switched-mark)
           (svn-update-mark)
@@ -1241,7 +1250,7 @@ The results are used to build the `svn-status-info' variable."
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width)
           (svn-marks-length (if (and svn-status-verbose svn-status-remote)
-                                8 5))
+                                8 6))
           (dir-set '(".")))
       (set-buffer "*svn-process*")
       (setq svn-status-info nil)
@@ -1273,16 +1282,18 @@ The results are used to build the `svn-status-info' variable."
           (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))
                 svn-file-mark (elt svn-marks 0)         ; 1st column - M,A,C,D,G,? etc
                 svn-property-mark (elt svn-marks 1)     ; 2nd column - M,C (properties)
-                svn-locked-mark (elt svn-marks 2)       ; 3rd column - L or blank
+                svn-wc-locked-mark (elt svn-marks 2)    ; 3rd column - L or blank
                 svn-with-history-mark (elt svn-marks 3) ; 4th column - + or blank
-                svn-switched-mark (elt svn-marks 4))     ; 5th column - S or blank
+                svn-switched-mark (elt svn-marks 4)     ; 5th column - S or blank
+                svn-repo-locked-mark (elt svn-marks 5)) ; 6th column - K,O,T,B or blank
           (if (and svn-status-verbose svn-status-remote)
               (setq svn-update-mark (elt svn-marks 7))) ; 8th column - * or blank
           (when (eq svn-property-mark ?\ )     (setq svn-property-mark nil))
-          (when (eq svn-locked-mark ?\ )       (setq svn-locked-mark nil))
+          (when (eq svn-wc-locked-mark ?\ )    (setq svn-wc-locked-mark nil))
           (when (eq svn-with-history-mark ?\ ) (setq svn-with-history-mark nil))
           (when (eq svn-switched-mark ?\ )     (setq svn-switched-mark nil))
           (when (eq svn-update-mark ?\ )       (setq svn-update-mark nil))
+          (when (eq svn-repo-locked-mark ?\ )  (setq svn-repo-locked-mark nil))
           (forward-char svn-marks-length)
           (skip-chars-forward " ")
           (cond
@@ -1318,9 +1329,10 @@ The results are used to build the `svn-status-info' variable."
                                             last-change-rev
                                             author
                                             svn-update-mark
-                                            svn-locked-mark
+                                            svn-wc-locked-mark
                                             svn-with-history-mark
-                                            svn-switched-mark)
+                                            svn-switched-mark
+                                            svn-repo-locked-mark)
                                       svn-status-info))
           (setq revision-width (max revision-width
                                     (length (number-to-string local-rev))
@@ -1447,6 +1459,8 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "D") 'svn-status-rm)
   (define-key svn-status-mode-map (kbd "c") 'svn-status-commit)
   (define-key svn-status-mode-map (kbd "M-c") 'svn-status-cleanup)
+  (define-key svn-status-mode-map (kbd "k") 'svn-status-lock)
+  (define-key svn-status-mode-map (kbd "K") 'svn-status-unlock)
   (define-key svn-status-mode-map (kbd "U") 'svn-status-update-cmd)
   (define-key svn-status-mode-map (kbd "M-u") 'svn-status-update-cmd)
   (define-key svn-status-mode-map (kbd "r") 'svn-status-revert)
@@ -1545,6 +1559,8 @@ A and B must be line-info's."
     ["svn revert" svn-status-revert t]
     ["svn resolved" svn-status-resolved t]
     ["svn cleanup" svn-status-cleanup t]
+    ["svn lock" svn-status-lock t]
+    ["svn unlock" svn-status-unlock t]
     ["Show Process Buffer" svn-status-show-process-buffer t]
     ("Property"
      ["svn proplist" svn-status-property-list t]
@@ -1803,6 +1819,11 @@ history, when it will be \"+\"."
 This is column five of the output from `svn status'.
 The result will be nil or \"S\"."
   (nth 10 line-info))
+(defun svn-status-line-info->repo-locked (line-info)
+  "Return whether LINE-INFO is switched relative to its parent.
+This is column six of the output from `svn status'.
+The result will be \"K\", \"O\", \"T\", \"B\" or nil."
+  (nth 11 line-info))
 
 (defun svn-status-line-info->is-visiblep (line-info)
   (not (or (svn-status-line-info->hide-because-unknown line-info)
@@ -2239,10 +2260,18 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                              (or (svn-status-line-info->localrev line-info) "")
                              (or (svn-status-line-info->lastchangerev line-info) "")
                              (svn-status-line-info->author line-info))
-                     (if svn-status-short-mod-flag-p update-available filename)
-                     (if svn-status-short-mod-flag-p filename update-available)
+                     (when svn-status-short-mod-flag-p update-available filename)
+                     (when svn-status-short-mod-flag-p filename update-available)
                      (svn-status-maybe-add-string (svn-status-line-info->locked line-info)
                                                   " [ LOCKED ]" 'svn-status-locked-face)
+                     (svn-status-maybe-add-string (svn-status-line-info->repo-locked line-info)
+                                                  (let ((flag (svn-status-line-info->repo-locked line-info)))
+                                                    (cond ((eq flag ?K) " [ REPO-LOCK-HERE ]")
+                                                          ((eq flag ?O) " [ REPO-LOCK-OTHER ]")
+                                                          ((eq flag ?T) " [ REPO-LOCK-STOLEN ]")
+                                                          ((eq flag ?B) " [ REPO-LOCK-BROKEN ]")
+                                                          (t " [ REPO-LOCK-UNKNOWN ]")))
+                                                  'svn-status-locked-face)
                      (svn-status-maybe-add-string (svn-status-line-info->switched line-info)
                                                   " (switched)" 'svn-status-switched-face)
                      elide-hint)
@@ -3025,6 +3054,22 @@ When this function is called with a prefix argument, use the actual file instead
   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
   (svn-run t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
+
+(defun svn-status-lock (arg)
+  "Run `svn lock' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive "P")
+  (message "locking: %S" (svn-status-get-file-list-names t))
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list t) "")
+  (svn-run t t 'lock "lock" "--targets" svn-status-temp-arg-file))
+
+(defun svn-status-unlock (arg)
+  "Run `svn unlock' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive "P")
+  (message "unlocking: %S" (svn-status-get-file-list-names t))
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list t) "")
+  (svn-run t t 'unlock "unlock" "--targets" svn-status-temp-arg-file))
 
 (defun svn-status-make-directory (dir)
   "Run `svn mkdir DIR'."
