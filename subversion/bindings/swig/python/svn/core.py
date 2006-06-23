@@ -34,6 +34,10 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 
 Pool = _core.svn_pool_create
 
+# Setup consistent names for revnum constants
+svn_ignored_revnum = SWIG_SVN_IGNORED_REVNUM
+svn_invalid_revnum = SWIG_SVN_INVALID_REVNUM
+
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
   path2_len = len (path2);
