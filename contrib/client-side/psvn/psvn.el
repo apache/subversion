@@ -1974,6 +1974,8 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <replaced>"))
           ((equal action 'updated)
            (setq tag-string " <updated>"))
+          ((equal action 'updated-props)
+           (setq tag-string " <updated-props>"))
           ((equal action 'conflicted)
            (setq tag-string " <conflicted>")
            (svn-status-line-info->set-filemark line-info ?C))
@@ -2110,8 +2112,12 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
               ((looking-at "G")
                (setq action 'merged))
 
+              ((looking-at " U")
+               (setq action 'updated-props))
+
               (t ;; this should never be needed(?)
-               (setq action 'unknown)))
+               (setq action (concat "parse-update: '"
+                                    (buffer-substring-no-properties (point) (+ 2 (point))) "'"))))
         (unless skip ;found an interesting line
           (forward-char 3)
           (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
