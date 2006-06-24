@@ -45,7 +45,7 @@ svn_wc_merge2(const char *left,
               const apr_array_header_t *merge_options,
               apr_pool_t *pool)
 {
-  const char *tmp_target, *result_target, *tmp_left, *tmp_right;
+  const char *tmp_target, *result_target;
   const char *mt_pt, *mt_bn;
   apr_file_t *result_f;
   svn_boolean_t is_binary;
@@ -69,14 +69,20 @@ svn_wc_merge2(const char *left,
   
   if (! is_binary)              /* this is a text file */
     {
+      apr_uint32_t translate_opts = SVN_WC_TRANSLATE_TO_NF;
+
+      if (diff3_cmd)
+        /* Force a copy into the temporary wc area to avoid having
+           temporary files created below to appear in the actual wc. */
+        translate_opts |= SVN_WC_TRANSLATE_FORCE_COPY;
+
       /* Make sure a temporary copy of 'target' is available with keywords
          contracted and line endings in repository-normal (LF) form.
          This is the file that diff3 will read as the 'mine' file.  */
       SVN_ERR(svn_wc_translated_file2
               (&tmp_target, merge_target,
                merge_target, adm_access,
-               SVN_WC_TRANSLATE_TO_NF
-               | SVN_WC_TRANSLATE_FORCE_COPY, pool));
+               translate_opts, pool));
 
       /* Open a second temporary file for writing; this is where diff3
          will write the merged results. */
@@ -85,35 +91,37 @@ svn_wc_merge2(const char *left,
                                        svn_io_file_del_on_pool_cleanup,
                                        pool));
 
-      /* LEFT and RIGHT might be in totally different directories than
-         MERGE_TARGET, and our diff3 command wants them all to be in
-         the same directory.  So make temporary copies of LEFT and
-         RIGHT right next to the target. */
-      SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_left,
-                                       tmp_target,
-                                       SVN_WC__TMP_EXT,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       pool));
-      SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_right,
-                                       tmp_target,
-                                       SVN_WC__TMP_EXT,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       pool));
-
-      SVN_ERR(svn_io_copy_file(left, tmp_left, TRUE, pool));
-      SVN_ERR(svn_io_copy_file(right, tmp_right, TRUE, pool));
-
       /* Run an external merge if requested. */
       if (diff3_cmd)
         {
           int exit_code;
+          const char *tmp_left, *tmp_right;
+
+          /* LEFT and RIGHT might be in totally different directories than
+             MERGE_TARGET, and our [external] diff3 command wants them all
+             to be in the same directory.  So make temporary copies of LEFT
+             and RIGHT right next to the target. */
+
+          SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_left,
+                                           tmp_target,
+                                           SVN_WC__TMP_EXT,
+                                           svn_io_file_del_on_pool_cleanup,
+                                           pool));
+          SVN_ERR(svn_io_copy_file(left, tmp_left, TRUE, pool));
+
+          SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_right,
+                                           tmp_target,
+                                           SVN_WC__TMP_EXT,
+                                           svn_io_file_del_on_pool_cleanup,
+                                           pool));
+          SVN_ERR(svn_io_copy_file(right, tmp_right, TRUE, pool));
 
           SVN_ERR(svn_io_run_diff3_2(".",
                                      tmp_target, tmp_left, tmp_right,
                                      target_label, left_label, right_label,
                                      result_f, &exit_code, diff3_cmd,
                                      merge_options, pool));
-          
+
           contains_conflicts = exit_code == 1;
         }
       else
@@ -132,7 +140,7 @@ svn_wc_merge2(const char *left,
             SVN_ERR(svn_diff_file_options_parse(options, merge_options, pool));
 
           SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                        tmp_left, tmp_target, tmp_right,
+                                        left, tmp_target, right,
                                         options, pool));
 
           /* Labels fall back to sensible defaults if not specified. */
@@ -152,7 +160,7 @@ svn_wc_merge2(const char *left,
             right_marker = ">>>>>>> .new";
 
           SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                             tmp_left, tmp_target, tmp_right,
+                                             left, tmp_target, right,
                                              left_marker,
                                              target_marker,
                                              right_marker,
