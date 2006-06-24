@@ -155,6 +155,11 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
         wc.get_pristine_copy_path(os.path.join(self.path, 'foo')),
         os.path.join(self.path, wc.get_adm_dir(), 'text-base', 'foo.svn-base'))
 
+  def test_entries_read(self):
+      entries = wc.entries_read(self.wc, True)
+        
+      self.assertEqual(['', 'tags', 'branches', 'trunk'], entries.keys())
+
   def tearDown(self):
       wc.adm_close(self.wc)
       shutil.rmtree(self.path)
