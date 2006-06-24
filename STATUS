@@ -153,12 +153,12 @@ Candidate changes:
 
   * r20225
     Additional documentation for Ruby bindings
-    Justification::
+    Justification:
       Documentation is always good and the revision only adds docs.
-      Merge conflicts unless earlier Ruby changes are not merged into
-        1.4.x branch.
+    Note:
+      Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
-      +1: blair
+      +1: blair, nori
 
 Approved changes:
 
