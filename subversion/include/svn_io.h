@@ -912,11 +912,12 @@ svn_error_t *svn_io_run_diff(const char *dir,
  * If @a user_args is non-NULL, replace "-E" with the <tt>const char*</tt>
  * elements that @a user_args contains.
  *
- * @a mine, @a older, and @a yours are utf8-encoded paths, relative to @a dir, 
- * to three files that already exist.  @a merged is an open file handle, and
- * is left open after the merge result is written to it. (@a merged
- * should *not* be the same file as @a mine, or nondeterministic things
- * may happen!)
+ * @a mine, @a older and @a yours are utf8-encoded paths (relative to
+ * @a dir or absolute) to three files that already exist.
+ *
+ * @a merged is an open file handle, and is left open after the merge
+ * result is written to it. (@a merged should *not* be the same file
+ * as @a mine, or nondeterministic things may happen!)
  *
  * @a mine_label, @a older_label, @a yours_label are utf8-encoded label
  * parameters for diff3's -L option.  Any of them may be @c NULL, in
