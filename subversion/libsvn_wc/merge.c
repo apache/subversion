@@ -95,29 +95,9 @@ svn_wc_merge2(const char *left,
       if (diff3_cmd)
         {
           int exit_code;
-          const char *tmp_left, *tmp_right;
-
-          /* LEFT and RIGHT might be in totally different directories than
-             MERGE_TARGET, and our [external] diff3 command wants them all
-             to be in the same directory.  So make temporary copies of LEFT
-             and RIGHT right next to the target. */
-
-          SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_left,
-                                           tmp_target,
-                                           SVN_WC__TMP_EXT,
-                                           svn_io_file_del_on_pool_cleanup,
-                                           pool));
-          SVN_ERR(svn_io_copy_file(left, tmp_left, TRUE, pool));
-
-          SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_right,
-                                           tmp_target,
-                                           SVN_WC__TMP_EXT,
-                                           svn_io_file_del_on_pool_cleanup,
-                                           pool));
-          SVN_ERR(svn_io_copy_file(right, tmp_right, TRUE, pool));
 
           SVN_ERR(svn_io_run_diff3_2(".",
-                                     tmp_target, tmp_left, tmp_right,
+                                     tmp_target, left, right,
                                      target_label, left_label, right_label,
                                      result_f, &exit_code, diff3_cmd,
                                      merge_options, pool));
