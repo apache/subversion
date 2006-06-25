@@ -161,6 +161,10 @@ config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 pristine_wc_dir = os.path.join(temp_dir, "wc")
 default_config_dir = config_dir
 
+# calculate repo url from pristine_dir
+pristine_url = test_area_url + '/' + pristine_dir
+if windows == 1:
+  pristine_url = string.replace(pristine_url, '\\', '/')
 
 #
 # Our pristine greek-tree state.

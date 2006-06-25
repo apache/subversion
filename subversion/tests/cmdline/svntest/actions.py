@@ -73,11 +73,6 @@ def guarantee_greek_repository(path):
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
 
-    # build a URL for doing an import.
-    url = main.test_area_url + '/' + main.pristine_dir
-    if main.windows == 1:
-      url = string.replace(url, '\\', '/')
-
     # import the greek tree, using l:foo/p:bar
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
@@ -85,7 +80,7 @@ def guarantee_greek_repository(path):
                                   '--username', main.wc_author,
                                   '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
-                                  main.greek_dump_dir, url)
+                                  main.greek_dump_dir, main.pristine_url)
 
     # check for any errors from the import
     if len(errput):
@@ -140,7 +135,7 @@ def guarantee_greek_repository(path):
     expected_wc = main.greek_state
   
     # Do a checkout, and verify the resulting output and disk contents.
-    run_and_verify_checkout(main.test_area_url + '/' + main.pristine_dir, 
+    run_and_verify_checkout(main.pristine_url, 
                             main.pristine_wc_dir,
                             expected_output,
                             expected_wc)
@@ -916,7 +911,7 @@ def make_repo_and_wc(sbox, create_wc = True):
     output, errput = main.run_svn (None, 'switch', '--relocate',
                                '--username', main.wc_author,
                                '--password', main.wc_passwd,
-                               main.test_area_url + '/' + main.pristine_dir,
+                               main.pristine_url,
                                main.current_repo_url, sbox.wc_dir)
   else:
     # just make sure the parent folder of our working copy is created
