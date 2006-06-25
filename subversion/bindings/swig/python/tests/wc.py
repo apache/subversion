@@ -160,6 +160,9 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
         
       self.assertEqual(['', 'tags', 'branches', 'trunk'], entries.keys())
 
+  def test_get_ignores(self):
+      self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
+
   def tearDown(self):
       wc.adm_close(self.wc)
       shutil.rmtree(self.path)
