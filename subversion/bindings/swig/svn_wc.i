@@ -190,6 +190,20 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in, numinputs=0)
+     apr_array_header_t **patterns (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(argout, fragment="t_output_helper")
+     apr_array_header_t **patterns
+{
+  $result = t_output_helper($result,
+                          svn_swig_py_array_to_list(*$1));
+}
+#endif
+
 /* -----------------------------------------------------------------------
    apr_array_header_t *wcprop_changes
    svn_wc_process_committed2()
