@@ -28,6 +28,9 @@ Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 
+# Constant for the merge info property.
+SVN_PROP_MERGE_INFO = "svn:mergeinfo"
+
 def shorten_path_kludge(path):
   '''Search for the comment entitled "The Merge Kluge" elsewhere in
   this file, to understand why we shorten, and subsequently chdir()
@@ -241,6 +244,7 @@ def textual_merges_galore(sbox):
                       + ">>>>>>> .merge-right.r3\n")
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
+  expected_status.tweak('', status=' M')
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('A/B/lambda', status='M ')
   expected_status.tweak('A/D/G/pi', status='M ')
@@ -337,7 +341,7 @@ def textual_merges_galore(sbox):
                       )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
-                             { ''     : Item(wc_rev=1, status='  '),
+                             { ''     : Item(wc_rev=1, status=' M'),
                                'rho'  : Item(wc_rev=2, status='G '),
                                'pi'   : Item(wc_rev=1, status='G '),
                                'tau'  : Item(wc_rev=1, status='C '),
