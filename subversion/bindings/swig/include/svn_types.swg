@@ -177,12 +177,18 @@
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *RANGELIST {
     $1 = svn_swig_py_rangelist_to_array ($input, _global_pool);
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
 }
 #endif
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_hash_t *MERGEINFO {
     $1 = svn_swig_py_mergeinfo_from_dict ($input, _global_pool);
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
 }
 #endif
 #ifdef SWIGPYTHON
@@ -194,6 +200,9 @@
         svn_swig_py_mergeinfo_to_dict(*$1,
 				      $descriptor(svn_merge_range_t *),
 				      _global_svn_swig_py_pool));
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
 }
 #endif
 /* -----------------------------------------------------------------------
