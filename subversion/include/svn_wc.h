@@ -1095,6 +1095,10 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * If @a filename is unmodified but has a timestamp variation then this
+ * function may "repair" @a filename's text-time by setting it to
+ * @a filename's last modification time.
  */
 svn_error_t *svn_wc_text_modified_p(svn_boolean_t *modified_p,
                                     const char *filename,
