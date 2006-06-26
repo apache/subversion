@@ -1668,10 +1668,10 @@ parse_merge_info(apr_hash_t **mergeinfo, const char *wcpath,
   return SVN_NO_ERROR;
 }
 
-/* Calculate merge info -- for use by do_merge()'s application of the
-   editor to the WC -- by subtracting revisions which have already
-   been merged from the requested range, and storing what's left in
-   REMAINING_RANGES (as svn_merge_range_t *'s). */
+/* Calculate a rangelist of svn_merge_range_t *'s -- for use by
+   do_merge()'s application of the editor to the WC -- by subtracting
+   revisions which have already been merged into the WC from the
+   requested range, and storing what's left in REMAINING_RANGES. */
 static svn_error_t *
 calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        const char *rel_path,
