@@ -323,13 +323,15 @@ module Svn
     #
     # [created_rev]
     #   Returns a revision at which the instance was last modified.
-    # [has_props]
-    #   Returns true if the instance has properties.
+    # [have_props?]
+    #   Returns +true+ if the instance has properties.
     # [last_author]
     #   Returns an author who last modified the instance.
     # [size]
     #   Returns a size of the instance.
     class Dirent
+      alias have_props? has_props
+
       # Returns +true+ when the instance is none.
       def none?
         kind == NODE_NONE
