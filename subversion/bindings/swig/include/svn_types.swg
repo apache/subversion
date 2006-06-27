@@ -19,8 +19,8 @@
 /* This interface file only defines types and their related information.
    There is no module associated with this interface file. */
 
-%include apr.swg
 %include exception.i
+%import apr.swg
 
 #ifdef SWIGRUBY
 #  if SWIG_VERSION <= 0x010327
