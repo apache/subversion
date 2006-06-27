@@ -1671,7 +1671,8 @@ parse_merge_info(apr_hash_t **mergeinfo, const char *wcpath,
 /* Calculate a rangelist of svn_merge_range_t *'s -- for use by
    do_merge()'s application of the editor to the WC -- by subtracting
    revisions which have already been merged into the WC from the
-   requested range, and storing what's left in REMAINING_RANGES. */
+   requested range, and storing what's left in REMAINING_RANGES.
+   TARGET_MERGEINFO is expected to be non-NULL. */
 static svn_error_t *
 calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        const char *rel_path,
@@ -1680,6 +1681,7 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        apr_pool_t *pool)
 {
   apr_array_header_t *requested_merge;
+  apr_array_header_t *target_rangelist;
 
   /* Create a mergeinfo structure representing the requested merge. */
   requested_merge = apr_array_make(pool, 1, sizeof(range));
@@ -1692,15 +1694,11 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   /* Subtract the revision ranges which have already been merged into
      the WC (if any) from the range requested for merging (to avoid
      repeated merging). */
-  if (target_mergeinfo)
-    {
-      apr_array_header_t *target_rangelist =
-        apr_hash_get(target_mergeinfo, rel_path, APR_HASH_KEY_STRING);
-
-      if (target_rangelist)
-        SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
-                                     requested_merge, pool));
-    }
+  target_rangelist = apr_hash_get(target_mergeinfo, rel_path,
+                                  APR_HASH_KEY_STRING);
+  if (target_rangelist)
+    SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
+                                 requested_merge, pool));
 
   return SVN_NO_ERROR;
 }
