@@ -17,7 +17,7 @@
  */
 
 #ifdef SWIGPYTHON
-%include proxy.swg
+%import proxy.swg
 
 %nodefault apr_array_header_t;
 %nodefault apr_file_t;

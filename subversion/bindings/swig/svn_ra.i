@@ -24,14 +24,8 @@
 %module ra
 #endif
 
-%include typemaps.i
-%include constraints.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 
 /* bad pool convention, also these should not be public interface at all

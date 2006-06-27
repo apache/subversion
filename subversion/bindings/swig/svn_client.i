@@ -24,14 +24,8 @@
 %module client
 #endif
 
-%include typemaps.i
-%include constraints.i
-
 %include svn_global.swg
 %import core.i
-%import apr.swg
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 %import svn_wc.i
 
@@ -571,7 +565,6 @@
 #endif
 %}
 
-%include svn_time_h.swg
 %include svn_client_h.swg
 
 #ifdef SWIGPYTHON
