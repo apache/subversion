@@ -26,7 +26,7 @@ del _unprefix_names
 # Names that are not to be exported
 import sys as _sys, os as _os, popen2 as _popen2, tempfile as _tempfile
 import __builtin__
-import svn.core as _core
+import svn.core as _svncore
 
 
 def entries(root, path, pool=None):
@@ -53,12 +53,12 @@ class FileDiff:
   def either_binary(self):
     "Return true if either of the files are binary."
     if self.path1 is not None:
-      prop = node_prop(self.root1, self.path1, _core.SVN_PROP_MIME_TYPE)
-      if prop and _core.svn_mime_type_is_binary(prop):
+      prop = node_prop(self.root1, self.path1, _svncore.SVN_PROP_MIME_TYPE)
+      if prop and _svncore.svn_mime_type_is_binary(prop):
         return 1
     if self.path2 is not None:
-      prop = node_prop(self.root2, self.path2, _core.SVN_PROP_MIME_TYPE)
-      if prop and _core.svn_mime_type_is_binary(prop):
+      prop = node_prop(self.root2, self.path2, _svncore.SVN_PROP_MIME_TYPE)
+      if prop and _svncore.svn_mime_type_is_binary(prop):
         return 1
     return 0
 
@@ -69,12 +69,12 @@ class FileDiff:
       stream = file_contents(root, path, pool)
       try:
         while 1:
-          chunk = _core.svn_stream_read(stream, _core.SVN_STREAM_CHUNK_SIZE)
+          chunk = _svncore.svn_stream_read(stream, _svncore.SVN_STREAM_CHUNK_SIZE)
           if not chunk:
             break
           fp.write(chunk)
       finally:
-        _core.svn_stream_close(stream)
+        _svncore.svn_stream_close(stream)
     fp.close()
     
     
@@ -103,7 +103,7 @@ class FileDiff:
           
     # the windows implementation of popen2 requires a string
     if _sys.platform == "win32":
-      cmd = _core.argv_to_command_string(cmd)
+      cmd = _svncore.argv_to_command_string(cmd)
 
     # open the pipe, forget the end for writing to the child (we won't),
     # and then return the file object for reading from the child.

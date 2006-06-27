@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.core import *
-import libsvn.core as _core
+import libsvn.core as _libsvncore
 import atexit as _atexit
 
 def _cleanup_application_pool():
@@ -32,7 +32,7 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
 
-Pool = _core.svn_pool_create
+Pool = _libsvncore.svn_pool_create
 
 # Setup consistent names for revnum constants
 svn_ignored_revnum = SWIG_SVN_IGNORED_REVNUM
@@ -218,4 +218,4 @@ def run_app(func, *args, **kw):
   APR is initialized, and an application pool is created. Cleanup is
   performed as the function exits (normally or via an exception).
   '''
-  return apply(func, (_core.application_pool,) + args, kw)
+  return apply(func, (application_pool,) + args, kw)
