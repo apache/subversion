@@ -223,7 +223,7 @@ typedef apr_int32_t time_t;
 {
   $1 = &temp;
 }
-%typemap(argout, fragment="output_helper")
+%typemap(argout, fragment="t_output_helper")
      apr_array_header_t **OUTPUT_OF_PROP
 {
   /* FIXME: Actually do something here. */
