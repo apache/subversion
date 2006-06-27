@@ -34,9 +34,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Parse the mergeinfo from @a input into @a mergehash, mapping from paths
- * to arrays of @c svn_merge_range_t.  Perform temporary allocations
- * in @a pool.
+/** Parse the mergeinfo from @a input into @a mergehash, mapping from
+ * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
+ * elements.  If no merge info is available, return an empty hash
+ * (never @c NULL).  Perform temporary allocations in @a pool.
  *
  * Note: @a mergehash will contain rangelists that are guaranteed to be
  * sorted.
