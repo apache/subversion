@@ -93,10 +93,23 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 }
 #endif
 
+#ifndef SWIGPYTHON
+/* Python users have to use svn_swig_py_make_editor manually, which sucks.
+   Maybe we could allow people to pass a python object in the editor parameter,
+   and None as the baton, and automatically invoke svn_swig_py_make_editor,
+   rather than forcing the svn_swig_py_make_editor to be done manually.
+   Of course, ideally, the baton parameter would vanish from the python
+   side entirely, but we can't kill compatibility like that until 2.0.
+*/
 %apply (const svn_delta_editor_t *EDITOR, void *BATON)
 {
-  (const svn_delta_editor_t *editor, void *edit_baton)
+  (const svn_delta_editor_t *editor, void *baton),
+  (const svn_delta_editor_t *editor, void *edit_baton),
+  (const svn_delta_editor_t *editor, void *file_baton),
+  (const svn_delta_editor_t *diff_editor, void *diff_baton),
+  (const svn_delta_editor_t *update_editor, void *update_baton)
 }
+#endif
 
 /* -----------------------------------------------------------------------
    handle svn_txdelta_window_handler_t/baton pair.

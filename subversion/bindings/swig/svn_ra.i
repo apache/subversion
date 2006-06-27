@@ -112,12 +112,6 @@
 }
 #endif
 
-%apply (const svn_delta_editor_t *EDITOR, void *BATON)
-{
-  (const svn_delta_editor_t *update_editor, void *update_baton),
-  (const svn_delta_editor_t *diff_editor, void *diff_baton)
-}
-
 #ifdef SWIGPERL
 %typemap(in) (const svn_ra_callbacks_t *callbacks,
 		     void *callback_baton) {
