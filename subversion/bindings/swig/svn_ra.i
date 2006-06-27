@@ -57,7 +57,10 @@
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+#ifndef SWIGRUBY
+/* FIXME: Presumably Ruby needs a typemap for this too. */
 %apply apr_hash_t **DIRENTHASH { apr_hash_t **dirents };
+#endif
 
 %apply const char *MAY_BE_NULL {
     const char *comment,

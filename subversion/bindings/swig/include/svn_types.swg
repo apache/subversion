@@ -270,6 +270,13 @@
 }
 #endif
 
+#ifndef SWIGRUBY
+/* FIXME: Presumably Ruby needs a typemap for this too. */
+%apply (const char *PTR, apr_size_t LEN) {
+    (const char *data, apr_size_t len)
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Handle retrieving the error message from svn_strerror
 */
