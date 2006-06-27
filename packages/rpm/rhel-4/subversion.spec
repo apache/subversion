@@ -106,6 +106,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Jun 26 2006 David Summers <david@summersoft.fay.ar.us> r20253
+- Follow-up to r20040, changed %{apache_dir} to %{_libdir} and %{_prefix} to
+  %{_libdir} to help out people compiling 64-bit versions.
+  Thanks to Toby Johnson and others.
+
 * Sun Jun 11 2006 David Summers <david@summersoft.fay.ar.us> r20040
 - Figured out another (better) way to fix Subversion bug #1456 instead of
   depending on a third program (chrpath); Used Fedora Core RPATH patch to
@@ -573,7 +578,7 @@ rmdir $RPM_BUILD_ROOT/%{_libdir}/svn-python
 make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 
 # Clean up unneeded files for package installation
-rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
+rm -rf $RPM_BUILD_ROOT/%{_libdir}/perl5/%{perl_version}
 
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/subversion
@@ -633,8 +638,8 @@ rm -rf $RPM_BUILD_ROOT
 %files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.so
+%{_libdir}/httpd/modules/mod_dav_svn.so
+%{_libdir}/httpd/modules/mod_authz_svn.so
 
 %files perl
 %defattr(-,root,root)
