@@ -49,9 +49,6 @@
 #endif
 %}
 
-/* We don't want to hear about supposedly bad constant values */
-#pragma SWIG nowarn=305
-
 /* ### for now, let's ignore this thing. */
 #ifndef SWIGRUBY
 %ignore svn_prop_t;
@@ -746,15 +743,22 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_pools_h.swg
 %include svn_version_h.swg
 %include svn_time_h.swg
+
 #ifdef SWIGRUBY
 %immutable name;
 %immutable value;
 #endif
+/* The constant SVN_PROP_REVISION_ALL_PROPS is a C fragment, not a single
+   data value, so the SWIG parser will raise a 305 warning if we don't
+   suppress it. */
+#pragma SWIG nowarn=305
 %include svn_props_h.swg
+#pragma SWIG nowarn=+305
 #ifdef SWIGRUBY
 %mutable name;
 %mutable value;
 #endif
+
 %include svn_opt_h.swg
 %include svn_auth_h.swg
 %include svn_config_h.swg
