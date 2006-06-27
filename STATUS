@@ -69,6 +69,13 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r20040, r20255, r20256
+    RPM changes to correctly build on x86-64 architecture.
+    Justfication:
+      Quite a few user requests and also RPMs should work on all architectures.
+    Votes:
+      +1: david
+    
   * r20041
     Get rid of requirement for another RPM package (chrpath) to build the
     Linux RPM packages.
