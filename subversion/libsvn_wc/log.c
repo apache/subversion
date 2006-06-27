@@ -99,6 +99,10 @@
    and there is no lock token for the file in the working copy. */
 #define SVN_WC__LOG_MAYBE_READONLY "maybe-readonly"
 
+/* Make file SVN_WC__LOG_ATTR_NAME executable if the
+   executable property is set. */
+#define SVN_WC__LOG_MAYBE_EXECUTABLE "maybe-executable"
+
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 
@@ -154,8 +158,11 @@
 /* This one is for SVN_WC__LOG_MERGE
    and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
 #define SVN_WC__LOG_ATTR_ARG_1          "arg1"
-/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
+/* This one is for SVN_WC__LOG_MERGE
+   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate a versioned
+   path to take its translation properties from */
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"
+/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_ARG_3          "arg3"
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
@@ -207,10 +214,12 @@ enum svn_wc__xfer_action {
       svn_wc__xfer_append:             append contents of NAME to DEST
       svn_wc__xfer_cp_and_translate:   copy NAME to DEST, doing any eol
                                        and keyword expansion according to
-                                       the current property vals of DEST.
+                                       the current property vals of VERSIONED
+                                       or, if that's NULL, those of DEST.
       svn_wc__xfer_cp_and_detranslate: copy NAME to DEST, converting to LF
                                        and contracting keywords according to
-                                       the current property vals of NAME.
+                                       the current property vals of VERSIONED
+                                       or, if that's NULL, those of NAME.
 
       When SPECIAL_ONLY is TRUE, only translate special,
       not keywords and eol-style.
@@ -220,18 +229,24 @@ static svn_error_t *
 file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      const char *dest,
+                     const char *versioned,
                      enum svn_wc__xfer_action action,
                      svn_boolean_t special_only,
                      svn_boolean_t rerun,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *full_from_path, *full_dest_path;
+  const char *full_from_path, *full_dest_path, *full_versioned_path;
 
   full_from_path = svn_path_join(svn_wc_adm_access_path(adm_access), name,
                                  pool);
   full_dest_path = svn_path_join(svn_wc_adm_access_path(adm_access), dest,
                                  pool);
+  if (versioned)
+    full_versioned_path = svn_path_join(svn_wc_adm_access_path(adm_access),
+                                        versioned, pool);
+  else
+    full_versioned_path = NULL; /* Silence GCC uninitialised warning */
 
   switch (action)
     {
@@ -254,7 +269,8 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 
         err = svn_wc_translated_file2
           (&tmp_file,
-           full_from_path, full_dest_path, adm_access,
+           full_from_path, versioned ? full_versioned_path : full_dest_path,
+           adm_access,
            SVN_WC_TRANSLATE_FROM_NF
            | SVN_WC_TRANSLATE_FORCE_COPY,
            pool);
@@ -282,7 +298,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc_translated_file2
                 (&tmp_file,
                  full_from_path,
-                 full_from_path, adm_access,
+                 versioned ? full_versioned_path : full_from_path, adm_access,
                  SVN_WC_TRANSLATE_TO_NF
                  | SVN_WC_TRANSLATE_FORCE_COPY,
                  pool));
@@ -538,12 +554,16 @@ log_do_file_xfer(struct log_runner *loggy,
 {
   svn_error_t *err;
   const char *dest = NULL;
+  const char *versioned;
   svn_boolean_t special_only;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
   special_only =
     svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_1, atts) != NULL;
+  versioned =
+    svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
+
   if (! dest)
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'dest' attribute in '%s'"),
@@ -551,8 +571,8 @@ log_do_file_xfer(struct log_runner *loggy,
                              (svn_wc_adm_access_path(loggy->adm_access),
                               loggy->pool));
 
-  err = file_xfer_under_path(loggy->adm_access, name, dest, action,
-                             special_only, loggy->rerun, loggy->pool);
+  err = file_xfer_under_path(loggy->adm_access, name, dest, versioned,
+                             action, special_only, loggy->rerun, loggy->pool);
   if (err)
     signal_error(loggy, err);
 
@@ -577,6 +597,21 @@ log_do_file_readonly(struct log_runner *loggy,
     }
   else
     return err;
+}
+
+/* Maybe make file NAME in log's CWD executable */
+static svn_error_t *
+log_do_file_maybe_executable(struct log_runner *loggy,
+                             const char *name)
+{
+  const char *full_path
+    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                    loggy->pool);
+
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
+                                      loggy->pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Maybe make file NAME in log's CWD readonly */
@@ -1508,6 +1543,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   else if (strcmp(eltname, SVN_WC__LOG_MAYBE_READONLY) == 0) {
     err = log_do_file_maybe_readonly(loggy, name);
   }
+  else if (strcmp(eltname, SVN_WC__LOG_MAYBE_EXECUTABLE) == 0) {
+    err = log_do_file_maybe_executable(loggy, name);
+  }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
   }
@@ -2133,6 +2171,23 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                                   SVN_WC__LOG_MV, FALSE, adm_access,
                                   src_path, dst_path, remove_dst_if_no_src,
                                   pool);
+}
+
+
+svn_error_t *
+svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const char *path,
+                                   apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum,
+                        pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_MAYBE_EXECUTABLE,
+                        SVN_WC__LOG_ATTR_NAME, path,
+                        NULL);
+
+  return SVN_NO_ERROR;
 }
 
 
