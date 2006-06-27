@@ -1152,7 +1152,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
         {
           svn_merge_range_t *temprange;
           
-          mergedfrom = sqlite3_column_text(stmt, 0);
+          mergedfrom = (char *) sqlite3_column_text(stmt, 0);
           startrev = sqlite3_column_int64(stmt, 1);
           endrev = sqlite3_column_int64(stmt, 2);
           if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
