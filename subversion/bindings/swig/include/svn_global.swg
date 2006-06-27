@@ -58,7 +58,7 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 }
 
 /* Output arguments */
-%typemap (out) SWIGTYPE *, SWIGTYPE &
+%typemap (out) SWIGTYPE *
     "$result = svn_swig_NewPointerObj((void*)($1), $descriptor, 
                                       _global_svn_swig_py_pool);";
 
