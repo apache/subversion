@@ -151,14 +151,22 @@ Candidate changes:
     Votes:
       +1: lgo
 
-  * r20225
-    Additional documentation for Ruby bindings
+  * r20166
+    Add install-swig-rb-doc make target.
     Justification:
-      Documentation is always good and the revision only adds docs.
-    Note:
-      Depends on r20042 - merge conflicts unless this revision is not merged.
+      Improves usability for the bindings around documentation.
     Votes:
-      +1: blair, nori
+      +0: nori
+
+  * r20248
+    Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
+    by adding a method, Svn::Core::Dirent#have_props?.
+    Justification:
+      Adds only one alias and improves usability for the bindings.
+    Note:
+      Depends on r20225 - merge conflicts unless this revision is not merged.
+    Votes:
+      +1: nori
 
 Approved changes:
 
@@ -171,3 +179,11 @@ Approved changes:
     Votes:
       +1: djh, brane, rooneg
 
+  * r20225
+    Additional documentation for Ruby bindings
+    Justification:
+      Documentation is always good and the revision only adds docs.
+    Note:
+      Depends on r20042 - merge conflicts unless this revision is not merged.
+    Votes:
+      +1: blair, nori
