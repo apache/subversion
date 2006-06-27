@@ -1790,9 +1790,11 @@ do_merge(const char *initial_URL1,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL1, NULL,
                                                NULL, NULL, FALSE, TRUE, 
                                                ctx, pool));
-  /* Resolve the revision numbers. */
+  /* Resolve the revision numbers, and store them as a merge range.
+     Note that the "start" of a merge range is inclusive. */
   SVN_ERR(svn_client__get_revision_number
           (&range.start, ra_session, revision1, path1, pool));
+  range.start += 1;
   SVN_ERR(svn_client__get_revision_number
           (&range.end, ra_session, revision2, path2, pool));
 
@@ -1821,6 +1823,8 @@ do_merge(const char *initial_URL1,
      may create holes in range to merge.  Loop over the revision
      ranges we have left to merge, getting an editor for each range,
      and applying its delta. */
+  /* ### FIXME: Handle notification callbacks for multiple merges into
+     ### a single versioned resource. */
   for (i = 0; i < remaining_ranges->nelts; i++)
     {
       svn_merge_range_t *r = APR_ARRAY_IDX(remaining_ranges, i,
@@ -1833,7 +1837,7 @@ do_merge(const char *initial_URL1,
                                           recurse,
                                           dry_run,
                                           ra_session2,
-                                          r->start,
+                                          r->start - 1,
                                           ctx->notify_func2,
                                           ctx->notify_baton2,
                                           ctx->cancel_func,
@@ -1851,6 +1855,11 @@ do_merge(const char *initial_URL1,
                               TRUE,  /* text_deltas */
                               URL2,
                               diff_editor, diff_edit_baton, pool));
+
+      SVN_ERR(reporter->set_path(report_baton, "", range.start - 1, FALSE,
+                                 NULL, pool));
+
+      SVN_ERR(reporter->finish_report(report_baton, pool));
     }
 
   if (!dry_run)
@@ -1873,11 +1882,6 @@ do_merge(const char *initial_URL1,
                                target_wcpath, adm_access,
                                TRUE /* skip checks */, pool));
     }
-
-  SVN_ERR(reporter->set_path(report_baton, "", range.start, FALSE, NULL,
-                             pool));
-  
-  SVN_ERR(reporter->finish_report(report_baton, pool));
   
   return SVN_NO_ERROR;
 }
