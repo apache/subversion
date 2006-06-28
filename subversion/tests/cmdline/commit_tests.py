@@ -1989,6 +1989,39 @@ def post_commit_hook_test(sbox):
   svntest.actions.run_and_verify_svn (None, expected_output, [],
                                       'ci', '-m', 'log msg', iota_path)
 
+#----------------------------------------------------------------------
+# Commit two targets non-recursively, but both targets should be the 
+# same folder (in multiple variations). Test that svn handles this correctly.
+def commit_same_folder_in_targets(sbox):
+  "commit two targets, both the same folder"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota') 
+
+  svntest.main.file_append (iota_path, "added extra line to file iota")
+  
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  # Commit the wc_dir and iota.
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         '-N',
+                                         wc_dir,
+                                         iota_path)
 
 ########################################################################
 # Run the tests
@@ -2029,7 +2062,8 @@ test_list = [ None,
               mods_in_schedule_delete,
               Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
               local_mods_are_not_commits,
-              post_commit_hook_test
+              post_commit_hook_test,
+              commit_same_folder_in_targets,
              ]
 
 if __name__ == '__main__':
