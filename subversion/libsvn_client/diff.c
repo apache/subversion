@@ -1821,6 +1821,7 @@ do_merge(const char *initial_URL1,
      may create holes in range to merge.  Loop over the revision
      ranges we have left to merge, getting an editor for each range,
      and applying its delta. */
+  /* ### FIXME: Handle reverts. */
   /* ### FIXME: Handle notification callbacks for multiple merges into
      ### a single versioned resource. */
   for (i = 0; i < remaining_ranges->nelts; i++)
@@ -1854,7 +1855,7 @@ do_merge(const char *initial_URL1,
                               URL2,
                               diff_editor, diff_edit_baton, pool));
 
-      SVN_ERR(reporter->set_path(report_baton, "", range.start - 1, FALSE,
+      SVN_ERR(reporter->set_path(report_baton, "", r->start - 1, FALSE,
                                  NULL, pool));
 
       SVN_ERR(reporter->finish_report(report_baton, pool));
