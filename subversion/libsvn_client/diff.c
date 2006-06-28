@@ -1843,13 +1843,18 @@ do_merge(const char *initial_URL1,
                                                NULL, NULL, FALSE, TRUE, 
                                                ctx, pool));
   /* Resolve the revision numbers, and store them as a merge range.
-     Note that the "start" of a merge range is inclusive. */
+     Determine whether this merge adds or backs out changes
+     (e.g. merge vs.  revert), and handle the fact that a
+     svn_merge_range_t's "start" and "end" are inclusive. */
   SVN_ERR(svn_client__get_revision_number
           (&range.start, ra_session, revision1, path1, pool));
   SVN_ERR(svn_client__get_revision_number
           (&range.end, ra_session, revision2, path2, pool));
   is_revert = (range.start > range.end);
-  range.start += 1;
+  if (is_revert)
+    range.end += 1;
+  else
+    range.start += 1;
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -1875,11 +1880,13 @@ do_merge(const char *initial_URL1,
      may create holes in range to merge.  Loop over the revision
      ranges we have left to merge, getting an editor for each range,
      and applying its delta. */
-  /* ### FIXME: Handle reverts. */
   /* ### FIXME: Handle notification callbacks for multiple merges into
      ### a single versioned resource. */
   for (i = 0; i < remaining_ranges->nelts; i++)
     {
+      /* When using this merge range, account for the exclusivity of
+         its low value (which is indicated by this operation being a
+         merge vs. revert). */
       svn_merge_range_t *r = APR_ARRAY_IDX(remaining_ranges, i,
                                            svn_merge_range_t *);
 
@@ -1890,7 +1897,7 @@ do_merge(const char *initial_URL1,
                                           recurse,
                                           dry_run,
                                           ra_session2,
-                                          r->start - 1,
+                                          is_revert ? r->start : r->start - 1,
                                           ctx->notify_func2,
                                           ctx->notify_baton2,
                                           ctx->cancel_func,
@@ -1901,7 +1908,7 @@ do_merge(const char *initial_URL1,
 
       SVN_ERR(svn_ra_do_diff2(ra_session,
                               &reporter, &report_baton,
-                              r->end,
+                              is_revert ? r->end - 1 : r->end,
                               "",
                               recurse,
                               ignore_ancestry,
@@ -1909,8 +1916,9 @@ do_merge(const char *initial_URL1,
                               URL2,
                               diff_editor, diff_edit_baton, pool));
 
-      SVN_ERR(reporter->set_path(report_baton, "", r->start - 1, FALSE,
-                                 NULL, pool));
+      SVN_ERR(reporter->set_path(report_baton, "",
+                                 is_revert ? r->start : r->start - 1,
+                                 FALSE, NULL, pool));
 
       SVN_ERR(reporter->finish_report(report_baton, pool));
     }
