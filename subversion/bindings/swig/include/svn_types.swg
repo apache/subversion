@@ -684,7 +684,7 @@
   $result = output_helper($result, rb_str_new2(digest_string));
 }
 
-%typemap(in, numinputs=0) unsigned char **digest ($*1_type temp)
+%typemap(in, numinputs=0) unsigned char **digest (unsigned char *temp)
 {
     $1 = &temp;
 }

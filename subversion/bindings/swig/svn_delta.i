@@ -178,6 +178,11 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 %}
 #endif
 
+
+#ifdef SWIGRUBY
+%ignore svn_txdelta_to_svndiff2;
+#endif
+
 %include svn_delta_h.swg
 
 /* -----------------------------------------------------------------------
