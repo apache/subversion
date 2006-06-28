@@ -150,18 +150,6 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 /* -----------------------------------------------------------------------

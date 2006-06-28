@@ -22,8 +22,33 @@
 /* SWIG can't understand __attribute__(x), so we make it go away */
 #define __attribute__(x)
 
-#ifdef SWIGPYTHON
+/* SWIG doesn't handle variadic parameters well */
+%ignore svn_string_createv;
+%ignore svn_stringbuf_createv;
 
+%{
+#include "svn_time.h"
+#include "svn_pools.h"
+%}
+
+#ifdef SWIGPYTHON
+%{
+#include "swigutil_py.h"
+%}
+#endif
+#ifdef SWIGPERL
+%{
+#include "swigutil_pl.h"
+%}
+#endif
+#ifdef SWIGRUBY
+%{
+#include "swigutil_rb.h"
+%}
+#endif
+
+
+#ifdef SWIGPYTHON
 %feature("autodoc",1);
 
 %{
@@ -133,20 +158,11 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 #define svn_argnum_obj18 19
 #define svn_argnum_obj19 20
 %}
-
 #endif
+
 
 #ifdef SWIGRUBY
 %{
 static VALUE _global_svn_swig_rb_pool = Qnil;
 %}
 #endif
-
-/* SWIG doesn't handle variadic parameters well */
-%ignore svn_string_createv;
-%ignore svn_stringbuf_createv;
-
-%{
-#include "svn_time.h"
-#include "svn_pools.h"
-%}

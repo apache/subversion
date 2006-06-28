@@ -172,19 +172,4 @@
 
 /* ----------------------------------------------------------------------- */
 
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
-%}
-
 %include svn_ra_h.swg
-

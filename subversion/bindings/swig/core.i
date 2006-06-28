@@ -32,21 +32,14 @@
 
 #include "svn_md5.h"
 #include "svn_diff.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
+%}
 
 #ifdef SWIGRUBY
+%{
 #include <apu.h>
 #include <apr_xlate.h>
-#include "swigutil_rb.h"
-#endif
 %}
+#endif
 
 /* ### for now, let's ignore this thing. */
 #ifndef SWIGRUBY

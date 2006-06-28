@@ -180,18 +180,6 @@
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 #ifdef SWIGRUBY
