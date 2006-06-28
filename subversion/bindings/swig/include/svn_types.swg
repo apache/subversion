@@ -270,12 +270,20 @@
 }
 #endif
 
-#ifndef SWIGRUBY
-/* FIXME: Presumably Ruby needs a typemap for this too. */
+#ifdef SWIGRUBY
+%typemap(in) (const char *PTR, apr_size_t LEN)
+{
+  if (!RTEST(rb_obj_is_kind_of($input, rb_cString))) {
+    rb_raise(rb_eArgError, "Expecting a string");
+  }
+  $1 = StringValuePtr($input);
+  $2 = RSTRING(StringValue($input))->len;
+}
+#endif
+
 %apply (const char *PTR, apr_size_t LEN) {
     (const char *data, apr_size_t len)
 }
-#endif
 
 /* -----------------------------------------------------------------------
    Handle retrieving the error message from svn_strerror

@@ -166,6 +166,17 @@ typedef apr_int32_t time_t;
 }
 #endif
 
+#ifdef SWIGRUBY
+%typemap(in, numinputs=0) apr_hash_t **DIRENTHASH = apr_hash_t **OUTPUT;
+%typemap(argout, fragment="output_helper") apr_hash_t **DIRENTHASH
+{
+  $result =
+    output_helper($result,
+                  svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                         "svn_dirent_t *"));
+}
+#endif
+
 /* -----------------------------------------------------------------------
    create an OUTPUT argument defn for an apr_hash_t ** which is storing
    property values
