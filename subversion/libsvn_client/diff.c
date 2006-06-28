@@ -1657,8 +1657,7 @@ do_merge(const char *initial_URL1,
          svn_boolean_t ignore_ancestry,
          svn_boolean_t dry_run,
          const svn_wc_diff_callbacks2_t *callbacks,
-         void *callback_baton,
-         svn_client_ctx_t *ctx,
+         struct merge_cmd_baton *merge_b,
          apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -1667,7 +1666,7 @@ do_merge(const char *initial_URL1,
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
-  struct merge_cmd_baton *merge_b = callback_baton;
+  svn_client_ctx_t *ctx = merge_b->ctx;
   const char *URL1, *URL2, *path1, *path2;
   svn_opt_revision_t *revision1, *revision2;
 
@@ -1734,7 +1733,7 @@ do_merge(const char *initial_URL1,
   SVN_ERR(svn_client__get_diff_editor(target_wcpath,
                                       adm_access,
                                       callbacks,
-                                      callback_baton,
+                                      merge_b,
                                       recurse,
                                       dry_run,
                                       ra_session2,
@@ -2784,7 +2783,6 @@ svn_client_merge2(const char *source1,
                        dry_run,
                        &merge_callbacks,
                        &merge_cmd_baton,
-                       ctx,
                        pool));
     }
 
@@ -2913,7 +2911,6 @@ svn_client_merge_peg2(const char *source,
                        dry_run,
                        &merge_callbacks,
                        &merge_cmd_baton,
-                       ctx,
                        pool));
     }
 
