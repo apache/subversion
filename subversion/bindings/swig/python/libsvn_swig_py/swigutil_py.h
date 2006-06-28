@@ -225,6 +225,11 @@ void svn_swig_py_notify_func(void *baton,
                              svn_wc_notify_state_t prop_state,
                              svn_revnum_t revision);
 
+SVN_SWIG_SWIGUTIL_EXPORT
+void svn_swig_py_notify_func2(void *baton,
+                              const svn_wc_notify_t *notify,
+                              apr_pool_t *pool);
+
 /* a status function that executes a Python function that is passed in
    via the baton argument */
 SVN_SWIG_SWIGUTIL_EXPORT
@@ -348,6 +353,19 @@ svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
                                           void *baton,
                                           apr_pool_t *pool);
 
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_ra_file_rev_handler_func(
+                    void *baton,
+                    const char *path,
+                    svn_revnum_t rev,
+                    apr_hash_t *rev_props,
+                    svn_txdelta_window_handler_t *delta_handler,
+                    void **delta_baton,
+                    apr_array_header_t *prop_diffs,
+                    apr_pool_t *pool);
+
+SVN_SWIG_SWIGUTIL_EXPORT
+extern const svn_ra_reporter2_t swig_py_ra_reporter2;
 
 #ifdef __cplusplus
 }

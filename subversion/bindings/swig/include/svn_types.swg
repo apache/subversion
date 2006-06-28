@@ -19,8 +19,8 @@
 /* This interface file only defines types and their related information.
    There is no module associated with this interface file. */
 
-%include apr.swg
 %include exception.i
+%import apr.swg
 
 #ifdef SWIGRUBY
 #  if SWIG_VERSION <= 0x010327
@@ -300,6 +300,21 @@
     }
 }
 #endif
+
+#ifdef SWIGRUBY
+%typemap(in) (const char *PTR, apr_size_t LEN)
+{
+  if (!RTEST(rb_obj_is_kind_of($input, rb_cString))) {
+    rb_raise(rb_eArgError, "Expecting a string");
+  }
+  $1 = StringValuePtr($input);
+  $2 = RSTRING(StringValue($input))->len;
+}
+#endif
+
+%apply (const char *PTR, apr_size_t LEN) {
+    (const char *data, apr_size_t len)
+}
 
 /* -----------------------------------------------------------------------
    Handle retrieving the error message from svn_strerror
@@ -700,7 +715,7 @@
   $result = output_helper($result, rb_str_new2(digest_string));
 }
 
-%typemap(in, numinputs=0) unsigned char **digest ($*1_type temp)
+%typemap(in, numinputs=0) unsigned char **digest (unsigned char *temp)
 {
     $1 = &temp;
 }
@@ -965,22 +980,6 @@
 #endif
 
 /* ----------------------------------------------------------------------- */
-
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include <apu.h>
-#include <apr_xlate.h>
-#include "swigutil_rb.h"
-#endif
-%}
 
 %include svn_time_h.swg
 %include svn_types_h.swg

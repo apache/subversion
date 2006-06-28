@@ -1095,6 +1095,10 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * If @a filename is unmodified but has a timestamp variation then this
+ * function may "repair" @a filename's text-time by setting it to
+ * @a filename's last modification time.
  */
 svn_error_t *svn_wc_text_modified_p(svn_boolean_t *modified_p,
                                     const char *filename,
@@ -2722,7 +2726,7 @@ svn_boolean_t svn_wc_is_entry_prop(const char *name);
  * the working copy's text-base files, rather than the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
- * If @ reverse_order is true, then show working_copy->repository diffs.
+ * If @a reverse_order is true, then show working_copy->repository diffs.
  *
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
@@ -3375,6 +3379,15 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 apr_hash_t *config,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
+
+/** Return @c TRUE iff @a STR matches any of the elements of @a LIST, a
+ * list of zero or more ignore patterns.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
+                         apr_pool_t *pool);
 
 
 /** Add @a lock to the working copy for @a path.  @a adm_access must contain

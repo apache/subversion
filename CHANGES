@@ -81,6 +81,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: don't crash on corrupt repositories (r17625)
     * fixed: expect error output from hook scripts in native encoding (r17101)
     * fixed: catch errors starting hook scripts (r16891 17041 -81)
+    * fixed: svnserve and authz can cause broken WCs (issue #2566)
 
   - Both:
     * delta compression improvements:

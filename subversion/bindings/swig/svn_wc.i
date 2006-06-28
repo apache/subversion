@@ -24,13 +24,8 @@
 %module wc
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 %import svn_ra.i
 
@@ -96,14 +91,6 @@
     const char *rev_author,
     const char *trail_url
 }
-
-/* svn_wc_transmit_text_deltas2() */
-%apply (const svn_delta_editor_t *EDITOR, void *BATON)
-{
-  (const svn_delta_editor_t *editor, void *file_baton),
-  (const svn_delta_editor_t *editor, void *baton)
-}
-
 
 %apply const char **OUTPUT { char **url };
 
@@ -190,6 +177,20 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in, numinputs=0)
+     apr_array_header_t **patterns (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(argout, fragment="t_output_helper")
+     apr_array_header_t **patterns
+{
+  $result = t_output_helper($result,
+                          svn_swig_py_array_to_list(*$1));
+}
+#endif
+
 /* -----------------------------------------------------------------------
    apr_array_header_t *wcprop_changes
    svn_wc_process_committed2()
@@ -251,6 +252,11 @@
 #ifdef SWIGPYTHON
 %typemap(in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
   $1 = svn_swig_py_notify_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+%typemap(in) (svn_wc_notify_func2_t notify_func, void *notify_baton) {
+  $1 = svn_swig_py_notify_func2;
   $2 = $input; /* our function is the baton. */
 }
 #endif
@@ -350,18 +356,6 @@
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 %include svn_wc_h.swg

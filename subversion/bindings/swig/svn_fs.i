@@ -24,13 +24,8 @@
 %module fs
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------
@@ -75,11 +70,6 @@
 };
 
 %apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
-
-/* svn_fs_parse_id() */
-%apply (const char *PTR, apr_size_t LEN) {
-    (const char *data, apr_size_t len)
-}
 
 /* svn_fs_berkeley_logfiles(), svn_fs_list_transactions() */
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
@@ -204,18 +194,6 @@
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 #ifdef SWIGRUBY

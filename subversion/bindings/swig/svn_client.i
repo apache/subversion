@@ -24,14 +24,8 @@
 %module client
 #endif
 
-%include typemaps.i
-%include constraints.i
-
 %include svn_global.swg
 %import core.i
-%import apr.swg
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 %import svn_wc.i
 
@@ -555,23 +549,13 @@
 
 /* ----------------------------------------------------------------------- */
 
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
 #ifdef SWIGRUBY
+%{
 #include <apu.h>
 #include <apr_xlate.h>
-#include "swigutil_rb.h"
-#endif
 %}
+#endif
 
-%include svn_time_h.swg
 %include svn_client_h.swg
 
 #ifdef SWIGPYTHON

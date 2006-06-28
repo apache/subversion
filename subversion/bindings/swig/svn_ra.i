@@ -24,14 +24,8 @@
 %module ra
 #endif
 
-%include typemaps.i
-%include constraints.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 
 /* bad pool convention, also these should not be public interface at all
@@ -112,12 +106,6 @@
 }
 #endif
 
-%apply (const svn_delta_editor_t *EDITOR, void *BATON)
-{
-  (const svn_delta_editor_t *update_editor, void *update_baton),
-  (const svn_delta_editor_t *diff_editor, void *diff_baton)
-}
-
 #ifdef SWIGPERL
 %typemap(in) (const svn_ra_callbacks_t *callbacks,
 		     void *callback_baton) {
@@ -166,21 +154,22 @@
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+{
+   $1 = svn_swig_py_ra_file_rev_handler_func;
+   $2 = (void *)$input;
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) (const svn_ra_reporter2_t *reporter, void *report_baton)
+{
+  $1 = (svn_ra_reporter2_t *)&swig_py_ra_reporter2;
+  $2 = (void *)$input;
+}
+#endif
+
 /* ----------------------------------------------------------------------- */
 
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
-%}
-
 %include svn_ra_h.swg
-

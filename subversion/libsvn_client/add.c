@@ -342,8 +342,8 @@ add_dir_recursive(const char *dirname,
       if (svn_wc_is_adm_dir(this_entry.name, subpool))
         continue;
 
-      if ((!no_ignore) && svn_cstring_match_glob_list(this_entry.name,
-                                                      ignores)) 
+      if ((!no_ignore) && svn_wc_match_ignore_list(this_entry.name,
+                                                   ignores, subpool))
         continue;
 
       /* Construct the full path of the entry. */

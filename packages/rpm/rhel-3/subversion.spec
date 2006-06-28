@@ -4,9 +4,13 @@
 %define apache_dir /usr
 %define pyver 2.2
 # If you don't want to take time for the tests then set make_*_check to 0.
-%define make_ra_local_check 1
-%define make_ra_svn_check 1
-%define make_ra_dav_check 1
+# RHEL 3 doesn't build BDB, so don't try to check it
+%define make_ra_local_bdb_check 0
+%define make_ra_svn_bdb_check 0
+%define make_ra_dav_bdb_check 0
+%define make_ra_local_fsfs_check 1
+%define make_ra_svn_fsfs_check 1
+%define make_ra_dav_fsfs_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -72,7 +76,7 @@ Requires: subversion = %{version}-%{release}
 Requires: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
 %description -n mod_dav_svn
-The subversion-server package adds the Subversion server Apache module to
+The mod_dav_svn package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %package perl
@@ -96,6 +100,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Jun 26 2006 David Summers <david@summersoft.fay.ar.us> r20253
+- [RHEL3,RHEL4] Follow-up to r20040, changed %{apache_dir} to %{_libdir}
+  and %{_prefix} to %{_libdir} to help out people compiling 64-bit versions.
+  Thanks to Toby Johnson and others.
+
 * Sun Jun 11 2006 David Summers <david@summersoft.fay.ar.us> r20040
 - Figured out another (better) way to fix Subversion bug #1456 instead of
   depending on a third program (chrpath); Used Fedora Core RPATH patch to
@@ -498,25 +507,47 @@ make swig-py
 make swig-pl DESTDIR=$RPM_BUILD_ROOT
 make check-swig-pl
 
-%if %{make_ra_local_check}
+%if %{make_ra_local_bdb_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check CLEANUP=true
+make check CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
-%if %{make_ra_svn_check}
+%if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true
+make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
-%if %{make_ra_dav_check}
+%if %{make_ra_dav_bdb_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-make davautocheck CLEANUP=true
+make davautocheck CLEANUP=true FS_TYPE=bdb
+echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
+%endif
+
+%if %{make_ra_local_fsfs_check}
+echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+make check CLEANUP=true FS_TYPE=fsfs
+echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+%endif
+
+%if %{make_ra_svn_fsfs_check}
+echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
+killall lt-svnserve || true
+sleep 1
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
+make svncheck CLEANUP=true FS_TYPE=fsfs
+killall lt-svnserve
+echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
+%endif
+
+%if %{make_ra_dav_fsfs_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+make davautocheck CLEANUP=true FS_TYPE=fsfs
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -605,8 +636,8 @@ rm -rf $RPM_BUILD_ROOT
 %files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
-%{apache_dir}/lib/httpd/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.so
+%{_libdir}/httpd/modules/mod_dav_svn.so
+%{_libdir}/httpd/modules/mod_authz_svn.so
 
 %files perl
 %defattr(-,root,root)

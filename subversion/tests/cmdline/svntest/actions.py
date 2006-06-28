@@ -73,11 +73,6 @@ def guarantee_greek_repository(path):
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
 
-    # build a URL for doing an import.
-    url = main.test_area_url + '/' + main.pristine_dir
-    if main.windows == 1:
-      url = string.replace(url, '\\', '/')
-
     # import the greek tree, using l:foo/p:bar
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
@@ -85,7 +80,7 @@ def guarantee_greek_repository(path):
                                   '--username', main.wc_author,
                                   '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
-                                  main.greek_dump_dir, url)
+                                  main.greek_dump_dir, main.pristine_url)
 
     # check for any errors from the import
     if len(errput):
@@ -129,6 +124,22 @@ def guarantee_greek_repository(path):
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
+  # If there's no pristine wc, create one.
+  if not os.path.exists(main.pristine_wc_dir):
+    # Generate the expected output tree.
+    expected_output = main.greek_state.copy()
+    expected_output.wc_dir = main.pristine_wc_dir
+    expected_output.tweak(status='A ', contents=None)
+  
+    # Generate an expected wc tree.
+    expected_wc = main.greek_state
+  
+    # Do a checkout, and verify the resulting output and disk contents.
+    run_and_verify_checkout(main.pristine_url, 
+                            main.pristine_wc_dir,
+                            expected_output,
+                            expected_wc)
+  
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
@@ -890,19 +901,18 @@ def make_repo_and_wc(sbox, create_wc = True):
   guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
-    # Generate the expected output tree.
-    expected_output = main.greek_state.copy()
-    expected_output.wc_dir = sbox.wc_dir
-    expected_output.tweak(status='A ', contents=None)
+    # this dir doesn't exist out of the box, so we may have to make it
+    if not os.path.exists(main.general_wc_dir):
+      os.makedirs(main.general_wc_dir)
+        
+    # copy the pristine wc and relocate it to our new repository.
+    duplicate_dir(main.pristine_wc_dir, sbox.wc_dir)
 
-    # Generate an expected wc tree.
-    expected_wc = main.greek_state
-
-    # Do a checkout, and verify the resulting output and disk contents.
-    run_and_verify_checkout(main.current_repo_url,
-                            sbox.wc_dir,
-                            expected_output,
-                            expected_wc)
+    output, errput = main.run_svn (None, 'switch', '--relocate',
+                               '--username', main.wc_author,
+                               '--password', main.wc_passwd,
+                               main.pristine_url,
+                               main.current_repo_url, sbox.wc_dir)
   else:
     # just make sure the parent folder of our working copy is created
     try:

@@ -94,6 +94,10 @@ if len(args) == 0:
 else:
   abs_builddir = os.path.abspath(args[0])
   create_dirs = 1
+  
+# Don't run bdb tests if they want to test fsfs
+if fs_type == 'fsfs':
+  all_tests = gen_obj.test_progs + gen_obj.scripts
 
 if run_httpd:
   if not httpd_port:
@@ -165,12 +169,19 @@ def locate_libs():
   cp = ConfigParser.ConfigParser()
   cp.read('gen-make.opts')
   apr_path = get(cp, 'options', '--with-apr', 'apr')
-  apr_dll_path = os.path.join(apr_path, objdir, 'libapr.dll')
   aprutil_path = get(cp, 'options', '--with-apr-util', 'apr-util')
-  aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil.dll')
   apriconv_path = get(cp, 'options', '--with-apr-iconv', 'apr-iconv')
-  apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
   apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
+  # look for APR 1.x dll's and use those if found
+  apr_dll_path = os.path.join(apr_path, objdir, 'libapr-1.dll')
+  if os.path.exists(apr_dll_path):
+    aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil-1.dll')
+    apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv-1.dll')
+  else:
+    apr_dll_path = os.path.join(apr_path, objdir, 'libapr.dll')
+    aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil.dll')
+    apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
+    
 
   copy_changed_file(apr_dll_path, abs_objdir)
   copy_changed_file(aprutil_dll_path, abs_objdir)

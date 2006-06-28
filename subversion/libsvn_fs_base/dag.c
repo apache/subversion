@@ -108,28 +108,6 @@ svn_fs_base__dag_get_fs(dag_node_t *node)
 }
 
 
-/* Dup NODEREV and all associated data into POOL */
-static node_revision_t *
-copy_node_revision(node_revision_t *noderev,
-                   apr_pool_t *pool)
-{
-  node_revision_t *nr = apr_pcalloc(pool, sizeof(*nr));
-  nr->kind = noderev->kind;
-  if (noderev->predecessor_id)
-    nr->predecessor_id = svn_fs_base__id_copy(noderev->predecessor_id, pool);
-  nr->predecessor_count = noderev->predecessor_count;
-  if (noderev->prop_key)
-    nr->prop_key = apr_pstrdup(pool, noderev->prop_key);
-  if (noderev->data_key)
-    nr->data_key = apr_pstrdup(pool, noderev->data_key);
-  if (noderev->edit_key)
-    nr->edit_key = apr_pstrdup(pool, noderev->edit_key);
-  if (noderev->created_path)
-    nr->created_path = apr_pstrdup(pool, noderev->created_path);
-  return nr;
-}
-
-
 svn_boolean_t svn_fs_base__dag_check_mutable(dag_node_t *node,
                                              const char *txn_id)
 {
@@ -410,9 +388,8 @@ set_entry(dag_node_t *parent,
      rep we just created. */
   if (! svn_fs_base__same_keys(rep_key, mutable_rep_key))
     {
-      node_revision_t *new_noderev = copy_node_revision(parent_noderev, pool);
-      new_noderev->data_key = mutable_rep_key;
-      SVN_ERR(svn_fs_bdb__put_node_revision(fs, parent->id, new_noderev, 
+      parent_noderev->data_key = mutable_rep_key;
+      SVN_ERR(svn_fs_bdb__put_node_revision(fs, parent->id, parent_noderev,
                                             trail, pool));
     }
 

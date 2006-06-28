@@ -24,13 +24,8 @@
 %module repos
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 %import svn_fs.i
 
@@ -273,20 +268,6 @@
 #endif
 
 /* ----------------------------------------------------------------------- */
-
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
-%}
 
 #ifdef SWIGRUBY
 %ignore svn_repos_fs;
