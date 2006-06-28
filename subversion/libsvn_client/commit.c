@@ -1289,26 +1289,35 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                 APR_ARRAY_PUSH(dirs_to_lock_recursive, 
                                const char *) = apr_pstrdup(pool, target);
               else
-                APR_ARRAY_PUSH(dirs_to_lock, 
-                               const char *) = apr_pstrdup(pool, target);
+                /* Don't lock if target is the base_dir, base_dir will be 
+                   locked anyway and we can't lock it twice */
+                if (strcmp(target, base_dir))
+                  APR_ARRAY_PUSH(dirs_to_lock, 
+                                 const char *) = apr_pstrdup(pool, target);
             }
 
           /* Now we need to iterate over the parent paths of this path
-             adding them to the set of directories we want to lock. */
-          svn_path_split(target, &parent_dir, &name, subpool);
-
-          target = parent_dir;
-
-          while (strcmp(target, base_dir))
+             adding them to the set of directories we want to lock. 
+             Do nothing if target is already the base_dir. */
+          if (strcmp(target, base_dir)) 
             {
-              if (target[0] == '/' && target[1] == '\0')
-                abort();
+              svn_path_split(target, &parent_dir, &name, subpool);
 
-              APR_ARRAY_PUSH(dirs_to_lock,
-                             const char *) = apr_pstrdup(pool, target);
-              target = svn_path_dirname(target, subpool);
+              target = parent_dir;
+
+              while (strcmp(target, base_dir))
+                {
+                  if ((target[0] == '/' && target[1] == '\0') ||
+                     (target[0] == '\0'))
+                    abort();
+
+                  APR_ARRAY_PUSH(dirs_to_lock,
+                                 const char *) = apr_pstrdup(pool, target);
+                  target = svn_path_dirname(target, subpool);
+                }
             }
         }
+
       svn_pool_destroy(subpool);
     }
 
