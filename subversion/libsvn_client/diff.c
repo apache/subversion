@@ -1846,10 +1846,10 @@ do_merge(const char *initial_URL1,
      Note that the "start" of a merge range is inclusive. */
   SVN_ERR(svn_client__get_revision_number
           (&range.start, ra_session, revision1, path1, pool));
-  range.start += 1;
   SVN_ERR(svn_client__get_revision_number
           (&range.end, ra_session, revision2, path2, pool));
   is_revert = (range.start > range.end);
+  range.start += 1;
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
