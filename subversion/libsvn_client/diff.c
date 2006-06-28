@@ -1678,6 +1678,7 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        const char *rel_path,
                        apr_hash_t *target_mergeinfo,
                        svn_merge_range_t* range,
+                       svn_boolean_t is_revert,
                        apr_pool_t *pool)
 {
   apr_array_header_t *requested_merge;
@@ -1697,10 +1698,62 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   target_rangelist = apr_hash_get(target_mergeinfo, rel_path,
                                   APR_HASH_KEY_STRING);
   if (target_rangelist)
-    SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
-                                 requested_merge, pool));
+    {
+      if (is_revert)
+        /* ### TODO: Find the the intersection of the revisions which
+           ### are in both the set of TARGET_RANGELIST and
+           ### REQUESTED_MERGE.  It looks like we need a new
+           ### svn_rangelist_intersect() API (along the lines of
+           ### svn_rangelist_remove() and its range_intersect()
+           ### delegate). */
+        ;
+      else
+        SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
+                                     requested_merge, pool));
+    }
 
   return SVN_NO_ERROR;
+}
+
+/* Calculate the new merge info for REL_PATH based on TARGET_MERGEINFO
+   and RANGES, and record it in the WC at TARGET_WCPATH.
+   TARGET_MERGEINFO is expected to be non-NULL. */
+static svn_error_t *
+update_wc_merge_info(const char *target_wcpath, apr_hash_t *target_mergeinfo,
+                     const char *rel_path, apr_array_header_t *ranges,
+                     svn_boolean_t is_revert, svn_wc_adm_access_t *adm_access,
+                     apr_pool_t *pool)
+{
+  svn_string_t *mergeinfo_str = NULL;
+  apr_hash_t *mergeinfo = apr_hash_copy(pool, target_mergeinfo);
+  apr_array_header_t *rangelist = apr_hash_get(target_mergeinfo, rel_path,
+                                               APR_HASH_KEY_STRING);
+  if (rangelist == NULL)
+    rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+
+  if (is_revert)
+    SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist, pool));
+  else
+    SVN_ERR(svn_rangelist_merge(&rangelist, rangelist, ranges, pool));
+
+  /* Update the merge info by adjusting the rangelist for REL_PATH. */
+  if (rangelist->nelts == 0)
+    rangelist = NULL;
+  apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, rangelist);
+
+  if (apr_hash_count(mergeinfo) > 0)
+    {
+      /* The WC will contain merge info. */
+      svn_stringbuf_t *mergeinfo_buf;
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
+      mergeinfo_str = svn_string_create_from_buf(mergeinfo_buf, pool);
+    }
+  
+  /* Record the new merge info in the WC. */
+  /* ### Later, we'll want behavior more analogous to
+     ### svn_client__get_prop_from_wc(). */
+  return svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str, target_wcpath,
+                          adm_access, TRUE /* skip checks */, pool);
 }
 
 /* URL1/PATH1, URL2/PATH2, and TARGET_WCPATH all better be
@@ -1731,9 +1784,10 @@ do_merge(const char *initial_URL1,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo, *orig_mergeinfo;
+  apr_hash_t *target_mergeinfo;
   apr_array_header_t *remaining_ranges;
   svn_merge_range_t range;
+  svn_boolean_t is_revert;
   svn_ra_session_t *ra_session, *ra_session2;
   const svn_ra_reporter2_t *reporter;
   void *report_baton;
@@ -1795,6 +1849,7 @@ do_merge(const char *initial_URL1,
   range.start += 1;
   SVN_ERR(svn_client__get_revision_number
           (&range.end, ra_session, revision2, path2, pool));
+  is_revert = (range.start > range.end);
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -1808,14 +1863,13 @@ do_merge(const char *initial_URL1,
 
   /* Look at the merge info prop of the WC target to see what's
      already been merged into it. */
-  SVN_ERR(parse_merge_info(&mergeinfo, target_wcpath, adm_access, ctx, pool));
-  orig_mergeinfo = apr_hash_copy(pool, mergeinfo);
+  SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access, ctx,
+                           pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session, adm_access, pool));
-  SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path, mergeinfo,
-                                 &range, pool));
-  apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, remaining_ranges);
+  SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path, target_mergeinfo,
+                                 &range, is_revert, pool));
 
   /* Revisions from the requested range which have already been merged
      may create holes in range to merge.  Loop over the revision
@@ -1862,26 +1916,10 @@ do_merge(const char *initial_URL1,
     }
 
   if (!dry_run)
-    {
-      /* Record revisions which have been merged into the WC. */
-      svn_string_t *mergeinfo_str = NULL;
-      SVN_ERR(svn_mergeinfo_merge(&mergeinfo, orig_mergeinfo, mergeinfo,
-                                  pool));
+    SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
+                                 remaining_ranges, is_revert, adm_access,
+                                 pool));
 
-      if (apr_hash_count(mergeinfo) > 0)
-        {
-          svn_stringbuf_t *mergeinfo_buf;
-          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
-          mergeinfo_str = svn_string_create_from_buf(mergeinfo_buf, pool);
-        }
-
-      /* ### Later, we'll want behavior more analogous to
-         ### svn_client__get_prop_from_wc(). */
-      SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str,
-                               target_wcpath, adm_access,
-                               TRUE /* skip checks */, pool));
-    }
-  
   return SVN_NO_ERROR;
 }
 
