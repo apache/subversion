@@ -24,13 +24,8 @@
 %module fs
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------
@@ -76,11 +71,6 @@
 
 %apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
 
-/* svn_fs_parse_id() */
-%apply (const char *PTR, apr_size_t LEN) {
-    (const char *data, apr_size_t len)
-}
-
 /* svn_fs_berkeley_logfiles(), svn_fs_list_transactions() */
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
     apr_array_header_t **logfiles,
@@ -95,62 +85,78 @@
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
 */
 
-%typemap(python,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
+#ifdef SWIGPYTHON
+%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
           _global_svn_swig_py_pool));
 }
-%typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
-%typemap(perl5,argout) apr_hash_t **entries_p {
+#endif
+#ifdef SWIGPERL
+%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **entries_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
       $descriptor(svn_fs_dirent_t *));
 }
-%typemap(ruby,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
-%typemap(ruby,argout) apr_hash_t **entries_p {
+#endif
+#ifdef SWIGRUBY
+%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **entries_p {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_fs_dirent_t *");
 }
+#endif
 
 /* -----------------------------------------------------------------------
    and except for svn_fs_paths_changed, which returns svn_fs_path_change_t
    structures
 */
 
-%typemap(python, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
-%typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
+#ifdef SWIGPYTHON
+%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_path_change_t *),
           _global_svn_swig_py_pool));
 }
+#endif
 
-%typemap(perl5, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
-%typemap(perl5, argout) apr_hash_t **changed_paths_p {
+#ifdef SWIGPERL
+%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **changed_paths_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
       $descriptor(svn_fs_path_change_t *));
 }
+#endif
 
-%typemap(ruby, in, numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
-%typemap(ruby, argout) apr_hash_t **changed_paths_p
+#ifdef SWIGRUBY
+%typemap(in, numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(argout) apr_hash_t **changed_paths_p
 {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
                                                    "svn_fs_path_change_t *");
 }
+#endif
 
 /* -----------------------------------------------------------------------
    handle get_locks_func/get_locks_baton pairs.
 */
-%typemap(python, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
+#ifdef SWIGPYTHON
+%typemap(in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
   $1 = svn_swig_py_fs_get_locks_func;
   $2 = $input; /* our function is the baton. */
 }
+#endif
 
-%typemap(ruby, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton)
+#ifdef SWIGRUBY
+%typemap(in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton)
 {
   $1 = svn_swig_rb_fs_get_locks_callback;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
+#endif
 
 /* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is
@@ -161,29 +167,19 @@
 
    The answer is to explicitly create a 2-tuple return value.
 */
-%typemap(python, argout) (const char **conflict_p, svn_revnum_t *new_rev) {
+#ifdef SWIGPYTHON
+%typemap(argout) (const char **conflict_p, svn_revnum_t *new_rev) {
     /* this is always Py_None */
     Py_DECREF($result);
     /* build the result tuple */
     $result = Py_BuildValue("zi", *$1, (long)*$2);
 }
+#endif
 
 /* ----------------------------------------------------------------------- */
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 #ifdef SWIGRUBY

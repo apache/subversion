@@ -1784,12 +1784,12 @@ merge_props(svn_stringbuf_t *log_accum,
    the entry refers to a file and has no absent or deleted state.
    Use POOL for temporary allocations. */
 static svn_error_t *
-tweak_entry(svn_stringbuf_t *log_accum,
-            svn_wc_adm_access_t *adm_access,
-            const char *name,
-            svn_revnum_t new_revision,
-            const char *new_URL,
-            apr_pool_t *pool)
+loggy_tweak_entry(svn_stringbuf_t *log_accum,
+                  svn_wc_adm_access_t *adm_access,
+                  const char *name,
+                  svn_revnum_t new_revision,
+                  const char *new_URL,
+                  apr_pool_t *pool)
 {
   /* Write log entry which will bump the revision number.  Also, just
      in case we're overwriting an existing phantom 'deleted' or
@@ -2006,8 +2006,8 @@ merge_file(svn_stringbuf_t *log_accum,
 
   /* Set the new revision and URL in the entry and clean up some other
      fields. */
-  SVN_ERR(tweak_entry(log_accum, adm_access, base_name,
-                      new_revision, new_URL, pool));
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+                            new_revision, new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -2932,9 +2932,9 @@ svn_wc_add_repos_file2(const char *dst_path,
 
   /* Set the new revision number and URL in the entry and clean up some other
      fields. */
-  SVN_ERR(tweak_entry(log_accum, adm_access, base_name,
-                      dst_entry ? dst_entry->revision : ent->revision,
-                      new_URL, pool));
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+                            dst_entry ? dst_entry->revision : ent->revision,
+                            new_URL, pool));
 
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));

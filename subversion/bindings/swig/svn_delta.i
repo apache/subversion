@@ -24,13 +24,8 @@
 %module delta
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
@@ -71,11 +66,14 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              apr_pool_t *pool);
 #endif
 
-%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton) {
+#ifdef SWIGPERL
+%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
+#endif
 
-%typemap(ruby, in) (const svn_delta_editor_t *EDITOR, void *BATON)
+#ifdef SWIGRUBY
+%typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON)
 {
   if (RTEST(rb_obj_is_kind_of($input,
                               svn_swig_rb_svn_delta_editor()))) {
@@ -88,17 +86,32 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_swig_rb_make_delta_editor(&$1, &$2, $input, _global_pool);
   }
 }
+#endif
 
+#ifndef SWIGPYTHON
+/* Python users have to use svn_swig_py_make_editor manually, which sucks.
+   Maybe we could allow people to pass a python object in the editor parameter,
+   and None as the baton, and automatically invoke svn_swig_py_make_editor,
+   rather than forcing the svn_swig_py_make_editor to be done manually.
+   Of course, ideally, the baton parameter would vanish from the python
+   side entirely, but we can't kill compatibility like that until 2.0.
+*/
 %apply (const svn_delta_editor_t *EDITOR, void *BATON)
 {
-  (const svn_delta_editor_t *editor, void *edit_baton)
+  (const svn_delta_editor_t *editor, void *baton),
+  (const svn_delta_editor_t *editor, void *edit_baton),
+  (const svn_delta_editor_t *editor, void *file_baton),
+  (const svn_delta_editor_t *diff_editor, void *diff_baton),
+  (const svn_delta_editor_t *update_editor, void *update_baton)
 }
+#endif
 
 /* -----------------------------------------------------------------------
    handle svn_txdelta_window_handler_t/baton pair.
 */
 
-%typemap(ruby, in) (svn_txdelta_window_handler_t handler,
+#ifdef SWIGRUBY
+%typemap(in) (svn_txdelta_window_handler_t handler,
                     void *handler_baton)
 {
   if (RTEST(rb_obj_is_kind_of($input,
@@ -113,39 +126,30 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
+#endif
 
 /* -----------------------------------------------------------------------
    handle svn_delta_path_driver().
 */
 
-%typemap(ruby, in) apr_array_header_t *paths
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *paths
 {
   $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
 }
 
-%typemap(ruby, in) (svn_delta_path_driver_cb_func_t callback_func,
+%typemap(in) (svn_delta_path_driver_cb_func_t callback_func,
                     void *callback_baton)
 {
   $1 = svn_swig_rb_delta_path_driver_cb_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
+#endif
 
 /* ----------------------------------------------------------------------- */
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 /* -----------------------------------------------------------------------
@@ -160,6 +164,11 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
   return svn_swig_rb_txdelta_window_t_ops_get(window);
 }
 %}
+#endif
+
+
+#ifdef SWIGRUBY
+%ignore svn_txdelta_to_svndiff2;
 #endif
 
 %include svn_delta_h.swg
@@ -254,5 +263,7 @@ svn_txdelta_md5_digest_as_cstring(svn_txdelta_stream_t *stream,
 
 /* Cancel the typemap as they aren't returned valued in member functions
    if editor. */
-%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton);
+#ifdef SWIGPERL
+%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton);
+#endif
 

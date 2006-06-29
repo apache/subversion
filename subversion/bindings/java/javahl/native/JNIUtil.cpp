@@ -303,20 +303,16 @@ JNIMutex *JNIUtil::getGlobalPoolMutex()
 {
     return g_globalPoolMutext;
 }
-/**
- * throw an error
- * @param message the message text of the error
- */
-void JNIUtil::throwError(const char *message)
+void JNIUtil::raiseThrowable(const char *name, const char *message)
 {
     if (getLogLevel() >= errorLog)
     {
         JNICriticalSection cs(*g_logMutex);
-        g_logStream << "Error thrown <" << message << ">" << std::endl;
+        g_logStream << "Throwable raised <" << message << ">" << std::endl;
     }
     JNIEnv *env = getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/JNIError");
-    if(isJavaExceptionThrown())
+    jclass clazz = env->FindClass(name);
+    if (isJavaExceptionThrown())
     {
         return;
     }

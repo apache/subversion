@@ -807,7 +807,7 @@ def dont_diff_binary_file(sbox):
 def diff_nonextant_urls(sbox):
   "svn diff errors against a non-existent URL"
 
-  sbox.build()
+  sbox.build(create_wc = False)
   non_extant_url = sbox.repo_url + '/A/does_not_exist'
   extant_url = sbox.repo_url + '/A/mu'
 
@@ -2495,6 +2495,137 @@ def basic_diff_summarize(sbox):
                                                 None, None, None, None,
                                                 wc_dir, '-r1:2')
 
+def diff_weird_author(sbox):
+  "diff with svn:author that has < in it"
+
+  sbox.build()
+
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+
+  open(os.path.join(sbox.wc_dir, 'A', 'mu'), 'w').write("new content\n")
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak("A/mu", wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None,
+                                        sbox.wc_dir)
+
+  svntest.main.run_svn(None, "propset", "--revprop", "-r", "2", "svn:author",
+                       "J. Random <jrandom@example.com>", sbox.repo_url)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["J. Random <jrandom@example.com>\n"],
+                                     [],
+                                     "pget", "--revprop", "-r" "2",
+                                     "svn:author", sbox.repo_url)
+
+  expected_output = [
+    "Index: A/mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(revision 2)\n",
+    "@@ -1 +1 @@\n",
+    "-This is the file 'mu'.\n",
+    "+new content\n"
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r1:2', sbox.repo_url)
+
+# test for issue 2121, use -x -w option for ignoring whitespace during diff
+def diff_ignore_whitespace(sbox):
+  "ignore whitespace when diffing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # only whitespace changes, should return no changes
+  open(file_path, 'w').write(" A  a   \n"
+                             "   B b  \n"
+                             "    C    c    \n")
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-x', '-w', file_path)
+  
+  # some changes + whitespace
+  open(file_path, 'w').write(" A  a   \n"
+                             "Xxxx X\n"
+                             "   Bb b  \n"
+                             "    C    c    \n")
+  expected_output = [
+    "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-39/iota\t(revision 2)\n",
+    "+++ svn-test-work/working_copies/diff_tests-39/iota\t(working copy)\n",
+    "@@ -1,3 +1,4 @@\n",
+    " Aa\n",
+    "-Bb\n",
+    "+Xxxx X\n",
+    "+   Bb b  \n",
+    " Cc\n" ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-x', '-w', file_path)
+
+def diff_ignore_eolstyle(sbox):
+  "ignore eol styles when diffing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only eol changes
+  open(file_path, 'w').write("Aa\r"
+                             "Bb\r"
+                             "Cc")
+
+  expected_output = [
+    "Index: svn-test-work/working_copies/diff_tests-40/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-40/iota\t(revision 2)\n",
+    "+++ svn-test-work/working_copies/diff_tests-40/iota\t(working copy)\n",
+    "@@ -1,3 +1,3 @@\n",
+    " Aa\n",
+    " Bb\n",
+    "-Cc\n",
+    "+Cc\n",
+    "\ No newline at end of file\n" ]
+    
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-x', '--ignore-eol-style', 
+                                     file_path)
+
 ########################################################################
 #Run the tests
 
@@ -2531,13 +2662,16 @@ test_list = [ None,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
               diff_mime_type_changes,
-              XFail(diff_prop_change_local_propmod),
+              diff_prop_change_local_propmod,
               diff_repos_wc_add_with_props,
               diff_nonrecursive_checkout_deleted_dir,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
               diff_added_subtree,
               basic_diff_summarize,
+              diff_weird_author,
+              diff_ignore_whitespace,
+              diff_ignore_eolstyle,
               ]
 
 if __name__ == '__main__':

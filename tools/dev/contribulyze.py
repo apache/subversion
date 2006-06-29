@@ -38,7 +38,6 @@
 import os
 import sys
 import re
-import shutil
 import getopt
 try:
   my_getopt = getopt.gnu_getopt

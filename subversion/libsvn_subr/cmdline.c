@@ -86,6 +86,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif
 
 #ifdef WIN32
+#if _MSC_VER < 1400
   /* Initialize the input and output encodings. */
   {
     static char input_encoding_buffer[16];
@@ -99,6 +100,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
                  "CP%u", (unsigned) GetConsoleOutputCP());
     output_encoding = output_encoding_buffer;
   }
+#endif /* _MSC_VER < 1400 */
 #endif /* WIN32 */
 
   /* C programs default to the "C" locale. But because svn is supposed

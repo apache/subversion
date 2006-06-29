@@ -55,13 +55,14 @@ SVN_FIND_APACHE(20020903)
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-dnl The specific reasons we require APR 0.9.5-final are:
-dnl   - APR_LARGEFILE added
-dnl   - APR_GSETID added
-dnl   - bug in apr_temp_dir_get() fixed
+dnl The specific reason we require APR 0.9.7 is:
+dnl   It contains fixes to its file writing routines
+dnl   now generating errors instead of silently ignoring
+dnl   them.  Only .7 and later can guarantee repository
+dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
-APU_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
@@ -252,6 +253,8 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
                    [The desired minor version for the Berkeley DB])
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
+
+SVN_LIB_SASL
 
 dnl Mac OS KeyChain -------------------
 
@@ -466,7 +469,7 @@ AC_CHECK_HEADER(zlib.h, [
                AC_DEFINE([SVN_HAVE_ZLIB], [1], [Is zlib support enabled?])
                LIBS="$LIBS -lz"
            ], [AC_MSG_ERROR([subversion requires zlib])])
-       ])
+       ], [AC_MSG_ERROR([subversion requires zlib])])
     
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
@@ -551,7 +554,19 @@ AC_PATH_PROG(PERL, perl, none)
 AC_PATH_PROG(RUBY, ruby, none)
 if test "$RUBY" != "none"; then
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
-    :
+    AC_PATH_PROG(RDOC, rdoc, none)
+    AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
+    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
+    ])
+    RUBY_MAJOR="$svn_cv_ruby_major"
+
+    AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
+    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MINOR))'`"
+    ])
+    RUBY_MINOR="$svn_cv_ruby_minor"
+
+    AC_SUBST(RUBY_MAJOR)
+    AC_SUBST(RUBY_MINOR)
   else
     RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])

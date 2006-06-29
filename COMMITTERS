@@ -11,7 +11,7 @@ Blanket commit access:
 
           jimb   Jim Blandy <jimb@red-bean.com>
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
-        kfogel   Karl Fogel <kfogel@collab.net>
+        kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@lyra.org>
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
@@ -62,6 +62,7 @@ Commit access for specific areas:
   Packages:
 
          david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
+       ebswift   Troy Simpson <troy@ebswift.com>             (windows-innosetup)
 
   Miscellaneous:
 
@@ -93,6 +94,10 @@ Commit access for specific areas:
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
+           lgo   Lieven Govaerts <lgo@mobsol.be>             (svntest)
+       madanus   Madan U S <madan@collab.net>                (svnmerge)
+          wein   Mathias Weinert <wein@mccw.de>              (mailer)
+    jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (python tests)
 
   Translation of message files:
 

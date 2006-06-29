@@ -639,7 +639,7 @@ send_unversioned_item(const char *name,
                       void *status_baton,
                       apr_pool_t *pool)
 {
-  int ignore_me = svn_cstring_match_glob_list(name, patterns);
+  int ignore_me = svn_wc_match_ignore_list(name, patterns, pool);
   const char *path = svn_path_join(svn_wc_adm_access_path(adm_access), 
                                    name, pool);
   int is_external = is_external_path(externals, path, pool);

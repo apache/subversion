@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.core import *
-import libsvn.core as _core
+import libsvn.core as _libsvncore
 import atexit as _atexit
 
 def _cleanup_application_pool():
@@ -32,7 +32,11 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
 
-Pool = _core.svn_pool_create
+Pool = _libsvncore.svn_pool_create
+
+# Setup consistent names for revnum constants
+svn_ignored_revnum = SWIG_SVN_IGNORED_REVNUM
+svn_invalid_revnum = SWIG_SVN_INVALID_REVNUM
 
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
@@ -110,7 +114,7 @@ def secs_from_timestr(svn_datetime, pool):
 # - cvs2svn/cvs2svn
 
 # Names that are not to be exported
-import sys as _sys, string as _string
+import sys as _sys
 
 if _sys.platform == "win32":
   import re as _re
@@ -125,7 +129,7 @@ if _sys.platform == "win32":
     arg = _re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
 
     # surround by quotes and escape quotes inside
-    arg = '"' + _string.replace(arg, '"', '"^""') + '"'
+    arg = '"' + arg.replace('"', '"^""') + '"'
     return arg
 
 
@@ -141,11 +145,11 @@ if _sys.platform == "win32":
     # the leading character and removing the last quote character."
     # So to prevent the argument string from being changed we add an extra set
     # of quotes around it here.
-    return '"' + _string.join(map(escape_shell_arg, argv), " ") + '"'
+    return '"' + " ".join(map(escape_shell_arg, argv)) + '"'
 
 else:
   def escape_shell_arg(str):
-    return "'" + _string.replace(str, "'", "'\\''") + "'"
+    return "'" + str.replace("'", "'\\''") + "'"
 
   def argv_to_command_string(argv):
     """Flatten a list of command line arguments into a command string.
@@ -154,7 +158,7 @@ else:
     shell which os functions like popen() and system() invoke internally.
     """
 
-    return _string.join(map(escape_shell_arg, argv), " ")
+    return " ".join(map(escape_shell_arg, argv))
 # ============================================================================
 # Deprecated functions
 
@@ -214,4 +218,4 @@ def run_app(func, *args, **kw):
   APR is initialized, and an application pool is created. Cleanup is
   performed as the function exits (normally or via an exception).
   '''
-  return apply(func, (_core.application_pool,) + args, kw)
+  return apply(func, (application_pool,) + args, kw)

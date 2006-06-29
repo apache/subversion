@@ -1,7 +1,7 @@
 This is an essay by Jim Blandy <jimb@redhat.com> on maintaining
 ChangeLog entries.  
 
-Although Subversion generates its ChangeLogs from cvs log data,
+Although Subversion generates its ChangeLogs from svn log data,
 instead of keeping independent ChangeLog files, most of the advice
 below is as applicable to cvs log messages as to ChangeLog entries.
 

@@ -58,6 +58,7 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
+    self.have_gen_uri = None
 
     # NLS options
     self.enable_nls = None
@@ -146,6 +147,12 @@ class WinGeneratorBase(GeneratorBase):
     # Find neon version
     if self.neon_path:
       self._find_neon()
+      
+    # Check for gen_uri_delims project in apr-util
+    gen_uri_path = os.path.join(self.apr_util_path, 'uri',
+                                'gen_uri_delims.dsp')
+    if os.path.exists(gen_uri_path):
+      self.have_gen_uri = 1
 
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
@@ -231,6 +238,19 @@ class WinGeneratorBase(GeneratorBase):
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
+    
+    # Drop the gen_uri_delims target unless we're on an old apr-util
+    if not self.have_gen_uri:
+      install_targets = filter(lambda x: x.name != 'gen_uri_delims',
+                               install_targets)
+      
+    # Drop the libsvn_fs_base target and tests if we don't have BDB
+    if not self.bdb_lib:
+      install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
+                               install_targets)
+      install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
+                                              and x.install == 'bdb-test'),
+                               install_targets)
 
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
@@ -577,6 +597,7 @@ class WinGeneratorBase(GeneratorBase):
     # XXX: know these things for itself.
     if self.bdb_lib:
       fakedefines.append("APU_HAVE_DB=1")
+      fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
 
     # check if they wanted nls
     if self.enable_nls:
@@ -657,7 +678,9 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
-    dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+    dblib = None
+    if self.bdb_lib:
+      dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
 
@@ -826,9 +849,8 @@ class WinGeneratorBase(GeneratorBase):
         self.bdb_lib = lib
         break
     else:
-      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
-                       "by default\n")
-      self.bdb_lib = "libdb42"
+      sys.stderr.write("BDB not found, BDB fs will not be built\n")
+      self.bdb_lib = None
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -864,13 +886,13 @@ class WinGeneratorBase(GeneratorBase):
     infp.close()
     try:
       txt = outfp.read()
-      if (txt):
+      if txt:
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
       else:
         vermatch = None
 
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
@@ -930,7 +952,7 @@ class WinGeneratorBase(GeneratorBase):
       vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
   
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))

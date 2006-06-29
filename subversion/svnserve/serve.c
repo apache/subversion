@@ -754,6 +754,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *name;
   svn_string_t *value;
 
+  /* Because the revprop value was at one time mandatory, the usual
+     optional element pattern "(?s)" isn't used. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
   SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
@@ -981,8 +983,8 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (! keep_locks && lock_tokens && lock_tokens->nelts)
         SVN_ERR(unlock_paths(lock_tokens, b, pool));
 
-         SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)(?c)",
-                                        new_rev, date, author, post_commit_err));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)(?c)",
+                                     new_rev, date, author, post_commit_err));
 
       if (! b->tunnel)
         SVN_ERR(svn_fs_deltify_revision(b->fs, new_rev, pool));
@@ -1383,7 +1385,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_uint64_t limit;
   log_baton_t lb;
 
-  /* Parse the arguments. */
+  /* Parse the arguments.  The usual optional element pattern "(?n)"
+     isn't used for the limit argument because pre-1.3 clients don't
+     know to send it. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit));
@@ -2221,9 +2225,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(ww))",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(www))",
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE, 
-                                 SVN_RA_SVN_CAP_SVNDIFF1));
+                                 SVN_RA_SVN_CAP_SVNDIFF1,
+                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES));
 
   /* Read client response.  Because the client response form changed
    * between version 1 and version 2, we have to do some of this by

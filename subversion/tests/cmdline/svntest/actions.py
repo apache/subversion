@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  actions.py:  routines that actually run the svn client.
 #
@@ -16,7 +15,7 @@
 #
 ######################################################################
 
-import os.path, shutil, string, re, sys
+import os.path, shutil, string, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
@@ -74,11 +73,6 @@ def guarantee_greek_repository(path):
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
 
-    # build a URL for doing an import.
-    url = main.test_area_url + '/' + main.pristine_dir
-    if main.windows == 1:
-      url = string.replace(url, '\\', '/')
-
     # import the greek tree, using l:foo/p:bar
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
@@ -86,7 +80,7 @@ def guarantee_greek_repository(path):
                                   '--username', main.wc_author,
                                   '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
-                                  main.greek_dump_dir, url)
+                                  main.greek_dump_dir, main.pristine_url)
 
     # check for any errors from the import
     if len(errput):
@@ -130,6 +124,22 @@ def guarantee_greek_repository(path):
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
+  # If there's no pristine wc, create one.
+  if not os.path.exists(main.pristine_wc_dir):
+    # Generate the expected output tree.
+    expected_output = main.greek_state.copy()
+    expected_output.wc_dir = main.pristine_wc_dir
+    expected_output.tweak(status='A ', contents=None)
+  
+    # Generate an expected wc tree.
+    expected_wc = main.greek_state
+  
+    # Do a checkout, and verify the resulting output and disk contents.
+    run_and_verify_checkout(main.pristine_url, 
+                            main.pristine_wc_dir,
+                            expected_output,
+                            expected_wc)
+  
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
@@ -197,6 +207,28 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
   return out, err
 
+
+def run_and_verify_load(repo_dir, dump_file_content):
+  "Runs 'svnadmin load' and reports any errors."
+  expected_stderr = []
+  output, errput = \
+          main.run_command_stdin(
+    "%s load --force-uuid --quiet %s" % (main.svnadmin_binary, repo_dir),
+    expected_stderr, 1, dump_file_content)
+  if expected_stderr:
+    actions.compare_and_display_lines(
+      "Standard error output", "STDERR", expected_stderr, errput)
+
+
+def run_and_verify_dump(repo_dir):
+  "Runs 'svnadmin dump' and reports any errors, returning the dump content."
+  output, errput = main.run_svnadmin('dump', repo_dir)
+  if not output:
+    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+  if not errput:
+    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
+
+  return output
 
 ######################################################################
 # Subversion Actions
@@ -400,8 +432,33 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          check_props = 0,
                          dry_run = 1,
                          *args):
+  """Run 'svn merge -rREV1:REV2 URL DIR'."""
+  if args:
+    run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
+                          status_tree, skip_tree, error_re_string,
+                          singleton_handler_a, a_baton, singleton_handler_b,
+                          b_baton, check_props, dry_run, *args)
+  else:
+    run_and_verify_merge2(dir, rev1, rev2, url, None, output_tree, disk_tree,
+                          status_tree, skip_tree, error_re_string,
+                          singleton_handler_a, a_baton, singleton_handler_b,
+                          b_baton, check_props, dry_run)
 
-  """Run 'svn merge -rREV1:REV2 URL DIR'
+
+def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
+                          output_tree, disk_tree, status_tree, skip_tree,
+                          error_re_string = None,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None,
+                          check_props = 0,
+                          dry_run = 1,
+                          *args):
+  """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
+  (for a three-way merge between URLs and WC).
+
+  If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.
 
   If ERROR_RE_STRING, the merge must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -432,7 +489,11 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   if isinstance(skip_tree, wc.State):
     skip_tree = skip_tree.old_tree()
 
-  merge_command = ('merge', '-r', rev1 + ':' + rev2, url, dir)
+  if url2:
+    merge_command = ("merge", url1 + "@" + str(rev1),url2 + "@" + str(rev2),
+                     dir)
+  else:
+    merge_command = ("merge", "-r", str(rev1) + ":" + str(rev2), url1, dir)
 
   if dry_run:
     pre_disk = tree.build_tree_from_wc(dir)
@@ -732,6 +793,37 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     display_trees(None, 'DIFF OUTPUT TREE', output_tree, mytree)
     raise
 
+def run_and_validate_lock(path, username, password):
+  """`svn lock' the given path and validate the contents of the lock.
+     Use the given username. This is important because locks are
+     user specific."""
+
+  comment = "Locking path:%s." % path
+
+  # lock the path
+  run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                     '--username', username,
+                     '--password', password,
+                     '-m', comment, path)
+
+  # Run info and check that we get the lock fields.
+  output, err = run_and_verify_svn(None, None, [],
+                                   'info','-R', 
+                                   path)
+
+  # prepare the regexs to compare against
+  token_re = re.compile (".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
+  author_re = re.compile (".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
+  created_re = re.compile (".*?Lock Created:.*?", re.DOTALL)
+  comment_re = re.compile (".*?%s\n.*?" % re.escape(comment), re.DOTALL)
+  # join all output lines into one
+  output = "".join(output)
+  # Fail even if one regex does not match
+  if ( not (token_re.match(output) and \
+            author_re.match(output) and \
+            created_re.match(output) and \
+            comment_re.match(output))):
+    raise Failure
 
 ######################################################################
 # Displaying expected and actual output
@@ -794,7 +886,7 @@ def match_or_fail(message, label, expected, actual):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox):
+def make_repo_and_wc(sbox, create_wc = True):
   """Create a fresh repository and checkout a wc from it.
 
   The repo and wc directories will both be named TEST_NAME, and
@@ -808,20 +900,26 @@ def make_repo_and_wc(sbox):
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(sbox.repo_dir)
 
-  # Generate the expected output tree.
-  expected_output = main.greek_state.copy()
-  expected_output.wc_dir = sbox.wc_dir
-  expected_output.tweak(status='A ', contents=None)
+  if create_wc:
+    # this dir doesn't exist out of the box, so we may have to make it
+    if not os.path.exists(main.general_wc_dir):
+      os.makedirs(main.general_wc_dir)
+        
+    # copy the pristine wc and relocate it to our new repository.
+    duplicate_dir(main.pristine_wc_dir, sbox.wc_dir)
 
-  # Generate an expected wc tree.
-  expected_wc = main.greek_state
-
-  # Do a checkout, and verify the resulting output and disk contents.
-  run_and_verify_checkout(main.current_repo_url,
-                          sbox.wc_dir,
-                          expected_output,
-                          expected_wc)
-
+    output, errput = main.run_svn (None, 'switch', '--relocate',
+                               '--username', main.wc_author,
+                               '--password', main.wc_passwd,
+                               main.pristine_url,
+                               main.current_repo_url, sbox.wc_dir)
+  else:
+    # just make sure the parent folder of our working copy is created
+    try:
+      os.mkdir(main.general_wc_dir)
+    except OSError, err:
+      if err.errno != errno.EEXIST:
+        raise
 
 # Duplicate a working copy or other dir.
 def duplicate_dir(wc_name, wc_copy_name):

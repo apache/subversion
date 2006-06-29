@@ -24,14 +24,8 @@
 %module ra
 #endif
 
-%include typemaps.i
-%include constraints.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 
 /* bad pool convention, also these should not be public interface at all
@@ -52,7 +46,8 @@
     const svn_ra_reporter2_t **reporter,
     void **report_baton,
     svn_dirent_t **dirent,
-    svn_lock_t **lock
+    svn_lock_t **lock,
+    const svn_delta_editor_t **
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
@@ -75,16 +70,18 @@
 /* -----------------------------------------------------------------------
    handle svn_ra_get_locations()
 */
-%typemap(python,in) apr_array_header_t *location_revisions {
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *location_revisions {
     $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input, 
                                                              _global_pool);
     if ($1 == NULL)
         SWIG_fail;
 }
-%typemap(python,in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **locations {
+%typemap(in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(argout,fragment="t_output_helper") apr_hash_t **locations {
     $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
 }
+#endif
 
 /* -----------------------------------------------------------------------
    thunk ra_callback
@@ -98,74 +95,81 @@
     const apr_array_header_t *paths
 };
 
-%typemap(perl5, in) (const svn_delta_editor_t *update_editor,
+#ifdef SWIGPERL
+%typemap(in) (const svn_delta_editor_t *update_editor,
 		     void *update_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
-%typemap(perl5, in) (const svn_delta_editor_t *diff_editor,
+%typemap(in) (const svn_delta_editor_t *diff_editor,
 		     void *diff_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
+#endif
 
-%apply (const svn_delta_editor_t *EDITOR, void *BATON)
-{
-  (const svn_delta_editor_t *update_editor, void *update_baton),
-  (const svn_delta_editor_t *diff_editor, void *diff_baton)
-}
-
-%typemap(perl5, in) (const svn_ra_callbacks_t *callbacks,
+#ifdef SWIGPERL
+%typemap(in) (const svn_ra_callbacks_t *callbacks,
 		     void *callback_baton) {
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
 }
+#endif
 
-%typemap(ruby, in) (const svn_ra_callbacks2_t *callbacks,
+#ifdef SWIGRUBY
+%typemap(in) (const svn_ra_callbacks2_t *callbacks,
                     void *callback_baton)
 {
   svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
 }
+#endif
 
-%typemap(python, in) (svn_ra_callbacks2_t *callbacks, 
+#ifdef SWIGPYTHON
+%typemap(in) (svn_ra_callbacks2_t *callbacks, 
                       void *callback_baton) {
   svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
 }
+#endif
 
-%typemap(perl5, in) apr_hash_t *config {
+#ifdef SWIGPERL
+%typemap(in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
 }
+#endif
 
-%typemap(ruby, in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
+#ifdef SWIGRUBY
+%typemap(in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
   $1 = svn_swig_rb_ra_lock_callback;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
-%typemap(ruby, in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
 {
   $1 = svn_swig_rb_ra_file_rev_handler;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
-%typemap(ruby, in) apr_hash_t *path_revs
+%typemap(in) apr_hash_t *path_revs
 {
   $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
 }
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+{
+   $1 = svn_swig_py_ra_file_rev_handler_func;
+   $2 = (void *)$input;
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) (const svn_ra_reporter2_t *reporter, void *report_baton)
+{
+  $1 = (svn_ra_reporter2_t *)&swig_py_ra_reporter2;
+  $2 = (void *)$input;
+}
+#endif
 
 /* ----------------------------------------------------------------------- */
 
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
-%}
-
 %include svn_ra_h.swg
-

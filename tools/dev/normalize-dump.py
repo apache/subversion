@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 import re
 import string
 
-header_re = re.compile(r'^(.*): ?(.*)$')
+header_re = re.compile(r'^([^:]*): ?(.*)$')
 
 class NodePath:
     def __init__(self, path, headers):

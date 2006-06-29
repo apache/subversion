@@ -43,6 +43,7 @@ SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
 SVN_KEYCHAIN_LIBS = @SVN_KEYCHAIN_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
+SVN_SASL_LIBS = @SVN_SASL_LIBS@
 
 LIBS = @LIBS@
 
@@ -99,7 +100,8 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_NEON_INCLUDES@ @SVN_KEYCHAIN_INCLUDES@ \
-           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@
+           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@ \
+           @SVN_SASL_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -118,6 +120,7 @@ SWIG_RB_LINK = @SWIG_RB_LINK@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
+SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/java/javahl/include
 
@@ -162,8 +165,8 @@ LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
 
 # Compilation of SWIG-generated C source code
-COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
-COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
+COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
@@ -258,6 +261,9 @@ javahl_java_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
 
 RUBY = @RUBY@
+RUBY_MAJOR = @RUBY_MAJOR@
+RUBY_MINOR = @RUBY_MINOR@
+RDOC = @RDOC@
 
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -484,7 +490,7 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-design doc-misc-docs doc-api
+doc: doc-misc-docs doc-api
 
 # Generate API documentation for the C libraries.
 ### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
@@ -495,12 +501,11 @@ doc-api:
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
-doc-design: doc-design-html doc-design-pdf doc-design-ps
 
 # Build all docs of a certain type.
-doc-all-html: doc-design-html doc-misc-docs-html
-doc-all-pdf: doc-design-pdf doc-misc-docs-pdf
-doc-all-ps: doc-design-ps doc-misc-docs-ps
+doc-all-html: doc-misc-docs-html
+doc-all-pdf: doc-misc-docs-pdf
+doc-all-ps: doc-misc-docs-ps
 
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
@@ -510,17 +515,8 @@ doc-misc-docs-pdf:
 doc-misc-docs-ps:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) ps
 
-doc-design-html:
-	cd $(top_srcdir)/doc/design && $(MAKE) all-html
-doc-design-pdf:
-	cd $(top_srcdir)/doc/design && $(MAKE) pdf
-doc-design-ps:
-	cd $(top_srcdir)/doc/design && $(MAKE) ps
-
-
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
-	cd $(top_srcdir)/doc/design && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
 
 # Converting from the .rnc XML shcemas to various other schema formats.
@@ -718,3 +714,5 @@ clean-swig-rb:
 extraclean-swig-rb: clean-swig-rb
 	$(EXTRACLEAN_SWIG_RB)
 
+install-swig-rb-doc:
+	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"

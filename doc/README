@@ -25,11 +25,6 @@ A rough guide:
                              Subversion site.  Think of it as a
                              temporary, but published, holding area.
 
-  design/                    Subversion's original design document.
-                             WARNING!  Extremely old!  From June 2000.
-                             Converted from the original texinfo into DocBook
-                             Lite, and *slowly* undergoing updates.
-
   programmer/                Documents for Subversion programmers.
 
   programmer/WritingChangeLogs.txt

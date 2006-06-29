@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
 #
@@ -159,8 +158,13 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
+pristine_wc_dir = os.path.join(temp_dir, "wc")
 default_config_dir = config_dir
 
+# calculate repo url from pristine_dir
+pristine_url = test_area_url + '/' + pristine_dir
+if windows == 1:
+  pristine_url = string.replace(pristine_url, '\\', '/')
 
 #
 # Our pristine greek-tree state.
@@ -254,7 +258,10 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   args = ''
   for arg in varargs:                   # build the command string
-    args = args + ' "' + str(arg) + '"'
+    arg = str(arg)
+    if os.name != 'nt':
+      arg = arg.replace('$', '\$')
+    args = args + ' "' + arg + '"'
 
   # Log the command line
   if verbose_mode:
@@ -416,7 +423,7 @@ def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
   exist, create it."""
 
-  if not(os.path.exists(path)):
+  if not os.path.exists(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
@@ -445,64 +452,70 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
-  # A BDB hot-backup procedure would be more efficient, but that would
-  # require access to the BDB tools, and this doesn't.  Print a fake
-  # pipe command so that the displayed CMDs can be run by hand
-  create_repos(dst_path)
-  dump_args = ' dump "' + src_path + '"'
-  load_args = ' load "' + dst_path + '"'
-
-  if ignore_uuid:
-    load_args = load_args + " --ignore-uuid"
-  if verbose_mode:
-    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-          '|', os.path.basename(svnadmin_binary) + load_args,
-  start = time.time()
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-  stop = time.time()
-  if verbose_mode:
-    print '<TIME = %.6f>' % (stop - start)
-
-  while 1:
-    data = dump_out.read(1024*1024)  # Arbitrary buffer size
-    if data == "":
-      break
-    load_in.write(data)
-  load_in.close() # Tell load we are done
-
-  dump_lines = dump_err.readlines()
-  load_lines = load_out.readlines()
-  dump_in.close()
-  dump_out.close()
-  dump_err.close()
-  load_out.close()
-  load_err.close()
-
-  dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
-  expect_revision = 0
-  for dump_line in dump_lines:
-    match = dump_re.match(dump_line)
-    if not match or match.group(1) != str(expect_revision):
-      print 'ERROR:  dump failed:', dump_line,
-      raise SVNRepositoryCopyFailure
-    expect_revision += 1
-  if expect_revision != head_revision + 1:
-    print 'ERROR:  dump failed; did not see revision', head_revision
-    raise SVNRepositoryCopyFailure
-
-  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
-  expect_revision = 1
-  for load_line in load_lines:
-    match = load_re.match(load_line)
-    if match:
-      if match.group(1) != str(expect_revision):
-        print 'ERROR:  load failed:', load_line,
+  # If the copy may have the same uuid, then hotcopy the repos files on disk.
+  if not ignore_uuid:
+    if not os.path.exists(general_repo_dir):
+      os.makedirs(general_repo_dir) # this also creates all the intermediate dirs
+      
+    output, errput = run_svnadmin('hotcopy', src_path, dst_path)
+  else:
+    # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
+    # the displayed CMDs can be run by hand
+    create_repos(dst_path)
+    dump_args = ' dump "' + src_path + '"'
+    load_args = ' load "' + dst_path + '"'
+  
+    if ignore_uuid:
+      load_args = load_args + " --ignore-uuid"
+    if verbose_mode:
+      print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+            '|', os.path.basename(svnadmin_binary) + load_args,
+    start = time.time()
+    dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+    load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+    stop = time.time()
+    if verbose_mode:
+      print '<TIME = %.6f>' % (stop - start)
+  
+    while 1:
+      data = dump_out.read(1024*1024)  # Arbitrary buffer size
+      if data == "":
+        break
+      load_in.write(data)
+    load_in.close() # Tell load we are done
+  
+    dump_lines = dump_err.readlines()
+    load_lines = load_out.readlines()
+    dump_in.close()
+    dump_out.close()
+    dump_err.close()
+    load_out.close()
+    load_err.close()
+  
+    dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
+    expect_revision = 0
+    for dump_line in dump_lines:
+      match = dump_re.match(dump_line)
+      if not match or match.group(1) != str(expect_revision):
+        print 'ERROR:  dump failed:', dump_line,
         raise SVNRepositoryCopyFailure
       expect_revision += 1
-  if expect_revision != head_revision + 1:
-    print 'ERROR:  load failed; did not see revision', head_revision
-    raise SVNRepositoryCopyFailure
+    if expect_revision != head_revision + 1:
+      print 'ERROR:  dump failed; did not see revision', head_revision
+      raise SVNRepositoryCopyFailure
+  
+    load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+    expect_revision = 1
+    for load_line in load_lines:
+      match = load_re.match(load_line)
+      if match:
+        if match.group(1) != str(expect_revision):
+          print 'ERROR:  load failed:', load_line,
+          raise SVNRepositoryCopyFailure
+        expect_revision += 1
+    if expect_revision != head_revision + 1:
+      print 'ERROR:  load failed; did not see revision', head_revision
+      raise SVNRepositoryCopyFailure
 
 
 def set_repos_paths(repo_dir):
@@ -568,7 +581,7 @@ class Sandbox:
     # contents.
     if self.repo_url.startswith("http"):
       # this dir doesn't exist out of the box, so we may have to make it
-      if not(os.path.exists(work_dir)):
+      if not os.path.exists(work_dir):
         os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
       fp = open(self.authz_file, "w")
@@ -596,10 +609,10 @@ class Sandbox:
     self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
     return self.dependents[-1]
 
-  def build(self, name = None):
+  def build(self, name = None, create_wc = True):
     if name != None:
       self._set_name(name)
-    if actions.make_repo_and_wc(self):
+    if actions.make_repo_and_wc(self, create_wc):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
   def add_test_path(self, path, remove=1):

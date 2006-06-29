@@ -59,7 +59,12 @@ public:
     static bool isJavaExceptionThrown();
     static JNIEnv * getEnv();
     static void setEnv(JNIEnv *);
+
+    /**
+     * @return Whether any Throwable has been raised.
+     */
     static bool isExceptionThrown();
+
     static void handleAPRError(int error, const char *op);
 
     /**
@@ -79,7 +84,24 @@ public:
 
     static void handleSVNError(svn_error_t *err);
     static jstring makeSVNErrorMessage(svn_error_t *err);
-    static void throwError(const char *message);
+
+    /**
+     * Create and throw a java.lang.Throwable instance.
+     *
+     * @param name The class name (in path form, with slashes in lieu
+     * of dots) of the Throwable to create and raise.
+     * @param message The message text of the Throwable.
+     */
+    static void raiseThrowable(const char *name, const char *message);
+
+    /**
+     * Creates and throws a JNIError.
+     *
+     * @param message The message text of the JNIError.
+     */
+    static void throwError(const char *message)
+    { raiseThrowable(JAVA_PACKAGE"/JNIError", message); }
+
     static apr_pool_t * getPool();
 	static bool JNIGlobalInit(JNIEnv *env);
     static bool JNIInit(JNIEnv *env);

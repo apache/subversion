@@ -625,7 +625,8 @@ headers_fetch(serf_bucket_t *headers,
   report_fetch_t *fetch_ctx = baton;
 
   /* note that we have old VC URL */
-  if (SVN_IS_VALID_REVNUM(fetch_ctx->info->base_rev))
+  if (SVN_IS_VALID_REVNUM(fetch_ctx->info->base_rev) &&
+      fetch_ctx->info->delta_base)
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->info->delta_base->data);
@@ -1386,6 +1387,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
         {
           abort();
         }
+
+      info = parser->state->private;
 
       SVN_ERR(open_dir(info->dir));
 

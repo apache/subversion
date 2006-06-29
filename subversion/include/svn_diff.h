@@ -397,8 +397,8 @@ svn_diff_file_diff(svn_diff_t **diff,
  * @since New in 1.4.
  *
  * Return a diff object in @a *diff (allocated from @a pool) that represents
- * the difference between an @a original file, @a modified file, and @a latest 
- * file. (The file arguments must be full paths to the files.)
+ * the difference between an @a original file, @a modified file, and @a latest
+ * file.
  *
  * Compare lines according to the relevant fields of @a options.
  */

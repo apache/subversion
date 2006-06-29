@@ -342,8 +342,8 @@ add_dir_recursive(const char *dirname,
       if (svn_wc_is_adm_dir(this_entry.name, subpool))
         continue;
 
-      if ((!no_ignore) && svn_cstring_match_glob_list(this_entry.name,
-                                                      ignores)) 
+      if ((!no_ignore) && svn_wc_match_ignore_list(this_entry.name,
+                                                   ignores, subpool))
         continue;
 
       /* Construct the full path of the entry. */
@@ -652,7 +652,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
           err = svn_client_add3(path, FALSE, FALSE, FALSE, ctx, subpool);
 
           /* We just created a new directory, but couldn't add it to
-             version control. Don't leave unversioned directoies behind. */
+             version control. Don't leave unversioned directories behind. */
           if (err)
             {
               /* ### If this returns an error, should we link it onto

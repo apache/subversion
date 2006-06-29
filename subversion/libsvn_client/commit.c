@@ -358,7 +358,8 @@ import_dir(const svn_delta_editor_t *editor,
       if (apr_hash_get(excludes, abs_path, APR_HASH_KEY_STRING))
         continue;
 
-      if ((!no_ignore) && svn_cstring_match_glob_list(filename, ignores))
+      if ((!no_ignore) && svn_wc_match_ignore_list(filename, ignores,
+                                                   subpool))
         continue;
 
       /* We only import subdirectories when we're doing a regular
@@ -526,7 +527,7 @@ import(const char *path,
       if (!no_ignore)
         {
           SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-          ignores_match = svn_cstring_match_glob_list(path, ignores);
+          ignores_match = svn_wc_match_ignore_list(path, ignores, pool);
         }
       if (!ignores_match) 
         SVN_ERR(import_file(editor, root_baton, path, edit_path,
@@ -739,7 +740,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   if (new_entries->nelts
       /* What's this, what's this?  This assignment is here because we
          use the value to construct the error message just below.  It
-         may not be asethetically pleasing, but it's less ugly than
+         may not be aesthetically pleasing, but it's less ugly than
          calling APR_ARRAY_IDX twice. */
       && svn_wc_is_adm_dir(temp = APR_ARRAY_IDX(new_entries,
                                                 new_entries->nelts - 1,
@@ -931,7 +932,7 @@ have_processed_parent(apr_array_header_t *commit_items,
 
 
 /* Remove redundancies by removing duplicates from NONRECURSIVE_TARGETS,
- * and removing any target that either is, a decendant of, a path in
+ * and removing any target that either is, or is a descendant of, a path in
  * RECURSIVE_TARGETS.  Return the result in *PUNIQUE_TARGETS.
  */
 static svn_error_t *
@@ -1288,26 +1289,35 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                 APR_ARRAY_PUSH(dirs_to_lock_recursive, 
                                const char *) = apr_pstrdup(pool, target);
               else
-                APR_ARRAY_PUSH(dirs_to_lock, 
-                               const char *) = apr_pstrdup(pool, target);
+                /* Don't lock if target is the base_dir, base_dir will be 
+                   locked anyway and we can't lock it twice */
+                if (strcmp(target, base_dir))
+                  APR_ARRAY_PUSH(dirs_to_lock, 
+                                 const char *) = apr_pstrdup(pool, target);
             }
 
           /* Now we need to iterate over the parent paths of this path
-             adding them to the set of directories we want to lock. */
-          svn_path_split(target, &parent_dir, &name, subpool);
-
-          target = parent_dir;
-
-          while (strcmp(target, base_dir))
+             adding them to the set of directories we want to lock. 
+             Do nothing if target is already the base_dir. */
+          if (strcmp(target, base_dir)) 
             {
-              if (target[0] == '/' && target[1] == '\0')
-                abort();
+              svn_path_split(target, &parent_dir, &name, subpool);
 
-              APR_ARRAY_PUSH(dirs_to_lock,
-                             const char *) = apr_pstrdup(pool, target);
-              target = svn_path_dirname(target, subpool);
+              target = parent_dir;
+
+              while (strcmp(target, base_dir))
+                {
+                  if ((target[0] == '/' && target[1] == '\0') ||
+                     (target[0] == '\0'))
+                    abort();
+
+                  APR_ARRAY_PUSH(dirs_to_lock,
+                                 const char *) = apr_pstrdup(pool, target);
+                  target = svn_path_dirname(target, subpool);
+                }
             }
         }
+
       svn_pool_destroy(subpool);
     }
 
