@@ -67,6 +67,9 @@
 /* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
 
+/* Delete changelist field from the entry SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_DELETE_CHANGELIST   "delete-changelist"
+
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 
@@ -827,6 +830,29 @@ log_do_delete_lock(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+log_do_delete_changelist(struct log_runner *loggy,
+                         const char *name)
+{
+  svn_error_t *err;
+  svn_wc_entry_t entry;
+
+  entry.changelist = NULL;
+
+  /* Now write the new entry out */
+  err = svn_wc__entry_modify(loggy->adm_access, name,
+                             &entry,
+                             SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                             FALSE, loggy->pool);
+  if (err)
+    return svn_error_createf(pick_error_code(loggy), err,
+                             _("Error removing changelist from entry '%s'"),
+                             name);
+  loggy->entries_modified = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 /* Ben sez:  this log command is (at the moment) only executed by the
    update editor.  It attempts to forcefully remove working data. */
 static svn_error_t *
@@ -1507,6 +1533,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
     err = log_do_delete_lock(loggy, name);
   }
+  else if (strcmp(eltname, SVN_WC__LOG_DELETE_CHANGELIST) == 0) {
+    err = log_do_delete_changelist(loggy, name);
+  }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry(loggy, name);
   }
@@ -1936,6 +1965,21 @@ svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
 {
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_LOCK,
+                        SVN_WC__LOG_ATTR_NAME, path,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *path,
+                                apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+                        SVN_WC__LOG_DELETE_CHANGELIST,
                         SVN_WC__LOG_ATTR_NAME, path,
                         NULL);
 

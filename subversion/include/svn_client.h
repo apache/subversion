@@ -1068,11 +1068,31 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Unlock paths in the repository, unless @a keep_locks is true.
  *
+ * If @a changelist_name is non-NULL, then use it as a restrictive filter
+ * on items that are committed;  that is, don't commit anything unless
+ * it's a member of changelist @a changelist_name.
+ *
  * Use @a pool for any temporary allocations.
  *
  * If no error is returned and @a (*commit_info_p)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_commit4(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t recurse,
+                   svn_boolean_t keep_locks,
+                   const char *changelist_name,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/** Similar to svn_client_commit4(), but always passes NULL @a
+ * changelist_name.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  *
  * @since New in 1.3.
  */

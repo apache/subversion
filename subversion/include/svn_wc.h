@@ -2292,6 +2292,8 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
+ * If @a path is a member of a changelist, remove that association.
+ *
  * If @a path is a file and @a digest is non-null, use @a digest as
  * the checksum for the new text base.  Else, calculate the checksum
  * if needed.

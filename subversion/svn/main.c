@@ -270,7 +270,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  successful commit.\n"),
 #endif
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
-     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
+     svn_cl__changelist_opt, svn_cl__config_dir_opt} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"

@@ -432,6 +432,11 @@ svn_wc_process_committed3(const char *path,
     SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access,
                                       base_name, pool));
 
+  /* Also, if the file was part of a changelist, being committed has
+     the effect of *removing* changelist membership. */
+  SVN_ERR(svn_wc__loggy_delete_changelist(&logtags, adm_access,
+                                          base_name, pool));
+
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp). */
