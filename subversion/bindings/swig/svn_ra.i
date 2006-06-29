@@ -72,7 +72,7 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input, 
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
                                                              _global_pool);
     if ($1 == NULL)
         SWIG_fail;
@@ -97,18 +97,18 @@
 
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *update_editor,
-		     void *update_baton) {
+              void *update_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 %typemap(in) (const svn_delta_editor_t *diff_editor,
-		     void *diff_baton) {
+              void *diff_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 #endif
 
 #ifdef SWIGPERL
 %typemap(in) (const svn_ra_callbacks_t *callbacks,
-		     void *callback_baton) {
+              void *callback_baton) {
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
 }
 #endif
@@ -122,7 +122,7 @@
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in) (svn_ra_callbacks2_t *callbacks, 
+%typemap(in) (svn_ra_callbacks2_t *callbacks,
                       void *callback_baton) {
   svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
 }
@@ -131,7 +131,7 @@
 #ifdef SWIGPERL
 %typemap(in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-					   _global_pool);
+                                           _global_pool);
 }
 #endif
 
