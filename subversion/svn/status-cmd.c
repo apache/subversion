@@ -314,7 +314,7 @@ svn_cl__status(apr_getopt_t *os,
 
               /* ### TODO(sussman): should be able to output XML too: */
               SVN_ERR(svn_cmdline_printf(subpool,
-                                         _("\nChangelist '%s':\n"),
+                                         _("\n--- Changelist '%s':\n"),
                                          changelist_name));
 
               for (j = 0; j < path_array->nelts; j++)
