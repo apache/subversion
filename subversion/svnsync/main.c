@@ -77,7 +77,7 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
     { "help", help_cmd, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
          "Describe the usage of this program or its subcommands.\n"),
-      { svnsync_opt_version } },
+      { 0 } },
     { NULL, NULL, { 0 }, NULL, { 0 } } 
   };
 
@@ -1132,7 +1132,9 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   const char *header =
     _("general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+      "               svnsync --version\n"
       "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
+      "Type 'svnsync --version' to see the program version and RA modules.\n"
       "\n"
       "Available subcommands:\n");
 
@@ -1250,7 +1252,6 @@ main(int argc, const char *argv[])
 
           case svnsync_opt_version:
             opt_baton.version = TRUE;
-            opt_baton.help = TRUE;
             break;
 
           case 'r':
@@ -1287,9 +1288,22 @@ main(int argc, const char *argv[])
     {
       if (os->ind >= os->argc)
         {
-          help_cmd(NULL, NULL, pool);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          if (opt_baton.version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc_t pseudo_cmd =
+                { "--version", help_cmd, {0}, "",
+                  {svnsync_opt_version,  /* must accept its own option */
+                  } };
+
+              subcommand = &pseudo_cmd;
+            }
+          else
+            {
+              help_cmd(NULL, NULL, pool);
+              svn_pool_destroy(pool);
+              return EXIT_FAILURE;
+            }
         }
       else
         {
@@ -1318,11 +1332,14 @@ main(int argc, const char *argv[])
           const apr_getopt_option_t *badopt =
             svn_opt_get_option_from_code(opt_id, svnsync_options);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
-                              "Type 'svnsync help %s' for usage.\n"),
-              subcommand->name, optstr, subcommand->name));
+          if (subcommand->name[0] == '-')
+            help_cmd(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+                                "Type 'svnsync help %s' for usage.\n"),
+                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }

@@ -329,7 +329,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
     "Describe the usage of this program or its subcommands.\n"),
-   {svnadmin__version} },
+   {0} },
 
   {"hotcopy", subcommand_hotcopy, {0}, N_
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
@@ -652,7 +652,9 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+      "               svnadmin --version\n"
       "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
+      "Type 'svnadmin --version' to see the program version and FS modules.\n"
       "\n"
       "Available subcommands:\n");
 
@@ -1255,7 +1257,6 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__version:
         opt_state.version = TRUE;
-        opt_state.help = TRUE;
         break;
       case svnadmin__incremental:
         opt_state.incremental = TRUE;
@@ -1332,12 +1333,25 @@ main(int argc, const char *argv[])
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf(stderr, pool,
-                                 _("subcommand argument required\n")));
-          subcommand_help(NULL, NULL, pool);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          if (opt_state.version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc_t pseudo_cmd =
+                { "--version", subcommand_help, {0}, "",
+                  {svnadmin__version,  /* must accept its own option */
+                  } };
+
+              subcommand = &pseudo_cmd;
+            }
+          else
+            {
+              svn_error_clear
+                (svn_cmdline_fprintf(stderr, pool,
+                                     _("subcommand argument required\n")));
+              subcommand_help(NULL, NULL, pool);
+              svn_pool_destroy(pool);
+              return EXIT_FAILURE;
+            }
         }
       else
         {
@@ -1413,11 +1427,14 @@ main(int argc, const char *argv[])
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code(opt_id, options_table);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
-                              "Type 'svnadmin help %s' for usage.\n"),
-              subcommand->name, optstr, subcommand->name));
+          if (subcommand->name[0] == '-')
+            subcommand_help(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+                                "Type 'svnadmin help %s' for usage.\n"),
+                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
