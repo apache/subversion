@@ -42,7 +42,8 @@
     const char *error_info,
     const char *copyfrom_path,
     const char *copy_path,
-    const char *base_checksum
+    const char *base_checksum,
+    const char *text_checksum
 };
 
 #ifdef SWIGPYTHON
