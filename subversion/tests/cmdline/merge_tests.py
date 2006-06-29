@@ -608,7 +608,7 @@ def delete_file_and_dir(sbox):
     'lambda'  : Item("This is the file 'lambda'.\n"),
     })
   expected_status = wc.State(B2_path, {
-    ''        : Item(status='  '),
+    ''        : Item(status=' M'),
     'E'       : Item(status=' M'),
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
