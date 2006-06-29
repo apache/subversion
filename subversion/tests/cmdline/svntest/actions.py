@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os.path, shutil, string, re, sys, errno
+import os, shutil, string, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput

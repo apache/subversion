@@ -97,7 +97,7 @@
 #ifdef SWIGPERL
 %typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **entries_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1,
       $descriptor(svn_fs_dirent_t *));
 }
 #endif
@@ -126,7 +126,7 @@
 #ifdef SWIGPERL
 %typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **changed_paths_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1,
       $descriptor(svn_fs_path_change_t *));
 }
 #endif
