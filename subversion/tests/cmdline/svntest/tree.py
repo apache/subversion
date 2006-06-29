@@ -493,13 +493,9 @@ def compare_trees(a, b,
     print "Error: unequal number of children"
     raise SVNTreeUnequal
   except SVNTreeUnequal:
-    if a.name == root_node_name:
-      raise SVNTreeUnequal
-    else:
+    if a.name != root_node_name:
       print "Unequal at node %s" % a.name
-      raise SVNTreeUnequal
-
-
+    raise
 
 
 
