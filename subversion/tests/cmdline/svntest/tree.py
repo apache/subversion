@@ -428,19 +428,18 @@ def compare_trees(a, b,
   the entry exists only in A, invoke FUNC_A on it, and likewise for
   B with FUNC_B."""
 
-  def display_nodes(expected, actual):
-    'Display two nodes, EXPECTED and ACTUAL.'
+  def display_nodes(a, b):
+    'Display two nodes, expected and actual.'
     print "============================================================="
-    print "Expected node", actual.name, "and actual node", expected.name, \
-          "are different!"
+    print "Expected", b.name, "and actual", a.name, "are different!"
     print "============================================================="
     print "EXPECTED NODE TO BE:"
     print "============================================================="
-    actual.pprint()
+    b.pprint()
     print "============================================================="
     print "ACTUAL NODE FOUND:"
     print "============================================================="
-    expected.pprint()
+    a.pprint()
 
   # Setup singleton handlers
   if (singleton_handler_a is None):
