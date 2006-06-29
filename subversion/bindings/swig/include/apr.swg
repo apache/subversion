@@ -114,7 +114,7 @@ typedef int apr_status_t;
 %apply unsigned long *OUTPUT { apr_uint32_t *, apr_size_t * }
 
 /* If sizeof(apr_off_t) > sizeof(apr_int64_t), apr_off_t will get truncated
- * to a 64-bit integer */ 
+ * to a 64-bit integer */
 %apply long long { apr_off_t, apr_int64_t }
 %apply unsigned long long { apr_uint64_t }
 
@@ -160,7 +160,7 @@ typedef apr_int32_t time_t;
 %typemap(in,numinputs=0) apr_hash_t **DIRENTHASH = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **DIRENTHASH {
     $result = t_output_helper($result,
-                              svn_swig_py_convert_hash(*$1, 
+                              svn_swig_py_convert_hash(*$1,
                                                        SWIGTYPE_p_svn_dirent_t,
                                                        NULL));
 }
@@ -229,7 +229,7 @@ typedef apr_int32_t time_t;
    storing svn_prop_t * property values
 */
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0) 
+%typemap(in, numinputs=0)
      apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
 {
   $1 = &temp;
@@ -317,7 +317,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 %typemap(argout,fragment="t_output_helper") apr_file_t **
     "$result = t_output_helper(
         $result,
-        svn_swig_NewPointerObj(*$1, $*1_descriptor, 
+        svn_swig_NewPointerObj(*$1, $*1_descriptor,
            _global_svn_swig_py_pool));";
 #endif
 

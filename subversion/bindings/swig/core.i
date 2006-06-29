@@ -61,14 +61,14 @@
 %immutable svn_error_t::message;
 %immutable svn_error_t::file;
 
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
    We want the error code enums wrapped so we must include svn_error_codes.h
-   before anything else does. 
+   before anything else does.
 */
 
 %include svn_error_codes_h.swg
 
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
    Include svn_types.swg early. Other .i files will import svn_types.swg which
    then includes svn_types.h, making further includes get skipped. We want
    to actually generate wrappers for svn_types.h, so do an _include_ right
@@ -78,13 +78,13 @@
 %include svn_types.swg
 
 
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
    moving along...
 */
 %import apr.swg
 %import svn_string.swg
 
-/* ----------------------------------------------------------------------- 
+/* -----------------------------------------------------------------------
    completely ignore a number of functions. the presumption is that the
    scripting language already has facilities for these things (or they
    are relatively trivial).
@@ -98,7 +98,7 @@
 %ignore svn_io_check_path;
 %ignore svn_io_check_special_path;
 %ignore svn_io_check_resolved_path;
-/* This is useful for implementing svn_ra_callbacks_t->open_tmp_file */ 
+/* This is useful for implementing svn_ra_callbacks_t->open_tmp_file */
 // svn_io_open_unique_file
 %ignore svn_io_create_unique_link;
 %ignore svn_io_read_link;
@@ -383,7 +383,7 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   auth provider convertors 
+   auth provider convertors
 */
 #ifdef SWIGPERL
 %typemap(in) apr_array_header_t *providers {
@@ -781,7 +781,7 @@ void svn_swig_py_clear_application_pool();
 svn_swig_py_initialize();
 
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
-PyModule_AddObject(m, "SubversionException", 
+PyModule_AddObject(m, "SubversionException",
                    svn_swig_py_register_exception());
 %}
 
@@ -894,7 +894,7 @@ svn_default_charset(void)
 {
   return INT2NUM((int)APR_DEFAULT_CHARSET);
 }
- 
+
 static VALUE
 svn_locale_charset(void)
 {
