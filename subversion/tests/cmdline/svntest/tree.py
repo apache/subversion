@@ -157,19 +157,16 @@ class SVNTreeNode:
 # TODO: Check to make sure contents and children are mutually exclusive
 
   def add_child(self, newchild):
+    child_already_exists = 0
     if self.children is None:  # if you're a file,
       self.children = []     # become an empty dir.
-    child_already_exists = 0
-    for a in self.children:
-      if a.name == newchild.name:
-        child_already_exists = 1
-        break
-    if child_already_exists == 0:
-      self.children.append(newchild)
-      newchild.path = os.path.join (self.path, newchild.name)
-
-    # If you already have the node,
     else:
+      for a in self.children:
+        if a.name == newchild.name:
+          child_already_exists = 1
+          break
+
+    if child_already_exists:
       if newchild.children is None:
         # this is the 'end' of the chain, so copy any content here.
         a.contents = newchild.contents
@@ -180,6 +177,9 @@ class SVNTreeNode:
         # try to add dangling children to your matching node
         for i in newchild.children:
           a.add_child(i)
+    else:
+      self.children.append(newchild)
+      newchild.path = os.path.join(self.path, newchild.name)
 
 
   def pprint(self):
