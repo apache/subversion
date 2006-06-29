@@ -236,18 +236,18 @@ B.  Viewing changelists
 
 'svn status' currently shows changelist definitions by crawling the
 working copy.  Output is much more readable than perforce, because
-we're still preserving column alignment:
+we're still preserving column alignment.
 
 $ svn st
 ?      1.2-backports.txt
 M      notes/wc-improvements
 
-Changelist 'status-cleanup':
+--- Changelist 'status-cleanup':
 M      subversion/svn/main.c
        subversion/svn/revert-cmd.c
 M      subversion/svn/info-cmd.c
 
-Changelist 'status-printing':
+--- Changelist 'status-printing':
 M      subversion/svn/status-cmd.c
 
 
@@ -260,8 +260,15 @@ with any changelist.
 
 'svn status' considers changelist membership to be inherently
 "interesting enough" to justify displaying a path, regardless of
-whether it's modified. 
+whether it's modified.
 
+Note that merely upgrading subversion won't break scripts that parse
+'svn status' output.  Such scripts might break *only* if users begin
+to use the new changelist feature.  This is a good balance between
+allowing subversion's development to progress, while not automatically
+punishing users for upgrading.  (Either way, the "---" characters
+should prevent scripts from accidentally detecting conflicts with "^C"
+regular expressions.)
 
 ### Open question:  at the moment, changelists are implemented by
     simply storing a new attribute in the .svn/entries file.  Rather
@@ -387,4 +394,7 @@ perform metadata operations on a whole set of files.
 
     ...behave?  Should it operate on *all* members of the changelist,
     or only those members within the CWD (and recursively "below")?
+
+   --> malcolmr and dlr believe that it's perfectly fine to use only
+       parts of changelists 'below' the target path.
 
