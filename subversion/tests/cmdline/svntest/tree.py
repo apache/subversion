@@ -17,7 +17,7 @@
 
 import re
 import string
-import os.path
+import os
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
