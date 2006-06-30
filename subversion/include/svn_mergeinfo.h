@@ -62,9 +62,9 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
 /** Merge two hashes of merge info, @a mergein1 and @a mergein2,
  * and place the result in @a output.
  *
- * Note: @a mergein1 and @a mergein2 must have rangelists that are sorted as said by
- * svn_sort_compare_ranges.  @a mergeoutput will have rangelists that are
- * guaranteed to be in sorted order.
+ * Note: @a mergein1 and @a mergein2 must have rangelists that are
+ * sorted as said by svn_sort_compare_ranges.  @a mergeoutput will
+ * have rangelists that are guaranteed to be in sorted order.
  * @since New in 1.5.
  */
 svn_error_t *
