@@ -28,7 +28,7 @@
 %opaque_proxy(apr_file_t);
 %opaque_proxy(apr_hash_t);
 
-/* 
+/*
  * SWIG/Python Automatic Memory Management in Subversion: An Overview
  * ------------------------------------------------------------------
  *
@@ -42,7 +42,7 @@
  * Each object has an _is_valid member, and stores a weakref to its parent
  * pool's _is_valid, and when that weakref is broken _mark_weakpool_invalid()
  * gets called in order to mark the object as invalid.
- * 
+ *
  * You can destroy a pool in three ways:
  *   pool.destroy()
  *   pool.clear()
@@ -129,7 +129,7 @@ class GenericSWIGWrapper:
     """Return underlying SWIG object"""
     self.assert_valid()
     return self.this
- 
+
 def _mark_weakpool_invalid(weakpool):
   if weakpool and weakpool() and hasattr(weakpool(), "_is_valid"):
     del weakpool()._is_valid
@@ -148,12 +148,12 @@ struct apr_pool_t {
 
           self._parent_pool = parent_pool or application_pool
           self._mark_valid()
-    
+
           # Protect important functions from GC
           self._apr_pool_destroy = _core.apr_pool_destroy
           self._svn_swig_py_clear_application_pool = \
             _core.svn_swig_py_clear_application_pool
-    
+
           # If we are an application-level pool,
           # then set this pool to be the application-level pool
           if not self._parent_pool:
@@ -161,46 +161,46 @@ struct apr_pool_t {
             application_pool = self
         finally:
           application_pool_lock.release()
-  
+
       def valid(self):
         """Check whether this memory pool and its parents
         are still valid"""
         return hasattr(self,"_is_valid")
-  
+
       def assert_valid(self):
         """Assert that this memory_pool is still valid."""
         assert self.valid(), "This pool has already been destroyed"
-  
+
       def clear(self):
         """Clear embedded memory pool. Invalidate all subpools."""
         pool = self._parent_pool
         apr_pool_clear(self)
         self.set_parent_pool(pool)
-  
+
       def destroy(self):
         """Destroy embedded memory pool. If you do not destroy
         the memory pool manually, Python will destroy it
         automatically."""
         global application_pool
-  
+
         self.assert_valid()
-  
+
         is_application_pool = not self._parent_pool
-  
+
         # Destroy pool
         self._apr_pool_destroy(self)
-  
+
         # Clear application pool if necessary
         if is_application_pool:
           application_pool = None
           self._svn_swig_py_clear_application_pool()
-  
+
         # Mark self as invalid
         if hasattr(self, "_parent_pool"):
           del self._parent_pool
         if hasattr(self, "_is_valid"):
           del self._is_valid
-        
+
         # Clear out any pool-owned references inserted by typemaps
         if hasattr(self, "_owned_refs"):
           del self._owned_refs
@@ -215,19 +215,19 @@ struct apr_pool_t {
           self._owned_refs[ref] += 1
         else:
           self._owned_refs[ref] = 1
-      
+
       def _remove_owned_ref(self, ref):
         """Remove an existing 'owned' reference.  Also used by typemaps."""
         if hasattr(self, "_owned_refs") and self._owned_refs.has_key(ref):
           self._owned_refs[ref] -= 1
           if self._owned_refs[ref] == 0:
             del self._owned_refs[ref]
-  
+
       def __del__(self):
         """Automatically destroy memory pools, if necessary"""
         if self.valid():
           self.destroy()
-  
+
       def _mark_valid(self):
         """Mark pool as valid"""
 
@@ -247,7 +247,7 @@ struct apr_pool_t {
           # are destroyed
           self._weakparent = weakref.ref(self._parent_pool._is_valid,
             lambda x: _mark_weakpool_invalid(weakself))
-  
+
         # Mark pool as valid
         self._is_valid = lambda: 1
 
@@ -256,7 +256,7 @@ struct apr_pool_t {
         self.assert_valid()
         if hasattr(obj, "set_parent_pool"):
           obj.set_parent_pool(self)
-          return obj 
+          return obj
         elif obj is None:
           return None
         else:

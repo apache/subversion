@@ -51,11 +51,11 @@ typedef struct svn_string_t svn_string_t;
 #ifdef SWIGPERL
 %typemap(argout) RET_STRING {
     if (*$1) {
-	$result = sv_newmortal();
-	sv_setpvn ($result, (*$1)->data, (*$1)->len);
+        $result = sv_newmortal();
+        sv_setpvn ($result, (*$1)->data, (*$1)->len);
     }
     else
-	$result = &PL_sv_undef;
+        $result = &PL_sv_undef;
     argvi++;
 }
 #endif
@@ -132,7 +132,7 @@ typedef struct svn_string_t svn_string_t;
     apr_pool_t *pool;
 
     svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-        
+
     $1 = svn_stringbuf_ncreate(StringValuePtr($input),
                                RSTRING($input)->len,
                                pool);
@@ -191,8 +191,8 @@ typedef struct svn_string_t svn_string_t;
 #ifdef SWIGPERL
 %typemap(in) const svn_string_t * (svn_string_t value) {
     if (SvOK($input)) {
-	value.data = SvPV($input, value.len);
-	$1 = &value;
+        value.data = SvPV($input, value.len);
+        $1 = &value;
     }
     else {
         $1 = NULL;
@@ -278,9 +278,9 @@ typedef struct svn_string_t svn_string_t;
 #ifdef SWIGPERL
 %typemap(argout) const char **OUTPUT {
     if (*$1 == NULL)
-	$result = &PL_sv_undef;
+        $result = &PL_sv_undef;
     else
-	$result = sv_2mortal(newSVpv(*$1, 0));
+        $result = sv_2mortal(newSVpv(*$1, 0));
     ++argvi;
 }
 #endif

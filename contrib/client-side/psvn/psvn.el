@@ -1847,7 +1847,7 @@ This is column five of the output from `svn status'.
 The result will be nil or \"S\"."
   (nth 10 line-info))
 (defun svn-status-line-info->repo-locked (line-info)
-  "Return whether LINE-INFO is switched relative to its parent.
+  "Return whether LINE-INFO contains some locking information.
 This is column six of the output from `svn status'.
 The result will be \"K\", \"O\", \"T\", \"B\" or nil."
   (nth 11 line-info))
@@ -1889,6 +1889,9 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 
 (defun svn-status-line-info->set-lastchangerev (line-info value)
   (setcar (nthcdr 5 line-info) value))
+
+(defun svn-status-line-info->set-repo-locked (line-info value)
+  (setcar (nthcdr 11 line-info) value))
 
 (defun svn-status-copy-filename-as-kill (arg)
   "Copy the actual file name to the kill-ring.
@@ -2013,7 +2016,9 @@ When called with the prefix argument 0, use the full path name."
       (svn-status-line-info->set-localrev line-info svn-status-commit-rev-number)
       (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number))
     (cond ((equal action 'committed)
-           (setq tag-string " <committed>"))
+           (setq tag-string " <committed>")
+           (when (member (svn-status-line-info->repo-locked line-info) '(?K))
+             (svn-status-line-info->set-repo-locked line-info nil)))
           ((equal action 'added)
            (setq tag-string " <added>"))
           ((equal action 'deleted)

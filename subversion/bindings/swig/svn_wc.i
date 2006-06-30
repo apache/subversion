@@ -203,7 +203,7 @@
   apr_pool_t *pool;
 
   svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-        
+
   $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
 }
 #endif
@@ -219,7 +219,7 @@
   apr_pool_t *pool;
 
   svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-        
+
   $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
 }
 #endif
