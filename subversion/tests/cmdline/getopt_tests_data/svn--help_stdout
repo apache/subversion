@@ -12,6 +12,7 @@ Available subcommands:
    add
    blame (praise, annotate, ann)
    cat
+   changelist (cl)
    checkout (co)
    cleanup
    commit (ci)

@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_cmdline.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -46,9 +47,18 @@ struct status_baton
   svn_boolean_t repos_locks;
   apr_pool_t *pool;
 
+  apr_hash_t *cached_changelists;
+
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
                                      errors while printing to stdout */
   svn_boolean_t xml_mode;
+};
+
+
+struct status_cache
+{
+  const char *path;
+  svn_wc_status2_t *status;
 };
 
 
@@ -113,11 +123,12 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 }
 
 
-/* A status callback function for printing STATUS for PATH. */
+/* Function which *actually* causes a status structure to be output to
+   the user.  Called by both print_status() and svn_cl__status(). */
 static void
-print_status(void *baton,
-             const char *path,
-             svn_wc_status2_t *status)
+print_status_normal_or_xml(void *baton,
+                           const char *path,
+                           svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
   svn_error_t *err;
@@ -141,6 +152,44 @@ print_status(void *baton,
         }
       svn_error_clear(err);
     }
+}
+
+
+/* A status callback function for printing STATUS for PATH. */
+static void
+print_status(void *baton,
+             const char *path,
+             svn_wc_status2_t *status)
+{
+  struct status_baton *sb = baton;
+
+  /* If there's a changelist attached to the entry, then we don't print
+     the item, but instead dup & cache the status structure for later. */
+  if (status->entry && status->entry->changelist)
+    {
+      /* The hash maps a changelist name to an array of status_cache
+         structures. */
+      apr_array_header_t *path_array;
+      const char *cl_key = apr_pstrdup(sb->pool, status->entry->changelist);
+      struct status_cache *scache = apr_pcalloc(sb->pool, sizeof(*scache));
+      scache->path = apr_pstrdup(sb->pool, path);
+      scache->status = svn_wc_dup_status2(status, sb->pool);
+
+      path_array = (apr_array_header_t *)
+        apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
+      if (path_array == NULL)
+        {
+          path_array = apr_array_make(sb->pool, 1,
+                                      sizeof(struct status_cache *));
+          apr_hash_set(sb->cached_changelists, cl_key,
+                       APR_HASH_KEY_STRING, path_array);
+        }
+
+      (*((struct status_cache **) apr_array_push(path_array))) = scache;
+      return;
+    }
+
+  print_status_normal_or_xml(baton, path, status);
 }
 
 /* Simpler helper to allow use of svn_cl__try. */
@@ -237,12 +286,45 @@ svn_cl__status(apr_getopt_t *os,
       sb.repos_locks = opt_state->update;
       sb.xml_mode = opt_state->xml;
       sb.pool = subpool;
+      sb.cached_changelists = apr_hash_make(sb.pool);
 
       SVN_ERR(svn_cl__try(do_status(opt_state, target, &rev, &sb, ctx,
                                     subpool),
                           NULL, opt_state->quiet,
                           SVN_ERR_WC_NOT_DIRECTORY, /* not versioned */
                           SVN_NO_ERROR));
+
+      /* If any paths were cached as changelists, we can now display
+         them as groups. */
+      if (apr_hash_count(sb.cached_changelists) > 0)
+        {
+          apr_hash_index_t *hi;
+          for (hi = apr_hash_first(subpool, sb.cached_changelists); hi;
+               hi = apr_hash_next(hi))
+            {
+              const char *changelist_name;
+              apr_array_header_t *path_array;
+              const void *key;
+              void *val;
+              int j;
+
+              apr_hash_this(hi, &key, NULL, &val);
+              changelist_name = key;
+              path_array = val;
+
+              /* ### TODO(sussman): should be able to output XML too: */
+              SVN_ERR(svn_cmdline_printf(subpool,
+                                         _("\n--- Changelist '%s':\n"),
+                                         changelist_name));
+
+              for (j = 0; j < path_array->nelts; j++)
+                {
+                  struct status_cache *scache =
+                    ((struct status_cache **) (path_array->elts))[j];
+                  print_status_normal_or_xml(&sb, scache->path, scache->status);
+                }
+            }
+        }
     }
 
   svn_pool_destroy(subpool);

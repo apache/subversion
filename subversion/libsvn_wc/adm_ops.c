@@ -432,6 +432,11 @@ svn_wc_process_committed3(const char *path,
     SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access,
                                       base_name, pool));
 
+  /* Also, if the file was part of a changelist, being committed has
+     the effect of *removing* changelist membership. */
+  SVN_ERR(svn_wc__loggy_delete_changelist(&logtags, adm_access,
+                                          base_name, pool));
+
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp). */
@@ -2383,6 +2388,38 @@ svn_error_t *svn_wc_remove_lock(const char *path,
     if (needs_lock)
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
   }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_changelist(const char *path,
+                  const char *changelist,
+                  svn_boolean_t clear,
+                  apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
+                                 TRUE, /* get write lock */
+                                 0, /* depth */
+                                 NULL, NULL, pool));
+
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"), path);
+
+  newentry.changelist = clear ? NULL : changelist;
+
+  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
+                               SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                               TRUE, pool));
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
 }

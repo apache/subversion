@@ -470,7 +470,7 @@ assemble_status(svn_wc_status2_t **status,
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
         && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock))
+        && (! repos_lock) && (! entry->changelist))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -1264,6 +1264,10 @@ is_sendable_status(svn_wc_status2_t *status,
 
   /* If there is a lock token, send it. */
   if (status->entry && status->entry->lock_token)
+    return TRUE;
+
+  /* If the entry is associated with a changelist, send it. */
+  if (status->entry && status->entry->changelist)
     return TRUE;
 
   /* Otherwise, don't send it. */

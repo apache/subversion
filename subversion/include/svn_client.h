@@ -1068,11 +1068,31 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Unlock paths in the repository, unless @a keep_locks is true.
  *
+ * If @a changelist_name is non-NULL, then use it as a restrictive filter
+ * on items that are committed;  that is, don't commit anything unless
+ * it's a member of changelist @a changelist_name.
+ *
  * Use @a pool for any temporary allocations.
  *
  * If no error is returned and @a (*commit_info_p)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_commit4(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t recurse,
+                   svn_boolean_t keep_locks,
+                   const char *changelist_name,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/** Similar to svn_client_commit4(), but always passes NULL @a
+ * changelist_name.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  *
  * @since New in 1.3.
  */
@@ -2455,6 +2475,44 @@ svn_client_cat(svn_stream_t *out,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
 
+
+/**
+ * Associate @a path with changelist @a changelist.  If CLEAR is set,
+ * then ignore @a changelist and deassociate any existing changelist
+ * from @a path.
+ *
+ * Note: this metadata is purely a client-side "bookkeeping"
+ * convenience, and is entirely managed by the working copy.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_changelist(const char *path,
+                      const char *changelist,
+                      svn_boolean_t clear,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+
+/**
+ * Beginning at @a root_path, do a recursive walk of a working copy
+ * and discover every path which belongs to @a changelist_name.
+ * Return the list of paths in @a *paths.  If no matching paths are
+ * found, return an empty array.
+ *
+ * @a cancel_func/cancel_baton are optional.  If non-NULL, poll them
+ * for user cancellation during the recursive walk.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_retrieve_changelist(apr_array_header_t **paths,
+                               const char *changelist_name,
+                               const char *root_path,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
 
 /** Locking commands
  *
@@ -2589,6 +2647,8 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
+  /* @since New in 1.5. */
+  const char *changelist;
   /** @} */
 
 } svn_info_t;
