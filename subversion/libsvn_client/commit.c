@@ -1174,6 +1174,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t recurse,
                    svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelist,
                    const char *changelist_name,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -1597,7 +1598,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           remove_lock = (! keep_locks && (item->state_flags
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
           assert(*commit_info_p);
-          if ((bump_err = svn_wc_process_committed3
+          if ((bump_err = svn_wc_process_committed4
                (item->path, adm_access,
                 loop_recurse,
                 (*commit_info_p)->revision,
@@ -1605,6 +1606,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                 (*commit_info_p)->author,
                 item->wcprop_changes,
                 remove_lock,
+                (! keep_changelist),
                 apr_hash_get(digests, item->path, APR_HASH_KEY_STRING),
                 subpool)))
             break;
@@ -1648,7 +1650,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                    apr_pool_t *pool)
 {
   return svn_client_commit4(commit_info_p, targets, recurse, keep_locks,
-                            NULL, ctx, pool);
+                            FALSE, NULL, ctx, pool);
 }
 
 svn_error_t *

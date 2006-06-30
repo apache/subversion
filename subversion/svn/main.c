@@ -161,6 +161,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("remove changelist association")},
   {"changelist",    svn_cl__changelist_opt, 1,
                     N_("operate only on members of changelist ARG")},
+  {"keep-changelist", svn_cl__keep_changelist_opt, 0,
+                    N_("don't delete changelist after commit")},
   {0,               0, 0, 0}
 };
 
@@ -271,7 +273,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 #endif
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
-     svn_cl__changelist_opt, svn_cl__config_dir_opt} },
+     svn_cl__changelist_opt, svn_cl__keep_changelist_opt,
+     svn_cl__config_dir_opt} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"
@@ -1184,6 +1187,9 @@ main(int argc, const char *argv[])
         opt_state.clear = TRUE;
       case svn_cl__changelist_opt:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        break;
+      case svn_cl__keep_changelist_opt:
+        opt_state.keep_changelist = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

@@ -2292,6 +2292,9 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
+ * If @a remove_changelist is @c TRUE, any association with a
+ * changelist will be removed.
+ *
  * If @a path is a member of a changelist, remove that association.
  *
  * If @a path is a file and @a digest is non-null, use @a digest as
@@ -2302,7 +2305,26 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_process_committed4(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t recurse,
+                                       svn_revnum_t new_revnum,
+                                       const char *rev_date,
+                                       const char *rev_author,
+                                       apr_array_header_t *wcprop_changes,
+                                       svn_boolean_t remove_lock,
+                                       svn_boolean_t remove_changelist,
+                                       const unsigned char *digest,
+                                       apr_pool_t *pool);
+
+/** Similar to svn_wc_process_committed4(), but with @a
+ * remove_changelist set to FALSE.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_process_committed3(const char *path,
                                        svn_wc_adm_access_t *adm_access,
