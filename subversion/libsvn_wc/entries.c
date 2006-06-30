@@ -445,11 +445,12 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Lock creation date. */
   SVN_ERR(read_time(&entry->lock_creation_date, buf, end, pool));
+  MAYBE_DONE;
 
   /* Changelist. */
   SVN_ERR(read_str(&entry->changelist, buf, end, pool));
 
- done:;
+ done:
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
