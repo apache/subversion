@@ -194,6 +194,10 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    with history as URL, and add 'deleted' entries to COMMITTABLES as
    items to delete in the copy destination.
 
+   If CHANGELIST_NAME is non-NULL, then use it as a restrictive filter
+   when harvesting committables; that is, don't add a path to
+   COMMITTABLES unless it's a member of the changelist.
+
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
    if the user has cancelled the operation.  */
 static svn_error_t *
@@ -209,6 +213,7 @@ harvest_committables(apr_hash_t *committables,
                      svn_boolean_t copy_mode,
                      svn_boolean_t nonrecursive,
                      svn_boolean_t just_locked,
+                     const char *changelist_name,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -478,16 +483,21 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      /* Finally, add the committable item. */
-      add_committable(committables, path, entry->kind, url,
-                      entry->revision,
-                      cf_url,
-                      cf_rev,
-                      state_flags);
-      if (lock_tokens && entry->lock_token)
-        apr_hash_set(lock_tokens, apr_pstrdup(token_pool, url),
-                     APR_HASH_KEY_STRING,
-                     apr_pstrdup(token_pool, entry->lock_token));
+      if ((changelist_name == NULL)
+          || (entry->changelist
+              && (strcmp(changelist_name, entry->changelist) == 0)))
+        {
+          /* Finally, add the committable item. */
+          add_committable(committables, path, entry->kind, url,
+                          entry->revision,
+                          cf_url,
+                          cf_rev,
+                          state_flags);
+          if (lock_tokens && entry->lock_token)
+            apr_hash_set(lock_tokens, apr_pstrdup(token_pool, url),
+                         APR_HASH_KEY_STRING,
+                         apr_pstrdup(token_pool, entry->lock_token));
+        }
     }
 
   /* For directories, recursively handle each of their entries (except
@@ -564,14 +574,20 @@ harvest_committables(apr_hash_t *committables,
                           && childkind == svn_node_none
                           && this_entry->schedule == svn_wc_schedule_delete)
                         {
-                          add_committable(committables, full_path,
-                                          this_entry->kind, used_url,
-                                          SVN_INVALID_REVNUM, 
-                                          NULL,
-                                          SVN_INVALID_REVNUM,
-                                          SVN_CLIENT_COMMIT_ITEM_DELETE);
-                          svn_error_clear(lockerr);
-                          continue; /* don't recurse! */
+                          if ((changelist_name == NULL)
+                              || (entry->changelist
+                                  && (strcmp(changelist_name,
+                                             entry->changelist) == 0)))
+                            {
+                              add_committable(committables, full_path,
+                                              this_entry->kind, used_url,
+                                              SVN_INVALID_REVNUM,
+                                              NULL,
+                                              SVN_INVALID_REVNUM,
+                                              SVN_CLIENT_COMMIT_ITEM_DELETE);
+                              svn_error_clear(lockerr);
+                              continue; /* don't recurse! */
+                            }
                         }
                       else
                         {
@@ -595,6 +611,7 @@ harvest_committables(apr_hash_t *committables,
                    adds_only,
                    copy_mode,
                    FALSE, just_locked,
+                   changelist_name,
                    ctx,
                    loop_pool));
         }
@@ -622,6 +639,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_array_header_t *targets,
                                  svn_boolean_t nonrecursive,
                                  svn_boolean_t just_locked,
+                                 const char *changelist_name,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool)
 {
@@ -750,10 +768,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                    ? target
                                    : svn_path_dirname(target, subpool)),
                                   subpool));
-      SVN_ERR(harvest_committables(*committables, *lock_tokens, target, dir_access,
-                                   entry->url, NULL, entry, NULL, FALSE, 
-                                   FALSE, nonrecursive, just_locked, ctx,
-                                   subpool));
+      SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
+                                   dir_access, entry->url, NULL,
+                                   entry, NULL, FALSE, FALSE, nonrecursive,
+                                   just_locked, changelist_name,
+                                   ctx, subpool));
 
       i++;
     }
@@ -819,7 +838,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
   /* Handle our TARGET. */
   SVN_ERR(harvest_committables(*committables, NULL, target,
                                adm_access, new_url, entry->url, entry, NULL,
-                               FALSE, TRUE, FALSE, FALSE, ctx, pool));
+                               FALSE, TRUE, FALSE, FALSE,
+                               NULL, ctx, pool));
 
   return SVN_NO_ERROR;
 }

@@ -89,6 +89,7 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->conflict_new         = entry->conflict_new;
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
+  tmpinfo->changelist           = entry->changelist;
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */

@@ -1170,10 +1170,11 @@ collect_lock_tokens(apr_hash_t **result,
 
 
 svn_error_t *
-svn_client_commit3(svn_commit_info_t **commit_info_p,
+svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t recurse,
                    svn_boolean_t keep_locks,
+                   const char *changelist_name,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1430,6 +1431,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                                                   rel_targets, 
                                                   recurse ? FALSE : TRUE,
                                                   ! keep_locks,
+                                                  changelist_name,
                                                   ctx,
                                                   pool)))
     goto cleanup;
@@ -1635,6 +1637,18 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
     }
 
   return reconcile_errors(cmt_err, unlock_err, bump_err, cleanup_err, pool);
+}
+
+svn_error_t *
+svn_client_commit3(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t recurse,
+                   svn_boolean_t keep_locks,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_commit4(commit_info_p, targets, recurse, keep_locks,
+                            NULL, ctx, pool);
 }
 
 svn_error_t *
