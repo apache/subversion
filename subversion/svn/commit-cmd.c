@@ -97,6 +97,7 @@ svn_cl__commit(apr_getopt_t *os,
                                                    opt_state->nonrecursive
                                                    ? FALSE : TRUE,
                                                    no_unlock,
+                                                   opt_state->keep_changelist,
                                                    opt_state->changelist,
                                                    ctx,
                                                    pool)));

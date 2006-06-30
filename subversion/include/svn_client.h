@@ -1070,9 +1070,11 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * If @a changelist_name is non-NULL, then use it as a restrictive filter
  * on items that are committed;  that is, don't commit anything unless
- * it's a member of changelist @a changelist_name.
+ * it's a member of changelist @a changelist_name.  After the commit
+ * completes successfully, remove changelist associations from the
+ * targets, unless @a keep_changelist is set.
  *
- * Use @a pool for any temporary allocations.
+ *fl Use @a pool for any temporary allocations.
  *
  * If no error is returned and @a (*commit_info_p)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
@@ -1085,12 +1087,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t recurse,
                    svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelist,
                    const char *changelist_name,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
-/** Similar to svn_client_commit4(), but always passes NULL @a
- * changelist_name.
+/** Similar to svn_client_commit4(), but always passes a NULL @a
+ * changelist_name and FALSE for @a keep_changelist.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  *

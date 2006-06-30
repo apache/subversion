@@ -57,6 +57,7 @@ typedef enum {
   svn_cl__encoding_opt,
   svn_cl__force_log_opt,
   svn_cl__force_opt,
+  svn_cl__keep_changelist_opt,
   svn_cl__ignore_ancestry_opt,
   svn_cl__ignore_externals_opt,
   svn_cl__incremental_opt,
@@ -147,6 +148,8 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t summarize;       /* create a summary of a diff */
   svn_boolean_t clear;           /* deassociate a changelist */
   const char *changelist;        /* operate on this changelist */
+  svn_boolean_t keep_changelist; /* don't remove changelist after commit */
+
 } svn_cl__opt_state_t;
 
 
