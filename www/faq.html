@@ -233,6 +233,9 @@ a <tt>file:</tt> URL?</a></li>
 <ul>
 <li><a href="#ramdisk-tests">How do I run the regression tests in a
     RAM disk?</a></li>
+<li><a href="#dynamic-exec-debugging">How do I run a debugger on
+    dynamic Subversion binaries without having to install
+    them?</a></li>
 </ul>
 
 <h4>References:</h4>
@@ -3335,6 +3338,40 @@ make check CLEANUP=true
 <p>See <a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml"
 >http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a> for the
 original authoritative discussion on use of RAM disks.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="dynamic-exec-debugging" title="dynamic-exec-debugging">
+
+<h3>How do I run a debugger on dynamic Subversion binaries without
+    having to install them?</h3>
+
+<p>Before the <code>make install</code> step on unix-y systems,
+dynamically built "executables" in a Subversion source tree are
+actually libtool-generated shell scripts which re-link and run the
+real binary.  As shown below, this complicates debugging:</p>
+
+<blockquote>
+<div><code>subversion$ gdb subversion/svn/svn</code></div>
+<div><code>... "/path/to/subversion/subversion/svn/svn": not in
+executable format: File format not recognized</code></div>
+</blockquote>
+
+<p>While this can be worked around by building using the
+<code>--disable-shared</code> argument to configure to statically link
+the binaries, or installing them and pointing your debugger at the
+installed version, it's often necessary or more expedient to be able
+to debug them right within your source tree.</p>
+
+<p>To do so, edit the last <code>exec</code> statement in the shell
+script to run the real binary in your debugger.  With gdb, this
+amounts to replacing <code>exec "$prgodir/$progname"</code> with
+<code>exec gdb --args "$progdir/$progname"</code>.</p>
+
+<p>This trick is also very useful when applied to the
+libtool-generated shell scripts for the white box tests.</p>
 
 </div>
 
