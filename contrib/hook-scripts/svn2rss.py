@@ -138,7 +138,6 @@ class SVN2RSS:
 
     def make_rss_item(self):
         """ Generate PyRSS2Gen Item from the commit info """
-        print str(self.revision)
         item_title = "Revision " + self.revision
         item_link = url + "?rev=" + self.revision
         rss_item = PyRSS2Gen.RSSItem(title = item_title,
