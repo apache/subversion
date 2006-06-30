@@ -236,31 +236,36 @@ test_parse_multi_line_mergeinfo(const char **msg,
 
 #define NBR_RANGELIST_DELTAS 4
 
-/* Helper routine for test_diff_mergeinfo(). */
+/* Verify that DELTAS matches EXPECTED_DELTAS (both expected to
+   contain only a rangelist for "/trunk").  Return an error based
+   careful examination if they do not match.  FUNC_VERIFIED is the
+   name of the API being verified (e.g. "svn_mergeinfo_diff"), while
+   TYPE is a word describing the deltas being examined. */
 static svn_error_t *
 verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
-                        const char *type, apr_pool_t *pool)
+                        const char *func_verified, const char *type,
+                        apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *rangelist;
 
   if (apr_hash_count(deltas) != 1)
     /* Deltas on "/trunk" expected. */
-    return fail(pool, "svn_mergeinfo_diff should report 1 path %s, "
-                "but found %d", type, apr_hash_count(deltas));
+    return fail(pool, "%s should report 1 path %s, but found %d",
+                func_verified, type, apr_hash_count(deltas));
 
   rangelist = apr_hash_get(deltas, "/trunk", APR_HASH_KEY_STRING);
   if (rangelist->nelts != NBR_RANGELIST_DELTAS)
-    return fail(pool, "svn_mergeinfo_diff should report %d range %ss, "
-                "but found %d", NBR_RANGELIST_DELTAS, type, rangelist->nelts);
+    return fail(pool, "%s should report %d range %ss, but found %d",
+                func_verified, NBR_RANGELIST_DELTAS, type, rangelist->nelts);
   for (i = 0; i < rangelist->nelts; i++)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                svn_merge_range_t *);
       if (range->start != expected_deltas[i].start ||
           range->end != expected_deltas[i].end)
-        return fail(pool, "svn_mergeinfo_diff should report range %ld-%ld, "
-                    "but found %ld-%ld", expected_deltas[i].start,
+        return fail(pool, "%s should report range %ld-%ld, but found %ld-%ld",
+                    func_verified, expected_deltas[i].start,
                     expected_deltas[i].end, range->start, range->end);
     }
   return SVN_NO_ERROR;
@@ -289,9 +294,9 @@ test_diff_mergeinfo(const char **msg,
 
   /* Verify calculation of range list deltas. */
   SVN_ERR(verify_mergeinfo_deltas(deleted, expected_rangelist_deletions,
-                                  "deletion", pool));
+                                  "svn_mergeinfo_diff", "deletion", pool));
   SVN_ERR(verify_mergeinfo_deltas(added, expected_rangelist_additions,
-                                  "addition", pool));
+                                  "svn_mergeinfo_diff", "addition", pool));
 
   return SVN_NO_ERROR;
 }
@@ -428,7 +433,7 @@ test_remove_mergeinfo(const char **msg,
 
   /* Verify calculation of range list remainder. */
   return verify_mergeinfo_deltas(output, expected_rangelist_remainder,
-                                 "leftover", pool);
+                                 "svn_mergeinfo_remove", "leftover", pool);
 }
 #undef NBR_RANGELIST_DELTAS
 
