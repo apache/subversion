@@ -64,6 +64,7 @@ except getopt.GetoptError, msg:
     usage_and_exit(msg)
 
 max_items = 20
+commit_rev = None
 
 for opt, arg in opts:
     if opt in ("-h", "--help"):
@@ -132,11 +133,12 @@ class SVN2RSS:
         s = StringIO()    
         pickle.dump(self.rss, s)
         f = open(self.pickle_file,"w")
-        f.write (s.getvalue())
+        f.write(s.getvalue())
         f.close()
 
     def make_rss_item(self):
         """ Generate PyRSS2Gen Item from the commit info """
+        print str(self.revision)
         item_title = "Revision " + self.revision
         item_link = url + "?rev=" + self.revision
         rss_item = PyRSS2Gen.RSSItem(title = item_title,
@@ -149,12 +151,10 @@ class SVN2RSS:
     def make_rss(self):
         """ Generate a PyRSS2Gen RSS2 object """
         if os.path.exists(self.pickle_file):
-            f = open(self.pickle_file, "r")
-            rss = pickle.load(f)
-            f.close()
-            if len(rss.items) == self.max_items :
-                rss.items.pop()
+            rss = pickle.load(open(self.pickle_file, "r"))
             rss.items.insert(0, self.rss_item)
+            if(len(rss.items) > self.max_items):
+                del(rss.items[self.max_items:])
         else:
             rss_item = self.rss_item
             rss = PyRSS2Gen.RSS2(
@@ -166,7 +166,39 @@ class SVN2RSS:
 
         return rss
 
-svn2rss = SVN2RSS(svn_path, commit_rev, repos_path, url, rss_file, max_items)
-rss = svn2rss.rss
-svn2rss.pickle()
-rss.write_xml(open(rss_file, "w"))
+try:
+    if (commit_rev == None):
+        cmd = "svnlook youngest " + repos_path
+        out, x, y = popen2.popen3(cmd)
+        cmd_out = out.readlines()
+        revisions = [int(cmd_out[0])]
+        out.close()
+        x.close()
+        y.close()
+    else:
+        rev_range = commit_rev.split(':')
+        len_rev_range = len(rev_range)
+        if len_rev_range == 1:
+            revisions = [int(commit_rev)]
+        elif len_rev_range == 2:
+            start, end = rev_range
+            start = int(start)
+            end = int(end)
+            if (start > end):
+                tmp = start
+                start = end
+                end = tmp
+            revisions = range(start, end + 1)[-max_items:]
+        else:
+            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." % (commit_rev))
+
+    for revision in revisions:
+        revision = str(revision)
+        svn2rss = SVN2RSS(svn_path, revision, repos_path, url, rss_file, max_items)
+        rss = svn2rss.rss
+        svn2rss.pickle()
+
+        rss.write_xml(open(svn2rss.rss_file, "w"))
+
+except ValueError, msg:
+    usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." % (commit_rev))
