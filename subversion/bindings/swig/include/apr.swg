@@ -19,10 +19,6 @@
  *   (that last phrase currently isn't fully obeyed).
  */
 
-#ifdef SWIGRUBY
-/* Inhibit incorrect class name warning. */
-#pragma SWIG nowarn=801
-#endif
 
 #ifdef SWIGRUBY
 #if SWIG_VERSION <= 0x010324

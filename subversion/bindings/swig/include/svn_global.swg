@@ -164,6 +164,10 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 
 
 #ifdef SWIGRUBY
+/* Ruby has strict capitalization conventions - 
+   tell SWIG to not warn as it renames things to follow these. */
+#pragma SWIG nowarn=801
+
 %{
 static VALUE _global_svn_swig_rb_pool = Qnil;
 %}
