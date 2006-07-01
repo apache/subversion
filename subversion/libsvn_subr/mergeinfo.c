@@ -363,6 +363,14 @@ svn_rangelist_intersect(apr_array_header_t **output,
 {
   /* ### Implement me in a manner which handles all the range overlap
      ### cases (non, partial, full) from svn_rangelist_remove(). */
+  *output = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool)
+{
+  /* ### Implement me! */
   return SVN_NO_ERROR;
 }
 

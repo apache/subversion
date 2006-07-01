@@ -131,6 +131,13 @@ svn_rangelist_intersect(apr_array_header_t **output,
                         apr_array_header_t *rangelist2,
                         apr_pool_t *pool);
 
+/** Reverse @a rangelist, and the @c start and @c end fields of each
+ * range in @a rangelist, in place.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool);
+
 /** Take an array of svn_merge_range_t *'s in @a input, and convert it
  * back to a text format rangelist in @a output.  If @a input contains
  * no elements, return the empty string.
