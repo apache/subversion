@@ -19,15 +19,6 @@
  *   (that last phrase currently isn't fully obeyed).
  */
 
-
-/* ----------------------------------------------------------------------- */
-
-/* ### be nice to have all the error values and macros. there are some
-   ### problems including this file, tho. SWIG isn't smart enough with some
-   ### of the preprocessing and thinks there is a macro redefinition */
-//%include apr_errno_h.swg
-typedef int apr_status_t;
-
 /* -----------------------------------------------------------------------
    Create perl5 typemaps for long long datatypes
 */
