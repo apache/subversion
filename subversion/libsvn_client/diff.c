@@ -1643,7 +1643,7 @@ parse_merge_info(apr_hash_t **mergeinfo, const char *wcpath,
                  apr_pool_t *pool)
 {
   apr_hash_t *props = apr_hash_make(pool);
-  const char *propval;
+  const svn_string_t *propval;
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
@@ -1652,16 +1652,15 @@ parse_merge_info(apr_hash_t **mergeinfo, const char *wcpath,
                              _("'%s' is not under version control"), 
                              svn_path_local_style(wcpath, pool));
 
-  /* ### For now, we should use svn_wc_prop_get() instead.  Later,
-     ### DannyB thinks we'll want something like
+  /* ### Use svn_wc_prop_get() would actually be sufficient for now.
+     ### DannyB thinks that later we'll need behavior more like
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
                                        wcpath, FALSE, entry, adm_access,
                                        TRUE, ctx, pool));
-  propval = apr_hash_get(props, SVN_PROP_MERGE_INFO,
-                         strlen(SVN_PROP_MERGE_INFO));
+  propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
-    SVN_ERR(svn_mergeinfo_parse(propval, mergeinfo, pool));
+    SVN_ERR(svn_mergeinfo_parse(propval->data, mergeinfo, pool));
   else
     *mergeinfo = apr_hash_make(pool);
 
@@ -1930,7 +1929,7 @@ do_merge(const char *initial_URL1,
       SVN_ERR(reporter->finish_report(report_baton, pool));
     }
 
-  if (!dry_run)
+  if (!dry_run && remaining_ranges->nelts > 0)
     SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
                                  remaining_ranges, is_revert, adm_access,
                                  pool));
