@@ -27,6 +27,7 @@
 #endif
 
 %include svn_global.swg
+%include svn_types.swg
 
 %{
 #include <apr.h>
@@ -76,8 +77,6 @@
    to actually generate wrappers for svn_types.h, so do an _include_ right
    now, before any _import_ has happened.
 */
-
-%include svn_types.swg
 
 %include svn_time_h.swg
 %include svn_types_h.swg
