@@ -21,6 +21,9 @@
 
 /* -----------------------------------------------------------------------
    Create perl5 typemaps for long long datatypes
+   PERL-FIXME: These typemaps are decidedly odd.  They convert long long
+     values to strings before returning them.  This behaviour is either
+     wrong, or needful of a comment explaining it.
 */
 #ifdef SWIGPERL
 %typemap(out) long long {
@@ -76,6 +79,7 @@
 /* If sizeof(apr_off_t) > sizeof(apr_int64_t), apr_off_t will get truncated
  * to a 64-bit integer */
 %apply long long { apr_off_t, apr_int64_t }
+%apply long long *OUTPUT { apr_int64_t * };
 %apply unsigned long long { apr_uint64_t }
 
 /* -----------------------------------------------------------------------
@@ -91,43 +95,28 @@ typedef apr_int64_t apr_time_t;
    (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-%apply long long *OUTPUT { apr_time_t * };
-
 /* -----------------------------------------------------------------------
-   create an OUTPUT argument typemap for an apr_hash_t **
+   apr_hash_t *
 */
 
-#ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
-    "$1 = &temp;";
-#endif
-
-#ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
-    "$1 = &temp;";
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
-    "$1 = &temp;";
-#endif
+%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp) "$1 = &temp;";
 
 /* -----------------------------------------------------------------------
-   create an OUTPUT argument defn for an apr_hash_t ** which is storing
-   dirent values
+   Output of apr_hash_t * <svn_dirent_t *> 
 */
-#ifdef SWIGPYTHON
+
 %typemap(in,numinputs=0) apr_hash_t **DIRENTHASH = apr_hash_t **OUTPUT;
+
+#ifdef SWIGPYTHON
 %typemap(argout,fragment="t_output_helper") apr_hash_t **DIRENTHASH {
-    $result = t_output_helper($result,
-                              svn_swig_py_convert_hash(*$1,
-                                                       SWIGTYPE_p_svn_dirent_t,
-                                                       NULL));
+  $result = t_output_helper($result,
+                    svn_swig_py_convert_hash(*$1,
+                                             $descriptor(svn_dirent_t *),
+                                             NULL));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **DIRENTHASH = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **DIRENTHASH
 {
   $result =
@@ -138,19 +127,19 @@ typedef apr_int32_t time_t;
 #endif
 
 /* -----------------------------------------------------------------------
-   create an OUTPUT argument defn for an apr_hash_t ** which is storing
-   property values
+   Output of apr_hash_t * <const char *, svn_string_t *>
+   (commonly used for property name and value pairs)
 */
 
-#ifdef SWIGPYTHON
 %typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
+
+#ifdef SWIGPYTHON
 %typemap(argout,fragment="t_output_helper") apr_hash_t **PROPHASH {
     $result = t_output_helper($result, svn_swig_py_prophash_to_dict(*$1));
 }
 #endif
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **PROPHASH {
     $result = svn_swig_pl_prophash_to_hash(*$1);
     argvi++;
@@ -158,7 +147,6 @@ typedef apr_int32_t time_t;
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **PROPHASH
 {
   $result = output_helper($result,
@@ -167,15 +155,9 @@ typedef apr_int32_t time_t;
 #endif
 
 /* -----------------------------------------------------------------------
-   create an INPUT argument defn for an apr_hash_t * which is storing
-   property values
+   Input of apr_hash_t * <const char *, svn_string_t *>
+   (commonly used for property name and value pairs)
 */
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *PROPHASH
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
-}
-#endif
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_hash_t *PROPHASH
@@ -184,45 +166,35 @@ typedef apr_int32_t time_t;
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   create an OUTPUT argument defn for an apr_array_header_t ** which is
-   storing svn_prop_t * property values
-*/
-#ifdef SWIGPYTHON
-%typemap(in, numinputs=0)
-     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *PROPHASH
 {
-  $1 = &temp;
-}
-%typemap(argout, fragment="t_output_helper")
-     apr_array_header_t **OUTPUT_OF_PROP
-{
-  /* FIXME: Actually do something here. */
+  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
 }
 #endif
 
-#ifdef SWIGRUBY
+/* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <svn_prop_t *>
+*/
 %typemap(in, numinputs=0)
-     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_PROP
+  apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
+  "$1 = &temp;";
+
+#ifdef SWIGRUBY
+%typemap(argout, fragment="output_helper") apr_array_header_t **OUTPUT_OF_PROP
 {
   $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
 }
 #endif
 
-
 /* -----------------------------------------------------------------------
-   apr_array_header_t ** <const char *>
+   Output of apr_array_header_t * <const char *>
 */
 
-%typemap(in, numinputs=0) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
-(apr_array_header_t *temp) {
-    $1 = &temp;
-}
+%typemap(in, numinputs=0)
+  apr_array_header_t **OUTPUT_OF_CONST_CHAR_P (apr_array_header_t *temp)
+  "$1 = &temp;";
+
 #ifdef SWIGPYTHON
 %typemap(argout, fragment="t_output_helper")
 apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
@@ -244,7 +216,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 #endif
 
 /* -----------------------------------------------------------------------
-  handle apr_file_t *
+   Input of apr_file_t *
 */
 
 #ifdef SWIGPYTHON
@@ -267,7 +239,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_file_t ** is always an OUT param
+   Output of apr_file_t *
 */
 
 %typemap(in, numinputs=0) apr_file_t ** (apr_file_t *temp)
@@ -294,5 +266,3 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
                             SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 0));
 }
 #endif
-
-/* ----------------------------------------------------------------------- */
