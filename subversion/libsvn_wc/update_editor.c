@@ -2069,35 +2069,21 @@ merge_file(svn_stringbuf_t *log_accum,
                                         e->revision);
               newrev_str = apr_psprintf(pool, ".r%ld",
                                         new_revision);
-              
+
               /* Merge the changes from the old-textbase (TXTB) to
                  new-textbase (TMP_TXTB) into the file we're
-                 updating (BASE_NAME).  Either the merge will
-                 happen smoothly, or a conflict will result.
-                 Luckily, this routine will take care of all eol
-                 and keyword translation, and diff3 will insert
-                 conflict markers for us.  It also deals with binary
-                 files appropriately.  */
-              SVN_ERR(svn_wc__loggy_merge(&log_accum, adm_access,
-                                          base_name, txtb, tmp_txtb,
-                                          oldrev_str, newrev_str, ".mine",
-                                          pool));
-              
-              /* Run a dry-run of the merge to see if a conflict will
-                 occur.  This is needed so we can report back to the
-                 client as the changes come in. */
+                 updating (BASE_NAME). Append commands to update the
+                 working copy to LOG_ACCUM. */
               base = svn_wc_adm_access_path(adm_access);
-
-              /* ### FIXME: We force use of the internal diff3 here
-                     because we don't want to run a graphical external
-                     diff3 twice.  See issue 1914. */
-              SVN_ERR(svn_wc_merge2(svn_path_join(base, txtb, pool),
-                                    svn_path_join(base, tmp_txtb, pool),
-                                    svn_path_join(base, base_name, pool),
-                                    adm_access,
-                                    oldrev_str, newrev_str, ".mine",
-                                    TRUE, &merge_outcome, NULL, NULL,
-                                    pool));
+              SVN_ERR(svn_wc__merge_internal
+                      (&log_accum,
+                       svn_path_join(base, txtb, pool),
+                       svn_path_join(base, tmp_txtb, pool),
+                       svn_path_join(base, base_name, pool),
+                       adm_access,
+                       oldrev_str, newrev_str, ".mine",
+                       FALSE, &merge_outcome, diff3_cmd, NULL,
+                       pool));
 
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
