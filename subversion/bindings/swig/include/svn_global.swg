@@ -172,3 +172,4 @@ static VALUE _global_svn_swig_rb_pool = Qnil;
 
 /* Now, include the main Subversion typemap library. */
 %include svn_types.swg
+%include proxy.swg
