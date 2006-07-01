@@ -1684,7 +1684,10 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   apr_array_header_t *requested_merge;
   apr_array_header_t *target_rangelist;
 
-  /* Create a mergeinfo structure representing the requested merge. */
+  /* Create a rangelist representing the requested merge. */
+  if (is_revert)
+    /* As we monkey with this data, make a copy of it. */
+    range = svn_range_dup(range, pool);
   requested_merge = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(requested_merge, svn_merge_range_t *) = range;
 
@@ -1700,14 +1703,19 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   if (target_rangelist)
     {
       if (is_revert)
-        /* ### TODO: Find the the intersection of the revisions which
-           ### are in both the set of TARGET_RANGELIST and
-           ### REQUESTED_MERGE.  It looks like we need a new
-           ### svn_rangelist_intersect() API (along the lines of
-           ### svn_rangelist_remove() and its range_intersect()
-           ### delegate). */
-        ;
+        {
+          /* Return the intersection of the revs which are both
+             already represented by the WC and are requested for
+             revert.  The revert range and will need to be reversed
+             for our APIs to work properly, as will the output for the
+             revert to work properly. */
+          SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
+          SVN_ERR(svn_rangelist_intersect(remaining_ranges, target_rangelist,
+                                          requested_merge, pool));
+          SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
+        }
       else
+        /* Return only those revs not already represented by this WC. */
         SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
                                      requested_merge, pool));
     }
