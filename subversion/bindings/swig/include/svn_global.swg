@@ -21,6 +21,10 @@
 %include typemaps.i
 %include constraints.i
 
+/* Include this early, so it can redefine typemaps included from the
+   SWIG standard library before they get %apply-ed anywhere. */
+%include svn_swigcompat.swg
+
 /* SWIG can't understand __attribute__(x), so we make it go away */
 #define __attribute__(x)
 
