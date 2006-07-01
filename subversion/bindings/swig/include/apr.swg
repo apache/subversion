@@ -20,27 +20,6 @@
  */
 
 
-#ifdef SWIGRUBY
-#if SWIG_VERSION <= 0x010324
-/* for SWIG bug */
-%define OUTPUT_TYPEMAP(type, converter, convtype)
-%typemap(in,numinputs=0) type *OUTPUT($*1_ltype temp), type &OUTPUT($*1_ltype temp) "$1 = &temp;";
-%typemap(argout, fragment="output_helper") type *OUTPUT, type &OUTPUT {
-   VALUE o = converter(convtype (*$1));
-   $result = output_helper($result, o);
-}
-%enddef
-
-OUTPUT_TYPEMAP(long, INT2NUM, (long));
-OUTPUT_TYPEMAP(long long, LL2NUM, (apr_int64_t));
-OUTPUT_TYPEMAP(unsigned long, UINT2NUM, (unsigned long));
-OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (apr_uint64_t));
-
-#undef OUTPUT_TYPEMAP
-#endif
-
-#endif
-
 /* ----------------------------------------------------------------------- */
 
 /* ### be nice to have all the error values and macros. there are some
