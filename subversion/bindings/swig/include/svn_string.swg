@@ -1,8 +1,6 @@
 /*
- * svn_string.swg :  SWIG include file for svn_string.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,13 +12,11 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_string.swg: This is a child file of svn_types.swg, and should
+ *   not be included directly.  This file should contain typemaps that
+ *   deal with svn_string_t, svn_stringbuf_t and char * string types.
  */
-
-/* This interface file does not include a %module line because it should
-   only be imported by other modules. */
-
-%import apr.swg
-%import svn_types.swg
 
 typedef struct svn_stringbuf_t svn_stringbuf_t;
 typedef struct svn_string_t svn_string_t;

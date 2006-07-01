@@ -1,8 +1,6 @@
 /*
- * core.i :  SWIG interface file for various core SVN and APR components
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * core.i: SWIG module interface file for libsvn_subr, a few pieces of
+ *   APR functionality, and anything else that does not fit into any
+ *   of the more specific module files.
  */
 
 #if defined(SWIGPERL)
@@ -77,12 +79,8 @@
 
 %include svn_types.swg
 
-
-/* -----------------------------------------------------------------------
-   moving along...
-*/
-%import apr.swg
-%import svn_string.swg
+%include svn_time_h.swg
+%include svn_types_h.swg
 
 /* -----------------------------------------------------------------------
    completely ignore a number of functions. the presumption is that the

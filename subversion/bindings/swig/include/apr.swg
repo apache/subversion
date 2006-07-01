@@ -1,8 +1,6 @@
 /*
- * apr.swg :  SWIG include file for selected APR types
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,21 +12,17 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * apr.swg: This is a child file of svn_types.swg, and should not be
+ *   included directly.  This file should contain typemaps that deal
+ *   with APR functionality, not involving any parts of Subversion
+ *   (that last phrase currently isn't fully obeyed).
  */
-
-/* This is the interface for the APR headers. This is not built as a module
-   because we aren't going to wrap the APR functions. Thus, we only define
-   the various types in here, as necessary.
-
-   Actually, core.i wraps a few, key functions.
-*/
 
 #ifdef SWIGRUBY
 /* Inhibit incorrect class name warning. */
 #pragma SWIG nowarn=801
 #endif
-
-%include typemaps.i
 
 #ifdef SWIGRUBY
 #if SWIG_VERSION <= 0x010324
