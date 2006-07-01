@@ -207,8 +207,6 @@
 %ignore svn_path_cstring_to_utf8;
 
 /* Other files */
-%ignore apr_check_dir_empty;
-
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
 
@@ -518,6 +516,13 @@ void apr_pool_clear(apr_pool_t *p);
 
 apr_status_t apr_file_open_stdout (apr_file_t **out, apr_pool_t *pool);
 apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
+
+/* Allow parsing of apr_errno.h without parsing apr.h. */
+#define APR_DECLARE(x) x
+/* Not wrapped, use svn_strerror instead. */
+%ignore apr_strerror;
+/* Wrap the APR status and error codes. */
+%include apr_errno.h
 
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
