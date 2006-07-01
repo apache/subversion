@@ -36,6 +36,7 @@
 # baseline                ベースライン
 # basename                ベース名
 # bump                    上げる
+# changelist              変更リスト
 # character converter     文字列コンバータ
 # child                   子ノード
 # cleanup                 掃除
@@ -169,7 +170,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-07-01 11:18+0900\n"
-"PO-Revision-Date: 2006-06-05 14:48+0900\n"
+"PO-Revision-Date: 2006-07-01 13:54+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5145,9 +5146,9 @@ msgid "Error removing lock from entry for '%s'"
 msgstr "'%s' のエントリからロックを削除する際にエラーが発生しました"
 
 #: libsvn_wc/log.c:878
-#, fuzzy, c-format
+#, c-format
 msgid "Error removing changelist from entry '%s'"
-msgstr "キー '%s' の変更の読み込み中にエラーが発生しました"
+msgstr "エントリ '%s' からの変更リストの削除中にエラーが発生しました"
 
 #: libsvn_wc/log.c:1008
 #, c-format
@@ -5518,7 +5519,7 @@ msgstr ""
 
 # * Description for svn.
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "       svn --version [--quiet]\n"
@@ -5533,10 +5534,14 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
+"          svn --version [--quiet]\n"
 "Subversion コマンドラインクライアント, バージョン %s.\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>' "
 "と\n"
 "打ってください。\n"
+"プログラムのバージョンや RA モジュールを参照するには 'svn --version' と打っ"
+"て\n"
+"ください。\n"
 "\n"
 "ほとんどのサブコマンドはファイルとディレクトリの一方または両方を引数にと"
 "り、\n"
@@ -5744,14 +5749,14 @@ msgstr ""
 "%s\n"
 
 #: svn/info-cmd.c:425
-#, fuzzy, c-format
+#, c-format
 msgid "Changelist: %s\n"
-msgstr "変更のあったパス:%s"
+msgstr "変更リスト:%s\n"
 
 #: svn/info-cmd.c:477
-#, fuzzy, c-format
+#, c-format
 msgid "no such changelist '%s'"
-msgstr "そのようなエントリはありません: '%s'"
+msgstr "そのような変更リストはありません: '%s'"
 
 #: svn/info-cmd.c:539
 #, c-format
@@ -6122,17 +6127,25 @@ msgstr "対象のロックを解除しません"
 msgid "show a summary of the results"
 msgstr "結果を要約したものを表示します"
 
+# * Description for 'svn --clear'.
+# * 29 half-size characters are displayed on the left.
 #: svn/main.c:161
 msgid "remove changelist association"
-msgstr ""
+msgstr "変更リストの関連づけを削除します"
 
+# * Description for 'svn --changelist'.
+# * 29 half-size characters are displayed on the left.
 #: svn/main.c:163
 msgid "operate only on members of changelist ARG"
 msgstr ""
+"変更リスト <引数> に含まれている項目のみに対して\n"
+"                             操作を実行します"
 
+# * Description for 'svn --keep-changelist'.
+# * 29 half-size characters are displayed on the left.
 #: svn/main.c:165
 msgid "don't delete changelist after commit"
-msgstr ""
+msgstr "コミット後に変更リストを削除しません"
 
 # * Description for 'svn add'.
 # * "add: " is displayed at the head of the first line.
@@ -6178,12 +6191,18 @@ msgstr ""
 "\n"
 "  <REV> を指定すると、リビジョン <REV> での <対象> をまず探します。\n"
 
+# * Description for 'svn changelist'.
+# * "changelist (cl): " is displayed at the head of the first line.
 #: svn/main.c:230
 msgid ""
 "Associate (or deassociate) local paths with changelist CLNAME.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --clear TARGET...\n"
 msgstr ""
+"ローカルパスを変更リスト <CLNAME> と関連づけます (または関連\n"
+"づけを削除します)。\n"
+"使用方法: 1. changelist <CLNAME> <対象>...\n"
+"          2. changelist --clear <対象>...\n"
 
 # * Description for 'svn checkout'.
 # * "checkout (co): " is displayed at the head of the first line.
@@ -7714,6 +7733,8 @@ msgid ""
 "\n"
 "--- Changelist '%s':\n"
 msgstr ""
+"\n"
+"--- 変更リスト '%s':\n"
 
 #: svn/status.c:263
 #, c-format
@@ -8260,7 +8281,6 @@ msgstr "完了しました。\n"
 
 # * Description for svnadmin.
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "               svnadmin --version\n"
@@ -8271,9 +8291,13 @@ msgid ""
 msgstr ""
 "一般的な使用方法: svnadmin <サブコマンド> <リポジトリパス> \\\n"
 "                           [<引数やオプション> ...]\n"
+"                  svnadmin --version\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svnadmin help <サブコマンド"
 ">'\n"
 "と打ってください。\n"
+"プログラムのバージョンや FS モジュールを参照するには 'svnadmin --version' "
+"と\n"
+"打ってください。\n"
 "\n"
 "利用可能なサブコマンド:\n"
 
@@ -8509,7 +8533,6 @@ msgstr ""
 
 # * Description for svndumpfilter.
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "               svndumpfilter --version\n"
@@ -8518,6 +8541,7 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "一般的な使用方法: svndumpfilter <サブコマンド> [<引数やオプション> ...]\n"
+"                  svndumpfilter --version\n"
 "特定のサブコマンドに関するヘルプを読みたいときは、\n"
 "'svndumpfilter help <サブコマンド>' と打ってください。\n"
 "\n"
@@ -8947,7 +8971,6 @@ msgstr "リポジトリパスの引数が指定されていません"
 
 # * Description for svnlook.
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "               svnlook --version\n"
@@ -8961,6 +8984,7 @@ msgid ""
 msgstr ""
 "一般的な使用方法: svnlook <サブコマンド> <リポジトリパス> \\\n"
 "                          [<引数やオプション> ...]\n"
+"                  svnlook --version\n"
 "注意: '--revision' や '--transaction' オプションをつけられるどのサブコマン"
 "ド\n"
 "      も、これらのオプションのどちらもついていない場合は、リポジトリの最新"
@@ -8969,6 +8993,9 @@ msgstr ""
 "特定のサブコマンドに関するヘルプを読みたいときは 'svnlook help <サブコマンド"
 ">'\n"
 "と打ってください。\n"
+"プログラムのバージョンや FS モジュールを参照するには 'svnlook --version' と"
+"打っ\n"
+"てください。\n"
 "\n"
 "利用可能なサブコマンド:\n"
 
@@ -9331,7 +9358,6 @@ msgstr "まだ同期されていないリビジョンのリビジョン属性は
 
 # * Description for svnsync.
 #: svnsync/main.c:1134
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "               svnsync --version\n"
@@ -9342,9 +9368,13 @@ msgid ""
 msgstr ""
 "一般的な使用方法: svnsync <サブコマンド> <同期先 URL> [<引数やオプション"
 "> ...]\n"
+"                  svnsync --version\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svnsync help <サブコマンド"
 ">'\n"
 "と打ってください。\n"
+"プログラムのバージョンや RA モジュールを参照するには 'svnsync --version' と"
+"打っ\n"
+"てください。\n"
 "\n"
 "利用可能なサブコマンド:\n"
 
