@@ -27,7 +27,6 @@
 #endif
 
 %include svn_global.swg
-%include svn_types.swg
 
 %{
 #include <apr.h>
@@ -63,23 +62,6 @@
 %immutable svn_dirent_t::last_author;
 %immutable svn_error_t::message;
 %immutable svn_error_t::file;
-
-/* -----------------------------------------------------------------------
-   We want the error code enums wrapped so we must include svn_error_codes.h
-   before anything else does.
-*/
-
-%include svn_error_codes_h.swg
-
-/* -----------------------------------------------------------------------
-   Include svn_types.swg early. Other .i files will import svn_types.swg which
-   then includes svn_types.h, making further includes get skipped. We want
-   to actually generate wrappers for svn_types.h, so do an _include_ right
-   now, before any _import_ has happened.
-*/
-
-%include svn_time_h.swg
-%include svn_types_h.swg
 
 /* -----------------------------------------------------------------------
    completely ignore a number of functions. the presumption is that the
@@ -731,9 +713,11 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* ----------------------------------------------------------------------- */
 
+%include svn_error_codes_h.swg
+%include svn_time_h.swg
+%include svn_types_h.swg
 %include svn_pools_h.swg
 %include svn_version_h.swg
-%include svn_time_h.swg
 
 /* The constant SVN_PROP_REVISION_ALL_PROPS is a C fragment, not a single
    data value, so the SWIG parser will raise a 305 warning if we don't
