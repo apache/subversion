@@ -1,8 +1,6 @@
 /*
- * svn_types.swg :  SWIG include file for svn_types.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,13 +12,15 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_types.swg: This is the main file of the Subversion typemap
+ *   library.  Certain categories of typemaps are removed into child
+ *   files that are then %included into this one, solely to promote
+ *   understandability of the code by grouping related parts.
  */
 
-/* This interface file only defines types and their related information.
-   There is no module associated with this interface file. */
-
-%include exception.i
-%import apr.swg
+%include apr.swg
+%include svn_string.swg
 
 #ifdef SWIGRUBY
 #  if SWIG_VERSION <= 0x010327
@@ -946,8 +946,3 @@
   }
 }
 #endif
-
-/* ----------------------------------------------------------------------- */
-
-%include svn_time_h.swg
-%include svn_types_h.swg
