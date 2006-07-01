@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-06-18 23:33-0300\n"
+"POT-Creation-Date: 2006-07-01 17:23-0300\n"
 "PO-Revision-Date: 2006-06-19 00:26-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
@@ -948,11 +948,11 @@ msgstr "Error en la limpieza post-commit (detalles a continuación):"
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' es un URL, pero los URLS no pueden ser objetivos de commit"
 
-#: libsvn_client/commit.c:1395
+#: libsvn_client/commit.c:1398
 msgid "Are all the targets part of the same working copy?"
 msgstr "¿Son todos los objetivos parte de la misma copia de trabajo?"
 
-#: libsvn_client/commit.c:1410
+#: libsvn_client/commit.c:1413
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr ""
 "No se puede hacer commit no recursivo de una eliminación de un directorio"
@@ -1305,7 +1305,8 @@ msgstr "Falta la especificación de la revisión"
 
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
-msgstr "El tipo de revisión sólo funciona en rutas de copia de trabajo, no en URLs"
+msgstr ""
+"El tipo de revisión sólo funciona en rutas de copia de trabajo, no en URLs"
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
@@ -2596,7 +2597,7 @@ msgstr "El requerimiento GET falló para '%s'"
 msgid "Could not save file"
 msgstr "No se pudo grabar el archivo"
 
-#: libsvn_ra_dav/fetch.c:906 libsvn_ra_svn/client.c:1000
+#: libsvn_ra_dav/fetch.c:906 libsvn_ra_svn/client.c:1002
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -3091,167 +3092,167 @@ msgstr "Elemento de difs de propiedades no es una lista"
 msgid "Unrecognized node kind '%s' from server"
 msgstr "Tipo de nodo no reconocido '%s' del servidor"
 
-#: libsvn_ra_svn/client.c:272 libsvn_ra_svn/client.c:326
+#: libsvn_ra_svn/client.c:273 libsvn_ra_svn/client.c:327
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Error de autentificación del servidor: %s"
 
-#: libsvn_ra_svn/client.c:275 libsvn_ra_svn/cram.c:194
+#: libsvn_ra_svn/client.c:276 libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
 msgid "Unexpected server response to authentication"
 msgstr "Respuesta del servidor inesperada ante autenticación"
 
-#: libsvn_ra_svn/client.c:313 libsvn_subr/prompt.c:156
+#: libsvn_ra_svn/client.c:314 libsvn_subr/prompt.c:156
 #, c-format
 msgid "Can't get password"
 msgstr "No se pudo obtener clave"
 
-#: libsvn_ra_svn/client.c:333
+#: libsvn_ra_svn/client.c:334
 msgid "Cannot negotiate authentication mechanism"
 msgstr "No se pudo negociar un mecanismo de autentificación"
 
-#: libsvn_ra_svn/client.c:465
+#: libsvn_ra_svn/client.c:466
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "Protocolo de túnel '%s' no definido"
 
-#: libsvn_ra_svn/client.c:482
+#: libsvn_ra_svn/client.c:483
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr ""
 "El protocolo de túnel  %s requiere que la variable de entorno %s sea definida"
 
-#: libsvn_ra_svn/client.c:493
+#: libsvn_ra_svn/client.c:494
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "No se pudieron procesar los símbolos del comando '%s'"
 
-#: libsvn_ra_svn/client.c:524
+#: libsvn_ra_svn/client.c:525
 #, c-format
 msgid "Error in child process: %s"
 msgstr "Error en proceso hijo: '%s'"
 
-#: libsvn_ra_svn/client.c:548
+#: libsvn_ra_svn/client.c:549
 #, c-format
 msgid "Can't create tunnel"
 msgstr "No se pudo crear el túnel"
 
-#: libsvn_ra_svn/client.c:587
+#: libsvn_ra_svn/client.c:588
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "URL de repositorio de svn ilegal '%s'"
 
-#: libsvn_ra_svn/client.c:626
+#: libsvn_ra_svn/client.c:627
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "El servidor requiere como mínimo la versión %d"
 
-#: libsvn_ra_svn/client.c:680
+#: libsvn_ra_svn/client.c:682
 msgid "Impossibly long repository root from server"
 msgstr "El servidor devolvió una raíz de repositorio imposiblemente larga"
 
-#: libsvn_ra_svn/client.c:691
+#: libsvn_ra_svn/client.c:693
 msgid "Module for accessing a repository using the svn network protocol."
 msgstr "Módulo para acceder al repositorio vía el protocolo de red svn."
 
-#: libsvn_ra_svn/client.c:839
+#: libsvn_ra_svn/client.c:841
 msgid "Server did not send repository root"
 msgstr "El servidor no envió la raíz del repositorio"
 
-#: libsvn_ra_svn/client.c:980
+#: libsvn_ra_svn/client.c:982
 msgid "Non-string as part of file contents"
 msgstr "Parte del contenido del archivo no es una cadena"
 
-#: libsvn_ra_svn/client.c:1078
+#: libsvn_ra_svn/client.c:1080
 msgid "Dirlist element not a list"
 msgstr "Elemento de la lista de directorios no es una lista"
 
-#: libsvn_ra_svn/client.c:1235
+#: libsvn_ra_svn/client.c:1237
 msgid "Log entry not a list"
 msgstr "Entrada de bitácora no es una lista"
 
-#: libsvn_ra_svn/client.c:1248
+#: libsvn_ra_svn/client.c:1250
 msgid "Changed-path entry not a list"
 msgstr "La entrada Changed-path no es una lista"
 
-#: libsvn_ra_svn/client.c:1324
+#: libsvn_ra_svn/client.c:1326
 msgid "'stat' not implemented"
 msgstr "'stat' no implementado"
 
-#: libsvn_ra_svn/client.c:1381
+#: libsvn_ra_svn/client.c:1383
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' no está implementado"
 
-#: libsvn_ra_svn/client.c:1393
+#: libsvn_ra_svn/client.c:1395
 msgid "Location entry not a list"
 msgstr "La entrada Location no es una lista"
 
-#: libsvn_ra_svn/client.c:1443
+#: libsvn_ra_svn/client.c:1445
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' no está implementado"
 
-#: libsvn_ra_svn/client.c:1456
+#: libsvn_ra_svn/client.c:1458
 msgid "Revision entry not a list"
 msgstr "La entrada de la revisión no es una lista"
 
-#: libsvn_ra_svn/client.c:1469 libsvn_ra_svn/client.c:1494
+#: libsvn_ra_svn/client.c:1471 libsvn_ra_svn/client.c:1496
 msgid "Text delta chunk not a string"
 msgstr "Porción del delta de texto no es una cadena"
 
-#: libsvn_ra_svn/client.c:1506
+#: libsvn_ra_svn/client.c:1508
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "El comando get-file-revs no devolvió ninguna revisión"
 
-#: libsvn_ra_svn/client.c:1554
+#: libsvn_ra_svn/client.c:1556
 msgid "Server doesn't support the lock command"
 msgstr "El servidor no soporta el comando 'lock'"
 
-#: libsvn_ra_svn/client.c:1618
+#: libsvn_ra_svn/client.c:1620
 msgid "Server doesn't support the unlock command"
 msgstr "El servidor no soporta el comando 'unlock'"
 
-#: libsvn_ra_svn/client.c:1715
+#: libsvn_ra_svn/client.c:1717
 msgid "Lock response not a list"
 msgstr "La respuesta a un pedido de bloqueo no es una lista"
 
-#: libsvn_ra_svn/client.c:1729
+#: libsvn_ra_svn/client.c:1731
 msgid "Unknown status for lock command"
 msgstr "Se recibió un estado desconocido para el comando 'lock'"
 
-#: libsvn_ra_svn/client.c:1751
+#: libsvn_ra_svn/client.c:1753
 msgid "Didn't receive end marker for lock responses"
 msgstr "No se recibió el marcador de final para las respuestas de 'lock'"
 
-#: libsvn_ra_svn/client.c:1838
+#: libsvn_ra_svn/client.c:1840
 msgid "Unlock response not a list"
 msgstr "La respuesta a un pedido de desbloqueo no es una lista"
 
-#: libsvn_ra_svn/client.c:1852
+#: libsvn_ra_svn/client.c:1854
 msgid "Unknown status for unlock command"
 msgstr "Se recibió un estado desconocido para el comando 'unlock'"
 
-#: libsvn_ra_svn/client.c:1873
+#: libsvn_ra_svn/client.c:1875
 msgid "Didn't receive end marker for unlock responses"
 msgstr "No se recibió el marcador de final para las respuestas de 'unlock'"
 
-#: libsvn_ra_svn/client.c:1897 libsvn_ra_svn/client.c:1925
+#: libsvn_ra_svn/client.c:1899 libsvn_ra_svn/client.c:1927
 msgid "Server doesn't support the get-lock command"
 msgstr "El servidor no soporta el comando 'get-lock'"
 
-#: libsvn_ra_svn/client.c:1938
+#: libsvn_ra_svn/client.c:1940
 msgid "Lock element not a list"
 msgstr "Elemento bloqueo no es una lista"
 
-#: libsvn_ra_svn/client.c:1961
+#: libsvn_ra_svn/client.c:1963
 msgid "Server doesn't support the replay command"
 msgstr "El servidor no soporta el comando 'replay'"
 
-#: libsvn_ra_svn/client.c:2025
+#: libsvn_ra_svn/client.c:2027
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versión de cargador RA (%d) no soportada para ra_svn"
 
-#: libsvn_ra_svn/editor.c:386 libsvn_ra_svn/editorp.c:421
+#: libsvn_ra_svn/editor.c:386 libsvn_ra_svn/editorp.c:455
 msgid "Invalid file or dir token during edit"
 msgstr "Símbolo de archivo o directorio inválido durante la edición"
 
@@ -3263,15 +3264,15 @@ msgstr "Parte del delta de texto no es una cadena"
 msgid "Successful edit status returned too soon"
 msgstr "Estatus de edición exitosa retornado demasiado pronto"
 
-#: libsvn_ra_svn/editorp.c:612
+#: libsvn_ra_svn/editorp.c:664
 msgid "Apply-textdelta already active"
 msgstr "Apply-textdelta ya está activo"
 
-#: libsvn_ra_svn/editorp.c:634 libsvn_ra_svn/editorp.c:652
+#: libsvn_ra_svn/editorp.c:686 libsvn_ra_svn/editorp.c:704
 msgid "Apply-textdelta not active"
 msgstr "Apply-textdelta no está activo"
 
-#: libsvn_ra_svn/editorp.c:800 libsvn_ra_svn/marshal.c:842
+#: libsvn_ra_svn/editorp.c:872 libsvn_ra_svn/marshal.c:842
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "Comando desconocido: '%s'"
@@ -5659,7 +5660,7 @@ msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
-"el cambio hecho por la revisión PAR (como -r PAR-1:PAR)\n"
+"el cambio hecho por la rev. PAR (símil -r PAR-1:PAR)\n"
 "                             Si PAR es negativo entonces es -r PAR:PAR-1"
 
 #: svn/main.c:74
@@ -5721,7 +5722,7 @@ msgstr "especifica una clave PAR"
 
 #: svn/main.c:100
 msgid "pass ARG to --diff-cmd as options (default: '-u')"
-msgstr "pasar PAR a --diff-cmd como opciones (por defecto: '-u')"
+msgstr "pasar opciones PAR a --diff-cmd (por defecto: '-u')"
 
 #: svn/main.c:103
 msgid "pass contents of file ARG as additional args"
@@ -6365,8 +6366,8 @@ msgid ""
 "    WC  -> WC:   move and schedule for addition (with history)\n"
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
-"Mueve y/o cambia el nombre de algo en la copia de trabajo o en el\n"
-"repositorio.\n"
+"Mueve y/o cambia el nombre de algo en la copia de\n"
+"trabajo o en el repositorio.\n"
 "uso: move ORIG DEST\n"
 "\n"
 "  Nota:  este subcomando equivale a 'copy' seguido de 'delete'.\n"
@@ -6677,7 +6678,8 @@ msgid ""
 "                 965       687 joe          wc/zig.c\n"
 "    Status against revision:   981\n"
 msgstr ""
-"Muestra el estado de archivos y directorios en la copia de trabajo.\n"
+"Muestra el estado de archivos y directorios en la\n"
+"copia de trabajo.\n"
 "uso: status [RUTA...]\n"
 "\n"
 "  Sin parámetros muestra solamente los items modificados localmente (sin\n"
