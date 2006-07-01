@@ -26,7 +26,7 @@ Candidate changes:
     Justification:
       It seems to work, according to the testsuites.
     Votes:
-      +1: maxb, jerenkrantz
+      +1: maxb, jerenkrantz, dionisos
       +0: nori
 
   * r19971
@@ -55,19 +55,19 @@ Candidate changes:
     Votes:
       +1: lgo    (non-binding)
 
-  * r20032      
+  * r20032
     Python test that validates that checkout uses the peg rev if provided.
     Justification:
-      Change is already included in 1.4.x (r18422)  
+      Change is already included in 1.4.x (r18422)
     Votes:
-      +1: lgo
+      +1: lgo, dionisos
 
   * r20036, r20037
     Python test for fix for issue 1780
     Justification:
       Fix is already included in 1.4.x (r18465)
     Votes:
-      +1: lgo
+      +1: lgo, dionisos
 
   * r20040, r20255, r20256
     RPM changes to correctly build on x86-64 architecture.
@@ -109,14 +109,14 @@ Candidate changes:
     Justification:
       Fixes and partial test are already included in 1.4.x (r20059)
     Votes:
-      +1: lgo
+      +1: lgo, dionisos
 
   * r20104, r20105, r20106
     Python tests for diff and blame ignoring whitespaces (-x -w option)
     Justification:
-      New feature in 1.4.x (r18487)  
+      New feature in 1.4.x (r18487)
     Votes:
-      +1: lgo
+      +1: lgo, dionisos
 
   * r20125
     ra_serf: Be more tolerant when updating a WC file without a delta base.
@@ -127,12 +127,12 @@ Candidate changes:
       +1: jerenkrantz, rooneg
 
   * r20127, r20128
-    Python tests for diff and blame ignoring eol style 
+    Python tests for diff and blame ignoring eol style
      (-x --ignore-eol-style option)
     Justification:
-      New feature in 1.4.x (r18602)  
+      New feature in 1.4.x (r18602)
     Votes:
-      +1: lgo  
+      +1: lgo, dionisos
 
   * r20170
     Don't carry around our own Visual Studio project files for Apache/APR --
