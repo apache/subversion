@@ -367,10 +367,38 @@ svn_rangelist_intersect(apr_array_header_t **output,
   return SVN_NO_ERROR;
 }
 
+/* Swap start and end fields of RANGE. */
+static void
+range_swap_endpoints(svn_merge_range_t *range)
+{
+  svn_revnum_t swap = range->start;
+  range->start = range->end;
+  range->end = swap;
+}
+
 svn_error_t *
 svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool)
 {
-  /* ### Implement me! */
+  int i, swap_index;
+  svn_merge_range_t range;
+  for (i = 0; i < rangelist->nelts / 2; i++)
+    {
+      swap_index = rangelist->nelts - i - 1;
+      range = *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      *APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *) =
+        *APR_ARRAY_IDX(rangelist, swap_index, svn_merge_range_t *);
+      *APR_ARRAY_IDX(rangelist, swap_index, svn_merge_range_t *) = range;
+      range_swap_endpoints(APR_ARRAY_IDX(rangelist, swap_index,
+                                         svn_merge_range_t *));
+      range_swap_endpoints(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *));
+    }
+
+  /* If there's an odd number of elements, we still need to swap the
+     end points of the remaining range. */
+  if (rangelist->nelts % 2 == 1)
+    range_swap_endpoints(APR_ARRAY_IDX(rangelist, rangelist->nelts / 2,
+                                       svn_merge_range_t *));
+
   return SVN_NO_ERROR;
 }
 

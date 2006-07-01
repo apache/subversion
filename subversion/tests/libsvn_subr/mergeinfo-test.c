@@ -330,7 +330,7 @@ test_rangelist_reverse(const char **msg,
                        apr_pool_t *pool)
 {
   apr_array_header_t *rangelist;
-  svn_merge_range_t expected_rangelist[3] = { {10, 10}, {7, 6}, {3, 3} };
+  svn_merge_range_t expected_rangelist[3] = { {10, 10}, {7, 5}, {3, 3} };
 
   *msg = "reversal of rangelist";
   if (msg_only)
@@ -338,6 +338,8 @@ test_rangelist_reverse(const char **msg,
 
   SVN_ERR(svn_mergeinfo_parse("/trunk: 3,5-7,10", &info1, pool));
   rangelist = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
+
+  SVN_ERR(svn_rangelist_reverse(rangelist, pool));
 
   return verify_ranges_match(rangelist, expected_rangelist, 3,
                              "svn_rangelist_reverse", "reversal", pool);
@@ -570,7 +572,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
     SVN_TEST_PASS(test_remove_rangelist),
     SVN_TEST_PASS(test_remove_mergeinfo),
-    SVN_TEST_XFAIL(test_rangelist_reverse),
+    SVN_TEST_PASS(test_rangelist_reverse),
     SVN_TEST_XFAIL(test_rangelist_intersect),
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
