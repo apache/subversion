@@ -175,6 +175,14 @@ Candidate changes:
     Votes:
       +1: nori
 
+  * r20301
+    Improve visibility of the "--version" option; fix quirks in parsing it.
+    Justification:
+      Users are happy if they can reasonably find a description for the
+      "--version" option.
+    Votes:
+      +0: nori
+
 Approved changes:
 
   * r19924
