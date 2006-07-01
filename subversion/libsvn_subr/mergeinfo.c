@@ -280,10 +280,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
         {
           if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt1))
             {
-              newrange = apr_pcalloc(pool, sizeof(*newrange));
-              newrange->start = elt1->start;
-              newrange->end = elt1->end;
-
+              newrange = svn_range_dup(elt1, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
               lastrange = newrange;
             }
@@ -295,11 +292,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
         {
           if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt1))
             {
-
-              newrange = apr_pcalloc(pool, sizeof(*newrange));
-              newrange->start = elt1->start;
-              newrange->end = elt1->end;
-
+              newrange = svn_range_dup(elt1, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
               lastrange = newrange;
             }
@@ -310,10 +303,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
         {
           if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt2))
             {
-              newrange = apr_pcalloc(pool, sizeof(*newrange));
-              newrange->start = elt2->start;
-              newrange->end = elt2->end;
-
+              newrange = svn_range_dup(elt2, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
               lastrange = newrange;
             }
@@ -332,10 +322,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
 
       if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
         {
-          newrange = apr_pcalloc(pool, sizeof(*newrange));
-          newrange->start = elt->start;
-          newrange->end = elt->end;
-
+          newrange = svn_range_dup(elt, pool);
           APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
           lastrange = newrange;
         }
@@ -348,10 +335,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
 
       if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
         {
-          newrange = apr_pcalloc(pool, sizeof(*newrange));
-          newrange->start = elt->start;
-          newrange->end = elt->end;
-
+          newrange = svn_range_dup(elt, pool);
           APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
           lastrange = newrange;
         }
@@ -436,9 +420,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                   if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
                                                         &temprange))
                     {
-                      newrange = apr_pcalloc(pool, sizeof(*newrange));
-                      newrange->start = temprange.start;
-                      newrange->end = temprange.end;
+                      newrange = svn_range_dup(&temprange, pool);
                       APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
                       lastrange = newrange;
                     }
@@ -471,9 +453,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
               if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
                                                     elt1))
                 {
-                  newrange = apr_pcalloc(pool, sizeof(*newrange));
-                  newrange->start = elt1->start;
-                  newrange->end = elt1->end;
+                  newrange = svn_range_dup(elt1, pool);
                   APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
                   lastrange = newrange;
                 }
@@ -490,11 +470,8 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
       if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
                                             &wboardelt))
         {
-          newrange = apr_pcalloc(pool, sizeof(*newrange));
-          newrange->start = wboardelt.start;
-          newrange->end = wboardelt.end;
+          newrange = svn_range_dup(&wboardelt, pool);
           APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-
           lastrange = newrange;
         }
       i++;
@@ -508,10 +485,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
 
       if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
         {
-          newrange = apr_pcalloc(pool, sizeof(*newrange));
-          newrange->start = elt->start;
-          newrange->end = elt->end;
-
+          newrange = svn_range_dup(elt, pool);
           APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
           lastrange = newrange;
         }
@@ -858,4 +832,12 @@ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
     }
 
   return new_rl;
+}
+
+svn_merge_range_t *
+svn_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
+{
+  svn_merge_range_t *new_range = apr_palloc(pool, sizeof(*new_range));
+  memcpy(new_range, range, sizeof(*new_range));
+  return new_range;
 }

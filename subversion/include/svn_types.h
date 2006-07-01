@@ -632,6 +632,14 @@ typedef struct svn_merge_range_t
   svn_revnum_t end;
 } svn_merge_range_t;
 
+/**
+ * Return a copy of @a range, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_merge_range_t *
+svn_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
