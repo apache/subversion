@@ -116,6 +116,21 @@ svn_error_t *
 svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard, apr_pool_t *pool);
 
+/** Find the intersection of two rangelists consisting of @c
+ * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
+ * place the result in @a output.
+ *
+ * Note: @a rangelist1 and @a rangelist2 must be sorted as said by
+ * svn_sort_compare_ranges. @a output is guaranteed to be in sorted
+ * order.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist_intersect(apr_array_header_t **output,
+                        apr_array_header_t *rangelist1,
+                        apr_array_header_t *rangelist2,
+                        apr_pool_t *pool);
+
 /** Take an array of svn_merge_range_t *'s in @a input, and convert it
  * back to a text format rangelist in @a output.  If @a input contains
  * no elements, return the empty string.

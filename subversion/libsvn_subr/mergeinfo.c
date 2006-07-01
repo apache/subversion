@@ -356,6 +356,17 @@ range_contains(svn_merge_range_t *first, svn_merge_range_t *second)
 }
 
 svn_error_t *
+svn_rangelist_intersect(apr_array_header_t **output,
+                        apr_array_header_t *rangelist1,
+                        apr_array_header_t *rangelist2,
+                        apr_pool_t *pool)
+{
+  /* ### Implement me in a manner which handles all the range overlap
+     ### cases (non, partial, full) from svn_rangelist_remove(). */
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard, apr_pool_t *pool)
 {

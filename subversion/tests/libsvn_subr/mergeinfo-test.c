@@ -236,17 +236,47 @@ test_parse_multi_line_mergeinfo(const char **msg,
 
 #define NBR_RANGELIST_DELTAS 4
 
+/* Verify that ACTUAL_RANGELIST matches EXPECTED_RANGES (an array of
+   NBR_EXPECTED length).  Return an error based careful examination if
+   they do not match.  FUNC_VERIFIED is the name of the API being
+   verified (e.g. "svn_rangelist_intersect"), while TYPE is a word
+   describing what the ranges being examined represent. */
+static svn_error_t *
+verify_ranges_match(apr_array_header_t *actual_rangelist,
+                    svn_merge_range_t *expected_ranges, int nbr_expected,
+                    const char *func_verified, const char *type,
+                    apr_pool_t *pool)
+{
+  int i;
+
+  if (actual_rangelist->nelts != nbr_expected)
+    return fail(pool, "%s should report %d range %ss, but found %d",
+                func_verified, nbr_expected, type, actual_rangelist->nelts);
+
+  for (i = 0; i < actual_rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(actual_rangelist, i,
+                                               svn_merge_range_t *);
+      if (range->start != expected_ranges[i].start ||
+          range->end != expected_ranges[i].end)
+        return fail(pool, "%s should report range %ld-%ld, but found %ld-%ld",
+                    func_verified, expected_ranges[i].start,
+                    expected_ranges[i].end, range->start, range->end);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Verify that DELTAS matches EXPECTED_DELTAS (both expected to
    contain only a rangelist for "/trunk").  Return an error based
    careful examination if they do not match.  FUNC_VERIFIED is the
    name of the API being verified (e.g. "svn_mergeinfo_diff"), while
-   TYPE is a word describing the deltas being examined. */
+   TYPE is a word describing what the deltas being examined
+   represent. */
 static svn_error_t *
 verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
                         const char *func_verified, const char *type,
                         apr_pool_t *pool)
 {
-  int i;
   apr_array_header_t *rangelist;
 
   if (apr_hash_count(deltas) != 1)
@@ -255,20 +285,12 @@ verify_mergeinfo_deltas(apr_hash_t *deltas, svn_merge_range_t *expected_deltas,
                 func_verified, type, apr_hash_count(deltas));
 
   rangelist = apr_hash_get(deltas, "/trunk", APR_HASH_KEY_STRING);
-  if (rangelist->nelts != NBR_RANGELIST_DELTAS)
-    return fail(pool, "%s should report %d range %ss, but found %d",
-                func_verified, NBR_RANGELIST_DELTAS, type, rangelist->nelts);
-  for (i = 0; i < rangelist->nelts; i++)
-    {
-      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
-                                               svn_merge_range_t *);
-      if (range->start != expected_deltas[i].start ||
-          range->end != expected_deltas[i].end)
-        return fail(pool, "%s should report range %ld-%ld, but found %ld-%ld",
-                    func_verified, expected_deltas[i].start,
-                    expected_deltas[i].end, range->start, range->end);
-    }
-  return SVN_NO_ERROR;
+  if (rangelist == NULL)
+    return fail(pool, "%s failed to produce a rangelist for /trunk",
+                func_verified);
+
+  return verify_ranges_match(rangelist, expected_deltas, NBR_RANGELIST_DELTAS,
+                             func_verified, type, pool);
 }
 
 static svn_error_t *
@@ -299,6 +321,31 @@ test_diff_mergeinfo(const char **msg,
                                   "svn_mergeinfo_diff", "addition", pool));
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_intersect(const char **msg,
+                         svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  apr_array_header_t *rangelist1, *rangelist2, *intersection;
+  svn_merge_range_t expected_intersection[2] = { {6, 7}, {10, 10} };
+
+  *msg = "intersection of rangelists";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_mergeinfo_parse("/trunk: 3,5-7,10", &info1, pool));
+  SVN_ERR(svn_mergeinfo_parse("/trunk: 6-10", &info2, pool));
+  rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
+  rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
+  
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
+                                  pool));
+
+  return verify_ranges_match(intersection, expected_intersection, 2,
+                             "svn_rangelist_intersect", "intersect", pool);
 }
 
 static svn_error_t *
@@ -503,6 +550,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_multi_line_mergeinfo),
     SVN_TEST_PASS(test_remove_rangelist),
     SVN_TEST_PASS(test_remove_mergeinfo),
+    SVN_TEST_PASS(test_rangelist_intersect),
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_rangelist_to_string),
