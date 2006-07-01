@@ -1,8 +1,6 @@
 /*
- * svn_global.swg :  Global SWIG definitions for Subversion
- *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_global.swg: Central point for global definitions to be used in
+ *  every bindings module.  This file is %included before anything
+ *  else, in every Subversion .i file.
  */
 
 %include typemaps.i
@@ -166,3 +168,7 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 static VALUE _global_svn_swig_rb_pool = Qnil;
 %}
 #endif
+
+
+/* Now, include the main Subversion typemap library. */
+%include svn_types.swg
