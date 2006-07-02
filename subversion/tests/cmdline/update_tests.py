@@ -1747,6 +1747,8 @@ def conflict_markers_matching_eol(sbox):
 
     # Create expected disk tree for the update.
     expected_backup_disk = expected_disk.copy()
+
+    # verify content of resulting conflicted file
     expected_backup_disk.add({
     'A/mu' : Item(contents= "This is the file 'mu'." + eolchar +
       "<<<<<<< .mine" + eolchar +
@@ -1754,7 +1756,24 @@ def conflict_markers_matching_eol(sbox):
       "=======" + eolchar +
       "Original appended text for mu" + eolchar +
       ">>>>>>> .r" + str(cur_rev) + eolchar),
-    })    
+    })
+    # verify content of base(left) file
+    expected_backup_disk.add({
+    'A/mu.r' + str(base_rev ) : Item(contents= "This is the file 'mu'." +
+      eolchar)
+    })
+    # verify content of theirs(right) file
+    expected_backup_disk.add({
+    'A/mu.r' + str(theirs_rev ) : Item(contents= "This is the file 'mu'." +
+      eolchar +
+      "Original appended text for mu" + eolchar)
+    })
+    # verify content of mine file
+    expected_backup_disk.add({
+    'A/mu.mine' : Item(contents= "This is the file 'mu'." +
+      eolchar +
+      "Conflicting appended text for mu" + eolchar)
+    })
 
     # Create expected status tree for the update.
     expected_backup_status.add({
@@ -1763,25 +1782,14 @@ def conflict_markers_matching_eol(sbox):
     expected_backup_status.tweak('A/mu', status='C ')
     expected_backup_status.tweak(wc_rev = cur_rev)
 
-    # "Extra" files that we expect to result from the conflicts.
-    extra_files = ['mu.*\.r' + str(base_rev ),
-                   'mu.*\.r' + str(theirs_rev),
-                   'mu.*\.mine']
-
     # Do the update and check the results in three ways.
-    # All "extra" files are passed to detect_conflict_files().
     svntest.actions.run_and_verify_update(wc_backup,
                                           expected_backup_output,
                                           expected_backup_disk,
                                           expected_backup_status,
                                           None,
-                                          detect_conflict_files,
-                                          extra_files)
-
-    # verify that the extra_files list is now empty.
-    if len(extra_files) != 0:
-      print "didn't get expected extra files"
-      raise svntest.Failure
+                                          None,
+                                          None)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
