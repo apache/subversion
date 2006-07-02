@@ -29,17 +29,16 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_changelist(const char *path,
-                      const char *changelist_name,
-                      svn_boolean_t clear,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool)
+svn_client_set_changelist(const char *path,
+                          const char *changelist_name,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool)
 {
-  SVN_ERR(svn_wc_changelist(path, changelist_name, clear, pool));
+  SVN_ERR(svn_wc_set_changelist(path, changelist_name, pool));
 
   /* ### TODO(sussman): create new notification type, and send
          notification feedback.  See locking-commands.c. */
-  if (! clear)
+  if (changelist_name)
     printf("Path '%s' is now part of changelist '%s'.\n",
            path, changelist_name);
   else

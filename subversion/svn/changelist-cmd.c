@@ -68,8 +68,8 @@ svn_cl__changelist(apr_getopt_t *os,
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       SVN_ERR(svn_cl__try
-              (svn_client_changelist(target, changelist_name,
-                                     opt_state->clear, ctx, subpool),
+              (svn_client_set_changelist(target, changelist_name,
+                                         ctx, subpool),
                NULL, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,

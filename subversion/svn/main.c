@@ -1185,6 +1185,7 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__clear_opt:
         opt_state.clear = TRUE;
+        break;
       case svn_cl__changelist_opt:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
         break;

@@ -2412,10 +2412,9 @@ svn_error_t *svn_wc_remove_lock(const char *path,
 
 
 svn_error_t *
-svn_wc_changelist(const char *path,
-                  const char *changelist,
-                  svn_boolean_t clear,
-                  apr_pool_t *pool)
+svn_wc_set_changelist(const char *path,
+                      const char *changelist,
+                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
@@ -2432,7 +2431,7 @@ svn_wc_changelist(const char *path,
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"), path);
 
-  newentry.changelist = clear ? NULL : changelist;
+  newentry.changelist = changelist;
 
   SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
                                SVN_WC__ENTRY_MODIFY_CHANGELIST,

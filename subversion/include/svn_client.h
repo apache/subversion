@@ -1080,7 +1080,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
  *
- * @since New in 1.3.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
@@ -1095,7 +1095,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 /** Similar to svn_client_commit4(), but always passes a NULL @a
  * changelist_name and FALSE for @a keep_changelist.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  *
  * @since New in 1.3.
  */
@@ -2480,9 +2480,10 @@ svn_client_cat(svn_stream_t *out,
 
 
 /**
- * Associate @a path with changelist @a changelist.  If CLEAR is set,
- * then ignore @a changelist and deassociate any existing changelist
- * from @a path.
+ * Associate @a path with changelist @a changelist, overwriting any
+ * existing changelist association.  (A path cannot be a member of
+ * more than one changelist.)  If @a changelist is NULL, then
+ * deassociate any existing changelist from @a path.
  *
  * Note: this metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -2490,11 +2491,10 @@ svn_client_cat(svn_stream_t *out,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_changelist(const char *path,
-                      const char *changelist,
-                      svn_boolean_t clear,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool);
+svn_client_set_changelist(const char *path,
+                          const char *changelist,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
 
 
 /**

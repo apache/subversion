@@ -3493,9 +3493,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 /**
  * Associate @a path with changelist @a changelist by setting the
- * 'changelist' attribute in its entry.  If @a clear is set, then
- * ignore @a changelist and remove any 'changelist' attribute in @a
- * path's entry.
+ * 'changelist' attribute in its entry.  Obviously, this will
+ * overwrite any existing value of the attribute.  If @a changelist is
+ * NULL, then remove any 'changelist' attribute in @a path's entry.
  *
  * Note: this metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3503,10 +3503,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_wc_changelist(const char *path,
-                  const char *changelist,
-                  svn_boolean_t clear,
-                  apr_pool_t *pool);
+svn_wc_set_changelist(const char *path,
+                      const char *changelist,
+                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus
