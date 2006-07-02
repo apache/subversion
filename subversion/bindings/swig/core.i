@@ -463,7 +463,6 @@
    svn_config_read_auth_data()
 */
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **hash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **hash
 {
   if (*$1) {
@@ -574,7 +573,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 */
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **cfg_hash {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *));
 }
@@ -586,7 +584,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **cfg_hash {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_config_t *");
 }
@@ -605,7 +602,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
     $result = t_output_helper(
         $result,

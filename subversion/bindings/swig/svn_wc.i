@@ -101,7 +101,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="t_output_helper") apr_hash_t **entries {
     $result = t_output_helper(
         $result,
@@ -111,7 +110,6 @@
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **entries
 {
   $result = output_helper($result,
@@ -127,14 +125,12 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **externals_old = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **externals_old
 {
   $result = output_helper($result,
                           svn_swig_rb_apr_hash_to_hash_string(*$1));
 }
 
-%typemap(in, numinputs=0) apr_hash_t **externals_new = apr_hash_t **externals_old;
 %typemap(argout, fragment="output_helper") apr_hash_t **externals_new = apr_hash_t **externals_old;
 #endif
 

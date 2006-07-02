@@ -20,6 +20,7 @@
 
 %include typemaps.i
 %include constraints.i
+%include exception.i
 
 /* Include this early, so it can redefine typemaps included from the
    SWIG standard library before they get %apply-ed anywhere. */
