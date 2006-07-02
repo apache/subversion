@@ -163,7 +163,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           /* Preserve the three pre-merge files, and modify the
              entry (mark as conflicted, track the preserved files). */ 
           const char *left_copy, *right_copy, *target_copy;
-          const char *tmp_left, *tmp_right, *tmp_target_copy;
+          const char *tmp_left, *tmp_right;
           const char *parentt, *left_base, *right_base, *target_base;
           svn_wc_adm_access_t *parent_access;
           svn_wc_entry_t tmp_entry;
@@ -256,19 +256,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                                 right_base, tmp_right,
                                                 log_merge_target, pool));
 
-          /* Back up MERGE_TARGET through detranslation/retranslation:
-             the new translation properties may not match the current ones */
-          SVN_ERR(svn_wc_translated_file2(&tmp_target_copy,
-                                          merge_target,
-                                          merge_target,
-                                          adm_access,
-                                          SVN_WC_TRANSLATE_TO_NF,
-                                          pool));
-          SVN_ERR(svn_wc__loggy_translated_file
-                  (log_accum, adm_access,
-                   svn_path_is_child(adm_path, tmp_target_copy, pool),
-                   svn_path_is_child(adm_path, target_copy, pool),
-                   log_merge_target, pool));
+          /* Back up MERGE_TARGET verbatim (it's already in expanded form.) */
+          /*###FIXME: the new translation properties are not necessarily
+            the same as the ones used to construct the current file...*/
+          SVN_ERR(svn_io_copy_file(merge_target,
+                                   target_copy, TRUE, pool));
 
           tmp_entry.conflict_old = left_base;
           tmp_entry.conflict_new = right_base;
