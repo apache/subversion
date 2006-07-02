@@ -93,7 +93,7 @@ static const apr_getopt_option_t options_table[] =
    N_("show help on a subcommand")},
 
   {"version",       svnlook__version, 0,
-   N_("show version information")},
+   N_("show program version information")},
 
   {"revision",      'r', 1,
    N_("specify revision number ARG")},
@@ -1651,7 +1651,6 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
-      "               svnlook --version\n"
       "Note: any subcommand which takes the '--revision' and '--transaction'\n"
       "      options will, if invoked without one of those options, act on\n"
       "      the repository's youngest revision.\n"
