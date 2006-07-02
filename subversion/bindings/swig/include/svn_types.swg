@@ -800,7 +800,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **dirents {
   $result = t_output_helper($result, svn_swig_py_convert_hash(*$1,
     $descriptor(svn_dirent_t *), _global_svn_swig_py_pool));
@@ -808,14 +807,12 @@
 #endif
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **dirents {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **dirents
 {
   $result = output_helper($result,
@@ -832,7 +829,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **locks
 {
   $result = output_helper($result,
@@ -861,7 +857,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **locations
 {
   $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);

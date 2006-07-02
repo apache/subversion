@@ -121,7 +121,6 @@
    handle svn_repos_fs_get_locks
 */
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **locks {
     $result = t_output_helper(
         $result,
@@ -226,7 +225,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **table_p = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **dirents
 {
   $result = output_helper($result,
@@ -261,7 +259,6 @@
    handle the output from svn_repos_trace_node_locations()
 */
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **locations {
     $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
 }

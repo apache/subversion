@@ -86,7 +86,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
@@ -95,14 +94,12 @@
 }
 #endif
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **entries_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1,
       $descriptor(svn_fs_dirent_t *));
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **entries_p {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_fs_dirent_t *");
 }
@@ -114,7 +111,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,
@@ -124,7 +120,6 @@
 #endif
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **changed_paths_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1,
       $descriptor(svn_fs_path_change_t *));
@@ -132,7 +127,6 @@
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **changed_paths_p
 {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
