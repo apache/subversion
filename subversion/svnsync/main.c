@@ -98,7 +98,7 @@ static const apr_getopt_option_t svnsync_options[] =
     {"revision",       'r', 1,
                        N_("specify revision number ARG")},
     {"version",        svnsync_opt_version, 0,
-                       N_("show version information")},
+                       N_("show program version information")},
     {"help",           'h', 0,
                        N_("show help on a subcommand")},
     {NULL,             '?', 0,
@@ -1132,7 +1132,6 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   const char *header =
     _("general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
-      "               svnsync --version\n"
       "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnsync --version' to see the program version and RA modules.\n"
       "\n"

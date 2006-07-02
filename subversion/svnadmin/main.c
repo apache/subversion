@@ -230,7 +230,7 @@ static const apr_getopt_option_t options_table[] =
      N_("show help on a subcommand")},
 
     {"version",       svnadmin__version, 0,
-     N_("show version information")},
+     N_("show program version information")},
 
     {"revision",      'r', 1,
      N_("specify revision number ARG (or X:Y range)")},
@@ -652,7 +652,6 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-      "               svnadmin --version\n"
       "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnadmin --version' to see the program version and FS modules.\n"
       "\n"

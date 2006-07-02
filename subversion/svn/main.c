@@ -88,7 +88,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"encoding",      svn_cl__encoding_opt, 1,
                     N_("treat value as being in charset encoding ARG")},
 #endif
-  {"version",       svn_cl__version_opt, 0, N_("print client version info")},
+  {"version",       svn_cl__version_opt, 0,
+                    N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      svn_cl__auth_username_opt, 1,

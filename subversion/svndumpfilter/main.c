@@ -783,7 +783,7 @@ static const apr_getopt_option_t options_table[] =
      N_("show help on a subcommand")},
 
     {"version",            svndumpfilter__version, 0,
-     N_("show version information") },
+     N_("show program version information") },
     {"quiet",              svndumpfilter__quiet, 0,
      N_("Do not display filtering statistics.") },
     {"drop-empty-revs",    svndumpfilter__drop_empty_revs, 0,
@@ -886,9 +886,9 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svndumpfilter_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-      "               svndumpfilter --version\n"
       "Type 'svndumpfilter help <subcommand>' for help on a "
       "specific subcommand.\n"
+      "Type 'svndumpfilter --version' to see the program version number.\n"
       "\n"
       "Available subcommands:\n");
 
