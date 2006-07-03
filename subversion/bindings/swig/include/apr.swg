@@ -96,21 +96,6 @@ typedef apr_int64_t apr_time_t;
 typedef apr_int32_t time_t;
 
 /* -----------------------------------------------------------------------
-   apr_hash_t *
-*/
-
-%typemap(in,numinputs=0) apr_hash_t ** ($*1_type temp) "$1 = &temp;";
-%typemap(argout,warning="900:FIXME: Missing argout typemap") apr_hash_t ** {
-  %#warning "FIXME: Missing argout typemap: $symname arg $argnum ($1_type)"
-#ifdef SWIGRUBY
-  /* Ruby fails to define $symname. */
-  SWIG_exception(SWIG_ValueError, "Function is not implemented yet");
-#else
-  SWIG_exception(SWIG_ValueError, "$symname is not implemented yet");
-#endif
-}
-
-/* -----------------------------------------------------------------------
    Output of apr_hash_t * <svn_dirent_t *> 
 */
 

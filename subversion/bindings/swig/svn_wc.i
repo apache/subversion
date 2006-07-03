@@ -42,14 +42,6 @@
    %apply-ing of typemaps defined elsewhere
 */
 
-%apply SWIGTYPE **OUTPARAM {
-    svn_wc_entry_t **,
-    svn_wc_adm_access_t **,
-    svn_wc_status_t **,
-    svn_wc_status2_t **,
-    svn_wc_revision_status_t **
-};
-
 /*
    svn_wc_check_wc(wc_format)
    svn_wc_merge(wc_format)

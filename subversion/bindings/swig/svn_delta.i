@@ -30,13 +30,6 @@
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
-%apply SWIGTYPE **OUTPARAM {
-    svn_txdelta_stream_t **,
-    void **,
-    svn_txdelta_window_t **,
-    const svn_delta_editor_t **,
-    svn_txdelta_window_handler_t *
-};
 
 %apply const char *MAY_BE_NULL {
     const char *error_info,

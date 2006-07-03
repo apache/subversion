@@ -23,27 +23,32 @@
 %include svn_string.swg
 
 /* -----------------------------------------------------------------------
-   Create a typemap to define "type **" as OUT parameters.
-
-   Note: SWIGTYPE is just a placeholder for "some arbitrary type". This
-         typemap will be applied onto a "real" type.
+   Generic handling for "type **" parameters.  Almost all such parameters
+   are OUTPUT parameters.  Handling is as follows:
+   - "in" typemap which allocates storage for a pointer, and points the 
+     argument to that storage.
+   - Default "argout" typemap which complains at compile time, and raises
+     an exception at runtime.
+   - OUTPARAM "argout" typemap which wraps (SWIG_NewPointerObj) a C
+     pointer for return to the scripting language.
+   - Application of the OUTPARAM typemap to those types for which it makes
+     sense (key examples for which it does not are strings, arrays, and
+     hashes - which need to be turned into their scripting language
+     equivalent).
+   Known instances of "type **" which are *not* OUTPUT parameters are:
+   - svn_stream_checksummed(..., const unsigned char **read_digest,
+                                 const unsigned char **write_digest, ...)
 */
-#ifdef SWIGPYTHON
-%typemap(in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-#endif
+%typemap(in, numinputs=0) SWIGTYPE ** ($*1_ltype temp) "$1 = &temp;";
+%typemap(argout,warning="900:FIXME: Missing argout typemap") SWIGTYPE ** {
+  %#warning "FIXME: Missing argout typemap: $symname arg $argnum ($1_type)"
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-  temp = NULL;
-  $1 = ($1_ltype)&temp;
-}
+  /* Ruby fails to define $symname. */
+  SWIG_exception(SWIG_ValueError, "Function is not implemented yet");
+#else
+  SWIG_exception(SWIG_ValueError, "$symname is not implemented yet");
 #endif
+}
 
 #ifdef SWIGPYTHON
 %typemap(argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
@@ -63,14 +68,65 @@
 }
 #endif
 
+%apply SWIGTYPE **OUTPARAM {
+  /* svn_types.h */
+  svn_commit_info_t **,
+  svn_dirent_t **,
+  svn_lock_t **,
+  svn_stream_t **,
+  /* core */
+  svn_auth_baton_t **,
+  svn_auth_iterstate_t **,
+  svn_auth_provider_object_t **,
+  svn_config_t **,
+  svn_diff_t **,
+  void **credentials,
+  /* svn_client */
+  svn_client_commit_info_t **,
+  svn_client_ctx_t **,
+  /* svn_delta */
+  const svn_delta_editor_t **,
+  svn_txdelta_stream_t **,
+  svn_txdelta_window_t **,
+  svn_txdelta_window_handler_t *,
+  void **handler_baton,
+  void **root_baton,
+  void **child_baton,
+  void **file_baton,
+  void **edit_baton,
+  /* svn_fs */
+  svn_fs_t **,
+  svn_fs_access_t **,
+  svn_fs_history_t **,
+  svn_fs_id_t **,
+  svn_fs_root_t **,
+  svn_fs_txn_t **,
+  void **contents_baton_p,
+  /* svn_ra */
+  svn_ra_callbacks2_t **,
+  svn_ra_plugin_t **,
+  const svn_ra_reporter2_t **,
+  svn_ra_session_t **,
+  void **report_baton,
+  /* svn_repos */
+  svn_authz_t **,
+  svn_repos_t **,
+  const svn_repos_parse_fns2_t **,
+  void **parse_baton,
+  void **revision_baton,
+  void **node_baton,
+  /* svn_wc */
+  svn_wc_adm_access_t **,
+  svn_wc_entry_t **,
+  svn_wc_revision_status_t **,
+  svn_wc_status_t **,
+  svn_wc_status2_t **,
+  void **set_locks_baton
+};
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps
 */
-
-%apply SWIGTYPE **OUTPARAM {
-  svn_stream_t **,
-  svn_commit_info_t **
-};
 
 %apply long *OUTPUT { svn_revnum_t * };
 %apply int *OUTPUT { svn_boolean_t * };
