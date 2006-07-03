@@ -150,6 +150,17 @@ Candidate changes:
     Votes:
       +1: dionisos, rooneg
 
+  * r20400
+    Update the SWIG ignore information for new svn_io.h and svn_path.h
+    functions added for 1.4 (and for 1.3 too, since we forget to do that
+    before).
+    Justification:
+      Avoid exporting broken and/or unsupported wrappings of functions to the
+      bindings.
+    Votes:
+      +1: maxb
+
+
   * r20382
     Fix status when a file is both added and conflicted.
     Justification:
