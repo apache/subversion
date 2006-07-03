@@ -152,6 +152,13 @@ Candidate changes:
     Votes:
       +1: dionisos, rooneg
 
+  * r20382
+    Fix status when a file is both added and conflicted.
+    Justification:
+      Small fix.  Low risk.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
   * r20225
