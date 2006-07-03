@@ -170,7 +170,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-07-03 11:41+0900\n"
-"PO-Revision-Date: 2006-07-01 13:54+0900\n"
+"PO-Revision-Date: 2006-07-03 12:40+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5519,7 +5519,7 @@ msgstr ""
 
 # * Description for svn.
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -5534,14 +5534,13 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
-"          svn --version [--quiet]\n"
 "Subversion コマンドラインクライアント, バージョン %s.\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>' "
 "と\n"
 "打ってください。\n"
-"プログラムのバージョンや RA モジュールを参照するには 'svn --version' と打っ"
-"て\n"
-"ください。\n"
+"プログラムのバージョンや RA モジュールを参照するには 'svn --version' と、"
+"バー\n"
+"ジョン番号のみを参照するには 'svn --version --quiet' と、打ってください。\n"
 "\n"
 "ほとんどのサブコマンドはファイルとディレクトリの一方または両方を引数にと"
 "り、\n"
@@ -5917,14 +5916,13 @@ msgstr ""
 "文字エンコーディングが <引数> であるとして処理し\n"
 "                             ます"
 
-# * Description for 'svn{admin,dumpfilter,look,serve,sync,version} --version'.
+# * Description for 'svn{,admin,dumpfilter,look,serve,sync,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
 #: svnversion/main.c:125
-#, fuzzy
 msgid "show program version information"
-msgstr "バージョン情報を表示します"
+msgstr "プログラムのバージョン情報を表示します"
 
 # * Description for 'svn --verbose'.
 # * 29 half-size characters are displayed on the left.
@@ -8277,7 +8275,6 @@ msgstr "完了しました。\n"
 
 # * Description for svnadmin.
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -8287,7 +8284,6 @@ msgid ""
 msgstr ""
 "一般的な使用方法: svnadmin <サブコマンド> <リポジトリパス> \\\n"
 "                           [<引数やオプション> ...]\n"
-"                  svnadmin --version\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svnadmin help <サブコマンド"
 ">'\n"
 "と打ってください。\n"
@@ -8529,7 +8525,6 @@ msgstr ""
 
 # * Description for svndumpfilter.
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -8540,6 +8535,9 @@ msgstr ""
 "一般的な使用方法: svndumpfilter <サブコマンド> [<引数やオプション> ...]\n"
 "特定のサブコマンドに関するヘルプを読みたいときは、\n"
 "'svndumpfilter help <サブコマンド>' と打ってください。\n"
+"プログラムのバージョン番号を参照するには 'svndumpfilter --version' と打って"
+"く\n"
+"ださい。\n"
 "\n"
 "利用可能なサブコマンド:\n"
 
@@ -8967,7 +8965,6 @@ msgstr "リポジトリパスの引数が指定されていません"
 
 # * Description for svnlook.
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8980,7 +8977,6 @@ msgid ""
 msgstr ""
 "一般的な使用方法: svnlook <サブコマンド> <リポジトリパス> \\\n"
 "                          [<引数やオプション> ...]\n"
-"                  svnlook --version\n"
 "注意: '--revision' や '--transaction' オプションをつけられるどのサブコマン"
 "ド\n"
 "      も、これらのオプションのどちらもついていない場合は、リポジトリの最新"
@@ -9354,7 +9350,6 @@ msgstr "まだ同期されていないリビジョンのリビジョン属性は
 
 # * Description for svnsync.
 #: svnsync/main.c:1134
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -9364,7 +9359,6 @@ msgid ""
 msgstr ""
 "一般的な使用方法: svnsync <サブコマンド> <同期先 URL> [<引数やオプション"
 "> ...]\n"
-"                  svnsync --version\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svnsync help <サブコマンド"
 ">'\n"
 "と打ってください。\n"
