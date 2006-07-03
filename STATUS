@@ -153,14 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20127, r20128
-    Python tests for diff and blame ignoring eol style
-     (-x --ignore-eol-style option)
-    Justification:
-      New feature in 1.4.x (r18602)
-    Votes:
-      +1: lgo, dionisos
-
   * r20179, r20191
     Python tests for fix for issue 2433
     Justification:
