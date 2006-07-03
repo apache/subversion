@@ -59,47 +59,6 @@ def check_url(url, opt):
       usage_and_exit("svn2rss.py: Invalid url '%s' is specified for " \
                      "'%s' option" % (url, opt))
 
-max_items = 20
-commit_rev = None
-item_url = feed_url = None
-
-if len(sys.argv) == 1:
-    usage_and_exit("Not enough arguments provided.")
-try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "hP:r:p:u:f:m:U:", [
-                                                      "help", "svn-path=",
-                                                      "revision=",
-                                                      "repos-path=",
-                                                      "item-url=",
-                                                      "rss-file=",
-                                                      "max-items=",
-                                                      "feed-url="])
-except getopt.GetoptError, msg:
-    usage_and_exit(msg)
-for opt, arg in opts:
-    if opt in ("-h", "--help"):
-        usage_and_exit()
-    elif opt in ("-P", "--svn-path"):
-        svn_path = arg
-    elif opt in ("-r", "--revision"):
-        commit_rev = arg
-    elif opt in ("-p", "--repos-path"):
-        repos_path = arg
-    elif opt in ("-u", "--item-url"):
-        item_url = arg
-        check_url(item_url, opt)
-    elif opt in ("-f", "--rss-file"):
-        rss_file = arg
-    elif opt in ("-m", "--max-items"):
-        try:
-           max_items = int(arg)
-        except ValueError, msg:
-           usage_and_exit("Invalid value '%s' for --max-items." % (arg))
-        if max_items < 1:
-           usage_and_exit("Value for --max-items must be a positive integer.")
-    elif opt in ("-U", "--feed-url"):
-        feed_url = arg
-        check_url(feed_url, opt)
 
 class SVN2RSS:
     def __init__(self, svn_path, revision, repos_path, item_url, rss_file, 
@@ -183,6 +142,51 @@ class SVN2RSS:
 
         return rss
 
+max_items = 20
+commit_rev = None
+item_url = feed_url = None
+
+if len(sys.argv) == 1:
+    usage_and_exit("Not enough arguments provided.")
+try:
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "hP:r:p:u:f:m:U:",
+                                   ["help",
+                                    "svn-path=",
+                                    "revision=",
+                                    "repos-path=",
+                                    "item-url=",
+                                    "rss-file=",
+                                    "max-items=",
+                                    "feed-url=",
+                                    ])
+except getopt.GetoptError, msg:
+    usage_and_exit(msg)
+for opt, arg in opts:
+    if opt in ("-h", "--help"):
+        usage_and_exit()
+    elif opt in ("-P", "--svn-path"):
+        svn_path = arg
+    elif opt in ("-r", "--revision"):
+        commit_rev = arg
+    elif opt in ("-p", "--repos-path"):
+        repos_path = arg
+    elif opt in ("-u", "--item-url"):
+        item_url = arg
+        check_url(item_url, opt)
+    elif opt in ("-f", "--rss-file"):
+        rss_file = arg
+    elif opt in ("-m", "--max-items"):
+        try:
+           max_items = int(arg)
+        except ValueError, msg:
+           usage_and_exit("Invalid value '%s' for --max-items." % (arg))
+        if max_items < 1:
+           usage_and_exit("Value for --max-items must be a positive integer.")
+    elif opt in ("-U", "--feed-url"):
+        feed_url = arg
+        check_url(feed_url, opt)
+
+
 try:
     if (commit_rev == None):
         cmd = "svnlook youngest " + repos_path
@@ -207,7 +211,8 @@ try:
                 end = tmp
             revisions = range(start, end + 1)[-max_items:]
         else:
-            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." % (commit_rev))
+            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
+                           % (commit_rev))
 
     for revision in revisions:
         revision = str(revision)
@@ -219,4 +224,5 @@ try:
         rss.write_xml(open(svn2rss.rss_file, "w"))
 
 except ValueError, msg:
-    usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." % (commit_rev))
+    usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
+                   % (commit_rev))
