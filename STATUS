@@ -132,7 +132,7 @@ Candidate changes:
     Votes:
       +1: dionisos
 
-  * r20301
+  * r20301, 20353
     Improve visibility of the "--version" option; fix quirks in parsing it.
     Justification:
       Users are happy if they can reasonably find a description for the
