@@ -153,13 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20032
-    Python test that validates that checkout uses the peg rev if provided.
-    Justification:
-      Change is already included in 1.4.x (r18422)
-    Votes:
-      +1: lgo, dionisos
-
   * r20036, r20037
     Python test for fix for issue 1780
     Justification:
