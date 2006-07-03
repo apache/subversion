@@ -270,8 +270,7 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
 
   if (needs_lock != NULL)
     {
-      SVN_ERR(svn_io_set_file_read_write_carefully(path, FALSE, 
-                                                   FALSE, pool));
+      SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
       if (did_set)
         *did_set = TRUE;
     }
