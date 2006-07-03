@@ -355,18 +355,6 @@ range_contains(svn_merge_range_t *first, svn_merge_range_t *second)
   return (first->start <= second->start) && (second->end <= first->end);
 }
 
-svn_error_t *
-svn_rangelist_intersect(apr_array_header_t **output,
-                        apr_array_header_t *rangelist1,
-                        apr_array_header_t *rangelist2,
-                        apr_pool_t *pool)
-{
-  /* ### Implement me in a manner which handles all the range overlap
-     ### cases (non, partial, full) from svn_rangelist_remove(). */
-  *output = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  return SVN_NO_ERROR;
-}
-
 /* Swap start and end fields of RANGE. */
 static void
 range_swap_endpoints(svn_merge_range_t *range)
@@ -402,20 +390,27 @@ svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
-                     apr_array_header_t *whiteboard, apr_pool_t *pool)
+/* Either remove any overlapping ranges described by ERASER from
+   WHITEBOARD (when DO_REMOVE is TRUE), or capture the overlap, and
+   place the remaining or overlapping ranges in OUTPUT. */
+/*  ### FIXME: Some variables names and inline comments for this method
+    ### are legacy from when it was solely the remove() impl. */
+static svn_error_t *
+rangelist_intersect_or_remove(apr_array_header_t **output,
+                              apr_array_header_t *eraser,
+                              apr_array_header_t *whiteboard,
+                              svn_boolean_t do_remove,
+                              apr_pool_t *pool)
 {
   int i, j, lasti;
   svn_merge_range_t *lastrange = NULL;
-  svn_merge_range_t *newrange;
   svn_merge_range_t wboardelt;
 
   *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
   i = 0;
   j = 0;
-  lasti = -1;
+  lasti = -1;  /* Initialized to a value that "i" will never be. */
 
   while (i < whiteboard->nelts && j < eraser->nelts)
     {
@@ -443,6 +438,10 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
          the removal, to test against. */
       if (range_contains(elt2, elt1))
         {
+          if (!do_remove)
+            APR_ARRAY_PUSH(*output, svn_merge_range_t *) =
+              svn_range_dup(elt1, pool);
+
           i++;
 
           if (elt1->start == elt2->start && elt1->end == elt2->end)
@@ -450,40 +449,62 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
         }
       else if (range_intersect(elt2, elt1))
         {
-          svn_merge_range_t temprange;
-          /* If the whiteboard range starts before the eraser
-             range, we need to output the range that falls before
-             the eraser start.  */
-
           if (elt1->start < elt2->start)
             {
-              temprange.start = elt1->start;
-              temprange.end = elt2->start - 1;
-              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    &temprange))
+              /* The whiteboard range starts before the eraser range. */
+              svn_merge_range_t tmp_range;
+              if (do_remove)
                 {
-                  newrange = svn_range_dup(&temprange, pool);
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-                  lastrange = newrange;
+                  /* Retain the range that falls before the eraser start. */
+                  tmp_range.start = elt1->start;
+                  tmp_range.end = elt2->start - 1;
+
+                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                        &tmp_range))
+                    {
+                      lastrange = svn_range_dup(&tmp_range, pool);
+                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+                    }
+                }
+              else
+                {
+                  /* Retain the range that falls between the eraser
+                     start and whiteboard end. */
+                  tmp_range.start = elt2->start;
+                  tmp_range.end = elt1->end;
+
+                  /* ### Perfom any range combining? */
+                  lastrange = svn_range_dup(&tmp_range, pool);
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
                 }
             }
-            /* Set up the rest of the whiteboard range for further
-               processing.  */
-            if (elt1->end > elt2->end)
-              {
-                wboardelt.start = elt2->end + 1;
-                wboardelt.end = elt1->end;
-              }
-            else
-              {
-                i++;
-              }
+
+          /* Set up the rest of the whiteboard range for further
+             processing.  */
+          if (elt1->end > elt2->end)
+            {
+              /* The whiteboard range ends after the eraser range. */
+              if (!do_remove)
+                {
+                  /* Partial overlap. */
+                  svn_merge_range_t *tmp_range =
+                    apr_palloc(pool, sizeof(*tmp_range));
+                  tmp_range->start = elt1->start;
+                  tmp_range->end = elt2->end;
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = tmp_range;
+                }
+
+              wboardelt.start = elt2->end + 1;
+              wboardelt.end = elt1->end;
+            }
+          else
+            i++;
         }
-      else
+      else  /* ranges don't intersect */
         {
-          /* If they don't intersect, see which side of the whiteboard
-             the eraser is on.  If it is on the left side, we need to
-             move the eraser.
+          /* See which side of the whiteboard the eraser is on.  If it
+             is on the left side, we need to move the eraser.
+
              If it is on past the whiteboard on the right side, we
              need to output the whiteboard and increment the
              whiteboard.  */
@@ -494,45 +515,70 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
               if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
                                                     elt1))
                 {
-                  newrange = svn_range_dup(elt1, pool);
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-                  lastrange = newrange;
+                  if (do_remove)
+                    {
+                      lastrange = svn_range_dup(elt1, pool);
+                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+                    }
+                  else
+                    lastrange = elt1;
                 }
               i++;
             }
         }
     }
 
+  if (do_remove)
+    {
   /* Copy the current whiteboard element if we didn't hit the end of the
      whiteboard.  This element may have been touched, so we can't just
      walk the whiteboard array, we have to use our copy.  */
-  if (i < whiteboard->nelts)
-    {
-      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                            &wboardelt))
+      if (i < whiteboard->nelts)
         {
-          newrange = svn_range_dup(&wboardelt, pool);
-          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-          lastrange = newrange;
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                &wboardelt))
+            {
+              lastrange = svn_range_dup(&wboardelt, pool);
+              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+            }
+          i++;
         }
-      i++;
-    }
 
-  /* Copy any other remaining untouched whiteboard elements.  */
-  for (; i < whiteboard->nelts; i++)
-    {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
-                                             svn_merge_range_t *);
-
-      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+      /* Copy any other remaining untouched whiteboard elements.  */
+      for (; i < whiteboard->nelts; i++)
         {
-          newrange = svn_range_dup(elt, pool);
-          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-          lastrange = newrange;
+          svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
+                                                 svn_merge_range_t *);
+
+          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+            {
+              lastrange = svn_range_dup(elt, pool);
+              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+            }
         }
     }
 
   return SVN_NO_ERROR;
+}
+
+
+/* Expected to handle all the range overlap cases: non, partial, full */
+svn_error_t *
+svn_rangelist_intersect(apr_array_header_t **output,
+                        apr_array_header_t *rangelist1,
+                        apr_array_header_t *rangelist2,
+                        apr_pool_t *pool)
+{
+  return rangelist_intersect_or_remove(output, rangelist1, rangelist2, FALSE,
+                                       pool);
+}
+
+svn_error_t *
+svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
+                     apr_array_header_t *whiteboard, apr_pool_t *pool)
+{
+  return rangelist_intersect_or_remove(output, eraser, whiteboard, TRUE,
+                                          pool);
 }
 
 /* Output deltas via *DELETED and *ADDED, which will never be @c NULL.
