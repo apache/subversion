@@ -74,6 +74,8 @@
   svn_dirent_t **,
   svn_lock_t **,
   svn_stream_t **,
+  svn_commit_callback2_t *,
+  void **callback2_baton,
   /* core */
   svn_auth_baton_t **,
   svn_auth_iterstate_t **,
@@ -81,6 +83,7 @@
   svn_config_t **,
   svn_diff_t **,
   void **credentials,
+  void **token,
   /* svn_client */
   svn_client_commit_info_t **,
   svn_client_ctx_t **,
@@ -105,13 +108,17 @@
   /* svn_ra */
   svn_ra_callbacks2_t **,
   svn_ra_plugin_t **,
+  const svn_ra_reporter_t **,
   const svn_ra_reporter2_t **,
   svn_ra_session_t **,
   void **report_baton,
+  void **ra_baton,
+  void **session_baton,
   /* svn_repos */
   svn_authz_t **,
   svn_repos_t **,
   const svn_repos_parse_fns2_t **,
+  const svn_repos_parser_fns_t **,
   void **parse_baton,
   void **revision_baton,
   void **node_baton,
