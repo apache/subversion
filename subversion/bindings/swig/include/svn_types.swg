@@ -725,11 +725,6 @@
   $result = output_helper($result, rb_str_new2(digest_string));
 }
 
-%typemap(in, numinputs=0) unsigned char **digest (unsigned char *temp)
-{
-    $1 = &temp;
-}
-
 %typemap(argout, fragment="output_helper") unsigned char **digest
 {
   char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);

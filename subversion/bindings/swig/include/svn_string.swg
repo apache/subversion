@@ -25,10 +25,6 @@ typedef struct svn_string_t svn_string_t;
    generic OUT param typemap for svn_string(buf)_t. we can share these
    because we only refer to the ->data and ->len values.
 */
-%typemap(in, numinputs=0) RET_STRING ($*1_ltype temp) {
-    $1 = &temp;
-}
-
 #ifdef SWIGPYTHON
 %typemap(argout,fragment="t_output_helper") RET_STRING {
     PyObject *s;

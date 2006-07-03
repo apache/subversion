@@ -166,10 +166,6 @@ typedef apr_int32_t time_t;
 /* -----------------------------------------------------------------------
    Output of apr_array_header_t * <svn_prop_t *>
 */
-%typemap(in, numinputs=0)
-  apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
-  "$1 = &temp;";
-
 #ifdef SWIGRUBY
 %typemap(argout, fragment="output_helper") apr_array_header_t **OUTPUT_OF_PROP
 {
@@ -180,10 +176,6 @@ typedef apr_int32_t time_t;
 /* -----------------------------------------------------------------------
    Output of apr_array_header_t * <const char *>
 */
-
-%typemap(in, numinputs=0)
-  apr_array_header_t **OUTPUT_OF_CONST_CHAR_P (apr_array_header_t *temp)
-  "$1 = &temp;";
 
 #ifdef SWIGPYTHON
 %typemap(argout, fragment="t_output_helper")
@@ -231,9 +223,6 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 /* -----------------------------------------------------------------------
    Output of apr_file_t *
 */
-
-%typemap(in, numinputs=0) apr_file_t ** (apr_file_t *temp)
-    "$1 = &temp;";
 
 #ifdef SWIGPYTHON
 %typemap(argout,fragment="t_output_helper") apr_file_t **

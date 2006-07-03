@@ -622,12 +622,6 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* svn_prop_diffs */
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **propdiffs (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-
 %typemap(argout, fragment="output_helper") apr_array_header_t **propdiffs
 {
   $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
