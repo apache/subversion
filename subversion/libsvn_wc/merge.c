@@ -267,8 +267,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                           pool));
           SVN_ERR(svn_wc__loggy_translated_file
                   (log_accum, adm_access,
-                   svn_path_is_child(adm_path, tmp_target_copy, pool),
                    svn_path_is_child(adm_path, target_copy, pool),
+                   svn_path_is_child(adm_path, tmp_target_copy, pool),
                    log_merge_target, pool));
 
           tmp_entry.conflict_old = left_base;
