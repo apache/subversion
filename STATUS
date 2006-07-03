@@ -45,7 +45,7 @@ Candidate changes:
     Justification:
       Improves consistency for users.
     Votes:
-      +1: rooneg
+      +1: rooneg, dionisos
       +1: lgo, nori    (non-binding)
 
   * r20040, r20255, r20256
@@ -139,6 +139,7 @@ Candidate changes:
       Users are happy if they can reasonably find a description for the
       "--version" option.
     Votes:
+      +1: dionisos
       +0: nori
 
   * r20340 (and r20313)
@@ -157,7 +158,7 @@ Candidate changes:
     Justification:
       Small fix.  Low risk.
     Votes:
-      +1: rooneg
+      +1: rooneg, dionisos
 
 Approved changes:
 
