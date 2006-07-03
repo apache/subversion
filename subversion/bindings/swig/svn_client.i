@@ -77,10 +77,6 @@
    returns apr_array_header_t * <svn_client_proplist_item_t *>
 */
 
-%typemap(in, numinputs=0) apr_array_header_t **props (apr_array_header_t *temp) {
-    $1 = &temp;
-}
-
 /* svn_client_proplist_item_t is used exclusively for svn_client_proplist().
    The python bindings convert it to a native python tuple. */
 #ifdef SWIGPYTHON
@@ -505,10 +501,6 @@
  * wrap svn_client_create_context */
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) svn_client_ctx_t ** (svn_client_ctx_t *temp) {
-    $1 = &temp;
-}
-
 %typemap(argout) svn_client_ctx_t ** {
   (*$1)->notify_func = svn_swig_pl_notify_func;
   (*$1)->notify_baton = (void *) &PL_sv_undef;
@@ -525,11 +517,6 @@
 
 /* svn_client_update2 */
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_array_header_t **result_revs (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-
 %typemap(argout, fragment="output_helper") apr_array_header_t **result_revs
 {
   $result = output_helper($result, svn_swig_rb_apr_array_to_array_svn_rev(*$1));

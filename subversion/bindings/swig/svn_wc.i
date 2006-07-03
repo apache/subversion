@@ -133,11 +133,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **externals_p (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
 %typemap(argout, fragment="output_helper")
      apr_array_header_t **externals_p
 {
@@ -152,11 +147,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **patterns (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
 %typemap(argout, fragment="output_helper")
      apr_array_header_t **patterns
 {
@@ -166,11 +156,6 @@
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0)
-     apr_array_header_t **patterns (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
 %typemap(argout, fragment="t_output_helper")
      apr_array_header_t **patterns
 {
