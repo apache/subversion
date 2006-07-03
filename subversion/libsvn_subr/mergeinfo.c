@@ -447,43 +447,34 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
         }
       else if (range_intersect(elt2, elt1))
         {
-          /* If they match exactly, we just move on.  */
-          if (elt1->start == elt2->start && elt1->end == elt2->end)
-            {
-              i++;
-              j++;
-            }
-          else
-            {
-              svn_merge_range_t temprange;
-              /* If the whiteboard range starts before the eraser
-                 range, we need to output the range that falls before
-                 the eraser start.  */
+          svn_merge_range_t temprange;
+          /* If the whiteboard range starts before the eraser
+             range, we need to output the range that falls before
+             the eraser start.  */
 
-              if (elt1->start < elt2->start)
+          if (elt1->start < elt2->start)
+            {
+              temprange.start = elt1->start;
+              temprange.end = elt2->start - 1;
+              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                    &temprange))
                 {
-                  temprange.start = elt1->start;
-                  temprange.end = elt2->start - 1;
-                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                        &temprange))
-                    {
-                      newrange = svn_range_dup(&temprange, pool);
-                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-                      lastrange = newrange;
-                    }
-                }
-              /* Set up the rest of the whiteboard range for further
-                 processing.  */
-              if (elt1->end > elt2->end)
-                {
-                  wboardelt.start = elt2->end + 1;
-                  wboardelt.end = elt1->end;
-                }
-              else
-                {
-                  i++;
+                  newrange = svn_range_dup(&temprange, pool);
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
+                  lastrange = newrange;
                 }
             }
+            /* Set up the rest of the whiteboard range for further
+               processing.  */
+            if (elt1->end > elt2->end)
+              {
+                wboardelt.start = elt2->end + 1;
+                wboardelt.end = elt1->end;
+              }
+            else
+              {
+                i++;
+              }
         }
       else
         {
