@@ -131,7 +131,7 @@ Candidate changes:
     Justification:
       Porting to 1.4.x prevents a wc-format bump later.
     Votes:
-      +1: dionisos
+      +1: dionisos, rooneg
 
   * r20301, 20353
     Improve visibility of the "--version" option; fix quirks in parsing it.
