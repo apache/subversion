@@ -63,23 +63,24 @@ def check_url(url, opt):
 class SVN2RSS:
     def __init__(self, svn_path, revision, repos_path, item_url, rss_file, 
                  max_items, feed_url):
-        self.svn_path = svn_path
         self.revision = revision
         self.repos_path = repos_path
         self.item_url = item_url
         self.rss_file = rss_file
         self.max_items = max_items
         self.feed_url = feed_url
+        self.svnlook_cmd = 'svnlook'
+        if svn_path is not None:
+            self.svnlook_cmd = os.path.join(svn_path, 'svnlook')
 
         self.rss_item_desc = self.make_rss_item_desc()
-        self.svnlook = os.path.join(self.svn_path, "svnlook")
         (file, ext) = os.path.splitext(self.rss_file)
         self.pickle_file = file + ".pickle"
         self.rss_item = self.make_rss_item()
         self.rss = self.make_rss()
         
     def make_rss_item_desc(self):
-        cmd = "svnlook info -r " + self.revision + " " + self.repos_path
+        cmd = [self.svnlook_cmd, 'info', '-r', self.revision, self.repos_path]
         out, x, y = popen2.popen3(cmd)
         cmd_out = out.readlines()
         Author = "\nAuthor: " + cmd_out[0]
@@ -90,7 +91,7 @@ class SVN2RSS:
         x.close()
         y.close()
         
-        cmd = "svnlook changed -r " + self.revision + " " + self.repos_path
+        cmd = [self.svnlook_cmd, 'changed', '-r', self.revision, self.repos_path]
         out, x, y = popen2.popen3(cmd)
         cmd_out = out.readlines()
         changed_files = "Modified: \n"
@@ -145,7 +146,7 @@ class SVN2RSS:
 def main():
     max_items = 20
     commit_rev = None
-    item_url = feed_url = None
+    svn_path = item_url = feed_url = None
     
     if len(sys.argv) == 1:
         usage_and_exit("Not enough arguments provided.")
@@ -188,8 +189,10 @@ def main():
             check_url(feed_url, opt)
     
     if (commit_rev == None):
-        cmd = "svnlook youngest " + repos_path
-        out, x, y = popen2.popen3(cmd)
+        svnlook_cmd = 'svnlook'
+        if svn_path is not None:
+            svnlook_cmd = os.path.join(svn_path, 'svnlook')
+        out, x, y = popen2.popen3([svnlook_cmd, 'youngest', repos_path])
         cmd_out = out.readlines()
         revisions = [int(cmd_out[0])]
         out.close()
