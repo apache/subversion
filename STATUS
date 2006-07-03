@@ -153,13 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20036, r20037
-    Python test for fix for issue 1780
-    Justification:
-      Fix is already included in 1.4.x (r18465)
-    Votes:
-      +1: lgo, dionisos
-
   * r20101
     Python test for blame eol-style handling
     Justification:
