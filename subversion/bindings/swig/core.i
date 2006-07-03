@@ -78,6 +78,7 @@
 %ignore svn_io_check_special_path;
 %ignore svn_io_check_resolved_path;
 /* This is useful for implementing svn_ra_callbacks_t->open_tmp_file */
+// svn_io_open_unique_file2
 // svn_io_open_unique_file
 %ignore svn_io_create_unique_link;
 %ignore svn_io_read_link;
@@ -90,6 +91,7 @@
 %ignore svn_io_append_file;
 %ignore svn_io_set_file_read_only;
 %ignore svn_io_set_file_read_write;
+%ignore svn_io_set_file_read_write_carefully;
 %ignore svn_io_set_file_executable;
 %ignore svn_io_is_file_executable;
 %ignore svn_io_read_length_line;
@@ -119,10 +121,15 @@
  * accept streams. This requires that the relevant language's custom
  * svn_stream_t wrapping code does not obstruct this usage. */
 // svn_stream_empty
+// svn_stream_disown
+// svn_stream_from_aprfile2
 // svn_stream_from_aprfile
 // svn_stream_for_stdout
 // svn_stream_from_stringbuf
 // svn_stream_compressed
+/* svn_stream_checksummed would require special attention to wrap, because
+ * of the read_digest and write_digest parameters. */
+%ignore svn_stream_checksummed;
 // svn_stream_read
 // svn_stream_write
 // svn_stream_close
@@ -134,17 +141,21 @@
 
 // svn_stream_readline
 // svn_stream_copy
+// svn_stream_contents_same
 // svn_stringbuf_from_file
 // svn_stringbuf_from_aprfile
 
 %ignore svn_io_remove_file;
 %ignore svn_io_remove_dir;
+%ignore svn_io_get_dir_filenames;
+%ignore svn_io_get_dirents2;
 %ignore svn_io_get_dirents;
 %ignore svn_io_dir_walk;
 %ignore svn_io_start_cmd;
 %ignore svn_io_wait_for_cmd;
 %ignore svn_io_run_cmd;
 %ignore svn_io_run_diff;
+%ignore svn_io_run_diff3_2;
 %ignore svn_io_run_diff3;
 // svn_io_detect_mimetype
 %ignore svn_io_file_open;
@@ -158,6 +169,7 @@
 %ignore svn_io_file_write_full;
 %ignore svn_io_stat;
 %ignore svn_io_file_rename;
+%ignore svn_io_file_move;
 %ignore svn_io_dir_make;
 %ignore svn_io_dir_make_hidden;
 %ignore svn_io_dir_make_sgid;
