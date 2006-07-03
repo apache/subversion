@@ -187,45 +187,44 @@ def main():
             feed_url = arg
             check_url(feed_url, opt)
     
-    try:
-        if (commit_rev == None):
-            cmd = "svnlook youngest " + repos_path
-            out, x, y = popen2.popen3(cmd)
-            cmd_out = out.readlines()
-            revisions = [int(cmd_out[0])]
-            out.close()
-            x.close()
-            y.close()
-        else:
+    if (commit_rev == None):
+        cmd = "svnlook youngest " + repos_path
+        out, x, y = popen2.popen3(cmd)
+        cmd_out = out.readlines()
+        revisions = [int(cmd_out[0])]
+        out.close()
+        x.close()
+        y.close()
+    else:
+        try:
             rev_range = commit_rev.split(':')
-            len_rev_range = len(rev_range)
-            if len_rev_range == 1:
-                revisions = [int(commit_rev)]
-            elif len_rev_range == 2:
-                start, end = rev_range
-                start = int(start)
-                end = int(end)
-                if (start > end):
-                    tmp = start
-                    start = end
-                    end = tmp
-                revisions = range(start, end + 1)[-max_items:]
-            else:
-                usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
-                               % (commit_rev))
+        except ValueError, msg:
+            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
+                           % (commit_rev))
+        len_rev_range = len(rev_range)
+        if len_rev_range == 1:
+            revisions = [int(commit_rev)]
+        elif len_rev_range == 2:
+            start, end = rev_range
+            start = int(start)
+            end = int(end)
+            if (start > end):
+                tmp = start
+                start = end
+                end = tmp
+            revisions = range(start, end + 1)[-max_items:]
+        else:
+            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
+                           % (commit_rev))
     
-        for revision in revisions:
-            revision = str(revision)
-            svn2rss = SVN2RSS(svn_path, revision, repos_path, item_url, rss_file, 
-                              max_items, feed_url)
-            rss = svn2rss.rss
-            svn2rss.pickle()
+    for revision in revisions:
+        revision = str(revision)
+        svn2rss = SVN2RSS(svn_path, revision, repos_path, item_url, rss_file, 
+                          max_items, feed_url)
+        rss = svn2rss.rss
+        svn2rss.pickle()
+        rss.write_xml(open(svn2rss.rss_file, "w"))
     
-            rss.write_xml(open(svn2rss.rss_file, "w"))
-    
-    except ValueError, msg:
-        usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
-                       % (commit_rev))
   
 if __name__ == "__main__":
     main()
