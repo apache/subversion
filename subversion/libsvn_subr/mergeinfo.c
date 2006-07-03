@@ -444,6 +444,9 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
       if (range_contains(elt2, elt1))
         {
           i++;
+
+          if (elt1->start == elt2->start && elt1->end == elt2->end)
+            j++;
         }
       else if (range_intersect(elt2, elt1))
         {
