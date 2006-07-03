@@ -153,13 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20104, r20105, r20106
-    Python tests for diff and blame ignoring whitespaces (-x -w option)
-    Justification:
-      New feature in 1.4.x (r18487)
-    Votes:
-      +1: lgo, dionisos
-
   * r20127, r20128
     Python tests for diff and blame ignoring eol style
      (-x --ignore-eol-style option)
