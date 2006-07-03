@@ -68,6 +68,7 @@
 #define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
 #define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
 #define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
+#define PATH_MERGEINFO_DB  "mergeinfo.db"  /* Contains mergeinfo.  */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -156,6 +157,12 @@ static const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
+}
+
+static const char *
+path_mergeinfo_db(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join(fs->path, PATH_MERGEINFO_DB, pool);
 }
 
 const char *
@@ -341,8 +348,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
-  SQLITE_ERR(sqlite3_open(svn_path_join(path, "mergeinfo.db", pool), 
-                          &ffd->mtd), ffd->mtd);
+  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(fs, pool), &ffd->mtd),
+                          ffd->mtd);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace (ffd->mtd, sqlite_tracer, ffd->mtd);
 #endif
@@ -399,6 +406,9 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
+  
+  /* Copy the merge tracking info. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MERGEINFO_DB, pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
@@ -4215,8 +4225,8 @@ commit_body(void *baton, apr_pool_t *pool)
     {
       const char *deletestring;
       
-      SQLITE_ERR(sqlite3_open(svn_path_join(cb->fs->path, "mergeinfo.db", 
-                                            pool), &ftd->mtd), ftd->mtd);
+      SQLITE_ERR(sqlite3_open(path_mergeinfo_db(cb->fs, pool),
+	                      &ftd->mtd), ftd->mtd);
 #ifdef SQLITE3_DEBUG
       sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
 #endif     
@@ -4243,8 +4253,8 @@ commit_body(void *baton, apr_pool_t *pool)
     {
       const char *deletestring;
       
-      SQLITE_ERR(sqlite3_open(svn_path_join(cb->fs->path, "mergeinfo.db", 
-                                            pool), &ftd->mtd), ftd->mtd);
+      SQLITE_ERR(sqlite3_open(path_mergeinfo_db(cb->fs, pool),
+	                      &ftd->mtd), ftd->mtd);
 #ifdef SQLITE3_DEBUG
       sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
 #endif
@@ -4383,8 +4393,8 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   fs->path = apr_pstrdup(pool, path);
 
-  SQLITE_ERR(sqlite3_open(svn_path_join(path, "mergeinfo.db", pool), 
-                   &ffd->mtd), ffd->mtd);
+  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(fs, pool), &ffd->mtd),
+                          ffd->mtd);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace (ffd->mtd, sqlite_tracer, ffd->mtd);
 #endif
