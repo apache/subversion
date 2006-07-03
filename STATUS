@@ -153,13 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20179, r20191
-    Python tests for fix for issue 2433
-    Justification:
-      Fix is already included in 1.4.x (r17321)
-    Votes:
-      +1: lgo, dionisos
-
   * r20225
     Additional documentation for Ruby bindings
     Justification:
