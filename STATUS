@@ -153,14 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r19968
-    Widen SWIG requirement to 1.3.29.
-    Justification:
-      It seems to work, according to the testsuites.
-    Votes:
-      +1: maxb, jerenkrantz, dionisos
-      +0: nori
-
   * r19924
     Deprecate svn_io_set_file_read_write_carefully and update the
     svn_io_set_file_read* functions to deal with perms and attributes
