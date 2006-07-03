@@ -42,16 +42,6 @@
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
-%apply SWIGTYPE **OUTPARAM {
-    svn_fs_root_t **,
-    svn_fs_txn_t **,
-    void **,
-    svn_fs_history_t **,
-    svn_fs_id_t **,
-    svn_fs_access_t **,
-    svn_lock_t **,
-    svn_fs_t **
-};
 
 %apply const char **OUTPUT { const char ** };
 

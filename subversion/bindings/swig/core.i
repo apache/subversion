@@ -216,14 +216,6 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
-*/
-%apply SWIGTYPE **OUTPARAM {
-  svn_auth_baton_t **, svn_diff_t **, svn_config_t **,
-  svn_auth_provider_object_t **
-}
-
-/* -----------------------------------------------------------------------
    Diff options are strings in array.
 */
 

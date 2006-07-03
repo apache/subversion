@@ -32,14 +32,6 @@
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
-%apply SWIGTYPE **OUTPARAM {
-    svn_repos_t **,
-    svn_dirent_t **,
-    svn_authz_t **,
-    const svn_delta_editor_t **editor,
-    void **edit_baton
-};
-
 %apply const char *MAY_BE_NULL {
     const char *src_entry,
     const char *unused_1,
