@@ -141,9 +141,9 @@ So the grammar looks something like this
 
 revisionrange -> REVISION "-" REVISION
 
-revisioneelement -> revisionrange | REVISION
+revisionelement -> revisionrange | REVISION
 
-revisionlist -> (revisionrange | REVISION)(COMMA revisioneelement)*
+revisionlist -> (revisionelement)(COMMA revisionelement)*
 
 revisionline -> PATHNAME COLON revisionlist
 
