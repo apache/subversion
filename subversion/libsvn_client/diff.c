@@ -1856,6 +1856,9 @@ do_merge(const char *initial_URL1,
           (&range.start, ra_session, revision1, path1, pool));
   SVN_ERR(svn_client__get_revision_number
           (&range.end, ra_session, revision2, path2, pool));
+  if (range.start == range.end)
+    /* No merge to perform. */
+    return SVN_NO_ERROR;
   is_revert = (range.start > range.end);
   if (is_revert)
     range.end += 1;
