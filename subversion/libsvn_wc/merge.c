@@ -235,7 +235,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              when 'svn up' calls this routine, it needs to make sure that
              this routine is using the newest property values that may
              have been received *during* the update.  Since this routine
-             will be run from within a log-command, install_file()
+             will be run from within a log-command, merge_file()
              needs to make sure that a previous log-command to 'install
              latest props' has already executed first.  Ben and I just
              checked, and that is indeed the order in which the log items
