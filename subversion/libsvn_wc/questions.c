@@ -273,7 +273,6 @@ compare_and_verify(svn_boolean_t *modified_p,
       apr_file_t *v_file_h, *b_file_h;
       svn_stream_t *v_stream, *b_stream;
       const svn_wc_entry_t *entry;
-      svn_error_t *err;
       
       SVN_ERR(svn_io_file_open(&b_file_h, base_file, APR_READ,
                               APR_OS_DEFAULT, pool));
@@ -322,15 +321,8 @@ compare_and_verify(svn_boolean_t *modified_p,
             }
         }
 
-      err = svn_stream_contents_same(&same, b_stream, v_stream, pool);
-      if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
-        {
-          same = FALSE;
-          svn_error_clear(err);
-        }
-      else if (err)
-        return err;
-
+      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream, pool));
+      
       SVN_ERR(svn_stream_close(v_stream));
       SVN_ERR(svn_stream_close(b_stream));
 
