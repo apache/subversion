@@ -372,6 +372,45 @@ def blame_ignore_whitespace(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'blame', '-x', '-w', file_path)
 
+def blame_ignore_eolstyle(sbox):
+  "ignore eol styles when blaming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only eol changes
+  open(file_path, 'w').write("Aa\r"
+                             "Bb\r"
+                             "Cc")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  expected_output = [                                  
+    "     2    jrandom Aa\n",
+    "     2    jrandom Bb\n",
+    "     3    jrandom Cc\n",
+    ]
+
+  output, error = svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-x', '--ignore-eol-style', file_path)
+
 ########################################################################
 # Run the tests
 
@@ -386,6 +425,7 @@ test_list = [ None,
               blame_peg_rev,
               blame_eol_styles,
               blame_ignore_whitespace,
+              blame_ignore_eolstyle
              ]
 
 if __name__ == '__main__':

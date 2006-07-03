@@ -2586,6 +2586,46 @@ def diff_ignore_whitespace(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-x', '-w', file_path)
 
+def diff_ignore_eolstyle(sbox):
+  "ignore eol styles when diffing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only eol changes
+  open(file_path, 'w').write("Aa\r"
+                             "Bb\r"
+                             "Cc")
+
+  expected_output = [
+    "Index: svn-test-work/working_copies/diff_tests-40/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-40/iota\t(revision 2)\n",
+    "+++ svn-test-work/working_copies/diff_tests-40/iota\t(working copy)\n",
+    "@@ -1,3 +1,3 @@\n",
+    " Aa\n",
+    " Bb\n",
+    "-Cc\n",
+    "+Cc\n",
+    "\ No newline at end of file\n" ]
+    
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-x', '--ignore-eol-style', 
+                                     file_path)
+
 ########################################################################
 #Run the tests
 
@@ -2631,6 +2671,7 @@ test_list = [ None,
               basic_diff_summarize,
               diff_weird_author,
               diff_ignore_whitespace,
+              diff_ignore_eolstyle,
               ]
 
 if __name__ == '__main__':
