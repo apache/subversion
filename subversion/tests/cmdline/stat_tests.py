@@ -975,6 +975,36 @@ def status_add_plus_conflict(sbox):
 
 #----------------------------------------------------------------------  
 
+def inconsistent_eol(sbox):
+  "status with inconsistent eol style"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, "iota")
+
+  open(iota_path, "wb").write("line 1\nline 2\n")
+
+  svntest.actions.run_and_verify_svn(None,
+                                     "property 'svn:eol-style' set on.*iota",
+                                     [],
+                                     'propset', 'svn:eol-style', 'native',
+                                     os.path.join(wc_dir, 'iota'))
+                                     
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Make the eol style inconsistent and verify that status says nothing.
+  open(iota_path, "wb").write("line 1\nline 2\r\n")
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1003,6 +1033,7 @@ test_list = [ None,
               status_dash_u_missing_dir,
               XFail(status_nonrecursive_update_different_cwd),
               status_add_plus_conflict,
+              inconsistent_eol,
              ]
 
 if __name__ == '__main__':
