@@ -302,7 +302,7 @@ compare_and_verify(svn_boolean_t *modified_p,
           SVN_ERR(svn_subst_stream_detranslated(&v_stream,
                                                 versioned_file,
                                                 eol_style,
-                                                eol_str, FALSE,
+                                                eol_str, TRUE,
                                                 keywords, special,
                                                 pool));
         }
