@@ -153,13 +153,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20101
-    Python test for blame eol-style handling
-    Justification:
-      Fixes and partial test are already included in 1.4.x (r20059)
-    Votes:
-      +1: lgo, dionisos
-
   * r20104, r20105, r20106
     Python tests for diff and blame ignoring whitespaces (-x -w option)
     Justification:
