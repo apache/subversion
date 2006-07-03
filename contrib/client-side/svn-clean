@@ -108,7 +108,7 @@ sub clean {
         # Make sure the file exists before removing it. Do not remove deleted
         # directories as they are needed to remove the files they contain when
         # committing.
-        stat $path;
+        lstat $path or stat $path;
         if (
             -e _
             and ( not -d _
