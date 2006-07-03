@@ -46,7 +46,7 @@ Candidate changes:
       Improves consistency for users.
     Votes:
       +1: rooneg
-      +1: lgo    (non-binding)
+      +1: lgo, nori    (non-binding)
 
   * r20040, r20255, r20256
     RPM changes to correctly build on x86-64 architecture.
@@ -133,7 +133,7 @@ Candidate changes:
     Votes:
       +1: dionisos, rooneg
 
-  * r20301, 20353
+  * r20301, r20353
     Improve visibility of the "--version" option; fix quirks in parsing it.
     Justification:
       Users are happy if they can reasonably find a description for the
