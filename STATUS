@@ -29,13 +29,6 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-  * r20011
-    Extra python tests for authz validation: export
-    Justification:
-      Tests how secure Subversion is.
-    Votes:
-      +1: lgo
-
   * r20030
     Fix svn export so it creates intermediate local folders if needed,
     thereby making it consistent with svn checkout.
@@ -177,3 +170,11 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
+
+  * r20011
+    Extra python tests for authz validation: export
+    Justification:
+      Tests how secure Subversion is.
+    Votes:
+      +1: lgo, lundblad
+
