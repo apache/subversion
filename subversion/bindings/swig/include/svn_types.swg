@@ -64,9 +64,9 @@
 }
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
-    $result = t_output_helper($result,
-      svn_swig_NewPointerObj(*$1, $*1_descriptor, _global_svn_swig_py_pool));
+%typemap(argout) SWIGTYPE **OUTPARAM {
+  %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
+                                        _global_svn_swig_py_pool));
 }
 #endif
 #ifdef SWIGPERL
@@ -76,8 +76,8 @@
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") SWIGTYPE **OUTPARAM {
-  $result = output_helper($result, SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+%typemap(argout) SWIGTYPE **OUTPARAM {
+  %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 #endif
 
@@ -789,10 +789,10 @@
   ($*1_type temp[APR_MD5_DIGESTSIZE]) "$1 = temp;";
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") unsigned char digest[ANY]
+%typemap(argout) unsigned char digest[ANY]
 {
-    $result = t_output_helper($result,
-        PyString_FromString(svn_md5_digest_to_cstring ($1, _global_pool)));
+  %append_output(PyString_FromString(svn_md5_digest_to_cstring($1,
+                                                               _global_pool)));
 }
 #endif
 #ifdef SWIGPERL
@@ -802,10 +802,9 @@
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") unsigned char digest[ANY]
-{
+%typemap(argout) unsigned char digest[ANY] {
   char *digest_string = (char *)svn_md5_digest_to_cstring($1, _global_pool);
-  $result = output_helper($result, rb_str_new2(digest_string));
+  %append_output(rb_str_new2(digest_string));
 }
 #endif
 
@@ -829,10 +828,9 @@
 /* Category 2 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") unsigned char **digest
-{
+%typemap(argout) unsigned char **digest {
   char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);
-  $result = output_helper($result, rb_str_new2(digest_string));
+  %append_output(rb_str_new2(digest_string));
 }
 #endif
 
@@ -938,9 +936,10 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **dirents {
-  $result = t_output_helper($result, svn_swig_py_convert_hash(*$1,
-    $descriptor(svn_dirent_t *), _global_svn_swig_py_pool));
+%typemap(argout) apr_hash_t **dirents {
+  %append_output(svn_swig_py_convert_hash(*$1,
+                                          $descriptor(svn_dirent_t *),
+                                          _global_svn_swig_py_pool));
 }
 #endif
 
@@ -951,11 +950,9 @@
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **dirents
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_swig_type
-                            (*$1, "svn_dirent_t *"));
+%typemap(argout) apr_hash_t **dirents {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        "svn_dirent_t *"));
 }
 #endif
 
@@ -967,11 +964,8 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **locks
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_swig_type
-                            (*$1, "svn_lock_t *"));
+%typemap(argout) apr_hash_t **locks {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_lock_t *"));
 }
 #endif
 
@@ -997,7 +991,7 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **locations
 {
-  $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
+  %append_output(svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1));
 }
 #endif
 
@@ -1010,9 +1004,8 @@
 %typemap(out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
 
 %typemap(in, numinputs=0) svn_boolean_t * (svn_boolean_t temp) "$1 = &temp;";
-%typemap(argout, fragment="output_helper") svn_boolean_t *
-{
-  $result = output_helper($result, *$1 ? Qtrue : Qfalse);
+%typemap(argout) svn_boolean_t * {
+  %append_output(*$1 ? Qtrue : Qfalse);
 }
 #endif
 
