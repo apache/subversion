@@ -461,17 +461,8 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
- * override default typemap for svn_client_commit_info_t for perl.  Some calls
- * never allocate and fill the commit_info struct.  This lets us return
- * undef for them.  Otherwise the object we pass back can cause crashes */
 #ifdef SWIGPERL
-%typemap(in, numinputs=0) svn_client_commit_info_t **
-                                 ( svn_client_commit_info_t * temp ) {
-    temp = NULL;
-    $1 = &temp;
-}
-
+/* FIXME: For svn_commit_info_t too? */
 %typemap(argout) svn_client_commit_info_t ** {
     if ($1 == NULL) {
         $result = &PL_sv_undef;
