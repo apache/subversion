@@ -1,8 +1,6 @@
 /*
- * svn_delta.i :  SWIG interface file for svn_delta.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,8 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_delta.i: SWIG interface file for svn_delta.h
  */
 
 #if defined(SWIGPERL)
