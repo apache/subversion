@@ -71,8 +71,8 @@
 #endif
 #ifdef SWIGPERL
 %typemap(argout) SWIGTYPE **OUTPARAM {
-    ST(argvi) = sv_newmortal();
-    SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
+    $result = SWIG_NewPointerObj(*$1, $*1_descriptor,0);
+    argvi++;
 }
 #endif
 #ifdef SWIGRUBY
@@ -281,8 +281,7 @@
                                         &callback_result, "S", $1,
                                         $1_descriptor);
         } else {
-            $result = sv_newmortal();
-            SWIG_MakePtr ($result, (void *)$1, $1_descriptor ,0);
+            $result = SWIG_NewPointerObj($1, $1_descriptor, 0);
             argvi++;
         }
     }
