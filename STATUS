@@ -171,10 +171,3 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20011
-    Extra python tests for authz validation: export
-    Justification:
-      Tests how secure Subversion is.
-    Votes:
-      +1: lgo, lundblad
-
