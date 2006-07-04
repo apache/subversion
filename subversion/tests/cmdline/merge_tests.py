@@ -2474,7 +2474,7 @@ def merge_keyword_expansions(sbox):
     'f'      : Item("$Revision: 4 $"),
     })
   expected_status = wc.State(short_bpath, {
-    ''       : Item(status='  ', wc_rev=4),
+    ''       : Item(status=' M', wc_rev=4),
     'f'      : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_bpath, { })
