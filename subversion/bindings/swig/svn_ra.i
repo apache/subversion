@@ -67,8 +67,8 @@
     if ($1 == NULL)
         SWIG_fail;
 }
-%typemap(argout,fragment="t_output_helper") apr_hash_t **locations {
-    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
+%typemap(argout) apr_hash_t **locations {
+  %append_output(svn_swig_py_locationhash_to_dict(*$1));
 }
 #endif
 

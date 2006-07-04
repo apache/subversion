@@ -93,20 +93,16 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") apr_hash_t **entries {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
-          _global_svn_swig_py_pool));
+%typemap(argout) apr_hash_t **entries {
+  %append_output(svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
+                                          _global_svn_swig_py_pool));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **entries
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_swig_type
-                            (*$1, "svn_wc_entry_t *"));
+%typemap(argout) apr_hash_t **entries {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        "svn_wc_entry_t *"));
 }
 #endif
 
@@ -117,13 +113,9 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **externals_old
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_string(*$1));
+%typemap(argout) apr_hash_t **externals_old, apr_hash_t **externals_new {
+  %append_output(svn_swig_rb_apr_hash_to_hash_string(*$1));
 }
-
-%typemap(argout, fragment="output_helper") apr_hash_t **externals_new = apr_hash_t **externals_old;
 #endif
 
 
@@ -133,11 +125,8 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **externals_p
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_array_to_array_external_item(*$1));
+%typemap(argout) apr_array_header_t **externals_p {
+  %append_output(svn_swig_rb_apr_array_to_array_external_item(*$1));
 }
 #endif
 
@@ -147,20 +136,14 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **patterns
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_array_to_array_string(*$1));
+%typemap(argout) apr_array_header_t **patterns {
+  %append_output(svn_swig_rb_apr_array_to_array_string(*$1));
 }
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper")
-     apr_array_header_t **patterns
-{
-  $result = t_output_helper($result,
-                          svn_swig_py_array_to_list(*$1));
+%typemap(argout) apr_array_header_t **patterns {
+  %append_output(svn_swig_py_array_to_list(*$1));
 }
 #endif
 

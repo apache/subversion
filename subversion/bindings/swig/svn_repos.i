@@ -113,11 +113,9 @@
    handle svn_repos_fs_get_locks
 */
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **locks {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_lock_t *),
-          _global_svn_swig_py_pool));
+%typemap(argout) apr_hash_t **locks {
+  %append_output(svn_swig_py_convert_hash(*$1, $descriptor(svn_lock_t *),
+                                          _global_svn_swig_py_pool));
 }
 #endif
 
@@ -217,10 +215,8 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **dirents
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+%typemap(argout) apr_hash_t **dirents {
+  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 #endif
 
@@ -228,9 +224,8 @@
    handle svn_repos_get_committed_info().
 */
 #ifdef SWIGRUBY
-%typemap(argout,fragment="output_helper") const char **committed_date
-{
-  $result = output_helper($result, svn_swig_rb_svn_date_string_to_time(*$1));
+%typemap(argout) const char **committed_date {
+  %append_output(svn_swig_rb_svn_date_string_to_time(*$1));
 }
 #endif
 
@@ -251,8 +246,8 @@
    handle the output from svn_repos_trace_node_locations()
 */
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **locations {
-    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
+%typemap(argout) apr_hash_t **locations {
+   %append_output(svn_swig_py_locationhash_to_dict(*$1));
 }
 #endif
 

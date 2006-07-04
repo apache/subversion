@@ -100,21 +100,17 @@ typedef apr_int32_t time_t;
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **DIRENTHASH {
-  $result = t_output_helper($result,
-                    svn_swig_py_convert_hash(*$1,
-                                             $descriptor(svn_dirent_t *),
-                                             NULL));
+%typemap(argout) apr_hash_t **DIRENTHASH {
+  %append_output(svn_swig_py_convert_hash(*$1,
+                                          $descriptor(svn_dirent_t *),
+                                          NULL));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **DIRENTHASH
-{
-  $result =
-    output_helper($result,
-                  svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                         "svn_dirent_t *"));
+%typemap(argout) apr_hash_t **DIRENTHASH {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        "svn_dirent_t *"));
 }
 #endif
 
@@ -124,8 +120,8 @@ typedef apr_int32_t time_t;
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **PROPHASH {
-    $result = t_output_helper($result, svn_swig_py_prophash_to_dict(*$1));
+%typemap(argout) apr_hash_t **PROPHASH {
+  %append_output(svn_swig_py_prophash_to_dict(*$1));
 }
 #endif
 
@@ -137,10 +133,8 @@ typedef apr_int32_t time_t;
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **PROPHASH
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+%typemap(argout) apr_hash_t **PROPHASH {
+  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 #endif
 
@@ -167,9 +161,8 @@ typedef apr_int32_t time_t;
    Output of apr_array_header_t * <svn_prop_t *>
 */
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_array_header_t **OUTPUT_OF_PROP
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
+  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
 }
 #endif
 
@@ -178,9 +171,8 @@ typedef apr_int32_t time_t;
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper")
-apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
+%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  %append_output(svn_swig_py_array_to_list(*$1));
 }
 #endif
 #ifdef SWIGPERL
@@ -190,10 +182,8 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_string(*$1));
+%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  %append_output(svn_swig_rb_apr_array_to_array_string(*$1));
 }
 #endif
 

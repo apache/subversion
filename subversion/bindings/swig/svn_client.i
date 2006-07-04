@@ -83,8 +83,7 @@
     %ignore svn_client_proplist_item_t;
 #endif
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") apr_array_header_t **props
-{
+%typemap(argout) apr_array_header_t **props {
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
@@ -110,14 +109,13 @@
 
         PyList_SET_ITEM(list, i, item);
     }
-    $result = t_output_helper($result, list);
+    %append_output(list);
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **props
-{
-  $result = svn_swig_rb_apr_array_to_array_proplist_item(*$1);
+%typemap(argout) apr_array_header_t **props {
+  %append_output(svn_swig_rb_apr_array_to_array_proplist_item(*$1));
 }
 
 %typemap(out) apr_hash_t *prop_hash
@@ -508,9 +506,8 @@
 
 /* svn_client_update2 */
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_array_header_t **result_revs
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+%typemap(argout) apr_array_header_t **result_revs {
+  %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
 }
 #endif
 
