@@ -2583,7 +2583,7 @@ def merge_dir_replace(sbox):
     'foo' : Item(),
     })
   expected_status = wc.State(C_path, {
-    ''    : Item(status='  ', wc_rev=1),
+    ''    : Item(status=' M', wc_rev=1),
     'foo' : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
@@ -2595,12 +2595,14 @@ def merge_dir_replace(sbox):
 
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
+    'A/C'        : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
     'A/B/F/foo'  : Item(status='  ', wc_rev=2),
+    'A/C'        : Item(status='  ', wc_rev=3),
     'A/C/foo'    : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -2617,6 +2619,7 @@ def merge_dir_replace(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
+    'A/C'         : Item(status='  ', wc_rev=3),
     'A/C/foo'     : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -2635,7 +2638,8 @@ def merge_dir_replace(sbox):
   expected_status.tweak(wc_rev=1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=5),
-    'A/C/foo'     : Item(status='  ', wc_rev=3),
+    'A/C'          : Item(status='  ', wc_rev=3),
+    'A/C/foo'      : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -2651,7 +2655,7 @@ def merge_dir_replace(sbox):
     'foo' : Item(),
     })
   expected_status = wc.State(C_path, {
-    ''    : Item(status='  ', wc_rev=1),
+    ''    : Item(status=' M', wc_rev=3),
     'foo' : Item(status='R ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
