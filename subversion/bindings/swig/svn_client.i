@@ -466,9 +466,7 @@
         $result = &PL_sv_undef;
         argvi++;
     }  else {
-        $result = sv_newmortal();
-        SWIG_MakePtr($result, (void *)*$1,
-                     $*1_descriptor, 0);
+        $result = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
         argvi++;
     }
 }
@@ -497,9 +495,7 @@
   (*$1)->log_msg_baton = (void *) &PL_sv_undef;
   (*$1)->cancel_func = svn_swig_pl_cancel_func;
   (*$1)->cancel_baton = (void *) &PL_sv_undef;
-  $result = sv_newmortal();
-  SWIG_MakePtr($result, (void *)*$1,
-               $*1_descriptor, 0);
+  $result = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
   argvi++;
 }
 #endif
