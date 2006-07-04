@@ -2351,6 +2351,38 @@ svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
   return err;
 }
 
+svn_error_t *svn_swig_py_commit_callback(svn_revnum_t new_revision,
+                                         const char *date,
+                                         const char *author,
+                                         void *baton)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver,
+                                      (char *)"lss",
+                                      new_revision, date, author)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
 svn_error_t *svn_swig_py_ra_file_rev_handler_func(
                     void *baton,
                     const char *path,

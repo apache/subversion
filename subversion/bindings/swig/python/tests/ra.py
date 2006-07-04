@@ -58,13 +58,22 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assert_(dirents.has_key('README2.txt'))
     self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
 
-  def test_commit(self):
+  def test_commit2(self):
     def my_callback(info, pool):
         self.assertEqual(info.revision, fs.youngest_rev(self.fs))
 
     editor, edit_baton = ra.get_commit_editor2(self.ra_ctx, "foobar", my_callback, None, False)
     root = delta.editor_invoke_open_root(editor, edit_baton, 4)
     child = delta.editor_invoke_add_directory(editor, "bla", root, None, 0)
+    delta.editor_invoke_close_edit(editor, edit_baton)
+
+  def test_commit(self):
+    def my_callback(revision, date, author):
+        self.assertEqual(revision, fs.youngest_rev(self.fs))
+
+    editor, edit_baton = ra.get_commit_editor(self.ra_ctx, "foobar", my_callback, None, False)
+    root = delta.editor_invoke_open_root(editor, edit_baton, 4)
+    child = delta.editor_invoke_add_directory(editor, "blah", root, None, 0)
     delta.editor_invoke_close_edit(editor, edit_baton)
 
   def test_get_locations(self):
