@@ -3181,7 +3181,7 @@ def cherry_pick_text_conflict(sbox):
     'D/G/tau'   : Item("This is the file 'tau'.\n"),
     })
   expected_status = wc.State(A_path, {
-    ''          : Item(status='  '),
+    ''          : Item(status=' M'),
     'mu'        : Item(status='C '),
     'B'         : Item(status='  '),
     'B/lambda'  : Item(status='  '),
