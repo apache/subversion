@@ -3466,6 +3466,7 @@ def merge_ignore_whitespace(sbox):
                                "C c\n"
                                "New line in iota\n")
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('', status=' M', wc_rev=1)
   expected_status.tweak(file_name, status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
 
