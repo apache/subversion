@@ -67,6 +67,9 @@
 /* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
 
+/* Delete changelist field from the entry SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_DELETE_CHANGELIST   "delete-changelist"
+
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 
@@ -192,6 +195,21 @@ struct log_runner
      incremented every time start_handler() is called. */
   int count;
 };
+
+
+
+/*** Forward declarations ***/
+
+/* log runner forward declaration used in log_do_merge */
+static svn_error_t *
+run_log_from_memory(svn_wc_adm_access_t *adm_access,
+                    const char *buf,
+                    apr_size_t buf_len,
+                    svn_boolean_t rerun,
+                    const char *diff3_cmd,
+                    apr_pool_t *pool);
+
+
 
 
 
@@ -498,6 +516,7 @@ log_do_merge(struct log_runner *loggy,
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
   enum svn_wc_merge_outcome_t merge_outcome;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", loggy->pool);
   svn_error_t *err;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
@@ -532,10 +551,23 @@ log_do_merge(struct log_runner *loggy,
                        loggy->pool);
 
   /* Now do the merge with our full paths. */
-  err = svn_wc_merge2(left, right, name, loggy->adm_access,
-                      left_label, right_label, target_label,
-                      FALSE, &merge_outcome, loggy->diff3_cmd, NULL,
-                      loggy->pool);
+  err = svn_wc__merge_internal(&log_accum,
+                               left, right, name, loggy->adm_access,
+                               left_label, right_label, target_label,
+                               FALSE, &merge_outcome, loggy->diff3_cmd, NULL,
+                               loggy->pool);
+  if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    if (err)
+      return err;
+
+  err = run_log_from_memory(loggy->adm_access,
+                            log_accum->data, log_accum->len,
+                            loggy->rerun, loggy->diff3_cmd, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
@@ -821,6 +853,29 @@ log_do_delete_lock(struct log_runner *loggy,
   if (err)
     return svn_error_createf(pick_error_code(loggy), err,
                              _("Error removing lock from entry for '%s'"),
+                             name);
+  loggy->entries_modified = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+log_do_delete_changelist(struct log_runner *loggy,
+                         const char *name)
+{
+  svn_error_t *err;
+  svn_wc_entry_t entry;
+
+  entry.changelist = NULL;
+
+  /* Now write the new entry out */
+  err = svn_wc__entry_modify(loggy->adm_access, name,
+                             &entry,
+                             SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                             FALSE, loggy->pool);
+  if (err)
+    return svn_error_createf(pick_error_code(loggy), err,
+                             _("Error removing changelist from entry '%s'"),
                              name);
   loggy->entries_modified = TRUE;
 
@@ -1507,6 +1562,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
     err = log_do_delete_lock(loggy, name);
   }
+  else if (strcmp(eltname, SVN_WC__LOG_DELETE_CHANGELIST) == 0) {
+    err = log_do_delete_changelist(loggy, name);
+  }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry(loggy, name);
   }
@@ -1639,6 +1697,53 @@ svn_wc__logfile_path(int log_number,
                       (log_number == 0) ? ""
                       : apr_psprintf(pool, ".%d", log_number));
 }
+
+/* Run a series of log-instructions from a memory block of length BUF_LEN
+   at BUF. RERUN and DIFF3_CMD are passed in the log baton to the
+   log runner callbacks.
+
+   Allocations are done in POOL.
+*/
+static svn_error_t *
+run_log_from_memory(svn_wc_adm_access_t *adm_access,
+                    const char *buf,
+                    apr_size_t buf_len,
+                    svn_boolean_t rerun,
+                    const char *diff3_cmd,
+                    apr_pool_t *pool)
+{
+  struct log_runner *loggy;
+  svn_xml_parser_t *parser;
+  /* kff todo: use the tag-making functions here, now. */
+  const char *log_start
+    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
+  const char *log_end
+    = "</wc-log>\n";
+
+  loggy = apr_pcalloc(pool, sizeof(*loggy));
+  loggy->adm_access = adm_access;
+  loggy->pool = svn_pool_create(pool);
+  loggy->parser = svn_xml_make_parser(loggy, start_handler,
+                                      NULL, NULL, pool);
+  loggy->entries_modified = FALSE;
+  loggy->wcprops_modified = FALSE;
+  loggy->rerun = rerun;
+  loggy->diff3_cmd = diff3_cmd;
+  loggy->count = 0;
+
+  parser = loggy->parser;
+  /* Expat wants everything wrapped in a top-level form, so start with
+     a ghost open tag. */
+  SVN_ERR(svn_xml_parse(parser, log_start, strlen(log_start), 0));
+
+  SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
+
+  /* Pacify Expat with a pointless closing element tag. */
+  SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Run a sequence of log files. */
 static svn_error_t *
@@ -1914,6 +2019,24 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
+svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+                              svn_wc_adm_access_t *adm_access,
+                              const char *dst,
+                              const char *src,
+                              const char *versioned,
+                              apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+                        SVN_WC__LOG_CP_AND_TRANSLATE,
+                        SVN_WC__LOG_ATTR_NAME, src,
+                        SVN_WC__LOG_ATTR_DEST, dst,
+                        SVN_WC__LOG_ATTR_ARG_2, versioned,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *path,
@@ -1936,6 +2059,21 @@ svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
 {
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_LOCK,
+                        SVN_WC__LOG_ATTR_NAME, path,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *path,
+                                apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+                        SVN_WC__LOG_DELETE_CHANGELIST,
                         SVN_WC__LOG_ATTR_NAME, path,
                         NULL);
 

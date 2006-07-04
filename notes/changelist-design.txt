@@ -398,3 +398,16 @@ perform metadata operations on a whole set of files.
    --> malcolmr and dlr believe that it's perfectly fine to use only
        parts of changelists 'below' the target path.
 
+
+--------------------
+
+TODO list:
+
+* create a streamy version of svn_client_retrieve_changelist(), to be
+  more friendly to 3rd party apps
+
+* make --cl the same as --changelist (?)
+
+* 'svn changelist' should take --changelist arg, to make it easy to
+  undefine a whole changelist at once
+

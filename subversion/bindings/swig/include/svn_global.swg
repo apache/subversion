@@ -1,8 +1,6 @@
 /*
- * svn_global.swg :  Global SWIG definitions for Subversion
- *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,10 +12,19 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_global.swg: Central point for global definitions to be used in
+ *  every bindings module.  This file is %included before anything
+ *  else, in every Subversion .i file.
  */
 
 %include typemaps.i
 %include constraints.i
+%include exception.i
+
+/* Include this early, so it can redefine typemaps included from the
+   SWIG standard library before they get %apply-ed anywhere. */
+%include svn_swigcompat.swg
 
 /* SWIG can't understand __attribute__(x), so we make it go away */
 #define __attribute__(x)
@@ -162,7 +169,16 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 
 
 #ifdef SWIGRUBY
+/* Ruby has strict capitalization conventions - 
+   tell SWIG to not warn as it renames things to follow these. */
+#pragma SWIG nowarn=801
+
 %{
 static VALUE _global_svn_swig_rb_pool = Qnil;
 %}
 #endif
+
+
+/* Now, include the main Subversion typemap library. */
+%include svn_types.swg
+%include proxy.swg

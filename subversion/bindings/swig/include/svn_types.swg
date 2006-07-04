@@ -1,8 +1,6 @@
 /*
- * svn_types.swg :  SWIG include file for svn_types.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,51 +12,43 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_types.swg: This is the main file of the Subversion typemap
+ *   library.  Certain categories of typemaps are removed into child
+ *   files that are then %included into this one, solely to promote
+ *   understandability of the code by grouping related parts.
  */
 
-/* This interface file only defines types and their related information.
-   There is no module associated with this interface file. */
-
-%include exception.i
-%import apr.swg
-
-#ifdef SWIGRUBY
-#  if SWIG_VERSION <= 0x010327
-/* Remove compiler warning (break strict-aliasing rules) */
-%typemap(in) SWIGTYPE * (void *temp)
-{
-#    if SWIG_VERSION <= 0x010325
-  SWIG_ConvertPtr($input, &temp, $1_descriptor, 1);
-#    else
-  SWIG_ConvertPtr($input, &temp, $1_descriptor, $disown);
-#    endif
-  $1 = ($1_ltype)temp;
-}
-#  endif
-#endif
+%include apr.swg
+%include svn_string.swg
 
 /* -----------------------------------------------------------------------
-   Create a typemap to define "type **" as OUT parameters.
-
-   Note: SWIGTYPE is just a placeholder for "some arbitrary type". This
-         typemap will be applied onto a "real" type.
+   Generic handling for "type **" parameters.  Almost all such parameters
+   are OUTPUT parameters.  Handling is as follows:
+   - "in" typemap which allocates storage for a pointer, and points the 
+     argument to that storage.
+   - Default "argout" typemap which complains at compile time, and raises
+     an exception at runtime.
+   - OUTPARAM "argout" typemap which wraps (SWIG_NewPointerObj) a C
+     pointer for return to the scripting language.
+   - Application of the OUTPARAM typemap to those types for which it makes
+     sense (key examples for which it does not are strings, arrays, and
+     hashes - which need to be turned into their scripting language
+     equivalent).
+   Known instances of "type **" which are *not* OUTPUT parameters are:
+   - svn_stream_checksummed(..., const unsigned char **read_digest,
+                                 const unsigned char **write_digest, ...)
 */
-#ifdef SWIGPYTHON
-%typemap(in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-#endif
+%typemap(in, numinputs=0) SWIGTYPE ** ($*1_ltype temp) "$1 = &temp;";
+%typemap(argout,warning="900:FIXME: Missing argout typemap") SWIGTYPE ** {
+  %#warning "FIXME: Missing argout typemap: $symname arg $argnum ($1_type)"
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-  temp = NULL;
-  $1 = ($1_ltype)&temp;
-}
+  /* Ruby fails to define $symname. */
+  SWIG_exception(SWIG_ValueError, "Function is not implemented yet");
+#else
+  SWIG_exception(SWIG_ValueError, "$symname is not implemented yet");
 #endif
+}
 
 #ifdef SWIGPYTHON
 %typemap(argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
@@ -78,14 +68,72 @@
 }
 #endif
 
+%apply SWIGTYPE **OUTPARAM {
+  /* svn_types.h */
+  svn_commit_info_t **,
+  svn_dirent_t **,
+  svn_lock_t **,
+  svn_stream_t **,
+  svn_commit_callback2_t *,
+  void **callback2_baton,
+  /* core */
+  svn_auth_baton_t **,
+  svn_auth_iterstate_t **,
+  svn_auth_provider_object_t **,
+  svn_config_t **,
+  svn_diff_t **,
+  void **credentials,
+  void **token,
+  /* svn_client */
+  svn_client_commit_info_t **,
+  svn_client_ctx_t **,
+  /* svn_delta */
+  const svn_delta_editor_t **,
+  svn_txdelta_stream_t **,
+  svn_txdelta_window_t **,
+  svn_txdelta_window_handler_t *,
+  void **handler_baton,
+  void **root_baton,
+  void **child_baton,
+  void **file_baton,
+  void **edit_baton,
+  /* svn_fs */
+  svn_fs_t **,
+  svn_fs_access_t **,
+  svn_fs_history_t **,
+  svn_fs_id_t **,
+  svn_fs_root_t **,
+  svn_fs_txn_t **,
+  void **contents_baton_p,
+  /* svn_ra */
+  svn_ra_callbacks2_t **,
+  svn_ra_plugin_t **,
+  const svn_ra_reporter_t **,
+  const svn_ra_reporter2_t **,
+  svn_ra_session_t **,
+  void **report_baton,
+  void **ra_baton,
+  void **session_baton,
+  /* svn_repos */
+  svn_authz_t **,
+  svn_repos_t **,
+  const svn_repos_parse_fns2_t **,
+  const svn_repos_parser_fns_t **,
+  void **parse_baton,
+  void **revision_baton,
+  void **node_baton,
+  /* svn_wc */
+  svn_wc_adm_access_t **,
+  svn_wc_entry_t **,
+  svn_wc_revision_status_t **,
+  svn_wc_status_t **,
+  svn_wc_status2_t **,
+  void **set_locks_baton
+};
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps
 */
-
-%apply SWIGTYPE **OUTPARAM {
-  svn_stream_t **,
-  svn_commit_info_t **
-};
 
 %apply long *OUTPUT { svn_revnum_t * };
 %apply int *OUTPUT { svn_boolean_t * };
@@ -715,11 +763,6 @@
   $result = output_helper($result, rb_str_new2(digest_string));
 }
 
-%typemap(in, numinputs=0) unsigned char **digest (unsigned char *temp)
-{
-    $1 = &temp;
-}
-
 %typemap(argout, fragment="output_helper") unsigned char **digest
 {
   char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);
@@ -846,7 +889,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **dirents {
   $result = t_output_helper($result, svn_swig_py_convert_hash(*$1,
     $descriptor(svn_dirent_t *), _global_svn_swig_py_pool));
@@ -854,14 +896,12 @@
 #endif
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **dirents {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **dirents
 {
   $result = output_helper($result,
@@ -878,7 +918,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **locks
 {
   $result = output_helper($result,
@@ -907,7 +946,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **locations
 {
   $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
@@ -977,8 +1015,3 @@
   }
 }
 #endif
-
-/* ----------------------------------------------------------------------- */
-
-%include svn_time_h.swg
-%include svn_types_h.swg

@@ -63,20 +63,6 @@ class Generator(generator.swig.Generator):
     """Write includes to a SWIG interface file"""
 
     self.ofile.write('\n/* Includes */\n')
-
-    # Include dependencies
-    self.ofile.write('#ifdef SWIGPYTHON\n');
-    apr_included = None
-    self.ofile.write('%import proxy.swg\n')
-    for include in includes:
-      if include in self.header_basenames:
-        self.ofile.write('%%include %s\n' % self.proxy_filename(include))
-      elif include[:3] == "apr" and not apr_included:
-        apr_included = 1
-        self.ofile.write('%import apr.swg\n')
-    self.ofile.write('#endif\n');
-
-    # Include the headerfile itself
     self.ofile.write('%%{\n#include "%s"\n%%}\n' % base_fname)
     if base_fname not in self._ignores:
       self.ofile.write('%%include %s\n' % base_fname)

@@ -1289,6 +1289,11 @@ typedef struct svn_wc_entry_t
    * @since New in 1.4. */
   const char *present_props;
 
+  /** which changelist this item is part of, or NULL if not part of any.
+   * @since New in 1.5.
+   */
+  const char *changelist;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;
@@ -2287,6 +2292,11 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
+ * If @a remove_changelist is @c TRUE, any association with a
+ * changelist will be removed.
+ *
+ * If @a path is a member of a changelist, remove that association.
+ *
  * If @a path is a file and @a digest is non-null, use @a digest as
  * the checksum for the new text base.  Else, calculate the checksum
  * if needed.
@@ -2295,7 +2305,26 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_process_committed4(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t recurse,
+                                       svn_revnum_t new_revnum,
+                                       const char *rev_date,
+                                       const char *rev_author,
+                                       apr_array_header_t *wcprop_changes,
+                                       svn_boolean_t remove_lock,
+                                       svn_boolean_t remove_changelist,
+                                       const unsigned char *digest,
+                                       apr_pool_t *pool);
+
+/** Similar to svn_wc_process_committed4(), but with @a
+ * remove_changelist set to FALSE.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_process_committed3(const char *path,
                                        svn_wc_adm_access_t *adm_access,
@@ -3460,6 +3489,23 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool);
+
+
+/**
+ * Associate @a path with changelist @a changelist by setting the
+ * 'changelist' attribute in its entry.  Obviously, this will
+ * overwrite any existing value of the attribute.  If @a changelist is
+ * NULL, then remove any 'changelist' attribute in @a path's entry.
+ *
+ * Note: this metadata is purely a client-side "bookkeeping"
+ * convenience, and is entirely managed by the working copy.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_set_changelist(const char *path,
+                      const char *changelist,
+                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus

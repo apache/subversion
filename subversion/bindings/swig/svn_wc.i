@@ -42,14 +42,6 @@
    %apply-ing of typemaps defined elsewhere
 */
 
-%apply SWIGTYPE **OUTPARAM {
-    svn_wc_entry_t **,
-    svn_wc_adm_access_t **,
-    svn_wc_status_t **,
-    svn_wc_status2_t **,
-    svn_wc_revision_status_t **
-};
-
 /*
    svn_wc_check_wc(wc_format)
    svn_wc_merge(wc_format)
@@ -101,7 +93,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="t_output_helper") apr_hash_t **entries {
     $result = t_output_helper(
         $result,
@@ -111,7 +102,6 @@
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **entries
 {
   $result = output_helper($result,
@@ -127,14 +117,12 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **externals_old = apr_hash_t **OUTPUT;
 %typemap(argout, fragment="output_helper") apr_hash_t **externals_old
 {
   $result = output_helper($result,
                           svn_swig_rb_apr_hash_to_hash_string(*$1));
 }
 
-%typemap(in, numinputs=0) apr_hash_t **externals_new = apr_hash_t **externals_old;
 %typemap(argout, fragment="output_helper") apr_hash_t **externals_new = apr_hash_t **externals_old;
 #endif
 
@@ -145,11 +133,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **externals_p (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
 %typemap(argout, fragment="output_helper")
      apr_array_header_t **externals_p
 {
@@ -164,11 +147,6 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **patterns (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
 %typemap(argout, fragment="output_helper")
      apr_array_header_t **patterns
 {
@@ -178,11 +156,6 @@
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0)
-     apr_array_header_t **patterns (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
 %typemap(argout, fragment="t_output_helper")
      apr_array_header_t **patterns
 {

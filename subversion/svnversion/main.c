@@ -121,7 +121,8 @@ main(int argc, const char *argv[])
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
       {"committed",  'c', 0, N_("last changed rather than current revisions")},
       {"help", 'h', 0, N_("display this help")},
-      {"version", SVNVERSION_OPT_VERSION, 0, N_("show version information")},
+      {"version", SVNVERSION_OPT_VERSION, 0,
+       N_("show program version information")},
       {0,             0,  0,  0}
     };
 

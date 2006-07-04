@@ -71,6 +71,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_HAS_PROP_MODS      "has-prop-mods"
 #define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
 #define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
+#define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -146,6 +147,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS      0x08000000
 #define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     0x10000000
 #define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      0x20000000
+#define SVN_WC__ENTRY_MODIFY_CHANGELIST         0x40000000
 
 
 /* ...or perhaps this to mean all of those above... */

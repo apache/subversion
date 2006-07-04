@@ -98,6 +98,19 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    apr_pool_t *pool);
 
 
+/* Extend **LOG_ACCUM with log instructions to generate a translated
+   file from SRC to DST with translation settings from VERSIONED
+   and flags specified in FLAGS.
+*/
+
+svn_error_t *
+svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+                              svn_wc_adm_access_t *adm_access,
+                              const char *dst,
+                              const char *src,
+                              const char *versioned,
+                              apr_pool_t *pool);
+
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
 */
@@ -111,13 +124,20 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
 */
-
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
                           svn_wc_adm_access_t *adm_access,
                           const char *path,
                           apr_pool_t *pool);
 
+/* Extend **LOG_ACCUM with log instructions to delete changelist
+   from the entry belonging to PATH.
+*/
+svn_error_t *
+svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *path,
+                                apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
    according to the flags specified in MODIFY_FLAGS, based on the values

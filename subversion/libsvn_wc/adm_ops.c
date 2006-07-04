@@ -310,7 +310,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_process_committed3(const char *path,
+svn_wc_process_committed4(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
                           svn_revnum_t new_revnum,
@@ -318,6 +318,7 @@ svn_wc_process_committed3(const char *path,
                           const char *rev_author,
                           apr_array_header_t *wcprop_changes,
                           svn_boolean_t remove_lock,
+                          svn_boolean_t remove_changelist,
                           const unsigned char *digest,
                           apr_pool_t *pool)
 {
@@ -432,6 +433,10 @@ svn_wc_process_committed3(const char *path,
     SVN_ERR(svn_wc__loggy_delete_lock(&logtags, adm_access,
                                       base_name, pool));
 
+  if (remove_changelist)
+    SVN_ERR(svn_wc__loggy_delete_changelist(&logtags, adm_access,
+                                            base_name, pool));
+
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp). */
@@ -504,16 +509,34 @@ svn_wc_process_committed3(const char *path,
              a directory.  Pass null for wcprop_changes, because the
              ones present in the current call are only applicable to
              this one committed item. */
-          SVN_ERR(svn_wc_process_committed2
+          SVN_ERR(svn_wc_process_committed4
                   (this_path, child_access,
                    (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
-                   new_revnum, rev_date, rev_author, NULL, FALSE, subpool));
+                   new_revnum, rev_date, rev_author, NULL, FALSE,
+                   remove_changelist, NULL, subpool));
         }
 
       svn_pool_destroy(subpool); 
    }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_process_committed3(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          const unsigned char *digest,
+                          apr_pool_t *pool)
+{
+  return svn_wc_process_committed4(path, adm_access, recurse, new_revnum,
+                                   rev_date, rev_author, wcprop_changes,
+                                   remove_lock, FALSE, digest, pool);
 }
 
 svn_error_t *
@@ -2383,6 +2406,37 @@ svn_error_t *svn_wc_remove_lock(const char *path,
     if (needs_lock)
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
   }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_set_changelist(const char *path,
+                      const char *changelist,
+                      apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
+                                 TRUE, /* get write lock */
+                                 0, /* depth */
+                                 NULL, NULL, pool));
+
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"), path);
+
+  newentry.changelist = changelist;
+
+  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
+                               SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                               TRUE, pool));
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
 }

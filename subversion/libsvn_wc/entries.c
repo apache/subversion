@@ -445,8 +445,12 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Lock creation date. */
   SVN_ERR(read_time(&entry->lock_creation_date, buf, end, pool));
-  
- done:;
+  MAYBE_DONE;
+
+  /* Changelist. */
+  SVN_ERR(read_str(&entry->changelist, buf, end, pool));
+
+ done:
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -784,6 +788,15 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE;
       }
   }
+
+  /* changelist */
+  entry->changelist = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHANGELIST,
+                                   APR_HASH_KEY_STRING);
+  if (entry->changelist)
+    {
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHANGELIST;
+      entry->changelist = apr_pstrdup(pool, entry->changelist);
+    }
   
   /* has-props flag. */
   SVN_ERR(do_bool_attr(&entry->has_props,
@@ -1527,7 +1540,10 @@ write_entry(svn_stringbuf_t *buf,
 
   /* Lock creation date. */
   write_time(buf, entry->lock_creation_date, pool);
-  
+
+  /* Changelist. */
+  write_str(buf, entry->changelist, pool);
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -1711,6 +1727,11 @@ write_entry_xml(svn_stringbuf_t **output,
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
                  APR_HASH_KEY_STRING,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
+
+  /* Changelist */
+  if (entry->changelist)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHANGELIST, APR_HASH_KEY_STRING,
+                 entry->changelist);
 
   /* Has-props flag. */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
@@ -2101,6 +2122,12 @@ fold_entry(apr_hash_t *entries,
   /* Lock creation date */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
+
+  /* Changelist */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CHANGELIST)
+    cur_entry->changelist = (entry->changelist
+                             ? apr_pstrdup(pool, entry->changelist)
+                             : NULL);
 
   /* has-props flag */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPS)
@@ -2511,6 +2538,8 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_owner = apr_pstrdup(pool, entry->lock_owner);
   if (entry->lock_comment)
     dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
+  if (entry->changelist)
+    dupentry->changelist = apr_pstrdup(pool, entry->changelist);
   if (entry->cachable_props)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)

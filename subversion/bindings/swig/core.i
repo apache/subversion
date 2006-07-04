@@ -1,8 +1,6 @@
 /*
- * core.i :  SWIG interface file for various core SVN and APR components
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * core.i: SWIG module interface file for libsvn_subr, a few pieces of
+ *   APR functionality, and anything else that does not fit into any
+ *   of the more specific module files.
  */
 
 #if defined(SWIGPERL)
@@ -62,29 +64,6 @@
 %immutable svn_error_t::file;
 
 /* -----------------------------------------------------------------------
-   We want the error code enums wrapped so we must include svn_error_codes.h
-   before anything else does.
-*/
-
-%include svn_error_codes_h.swg
-
-/* -----------------------------------------------------------------------
-   Include svn_types.swg early. Other .i files will import svn_types.swg which
-   then includes svn_types.h, making further includes get skipped. We want
-   to actually generate wrappers for svn_types.h, so do an _include_ right
-   now, before any _import_ has happened.
-*/
-
-%include svn_types.swg
-
-
-/* -----------------------------------------------------------------------
-   moving along...
-*/
-%import apr.swg
-%import svn_string.swg
-
-/* -----------------------------------------------------------------------
    completely ignore a number of functions. the presumption is that the
    scripting language already has facilities for these things (or they
    are relatively trivial).
@@ -99,6 +78,7 @@
 %ignore svn_io_check_special_path;
 %ignore svn_io_check_resolved_path;
 /* This is useful for implementing svn_ra_callbacks_t->open_tmp_file */
+// svn_io_open_unique_file2
 // svn_io_open_unique_file
 %ignore svn_io_create_unique_link;
 %ignore svn_io_read_link;
@@ -111,6 +91,7 @@
 %ignore svn_io_append_file;
 %ignore svn_io_set_file_read_only;
 %ignore svn_io_set_file_read_write;
+%ignore svn_io_set_file_read_write_carefully;
 %ignore svn_io_set_file_executable;
 %ignore svn_io_is_file_executable;
 %ignore svn_io_read_length_line;
@@ -140,10 +121,15 @@
  * accept streams. This requires that the relevant language's custom
  * svn_stream_t wrapping code does not obstruct this usage. */
 // svn_stream_empty
+// svn_stream_disown
+// svn_stream_from_aprfile2
 // svn_stream_from_aprfile
 // svn_stream_for_stdout
 // svn_stream_from_stringbuf
 // svn_stream_compressed
+/* svn_stream_checksummed would require special attention to wrap, because
+ * of the read_digest and write_digest parameters. */
+%ignore svn_stream_checksummed;
 // svn_stream_read
 // svn_stream_write
 // svn_stream_close
@@ -155,17 +141,21 @@
 
 // svn_stream_readline
 // svn_stream_copy
+// svn_stream_contents_same
 // svn_stringbuf_from_file
 // svn_stringbuf_from_aprfile
 
 %ignore svn_io_remove_file;
 %ignore svn_io_remove_dir;
+%ignore svn_io_get_dir_filenames;
+%ignore svn_io_get_dirents2;
 %ignore svn_io_get_dirents;
 %ignore svn_io_dir_walk;
 %ignore svn_io_start_cmd;
 %ignore svn_io_wait_for_cmd;
 %ignore svn_io_run_cmd;
 %ignore svn_io_run_diff;
+%ignore svn_io_run_diff3_2;
 %ignore svn_io_run_diff3;
 // svn_io_detect_mimetype
 %ignore svn_io_file_open;
@@ -179,6 +169,7 @@
 %ignore svn_io_file_write_full;
 %ignore svn_io_stat;
 %ignore svn_io_file_rename;
+%ignore svn_io_file_move;
 %ignore svn_io_dir_make;
 %ignore svn_io_dir_make_hidden;
 %ignore svn_io_dir_make_sgid;
@@ -228,8 +219,6 @@
 %ignore svn_path_cstring_to_utf8;
 
 /* Other files */
-%ignore apr_check_dir_empty;
-
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
 
@@ -237,14 +226,6 @@
    as a result. */
 %constant svn_revnum_t SWIG_SVN_INVALID_REVNUM = -1;
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
-
-/* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
-*/
-%apply SWIGTYPE **OUTPARAM {
-  svn_auth_baton_t **, svn_diff_t **, svn_config_t **,
-  svn_auth_provider_object_t **
-}
 
 /* -----------------------------------------------------------------------
    Diff options are strings in array.
@@ -517,7 +498,6 @@
    svn_config_read_auth_data()
 */
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **hash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **hash
 {
   if (*$1) {
@@ -571,6 +551,13 @@ void apr_pool_clear(apr_pool_t *p);
 apr_status_t apr_file_open_stdout (apr_file_t **out, apr_pool_t *pool);
 apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
+/* Allow parsing of apr_errno.h without parsing apr.h. */
+#define APR_DECLARE(x) x
+/* Not wrapped, use svn_strerror instead. */
+%ignore apr_strerror;
+/* Wrap the APR status and error codes. */
+%include apr_errno.h
+
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
 */
@@ -584,18 +571,6 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
    Default pool handling for perl.
 */
 #ifdef SWIGPERL
-
-/* Fix for SWIG 1.3.24 */
-#if SWIG_VERSION == 0x010324
-%typemap(varin) apr_pool_t * {
-  void *temp;
-  if (SWIG_ConvertPtr($input, (void **) &temp, $1_descriptor,0) < 0) {
-    croak("Type error in argument $argnum of $symname. Expected $1_mangle");
-  }
-  $1 = ($1_ltype) temp;
-}
-#endif
-
 apr_pool_t *current_pool;
 
 #if SWIG_VERSION <= 0x010324
@@ -633,7 +608,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 */
 
 #ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **cfg_hash {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *));
 }
@@ -645,7 +619,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **cfg_hash {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_config_t *");
 }
@@ -664,7 +637,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
     $result = t_output_helper(
         $result,
@@ -693,12 +665,6 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* svn_prop_diffs */
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **propdiffs (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-
 %typemap(argout, fragment="output_helper") apr_array_header_t **propdiffs
 {
   $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
@@ -765,9 +731,11 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* ----------------------------------------------------------------------- */
 
+%include svn_error_codes_h.swg
+%include svn_time_h.swg
+%include svn_types_h.swg
 %include svn_pools_h.swg
 %include svn_version_h.swg
-%include svn_time_h.swg
 
 /* The constant SVN_PROP_REVISION_ALL_PROPS is a C fragment, not a single
    data value, so the SWIG parser will raise a 305 warning if we don't
