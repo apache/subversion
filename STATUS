@@ -110,7 +110,7 @@ Candidate changes:
     Justification:
       Improves usability for the bindings around documentation.
     Votes:
-      +0: nori
+      +1: nori
 
   * r20248
     Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
@@ -136,8 +136,7 @@ Candidate changes:
       Users are happy if they can reasonably find a description for the
       "--version" option.
     Votes:
-      +1: dionisos
-      +0: nori
+      +1: dionisos, nori
 
   * r20340 (and r20313)
     Fix issue #1914: update runs diff3 twice
@@ -166,7 +165,7 @@ Candidate changes:
     Justification:
       Small fix.  Low risk.
     Votes:
-      +1: rooneg, dionisos
+      +1: rooneg, dionisos, nori
 
 Approved changes:
 
