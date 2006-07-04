@@ -222,26 +222,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 
 /* -----------------------------------------------------------------------
    Output of apr_file_t *
+   ... is currently being handled by the standard OUTPARAM code in
+   svn_types.swg, but should probably be more comfortably translated to
+   scripting language concepts.
 */
-
-#ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_file_t **
-    "$result = t_output_helper(
-        $result,
-        svn_swig_NewPointerObj(*$1, $*1_descriptor,
-           _global_svn_swig_py_pool));";
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_file_t ** {
-    ST(argvi) = sv_newmortal();
-    SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_file_t ** {
-    $result = output_helper($result,
-                            SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 0));
-}
-#endif

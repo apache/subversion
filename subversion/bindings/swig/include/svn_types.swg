@@ -82,6 +82,8 @@
 #endif
 
 %apply SWIGTYPE **OUTPARAM {
+  /* apr */
+  apr_file_t **,
   /* svn_types.h */
   svn_commit_info_t **,
   svn_dirent_t **,
