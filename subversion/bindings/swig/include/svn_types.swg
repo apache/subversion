@@ -40,6 +40,19 @@
                                  const unsigned char **write_digest, ...)
 */
 %typemap(in, numinputs=0) SWIGTYPE ** ($*1_ltype temp) "$1 = &temp;";
+
+/* We have a long standing bug where svn_client_commit_info_t and
+   svn_commit_info_t output parameters are not properly initialized to NULL
+   when there is nothing to commit.  This is a workaround.  Yes, it is
+   unspeakably evil that this was not just fixed at source when it was
+   discovered initially. */
+%typemap(in, numinputs=0) BAD_OUTPUT_INIT_HACK ** ($*1_ltype temp = NULL)
+  "$1 = &temp;";
+%apply BAD_OUTPUT_INIT_HACK ** {
+  svn_commit_info_t **,
+  svn_client_commit_info_t **
+};
+
 %typemap(argout,warning="900:FIXME: Missing argout typemap") SWIGTYPE ** {
   %#warning "FIXME: Missing argout typemap: $symname arg $argnum ($1_type)"
 #ifdef SWIGRUBY
