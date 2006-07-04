@@ -17,6 +17,25 @@
  *   SWIG version.
  */
 
+/* %append_output(obj) */
+#if SWIG_VERSION <= 0x010327
+#ifdef SWIGPYTHON
+%fragment("t_output_helper");
+#define %append_output(obj) $result = t_output_helper($result, obj)
+#endif
+
+#ifdef SWIGPERL
+#define %append_output(obj) \
+  if (argvi >= items) EXTEND(sp,1); $result = obj; argvi++
+#endif
+
+#ifdef SWIGRUBY
+%fragment("output_helper");
+#define %append_output(obj) $result = output_helper($result, obj)
+#endif
+#endif
+
+
 #ifdef SWIGPERL
 #if SWIG_VERSION == 0x010324
 %typemap(varin) apr_pool_t * {
