@@ -330,6 +330,13 @@ svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
                                           apr_pool_t *pool);
 
 SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_commit_callback(svn_revnum_t new_revision,
+                                         const char *date,
+                                         const char *author,
+                                         void *baton);
+
+
+SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_ra_file_rev_handler_func(
                     void *baton,
                     const char *path,

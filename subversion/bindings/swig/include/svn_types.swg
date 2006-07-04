@@ -544,6 +544,14 @@
 };
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) (svn_commit_callback_t callback, void *callback_baton)
+{
+  $1 = svn_swig_py_commit_callback;
+  $2 = (void *)$input;
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback2_t
    svn_ra get_commit_editor2()
