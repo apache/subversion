@@ -1699,11 +1699,11 @@ def conflict_markers_matching_eol(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, cur_rev)
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, cur_rev)
 
+  path_backup = os.path.join(wc_backup, 'A', 'mu')
+
   # do the test for each eol-style
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
-    path_backup = os.path.join(wc_backup, 'A', 'mu')
-
     # add a new file with the eol-style property set.
     open(mu_path, 'wb').write("This is the file 'mu'."+ eolchar)
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
