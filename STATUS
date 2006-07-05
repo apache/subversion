@@ -144,6 +144,13 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r20435
+    Cleanup remains of previous run before starting authz test 9
+    Justification:
+      Small fix for a test already included in 1.4.x (r20413)
+    Votes:
+      +1: lgo
+
 Approved changes:
 
   * r20030
