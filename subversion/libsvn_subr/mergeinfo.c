@@ -578,7 +578,7 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard, apr_pool_t *pool)
 {
   return rangelist_intersect_or_remove(output, eraser, whiteboard, TRUE,
-                                          pool);
+                                       pool);
 }
 
 /* Output deltas via *DELETED and *ADDED, which will never be @c NULL.
