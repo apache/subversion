@@ -265,6 +265,23 @@ cleanup_env(void *data)
   return APR_SUCCESS;
 }
 
+#if APR_HAS_THREADS
+/* This cleanup is the fall back plan.  If the thread exits and the
+   environment hasn't been closed it's responsible for cleanup of the
+   thread local error info variable, which would otherwise be leaked.
+   Normally it will not be called, because svn_fs_base__close will
+   set the thread's error info to NULL after cleaning it up. */
+static void
+cleanup_error_info(void *baton)
+{
+  bdb_error_info_t *error_info = baton;
+
+  if (error_info)
+    svn_error_clear(error_info->pending_errors);
+
+  free(error_info);
+}
+#endif /* APR_HAS_THREADS */
 
 /* Create a Berkeley DB environment. */
 static svn_error_t *
@@ -304,9 +321,9 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
 
 #if APR_HAS_THREADS
   {
-    /* We can't use a destructor function, see get_error_info() above... */
     apr_status_t apr_err = apr_threadkey_private_create(&bdb->error_info,
-                                                        NULL, pool);
+                                                        cleanup_error_info,
+                                                        pool);
     if (apr_err)
       return svn_error_create(apr_err, NULL,
                               "Can't allocate thread-specific storage"
@@ -546,11 +563,12 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
      cleanup_env_baton(). */
   bdb_baton->bdb = NULL;
 
-  if (0 == --bdb_baton->error_info->refcount)
+  /* Note that we only bother with this cleanup if the pool is non-NULL, to
+     guard against potential races between this and the cleanup_env cleanup
+     callback.  It's not clear if that can actually happen, but better safe
+     than sorry. */
+  if (0 == --bdb_baton->error_info->refcount && bdb->pool)
     {
-      /* ###
-         Oh bother, this is another potential pool-cleanup-ordering bug.
-         Should we just skip this line if bdb->pool==0? See cleanup_env. */
       svn_error_clear(bdb_baton->error_info->pending_errors);
 #if APR_HAS_THREADS
       free(bdb_baton->error_info);
