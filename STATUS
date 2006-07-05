@@ -8,23 +8,6 @@ Status of 1.4.0:
 ================
 
 Candidate changes:
-
- * r20423
-   Re-order the arguments of svn_txdelta_to_svndiff2(), a new API in 1.4,
-   so that they meet our conventions of:
-    - output parameters come first
-    - pool comes last
-   Justification:
-    (1) Users of our APIs are not confused.
-    (2) The SWIG bindings don't need to use a different argument ordering
-        to the C API.
-   Notes:
-     As this is an API change, it CANNOT be delayed to 1.4.1, and if for
-     any reason it should be rejected, it needs to be reverted from trunk.
-     Please vote for this quickly, to minimize the window in which there is
-     an API mismatch between trunk and the 1.4.x branch - thanks!
-   Votes:
-     +1: maxb, rooneg
       
  * r19919
    Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
@@ -44,16 +27,7 @@ Candidate changes:
     Justification:
       Regression from 1.3.x.
     Votes:
-      +1: lundblad
-
-  * r20030
-    Fix svn export so it creates intermediate local folders if needed,
-    thereby making it consistent with svn checkout.
-    Justification:
-      Improves consistency for users.
-    Votes:
-      +1: rooneg, dionisos
-      +1: lgo, nori    (non-binding)
+      +1: lundblad, dlr
 
   * r20040, r20255, r20256
     RPM changes to correctly build on x86-64 architecture.
@@ -169,15 +143,16 @@ Candidate changes:
     Votes:
       +1: maxb
 
-
-  * r20382
-    Fix status when a file is both added and conflicted.
-    Justification:
-      Small fix.  Low risk.
-    Votes:
-      +1: rooneg, dionisos, nori
-
 Approved changes:
+
+  * r20030
+    Fix svn export so it creates intermediate local folders if needed,
+    thereby making it consistent with svn checkout.
+    Justification:
+      Improves consistency for users.
+    Votes:
+      +1: rooneg, dionisos, dlr
+      +1: lgo, nori    (non-binding)
 
   * r20225
     Additional documentation for Ruby bindings
@@ -188,3 +163,26 @@ Approved changes:
     Votes:
       +1: blair, nori
 
+  * r20382
+    Fix status when a file is both added and conflicted.
+    Justification:
+      Small fix.  Low risk.
+    Votes:
+      +1: rooneg, dionisos, nori, dlr
+
+ * r20423
+   Re-order the arguments of svn_txdelta_to_svndiff2(), a new API in 1.4,
+   so that they meet our conventions of:
+    - output parameters come first
+    - pool comes last
+   Justification:
+    (1) Users of our APIs are not confused.
+    (2) The SWIG bindings don't need to use a different argument ordering
+        to the C API.
+   Notes:
+     As this is an API change, it CANNOT be delayed to 1.4.1, and if for
+     any reason it should be rejected, it needs to be reverted from trunk.
+     Please vote for this quickly, to minimize the window in which there is
+     an API mismatch between trunk and the 1.4.x branch - thanks!
+   Votes:
+     +1: maxb, dlr, rooneg
