@@ -144,13 +144,6 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r20435
-    Cleanup remains of previous run before starting authz test 9
-    Justification:
-      Small fix for a test already included in 1.4.x (r20413)
-    Votes:
-      +1: lgo, rooneg
-
 Approved changes:
 
   * r20030
@@ -202,3 +195,10 @@ Approved changes:
      an API mismatch between trunk and the 1.4.x branch - thanks!
    Votes:
      +1: maxb, dlr, rooneg
+
+  * r20435
+    Cleanup remains of previous run before starting authz test 9
+    Justification:
+      Small fix for a test already included in 1.4.x (r20413)
+    Votes:
+      +1: lgo, rooneg, dlr
