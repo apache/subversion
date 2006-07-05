@@ -1785,7 +1785,6 @@ do_merge(const char *initial_URL1,
          svn_wc_adm_access_t *adm_access,
          svn_boolean_t recurse,
          svn_boolean_t ignore_ancestry,
-         svn_boolean_t dry_run,
          const svn_wc_diff_callbacks2_t *callbacks,
          struct merge_cmd_baton *merge_b,
          apr_pool_t *pool)
@@ -1904,7 +1903,7 @@ do_merge(const char *initial_URL1,
                                           callbacks,
                                           merge_b,
                                           recurse,
-                                          dry_run,
+                                          merge_b->dry_run,
                                           ra_session2,
                                           is_revert ? r->start : r->start - 1,
                                           ctx->notify_func2,
@@ -1932,7 +1931,7 @@ do_merge(const char *initial_URL1,
       SVN_ERR(reporter->finish_report(report_baton, pool));
     }
 
-  if (!dry_run && remaining_ranges->nelts > 0)
+  if (!merge_b->dry_run && remaining_ranges->nelts > 0)
     SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
                                  remaining_ranges, is_revert, adm_access,
                                  pool));
@@ -2957,7 +2956,6 @@ svn_client_merge2(const char *source1,
                        adm_access,
                        recurse,
                        ignore_ancestry,
-                       dry_run,
                        &merge_callbacks,
                        &merge_cmd_baton,
                        pool));
@@ -3085,7 +3083,6 @@ svn_client_merge_peg2(const char *source,
                        adm_access,
                        recurse,
                        ignore_ancestry,
-                       dry_run,
                        &merge_callbacks,
                        &merge_cmd_baton,
                        pool));

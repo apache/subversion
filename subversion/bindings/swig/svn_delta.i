@@ -1,8 +1,6 @@
 /*
- * svn_delta.i :  SWIG interface file for svn_delta.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,8 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_delta.i: SWIG interface file for svn_delta.h
  */
 
 #if defined(SWIGPERL)
@@ -205,14 +205,17 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
                     pool, handler, handler_baton);
 }
 
+/* FIXME: Is this even required any more, now that the arguments have
+   been re-ordered so that pool is last? */
 static void
 svn_txdelta_to_svndiff2_wrapper(svn_stream_t *output,
                                 svn_txdelta_window_handler_t *handler,
                                 void **handler_baton,
-                                int version,
+                                int svndiff_version,
                                 apr_pool_t *pool)
 {
-  svn_txdelta_to_svndiff2(output, pool, handler, handler_baton, version);
+  svn_txdelta_to_svndiff2(handler, handler_baton, output, svndiff_version,
+                          pool);
 }
 
 static svn_error_t *

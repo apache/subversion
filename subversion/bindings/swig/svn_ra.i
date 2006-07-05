@@ -1,8 +1,6 @@
 /*
- * svn_ra.i :  SWIG interface file for svn_ra.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,8 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_ra.i: SWIG interface file for svn_ra.h
  */
 
 #if defined(SWIGPERL)
@@ -67,8 +67,8 @@
     if ($1 == NULL)
         SWIG_fail;
 }
-%typemap(argout,fragment="t_output_helper") apr_hash_t **locations {
-    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
+%typemap(argout) apr_hash_t **locations {
+  %append_output(svn_swig_py_locationhash_to_dict(*$1));
 }
 #endif
 

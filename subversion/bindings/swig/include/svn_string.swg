@@ -26,7 +26,7 @@ typedef struct svn_string_t svn_string_t;
    because we only refer to the ->data and ->len values.
 */
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") RET_STRING {
+%typemap(argout) RET_STRING {
     PyObject *s;
     if (*$1 == NULL) {
         Py_INCREF(Py_None);
@@ -37,27 +37,24 @@ typedef struct svn_string_t svn_string_t;
         if (s == NULL)
             SWIG_fail;
     }
-    $result = t_output_helper($result, s);
+    %append_output(s);
 }
 #endif
 #ifdef SWIGPERL
 %typemap(argout) RET_STRING {
-    if (*$1) {
-        $result = sv_newmortal();
-        sv_setpvn ($result, (*$1)->data, (*$1)->len);
-    }
-    else
-        $result = &PL_sv_undef;
-    argvi++;
+  if (*$1) {
+    %append_output(sv_2mortal(newSVpvn((*$1)->data, (*$1)->len)));
+  } else {
+    %append_output(&PL_sv_undef);
+  }
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(argout,fragment="output_helper") RET_STRING
-{
+%typemap(argout) RET_STRING {
   if (*$1) {
-    $result = output_helper($result, rb_str_new((*$1)->data, (*$1)->len));
+    %append_output(rb_str_new((*$1)->data, (*$1)->len));
   } else {
-    $result = output_helper($result, Qnil);
+    %append_output(Qnil);
   }
 }
 #endif
@@ -156,7 +153,7 @@ typedef struct svn_string_t svn_string_t;
 
 %typemap(argout) svn_stringbuf_t *output
 {
-  $result = rb_str_new($1->data, $1->len);
+  %append_output(rb_str_new($1->data, $1->len));
 }
 #endif
 
@@ -247,7 +244,7 @@ typedef struct svn_string_t svn_string_t;
    define a way to return a 'const char *'
 */
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") const char **OUTPUT {
+%typemap(argout) const char **OUTPUT {
     PyObject *s;
     if (*$1 == NULL) {
         Py_INCREF(Py_None);
@@ -258,27 +255,27 @@ typedef struct svn_string_t svn_string_t;
         if (s == NULL)
             SWIG_fail;
     }
-    $result = t_output_helper($result, s);
+    %append_output(s);
 }
 #endif
 
 #ifdef SWIGPERL
 %typemap(argout) const char **OUTPUT {
-    if (*$1 == NULL)
-        $result = &PL_sv_undef;
-    else
-        $result = sv_2mortal(newSVpv(*$1, 0));
-    ++argvi;
+  if (*$1 == NULL) {
+    %append_output(&PL_sv_undef);
+  } else {
+    %append_output(sv_2mortal(newSVpv(*$1, 0)));
+  }
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout,fragment="output_helper") const char **OUTPUT
+%typemap(argout) const char **OUTPUT
 {
   if (*$1) {
-    $result = output_helper($result, rb_str_new2(*$1));
+    %append_output(rb_str_new2(*$1));
   } else {
-    $result = output_helper($result, Qnil);
+    %append_output(Qnil);
   }
 }
 #endif
@@ -312,5 +309,3 @@ typedef struct svn_string_t svn_string_t;
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
 };
-
-/* ----------------------------------------------------------------------- */

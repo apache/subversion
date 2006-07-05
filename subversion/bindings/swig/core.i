@@ -313,23 +313,20 @@
    ### watch out for 'return' anywhere in the binding code. */
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") (char *buffer, apr_size_t *len) {
-    $result = t_output_helper($result, PyString_FromStringAndSize($1, *$2));
-    free($1);
+%typemap(argout) (char *buffer, apr_size_t *len) {
+  %append_output(PyString_FromStringAndSize($1, *$2));
+  free($1);
 }
 #endif
 #ifdef SWIGPERL
 %typemap(argout) (char *buffer, apr_size_t *len) {
-    $result = sv_newmortal();
-    sv_setpvn ($result, $1, *$2);
-    free($1);
-    argvi++;
+  %append_output(sv_2mortal(newSVpvn($1, *$2)));
+  free($1);
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") (char *buffer, apr_size_t *len)
-{
-  $result = output_helper($result, *$2 == 0 ? Qnil : rb_str_new($1, *$2));
+%typemap(argout) (char *buffer, apr_size_t *len) {
+  %append_output(*$2 == 0 ? Qnil : rb_str_new($1, *$2));
   free($1);
 }
 #endif
@@ -365,21 +362,20 @@
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
-    $result = t_output_helper($result, PyInt_FromLong(*$2));
+%typemap(argout) (const char *data, apr_size_t *len) {
+  %append_output(PyInt_FromLong(*$2));
 }
 #endif
 
 #ifdef SWIGPERL
-%typemap(argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
-    $result = sv_2mortal (newSViv(*$2));
+%typemap(argout) (const char *data, apr_size_t *len) {
+  %append_output(sv_2mortal(newSViv(*$2)));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") (const char *data, apr_size_t *len)
-{
-    $result = output_helper($result, LONG2NUM(*$2));
+%typemap(argout) (const char *data, apr_size_t *len) {
+  %append_output(LONG2NUM(*$2));
 }
 #endif
 
@@ -501,9 +497,9 @@
 %typemap(argout) apr_hash_t **hash
 {
   if (*$1) {
-    $result = svn_swig_rb_apr_hash_to_hash_svn_string(*$1);
+    %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
   } else {
-    $result = Qnil;
+    %append_output(Qnil);
   }
 }
 #endif
@@ -609,7 +605,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **cfg_hash {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *)));
 }
 
 %typemap(in) (svn_config_enumerator_t callback, void *baton) {
@@ -620,7 +616,8 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **cfg_hash {
-  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_config_t *");
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        "svn_config_t *"));
 }
 
 %typemap(in) (svn_config_enumerator2_t callback, void *baton)
@@ -637,11 +634,11 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
-    $result = t_output_helper(
-        $result,
-        svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
-                               _global_svn_swig_py_pool));
+/* FIXME: We are effectively treating this hash as an opaque blob...
+ * shouldn't we be converting it to a dict? */
+%typemap(argout) apr_hash_t **cfg_hash {
+  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                                        _global_svn_swig_py_pool));
 }
 #endif
 
@@ -665,9 +662,8 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* svn_prop_diffs */
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_array_header_t **propdiffs
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
+%typemap(argout) apr_array_header_t **propdiffs {
+  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
 }
 #endif
 

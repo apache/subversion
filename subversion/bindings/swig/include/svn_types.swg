@@ -21,6 +21,7 @@
 
 %include apr.swg
 %include svn_string.swg
+%include svn_containers.swg
 
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
@@ -40,6 +41,19 @@
                                  const unsigned char **write_digest, ...)
 */
 %typemap(in, numinputs=0) SWIGTYPE ** ($*1_ltype temp) "$1 = &temp;";
+
+/* We have a long standing bug where svn_client_commit_info_t and
+   svn_commit_info_t output parameters are not properly initialized to NULL
+   when there is nothing to commit.  This is a workaround.  Yes, it is
+   unspeakably evil that this was not just fixed at source when it was
+   discovered initially. */
+%typemap(in, numinputs=0) BAD_OUTPUT_INIT_HACK ** ($*1_ltype temp = NULL)
+  "$1 = &temp;";
+%apply BAD_OUTPUT_INIT_HACK ** {
+  svn_commit_info_t **,
+  svn_client_commit_info_t **
+};
+
 %typemap(argout,warning="900:FIXME: Missing argout typemap") SWIGTYPE ** {
   %#warning "FIXME: Missing argout typemap: $symname arg $argnum ($1_type)"
 #ifdef SWIGRUBY
@@ -51,24 +65,19 @@
 }
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
-    $result = t_output_helper($result,
-      svn_swig_NewPointerObj(*$1, $*1_descriptor, _global_svn_swig_py_pool));
-}
-#endif
-#ifdef SWIGPERL
 %typemap(argout) SWIGTYPE **OUTPARAM {
-    ST(argvi) = sv_newmortal();
-    SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
+  %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
+                                        _global_svn_swig_py_pool));
 }
-#endif
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") SWIGTYPE **OUTPARAM {
-  $result = output_helper($result, SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+#else
+%typemap(argout) SWIGTYPE **OUTPARAM {
+  %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 #endif
 
 %apply SWIGTYPE **OUTPARAM {
+  /* apr */
+  apr_file_t **,
   /* svn_types.h */
   svn_commit_info_t **,
   svn_dirent_t **,
@@ -297,8 +306,7 @@
                                         &callback_result, "S", $1,
                                         $1_descriptor);
         } else {
-            $result = sv_newmortal();
-            SWIG_MakePtr ($result, (void *)$1, $1_descriptor ,0);
+            $result = SWIG_NewPointerObj($1, $1_descriptor, 0);
             argvi++;
         }
     }
@@ -575,6 +583,14 @@
 };
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) (svn_commit_callback_t callback, void *callback_baton)
+{
+  $1 = svn_swig_py_commit_callback;
+  $2 = (void *)$input;
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback2_t
    svn_ra get_commit_editor2()
@@ -682,8 +698,7 @@
 }
 
 %typemap(argout) svn_stream_t ** {
-    $result = svn_swig_pl_from_stream (*$1);
-    argvi++;
+  %append_output(svn_swig_pl_from_stream(*$1));
 }
 #endif
 
@@ -733,49 +748,132 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   Wrap the digest output for functions populating digests.
+   MD5 Digest Parameters: in the Subversion C API, there are:
+   - 'char' digests, which are hexadecimal-encoded strings.
+   - 'unsigned char' digests, which are raw blocks of bytes.
+   This section of typemaps relates to the second variety.
+   The number of subtly different forms in which these appear in our
+   APIs is absolutely scary, and we desperately must introduce some sanity
+   when we do Subversion 2.0.
+
+   Function Parameters (Category 1):
+
+   'unsigned char digest[]':
+     Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum()
+     *but* appears as an input parameter in svn_base64_from_md5() -
+     practically, this means that svn_base64_from_md5 is in error, and
+     should be using 'const unsigned char digest[]', but fortunately, we
+     do not wrap the svn_base64_* APIs, so do not have to care here.
+
+   'unsigned char *digest' (also, 'result_digest'):
+     Output parameter in: svn_txdelta_send_stream(), svn_txdelta_apply()
+     essentially the same as 'unsigned char digest[]' - the difference
+     between [] and * is gratuitous inconsistency, as the types are
+     equivalent and can share the same typemaps.
+
+
+   Function Parameters (Category 2):
+
+   'const unsigned char **digest':
+     Output parameter in: svn_wc_transmit_text_deltas2()
+     A *different* protocol for returning a digest.
+
+
+   Function Parameters (No typemaps):
+
+   'const unsigned char **read_digest' (also, 'write_digest'):
+     These are *delayed* output parameters in svn_stream_checksummed().
+     Would be quite complex to wrap, so this function is %ignore-d in the
+     svn_io.h cherrypicking section.
+     
+   
+   Function Parameters (Category 3):
+
+   'const unsigned char digest[]' (also, 'd1', 'd2'):
+     Input parameters in:
+     svn_md5_digest_to_cstring_display()
+     svn_md5_digest_to_cstring()
+     svn_md5_digests_match()
+
+   'const unsigned char *digest':
+     Input paramater in: svn_wc_process_committed3() {and later revs}
+     Again, the difference between [] and * is gratuitous inconsistency,
+     and typemaps can be shared.
+
+
+   Function return values (Category 4):
+
+   'const unsigned char *' in svn_txdelta_md5_digest()
 */
 
+/* Category 1 */
+
 %typemap(in, numinputs=0) unsigned char digest[ANY]
-    ($*1_type temp[APR_MD5_DIGESTSIZE]) {
-    $1 = ($1_ltype)temp;
-}
+  ($*1_type temp[APR_MD5_DIGESTSIZE]) "$1 = temp;";
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") unsigned char digest[ANY]
+%typemap(argout) unsigned char digest[ANY]
 {
-    $result = t_output_helper($result,
-        PyString_FromString(svn_md5_digest_to_cstring ($1, _global_pool)));
+  %append_output(PyString_FromString(svn_md5_digest_to_cstring($1,
+                                                               _global_pool)));
 }
 #endif
-
 #ifdef SWIGPERL
 %typemap(argout) unsigned char digest[ANY] {
-    ST(argvi) = sv_newmortal();
-    sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
+  %append_output(sv_2mortal(newSVpv(svn_md5_digest_to_cstring($1,
+                                                              _global_pool),
+                                    0)));
 }
 #endif
+#ifdef SWIGRUBY
+%typemap(argout) unsigned char digest[ANY] {
+  char *digest_string = (char *)svn_md5_digest_to_cstring($1, _global_pool);
+  %append_output(rb_str_new2(digest_string));
+}
+#endif
+
+%apply unsigned char digest[ANY] { unsigned char *digest };
+
+/* FIXME: It would be nice for it to be documented why Perl is doing
+   something different and bizarre here. */
+#ifndef SWIGPERL
+%apply unsigned char digest[ANY] { unsigned char *result_digest };
+#else
+%typemap(in, numinputs=0) unsigned char *result_digest {
+    $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
+}
+
+%typemap(argout) unsigned char *result_digest {
+  /* FIXME: This code is clearly buggy. The return value of sv_newmortal()
+     is immediately overwritten by the return value
+     of svn_swig_pl_from_md5(). */
+    ST(argvi) = sv_newmortal();
+    ST(argvi++) = svn_swig_pl_from_md5($1);
+}
+#endif
+
+/* Category 2 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") unsigned char digest[ANY]
-{
-  char *digest_string = (char *)svn_md5_digest_to_cstring($1, _global_pool);
-  $result = output_helper($result, rb_str_new2(digest_string));
-}
-
-%typemap(argout, fragment="output_helper") unsigned char **digest
-{
+%typemap(argout) unsigned char **digest {
   char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);
-  $result = output_helper($result, rb_str_new2(digest_string));
+  %append_output(rb_str_new2(digest_string));
 }
 #endif
 
-/* svn_md5_* functions takes const ones as input */
+/* Category 3 */
+
+/* Override the non-const typemaps defined for category 1, which would
+   otherwise apply by default, and contribute nonsensical wrappings. */
+%typemap(in)     const unsigned char digest[], const unsigned char *digest "";
+%typemap(argout) const unsigned char digest[], const unsigned char *digest "";
+
+/* FIXME: There is a lot of coverage missing here */
+
 #ifdef SWIGPERL
 %typemap(in) const unsigned char digest[] {
     SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
 }
-%typemap(argout) const unsigned char digest[] {}
 #endif
 
 #ifdef SWIGRUBY
@@ -790,34 +888,10 @@
     $1 = ($1_ltype)StringValuePtr($input);
   }
 }
-%typemap(argout) const unsigned char *digest {}
 #endif
 
-/*
-   svn_txdelta_send_stream() uses *digest not digest[] .
-   svn_txdelta_apply() uses *result_digest not digest[] .
-*/
-
-%typemap(in, numinputs=0) unsigned char *result_digest {
-    $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
-}
-
-#ifdef SWIGPERL
-%typemap(argout) unsigned char *result_digest {
-    ST(argvi) = sv_newmortal();
-    ST(argvi++) = svn_swig_pl_from_md5($1);
-}
-#endif
-
-%apply unsigned char digest[ANY] {
-    unsigned char *digest
-};
-
-#ifndef SWIGPERL
-%apply unsigned char digest[ANY] {
-    unsigned char *result_digest
-};
-#endif
+/* Category 4 */
+/* FIXME: Write a typemap for category 4 */
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
@@ -889,24 +963,23 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **dirents {
-  $result = t_output_helper($result, svn_swig_py_convert_hash(*$1,
-    $descriptor(svn_dirent_t *), _global_svn_swig_py_pool));
+%typemap(argout) apr_hash_t **dirents {
+  %append_output(svn_swig_py_convert_hash(*$1,
+                                          $descriptor(svn_dirent_t *),
+                                          _global_svn_swig_py_pool));
 }
 #endif
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **dirents {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *)));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **dirents
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_swig_type
-                            (*$1, "svn_dirent_t *"));
+%typemap(argout) apr_hash_t **dirents {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        "svn_dirent_t *"));
 }
 #endif
 
@@ -918,11 +991,8 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **locks
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_swig_type
-                            (*$1, "svn_lock_t *"));
+%typemap(argout) apr_hash_t **locks {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_lock_t *"));
 }
 #endif
 
@@ -948,7 +1018,7 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **locations
 {
-  $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
+  %append_output(svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1));
 }
 #endif
 
@@ -958,19 +1028,11 @@
 
 #ifdef SWIGRUBY
 %typemap(in) svn_boolean_t "$1 = RTEST($input);";
-%typemap(out, fragment="output_helper") svn_boolean_t
-{
-  $result = output_helper($result, $1 ? Qtrue : Qfalse);
-}
+%typemap(out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
 
-%typemap(in, numinputs=0) svn_boolean_t * (svn_boolean_t temp)
-{
-  $1 = &temp;
-}
-
-%typemap(argout, fragment="output_helper") svn_boolean_t *
-{
-  $result = output_helper($result, *$1 ? Qtrue : Qfalse);
+%typemap(in, numinputs=0) svn_boolean_t * (svn_boolean_t temp) "$1 = &temp;";
+%typemap(argout) svn_boolean_t * {
+  %append_output(*$1 ? Qtrue : Qfalse);
 }
 #endif
 

@@ -136,8 +136,9 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 
 %typemap(in,numinputs=0) long long *OUTPUT (apr_int64_t temp)
     "$1 = &temp;";
-%typemap(argout) long long *OUTPUT
-   "$result = t_output_helper($result, PyLong_FromLongLong((*$1)));";
+%typemap(argout) long long *OUTPUT {
+  %append_output(PyLong_FromLongLong(*$1));
+}
 
 /* We assume here that Subversion functions have no more than
    20 fixed parameters. If you want to wrap a function that has

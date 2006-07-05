@@ -1,8 +1,6 @@
 /*
- * svn_client.i :  SWIG interface file for svn_client.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,8 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_client.i: SWIG interface file for svn_client.h
  */
 
 #if defined(SWIGPERL)
@@ -83,8 +83,7 @@
     %ignore svn_client_proplist_item_t;
 #endif
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") apr_array_header_t **props
-{
+%typemap(argout) apr_array_header_t **props {
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
@@ -110,14 +109,13 @@
 
         PyList_SET_ITEM(list, i, item);
     }
-    $result = t_output_helper($result, list);
+    %append_output(list);
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **props
-{
-  $result = svn_swig_rb_apr_array_to_array_proplist_item(*$1);
+%typemap(argout) apr_array_header_t **props {
+  %append_output(svn_swig_rb_apr_array_to_array_proplist_item(*$1));
 }
 
 %typemap(out) apr_hash_t *prop_hash
@@ -128,9 +126,8 @@
 
 #ifdef SWIGPERL
 %typemap(argout) apr_array_header_t **props {
-    $result = svn_swig_pl_convert_array(*$1,
-      $descriptor(svn_client_proplist_item_t *));
-    argvi++;
+  %append_output(svn_swig_pl_convert_array(*$1,
+                    $descriptor(svn_client_proplist_item_t *)));
 }
 
 %typemap(out) apr_hash_t *prop_hash {
@@ -371,7 +368,8 @@
 #ifdef SWIGPERL
 %typemap(argout) void *CALLBACK_BATON (SV * _global_callback) {
   /* callback baton */
-  $result = sv_2mortal (newRV_inc (_global_callback)); argvi++; }
+  %append_output(sv_2mortal(newRV_inc(_global_callback)));
+}
 
 %typemap(in) void *CALLBACK_BATON (SV * _global_callback) {
   _global_callback = $input;
@@ -461,27 +459,14 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
- * override default typemap for svn_client_commit_info_t for perl.  Some calls
- * never allocate and fill the commit_info struct.  This lets us return
- * undef for them.  Otherwise the object we pass back can cause crashes */
 #ifdef SWIGPERL
-%typemap(in, numinputs=0) svn_client_commit_info_t **
-                                 ( svn_client_commit_info_t * temp ) {
-    temp = NULL;
-    $1 = &temp;
-}
-
+/* FIXME: For svn_commit_info_t too? */
 %typemap(argout) svn_client_commit_info_t ** {
-    if ($1 == NULL) {
-        $result = &PL_sv_undef;
-        argvi++;
-    }  else {
-        $result = sv_newmortal();
-        SWIG_MakePtr($result, (void *)*$1,
-                     $*1_descriptor, 0);
-        argvi++;
-    }
+  if ($1 == NULL) {
+    %append_output(&PL_sv_undef);
+  } else {
+    %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+  }
 }
 #endif
 
@@ -508,18 +493,14 @@
   (*$1)->log_msg_baton = (void *) &PL_sv_undef;
   (*$1)->cancel_func = svn_swig_pl_cancel_func;
   (*$1)->cancel_baton = (void *) &PL_sv_undef;
-  $result = sv_newmortal();
-  SWIG_MakePtr($result, (void *)*$1,
-               $*1_descriptor, 0);
-  argvi++;
+  %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 #endif
 
 /* svn_client_update2 */
 #ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_array_header_t **result_revs
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+%typemap(argout) apr_array_header_t **result_revs {
+  %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
 }
 #endif
 

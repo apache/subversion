@@ -15,8 +15,7 @@
  *
  * apr.swg: This is a child file of svn_types.swg, and should not be
  *   included directly.  This file should contain typemaps that deal
- *   with APR functionality, not involving any parts of Subversion
- *   (that last phrase currently isn't fully obeyed).
+ *   with APR functionality, not involving any parts of Subversion.
  */
 
 /* -----------------------------------------------------------------------
@@ -44,26 +43,16 @@
     "$1 = &temp;";
 %typemap(argout) long long *OUTPUT {
   char temp[256];
-  if (argvi >= items) {
-    EXTEND(sp,1);
-  }
   sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t)*($1));
-  $result = sv_newmortal();
-  sv_setpv($result,temp);
-  argvi++;
+  %append_output(sv_2mortal(newSVpv(temp, 0)));
 }
 
 %typemap(in, numinputs=0) unsigned long long *OUTPUT (apr_uint64_t temp)
     "$1 = &temp;";
 %typemap(argout) unsigned long long *OUTPUT {
   char temp[256];
-  if (argvi >= items) {
-    EXTEND(sp,1);
-  }
   sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t)*($1));
-  $result = sv_newmortal();
-  sv_setpv($result,temp);
-  argvi++;
+  %append_output(sv_2mortal(newSVpv(temp, 0)));
 }
 #endif
 
@@ -96,108 +85,6 @@ typedef apr_int64_t apr_time_t;
 typedef apr_int32_t time_t;
 
 /* -----------------------------------------------------------------------
-   Output of apr_hash_t * <svn_dirent_t *> 
-*/
-
-#ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **DIRENTHASH {
-  $result = t_output_helper($result,
-                    svn_swig_py_convert_hash(*$1,
-                                             $descriptor(svn_dirent_t *),
-                                             NULL));
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **DIRENTHASH
-{
-  $result =
-    output_helper($result,
-                  svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                         "svn_dirent_t *"));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Output of apr_hash_t * <const char *, svn_string_t *>
-   (commonly used for property name and value pairs)
-*/
-
-#ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **PROPHASH {
-    $result = t_output_helper($result, svn_swig_py_prophash_to_dict(*$1));
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_pl_prophash_to_hash(*$1);
-    argvi++;
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_hash_t **PROPHASH
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Input of apr_hash_t * <const char *, svn_string_t *>
-   (commonly used for property name and value pairs)
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) apr_hash_t *PROPHASH
-{
-  $1 = svn_swig_py_prophash_from_dict($input, _global_pool);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *PROPHASH
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Output of apr_array_header_t * <svn_prop_t *>
-*/
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_array_header_t **OUTPUT_OF_PROP
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Output of apr_array_header_t * <const char *>
-*/
-
-#ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper")
-apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
-}
-#endif
-#ifdef SWIGPERL
-%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    $result = svn_swig_pl_array_to_list(*$1);
-    ++argvi;
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
    Input of apr_file_t *
 */
 
@@ -222,26 +109,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 
 /* -----------------------------------------------------------------------
    Output of apr_file_t *
+   ... is currently being handled by the standard OUTPARAM code in
+   svn_types.swg, but should probably be more comfortably translated to
+   scripting language concepts.
 */
-
-#ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_file_t **
-    "$result = t_output_helper(
-        $result,
-        svn_swig_NewPointerObj(*$1, $*1_descriptor,
-           _global_svn_swig_py_pool));";
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_file_t ** {
-    ST(argvi) = sv_newmortal();
-    SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_file_t ** {
-    $result = output_helper($result,
-                            SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 0));
-}
-#endif

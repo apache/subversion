@@ -1,8 +1,6 @@
 /*
- * svn_fs.i :  SWIG interface file for svn_fs.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +12,8 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_fs.i: SWIG interface file for svn_fs.h
  */
 
 #if defined(SWIGPERL)
@@ -76,22 +76,21 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_hash_t **entries_p {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
-          _global_svn_swig_py_pool));
+%typemap(argout) apr_hash_t **entries_p {
+  %append_output(svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
+                                          _global_svn_swig_py_pool));
 }
 #endif
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **entries_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1,
-      $descriptor(svn_fs_dirent_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1,
+                                          $descriptor(svn_fs_dirent_t *)));
 }
 #endif
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **entries_p {
-  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_fs_dirent_t *");
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        "svn_fs_dirent_t *"));
 }
 #endif
 
@@ -101,26 +100,26 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_path_change_t *),
-          _global_svn_swig_py_pool));
+%typemap(argout) apr_hash_t **changed_paths_p {
+  %append_output(svn_swig_py_convert_hash(*$1,
+                                          $descriptor(svn_fs_path_change_t *),
+                                          _global_svn_swig_py_pool));
 }
 #endif
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **changed_paths_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1,
-      $descriptor(svn_fs_path_change_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1,
+                                          $descriptor(svn_fs_path_change_t *)
+                                         ));
 }
 #endif
 
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **changed_paths_p
 {
-  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                   "svn_fs_path_change_t *");
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                   "svn_fs_path_change_t *"));
 }
 #endif
 
