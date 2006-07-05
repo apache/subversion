@@ -21,6 +21,7 @@
 
 %include apr.swg
 %include svn_string.swg
+%include svn_containers.swg
 
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
