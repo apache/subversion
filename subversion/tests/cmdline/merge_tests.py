@@ -914,6 +914,7 @@ def merge_catches_nonexistent_target(sbox):
       'tau'  : Item(),
       })
     expected_status.tweak(status='  ', wc_rev=1)
+    expected_status.tweak('', status=' M')
     expected_disk = wc.State('', {
       'pi'   : Item("This is the file 'pi'.\n"),
       'rho'  : Item("This is the file 'rho'.\n"),
@@ -977,6 +978,7 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item(status='M '),
     })
   expected_status.tweak(wc_rev=4)
+  expected_status.tweak('', status=' M')
   expected_skip = wc.State(I_path, {
     'E'       : Item(),
     'E/alpha' : Item(),
