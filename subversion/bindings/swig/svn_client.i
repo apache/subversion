@@ -497,13 +497,6 @@
 }
 #endif
 
-/* svn_client_update2 */
-#ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **result_revs {
-  %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
-}
-#endif
-
 /* ----------------------------------------------------------------------- */
 
 #ifdef SWIGRUBY

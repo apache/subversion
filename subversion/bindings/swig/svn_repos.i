@@ -60,18 +60,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   handle the 'location_revisions' parameter appropriately
-*/
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
-}
-#endif
-
-/* -----------------------------------------------------------------------
    XXX: for some reasons svn_delta_editor doesn't get typemapped even
    if svn_delta.i is imported. so we redeclare here.
 */
@@ -211,16 +199,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   handle svn_repos_fs_revision_proplist().
-*/
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
    handle svn_repos_get_committed_info().
 */
 #ifdef SWIGRUBY
@@ -239,15 +217,6 @@
 %typemap(in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
                                            _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle the output from svn_repos_trace_node_locations()
-*/
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **locations {
-   %append_output(svn_swig_py_locationhash_to_dict(*$1));
 }
 #endif
 

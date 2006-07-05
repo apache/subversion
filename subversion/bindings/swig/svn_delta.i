@@ -127,11 +127,6 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 */
 
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *paths
-{
-  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
-}
-
 %typemap(in) (svn_delta_path_driver_cb_func_t callback_func,
                     void *callback_baton)
 {
