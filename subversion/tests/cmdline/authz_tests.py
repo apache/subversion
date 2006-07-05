@@ -518,6 +518,9 @@ def authz_partial_export_test(sbox):
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
+  # cleanup remains of a previous test run.
+  svntest.main.safe_rmtree(local_dir)
+
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
   # 1st part: disable read access on folder A/B, export should not
