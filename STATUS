@@ -24,7 +24,7 @@ Candidate changes:
      Please vote for this quickly, to minimize the window in which there is
      an API mismatch between trunk and the 1.4.x branch - thanks!
    Votes:
-     +1: maxb
+     +1: maxb, rooneg
       
  * r19919
    Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
