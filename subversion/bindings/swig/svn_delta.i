@@ -205,14 +205,17 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
                     pool, handler, handler_baton);
 }
 
+/* FIXME: Is this even required any more, now that the arguments have
+   been re-ordered so that pool is last? */
 static void
 svn_txdelta_to_svndiff2_wrapper(svn_stream_t *output,
                                 svn_txdelta_window_handler_t *handler,
                                 void **handler_baton,
-                                int version,
+                                int svndiff_version,
                                 apr_pool_t *pool)
 {
-  svn_txdelta_to_svndiff2(output, pool, handler, handler_baton, version);
+  svn_txdelta_to_svndiff2(handler, handler_baton, output, svndiff_version,
+                          pool);
 }
 
 static svn_error_t *

@@ -1003,9 +1003,9 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   base64_stream = dav_svn_make_base64_output_stream(wb->uc->bb, wb->uc->output,
                                                     file->pool);
 
-  svn_txdelta_to_svndiff2(base64_stream, file->pool,
-                          &(wb->handler), &(wb->handler_baton), 
-                          file->uc->svndiff_version);
+  svn_txdelta_to_svndiff2(&(wb->handler), &(wb->handler_baton), 
+                          base64_stream, file->uc->svndiff_version,
+                          file->pool);
 
   *handler = window_handler;
   *handler_baton = wb;
