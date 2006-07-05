@@ -394,14 +394,15 @@ void svn_txdelta_apply(svn_stream_t *source,
  * Allocation takes place in a sub-pool of @a pool.  On return, @a *handler
  * is set to a window handler function and @a *handler_baton is set to
  * the value to pass as the @a baton argument to @a *handler. The svndiff
- * version is @a version.
+ * version is @a svndiff_version.
  *
  * @since New in 1.4.
  */
-void svn_txdelta_to_svndiff2(svn_stream_t *output,
-                             apr_pool_t *pool,
-                             svn_txdelta_window_handler_t *handler,
-                             void **handler_baton, int version);
+void svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
+                             void **handler_baton,
+                             svn_stream_t *output,
+                             int svndiff_version,
+                             apr_pool_t *pool);
 
 /** Similar to svn_txdelta_to_svndiff2, but always using svndiff
  * version 0.

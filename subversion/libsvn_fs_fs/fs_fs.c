@@ -3179,9 +3179,9 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   /* Prepare to write the svndiff data. */
   if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
-    svn_txdelta_to_svndiff2(b->rep_stream, pool, &wh, &whb, 1);
+    svn_txdelta_to_svndiff2(&wh, &whb, b->rep_stream, 1, pool);
   else
-    svn_txdelta_to_svndiff2(b->rep_stream, pool, &wh, &whb, 0);
+    svn_txdelta_to_svndiff2(&wh, &whb, b->rep_stream, 0, pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
       
