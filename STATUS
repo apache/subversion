@@ -88,6 +88,15 @@ Candidate changes:
     Votes:
       +1: nori
 
+  * r20218, r20428
+    Move away from using pools to manage bdb environments, since it
+    results in unpredictable behavior during shutdown due to pool 
+    destruction ordering issues.
+    Justification:
+      Unpredictable behavior is bad.
+    Votes:
+      +1: rooneg
+
   * r20248
     Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
     by adding a method, Svn::Core::Dirent#have_props?.
