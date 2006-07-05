@@ -44,26 +44,16 @@
     "$1 = &temp;";
 %typemap(argout) long long *OUTPUT {
   char temp[256];
-  if (argvi >= items) {
-    EXTEND(sp,1);
-  }
   sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t)*($1));
-  $result = sv_newmortal();
-  sv_setpv($result,temp);
-  argvi++;
+  %append_output(sv_2mortal(newSVpv(temp, 0)));
 }
 
 %typemap(in, numinputs=0) unsigned long long *OUTPUT (apr_uint64_t temp)
     "$1 = &temp;";
 %typemap(argout) unsigned long long *OUTPUT {
   char temp[256];
-  if (argvi >= items) {
-    EXTEND(sp,1);
-  }
   sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t)*($1));
-  $result = sv_newmortal();
-  sv_setpv($result,temp);
-  argvi++;
+  %append_output(sv_2mortal(newSVpv(temp, 0)));
 }
 #endif
 
@@ -127,8 +117,7 @@ typedef apr_int32_t time_t;
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_pl_prophash_to_hash(*$1);
-    argvi++;
+  %append_output(svn_swig_pl_prophash_to_hash(*$1));
 }
 #endif
 
@@ -177,8 +166,7 @@ typedef apr_int32_t time_t;
 #endif
 #ifdef SWIGPERL
 %typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    $result = svn_swig_pl_array_to_list(*$1);
-    ++argvi;
+  %append_output(svn_swig_pl_array_to_list(*$1));
 }
 #endif
 #ifdef SWIGRUBY

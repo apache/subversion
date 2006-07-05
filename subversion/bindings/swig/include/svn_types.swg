@@ -68,14 +68,7 @@
   %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
                                         _global_svn_swig_py_pool));
 }
-#endif
-#ifdef SWIGPERL
-%typemap(argout) SWIGTYPE **OUTPARAM {
-    $result = SWIG_NewPointerObj(*$1, $*1_descriptor,0);
-    argvi++;
-}
-#endif
-#ifdef SWIGRUBY
+#else
 %typemap(argout) SWIGTYPE **OUTPARAM {
   %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
@@ -673,8 +666,7 @@
 }
 
 %typemap(argout) svn_stream_t ** {
-    $result = svn_swig_pl_from_stream (*$1);
-    argvi++;
+  %append_output(svn_swig_pl_from_stream(*$1));
 }
 #endif
 
@@ -796,8 +788,9 @@
 #endif
 #ifdef SWIGPERL
 %typemap(argout) unsigned char digest[ANY] {
-    ST(argvi) = sv_newmortal();
-    sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
+  %append_output(sv_2mortal(newSVpv(svn_md5_digest_to_cstring($1,
+                                                              _global_pool),
+                                    0)));
 }
 #endif
 #ifdef SWIGRUBY
@@ -819,6 +812,9 @@
 }
 
 %typemap(argout) unsigned char *result_digest {
+  /* FIXME: This code is clearly buggy. The return value of sv_newmortal()
+     is immediately overwritten by the return value
+     of svn_swig_pl_from_md5(). */
     ST(argvi) = sv_newmortal();
     ST(argvi++) = svn_swig_pl_from_md5($1);
 }
@@ -944,7 +940,7 @@
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **dirents {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *)));
 }
 #endif
 
