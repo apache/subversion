@@ -72,14 +72,6 @@ Candidate changes:
     Votes:
       +1: jerenkrantz, rooneg
 
-  * r20170
-    Don't carry around our own Visual Studio project files for Apache/APR --
-    they only worked for APR 0.9.x and the user can manually convert them.
-    Justification:
-      Low impact and needed for Apache 2.2 compatibility.
-    Votes:
-      +1: djh, rooneg
-
   * r20180, r20187
     Finish Apache 2.2/APR 1.x build/test support for Win32.
     Justification:
@@ -153,6 +145,14 @@ Approved changes:
     Votes:
       +1: rooneg, dionisos, dlr
       +1: lgo, nori    (non-binding)
+
+  * r20170
+    Don't carry around our own Visual Studio project files for Apache/APR --
+    they only worked for APR 0.9.x and the user can manually convert them.
+    Justification:
+      Low impact and needed for Apache 2.2 compatibility.
+    Votes:
+      +1: djh, rooneg, dlr
 
   * r20225
     Additional documentation for Ruby bindings
