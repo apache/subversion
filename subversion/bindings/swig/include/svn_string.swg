@@ -42,13 +42,11 @@ typedef struct svn_string_t svn_string_t;
 #endif
 #ifdef SWIGPERL
 %typemap(argout) RET_STRING {
-    if (*$1) {
-        $result = sv_newmortal();
-        sv_setpvn ($result, (*$1)->data, (*$1)->len);
-    }
-    else
-        $result = &PL_sv_undef;
-    argvi++;
+  if (*$1) {
+    %append_output(sv_2mortal(newSVpvn((*$1)->data, (*$1)->len)));
+  } else {
+    %append_output(&PL_sv_undef);
+  }
 }
 #endif
 #ifdef SWIGRUBY
@@ -263,11 +261,11 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPERL
 %typemap(argout) const char **OUTPUT {
-    if (*$1 == NULL)
-        $result = &PL_sv_undef;
-    else
-        $result = sv_2mortal(newSVpv(*$1, 0));
-    ++argvi;
+  if (*$1 == NULL) {
+    %append_output(&PL_sv_undef);
+  } else {
+    %append_output(sv_2mortal(newSVpv(*$1, 0)));
+  }
 }
 #endif
 

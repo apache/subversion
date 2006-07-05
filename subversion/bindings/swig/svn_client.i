@@ -126,9 +126,8 @@
 
 #ifdef SWIGPERL
 %typemap(argout) apr_array_header_t **props {
-    $result = svn_swig_pl_convert_array(*$1,
-      $descriptor(svn_client_proplist_item_t *));
-    argvi++;
+  %append_output(svn_swig_pl_convert_array(*$1,
+                    $descriptor(svn_client_proplist_item_t *)));
 }
 
 %typemap(out) apr_hash_t *prop_hash {
@@ -369,7 +368,8 @@
 #ifdef SWIGPERL
 %typemap(argout) void *CALLBACK_BATON (SV * _global_callback) {
   /* callback baton */
-  $result = sv_2mortal (newRV_inc (_global_callback)); argvi++; }
+  %append_output(sv_2mortal(newRV_inc(_global_callback)));
+}
 
 %typemap(in) void *CALLBACK_BATON (SV * _global_callback) {
   _global_callback = $input;
@@ -462,13 +462,11 @@
 #ifdef SWIGPERL
 /* FIXME: For svn_commit_info_t too? */
 %typemap(argout) svn_client_commit_info_t ** {
-    if ($1 == NULL) {
-        $result = &PL_sv_undef;
-        argvi++;
-    }  else {
-        $result = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
-        argvi++;
-    }
+  if ($1 == NULL) {
+    %append_output(&PL_sv_undef);
+  } else {
+    %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+  }
 }
 #endif
 
@@ -495,8 +493,7 @@
   (*$1)->log_msg_baton = (void *) &PL_sv_undef;
   (*$1)->cancel_func = svn_swig_pl_cancel_func;
   (*$1)->cancel_baton = (void *) &PL_sv_undef;
-  $result = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
-  argvi++;
+  %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 #endif
 

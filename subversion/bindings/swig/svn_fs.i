@@ -83,8 +83,8 @@
 #endif
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **entries_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1,
-      $descriptor(svn_fs_dirent_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1,
+                                          $descriptor(svn_fs_dirent_t *)));
 }
 #endif
 #ifdef SWIGRUBY
@@ -109,8 +109,9 @@
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **changed_paths_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1,
-      $descriptor(svn_fs_path_change_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1,
+                                          $descriptor(svn_fs_path_change_t *)
+                                         ));
 }
 #endif
 

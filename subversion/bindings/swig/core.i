@@ -300,10 +300,8 @@
 #endif
 #ifdef SWIGPERL
 %typemap(argout) (char *buffer, apr_size_t *len) {
-    $result = sv_newmortal();
-    sv_setpvn ($result, $1, *$2);
-    free($1);
-    argvi++;
+  %append_output(sv_2mortal(newSVpvn($1, *$2)));
+  free($1);
 }
 #endif
 #ifdef SWIGRUBY
@@ -350,8 +348,8 @@
 #endif
 
 #ifdef SWIGPERL
-%typemap(argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
-    $result = sv_2mortal (newSViv(*$2));
+%typemap(argout) (const char *data, apr_size_t *len) {
+  %append_output(sv_2mortal(newSViv(*$2)));
 }
 #endif
 
@@ -576,7 +574,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **cfg_hash {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *));
+  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *)));
 }
 
 %typemap(in) (svn_config_enumerator_t callback, void *baton) {
