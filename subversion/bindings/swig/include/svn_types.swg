@@ -211,27 +211,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   Input of scripting hash/dictionary (string => string)
-   converted to apr_hash_t (const char * => const char *)
-*/
-#ifdef SWIGPYTHON
-%typemap(in) apr_hash_t *STRING_TO_STRING {
-    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in) apr_hash_t *STRING_TO_STRING {
-    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *STRING_TO_STRING {
-    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
-}
-#endif
-
-
-/* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
@@ -925,73 +904,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_hash_t **dirents
-   svn_client_ls()
-   svn_io_get_dirents()
-   svn_ra get_dir()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_py_convert_hash(*$1,
-                                          $descriptor(svn_dirent_t *),
-                                          _global_svn_swig_py_pool));
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *)));
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_dirent_t *"));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_hash_t **locks
-   svn_client_ls3()
-   svn_repos_fs_get_locks()
-   svn_ra_get_locks()
-*/
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **locks {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_lock_t *"));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t *location_revisions
-   svn_repos_trace_node_locations()
-   svn_ra_get_locations()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *location_revisions
-{
-  $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_hash_t **locations
-   svn_repos_trace_node_locations()
-   svn_ra_get_locations()
-*/
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **locations
-{
-  %append_output(svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 
@@ -1021,28 +933,3 @@
     svn_swig_py_acquire_py_lock();
 #endif
 }
-
-
-/* -----------------------------------------------------------------------
-   handle config and fs_config in svn_{fs,repos}_create
-*/
-
-
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *config
-{
-  if (NIL_P($input)) {
-    $1 = NULL;
-  } else {
-    $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *", _global_pool);
-  }
-}
-%typemap(in) apr_hash_t *fs_config
-{
-  if (NIL_P($input)) {
-    $1 = NULL;
-  } else {
-    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
-  }
-}
-#endif

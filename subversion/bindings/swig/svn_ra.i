@@ -58,21 +58,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   handle svn_ra_get_locations()
-*/
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
-}
-%typemap(argout) apr_hash_t **locations {
-  %append_output(svn_swig_py_locationhash_to_dict(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
    thunk ra_callback
 */
 %apply const char **OUTPUT {
@@ -135,11 +120,6 @@
 {
   $1 = svn_swig_rb_ra_file_rev_handler;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) apr_hash_t *path_revs
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
 }
 #endif
 

@@ -360,45 +360,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   auth provider convertors
-*/
-#ifdef SWIGPERL
-%typemap(in) apr_array_header_t *providers {
-    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
-      $descriptor(svn_auth_provider_object_t *), _global_pool);
-}
-#endif
-
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *providers {
-    svn_auth_provider_object_t *provider;
-    int targlen;
-    if (!PySequence_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        SWIG_fail;
-    }
-    targlen = PySequence_Length($input);
-    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
-    ($1)->nelts = targlen;
-    while (targlen--) {
-        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
-          $descriptor(svn_auth_provider_object_t *), $svn_argnum, NULL);
-        if (PyErr_Occurred()) {
-          SWIG_fail;
-        }
-        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
-    }
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *providers
-{
-  $1 = svn_swig_rb_array_to_auth_provider_object_apr_array($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
    auth parameter set/get
 */
 
@@ -457,30 +418,6 @@
 
 #ifndef SWIGRUBY
 %ignore svn_auth_get_parameter;
-#endif
-
-/* -----------------------------------------------------------------------
-   svn_config_read_auth_data()
-*/
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **hash
-{
-  if (*$1) {
-    %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-  } else {
-    %append_output(Qnil);
-  }
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   svn_config_write_auth_data()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *hash
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
-}
 #endif
 
 /* -----------------------------------------------------------------------
@@ -573,10 +510,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 */
 
 #ifdef SWIGPERL
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *)));
-}
-
 %typemap(in) (svn_config_enumerator_t callback, void *baton) {
     $1 = svn_swig_pl_thunk_config_enumerator,
     $2 = (void *)$input;
@@ -584,11 +517,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_config_t *"));
-}
-
 %typemap(in) (svn_config_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_enumerator;
@@ -600,15 +528,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
   $1 = svn_swig_rb_config_section_enumerator;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
-#endif
-
-#ifdef SWIGPYTHON
-/* FIXME: We are effectively treating this hash as an opaque blob...
- * shouldn't we be converting it to a dict? */
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
-                                        _global_svn_swig_py_pool));
-}
 #endif
 
 /* Allow None to be passed as config_dir argument */
@@ -628,31 +547,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #ifdef SWIGPYTHON
 PyObject *svn_swig_py_exception_type(void);
 #endif
-
-/* svn_prop_diffs */
-#ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **propdiffs {
-  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
-}
-#endif
-
-%apply apr_hash_t *PROPHASH {
-  apr_hash_t *target_props,
-  apr_hash_t *source_props
-};
-
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *proplist
-{
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
-}
-#endif
-
-%apply apr_array_header_t **OUTPUT_OF_PROP {
-  apr_array_header_t **entry_props,
-  apr_array_header_t **wc_props,
-  apr_array_header_t **regular_props
-};
 
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.
