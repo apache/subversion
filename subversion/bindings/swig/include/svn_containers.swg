@@ -23,23 +23,54 @@
    %typemap(argout) apr_hash_t **
 */
 
-/* -----------------------------------------------------------------------
-   Output of apr_hash_t * <svn_dirent_t *> 
-*/
-
 #ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **DIRENTHASH {
+%define %hash_argout_typemap(ParamName, ValueType, PythonPool)
+%typemap(argout) apr_hash_t **ParamName {
   %append_output(svn_swig_py_convert_hash(*$1,
-                                          $descriptor(svn_dirent_t *),
-                                          NULL));
+                                          $descriptor(ValueType),
+                                          PythonPool));
+}
+%enddef
+#endif
+#ifdef SWIGPERL
+%define %hash_argout_typemap(ParamName, ValueType, PythonPool)
+%typemap(argout) apr_hash_t **ParamName {
+  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(ValueType)));
+}
+%enddef
+#endif
+#ifdef SWIGRUBY
+%define %hash_argout_typemap(ParamName, ValueType, PythonPool)
+%typemap(argout) apr_hash_t **ParamName {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        #ValueType));
+}
+%enddef
+#endif
+
+%hash_argout_typemap(DIRENTHASH, svn_dirent_t *, NULL)
+%hash_argout_typemap(dirents, svn_dirent_t *, _global_svn_swig_py_pool)
+/* -----------------------------------------------------------------------
+   handle svn_repos_fs_revision_proplist().
+*/
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **dirents {
+  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **DIRENTHASH {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_dirent_t *"));
+%hash_argout_typemap(locks, svn_lock_t *, )
+#endif
+#ifdef SWIGPYTHON
+/* FIXME: We are effectively treating this hash as an opaque blob...
+ * shouldn't we be converting it to a dict? */
+%typemap(argout) apr_hash_t **cfg_hash {
+  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                                        _global_svn_swig_py_pool));
 }
+#else
+%hash_argout_typemap(cfg_hash, svn_config_t *, )
 #endif
 
 /* -----------------------------------------------------------------------
@@ -66,52 +97,16 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_hash_t **dirents
-   svn_client_ls()
-   svn_io_get_dirents()
-   svn_ra get_dir()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_py_convert_hash(*$1,
-                                          $descriptor(svn_dirent_t *),
-                                          _global_svn_swig_py_pool));
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_dirent_t *)));
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_dirent_t *"));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_hash_t **locks
-   svn_client_ls3()
-   svn_repos_fs_get_locks()
-   svn_ra_get_locks()
-*/
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **locks {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_lock_t *"));
-}
-#endif
-
-/* -----------------------------------------------------------------------
    apr_hash_t **locations
    svn_repos_trace_node_locations()
    svn_ra_get_locations()
 */
 
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **locations {
+  %append_output(svn_swig_py_locationhash_to_dict(*$1));
+}
+#endif
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **locations
 {
@@ -133,55 +128,6 @@
 }
 #endif
 
-#ifdef SWIGPYTHON
-/* FIXME: We are effectively treating this hash as an opaque blob...
- * shouldn't we be converting it to a dict? */
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
-                                        _global_svn_swig_py_pool));
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *)));
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_config_t *"));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle svn_ra_get_locations()
-*/
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **locations {
-  %append_output(svn_swig_py_locationhash_to_dict(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_fs_revision_proplist().
-*/
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle the output from svn_repos_trace_node_locations()
-*/
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **locations {
-   %append_output(svn_swig_py_locationhash_to_dict(*$1));
-}
-#endif
 
 /* -----------------------------------------------------------------------
    apr_hash_t **externals_old

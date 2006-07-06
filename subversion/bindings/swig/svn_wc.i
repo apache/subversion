@@ -92,18 +92,8 @@
    svn_wc_entries_read()
 */
 
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **entries {
-  %append_output(svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
-                                          _global_svn_swig_py_pool));
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **entries {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_wc_entry_t *"));
-}
+#ifndef SWIGPERL
+%hash_argout_typemap(entries, svn_wc_entry_t *, _global_svn_swig_py_pool)
 #endif
 
 /* -----------------------------------------------------------------------

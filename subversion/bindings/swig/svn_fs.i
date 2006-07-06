@@ -75,53 +75,15 @@
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
 */
 
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **entries_p {
-  %append_output(svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
-                                          _global_svn_swig_py_pool));
-}
-#endif
-#ifdef SWIGPERL
-%typemap(argout) apr_hash_t **entries_p {
-  %append_output(svn_swig_pl_convert_hash(*$1,
-                                          $descriptor(svn_fs_dirent_t *)));
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **entries_p {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_fs_dirent_t *"));
-}
-#endif
+%hash_argout_typemap(entries_p, svn_fs_dirent_t *, _global_svn_swig_py_pool)
 
 /* -----------------------------------------------------------------------
    and except for svn_fs_paths_changed, which returns svn_fs_path_change_t
    structures
 */
 
-#ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **changed_paths_p {
-  %append_output(svn_swig_py_convert_hash(*$1,
-                                          $descriptor(svn_fs_path_change_t *),
-                                          _global_svn_swig_py_pool));
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_hash_t **changed_paths_p {
-  %append_output(svn_swig_pl_convert_hash(*$1,
-                                          $descriptor(svn_fs_path_change_t *)
-                                         ));
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **changed_paths_p
-{
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                   "svn_fs_path_change_t *"));
-}
-#endif
+%hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *,
+                     _global_svn_swig_py_pool)
 
 /* -----------------------------------------------------------------------
    handle get_locks_func/get_locks_baton pairs.

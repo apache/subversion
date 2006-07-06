@@ -101,10 +101,7 @@
    handle svn_repos_fs_get_locks
 */
 #ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **locks {
-  %append_output(svn_swig_py_convert_hash(*$1, $descriptor(svn_lock_t *),
-                                          _global_svn_swig_py_pool));
-}
+%hash_argout_typemap(locks, svn_lock_t *, _global_svn_swig_py_pool)
 #endif
 
 
