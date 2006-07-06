@@ -239,7 +239,7 @@ class SvnWcTest < Test::Unit::TestCase
     end
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-      assert_raises(Svn::Error::WC_PATH_FOUND) do
+      assert_raises(Svn::Error::WcPathFound) do
         access.mark_missing_deleted(path1)
       end
       FileUtils.rm(path1)
