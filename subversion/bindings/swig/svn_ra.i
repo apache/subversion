@@ -102,13 +102,6 @@
 }
 #endif
 
-#ifdef SWIGPERL
-%typemap(in) apr_hash_t *config {
-    $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-                                           _global_pool);
-}
-#endif
-
 #ifdef SWIGRUBY
 %typemap(in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
