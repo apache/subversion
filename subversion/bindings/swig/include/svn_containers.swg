@@ -50,15 +50,6 @@
 
 %hash_argout_typemap(DIRENTHASH, svn_dirent_t *, NULL)
 %hash_argout_typemap(dirents, svn_dirent_t *, _global_svn_swig_py_pool)
-/* -----------------------------------------------------------------------
-   handle svn_repos_fs_revision_proplist().
-*/
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **dirents {
-  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-}
-#endif
-
 #ifdef SWIGRUBY
 %hash_argout_typemap(locks, svn_lock_t *, )
 #endif
