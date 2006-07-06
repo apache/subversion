@@ -156,10 +156,6 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 #endif
 
 
-#ifdef SWIGRUBY
-%ignore svn_txdelta_to_svndiff2;
-#endif
-
 %include svn_delta_h.swg
 
 /* -----------------------------------------------------------------------
@@ -198,19 +194,6 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
 {
   svn_txdelta_apply(source, target, result_digest, error_info,
                     pool, handler, handler_baton);
-}
-
-/* FIXME: Is this even required any more, now that the arguments have
-   been re-ordered so that pool is last? */
-static void
-svn_txdelta_to_svndiff2_wrapper(svn_stream_t *output,
-                                svn_txdelta_window_handler_t *handler,
-                                void **handler_baton,
-                                int svndiff_version,
-                                apr_pool_t *pool)
-{
-  svn_txdelta_to_svndiff2(handler, handler_baton, output, svndiff_version,
-                          pool);
 }
 
 static svn_error_t *
