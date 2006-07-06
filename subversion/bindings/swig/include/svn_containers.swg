@@ -51,7 +51,17 @@
 %hash_argout_typemap(DIRENTHASH, svn_dirent_t *, NULL)
 %hash_argout_typemap(dirents, svn_dirent_t *, _global_svn_swig_py_pool)
 %hash_argout_typemap(locks, svn_lock_t *, _global_svn_swig_py_pool)
-%hash_argout_typemap(cfg_hash, svn_config_t *, _global_svn_swig_py_pool)
+#ifdef SWIGPYTHON
+/* FIXME: We are effectively treating this hash as an opaque blob...
+   this is because we currently do not have suitable typemaps to convert
+   it back to an apr_hash_t * for use. */
+%typemap(argout) apr_hash_t **cfg_hash {
+  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                                        _global_svn_swig_py_pool));
+}
+#else
+%hash_argout_typemap(cfg_hash, svn_config_t *, )
+#endif
 
 /* -----------------------------------------------------------------------
    Output of apr_hash_t * <const char *, svn_string_t *>
