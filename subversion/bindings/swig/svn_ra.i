@@ -96,7 +96,7 @@
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in) (svn_ra_callbacks2_t *callbacks,
+%typemap(in) (const svn_ra_callbacks2_t *callbacks,
                       void *callback_baton) {
   svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
 }
