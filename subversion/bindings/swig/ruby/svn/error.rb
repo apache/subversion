@@ -18,6 +18,7 @@ module Svn
               super(#{value}, message, file, line)
             end
           end
+          # This is for backward compatibility with 1.4 or earlier.
           #{error_const_name} = #{error_class_name}
         EOC
         TABLE[value] = const_get(error_class_name)
