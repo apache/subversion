@@ -439,9 +439,15 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
       if (range_contains(elt2, elt1))
         {
           if (!do_remove)
-            APR_ARRAY_PUSH(*output, svn_merge_range_t *) =
-              svn_range_dup(elt1, pool);
-
+            {
+              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                    elt1))
+                {
+                  lastrange = svn_range_dup(elt1, pool);
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+                }
+            }
+          
           i++;
 
           if (elt1->start == elt2->start && elt1->end == elt2->end)
@@ -473,9 +479,13 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.start = elt2->start;
                   tmp_range.end = elt1->end;
 
-                  /* ### Perfom any range combining? */
-                  lastrange = svn_range_dup(&tmp_range, pool);
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                        &tmp_range))
+                    {
+                      lastrange = svn_range_dup(&tmp_range, pool);
+                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+                    }
+                  
                 }
             }
 
@@ -487,11 +497,16 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
               if (!do_remove)
                 {
                   /* Partial overlap. */
-                  svn_merge_range_t *tmp_range =
-                    apr_palloc(pool, sizeof(*tmp_range));
-                  tmp_range->start = elt1->start;
-                  tmp_range->end = elt2->end;
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = tmp_range;
+                  svn_merge_range_t tmp_range;                  
+                  tmp_range.start = elt1->start;
+                  tmp_range.end = elt2->end;
+                  
+                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                        &tmp_range))
+                    {
+                      lastrange = svn_range_dup(&tmp_range, pool);
+                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
+                    }
                 }
 
               wboardelt.start = elt2->end + 1;
@@ -520,8 +535,6 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                       lastrange = svn_range_dup(elt1, pool);
                       APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
                     }
-                  else
-                    lastrange = elt1;
                 }
               i++;
             }
