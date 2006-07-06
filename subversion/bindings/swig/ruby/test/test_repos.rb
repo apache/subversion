@@ -184,7 +184,7 @@ class SvnReposTest < Test::Unit::TestCase
     FileUtils.mv(@repos.path, backup_path)
     FileUtils.mv(repos.path, @repos.path)
 
-    assert_raises(Svn::Error::FS_NO_SUCH_REVISION) do
+    assert_raises(Svn::Error::FsNoSuchRevision) do
       assert_equal(log, ctx.log_message(path, rev))
     end
 

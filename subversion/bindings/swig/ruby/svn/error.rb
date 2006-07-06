@@ -1,4 +1,5 @@
 require "svn/ext/core"
+require "svn/util"
 
 module Svn
   class Error < StandardError
@@ -9,15 +10,17 @@ module Svn
       if /^SVN_ERR_(.*)/ =~ const_name
         error_const_name = $1
         next if /_CATEGORY_START\z/ =~ error_const_name
+        error_class_name = Util.to_ruby_class_name(error_const_name)
         value = Ext::Core.const_get(const_name)
         module_eval(<<-EOC, __FILE__, __LINE__ + 1)
-          class #{error_const_name} < Error
+          class #{error_class_name} < Error
             def initialize(message="", file=nil, line=nil)
               super(#{value}, message, file, line)
             end
           end
+          #{error_const_name} = #{error_class_name}
         EOC
-        TABLE[value] = const_get(error_const_name)
+        TABLE[value] = const_get(error_class_name)
       end
     end
     
