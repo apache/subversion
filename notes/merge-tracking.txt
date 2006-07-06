@@ -129,7 +129,7 @@ For the large number of people i have talked to and heard about from
 others, it seems the human editable *format* of how svnmerge stores
 merge information (IE pathname and list of revisions) is fine.  Binary
 storage of such information would buy, on average, a 2-3 byte decrease
-per revision/range in size over ascii[1], while making it not directly
+per revision/range in size over ASCII[2], while making it not directly
 human editable.
 
 As such, i have chosen to represent the revisions we have merged *into*
