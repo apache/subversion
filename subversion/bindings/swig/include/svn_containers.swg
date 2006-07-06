@@ -50,9 +50,7 @@
 
 %hash_argout_typemap(DIRENTHASH, svn_dirent_t *, NULL)
 %hash_argout_typemap(dirents, svn_dirent_t *, _global_svn_swig_py_pool)
-#ifdef SWIGRUBY
-%hash_argout_typemap(locks, svn_lock_t *, )
-#endif
+%hash_argout_typemap(locks, svn_lock_t *, _global_svn_swig_py_pool)
 #ifdef SWIGPYTHON
 /* FIXME: We are effectively treating this hash as an opaque blob...
  * shouldn't we be converting it to a dict? */

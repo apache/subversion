@@ -98,14 +98,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   handle svn_repos_fs_get_locks
-*/
-#ifdef SWIGPYTHON
-%hash_argout_typemap(locks, svn_lock_t *, _global_svn_swig_py_pool)
-#endif
-
-
-/* -----------------------------------------------------------------------
    handle svn_repos_authz_read_func_t/baton pairs
 */
 
