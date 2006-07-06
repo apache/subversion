@@ -2561,10 +2561,10 @@ See `svn-status-marked-files' for what counts as selected."
 (defun svn-status-get-file-information ()
   "Find out about the file under point.
 The result may be parsed with the various `svn-status-line-info->...' functions.
-When called from a *svn-status* buffer, do the same as `svn-status-get-file-information'.
+When called from a *svn-status* buffer, do the same as `svn-status-get-line-information'.
 When called from a file buffer provide a structure that contains the filename."
   (cond ((eq major-mode 'svn-status-mode)
-         (svn-status-get-file-information))
+         (svn-status-get-line-information))
         (t
          ;; a fake strukture that contains the buffername for the current buffer
          (svn-status-make-line-info (buffer-file-name (current-buffer))))))
@@ -2962,7 +2962,8 @@ When called from a file buffer, go to the current line in the resulting blame ou
   (when current-prefix-arg
     (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
   (unless revision (setq revision "BASE"))
-  (svn-run t t 'blame "blame" "-r" revision (svn-status-line-info->filename (svn-status-get-file-information))))
+  (svn-run t t 'blame "blame" "-r" revision (svn-status-line-info->filename
+                                             (svn-status-get-file-information))))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
