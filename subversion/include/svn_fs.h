@@ -173,7 +173,7 @@ svn_error_t *svn_fs_create(svn_fs_t **fs_p, const char *path,
  * @since New in 1.1.
  */
 svn_error_t *svn_fs_open(svn_fs_t **fs_p, const char *path,
-                         apr_hash_t *config, apr_pool_t *pool);
+                         apr_hash_t *fs_config, apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
