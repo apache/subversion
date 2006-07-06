@@ -2302,6 +2302,43 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
   return err;
 }
 
+/* svn_ra_callbacks_t */
+static svn_error_t *
+ra_callbacks_open_tmp_file(apr_file_t **fp,
+                           void *callback_baton,
+                           apr_pool_t *pool)
+{
+  PyObject *callbacks = (PyObject *)callback_baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallMethod(callbacks, 
+                                    "open_tmp_file",
+                                    (char *)"O&", 
+                                    make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result == Py_None)
+    {
+      *fp = NULL;
+    }
+  else 
+    {
+      *fp = svn_swig_py_make_file(result, pool);
+      if (*fp == NULL)
+       {
+      	  err = callback_exception_error();
+       }
+    }
+
+  Py_XDECREF(result);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 void
 svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                void **baton,
@@ -2309,12 +2346,29 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                apr_pool_t *pool)
 {
   svn_error_t *err = svn_ra_create_callbacks(callbacks, pool);
+  PyObject *py_auth_baton;
 
   if (err)
     {
       svn_swig_py_svn_exception(err);
       return;
     }
+
+  (*callbacks)->open_tmp_file = ra_callbacks_open_tmp_file;
+
+  py_auth_baton = PyObject_GetAttrString(py_callbacks, "auth_baton");
+
+  if (svn_swig_ConvertPtrString(py_auth_baton, 
+                                (void **)&((*callbacks)->auth_baton),
+                                "svn_auth_baton_t *")) 
+    {
+      err = type_conversion_error("svn_auth_baton_t *");
+      svn_swig_py_svn_exception(err);
+      Py_XDECREF(py_auth_baton);
+      return;
+    }
+  
+  Py_XDECREF(py_auth_baton);
 
   *baton = py_callbacks;
 }
