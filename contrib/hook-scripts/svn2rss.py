@@ -1,20 +1,38 @@
 #!/usr/bin/env python
 
-"""Usage: svn2rss.py [OPTION...]
+"""Usage: svn2rss.py [OPTION...] REPOS-PATH
 
- -h | --help         Show this help message
- -P | --svn-path=    path where svn binaries are installed
- -r | --revision=    svn revision
- -p | --repos-path=  svn repository to generate RSS 2.0 feed
- -u | --item-url=    link to appear in the rss item
- -f | --rss-file=    filename to store the rss feed
- -m | --max-items=   maximum items to store in the rss feed
- -U | --feed-url=    global RSS feed url 
+Generate an RSS 2.0 file containing commit information for the
+Subversion repository located at REPOS-PATH.  Once the maximum number
+of items is reached, older elements are removed.  The item title is
+the revision number, and the item description contains the author,
+date, log messages and changed paths.
 
-Generates a RSS 2.0 file containing commit information.  Once the
-maximum number of items is reached, older elements are removed.  The
-item title is the revision number, and the item description contains
-the author, date, log messages and changed paths."""
+Options:
+
+ -h, --help             Show this help message.
+ 
+ -f, --rss-file=PATH    Store the RSS feed in the file located at PATH, which
+                        will be created if it doesn't already exist.  If not
+                        provided, the script will store the feed in the
+                        current working directory, in a file named
+                        REPOS_NAME.rss (where REPOS_NAME is the basename
+                        of the REPOS_PATH command-line argument). 
+ 
+ -r, --revision=X[:Y]   Subversion revision (or revision range) to generate
+                        RSS info for.  If not provided, info for the single
+                        youngest revision in the repository will be generated.
+ 
+ -m, --max-items=N      Keep only N items in the RSS feed file.  By default,
+                        20 items are kept.
+ 
+ -u, --item-url=URL     Use URL as the basis for generating RSS item links.
+ 
+ -U, --feed-url=URL     Use URL as the global RSS feed link.
+
+ -P, --svn-path=DIR     Look in DIR for the svnlook binary.  If not provided,
+                        the script will run "svnlook" via a typical $PATH hunt.
+"""
 
 import sys
 
@@ -115,7 +133,9 @@ class SVN2RSS:
     def make_rss_item(self):
         """ Generate PyRSS2Gen Item from the commit info """
         item_title = "Revision " + self.revision
-        item_link = self.item_url + "?rev=" + self.revision
+        item_link = self.item_url \
+                    and self.item_url + "?rev=" + self.revision \
+                    or ""
         rss_item = PyRSS2Gen.RSSItem(title = item_title,
                                      link = item_link,
                                      description = self.make_rss_item_desc(),
@@ -144,18 +164,12 @@ class SVN2RSS:
         return rss
 
 def main():
-    max_items = 20
-    commit_rev = None
-    svn_path = item_url = feed_url = None
-    
-    if len(sys.argv) == 1:
-        usage_and_exit("Not enough arguments provided.")
+    # Parse the command-line options and arguments.
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "hP:r:p:u:f:m:U:",
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "hP:r:u:f:m:U:",
                                        ["help",
                                         "svn-path=",
                                         "revision=",
-                                        "repos-path=",
                                         "item-url=",
                                         "rss-file=",
                                         "max-items=",
@@ -163,6 +177,18 @@ def main():
                                         ])
     except getopt.GetoptError, msg:
         usage_and_exit(msg)
+
+    # Make sure required arguments are present.
+    if len(args) != 1:
+        usage_and_exit("You must specify a repository path.")
+    repos_path = args[0]
+
+    # Now deal with the options.
+    max_items = 20
+    commit_rev = None
+    svn_path = item_url = feed_url = None
+    rss_file = os.path.basename(repos_path) + ".rss"
+    
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             usage_and_exit()
@@ -170,8 +196,6 @@ def main():
             svn_path = arg
         elif opt in ("-r", "--revision"):
             commit_rev = arg
-        elif opt in ("-p", "--repos-path"):
-            repos_path = arg
         elif opt in ("-u", "--item-url"):
             item_url = arg
             check_url(item_url, opt)
