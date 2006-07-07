@@ -535,12 +535,12 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 
   if (do_remove)
     {
-  /* Copy the current whiteboard element if we didn't hit the end of the
-     whiteboard, and we still had it around.  This element may have been 
-     touched, so we can't just walk the whiteboard array, 
-     we have to use our copy.  This case only happens when
-     we ran out of eraser before whiteboard, *and* we had changed
-     the whiteboard element.  */
+      /* Copy the current whiteboard element if we didn't hit the end
+         of the whiteboard, and we still had it around.  This element
+         may have been touched, so we can't just walk the whiteboard
+         array, we have to use our copy.  This case only happens when
+         we ran out of eraser before whiteboard, *and* we had changed
+         the whiteboard element. */
       if (i == lasti && i < whiteboard->nelts)
         {
           if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
