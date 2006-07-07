@@ -69,22 +69,25 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **PROPHASH {
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
   %append_output(svn_swig_py_prophash_to_dict(*$1));
 }
 #endif
-
 #ifdef SWIGPERL
-%typemap(argout) apr_hash_t **PROPHASH {
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
   %append_output(svn_swig_pl_prophash_to_hash(*$1));
 }
 #endif
-
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **PROPHASH {
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
   %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 #endif
+%apply apr_hash_t **HASH_SVN_STRING {
+  apr_hash_t **props,
+  apr_hash_t **original_props,
+  apr_hash_t **table_p
+};
 
 /* -----------------------------------------------------------------------
    apr_hash_t **locations

@@ -51,15 +51,6 @@
   enum svn_wc_merge_outcome_t *
 };
 
-/*
-   svn_wc_prop_list()
-   svn_wc_get_prop_diffs()
-*/
-%apply apr_hash_t **PROPHASH {
-  apr_hash_t **props,
-  apr_hash_t **original_props
-};
-
 /* svn_wc_get_prop_diffs() */
 %apply apr_array_header_t **OUTPUT_OF_PROP {
   apr_array_header_t **propchanges

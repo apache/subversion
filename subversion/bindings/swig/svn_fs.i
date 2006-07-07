@@ -45,9 +45,6 @@
 
 %apply const char **OUTPUT { const char ** };
 
-/* svn_fs_*_proplist() */
-%apply apr_hash_t **PROPHASH { apr_hash_t **table_p };
-
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
    ### incompatible. */

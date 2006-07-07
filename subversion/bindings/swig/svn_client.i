@@ -48,9 +48,6 @@
     const char *comment
 };
 
-/* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
-%apply apr_hash_t **PROPHASH { apr_hash_t **props };
-
 /* svn_client_url_from_path(), svn_client_uuid_from_url()
  * svn_client_uuid_from_path */
 %apply const char **OUTPUT {
