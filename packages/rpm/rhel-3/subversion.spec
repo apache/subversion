@@ -20,7 +20,6 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
-Patch0: apr.patch
 Patch1: subversion-0.31.0-rpath.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
@@ -100,6 +99,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
+- [RHEL3] Updated to APR/APR-UTIL 0.9.12.
+  This requires httpd-2.0.46-56.ent.centos.2.1 or higher.
+
 * Mon Jun 26 2006 David Summers <david@summersoft.fay.ar.us> r20253
 - [RHEL3,RHEL4] Follow-up to r20040, changed %{apache_dir} to %{_libdir}
   and %{_prefix} to %{_libdir} to help out people compiling 64-bit versions.
@@ -468,9 +471,6 @@ Tools for Subversion.
 
 %prep
 %setup -q
-
-# Patch for APR
-%patch0 -p0
 
 # Patch for RPATH
 %patch1 -p1
