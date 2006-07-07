@@ -464,13 +464,6 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   /* Retain the range that falls before the eraser start. */
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->start - 1;
-
-                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                        &tmp_range))
-                    {
-                      lastrange = svn_range_dup(&tmp_range, pool);
-                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-                    }
                 }
               else
                 {
@@ -478,14 +471,13 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                      start and whiteboard end. */
                   tmp_range.start = elt2->start;
                   tmp_range.end = elt1->end;
+                }
 
-                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                        &tmp_range))
-                    {
-                      lastrange = svn_range_dup(&tmp_range, pool);
-                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-                    }
-                  
+              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
+                                                    &tmp_range))
+                {
+                  lastrange = svn_range_dup(&tmp_range, pool);
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
                 }
             }
 
