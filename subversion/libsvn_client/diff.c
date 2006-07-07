@@ -44,6 +44,17 @@
 
 #include "svn_private_config.h"
 
+/* Sanity check -- ensure that we have valid revisions to look at. */
+#define ENSURE_VALID_REVISION_KINDS(rev1_kind, rev2_kind) \
+  if ((rev1_kind == svn_opt_revision_unspecified) \
+      || (rev2_kind == svn_opt_revision_unspecified)) \
+    { \
+      return svn_error_create \
+        (SVN_ERR_CLIENT_BAD_REVISION, NULL, \
+         _("Not all required revisions are specified")); \
+    }
+
+
 /*
  * Constant separator strings
  */
@@ -1763,6 +1774,41 @@ update_wc_merge_info(const char *target_wcpath, apr_hash_t *target_mergeinfo,
                           adm_access, TRUE /* skip checks */, pool);
 }
 
+/* Convert requested revisions for PATH1@REVISION1 and PATH1@REVISION2
+   into a merge range (using RA_SESSION1 and RA_SESSION2), determine
+   whether that range represents a revert, and store in *RANGE and
+   *IS_REVERT (respectively). */
+static svn_error_t *
+grok_range_info_from_opt_revisions(svn_merge_range_t *range,
+                                   svn_boolean_t *is_revert,
+                                   svn_ra_session_t *ra_session1,
+                                   const char *path1,
+                                   svn_opt_revision_t *revision1,
+                                   svn_ra_session_t *ra_session2,
+                                   const char *path2,
+                                   svn_opt_revision_t *revision2,
+                                   apr_pool_t *pool)
+{
+  /* Resolve the revision numbers, and store them as a merge range.
+     Determine whether this merge adds or backs out changes
+     (e.g. merge vs. revert), and handle the fact that a
+     svn_merge_range_t's "start" and "end" are inclusive. */
+  SVN_ERR(svn_client__get_revision_number
+          (&range->start, ra_session1, revision1, path1, pool));
+  SVN_ERR(svn_client__get_revision_number
+          (&range->end, ra_session2, revision2, path2, pool));
+  if (range->start == range->end)
+    /* No merge to perform. */
+    return SVN_NO_ERROR;
+  *is_revert = (range->start > range->end);
+  if (*is_revert)
+    range->end += 1;
+  else
+    range->start += 1;
+
+  return SVN_NO_ERROR;
+}
+
 /* URL1/PATH1, URL2/PATH2, and TARGET_WCPATH all better be
    directories.  For the single file case, the caller does the merging
    manually.  PATH1 and PATH2 can be NULL.
@@ -1803,14 +1849,8 @@ do_merge(const char *initial_URL1,
   svn_opt_revision_t *revision1, *revision2;
   int i;
 
-  /* Sanity check -- ensure that we have valid revisions to look at. */
-  if ((initial_revision1->kind == svn_opt_revision_unspecified)
-      || (initial_revision2->kind == svn_opt_revision_unspecified))
-    {
-      return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         _("Not all required revisions are specified"));
-    }
+  ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
+                              initial_revision2->kind);
 
   /* If we are performing a pegged merge, we need to find out what our
      actual URLs will be. */
@@ -1847,22 +1887,11 @@ do_merge(const char *initial_URL1,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL1, NULL,
                                                NULL, NULL, FALSE, TRUE, 
                                                ctx, pool));
-  /* Resolve the revision numbers, and store them as a merge range.
-     Determine whether this merge adds or backs out changes
-     (e.g. merge vs.  revert), and handle the fact that a
-     svn_merge_range_t's "start" and "end" are inclusive. */
-  SVN_ERR(svn_client__get_revision_number
-          (&range.start, ra_session, revision1, path1, pool));
-  SVN_ERR(svn_client__get_revision_number
-          (&range.end, ra_session, revision2, path2, pool));
-  if (range.start == range.end)
-    /* No merge to perform. */
-    return SVN_NO_ERROR;
-  is_revert = (range.start > range.end);
-  if (is_revert)
-    range.end += 1;
-  else
-    range.start += 1;
+
+  SVN_ERR(grok_range_info_from_opt_revisions(&range, &is_revert,
+                                             ra_session, path1, revision1,
+                                             ra_session, path2, revision2,
+                                             pool));
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -1947,28 +1976,21 @@ do_merge(const char *initial_URL1,
    in POOL. */
 static svn_error_t *
 single_file_merge_get_file(const char **filename,
+                           svn_ra_session_t *ra_session,
                            apr_hash_t **props,
-                           svn_revnum_t *rev,
+                           svn_revnum_t rev,
                            const char *url,
-                           const char *path,
-                           const svn_opt_revision_t *revision,
                            struct merge_cmd_baton *merge_b,
                            apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
   apr_file_t *fp;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
-                                               NULL, NULL, FALSE, TRUE, 
-                                               merge_b->ctx, pool));
-  SVN_ERR(svn_client__get_revision_number(rev, ra_session, revision,
-                                          path, pool));
   SVN_ERR(svn_io_open_unique_file2(&fp, filename,
                                    merge_b->target, ".tmp",
                                    svn_io_file_del_none, pool));
   stream = svn_stream_from_aprfile2(fp, FALSE, pool);
-  SVN_ERR(svn_ra_get_file(ra_session, "", *rev,
+  SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
   SVN_ERR(svn_stream_close(stream));
 
@@ -1977,7 +1999,6 @@ single_file_merge_get_file(const char **filename,
                             
 
 /* The single-file, simplified version of do_merge. */
-/* ### FIXME: To handle merge tracking, follow pattern from do_merge(). */
 static svn_error_t *
 do_single_file_merge(const char *initial_URL1,
                      const char *initial_path1,
@@ -1993,15 +2014,25 @@ do_single_file_merge(const char *initial_URL1,
 {
   apr_hash_t *props1, *props2;
   const char *tmpfile1, *tmpfile2;
-  svn_revnum_t rev1, rev2;
   const char *mimetype1, *mimetype2;
   svn_string_t *pval;
   apr_array_header_t *propchanges;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
-  const char *URL1, *path1, *URL2, *path2;
+  svn_client_ctx_t *ctx = merge_b->ctx;
+  const char *URL1, *path1, *URL2, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   svn_error_t *err;
+  svn_merge_range_t range;
+  svn_ra_session_t *ra_session1, *ra_session2;
+  svn_boolean_t is_revert;
+  apr_hash_t *target_mergeinfo;
+  apr_array_header_t *remaining_ranges;
+  svn_boolean_t from_same_repos;
+  int i;
+
+  ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
+                              initial_revision2->kind);
 
   /* If we are performing a pegged merge, we need to find out what our
      actual URLs will be. */
@@ -2015,7 +2046,7 @@ do_single_file_merge(const char *initial_URL1,
                                           peg_revision,
                                           initial_revision1,
                                           initial_revision2,
-                                          merge_b->ctx, pool));
+                                          ctx, pool));
 
       merge_b->url = URL2;
       merge_b->path = NULL;
@@ -2033,59 +2064,99 @@ do_single_file_merge(const char *initial_URL1,
       revision2 = apr_pcalloc(pool, sizeof(*revision2));
       *revision2 = *initial_revision2;
     }
-  
-  /* ### heh, funny.  we could be fetching two fulltexts from two
-     *totally* different repositories here.  :-) */
-  SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1, &rev1,
-                                     URL1, path1, revision1,
-                                     merge_b, pool));
 
-  SVN_ERR(single_file_merge_get_file(&tmpfile2, &props2, &rev2,
-                                     URL2, path2, revision2, 
-                                     merge_b, pool));
+  /* Establish RA sessions to both URLs. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, URL1, NULL,
+                                               NULL, NULL, FALSE, TRUE,
+                                               ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, URL2, NULL,
+                                               NULL, NULL, FALSE, TRUE,
+                                               ctx, pool));
 
-  /* Discover any svn:mime-type values in the proplists */
-  pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
-  mimetype1 = pval ? pval->data : NULL;
+  SVN_ERR(grok_range_info_from_opt_revisions(&range, &is_revert,
+                                             ra_session1, path1, revision1,
+                                             ra_session2, path2, revision2,
+                                             pool));
 
-  pval = apr_hash_get(props2, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
-  mimetype2 = pval ? pval->data : NULL;
+  /* Look at the merge info prop of the WC target to see what's
+     already been merged into it. */
+  SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access, ctx,
+                           pool));
 
-  /* Deduce property diffs. */
-  SVN_ERR(svn_prop_diffs(&propchanges, props2, props1, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
+                                            ra_session1, adm_access, pool));
+  SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path, target_mergeinfo,
+                                 &range, is_revert, pool));
 
-  SVN_ERR(merge_file_changed(adm_access,
-                             &text_state, &prop_state,
-                             merge_b->target,
-                             tmpfile1,
-                             tmpfile2,
-                             rev1,
-                             rev2,
-                             mimetype1, mimetype2,
-                             propchanges, props1,
-                             merge_b));
-
-  /* Ignore if temporary file not found. It may have been renamed. */
-  err = svn_io_remove_file(tmpfile1, pool);
-  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-    return err;
-  svn_error_clear(err);
-  err = svn_io_remove_file(tmpfile2, pool);
-  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
-    return err;
-  svn_error_clear(err);
-  
-  if (merge_b->ctx->notify_func2)
+  /* ### FIXME: Handle notification callbacks for multiple merges into
+     ### a single versioned resource. */
+  for (i = 0; i < remaining_ranges->nelts; i++)
     {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(merge_b->target, svn_wc_notify_update_update,
-                               pool);
-      notify->kind = svn_node_file;
-      notify->content_state = text_state;
-      notify->prop_state = prop_state;
-      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                    pool);
+      /* When using this merge range, account for the exclusivity of
+         its low value (which is indicated by this operation being a
+         merge vs. revert). */
+      svn_merge_range_t *r = APR_ARRAY_IDX(remaining_ranges, i,
+                                           svn_merge_range_t *);
+
+      /* While we currently don't allow it, in theory we could be
+         fetching two fulltexts from two different repositories here. */
+      SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1, &props1, 
+                                         is_revert ? r->start : r->start - 1, 
+                                         URL1, merge_b, pool));
+
+      SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2, &props2, 
+                                         is_revert ? r->end - 1 : r->end, 
+                                         URL2, merge_b, pool));
+
+      /* Discover any svn:mime-type values in the proplists */
+      pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
+                          strlen(SVN_PROP_MIME_TYPE));
+      mimetype1 = pval ? pval->data : NULL;
+
+      pval = apr_hash_get(props2, SVN_PROP_MIME_TYPE,
+                          strlen(SVN_PROP_MIME_TYPE));
+      mimetype2 = pval ? pval->data : NULL;
+
+      /* Deduce property diffs. */
+      SVN_ERR(svn_prop_diffs(&propchanges, props2, props1, pool));
+
+      SVN_ERR(merge_file_changed(adm_access,
+                                 &text_state, &prop_state,
+                                 merge_b->target,
+                                 tmpfile1,
+                                 tmpfile2,
+                                 is_revert ? r->start : r->start - 1, 
+                                 is_revert ? r->end - 1 : r->end, 
+                                 mimetype1, mimetype2,
+                                 propchanges, props1,
+                                 merge_b));
+
+      /* Ignore if temporary file not found. It may have been renamed. */
+      err = svn_io_remove_file(tmpfile1, pool);
+      if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
+        return err;
+      svn_error_clear(err);
+      err = svn_io_remove_file(tmpfile2, pool);
+      if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
+        return err;
+      svn_error_clear(err);
+  
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify
+          = svn_wc_create_notify(merge_b->target, svn_wc_notify_update_update,
+                                 pool);
+          notify->kind = svn_node_file;
+          notify->content_state = text_state;
+          notify->prop_state = prop_state;
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
     }
+
+  if (!merge_b->dry_run && remaining_ranges->nelts > 0)
+    SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
+                                 remaining_ranges, is_revert, adm_access,
+                                 pool));
 
   return SVN_NO_ERROR;
 }

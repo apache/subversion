@@ -1407,8 +1407,8 @@ fs_change_merge_info(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
-/* Change, add, or delete a node's property value.  The node affect is
-   PATH under ROOT, the property value to modify is NAME, and VALUE
+/* Change, add, or delete a node's property value.  The affected node
+   is PATH under ROOT, the property value to modify is NAME, and VALUE
    points to either a string value to set the new contents to, or NULL
    if the property should be deleted.  Perform temporary allocations
    in POOL. */
@@ -1451,16 +1451,21 @@ fs_change_node_prop(svn_fs_root_t *root,
 
   if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
     {
-
       /* fs_change_mergeinfo will reconvert the mergeinfo to a string,
          which is a waste in our case because we already have it as a
          string.  To avoid this, we just call change_txn_mergeinfo
          directly.  */
-
       svn_fs_txn_t *txn;
+
+      /* At least for single file merges, nodes which are direct
+         children of the root are received without a leading slash
+         (e.g. "/file.txt" is received as "file.txt"), so must be made
+         absolute. */
+      const char *canon_path = svn_fs_fs__canonicalize_abspath(path, pool);
+
       SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
 
-      SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, value, pool));
+      SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, canon_path, value, pool));
       
       SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
                                          SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
