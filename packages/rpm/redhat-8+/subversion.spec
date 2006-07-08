@@ -1,16 +1,16 @@
 %define apache_version 2.0.48-0.1
-%define apr_version 0.9.5
+%define apr_version 0.9.7
 %define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
 %define pyver 2.2
 # If you don't want to take time for the tests then set make_*_check to 0.
-%define make_ra_local_bdb_check 1
-%define make_ra_svn_bdb_check 1
-%define make_ra_dav_bdb_check 1
-%define make_ra_local_fsfs_check 1
-%define make_ra_svn_fsfs_check 1
-%define make_ra_dav_fsfs_check 1
+%define make_ra_local_bdb_check 0
+%define make_ra_svn_bdb_check 0
+%define make_ra_dav_bdb_check 0
+%define make_ra_local_fsfs_check 0
+%define make_ra_svn_fsfs_check 0
+%define make_ra_dav_fsfs_check 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -20,7 +20,6 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
-Patch0: apr.patch
 Patch1: subversion-0.31.0-rpath.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
@@ -105,6 +104,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
+- [RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
+  RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes
+  APR/APR-UTIL 0.9.12.
+
 * Mon Jun 26 2006 David Summers <david@summersoft.fay.ar.us> r20253
 - [RHEL3,RHEL4] Follow-up to r20040, changed %{apache_dir} to %{_libdir}
   and %{_prefix} to %{_libdir} to help out people compiling 64-bit versions.
@@ -473,9 +477,6 @@ Tools for Subversion.
 
 %prep
 %setup -q
-
-# Patch for APR
-%patch0 -p0
 
 # Patch for RPATH
 %patch1 -p1

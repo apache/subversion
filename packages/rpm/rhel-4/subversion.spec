@@ -105,8 +105,8 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
- * Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
-- [RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
+* Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
+- [RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
   RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes
   APR/APR-UTIL 0.9.12.
 
