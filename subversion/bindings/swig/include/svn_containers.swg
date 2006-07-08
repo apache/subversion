@@ -308,9 +308,16 @@
    svn_ra_get_locations()
 */
 
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *location_revisions {
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
+                                                             _global_pool);
+    if ($1 == NULL)
+        SWIG_fail;
+}
+#endif
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *location_revisions
-{
+%typemap(in) apr_array_header_t *location_revisions {
   $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
 }
 #endif
@@ -333,16 +340,14 @@
                                                              _global_pool);
 }
 #endif
-
 #ifdef SWIGRUBY
 %typemap(in) const apr_array_header_t *STRINGLIST {
   $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
 }
 #endif
 
-/* path lists */
 %apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *paths
+  apr_array_header_t *paths
 };
 
 /* -----------------------------------------------------------------------
@@ -388,38 +393,6 @@
 %typemap(in) apr_array_header_t *proplist
 {
   $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
-}
-#endif
-
-/* svn_delta_path_driver() */
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *paths
-{
-  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle svn_ra_get_locations()
-*/
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle the 'location_revisions' parameter appropriately
-*/
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
 }
 #endif
 
