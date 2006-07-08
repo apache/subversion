@@ -5,12 +5,12 @@
 %define apache_dir /usr
 %define pyver 2.2
 # If you don't want to take time for the tests then set make_*_check to 0.
-%define make_ra_local_bdb_check 0
-%define make_ra_svn_bdb_check 0
-%define make_ra_dav_bdb_check 0
-%define make_ra_local_fsfs_check 0
-%define make_ra_svn_fsfs_check 0
-%define make_ra_dav_fsfs_check 0
+%define make_ra_local_bdb_check 1
+%define make_ra_svn_bdb_check 1
+%define make_ra_dav_bdb_check 1
+%define make_ra_local_fsfs_check 1
+%define make_ra_svn_fsfs_check 1
+%define make_ra_dav_fsfs_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -105,7 +105,7 @@ Tools for Subversion.
 
 %changelog
 * Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
-- [RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
+- [RH8,RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
   RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes
   APR/APR-UTIL 0.9.12.
 
