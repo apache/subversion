@@ -43,11 +43,6 @@
     const char *tgt_path
 };
 
-/* svn_repos_db_logfiles() */
-%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    apr_array_header_t **logfiles
-}
-
 /* svn_repos_get_logs() */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths

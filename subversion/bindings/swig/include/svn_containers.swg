@@ -245,10 +245,12 @@
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
   %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
 }
+
 %apply apr_array_header_t **OUTPUT_OF_PROP {
   apr_array_header_t **entry_props,
   apr_array_header_t **wc_props,
-  apr_array_header_t **regular_props
+  apr_array_header_t **regular_props,
+  apr_array_header_t **propdiffs
 };
 #endif
 
@@ -272,12 +274,11 @@
 }
 #endif
 
-/* svn_prop_diffs */
-#ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **propdiffs {
-  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
-}
-#endif
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **patterns,
+  apr_array_header_t **logfiles,
+  apr_array_header_t **names_p
+};
 
 /* -----------------------------------------------------------------------
    apr_array_header_t **externals_p
@@ -287,23 +288,6 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **externals_p {
   %append_output(svn_swig_rb_apr_array_to_array_external_item(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t **patterns
-   svn_wc_get_default_ignores()
-*/
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **patterns {
-  %append_output(svn_swig_rb_apr_array_to_array_string(*$1));
-}
-#endif
-
-#ifdef SWIGPYTHON
-%typemap(argout) apr_array_header_t **patterns {
-  %append_output(svn_swig_py_array_to_list(*$1));
 }
 #endif
 
