@@ -1674,6 +1674,9 @@ def checkout_broken_eol(sbox):
                                           expected_output,
                                           expected_wc)
 
+# eol-style handling during update with conflicts, scenario 1:
+# when update creates a conflict on a file, make sure the file and files 
+# r<left>, r<right> and .mine are in the eol-style defined for that file.
 def conflict_markers_matching_eol(sbox):
   "conflict markers should match the file's eol style"
 
@@ -1688,23 +1691,25 @@ def conflict_markers_matching_eol(sbox):
   else:
     crlf = '\r\n'
 
-  # Checkout a second working copy of
+  # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout', sbox.repo_url, wc_backup)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout', 
+                                     sbox.repo_url, wc_backup)
 
   # set starting revision
   cur_rev = 1
 
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, cur_rev)
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, cur_rev)
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 
+                                                              cur_rev)
 
   path_backup = os.path.join(wc_backup, 'A', 'mu')
 
   # do the test for each eol-style
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
-    # add a new file with the eol-style property set.
+    # rewrite file mu and set the eol-style property.
     open(mu_path, 'wb').write("This is the file 'mu'."+ eolchar)
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
@@ -1729,7 +1734,8 @@ def conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'update', wc_backup)
 
     # Make a local mod to mu
-    svntest.main.file_append(mu_path, 'Original appended text for mu' + eolchar)
+    svntest.main.file_append(mu_path, 
+                             'Original appended text for mu' + eolchar)
 
     # Commit the original change and note the 'theirs' revision number 
     svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
