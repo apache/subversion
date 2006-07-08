@@ -170,21 +170,40 @@
    converted to apr_hash_t (const char * => const char *)
 */
 #ifdef SWIGPYTHON
-%typemap(in) apr_hash_t *STRING_TO_STRING {
-    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
+%typemap(in) apr_hash_t *HASH_CSTRING {
+  $1 = svn_swig_py_stringhash_from_dict($input, _global_pool);
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  /* PYTHON-FIXME: Handle None -> NULL. */
+  $1 = svn_swig_py_stringhash_from_dict($input, _global_pool);
 }
 #endif
 #ifdef SWIGPERL
-%typemap(in) apr_hash_t *STRING_TO_STRING {
-    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+%typemap(in) apr_hash_t *HASH_CSTRING {
+  $1 = svn_swig_pl_strings_to_hash($input, _global_pool);
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  /* PERL-FIXME: Handle undef -> NULL. */
+  $1 = svn_swig_pl_strings_to_hash($input, _global_pool);
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(in) apr_hash_t *STRING_TO_STRING {
-    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+%typemap(in) apr_hash_t *HASH_CSTRING {
+  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  $1 = (NIL_P($input)) ? NULL : 
+    svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 #endif
 
+%apply apr_hash_t *HASH_CSTRING {
+  apr_hash_t *path_tokens
+};
+%apply apr_hash_t *HASH_CSTRING_MAYBENULL {
+  apr_hash_t *fs_config,
+  apr_hash_t *lock_tokens
+};
 
 /* -----------------------------------------------------------------------
    handle config and fs_config in svn_{fs,repos}_create
@@ -203,14 +222,6 @@
     $1 = NULL;
   } else {
     $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *", _global_pool);
-  }
-}
-%typemap(in) apr_hash_t *fs_config
-{
-  if (NIL_P($input)) {
-    $1 = NULL;
-  } else {
-    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
   }
 }
 #endif

@@ -47,11 +47,6 @@
     const char *lock_token
 };
 
-%apply apr_hash_t *STRING_TO_STRING {
-  apr_hash_t *lock_tokens,
-  apr_hash_t *path_tokens
-};
-
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif

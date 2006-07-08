@@ -56,8 +56,6 @@
     const char *comment
 };
 
-%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
-
 /* svn_fs_berkeley_logfiles(), svn_fs_list_transactions() */
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
     apr_array_header_t **logfiles,

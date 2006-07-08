@@ -43,8 +43,6 @@
     const char *tgt_path
 };
 
-%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
-
 /* svn_repos_db_logfiles() */
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
     apr_array_header_t **logfiles
