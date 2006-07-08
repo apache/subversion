@@ -1750,7 +1750,11 @@ update_wc_merge_info(const char *target_wcpath, apr_hash_t *target_mergeinfo,
     rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
   if (is_revert)
-    SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist, pool));
+    {
+      ranges = svn_rangelist_dup(ranges, pool);
+      SVN_ERR(svn_rangelist_reverse(ranges, pool));
+      SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist, pool));
+    }
   else
     SVN_ERR(svn_rangelist_merge(&rangelist, rangelist, ranges, pool));
 
