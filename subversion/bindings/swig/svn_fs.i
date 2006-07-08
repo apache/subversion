@@ -56,12 +56,6 @@
     const char *comment
 };
 
-/* svn_fs_berkeley_logfiles(), svn_fs_list_transactions() */
-%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    apr_array_header_t **logfiles,
-    apr_array_header_t **names_p
-}
-
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
