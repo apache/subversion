@@ -161,7 +161,8 @@
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %apply apr_hash_t *PROPHASH {
   apr_hash_t *target_props,
-  apr_hash_t *source_props
+  apr_hash_t *source_props,
+  apr_hash_t *hash
 };
 #endif
 
@@ -223,16 +224,6 @@
   } else {
     $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *", _global_pool);
   }
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   svn_config_write_auth_data()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *hash
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
 }
 #endif
 
