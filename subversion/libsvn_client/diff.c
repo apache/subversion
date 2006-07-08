@@ -1774,13 +1774,24 @@ update_wc_merge_info(const char *target_wcpath, apr_hash_t *target_mergeinfo,
                           adm_access, TRUE /* skip checks */, pool);
 }
 
-/* Convert requested revisions for PATH1@REVISION1 and PATH1@REVISION2
-   into a merge range (using RA_SESSION1 and RA_SESSION2), determine
-   whether that range represents a revert, and store in *RANGE and
-   *IS_REVERT (respectively). */
+/* A tri-state value returned by grok_range_info_from_opt_revisions(). */
+enum merge_type
+{
+  merge_type_merge,   /* additive */
+  merge_type_revert,  /* subtractive */
+  merge_type_no_op    /* no change */
+};
+
+/* Resolve requested revisions for PATH1@REVISION1 and PATH1@REVISION2
+   (using RA_SESSION1 and RA_SESSION2), convert them into a merge
+   range, determine whether that range represents a
+   merge/revert/no-op, and store that knowledge in *RANGE and
+   *MERGE_TYPE (respectively).  If the resulting revisions would
+   result in the merge being a no-op, RANGE->START and RANGE->END are
+   set to SVN_INVALID_REVNUM. */
 static svn_error_t *
 grok_range_info_from_opt_revisions(svn_merge_range_t *range,
-                                   svn_boolean_t *is_revert,
+                                   enum merge_type *merge_type,
                                    svn_ra_session_t *ra_session1,
                                    const char *path1,
                                    svn_opt_revision_t *revision1,
@@ -1789,22 +1800,29 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
                                    svn_opt_revision_t *revision2,
                                    apr_pool_t *pool)
 {
-  /* Resolve the revision numbers, and store them as a merge range.
-     Determine whether this merge adds or backs out changes
-     (e.g. merge vs. revert), and handle the fact that a
-     svn_merge_range_t's "start" and "end" are inclusive. */
+  /* Resolve the revision numbers. */
   SVN_ERR(svn_client__get_revision_number
           (&range->start, ra_session1, revision1, path1, pool));
   SVN_ERR(svn_client__get_revision_number
           (&range->end, ra_session2, revision2, path2, pool));
-  if (range->start == range->end)
-    /* No merge to perform. */
-    return SVN_NO_ERROR;
-  *is_revert = (range->start > range->end);
-  if (*is_revert)
-    range->end += 1;
-  else
-    range->start += 1;
+
+  /* Handle the fact that a svn_merge_range_t's "start" and "end" are
+     inclusive. */
+  if (range->start < range->end)
+    {
+      *merge_type = merge_type_merge;
+      range->start += 1;
+    }
+  else if (range->start > range->end)
+    {
+      *merge_type = merge_type_revert;
+      range->end += 1;
+    }
+  else  /* No revisions to merge. */
+    {
+      *merge_type = merge_type_no_op;
+      range->start = range->end = SVN_INVALID_REVNUM;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1838,6 +1856,7 @@ do_merge(const char *initial_URL1,
   apr_hash_t *target_mergeinfo;
   apr_array_header_t *remaining_ranges;
   svn_merge_range_t range;
+  enum merge_type merge_type;
   svn_boolean_t is_revert;
   svn_ra_session_t *ra_session, *ra_session2;
   const svn_ra_reporter2_t *reporter;
@@ -1888,10 +1907,14 @@ do_merge(const char *initial_URL1,
                                                NULL, NULL, FALSE, TRUE, 
                                                ctx, pool));
 
-  SVN_ERR(grok_range_info_from_opt_revisions(&range, &is_revert,
+  SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type,
                                              ra_session, path1, revision1,
                                              ra_session, path2, revision2,
                                              pool));
+  if (merge_type == merge_type_no_op)
+    return SVN_NO_ERROR;
+  else
+    is_revert = (merge_type == merge_type_revert);
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -2025,10 +2048,10 @@ do_single_file_merge(const char *initial_URL1,
   svn_error_t *err;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session1, *ra_session2;
+  enum merge_type merge_type;
   svn_boolean_t is_revert;
   apr_hash_t *target_mergeinfo;
   apr_array_header_t *remaining_ranges;
-  svn_boolean_t from_same_repos;
   int i;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
@@ -2073,10 +2096,14 @@ do_single_file_merge(const char *initial_URL1,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  SVN_ERR(grok_range_info_from_opt_revisions(&range, &is_revert,
+  SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type,
                                              ra_session1, path1, revision1,
                                              ra_session2, path2, revision2,
                                              pool));
+  if (merge_type == merge_type_no_op)
+    return SVN_NO_ERROR;
+  else
+    is_revert = (merge_type == merge_type_revert);
 
   /* Look at the merge info prop of the WC target to see what's
      already been merged into it. */
