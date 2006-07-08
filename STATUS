@@ -34,7 +34,7 @@ Candidate changes:
     Justfication:
       Quite a few user requests and also RPMs should work on all architectures.
     Votes:
-      +1: david
+      +1: dws
     
   * r20041
     Get rid of requirement for another RPM package (chrpath) to build the
@@ -44,7 +44,7 @@ Candidate changes:
       way to simplify build package requirements with patch instead of
       package.
     Votes:
-      +1: david
+      +1: dws
 
 
   * r20042
@@ -55,6 +55,13 @@ Candidate changes:
     Votes:
       +1: nori
       +0: blair
+
+  * r20461, r20469, r20470, r20473, r20476
+    Port RPMs to APR/APR-UTIL >= 0.9.7 (0.9.12)
+    Justification:
+      Unbreak RPM build on 1.4.x branch.
+    Votes:
+      +1: dws
 
   * r20077
     Fix merge failure when target of an add has been deleted.
