@@ -129,9 +129,9 @@ parse_pathname(const char **input, const char *end,
 }
 
 
-/* revisionlist -> (revisionrange | REVISION)(COMMA revisioneelement)*
+/* revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION
-   revisioneelement -> revisionrange | REVISION
+   revisionelement -> revisionrange | REVISION
 */
 static svn_error_t *
 parse_revlist(const char **input, const char *end,
