@@ -397,28 +397,13 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_array_header_t *wcprop_changes
-   svn_wc_process_committed2()
+   apr_array_header_t *wcprop_changes svn_wc_process_committed2()
+   apr_array_header_t *propchanges svn_wc_merge_props()
 */
 
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *wcprop_changes
-{
-  VALUE rb_pool;
-  apr_pool_t *pool;
-
-  svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t *propchanges
-   svn_wc_merge_props()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *propchanges
+%typemap(in) apr_array_header_t *wcprop_changes,
+             apr_array_header_t *propchanges
 {
   VALUE rb_pool;
   apr_pool_t *pool;
