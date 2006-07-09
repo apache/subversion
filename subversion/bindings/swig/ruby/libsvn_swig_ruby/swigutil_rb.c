@@ -569,24 +569,23 @@ c2r_svn_string(void *value, void *ctx)
 static VALUE                                                                 \
 c2r_ ## type ## _dup(void *type, void *ctx)                                  \
 {                                                                            \
-  apr_pool_t *type ## _pool;                                                 \
-  VALUE rb_ ## type ## _pool;                                                \
-  svn_ ## type ## _t *copied_ ## type;                                       \
-  VALUE rb_copied_ ## type;                                                  \
+  apr_pool_t *pool;                                                          \
+  VALUE rb_pool;                                                             \
+  svn_ ## type ## _t *copied_item;                                           \
+  VALUE rb_copied_item;                                                      \
                                                                              \
   if (!type)                                                                 \
     return Qnil;                                                             \
                                                                              \
-  svn_swig_rb_get_pool(0, (VALUE *)0, 0,                                     \
-                       &rb_ ## type ## _pool, &type ## _pool);               \
-  copied_ ## type = svn_ ## dup_func((type_prefix svn_ ## type ## _t *)type, \
-                                     type ## _pool);                         \
-  rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,                \
-                                     (void *)"svn_" # type "_t *");          \
-  rb_set_pool(rb_copied_ ## type, rb_ ## type ##_pool);                      \
+  svn_swig_rb_get_pool(0, (VALUE *)0, 0, &rb_pool, &pool);                   \
+  copied_item = svn_ ## dup_func((type_prefix svn_ ## type ## _t *)type,     \
+                                  pool);                                     \
+  rb_copied_item = c2r_swig_type((void *)copied_item,                        \
+                                 (void *)"svn_" # type "_t *");              \
+  rb_set_pool(rb_copied_item, rb_pool);                                      \
                                                                              \
-  return rb_copied_ ## type;                                                 \
-}                                                                            \
+  return rb_copied_item;                                                     \
+}
 
 #define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)        \
 DEFINE_DUP_BASE(type, dup_func, type_prefix)                                 \
