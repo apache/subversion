@@ -101,7 +101,7 @@ Candidate changes:
       unused by the change - since leaving the code in place has no adverse
       effects, it is not worth the effort of a merge branch.
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
 Approved changes:
 
