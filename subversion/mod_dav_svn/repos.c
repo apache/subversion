@@ -2809,8 +2809,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           svn_stream_set_close(o_stream, dav_svn_close_filter);
 
           /* get a handler/baton for writing into the output stream */
-          svn_txdelta_to_svndiff2(o_stream, resource->pool, &handler, &h_baton,
-                                  resource->info->svndiff_version);
+          svn_txdelta_to_svndiff2(&handler, &h_baton,
+                                  o_stream, resource->info->svndiff_version,
+                                  resource->pool);
 
           /* got everything set up. read in delta windows and shove them into
              the handler, which pushes data into the output stream, which goes

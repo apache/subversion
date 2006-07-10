@@ -90,20 +90,3 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
-
-  * r20423
-    Re-order the arguments of svn_txdelta_to_svndiff2(), a new API in 1.4,
-    so that they meet our conventions of:
-      - output parameters come first
-      - pool comes last
-    Justification:
-      - Users of our APIs are not confused.
-      - The SWIG bindings don't need to use a different argument ordering
-        to the C API.
-    Notes:
-      As this is an API change, it CANNOT be delayed to 1.4.1, and if for
-      any reason it should be rejected, it needs to be reverted from trunk.
-      Please vote for this quickly, to minimize the window in which there is
-      an API mismatch between trunk and the 1.4.x branch - thanks!
-    Votes:
-      +1: maxb, dlr, rooneg
