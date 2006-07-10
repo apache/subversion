@@ -1988,9 +1988,16 @@ do_merge(const char *initial_URL1,
     }
 
   if (!merge_b->dry_run && remaining_ranges->nelts > 0)
-    SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
-                                 remaining_ranges, is_revert, adm_access,
-                                 pool));
+    {
+      /* As some of the above merges may've changed the WC's merge
+         info, refresh our copy before using it to update the WC's
+         merge info. */
+      SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access,
+                               ctx, pool));
+      SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
+                                   remaining_ranges, is_revert, adm_access,
+                                   pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2185,9 +2192,16 @@ do_single_file_merge(const char *initial_URL1,
     }
 
   if (!merge_b->dry_run && remaining_ranges->nelts > 0)
-    SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
-                                 remaining_ranges, is_revert, adm_access,
-                                 pool));
+    {
+      /* As some of the above merges may've changed the WC's merge
+         info, refresh our copy before using it to update the WC's
+         merge info. */
+      SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access,
+                               ctx, pool));
+      SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
+                                   remaining_ranges, is_revert, adm_access,
+                                   pool));
+    }
 
   return SVN_NO_ERROR;
 }
