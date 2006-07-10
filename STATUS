@@ -70,15 +70,6 @@ Candidate changes:
     Votes:
       +1: nori
 
-  * r20218, r20428
-    Move away from using pools to manage bdb environments, since it
-    results in unpredictable behavior during shutdown due to pool 
-    destruction ordering issues.
-    Justification:
-      Unpredictable behavior is bad.
-    Votes:
-      +1: rooneg, jerenkrantz
-
   * r20248
     Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
     by adding a method, Svn::Core::Dirent#have_props?.
@@ -123,6 +114,15 @@ Approved changes:
       Low impact and needed for Apache 2.2 compatibility.
     Votes:
       +1: djh, rooneg, dlr
+
+  * r20218, r20428
+    Move away from using pools to manage bdb environments, since it
+    results in unpredictable behavior during shutdown due to pool 
+    destruction ordering issues.
+    Justification:
+      Unpredictable behavior is bad.
+    Votes:
+      +1: rooneg, jerenkrantz, cmpilato
 
   * r20225
     Additional documentation for Ruby bindings
