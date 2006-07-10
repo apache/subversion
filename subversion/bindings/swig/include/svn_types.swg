@@ -697,7 +697,9 @@
    Function Parameters (Category 1):
 
    'unsigned char digest[]':
-     Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum()
+     Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum(),
+                          svn_wc_transmit_text_deltas2()
+     
      *but* appears as an input parameter in svn_base64_from_md5() -
      practically, this means that svn_base64_from_md5 is in error, and
      should be using 'const unsigned char digest[]', but fortunately, we
@@ -710,11 +712,9 @@
      equivalent and can share the same typemaps.
 
 
-   Function Parameters (Category 2):
+   (Category 2):
 
-   'const unsigned char **digest':
-     Output parameter in: svn_wc_transmit_text_deltas2()
-     A *different* protocol for returning a digest.
+   There is no category 2!
 
 
    Function Parameters (No typemaps):
@@ -787,15 +787,6 @@
      of svn_swig_pl_from_md5(). */
     ST(argvi) = sv_newmortal();
     ST(argvi++) = svn_swig_pl_from_md5($1);
-}
-#endif
-
-/* Category 2 */
-
-#ifdef SWIGRUBY
-%typemap(argout) unsigned char **digest {
-  char *digest_string = (char *)svn_md5_digest_to_cstring(*$1, _global_pool);
-  %append_output(rb_str_new2(digest_string));
 }
 #endif
 

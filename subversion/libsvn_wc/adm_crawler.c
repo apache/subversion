@@ -711,7 +711,7 @@ svn_wc_transmit_text_deltas2(const char *path,
                              const svn_delta_editor_t *editor,
                              void *file_baton,
                              const char **tempfile,
-                             const unsigned char **digest,
+                             unsigned char digest[],
                              apr_pool_t *pool)
 {
   const char *tmpf, *tmp_base;
@@ -881,7 +881,7 @@ svn_wc_transmit_text_deltas2(const char *path,
   local_digest = svn_txdelta_md5_digest(txdelta_stream);
 
   if (digest)
-    *digest = local_digest;
+    memcpy(digest, local_digest, APR_MD5_DIGESTSIZE);
 
   /* Close the file baton, and get outta here. */
   return editor->close_file
