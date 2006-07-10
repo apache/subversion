@@ -87,6 +87,13 @@ Candidate changes:
     Votes:
       +1: dionisos, dlr
 
+  * r20522
+    Make svn_client_list conform to our guidelines for libsvn_client APIs.
+    Justification:
+      We can only do it right once: the first time.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
   * r20225
