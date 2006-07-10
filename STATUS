@@ -80,6 +80,13 @@ Candidate changes:
     Votes:
       +1: nori
 
+  * r20518
+    Make svn_wc_merge2 (new in 1.4) conformant to our API rules
+    Justification:
+      We can only do it right once: the first time.
+    Votes:
+      +1: dionisos
+
 Approved changes:
 
   * r20225
