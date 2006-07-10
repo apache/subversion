@@ -88,7 +88,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"encoding",      svn_cl__encoding_opt, 1,
                     N_("treat value as being in charset encoding ARG")},
 #endif
-  {"version",       svn_cl__version_opt, 0, N_("print client version info")},
+  {"version",       svn_cl__version_opt, 0,
+                    N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      svn_cl__auth_username_opt, 1,
@@ -346,11 +347,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "help", svn_cl__help, {"?", "h"}, N_
     ("Describe the usage of this program or its subcommands.\n"
      "usage: help [SUBCOMMAND...]\n"),
-    {svn_cl__version_opt, 'q', svn_cl__config_dir_opt} },
-  /* We need to support "--help", "-?", and all that good stuff, of
-     course.  But those options, since unknown, will result in the
-     help message being printed out anyway, so there's no need to
-     support them explicitly. */
+    {svn_cl__config_dir_opt} },
+  /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
   { "import", svn_cl__import, {0}, N_
     ("Commit an unversioned file or tree into the repository.\n"
@@ -1048,7 +1046,6 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__version_opt:
         opt_state.version = TRUE;
-        opt_state.help = TRUE;
         break;
       case svn_cl__auth_username_opt:
         err = svn_utf_cstring_to_utf8(&opt_state.auth_username,
@@ -1207,12 +1204,27 @@ main(int argc, const char *argv[])
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf(stderr, pool,
-                                 _("Subcommand argument required\n")));
-          svn_cl__help(NULL, NULL, pool);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          if (opt_state.version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
+                { "--version", svn_cl__help, {0}, "",
+                  {svn_cl__version_opt,    /* must accept its own option */
+                   'q',                    /* brief output */
+                   svn_cl__config_dir_opt  /* all commands accept this */
+                  } };
+
+              subcommand = &pseudo_cmd;
+            }
+          else
+            {
+              svn_error_clear
+                (svn_cmdline_fprintf(stderr, pool,
+                                     _("Subcommand argument required\n")));
+              svn_cl__help(NULL, NULL, pool);
+              svn_pool_destroy(pool);
+              return EXIT_FAILURE;
+            }
         }
       else
         {
@@ -1259,11 +1271,14 @@ main(int argc, const char *argv[])
               || (err = svn_utf_cstring_to_utf8(&cmdname_utf8,
                                                 subcommand->name, pool)))
             return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
-                              "Type 'svn help %s' for usage.\n"),
-              cmdname_utf8, optstr_utf8, cmdname_utf8));
+          if (subcommand->name[0] == '-')
+            svn_cl__help(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
+                                "Type 'svn help %s' for usage.\n"),
+                cmdname_utf8, optstr_utf8, cmdname_utf8));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
