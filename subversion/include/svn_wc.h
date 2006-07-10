@@ -3330,8 +3330,9 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  * This process creates a copy of @a path with keywords and eol
  * untranslated.  If @a tempfile is non-null, set @a *tempfile to the
  * path to this copy.  Do not clean up the copy; caller can do that.
- * If @a digest is non-null, set @a *digest to the MD5 checksum of the
- * temporary file.  (The purpose of handing back the tmp copy is that
+ * If @a digest is non-null, put the MD5 checksum of the
+ * temporary file into @a digest, which must point to @c APR_MD5_DIGESTSIZE
+ * bytes of storage.  (The purpose of handing back the tmp copy is that
  * it is usually about to become the new text base anyway, but the
  * installation of the new text base is outside the scope of this
  * function.)
@@ -3355,7 +3356,7 @@ svn_error_t *svn_wc_transmit_text_deltas2(const char *path,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
                                           const char **tempfile,
-                                          const unsigned char **digest,
+                                          unsigned char digest[],
                                           apr_pool_t *pool);
 
 /** Similar to svn_wc_transmit_text_deltas2(), but with @a digest set to null.
