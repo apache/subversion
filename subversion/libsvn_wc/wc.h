@@ -220,6 +220,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 */
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+                       enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *left,
                        const char *right,
                        const char *merge_target,
@@ -228,7 +229,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *right_label,
                        const char *target_label,
                        svn_boolean_t dry_run,
-                       enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        apr_pool_t *pool);
