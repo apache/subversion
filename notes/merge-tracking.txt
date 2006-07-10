@@ -400,7 +400,7 @@ No.
 
 Let's say you have
 
-a/foo (merge info: /trunk:5-9
+a/foo (merge info: /trunk:5-9)
 a/branches/bar (merge info: /trunk:1-4)
 
 If you copy a/foo into a/branches/bar, we now have
