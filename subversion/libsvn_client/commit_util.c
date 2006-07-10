@@ -1342,9 +1342,9 @@ svn_client__do_commit(const char *base_url,
       dir_path = svn_path_dirname(item->path, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
                                   subpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(item->path, item_access, fulltext,
-                                           editor, file_baton, 
-                                           &tempfile, digest, subpool));
+      SVN_ERR(svn_wc_transmit_text_deltas2(&tempfile, digest, item->path,
+                                           item_access, fulltext, editor,
+                                           file_baton, subpool));
       if (tempfile && *tempfiles)
         {
           tempfile = apr_pstrdup(apr_hash_pool_get(*tempfiles), tempfile);

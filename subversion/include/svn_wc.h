@@ -3350,13 +3350,13 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_transmit_text_deltas2(const char *path,
+svn_error_t *svn_wc_transmit_text_deltas2(const char **tempfile,
+                                          unsigned char digest[],
+                                          const char *path,
                                           svn_wc_adm_access_t *adm_access,
                                           svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
-                                          const char **tempfile,
-                                          unsigned char digest[],
                                           apr_pool_t *pool);
 
 /** Similar to svn_wc_transmit_text_deltas2(), but with @a digest set to null.
