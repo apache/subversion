@@ -866,6 +866,58 @@ def status_dash_u_missing_dir(sbox):
                                      [],
                                      "status", "-u", wc_dir)
 
+def status_add_plus_conflict(sbox):
+  "status on conflicted added file"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  branch_url  = svntest.main.current_repo_url + '/branch'
+  trunk_url  = svntest.main.current_repo_url + '/trunk'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'rev 2',
+                                     branch_url, trunk_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  branch_file = os.path.join(wc_dir, 'branch', 'file')
+
+  open(branch_file, 'wb+').write("line 1\nline2\nline3\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     branch_file, '-m', 'rev 3')
+
+  open(branch_file, 'wb').write("line 1\nline3\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     branch_file, '-m', 'rev 4')
+
+  open(branch_file, 'wb').write("line 1\nline2\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     branch_file, '-m', 'rev 5')
+
+  trunk_dir = os.path.join(wc_dir, 'trunk')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     branch_url, '-r', '2:3', trunk_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     branch_url, '-r', '4:5', trunk_dir)
+
+  expected_output = [
+    "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
+    "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
+    "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
+    "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', wc_dir)
+
 #----------------------------------------------------------------------  
 
 ########################################################################
@@ -894,6 +946,7 @@ test_list = [ None,
               status_ignored_dir,
               status_unversioned_dir,
               status_dash_u_missing_dir,
+              status_add_plus_conflict,
              ]
 
 if __name__ == '__main__':

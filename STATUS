@@ -91,13 +91,6 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20382
-    Fix status when a file is both added and conflicted.
-    Justification:
-      Small fix.  Low risk.
-    Votes:
-      +1: rooneg, dionisos, nori, dlr
-
   * r20395
     Don't error out during status due to inconsistent EOL styles in working
     copy files.
