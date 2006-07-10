@@ -60,7 +60,7 @@ Candidate changes:
       Low impact and fixes some build and test issues with Win32 and
       Apache 2.2.
     Votes:
-      +1: djh
+      +1: djh, rooneg
       +0: dlr
 
   * r20166
