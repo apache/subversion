@@ -68,7 +68,7 @@ Candidate changes:
     Justification:
       Simple fix, reported multiple times.
     Votes:
-      +1: rooneg, nori
+      +1: rooneg, nori, jerenkrantz
       +0: lgo
 
   * r20125
@@ -102,7 +102,7 @@ Candidate changes:
     Justification:
       Unpredictable behavior is bad.
     Votes:
-      +1: rooneg
+      +1: rooneg, jerenkrantz
 
   * r20248
     Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
