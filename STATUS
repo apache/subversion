@@ -80,13 +80,6 @@ Candidate changes:
     Votes:
       +1: nori
 
-  * r20518
-    Make svn_wc_merge2 (new in 1.4) conformant to our API rules
-    Justification:
-      We can only do it right once: the first time.
-    Votes:
-      +1: dionisos, dlr
-
   * r20522
     Make svn_client_list conform to our guidelines for libsvn_client APIs.
     Justification:
@@ -115,3 +108,10 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
+
+  * r20518
+    Make svn_wc_merge2 (new in 1.4) conformant to our API rules
+    Justification:
+      We can only do it right once: the first time.
+    Votes:
+      +1: dionisos, dlr, rooneg
