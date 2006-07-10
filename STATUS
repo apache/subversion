@@ -91,13 +91,6 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20270
-    Add two log commands required by loggy merge as added in r20313.
-    Justification:
-      Porting to 1.4.x prevents a wc-format bump later.
-    Votes:
-      +1: dionisos, rooneg, cmpilato
-
   * r20301, r20353
     Improve visibility of the "--version" option; fix quirks in parsing it.
     Justification:
