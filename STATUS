@@ -87,7 +87,7 @@ Candidate changes:
     Votes:
       +1: rooneg, maxb
 
-  * r20524
+  * r20524 (excluding bindings portion of change)
     1.4.x API consistency fix: make svn_wc_transmit_text_deltas2() use a
     digest output parameter in the same way that all the other functions
     in our API do.
@@ -95,6 +95,11 @@ Candidate changes:
       API cleanliness, avoid confusing users, avoid needing to write
       bindings that deal with two different protocols for returning the
       same kind of value.
+    Notes:
+      The bindings part of the trunk change conflicts when merged to 1.4.x -
+      simply revert that part. It is simply removal of code rendered
+      unused by the change - since leaving the code in place has no adverse
+      effects, it is not worth the effort of a merge branch.
     Votes:
       +1: maxb
 
