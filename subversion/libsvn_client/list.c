@@ -101,9 +101,9 @@ svn_client_list(const char *path_or_url,
                 svn_boolean_t recurse,
                 apr_uint32_t dirent_fields,
                 svn_boolean_t fetch_locks,
-                svn_client_ctx_t *ctx,
                 svn_client_list_func_t list_func,
                 void *baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
@@ -320,8 +320,8 @@ svn_client_ls3(apr_hash_t **dirents,
   lb.pool = pool;
 
   return svn_client_list(path_or_url, peg_revision, revision, recurse,
-                         SVN_DIRENT_ALL, locks != NULL, ctx,
-                         store_dirent, &lb, pool);
+                         SVN_DIRENT_ALL, locks != NULL,
+                         store_dirent, &lb, ctx, pool);
 }
 
 svn_error_t *
