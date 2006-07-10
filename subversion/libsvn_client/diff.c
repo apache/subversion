@@ -864,11 +864,11 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           const char *right_label = apr_psprintf(subpool,
                                                  _(".merge-right.r%ld"),
                                                  yours_rev);
-          SVN_ERR(svn_wc_merge2(older, yours, mine, adm_access,
+          SVN_ERR(svn_wc_merge2(&merge_outcome,
+                                older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
-                                merge_b->dry_run, &merge_outcome, 
-                                merge_b->diff3_cmd, merge_b->merge_options,
-                                subpool));
+                                merge_b->dry_run, merge_b->diff3_cmd,
+                                merge_b->merge_options, subpool));
         }
 
       /* Philip asks "Why?"  Why does the notification depend on whether the
