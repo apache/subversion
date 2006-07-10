@@ -91,17 +91,6 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20340 (and r20313)
-    Fix issue #1914: update runs diff3 twice
-    Justification:
-      With external diff3, without this chance, we can produce incorrect
-      merge result reports (G instead of C) because internal and external
-      diff tools can give different results.
-    Note:
-      r20340 depends on r20313 and 20270
-    Votes:
-      +1: dionisos, rooneg, cmpilato
-
   * r20382
     Fix status when a file is both added and conflicted.
     Justification:

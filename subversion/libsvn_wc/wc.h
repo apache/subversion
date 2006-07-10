@@ -197,6 +197,42 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t compare_textbases,
                                  apr_pool_t *pool);
 
+
+
+/* Merge the difference between LEFT and RIGHT into MERGE_TARGET,
+   accumulating instructions to update the working copy into LOG_ACCUM.
+
+   The merge result is stored in *MERGE_OUTCOME and merge conflicts
+   are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
+   TARGET_LABEL.
+
+   When DRY_RUN is true, no actual changes are made to the working copy.
+
+   If DIFF3_CMD is specified, the given external diff3 tool will
+   be used instead of our built in diff3 routines.
+
+   When MERGE_OPTIONS are specified, they are used by the internal
+   diff3 routines, or passed to the external diff3 tool.
+
+   For a complete description, see svn_wc_merge2() for which this is
+   the (loggy) implementation.
+
+*/
+svn_error_t *
+svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+                       const char *left,
+                       const char *right,
+                       const char *merge_target,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *left_label,
+                       const char *right_label,
+                       const char *target_label,
+                       svn_boolean_t dry_run,
+                       enum svn_wc_merge_outcome_t *merge_outcome,
+                       const char *diff3_cmd,
+                       const apr_array_header_t *merge_options,
+                       apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
