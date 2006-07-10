@@ -82,15 +82,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20030
-    Fix svn export so it creates intermediate local folders if needed,
-    thereby making it consistent with svn checkout.
-    Justification:
-      Improves consistency for users.
-    Votes:
-      +1: rooneg, dionisos, dlr
-      +1: lgo, nori    (non-binding)
-
   * r20077
     Fix merge failure when target of an add has been deleted.
     Justification:
