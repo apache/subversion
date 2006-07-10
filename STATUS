@@ -91,14 +91,6 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20301, r20353
-    Improve visibility of the "--version" option; fix quirks in parsing it.
-    Justification:
-      Users are happy if they can reasonably find a description for the
-      "--version" option.
-    Votes:
-      +1: dionisos, nori, cmpilato
-
   * r20340 (and r20313)
     Fix issue #1914: update runs diff3 twice
     Justification:
