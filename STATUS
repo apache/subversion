@@ -91,16 +91,6 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20400
-    Update the SWIG ignore information for new svn_io.h and svn_path.h
-    functions added for 1.4 (and for 1.3 too, since we forget to do that
-    before).
-    Justification:
-      Avoid exporting broken and/or unsupported wrappings of functions to the
-      bindings.
-    Votes:
-      +1: maxb, cmpilato
-
   * r20423
     Re-order the arguments of svn_txdelta_to_svndiff2(), a new API in 1.4,
     so that they meet our conventions of:
