@@ -94,6 +94,17 @@ Candidate changes:
     Votes:
       +1: rooneg
 
+  * r20524
+    1.4.x API consistency fix: make svn_wc_transmit_text_deltas2() use a
+    digest output parameter in the same way that all the other functions
+    in our API do.
+    Justification:
+      API cleanliness, avoid confusing users, avoid needing to write
+      bindings that deal with two different protocols for returning the
+      same kind of value.
+    Votes:
+      +1: maxb
+
 Approved changes:
 
   * r20225
