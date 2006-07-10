@@ -82,15 +82,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20218, r20428
-    Move away from using pools to manage bdb environments, since it
-    results in unpredictable behavior during shutdown due to pool 
-    destruction ordering issues.
-    Justification:
-      Unpredictable behavior is bad.
-    Votes:
-      +1: rooneg, jerenkrantz, cmpilato
-
   * r20225
     Additional documentation for Ruby bindings
     Justification:
