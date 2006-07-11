@@ -105,6 +105,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Jun 26 2006 David Summers <david@summersoft.fay.ar.us> r20253
+- [RHEL3,RHEL4] Follow-up to r20040, changed %{apache_dir} to %{_libdir}
+  and %{_prefix} to %{_libdir} to help out people compiling 64-bit versions.
+  Thanks to Toby Johnson and others.
+
 * Sun Jun 11 2006 David Summers <david@summersoft.fay.ar.us> r20040
 - Figured out another (better) way to fix Subversion bug #1456 instead of
   depending on a third program (chrpath); Used Fedora Core RPATH patch to

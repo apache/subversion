@@ -64,17 +64,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20255, r20256
-    Complete RPM changes to correctly build on x86-64 architecture.
-    Justification:
-      Quite a few user requests and also RPMs should work on all architectures.
-    Notes:
-      See also r20040 - which is a separate merge item to allow
-      the unrelated r20041 to be merged in between, to avoid conflicts.
-    Votes:
-      +1: dws
-      +0: rooneg
-    
   * r20461, r20469, r20470, r20473, r20476
     Port RPMs to APR/APR-UTIL >= 0.9.7 (0.9.12)
     Justification:
