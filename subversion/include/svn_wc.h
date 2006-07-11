@@ -2947,7 +2947,8 @@ typedef enum svn_wc_merge_outcome_t
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_merge2(const char *left,
+svn_error_t *svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+                           const char *left,
                            const char *right,
                            const char *merge_target,
                            svn_wc_adm_access_t *adm_access,
@@ -2955,7 +2956,6 @@ svn_error_t *svn_wc_merge2(const char *left,
                            const char *right_label,
                            const char *target_label,
                            svn_boolean_t dry_run,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
                            const char *diff3_cmd,
                            const apr_array_header_t *merge_options,
                            apr_pool_t *pool);

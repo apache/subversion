@@ -34,6 +34,7 @@
 
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+                       enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *left,
                        const char *right,
                        const char *merge_target,
@@ -42,7 +43,6 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *right_label,
                        const char *target_label,
                        svn_boolean_t dry_run,
-                       enum svn_wc_merge_outcome_t *merge_outcome,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        apr_pool_t *pool)
@@ -395,7 +395,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
 
 svn_error_t *
-svn_wc_merge2(const char *left,
+svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
               const char *right,
               const char *merge_target,
               svn_wc_adm_access_t *adm_access,
@@ -403,19 +404,17 @@ svn_wc_merge2(const char *left,
               const char *right_label,
               const char *target_label,
               svn_boolean_t dry_run,
-              enum svn_wc_merge_outcome_t *merge_outcome,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
               apr_pool_t *pool)
 {
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_wc__merge_internal(&log_accum,
+  SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
                                  left, right, merge_target,
                                  adm_access,
                                  left_label, right_label, target_label,
                                  dry_run,
-                                 merge_outcome,
                                  diff3_cmd,
                                  merge_options,
                                  pool));
@@ -441,7 +440,8 @@ svn_wc_merge(const char *left,
              const char *diff3_cmd,
              apr_pool_t *pool)
 {
-  return svn_wc_merge2(left, right, merge_target, adm_access,
+  return svn_wc_merge2(merge_outcome,
+                       left, right, merge_target, adm_access,
                        left_label, right_label, target_label,
-                       dry_run, merge_outcome, diff3_cmd, NULL, pool);
+                       dry_run, diff3_cmd, NULL, pool);
 }

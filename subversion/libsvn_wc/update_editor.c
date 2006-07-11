@@ -2076,13 +2076,13 @@ merge_file(svn_stringbuf_t *log_accum,
                  working copy to LOG_ACCUM. */
               base = svn_wc_adm_access_path(adm_access);
               SVN_ERR(svn_wc__merge_internal
-                      (&log_accum,
+                      (&log_accum, &merge_outcome,
                        svn_path_join(base, txtb, pool),
                        svn_path_join(base, tmp_txtb, pool),
                        svn_path_join(base, base_name, pool),
                        adm_access,
                        oldrev_str, newrev_str, ".mine",
-                       FALSE, &merge_outcome, diff3_cmd, NULL,
+                       FALSE, diff3_cmd, NULL,
                        pool));
 
             } /* end: working file exists and has mods */

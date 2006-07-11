@@ -548,10 +548,10 @@ log_do_merge(struct log_runner *loggy,
                        loggy->pool);
 
   /* Now do the merge with our full paths. */
-  err = svn_wc__merge_internal(&log_accum,
+  err = svn_wc__merge_internal(&log_accum, &merge_outcome,
                                left, right, name, loggy->adm_access,
                                left_label, right_label, target_label,
-                               FALSE, &merge_outcome, loggy->diff3_cmd, NULL,
+                               FALSE, loggy->diff3_cmd, NULL,
                                loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
