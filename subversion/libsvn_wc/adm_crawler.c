@@ -699,13 +699,13 @@ svn_wc_crawl_revisions(const char *path,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas2(const char *path,
+svn_wc_transmit_text_deltas2(const char **tempfile,
+                             unsigned char digest[],
+                             const char *path,
                              svn_wc_adm_access_t *adm_access,
                              svn_boolean_t fulltext,
                              const svn_delta_editor_t *editor,
                              void *file_baton,
-                             const char **tempfile,
-                             unsigned char digest[],
                              apr_pool_t *pool)
 {
   const char *tmpf, *tmp_base;
@@ -891,8 +891,8 @@ svn_wc_transmit_text_deltas(const char *path,
                             const char **tempfile,
                             apr_pool_t *pool)
 {
-  return svn_wc_transmit_text_deltas2(path, adm_access, fulltext, editor,
-                                      file_baton, tempfile, NULL, pool);
+  return svn_wc_transmit_text_deltas2(tempfile, NULL, path, adm_access,
+                                      fulltext, editor, file_baton, pool);
 }
 
 svn_error_t *
