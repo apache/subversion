@@ -64,17 +64,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20041
-    Get rid of requirement for another RPM package (chrpath) to build the
-    Linux RPM packages.
-    Justification:
-      Using Fedora Core as an example, I figured out a better
-      way to simplify build package requirements with patch instead of
-      package.
-    Votes:
-      +1: dws
-      +0: rooneg
-
   * r20255, r20256
     Complete RPM changes to correctly build on x86-64 architecture.
     Justification:
