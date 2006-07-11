@@ -64,14 +64,6 @@ Approved changes:
     Votes:
       +1: maxb, malcolm, rooneg
 
-  * r20461, r20469, r20470, r20473, r20476
-    Port RPMs to APR/APR-UTIL >= 0.9.7 (0.9.12)
-    Justification:
-      Unbreak RPM build on 1.4.x branch.
-    Votes:
-      +1: dws
-      +0: rooneg
-
   * r20225
     Additional documentation for Ruby bindings
     Justification:

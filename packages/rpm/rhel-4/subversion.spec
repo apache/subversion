@@ -1,5 +1,5 @@
 %define apache_version 2.0.52
-%define apr_version 0.9.4
+%define apr_version 0.9.7
 %define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
@@ -20,7 +20,6 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
-Patch0: apr.patch
 Patch1: subversion-0.31.0-rpath.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
@@ -106,6 +105,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
+- [RH8,RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
+  RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes
+  APR/APR-UTIL 0.9.12.
+
 * Mon Jun 26 2006 David Summers <david@summersoft.fay.ar.us> r20253
 - [RHEL3,RHEL4] Follow-up to r20040, changed %{apache_dir} to %{_libdir}
   and %{_prefix} to %{_libdir} to help out people compiling 64-bit versions.
@@ -474,9 +478,6 @@ Tools for Subversion.
 
 %prep
 %setup -q
-
-# Patch for APR
-%patch0 -p0
 
 # Patch for RPATH
 %patch1 -p1
