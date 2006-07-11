@@ -499,7 +499,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  *   * subcommand-specific help (svn_opt_subcommand_help)
  *   * generic help (svn_opt_print_generic_help)
  *   * version info
- *   * simple usage complaint: "Type '@a pgn_name help' for usage."
+ *   * simple usage complaint: "Type '@a pgm_name help' for usage."
  *
  * If @a os is not @c NULL and it contains arguments, then try printing
  * help for them as though they are subcommands, using @a cmd_table

@@ -547,7 +547,7 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * @a tgt_root.  @a src_entry is the node to update.  If @a src_entry
  * is empty, then compute the difference between the entire tree
  * anchored at @a src_parent_dir under @a src_root and @a tgt_path
- * under @a target_root.  Else, describe the changes needed to update
+ * under @a tgt_root.  Else, describe the changes needed to update
  * only that entry in @a src_parent_dir.  Typically, callers of this
  * function will use a @a tgt_path that is the concatenation of @a
  * src_parent_dir and @a src_entry.

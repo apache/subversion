@@ -239,8 +239,7 @@ typedef svn_boolean_t (*svn_config_section_enumerator2_t)(const char *name,
  * ### See kff's comment to svn_config_enumerate2().  It applies to this
  * function, too. ###
  *
- * @a callback's @a name and @a name parameters are only valid for the
- * duration of the call.
+ * @a callback's @a name parameter is only valid for the duration of the call.
  *
  * @since New in 1.3.
  */
@@ -301,7 +300,7 @@ int svn_config_enumerate2(svn_config_t *cfg, const char *section,
                           apr_pool_t *pool);
 
 /**
- * Return @c TRUE if @a section exists in @a config, @c FALSE otherwise.
+ * Return @c TRUE if @a section exists in @a cfg, @c FALSE otherwise.
  *
  * @since New in 1.4.
  */

@@ -3410,7 +3410,7 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
-/** Return @c TRUE iff @a STR matches any of the elements of @a LIST, a
+/** Return true iff @a str matches any of the elements of @a list, a
  * list of zero or more ignore patterns.
  *
  * @since New in 1.5.
