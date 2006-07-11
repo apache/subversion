@@ -40,7 +40,7 @@ for repos dump/load, including the merge history index.
 * Move update design.html with the latest content from the design spec
   in the notes/ dir.
 
-* ra_serf (phase 2?)
+* ra_serf: Implement svn_ra_get_merge_info() (phase 2?).
 
 
 
