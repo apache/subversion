@@ -88,15 +88,6 @@ Candidate changes:
 
 Candidate changes for the RPMs:
 
-  * r20462
-    Delete Red Hat 7.x RPMs.
-    Justification:
-      It would be distinctly inappropriate to leave them in 1.4.x, if we
-      merge fixes made in trunk after their removal from trunk to the other
-      versions of the RPMs in 1.4.x.
-    Votes:
-      +1: maxb, malcolm, dws
-
   === The next 6 backports form a chain of merge dependencies! ===
 
   * r20012
