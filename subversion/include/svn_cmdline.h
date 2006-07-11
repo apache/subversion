@@ -154,7 +154,7 @@ svn_cmdline_prompt_user(const char **result,
  *
  * @since New in 1.4.
  */
-typedef struct {
+typedef struct svn_cmdline_prompt_baton_t {
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 } svn_cmdline_prompt_baton_t;

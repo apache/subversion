@@ -46,7 +46,7 @@ extern "C" {
  * @since New in 1.4.
  *
  * Not specifying any of these means no removal at all. */
-typedef enum
+typedef enum svn_io_file_del_t
 {
   /** No deletion ever */
   svn_io_file_del_none = 0,
