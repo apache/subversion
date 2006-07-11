@@ -419,8 +419,8 @@ svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
   svn_commit_callback2_t callback2;
   void *callback2_baton;
 
-  svn_compat_wrap_commit_callback(callback, callback_baton,
-                                  &callback2, &callback2_baton,
+  svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
+                                  callback, callback_baton,
                                   pool);
 
   return svn_ra_get_commit_editor2(session, editor, edit_baton,
