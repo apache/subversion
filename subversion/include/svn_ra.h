@@ -711,6 +711,9 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * svn_merge_range_t * elements), or @c NULL if there is no merge
  * info available.
  *
+ * When @a include_parents is @c TRUE, include inherited merge info
+ * from parent directories of @a paths.
+ *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * @since New in 1.5.

@@ -1040,6 +1040,9 @@ svn_repos_get_logs(svn_repos_t *repos,
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h).
  *
+ * When @a include_parents is @c TRUE, include inherited merge info
+ * from parent directories of @a paths.
+ *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
