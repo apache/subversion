@@ -72,14 +72,7 @@ Candidate changes:
 
 Candidate changes for the RPMs:
 
-  === The next 5 backports form a chain of merge dependencies! ===
-
-  * r20023
-    RPM specfiles: Abstract Python version into macro.
-    Justification:
-      Avoid merge conflicts with future backports.
-    Votes:
-      +1: maxb, dws
+  === The next 4 backports form a chain of merge dependencies! ===
 
   * r20040
     Begin RPM changes to correctly build on x86-64 architecture.
