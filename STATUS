@@ -67,7 +67,7 @@ Candidate changes:
     More API cleanliness for svn_wc_transmit_text_deltas2() - move the output
     parameters first, as per our standards.
     Votes:
-      +1: maxb
+      +1: maxb, malcolm
 
 Approved changes:
 
