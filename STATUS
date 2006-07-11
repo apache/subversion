@@ -46,6 +46,11 @@ Candidate changes:
     Votes:
       +1: nori, rooneg
 
+  * r20558
+    Add missing '@since New in 1.4.' notation.
+    Votes:
+      +1: maxb
+
 Approved changes:
 
   * r20248
