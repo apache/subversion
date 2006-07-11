@@ -44,7 +44,9 @@ Candidate changes:
     Justification:
       Improves usability for the bindings around documentation.
     Votes:
-      +1: nori
+      +1: nori, rooneg
+
+Approved changes:
 
   * r20248
     Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
@@ -54,9 +56,7 @@ Candidate changes:
     Note:
       Depends on r20225 - merge conflicts unless this revision is not merged.
     Votes:
-      +1: nori
-
-Approved changes:
+      +1: nori, rooneg
 
   * r20225
     Additional documentation for Ruby bindings
