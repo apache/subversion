@@ -97,12 +97,12 @@ typedef struct svn_ra__vtable_t {
                            apr_hash_t **props,
                            apr_pool_t *pool);
   svn_error_t *(*get_dir)(svn_ra_session_t *session,
-                          const char *path,
-                          svn_revnum_t revision,
-                          apr_uint32_t dirent_fields,
                           apr_hash_t **dirents,
                           svn_revnum_t *fetched_rev,
                           apr_hash_t **props,
+                          const char *path,
+                          svn_revnum_t revision,
+                          apr_uint32_t dirent_fields,
                           apr_pool_t *pool);
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter2_t **reporter,
