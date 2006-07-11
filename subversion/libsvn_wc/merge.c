@@ -98,10 +98,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         {
           int exit_code;
 
-          SVN_ERR(svn_io_run_diff3_2(".",
+          SVN_ERR(svn_io_run_diff3_2(&exit_code, ".",
                                      tmp_target, left, right,
                                      target_label, left_label, right_label,
-                                     result_f, &exit_code, diff3_cmd,
+                                     result_f, diff3_cmd,
                                      merge_options, pool));
 
           contains_conflicts = exit_code == 1;
