@@ -30,27 +30,6 @@ Candidate changes:
       +1: nori
       +0: blair
 
-  * r20180, r20187
-    Finish Apache 2.2/APR 1.x build/test support for Win32.
-    Justification:
-      Low impact and fixes some build and test issues with Win32 and
-      Apache 2.2.
-    Votes:
-      +1: djh, rooneg
-      +0: dlr
-
-  * r20166
-    Add install-swig-rb-doc make target.
-    Justification:
-      Improves usability for the bindings around documentation.
-    Votes:
-      +1: nori, rooneg
-
-  * r20558
-    Add missing '@since New in 1.4.' notation.
-    Votes:
-      +1: maxb, rooneg
-
 Approved changes:
 
   * r20248
@@ -71,3 +50,25 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
+
+  * r20180, r20187
+    Finish Apache 2.2/APR 1.x build/test support for Win32.
+    Justification:
+      Low impact and fixes some build and test issues with Win32 and
+      Apache 2.2.
+    Votes:
+      +1: djh, rooneg, jerenkrantz
+      +0: dlr
+
+  * r20166
+    Add install-swig-rb-doc make target.
+    Justification:
+      Improves usability for the bindings around documentation.
+    Votes:
+      +1: nori, rooneg, jerenkrantz
+
+  * r20558
+    Add missing '@since New in 1.4.' notation.
+    Votes:
+      +1: maxb, rooneg, jerenkrantz
+
