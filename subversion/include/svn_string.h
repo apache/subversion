@@ -159,7 +159,7 @@ svn_boolean_t svn_string_compare(const svn_string_t *str1,
  */
 apr_size_t svn_string_first_non_whitespace(const svn_string_t *str);
 
-/** Return position of last occurrence of @a char in @a str, or return
+/** Return position of last occurrence of @a ch in @a str, or return
  * @a str->len if no occurrence.
  */ 
 apr_size_t svn_string_find_char_backward(const svn_string_t *str, char ch);
@@ -221,7 +221,7 @@ void svn_stringbuf_setempty(svn_stringbuf_t *str);
 svn_boolean_t svn_stringbuf_isempty(const svn_stringbuf_t *str);
 
 /** Chop @a nbytes bytes off end of @a str, but not more than @a str->len. */
-void svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t bytes);
+void svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
 
 /** Fill bytestring @a str with character @a c. */
 void svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);

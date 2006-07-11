@@ -902,7 +902,7 @@ svn_error_t *svn_io_run_diff(const char *dir,
                              apr_pool_t *pool);
 
 
-/** Invoke @c the configured diff3 program, in utf8-encoded @a dir
+/** Invoke the configured @c diff3 program, in utf8-encoded @a dir
  * like this:
  *
  *          diff3 -E -m @a mine @a older @a yours > @a merged
@@ -949,7 +949,7 @@ svn_error_t *svn_io_run_diff3_2(const char *dir,
                                 const apr_array_header_t *user_args,
                                 apr_pool_t *pool);
 
-/** Similar to @a svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
+/** Similar to svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */

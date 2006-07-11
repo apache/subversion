@@ -1644,7 +1644,7 @@ svn_client_diff_summarize_peg(const char *path,
  * ctx->notify_baton2 once for each merged target, passing the target's local 
  * path.
  *
- * If @a dry_run is @a true the merge is carried out, and full notification
+ * If @a dry_run is true, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
  * The authentication baton cached in @a ctx is used to communicate with the 
@@ -1765,7 +1765,7 @@ svn_client_relocate(const char *dir,
 
 /** Restore the pristine version of a working copy @a paths,
  * effectively undoing any local mods.  For each path in @a paths, if
- * it is a directory, and @a recursive is @a true, this will be a
+ * it is a directory, and @a recursive is true, this will be a
  * recursive operation.
  *
  * If @a ctx->notify_func2 is non-null, then for each item reverted,
@@ -2153,7 +2153,7 @@ svn_client_revprop_get(const char *propname,
  * copy path.
  *
  * Each element of the returned array is (@c svn_client_proplist_item_t *).
- * For each item, item->node_name contains the name relative to the
+ * For each @a item, @a item->node_name contains the name relative to the
  * same base as @a target, and @a item->prop_hash maps (<tt>const char *</tt>)
  * property names to (@c svn_string_t *) values.
  * 

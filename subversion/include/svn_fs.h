@@ -717,10 +717,9 @@ svn_error_t *svn_fs_txn_prop(svn_string_t **value_p,
                              apr_pool_t *pool);
 
 
-/** Set @a *table_p to the entire property list of transaction @a txn in
- * filesystem @a fs, as an APR hash table allocated in @a pool.  The
- * resulting table maps property names to pointers to @c svn_string_t
- * objects containing the property value.
+/** Set @a *table_p to the entire property list of transaction @a txn, as
+ * an APR hash table allocated in @a pool.  The resulting table maps property
+ * names to pointers to @c svn_string_t objects containing the property value.
  */
 svn_error_t *svn_fs_txn_proplist(apr_hash_t **table_p,
                                  svn_fs_txn_t *txn,
@@ -887,7 +886,7 @@ svn_error_t *svn_fs_paths_changed(apr_hash_t **changed_paths_p,
 /* Operations appropriate to all kinds of nodes.  */
 
 /** Set @a *kind_p to the type of node present at @a path under @a
- * root.  If @a path does not exist under @a root, set @a *kind to @c
+ * root.  If @a path does not exist under @a root, set @a *kind_p to @c
  * svn_node_none.  Use @a pool for temporary allocation.
  */
 svn_error_t *svn_fs_check_path(svn_node_kind_t *kind_p,
@@ -910,12 +909,12 @@ svn_error_t *svn_fs_node_history(svn_fs_history_t **history_p,
                                  apr_pool_t *pool);
 
 
-/** Set @a *prev_history_t to an opaque node history object which
+/** Set @a *prev_history_p to an opaque node history object which
  * represents the previous (or "next oldest") interesting history
  * location for the filesystem node represented by @a history, or @c
  * NULL if no such previous history exists.  If @a cross_copies is @c
  * FALSE, also return @c NULL if stepping backwards in history to @a
- * prev_history_t would cross a filesystem copy operation.  
+ * *prev_history_p would cross a filesystem copy operation.  
  *
  * @note If this is the first call to svn_fs_history_prev() for the @a
  * history object, it could return a history object whose location is
