@@ -19,6 +19,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
       - 'svn diff --summarize' (issue #2015)
       - 'svn merge/blame -x' (r18716 -20) (r18602 -857)
     * 'svn log' now supports peg revisions (issue #2287)
+    * 'svn export' now creates intermediate directories if needed (r20030)
     * use switch/relocate when svn:externals updated (issue #2209)
     * internal diff can ignore whitespace and eol style changes (issue #2121)
     * conflict markers now match the file's eol style (issue #1325)
@@ -33,8 +34,11 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: 'svn checkout' should default operative rev to peg rev (r18422)
     * fixed: 'svn diff' supports all eol styles (r17624 -8 -61 18195 -392)
     * fixed: 'svn diff' multi-target memory leak (r17518)
+    * fixed: 'svn merge' showing wrong status with external diff3 (issue #1914)
+    * fixed: 'svn merge' not merging added dir into deleted dir (issue #2515)
     * fixed: 'svn rm' of non-existent item should fail (issue #2440)
     * fixed: 'svn status' should skip unversioned files (issue #2030)
+    * fixed: 'svn status' shows added and conflicted files as added (r20382)
     * fixed: 'svn switch --relocate' may set wrong repos root (r17031)
     * fixed: 'svn switch --relocate' memory leak (r19535)
     * fixed: 'svn switch --relocate' not caching passwords (issue #2360)
@@ -92,7 +96,11 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: delta combiner reading past EOF (r17743)
 
 Developer-visible-changes:
+* require APR >= 0.9.7 to improve error detection for FSFS repos (r19915)
+* require zlib, for svndiff1 delta encoding (r18363)
+* support SWIG 1.3.29 (r19968)
 * numerous improvements to gen-make.py build system, especially on win32
+* removed Visual Studio.NET APR 0.9 project files (r20170)
 * numerous improvements to the test suite
 * new public APIs:
   - keyword and eol translation helpers and generic streams (see svn_subst.h)
@@ -127,6 +135,7 @@ Developer-visible-changes:
 * fixed: svn_client_copy and _move should fail if target exists (issue #2188)
 * fixed: svn_io_file_rename and readonlyness on Windows and UNIX (r17366 -69)
 * fixed: ra_dav memory leak when reusing session (issue #2247)
+* fixed: console character encoding problems when built with VS2005 (r20108)
 * SWIG bindings:
     - SWIG/python bindings:
       - new support for svn_client_info (r19413)
