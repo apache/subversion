@@ -552,7 +552,19 @@ AC_PATH_PROG(PERL, perl, none)
 AC_PATH_PROG(RUBY, ruby, none)
 if test "$RUBY" != "none"; then
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
-    :
+    AC_PATH_PROG(RDOC, rdoc, none)
+    AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
+    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
+    ])
+    RUBY_MAJOR="$svn_cv_ruby_major"
+
+    AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
+    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MINOR))'`"
+    ])
+    RUBY_MINOR="$svn_cv_ruby_minor"
+
+    AC_SUBST(RUBY_MAJOR)
+    AC_SUBST(RUBY_MINOR)
   else
     RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])

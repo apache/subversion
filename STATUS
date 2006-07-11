@@ -57,10 +57,3 @@ Approved changes:
     Votes:
       +1: blair, nori
 
-  * r20166
-    Add install-swig-rb-doc make target.
-    Justification:
-      Improves usability for the bindings around documentation.
-    Votes:
-      +1: nori, rooneg, jerenkrantz
-

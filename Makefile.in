@@ -118,6 +118,7 @@ SWIG_RB_LINK = @SWIG_RB_LINK@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
+SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/java/javahl/include
 
@@ -258,6 +259,9 @@ javahl_java_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
 
 RUBY = @RUBY@
+RUBY_MAJOR = @RUBY_MAJOR@
+RUBY_MINOR = @RUBY_MINOR@
+RDOC = @RDOC@
 
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -718,3 +722,5 @@ clean-swig-rb:
 extraclean-swig-rb: clean-swig-rb
 	$(EXTRACLEAN_SWIG_RB)
 
+install-swig-rb-doc:
+	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"
