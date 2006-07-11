@@ -1,0 +1,73 @@
+The formulative plan for prototyping a Merge Tracking implementation
+for Subversion's core <http://subversion.tigris.org/merge-tracking/>.
+
+Phase 1
+=======
+
+Record and use merge history to avoid the repeated merge problem and
+allow for cherry-picking.  Expose merge info via properties.  Allow
+for repos dump/load, including the merge history index.
+
+* Handle notifications resulting from a merge.  (dlr)
+
+  * Collate changes as merge ranges are applied.  Detect and handle
+    collisions (multiple notifications to the same WC item), giving
+    preference to later notifications (?).
+
+  * Stop applying merge ranges as soon as a conflict is encountered,
+    and be sure to record partial application of merge ranges (in
+    addition to the usual full application).
+
+* Handle merge info inheritance (and eliding, if any additional work
+  is necessary).  (madanus)
+
+* Handle initialization of merge info represented by a copy source:
+  target merge info = source revs + source merge info
+
+  * Update design spec.  (dberlin?)
+
+  * Update code.  (dlr?)
+
+  * Anything similar necessary for moves?
+
+* ra_dav: Implement svn_ra_get_merge_info().  (dberlin)
+
+* mod_dav_svn: Implement handling for svn_ra_get_merge_info() (as a new
+  custom REPORT?).  (dberlin)
+
+* BerkeleyDB FS
+
+* Move update design.html with the latest content from the design spec
+  in the notes/ dir.
+
+* ra_serf (phase 2?)
+
+
+
+Phase 2
+=======
+
+Implement auditing/reporting and other high-level features.
+
+* Add svnmerge.py-like commands for property editing:
+  
+  * Discuss the following on the dev list:
+
+    avail         Show unmerged revisions available for PATH as a revision list
+      --all         show both available and blocked revisions (aka ignore
+                    blocked revisions)
+      --diff        show corresponding diff instead of revision list
+      --log         show corresponding log history instead of revision list
+    block         Block revisions within PATH so that they disappear from the
+                  available list
+    integrated    Show merged revisions available for PATH as a revision list
+      --diff        show corresponding diff instead of revision list
+      --log         show corresponding log history instead of revision list
+    merge/rollback
+      --record-only do not perform an actual merge of the changes, yet record
+                    that a merge happened
+    unblock       Revert the effect of 'block'
+
+  * Write up outcome in func-spec.html.
+
+* Much more to come...
