@@ -30,6 +30,12 @@ Candidate changes:
       +1: nori
       +0: blair
 
+  * r20562
+    API: Use named, not anonymous, structs and enums in new-in-1.4 cases, for
+    consistency with the majority of existing cases.
+    Votes:
+      +1: maxb
+
 Approved changes:
 
   * r20248
