@@ -69,10 +69,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-
-Candidate changes for the RPMs:
-
-  === The next 4 backports form a chain of merge dependencies! ===
+Approved changes:
 
   * r20040
     Begin RPM changes to correctly build on x86-64 architecture.
@@ -83,6 +80,7 @@ Candidate changes for the RPMs:
       the unrelated r20041 to be merged in between, to avoid conflicts.
     Votes:
       +1: dws
+      +0: rooneg
     
   * r20041
     Get rid of requirement for another RPM package (chrpath) to build the
@@ -93,6 +91,7 @@ Candidate changes for the RPMs:
       package.
     Votes:
       +1: dws
+      +0: rooneg
 
   * r20255, r20256
     Complete RPM changes to correctly build on x86-64 architecture.
@@ -103,6 +102,7 @@ Candidate changes for the RPMs:
       the unrelated r20041 to be merged in between, to avoid conflicts.
     Votes:
       +1: dws
+      +0: rooneg
     
   * r20461, r20469, r20470, r20473, r20476
     Port RPMs to APR/APR-UTIL >= 0.9.7 (0.9.12)
@@ -110,8 +110,7 @@ Candidate changes for the RPMs:
       Unbreak RPM build on 1.4.x branch.
     Votes:
       +1: dws
-
-Approved changes:
+      +0: rooneg
 
   * r20225
     Additional documentation for Ruby bindings
@@ -121,4 +120,3 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
-
