@@ -49,9 +49,11 @@ Phase 2
 
 Implement auditing/reporting and other high-level features.
 
-* Add svnmerge.py-like commands for property editing:
+* Add some set of svnmerge.py-like commands for merge info
+  auditing/editing to the 'svn' command-line binary.
   
-  * Discuss the following on the dev list:
+  * Discuss the following command set on the dev list (as just a
+    jumping-off point):
 
     avail         Show unmerged revisions available for PATH as a revision list
       --all         show both available and blocked revisions (aka ignore
