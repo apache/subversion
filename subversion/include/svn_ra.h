@@ -1559,6 +1559,7 @@ svn_error_t * svn_ra_svn_init(int abi_version,
 
 /** Initialize libsvn_ra_serf.
  *
+ * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.1 API. */
 svn_error_t * svn_ra_serf_init(int abi_version,
                                apr_pool_t *pool,

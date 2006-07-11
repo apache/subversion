@@ -41,9 +41,11 @@ extern "C" {
 
 
 /** Used as an argument when creating temporary files to indicate
-    when a file should be removed.
-
-    Not specifying any of these means no removal at all. */
+ * when a file should be removed.
+ *
+ * @since New in 1.4.
+ *
+ * Not specifying any of these means no removal at all. */
 typedef enum
 {
   /** No deletion ever */

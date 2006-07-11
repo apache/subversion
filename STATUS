@@ -73,8 +73,3 @@ Approved changes:
     Votes:
       +1: nori, rooneg, jerenkrantz
 
-  * r20558
-    Add missing '@since New in 1.4.' notation.
-    Votes:
-      +1: maxb, rooneg, jerenkrantz
-
