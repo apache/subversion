@@ -151,7 +151,7 @@ Developer-visible-changes:
     - API for path validation (r18989, r19079)
     - C++/Java code refactoring, cleanup, and consolidation
     - fixed: handle possible errors from date/time conversions (r17213)
-    - fixed: SVNClient username()/password() JVM crash on null input (r19825)
+    - fixed: SVNClient username/password JVM crash on null input (r19803 -13)
     - fixed: specify default UUID load action (r18030)
     - fixed: compile error on Visual Studio 2005 (r18054)
 
