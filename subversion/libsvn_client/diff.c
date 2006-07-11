@@ -94,6 +94,72 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
 }
 
 
+static svn_error_t *
+display_mergeinfo_diff(const char *orig_mergeinfo_val,
+                       const char *new_mergeinfo_val,
+                       const char *encoding,
+                       apr_file_t *file,
+                       apr_pool_t *pool)
+{
+  apr_hash_t *orig_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
+  apr_hash_index_t *hi;
+  const void *from_path;
+  apr_array_header_t *merge_revarray;
+  svn_stringbuf_t *merge_revstr;
+
+  if (orig_mergeinfo_val)
+    SVN_ERR(svn_mergeinfo_parse(orig_mergeinfo_val, 
+                                &orig_mergeinfo_hash, pool));
+  else
+    orig_mergeinfo_hash = apr_hash_make(pool);
+
+  if (new_mergeinfo_val)
+    SVN_ERR(svn_mergeinfo_parse(new_mergeinfo_val, &new_mergeinfo_hash, pool));
+  else
+    new_mergeinfo_hash = apr_hash_make(pool);
+
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, orig_mergeinfo_hash, 
+                             new_mergeinfo_hash, pool));
+
+  for (hi = apr_hash_first(pool, deleted); 
+       hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+
+      from_path = key;
+      merge_revarray = val;
+
+      svn_rangelist_to_string(&merge_revstr, merge_revarray, pool);
+
+      SVN_ERR(file_printf_from_utf8(file, encoding,
+                                    "   Reverted %s:r%s" APR_EOL_STR,
+                                    from_path, merge_revstr->data));
+    }
+
+  for (hi = apr_hash_first(pool, added); 
+       hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+
+      from_path = key;
+      merge_revarray = val;
+
+      svn_rangelist_to_string(&merge_revstr, merge_revarray, pool);
+
+      SVN_ERR(file_printf_from_utf8(file, encoding,
+                                    "   Merged %s:r%s" APR_EOL_STR,
+                                    from_path, merge_revstr->data));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff3, which is probably stdout. */
@@ -138,6 +204,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       
       SVN_ERR(file_printf_from_utf8(file, encoding, _("Name: %s%s"),
                                     propchange->name, APR_EOL_STR));
+
+      if (strcmp(propchange->name, SVN_PROP_MERGE_INFO) == 0)
+        {
+          const char *orig = original_value ? original_value->data : NULL;
+          const char *val = propchange->value ? propchange->value->data : NULL;
+
+          SVN_ERR(display_mergeinfo_diff(orig, val, encoding, file, pool));
+
+          continue;
+        }
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
