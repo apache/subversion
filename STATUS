@@ -56,13 +56,13 @@ Candidate changes:
     Votes:
       +1: nori
 
+Approved changes:
+
   * r20530
     More API cleanliness for svn_wc_transmit_text_deltas2() - move the output
     parameters first, as per our standards.
     Votes:
-      +1: maxb, malcolm
-
-Approved changes:
+      +1: maxb, malcolm, rooneg
 
   * r20461, r20469, r20470, r20473, r20476
     Port RPMs to APR/APR-UTIL >= 0.9.7 (0.9.12)
