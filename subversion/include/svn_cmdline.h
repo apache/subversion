@@ -141,6 +141,8 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
 
 /** Prompt the user for input, using @a prompt_str for the prompt and
  * returning the user's response in @a result, allocated in @a pool.
+ *
+ * @since New in 1.4.
  */
 svn_error_t *
 svn_cmdline_prompt_user(const char **result,
@@ -149,6 +151,8 @@ svn_cmdline_prompt_user(const char **result,
 
 /** A cancellation function/baton pair to be passed as the baton argument
  * to the @c svn_cmdline_*_prompt functions.
+ *
+ * @since New in 1.4.
  */
 typedef struct {
   svn_cancel_func_t cancel_func;
@@ -157,6 +161,8 @@ typedef struct {
 
 /** An implementation of @c svn_auth_simple_prompt_func_t that prompts
  * the user for keyboard input on the command line.
+ *
+ * @since New in 1.4.
  *
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
@@ -172,6 +178,8 @@ svn_cmdline_auth_simple_prompt(svn_auth_cred_simple_t **cred_p,
 /** An implementation of @c svn_auth_username_prompt_func_t that prompts
  * the user for their username via the command line.
  *
+ * @since New in 1.4.
+ *
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
@@ -184,6 +192,8 @@ svn_cmdline_auth_username_prompt(svn_auth_cred_username_t **cred_p,
 
 /** An implementation of @c svn_auth_ssl_server_trust_prompt_func_t that
  * asks the user if they trust a specific ssl server via the command line.
+ *
+ * @since New in 1.4.
  *
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
@@ -202,6 +212,8 @@ svn_cmdline_auth_ssl_server_trust_prompt
  * prompts the user for the filename of their SSL client certificate via
  * the command line.
  *
+ * @since New in 1.4.
+ *
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
 svn_error_t *
@@ -215,6 +227,8 @@ svn_cmdline_auth_ssl_client_cert_prompt
 
 /** An implementation of @c svn_auth_ssl_client_cert_pw_prompt_func_t that
  * prompts the user for their SSL certificate password via the command line.
+ *
+ * @since New in 1.4.
  *
  * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
  */
@@ -249,6 +263,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              apr_pool_t *pool);
 
 /** Wrapper for apr_getopt_init(), which see.
+ *
+ * @since New in 1.4.
  * 
  * On OS400 V5R4, prior to calling apr_getopt_init(), converts each of the
  * @a argc strings in @a argv[] in place from EBCDIC to UTF-8, allocating
