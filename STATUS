@@ -56,13 +56,6 @@ Candidate changes:
     Votes:
       +1: nori
 
-  * r20522
-    Make svn_client_list conform to our guidelines for libsvn_client APIs.
-    Justification:
-      We can only do it right once: the first time.
-    Votes:
-      +1: rooneg, maxb
-
   * r20530
     More API cleanliness for svn_wc_transmit_text_deltas2() - move the output
     parameters first, as per our standards.
@@ -120,3 +113,10 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
+
+  * r20522
+    Make svn_client_list conform to our guidelines for libsvn_client APIs.
+    Justification:
+      We can only do it right once: the first time.
+    Votes:
+      +1: rooneg, maxb, malcolm (core changes only)
