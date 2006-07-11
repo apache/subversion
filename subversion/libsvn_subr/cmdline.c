@@ -455,9 +455,9 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
 svn_error_t *
 svn_cmdline__getopt_init(apr_getopt_t **os,
-                         apr_pool_t *pool,
                          int argc,
-                         const char *argv[])
+                         const char *argv[],
+                         apr_pool_t *pool)
 {
   apr_status_t apr_err;
 #ifdef AS400_UTF8
