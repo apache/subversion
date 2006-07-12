@@ -36,31 +36,34 @@ Candidate changes:
   * r20562
     API: Use named, not anonymous, structs and enums in new-in-1.4 cases, for
     consistency with the majority of existing cases.
+    Concerns:
+      All this does is introduce extraneous symbols into the global namespace.
     Votes:
       +1: maxb
+      -0: rooneg
 
   * r20568
     1.4.x API: Fix svn_io_run_diff3_2() to obey output parameters convention.
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
   * r20572
     1.4.x API: Fix svn_ra_get_dir2() to obey output parameters convention,
     and also fix the underlying vtable implementation.
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
   * r20573
     1.4.x API: Fix svn_compat_wrap_commit_callback() to obey output parameters
     convention.
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
   * r20574
     1.4.x API: Fix svn_cmdline__getopt_init() to obey pool parameter
     convention.
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
 Approved changes:
 
