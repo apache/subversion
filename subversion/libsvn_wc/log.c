@@ -126,7 +126,9 @@
 #define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
 
 
-/* A log command which runs svn_wc_merge2().
+/* DEPRECATED, left for compat with pre-v8 format working copies
+
+   A log command which runs svn_wc_merge2().
    See its documentation for details.
 
    Here is a map of entry-attributes to svn_wc_merge arguments:
@@ -2264,33 +2266,6 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
                         propname,
                         SVN_WC__LOG_ATTR_PROPVAL,
                         propval,
-                        NULL);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__loggy_merge(svn_stringbuf_t **log_accum,
-                    svn_wc_adm_access_t *adm_access,
-                    const char *target,
-                    const char *left,
-                    const char *right,
-                    const char *left_label,
-                    const char *right_label,
-                    const char *target_label,
-                    apr_pool_t *pool)
-{
-  svn_xml_make_open_tag(log_accum,
-                        pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_MERGE,
-                        SVN_WC__LOG_ATTR_NAME, target,
-                        SVN_WC__LOG_ATTR_ARG_1, left,
-                        SVN_WC__LOG_ATTR_ARG_2, right,
-                        SVN_WC__LOG_ATTR_ARG_3, left_label,
-                        SVN_WC__LOG_ATTR_ARG_4, right_label,
-                        SVN_WC__LOG_ATTR_ARG_5, target_label,
                         NULL);
 
   return SVN_NO_ERROR;
