@@ -69,6 +69,18 @@ Approved changes:
     Votes:
       +1: blair, nori
 
+  * r20042, r20579
+    Improve usability for Svn::Core::Dirent#time in the SWIG/Ruby bindings
+    by adding another method, Svn::Core::Dirent#time2, which directly returns
+    a Time instead of an Integer.
+    Justification:
+      Improves usability for the bindings.
+    Note:
+      r20579 depends on r20225, which depends on r20042.
+    Votes:
+      +1: nori, rooneg
+      +0: blair (r20042), danderson (the whole thing)
+
   * r20568
     1.4.x API: Fix svn_io_run_diff3_2() to obey output parameters convention.
     Votes:
