@@ -1009,11 +1009,12 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
 }
 
 static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
-                                   const char *path, svn_revnum_t rev,
-                                   apr_uint32_t dirent_fields,
                                    apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
                                    apr_hash_t **props,
+                                   const char *path,
+                                   svn_revnum_t rev,
+                                   apr_uint32_t dirent_fields,
                                    apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess_baton = session->priv;

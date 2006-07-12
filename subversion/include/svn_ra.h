@@ -679,12 +679,12 @@ svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
  * @since New in 1.4.
  */
 svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t revision,
-                             apr_uint32_t dirent_fields,
                              apr_hash_t **dirents,
                              svn_revnum_t *fetched_rev,
                              apr_hash_t **props,
+                             const char *path,
+                             svn_revnum_t revision,
+                             apr_uint32_t dirent_fields,
                              apr_pool_t *pool);
 
 /**

@@ -32,12 +32,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20572
-    1.4.x API: Fix svn_ra_get_dir2() to obey output parameters convention,
-    and also fix the underlying vtable implementation.
-    Votes:
-      +1: maxb, rooneg, cmpilato, dlr
-
   * r20574
     1.4.x API: Fix svn_cmdline__getopt_init() to obey pool parameter
     convention.
