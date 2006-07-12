@@ -31,7 +31,7 @@ Candidate changes:
       r20579 depends on r20225, which depends on r20042.
     Votes:
       +1: nori
-      +0: blair (r20579)
+      +0: blair (r20042)
 
   * r20562
     API: Use named, not anonymous, structs and enums in new-in-1.4 cases, for
