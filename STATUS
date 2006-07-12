@@ -30,7 +30,7 @@ Candidate changes:
     Note:
       r20579 depends on r20225, which depends on r20042.
     Votes:
-      +1: nori
+      +1: nori, rooneg
       +0: blair (r20042)
 
   * r20562
