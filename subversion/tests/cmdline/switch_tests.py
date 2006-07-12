@@ -1066,12 +1066,86 @@ def switch_change_repos_root(sbox):
   # Make sure we didn't break the WC.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-                                        
 
+# Issue 2578.
+def relocate_and_propset(sbox):
+  "out of date propset should fail after a relocate"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+  svntest.main.set_repos_paths(sbox.repo_dir)
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+
+  # import the greek tree
+  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
+  output, errput = svntest.main.run_svn(None, 'import',
+                                '--username', svntest.main.wc_author,
+                                '--password', svntest.main.wc_passwd,
+                                '-m', 'Log message for revision 1.',
+                                svntest.main.greek_dump_dir, sbox.repo_url)
+
+  # checkout
+  svntest.main.safe_rmtree(wc_dir, 1)
+  svntest.actions.run_and_verify_svn (None,
+                                      None, [],
+                                      'checkout',
+                                      '--username', svntest.main.wc_author,
+                                      '--password', svntest.main.wc_passwd,
+                                      repo_url, wc_dir)
+
+  # Relocate
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2)
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # Remove gamma from the working copy.
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  svntest.main.run_svn(None, 'rm', gamma_path)
+
+  # Create expected commit output.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
+
+  # After committing, status should show no sign of gamma.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma')
+
+  # Commit the deletion of gamma and verify.
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Now gamma should be marked as `deleted' under the hood, at
+  # revision 2.  Meanwhile, A/D is still lagging at revision 1.
+
+  # Make a propchange on A/D
+  svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
+
+  # Commit and *expect* a repository Merge failure:
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         None,
+                                         None,
+                                         "[Oo]ut.of.date",
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
 
 ########################################################################
 # Run the tests
 
+def is_this_dav():
+  return svntest.main.test_area_url.startswith('http')
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1093,6 +1167,7 @@ test_list = [ None,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
               switch_change_repos_root,
+              XFail(relocate_and_propset, is_this_dav),
              ]
 
 if __name__ == '__main__':
