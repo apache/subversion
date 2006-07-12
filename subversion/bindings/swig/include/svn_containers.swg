@@ -346,8 +346,14 @@
 }
 #endif
 
+/* svn_delta_path_driver() mutates its 'paths' argument (by sorting it),
+   despite the fact that it is notionally an input parameter - hence, the
+   lack of 'const' in that one case. */
 %apply const apr_array_header_t *STRINGLIST {
-  apr_array_header_t *paths
+  const apr_array_header_t *args,
+  const apr_array_header_t *diff_options,
+  apr_array_header_t *paths,
+  const apr_array_header_t *targets
 };
 
 /* -----------------------------------------------------------------------

@@ -228,14 +228,6 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   Diff options are strings in array.
-*/
-
-%apply const apr_array_header_t *STRINGLIST {
-  const apr_array_header_t *args
-}
-
-/* -----------------------------------------------------------------------
    handle the MIME type return value of svn_io_detect_mimetype()
 */
 %apply const char **OUTPUT { const char ** };

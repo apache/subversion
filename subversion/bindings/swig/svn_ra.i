@@ -59,10 +59,6 @@
     const char **uuid
 };
 
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *paths
-};
-
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *update_editor,
               void *update_baton) {
