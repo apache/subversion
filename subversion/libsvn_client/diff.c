@@ -103,7 +103,7 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
 {
   apr_hash_t *orig_mergeinfo_hash, *new_mergeinfo_hash, *added, *deleted;
   apr_hash_index_t *hi;
-  const void *from_path;
+  const char *from_path;
   apr_array_header_t *merge_revarray;
   svn_stringbuf_t *merge_revstr;
 
