@@ -28,7 +28,7 @@ Candidate changes:
       All this does is introduce extraneous symbols into the global namespace.
     Votes:
       +1: maxb
-      -0: rooneg, dlr
+      -0: rooneg, dlr, malcolm
 
   * r20600
     In mailer.py, allow mappings to apply to the diff_add_url,
@@ -42,6 +42,13 @@ Candidate changes:
       values that mailer.py accepts).
     Votes:
       +1: blair
+
+  * r20605
+    Fix link errors in Mac OS X static builds.
+    Justification:
+      Static builds currently fail unless --disable-keychain is used.
+    Votes:
+      +1: malcolm
 
 Approved changes:
 
