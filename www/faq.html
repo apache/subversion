@@ -3367,7 +3367,7 @@ to debug them right within your source tree.</p>
 
 <p>To do so, edit the last <code>exec</code> statement in the shell
 script to run the real binary in your debugger.  With gdb, this
-amounts to replacing <code>exec "$prgodir/$progname"</code> with
+amounts to replacing <code>exec "$progdir/$progname"</code> with
 <code>exec gdb --args "$progdir/$progname"</code>.</p>
 
 <p>This trick is also very useful when applied to the
