@@ -72,15 +72,24 @@
 %typemap(argout) apr_hash_t **HASH_SVN_STRING {
   %append_output(svn_swig_py_prophash_to_dict(*$1));
 }
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  %append_output(!*$1 ? Py_None : svn_swig_py_prophash_to_dict(*$1));
+}
 #endif
 #ifdef SWIGPERL
 %typemap(argout) apr_hash_t **HASH_SVN_STRING {
   %append_output(svn_swig_pl_prophash_to_hash(*$1));
 }
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  %append_output(!*$1 ? &PL_sv_undef : svn_swig_pl_prophash_to_hash(*$1));
+}
 #endif
 #ifdef SWIGRUBY
 %typemap(argout) apr_hash_t **HASH_SVN_STRING {
   %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+}
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  %append_output(!*$1 ? Qnil : svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 #endif
 %apply apr_hash_t **HASH_SVN_STRING {
@@ -88,6 +97,11 @@
   apr_hash_t **original_props,
   apr_hash_t **table_p
 };
+%apply apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  /* svn_config_read_auth_data() */
+  apr_hash_t **hash
+};
+
 
 /* -----------------------------------------------------------------------
    apr_hash_t **locations
@@ -106,21 +120,6 @@
   %append_output(svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1));
 }
 #endif
-
-/* -----------------------------------------------------------------------
-   svn_config_read_auth_data()
-*/
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **hash
-{
-  if (*$1) {
-    %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-  } else {
-    %append_output(Qnil);
-  }
-}
-#endif
-
 
 /* -----------------------------------------------------------------------
    apr_hash_t **externals_old
