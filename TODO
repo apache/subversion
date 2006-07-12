@@ -49,6 +49,9 @@ Phase 2
 
 Implement auditing/reporting and other high-level features.
 
+* Allow most or all of merge arguments to be elided (through combination of
+  using merge info and copy history) if user wants (dberlin).
+
 * Add some set of svnmerge.py-like commands for merge info
   auditing/editing to the 'svn' command-line binary.
   
