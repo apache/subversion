@@ -166,21 +166,6 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
                             const char *propval,
                             apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with log instructions to merge changes between
-   LEFT and RIGHT into TARGET, marking conflicts with the appropriate labels.
-*/
-
-svn_error_t *
-svn_wc__loggy_merge(svn_stringbuf_t **log_accum,
-                    svn_wc_adm_access_t *adm_access,
-                    const char *target,
-                    const char *left,
-                    const char *right,
-                    const char *left_label,
-                    const char *right_label,
-                    const char *target_label,
-                    apr_pool_t *pool);
-
 
 /* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
    DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
