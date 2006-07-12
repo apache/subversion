@@ -30,23 +30,22 @@ Candidate changes:
       +1: maxb
       -0: rooneg
 
+Approved changes:
+
   * r20572
     1.4.x API: Fix svn_ra_get_dir2() to obey output parameters convention,
     and also fix the underlying vtable implementation.
     Votes:
-      +1: maxb, rooneg
+      +1: maxb, rooneg, cmpilato
 
   * r20573
     1.4.x API: Fix svn_compat_wrap_commit_callback() to obey output parameters
     convention.
     Votes:
-      +1: maxb, rooneg
+      +1: maxb, rooneg, cmpilato
 
   * r20574
     1.4.x API: Fix svn_cmdline__getopt_init() to obey pool parameter
     convention.
     Votes:
-      +1: maxb, rooneg
-
-Approved changes:
-
+      +1: maxb, rooneg, cmpilato
