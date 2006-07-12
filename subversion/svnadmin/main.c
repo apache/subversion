@@ -1195,7 +1195,7 @@ main(int argc, const char *argv[])
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
 
   /* Parse options. */
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
 

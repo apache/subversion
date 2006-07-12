@@ -1909,7 +1909,7 @@ main(int argc, const char *argv[])
   opt_state.rev = SVN_INVALID_REVNUM;
 
   /* Parse options. */
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
 

@@ -32,8 +32,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r20574
-    1.4.x API: Fix svn_cmdline__getopt_init() to obey pool parameter
-    convention.
-    Votes:
-      +1: maxb, rooneg, cmpilato, dlr
