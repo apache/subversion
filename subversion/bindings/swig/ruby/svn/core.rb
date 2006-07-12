@@ -335,6 +335,14 @@ module Svn
       def unknown?
         kind == NODE_UNKNOWN
       end
+
+      #
+      # Svn::Core::Dirent#time is replaced by this method, _deprecated_,
+      # and provided for backward compatibility with the 1.3 API.
+      def time2
+        __time = time
+        __time && Time.from_apr_time(__time)
+      end
     end
 
     Config = SWIG::TYPE_p_svn_config_t
