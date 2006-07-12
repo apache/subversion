@@ -21,14 +21,17 @@ Candidate changes:
       +1: maxb, malcolm
       -1: jerenkrantz
 
-  * r20042
+  * r20042, r20579
     Improve usability for Svn::Core::Dirent#time in the SWIG/Ruby bindings
-    by converting its returned value from a Integer to a Time.
+    by adding another method, Svn::Core::Dirent#time2, which directly returns
+    a Time instead of an Integer.
     Justification:
       Improves usability for the bindings.
+    Note:
+      r20579 depends on r20225, which depends on r20042.
     Votes:
       +1: nori
-      +0: blair
+      +0: blair (r20579)
 
   * r20562
     API: Use named, not anonymous, structs and enums in new-in-1.4 cases, for
