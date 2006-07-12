@@ -30,11 +30,6 @@ Candidate changes:
       +1: maxb
       -0: rooneg
 
-  * r20568
-    1.4.x API: Fix svn_io_run_diff3_2() to obey output parameters convention.
-    Votes:
-      +1: maxb, rooneg
-
   * r20572
     1.4.x API: Fix svn_ra_get_dir2() to obey output parameters convention,
     and also fix the underlying vtable implementation.
@@ -73,3 +68,8 @@ Approved changes:
       Depends on r20042 - merge conflicts unless this revision is not merged.
     Votes:
       +1: blair, nori
+
+  * r20568
+    1.4.x API: Fix svn_io_run_diff3_2() to obey output parameters convention.
+    Votes:
+      +1: maxb, rooneg, danderson
