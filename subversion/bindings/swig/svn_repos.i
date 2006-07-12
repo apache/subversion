@@ -43,11 +43,6 @@
     const char *tgt_path
 };
 
-/* svn_repos_get_logs() */
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *paths
-};
-
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif

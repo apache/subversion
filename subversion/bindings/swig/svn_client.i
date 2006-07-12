@@ -38,11 +38,6 @@
   const svn_opt_revision_t *peg_revision
 };
 
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *targets,
-    const apr_array_header_t *diff_options
-};
-
 %apply const char *MAY_BE_NULL {
     const char *native_eol,
     const char *comment
