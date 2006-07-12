@@ -16,7 +16,8 @@ for repos dump/load, including the merge history index.
 
   * Stop applying merge ranges as soon as a conflict is encountered,
     and be sure to record partial application of merge ranges (in
-    addition to the usual full application).
+    addition to the usual full application).  (This change in behavior
+    is under debate on the dev list, and may be scrubbed.)
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (madanus)
@@ -49,8 +50,9 @@ Phase 2
 
 Implement auditing/reporting and other high-level features.
 
-* Allow most or all of merge arguments to be elided (through combination of
-  using merge info and copy history) if user wants (dberlin).
+* Allow most/all arguments to 'merge' to be elided (through
+  combination of using merge info and copy history) if user wants.
+  (dberlin)
 
 * Add some set of svnmerge.py-like commands for merge info
   auditing/editing to the 'svn' command-line binary.
@@ -70,7 +72,7 @@ Implement auditing/reporting and other high-level features.
       --log         show corresponding log history instead of revision list
     merge/rollback
       --record-only do not perform an actual merge of the changes, yet record
-                    that a merge happened
+                    that a merge happened  (likely phase 1?)
     unblock       Revert the effect of 'block'
 
   * Write up outcome in func-spec.html.
