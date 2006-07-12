@@ -38,12 +38,6 @@ Approved changes:
     Votes:
       +1: maxb, rooneg, cmpilato
 
-  * r20573
-    1.4.x API: Fix svn_compat_wrap_commit_callback() to obey output parameters
-    convention.
-    Votes:
-      +1: maxb, rooneg, cmpilato
-
   * r20574
     1.4.x API: Fix svn_cmdline__getopt_init() to obey pool parameter
     convention.
