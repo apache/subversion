@@ -319,21 +319,46 @@ module Svn
       end
     end
 
+    # Following methods are also available:
+    #
+    # [created_rev]
+    #   Returns a revision at which the instance was last modified.
+    # [have_props?]
+    #   Returns +true+ if the instance has properties.
+    # [last_author]
+    #   Returns an author who last modified the instance.
+    # [size]
+    #   Returns a size of the instance.
     class Dirent
+      alias have_props? has_props
+
+      # Returns +true+ when the instance is none.
       def none?
         kind == NODE_NONE
       end
 
+      # Returns +true+ when the instance is a directory.
       def directory?
         kind == NODE_DIR
       end
 
+      # Returns +true+ when the instance is a file.
       def file?
         kind == NODE_FILE
       end
 
+      # Returns +true+ when the instance is an unknown node.
       def unknown?
         kind == NODE_UNKNOWN
+      end
+
+      # Returns a Time when the instance was last changed.
+      #
+      # Svn::Core::Dirent#time is replaced by this method, _deprecated_,
+      # and provided for backward compatibility with the 1.3 API.
+      def time2
+        __time = time
+        __time && Time.from_apr_time(__time)
       end
     end
 
@@ -451,7 +476,20 @@ module Svn
       end
     end
 
+    # Following methods are also available:
+    #
+    # [action]
+    #   Returns an action taken to the path at the revision.
+    # [copyfrom_path]
+    #   If the path was added at the revision by the copy action from
+    #   another path at another revision, returns an original path.
+    #   Otherwise, returns +nil+.
+    # [copyfrom_rev]
+    #   If the path was added at the revision by the copy action from
+    #   another path at another revision, returns an original revision.
+    #   Otherwise, returns <tt>-1</tt>.
     class LogChangedPath
+      # Returns +true+ when the path is added by the copy action.
       def copied?
         Util.copy?(copyfrom_path, copyfrom_rev)
       end

@@ -1516,6 +1516,8 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file = "sample.txt"
     dir = "sample"
+    prop_name = "sample-prop"
+    prop_value = "sample value"
     dir_path = File.join(@wc_path, dir)
     path = File.join(@wc_path, file)
 
@@ -1524,6 +1526,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.mkdir(dir_path)
     File.open(path, "w") {|f| f.print(src)}
     ctx.add(path)
+    ctx.prop_set(prop_name, prop_value, path)
     rev = ctx.ci(@wc_path).revision
 
     entries = []
@@ -1538,8 +1541,10 @@ class SvnClientTest < Test::Unit::TestCase
       case path
       when dir, ""
         assert(dirent.directory?)
+        assert_false(dirent.have_props?)
       when file
         assert(dirent.file?)
+        assert_true(dirent.have_props?)
       else
         flunk
       end

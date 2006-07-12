@@ -50,37 +50,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20248
-    Improve usability of Svn::Core::Dirent in the SWIG/Ruby bindings
-    by adding a method, Svn::Core::Dirent#have_props?.
-    Justification:
-      Adds only one alias and improves usability for the bindings.
-    Note:
-      Depends on r20225 - merge conflicts unless this revision is not merged.
-    Votes:
-      +1: nori, rooneg
-
-  * r20225
-    Additional documentation for Ruby bindings
-    Justification:
-      Documentation is always good and the revision only adds docs.
-    Note:
-      Depends on r20042 - merge conflicts unless this revision is not merged.
-    Votes:
-      +1: blair, nori
-
-  * r20042, r20579
-    Improve usability for Svn::Core::Dirent#time in the SWIG/Ruby bindings
-    by adding another method, Svn::Core::Dirent#time2, which directly returns
-    a Time instead of an Integer.
-    Justification:
-      Improves usability for the bindings.
-    Note:
-      r20579 depends on r20225, which depends on r20042.
-    Votes:
-      +1: nori, rooneg
-      +0: blair (r20042), danderson (the whole thing)
-
   * r20568
     1.4.x API: Fix svn_io_run_diff3_2() to obey output parameters convention.
     Votes:
