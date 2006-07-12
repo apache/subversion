@@ -352,10 +352,12 @@ module Svn
         kind == NODE_UNKNOWN
       end
 
-      alias _time time
       # Returns a Time when the instance was last changed.
-      def time
-        __time = _time
+      #
+      # Svn::Core::Dirent#time is replaced by this method, _deprecated_,
+      # and provided for backward compatibility with the 1.3 API.
+      def time2
+        __time = time
         __time && Time.from_apr_time(__time)
       end
     end
