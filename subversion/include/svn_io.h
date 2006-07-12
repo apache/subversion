@@ -937,7 +937,8 @@ svn_error_t *svn_io_run_diff(const char *dir,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_io_run_diff3_2(const char *dir,
+svn_error_t *svn_io_run_diff3_2(int *exitcode,
+                                const char *dir,
                                 const char *mine,
                                 const char *older,
                                 const char *yours,
@@ -945,7 +946,6 @@ svn_error_t *svn_io_run_diff3_2(const char *dir,
                                 const char *older_label,
                                 const char *yours_label,
                                 apr_file_t *merged,
-                                int *exitcode,
                                 const char *diff3_cmd,
                                 const apr_array_header_t *user_args,
                                 apr_pool_t *pool);

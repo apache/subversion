@@ -50,7 +50,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r20568
-    1.4.x API: Fix svn_io_run_diff3_2() to obey output parameters convention.
-    Votes:
-      +1: maxb, rooneg, danderson
