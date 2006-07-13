@@ -37,6 +37,7 @@
 #include "svn_pools.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_time.h"
 #include "client.h"
 #include <assert.h>
 
@@ -1760,6 +1761,9 @@ do_merge(const char *initial_URL1,
   
   SVN_ERR(reporter->finish_report(report_baton, pool));
   
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps();
+
   return SVN_NO_ERROR;
 }
 
@@ -1898,6 +1902,9 @@ do_single_file_merge(const char *initial_URL1,
     return err;
   svn_error_clear(err);
   
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps();
+
   if (merge_b->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
