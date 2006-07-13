@@ -41,6 +41,16 @@ public class SVNClient implements SVNClientInterface
     public SVNClient()
     {
         cppAddr = ctNative();
+
+        // Ensure that Subversion's config file area and templates exist.
+        try
+        {
+            setConfigDirectory(null);
+        }
+        catch (ClientException suppressed)
+        {
+            // Not an exception-worthy problem, continue on.
+        }
     }
     /**
      * Build the native peer

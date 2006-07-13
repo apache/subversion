@@ -27,7 +27,6 @@
 #include <apr_lib.h>
 
 #include "svn_pools.h"
-#include "svn_config.h"
 #include "svn_wc.h"
 #include "svn_path.h"
 #include <apr_file_info.h>
@@ -241,19 +240,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         }
     }
 #endif
-
-    // ### FIXME: If $HOME is not writable (e.g. the caller wants to
-    // ### invoke SVNClient.setConfigDirectory()), this errors out and
-    // ### NativeResources class initialization fails!
-    // we use the default directory for config files
-    // this can be changed later
-    svn_error_t *err = svn_config_ensure (NULL, g_pool); 
-    if (err)
-    {
-        svn_pool_destroy (g_pool);
-        handleSVNError(err);
-        return false;
-    }
 
     // build all mutexes
     g_finalizedObjectsMutex = new JNIMutex(g_pool);
