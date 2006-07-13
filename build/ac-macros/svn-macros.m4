@@ -1,45 +1,29 @@
-dnl -----------------------------------------------------------------------
-dnl Additional autoconf macros for Subversion
-dnl
+# Miscellaneous additional macros for Subversion's own use.
 
-
-dnl this writes a "config.nice" file which reinvokes ./configure with all
-dnl of the arguments. this is different from config.status which simply
-dnl regenerates the output files. config.nice is useful after you rebuild
-dnl ./configure (via autoconf or autogen.sh)
-AC_DEFUN(SVN_CONFIG_NICE,[
-  AC_REQUIRE([AC_CANONICAL_HOST])
+# SVN_CONFIG_NICE(FILENAME)
+# Write a shell script to FILENAME (typically 'config.nice') which reinvokes
+# configure with all of the arguments.  Reserves use of the filename
+# FILENAME.old for its own use.
+# This is different from 'config.status --recheck' in that it does add implicit
+# --no-create --no-recursion options, and stores _just_ the configure
+# invocation, instead of the entire configured state.
+AC_DEFUN([SVN_CONFIG_NICE], [
   AC_MSG_NOTICE([creating $1])
-  rm -f $1
-  cat >$1<<EOF
+  # This little dance satisfies Cygwin, which cannot overwrite in-use files.
+  if test -f "$1"; then
+    mv "$1" "$1.old"
+    rm -f "$1.old"
+  fi
+
+  cat >"$1" <<EOF
 #! /bin/sh
 #
 # Created by configure
 
+'[$]0' $ac_configure_args "\[$]@"
 EOF
 
-  case $host in
-    *-*-cygwin*)
-      # exec closes config.nice before configure attempts to rewrite it
-      EXEC_HACK="exec "
-      ;;
-    *)
-      EXEC_HACK=
-      ;;
-  esac
-
-  echo "$EXEC_HACK\"[$]0\" \\" >> $1
-  for arg in "[$]@"; do
-    case $arg in
-      --no-create) ;;
-      --no-recursion) ;;
-      *)
-        echo "\"$arg\" \\" >> $1
-      ;;
-    esac
-  done
-  echo '"[$]@"' >> $1
-  chmod +x $1
+  chmod +x "$1"
 ])
 
 
