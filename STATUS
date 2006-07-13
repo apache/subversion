@@ -8,7 +8,11 @@ Status of 1.4.0:
 ================
 
 Candidate changes:
+
+  None
       
+Approved changes:
+
   * r19919, r20632, r20636
     Fix SVN_CONFIG_NICE to work with autoconf 2.60-dev CVS and prereleases,
     which clobber configure arguments in AC_INIT. 
@@ -16,7 +20,4 @@ Candidate changes:
       Developer convenience throughout the lifetime of 1.4.x.
       Note that affected versions are already packaged within Debian etch.
     Votes:
-      +1: maxb, malcolm
-
-Approved changes:
-
+      +1: maxb, malcolm, danderson
