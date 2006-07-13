@@ -393,9 +393,6 @@
       _global_svn_swig_py_pool = input;
       Py_XINCREF(_global_svn_swig_py_pool);
     } else {
-      if (PyErr_Occurred()) {
-        PyErr_Clear();
-      }
       svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
       svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
     }
