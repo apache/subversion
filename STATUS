@@ -36,7 +36,7 @@ Candidate changes:
       declaration, as is common with all other C constructs, rather than
       just at the end, which is less readable.
     Votes:
-      +1: maxb
+      +1: maxb, danderson
       -0: rooneg, dlr, malcolm
 
   * r20600
