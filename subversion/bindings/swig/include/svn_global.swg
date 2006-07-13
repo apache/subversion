@@ -72,30 +72,32 @@ static PyObject * _global_svn_swig_py_pool = NULL;
    isn't a perfect solution, but it does the job. */
 #define $svn_argnum svn_argnum_$input
 
-/* Pointers, references, and arrays */
-%typemap (arginit) POOLINIT ( \
-  PyObject *_global_svn_swig_py_pool, apr_pool_t *_global_pool,
-  int _global_pool_is_application_pool)
-{
-  _global_pool_is_application_pool = 1;
-  svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-}
-%apply POOLINIT { void *, SWIGTYPE *, SWIGTYPE [] };
-
-/* Object passed as pointer */
-%typemap (in) void *, SWIGTYPE *, SWIGTYPE []
-{
-  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum,
-    _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
-  if (PyErr_Occurred()) {
-    SWIG_fail;
-  }
-}
-
-/* Output arguments */
-%typemap (out) SWIGTYPE *
-    "$result = svn_swig_NewPointerObj((void*)($1), $descriptor,
-                                      _global_svn_swig_py_pool);";
+/* We assume here that Subversion functions have no more than
+   20 fixed parameters. If you want to wrap a function that has
+   more fixed parameters, you'll need to add more #define
+   statements. */
+%{
+#define svn_argnum_obj0 1
+#define svn_argnum_obj1 2
+#define svn_argnum_obj2 3
+#define svn_argnum_obj3 4
+#define svn_argnum_obj4 5
+#define svn_argnum_obj5 6
+#define svn_argnum_obj6 7
+#define svn_argnum_obj7 8
+#define svn_argnum_obj8 9
+#define svn_argnum_obj9 10
+#define svn_argnum_obj10 11
+#define svn_argnum_obj11 12
+#define svn_argnum_obj12 13
+#define svn_argnum_obj13 14
+#define svn_argnum_obj14 15
+#define svn_argnum_obj15 16
+#define svn_argnum_obj16 17
+#define svn_argnum_obj17 18
+#define svn_argnum_obj18 19
+#define svn_argnum_obj19 20
+%}
 
 /* Python format specifiers. Use Python instead of SWIG to parse
    these basic types, because Python reports better error messages
@@ -140,32 +142,6 @@ static PyObject * _global_svn_swig_py_pool = NULL;
   %append_output(PyLong_FromLongLong(*$1));
 }
 
-/* We assume here that Subversion functions have no more than
-   20 fixed parameters. If you want to wrap a function that has
-   more fixed parameters, you'll need to add more #define
-   statements. */
-%{
-#define svn_argnum_obj0 1
-#define svn_argnum_obj1 2
-#define svn_argnum_obj2 3
-#define svn_argnum_obj3 4
-#define svn_argnum_obj4 5
-#define svn_argnum_obj5 6
-#define svn_argnum_obj6 7
-#define svn_argnum_obj7 8
-#define svn_argnum_obj8 9
-#define svn_argnum_obj9 10
-#define svn_argnum_obj10 11
-#define svn_argnum_obj11 12
-#define svn_argnum_obj12 13
-#define svn_argnum_obj13 14
-#define svn_argnum_obj14 15
-#define svn_argnum_obj15 16
-#define svn_argnum_obj16 17
-#define svn_argnum_obj17 18
-#define svn_argnum_obj18 19
-#define svn_argnum_obj19 20
-%}
 #endif
 
 
