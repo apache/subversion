@@ -21,24 +21,6 @@ Candidate changes:
       +1: maxb, malcolm
       -1: jerenkrantz
 
-  * r20562
-    API: Use named, not anonymous, structs and enums in new-in-1.4 cases, for
-    consistency with the majority of existing cases.
-    Concerns:
-      All this does is introduce extraneous symbols into the global namespace.
-    Counter-concerns:
-      The namespace 'pollution' is entirely benign, since it lies within the
-      svn_* namespace which we already lay claim to, and we would never ever
-      desire to create both a 'struct svn_foo_t' and a 'svn_foo_t' which were
-      different.
-    Benefits:
-      Makes name of thing being declared be present at the start of the
-      declaration, as is common with all other C constructs, rather than
-      just at the end, which is less readable.
-    Votes:
-      +1: maxb, danderson
-      -0: rooneg, dlr, malcolm
-
   * r20600
     In mailer.py, allow mappings to apply to the diff_add_url,
     diff_copy_url, diff_delete_url and diff_modify_url parameters.
@@ -54,3 +36,20 @@ Candidate changes:
 
 Approved changes:
 
+  * r20562
+    API: Use named, not anonymous, structs and enums in new-in-1.4 cases, for
+    consistency with the majority of existing cases.
+    Concerns:
+      All this does is introduce extraneous symbols into the global namespace.
+    Counter-concerns:
+      The namespace 'pollution' is entirely benign, since it lies within the
+      svn_* namespace which we already lay claim to, and we would never ever
+      desire to create both a 'struct svn_foo_t' and a 'svn_foo_t' which were
+      different.
+    Benefits:
+      Makes name of thing being declared be present at the start of the
+      declaration, as is common with all other C constructs, rather than
+      just at the end, which is less readable.
+    Votes:
+      +1: maxb, danderson, malcolm
+      -0: rooneg, dlr
