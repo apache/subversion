@@ -43,13 +43,12 @@ Candidate changes:
     Votes:
       +1: blair
 
+Approved changes:
+
   * r20605
     Fix link errors in Mac OS X static builds.
     Justification:
       Static builds currently fail unless --disable-keychain is used.
     Votes:
-      +1: malcolm, rooneg
+      +1: malcolm, rooneg, danderson
       +0: dlr (concept)
-
-Approved changes:
-
