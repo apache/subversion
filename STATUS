@@ -49,6 +49,16 @@ Candidate changes:
       Static builds currently fail unless --disable-keychain is used.
     Votes:
       +1: malcolm
+      +0: dlr (concept)
+
+  * r20609
+    Fix the possibility of data loss caused by multiple merges (the
+    first of which adds a file to the WC) and a commit in quick
+    succession.
+    Justification:
+      Data loss is inexcusable.
+    Votes:
+      +1: dlr
 
 Approved changes:
 
