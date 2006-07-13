@@ -51,6 +51,8 @@ Candidate changes:
       +1: malcolm
       +0: dlr (concept)
 
+Approved changes:
+
   * r20609, r20612
     Fix the possibility of data loss caused by multiple merges (the
     first of which adds a file to the WC) and a commit in quick
@@ -58,7 +60,4 @@ Candidate changes:
     Justification:
       Data loss is inexcusable.
     Votes:
-      +1: dlr, jerenkrantz
-
-Approved changes:
-
+      +1: dlr, jerenkrantz, ringstrom
