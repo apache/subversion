@@ -19,14 +19,5 @@ Candidate changes:
       +1: maxb
       +1 (not r20632): malcolm
 
-  * r20600
-    In mailer.py, perform parameter substitution on the diff_add_url,
-    diff_copy_url, diff_delete_url and diff_modify_url parameters too.
-    Justification:
-      Bugfix.
-    Votes:
-      +1: blair
-      +0: maxb
-
 Approved changes:
 
