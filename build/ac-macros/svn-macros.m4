@@ -2,9 +2,9 @@
 
 # SVN_CONFIG_NICE(FILENAME)
 # Write a shell script to FILENAME (typically 'config.nice') which reinvokes
-# configure with all of the arguments.  Saves any previously existing FILENAME
-# as FILENAME.old, overwriting any previously existing FILENAME.old.  This is
-# different from 'config.status --recheck' in that it does add implicit
+# configure with all of the arguments.  Reserves use of the filename
+# FILENAME.old for its own use.
+# This is different from 'config.status --recheck' in that it does add implicit
 # --no-create --no-recursion options, and stores _just_ the configure
 # invocation, instead of the entire configured state.
 AC_DEFUN([SVN_CONFIG_NICE], [
