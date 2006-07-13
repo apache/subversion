@@ -547,6 +547,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-transient-buffers)
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
+(defvar svn-status-last-diff-options nil)
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 
 ;; Emacs 21 defines these in ediff-init.el but it seems more robust
@@ -774,8 +775,9 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 
 (when (not svn-status-diff-mode-map)
   (setq svn-status-diff-mode-map (copy-keymap diff-mode-shared-map))
+  (define-key svn-status-diff-mode-map [?g] 'svn-status-diff-update)
+  (define-key svn-status-diff-mode-map [?s] 'svn-status-pop-to-status-buffer)
   (define-key svn-status-diff-mode-map [?w] 'svn-status-diff-save-current-defun-as-kill))
-
 
 (defvar svn-global-trac-map ()
   "Subkeymap used in `svn-global-keymap' for trac issue tracker commands.")
@@ -3000,6 +3002,8 @@ If ARG then prompt for revision to diff against, else compare working copy with 
     (setq revision (svn-status-read-revision-string
                     "Diff with files for version: " "PREV")))
 
+  (setq svn-status-last-diff-options (list line-infos recursive revision))
+
   (let ((clear-buf t)
         (beginning nil))
     (dolist (line-info line-infos)
@@ -3062,6 +3066,13 @@ Commands:
   (let ((diff-mode-shared-map (copy-keymap svn-status-diff-mode-map))
         major-mode mode-name)
     (diff-mode)))
+
+(defun svn-status-diff-update ()
+  "Rerun the last svn diff command and update the *svn-diff* buffer."
+  (interactive)
+  (svn-status-save-some-buffers)
+  (save-window-excursion
+    (apply 'svn-status-show-svn-diff-internal svn-status-last-diff-options)))
 
 (defun svn-status-show-process-buffer ()
   "Show the content of the *svn-process* buffer"
