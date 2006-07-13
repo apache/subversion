@@ -9,7 +9,11 @@
 # invocation, instead of the entire configured state.
 AC_DEFUN([SVN_CONFIG_NICE], [
   AC_MSG_NOTICE([creating $1])
-  mv "$1" "$1.old"
+  # This little dance satisfies Cygwin, which cannot overwrite in-use files.
+  if test -f "$1"; then
+    mv "$1" "$1.old"
+    rm -f "$1.old"
+  fi
 
   cat >"$1" <<EOF
 #! /bin/sh
