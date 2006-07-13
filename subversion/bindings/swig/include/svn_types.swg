@@ -248,8 +248,8 @@
     }
 }
 #endif
+
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0) apr_hash_t **MERGEHASH = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **MERGEHASH
 {
     $result = t_output_helper(

@@ -145,7 +145,6 @@
 */
 
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0) apr_hash_t **minfohash = apr_hash_t **OUTPUT;
 %typemap(argout) apr_hash_t **minfohash
 {
     $result = t_output_helper(
