@@ -44,6 +44,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: 'svn switch --relocate' not caching passwords (issue #2360)
     * fixed: 'svn info' not showing locks sometimes (r19777)
     * fixed: incorrect merge of add of binary file already in WC (issue #2403)
+    * fixed: possible dataloss if editing immediately after merge (r20609 -12)
     * fixed: lots of diff wc<->repos bugs
     * fixed: unfriendly error message on propget on nonexistent path (r19399)
     * fixed: spurious revert report after manual conflict removal (issue #2517)
@@ -99,6 +100,9 @@ Developer-visible-changes:
 * require APR >= 0.9.7 to improve error detection for FSFS repos (r19915)
 * require zlib, for svndiff1 delta encoding (r18363)
 * support SWIG 1.3.29 (r19968)
+* support autoconf 2.60-dev (r19919 20632 -36)
+* removed no-longer-supported Red Hat 7.x RPMs (r20636)
+* add support for building RPMs for x86-64 architecture (r20548 -552)
 * numerous improvements to gen-make.py build system, especially on win32
 * removed Visual Studio.NET APR 0.9 project files (r20170)
 * numerous improvements to the test suite
@@ -143,6 +147,7 @@ Developer-visible-changes:
       - full support for Subversion 1.4 APIs, including :
         svn_ra_replay and svn_diff_summarize
       - numerous bug fixes
+      - add ruby documentation (make install-swig-rb-doc) (r20166)
     - SWIG/perl bindings:
       - new support for svn_client_info (r18758)
       - minor corrections to SVN::Fs (r19312)
