@@ -26,6 +26,15 @@ Candidate changes:
     consistency with the majority of existing cases.
     Concerns:
       All this does is introduce extraneous symbols into the global namespace.
+    Counter-concerns:
+      The namespace 'pollution' is entirely benign, since it lies within the
+      svn_* namespace which we already lay claim to, and we would never ever
+      desire to create both a 'struct svn_foo_t' and a 'svn_foo_t' which were
+      different.
+    Benefits:
+      Makes name of thing being declared be present at the start of the
+      declaration, as is common with all other C constructs, rather than
+      just at the end, which is less readable.
     Votes:
       +1: maxb
       -0: rooneg, dlr, malcolm
