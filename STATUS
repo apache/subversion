@@ -20,17 +20,13 @@ Candidate changes:
       +1 (not r20632): malcolm
 
   * r20600
-    In mailer.py, allow mappings to apply to the diff_add_url,
-    diff_copy_url, diff_delete_url and diff_modify_url parameters.
+    In mailer.py, perform parameter substitution on the diff_add_url,
+    diff_copy_url, diff_delete_url and diff_modify_url parameters too.
     Justification:
-      The mailer.conf.example file says:
-        It is typically used for computing from/to addresses, but can
-        actually be used to remap values for any option in this
-        file.
-      This makes this statement truer (I haven't checked all the
-      values that mailer.py accepts).
+      Bugfix.
     Votes:
       +1: blair
+      +0: maxb
 
 Approved changes:
 
