@@ -1902,9 +1902,6 @@ do_single_file_merge(const char *initial_URL1,
     return err;
   svn_error_clear(err);
   
-  /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
-
   if (merge_b->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
@@ -1916,6 +1913,9 @@ do_single_file_merge(const char *initial_URL1,
       (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                     pool);
     }
+
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps();
 
   return SVN_NO_ERROR;
 }
