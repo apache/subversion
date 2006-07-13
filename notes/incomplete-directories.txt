@@ -1,0 +1,196 @@
+          Implementing Incomplete Directory Support in SVN
+
+=*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*=
+
+This design document started out as a post by Eric Gillespie:
+
+   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=117053
+   From: Eric Gillespie <epg@pretzelnet.org>
+   To: dev@subversion.tigris.org
+   Subject: [PROPOSAL] Incomplete working copies (issue #695)
+   Date: Thu, 22 Jun 2006 22:35:06 -0700
+   Message-ID: <25668.1151040906@gould.diplodocus.org>
+
+=*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*= =*=
+
+I'd like to propose a new solution to this issue, and hopefully
+get it into 1.5.  What i'm really looking for is the kind of
+flexibility Perforce has with its client specs in which parts of
+a tree you check out.
+
+I don't think Ben Reser's proposal
+(http://svn.haxx.se/dev/archive-2005-07/0398.shtml) covers this.
+Using his first example, there is no way to avoid pulling in
+trunk/foo/images/another-big-dir when it is added.
+
+This is based on an idea from Karl Fogel.
+
+        Implementing Incomplete Directory Support in SVN
+       ==================================================
+
+Many users have very large trees of which they only want to
+checkout certain parts.  checkout -N is not today up to this
+task.  This proposal introduces the --depth option to the
+checkout, switch, and update subcommands as a replacement for -N,
+which allows working copies to have very specific contents,
+leaving out everything the user does not want.
+
+This is similar to Perforce's client specs, but without the
+ability to have a repository entry have a different name in the
+working copy.  We actually already have this capability in
+switch.
+
+Depth
+=====
+
+We have a new "depth" field in .svn/entries, which has three
+possible values: 0, 1, or infinity.  Only this_dir entries may
+have depth:0 or depth:1; all others have depth:inf.
+
+   depth:0 ---------->  Updates will not pull in any files or
+                        subdirectories not already present.
+
+   depth:1 ---------->  Updates will pull in any files or
+                        subdirectories not already present; those
+                        subdirectories' this_dir entries will
+                        have depth:0.
+
+   depth:inf -------->  Updates will pull in any files or
+                        subdirectories not already present; those
+                        subdirectories' this_dir entries will
+                        have depth:inf.
+
+The --depth option sets depth values as it updates the working
+copy, setting any new subdirectories' this_dir depth values as
+described above.
+
+User interface
+==============
+
+Affected commands:
+
+    * checkout
+    * switch
+    * update
+
+The -N option becomes a synonym for --depth 1 for these commands.
+This changes the existing -N behavior for these commands, but in
+a trivial way (see below).
+
+checkout without --depth or -N behaves the same as it does today.
+switch and update without --depth or -N behave the same way as
+today IFF the working copy is fully depth:inf.  switch and update
+without --depth or -N will NOT change depth values (exception: a
+missing directory specified on the command line will be pulled
+in).
+
+Thus, 'checkout' is identical to 'checkout --depth inf', but
+'switch' and 'update' are not the same as 'switch --depth inf'
+and 'update --depth inf'.  The former update entries according to
+existing depth values, while the latter pulls in everything.
+
+To get started, run checkout with --depth 0 or --depth 1.  If
+additional files or directories are desired, pull them in with
+update commands using appropriate --depth options.
+
+Examples
+========
+
+svn co http://.../A
+
+    Same as today; everything has depth:inf.
+
+svn co -N http://.../A
+
+    Today, this creates wc containing only mu.  Now, this will be
+    identical to 'svn co --depth 1 /A'.
+
+svn co --depth 0 http://.../A Awc
+
+    Creates wc Awc, but *empty*.
+
+    Awc/.svn/entries                this_dir    depth:0
+
+svn co --depth 1 http://.../A Awc1
+
+    Creates wc Awc1 with all files and all subdirectories, but
+    subdirectories are *empty*.
+
+    Awc1/.svn/entries               this_dir    depth:1
+                                    B
+                                    C
+    Awc1/B/.svn/entries             this_dir    depth:0
+    Awc1/C/.svn/entries             this_dir    depth:0
+    ...
+
+svn up Awc/B:
+
+    Since B is not yet checked out, add it at depth infinity.
+
+    Awc/.svn/entries                this_dir    depth:0
+                                    B
+    Awc/B/.svn/entries              this_dir    depth:inf
+                                    ...
+    Awc/B/E/.svn/entries            this_dir    depth:inf
+                                    ...
+    ...
+
+svn up Awc
+
+    Since A is already checked out, don't change its depth, just
+    update it.  B and everything under it is at depth:inf, so it
+    will be updated just as today.
+
+svn up --depth 1 Awc/D
+
+    Since D is not yet checked out, add it at depth 1.
+
+    Awc/.svn/entries                this_dir    depth:0
+                                    B
+                                    D
+    Awc/D/.svn/entries              this_dir    depth:1
+                                    ...
+    Awc/D/G/.svn/entries            this_dir    depth:0
+    ...
+
+svn up --depth 0 Awc/B/E
+
+    Remove everything under E, but leave E as an empty directory
+    since B is depth:inf.
+
+    Awc/.svn/entries                this_dir    depth:0
+                                    B
+                                    D
+    Awc/B/.svn/entries              this_dir    depth:inf
+                                    ...
+    Awc/B/E/.svn/entries            this_dir    depth:0
+    ...
+
+svn up --depth 0 Awc/D
+
+    Remove everything under D, and D itself since A is depth:0.
+
+    Awc/.svn/entries                this_dir    depth:0
+                                    B
+
+svn up Awc/D
+
+    Bring D back at depth:inf.
+
+    Awc/.svn/entries                this_dir    depth:0
+                                    ...
+    Awc/D/.svn/entries              this_dir    depth:inf
+                                    ...
+    ...
+
+svn up --depth 1 Awc
+
+    Bring in everything that's missing (C/ and mu) and empty all
+    subdirectories (and set their this_dir to depth:0).
+
+    Awc/.svn/entries                this_dir    depth:1
+                                    B
+                                    C
+    Awc/B/.svn/entries              this_dir    depth:0
+    Awc/C/.svn/entries              this_dir    depth:0
+    ...
