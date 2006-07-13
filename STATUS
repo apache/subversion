@@ -48,7 +48,7 @@ Candidate changes:
     Justification:
       Static builds currently fail unless --disable-keychain is used.
     Votes:
-      +1: malcolm
+      +1: malcolm, rooneg
       +0: dlr (concept)
 
 Approved changes:
