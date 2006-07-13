@@ -9,7 +9,14 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  None
+  * r20648
+    Fix broken API contract and numerous error leaks in svn_config_ensure().
+    Justification:
+      API states a different behavior than the implementation
+      provides.  Initialization of JavaHL's native library will fail
+      if the invoker's $HOME isn't accessible.
+    Votes:
+      +1: dlr
       
 Approved changes:
 
