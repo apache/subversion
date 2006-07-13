@@ -33,11 +33,10 @@
 #endif
 
 /* Attempt to combine two ranges, IN1 and IN2, and put the result in
-   OUTPUT.
-   If they could be combined, return TRUE. If they could not, return FALSE  */
+   OUTPUT.  Return whether they could be combined. */
 static svn_boolean_t
-svn_combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
-                   svn_merge_range_t *in2)
+combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
+               svn_merge_range_t *in2)
 {
   if (in1->start == in2->start)
     {
@@ -168,7 +167,7 @@ parse_revlist(const char **input, const char *end,
       /* XXX: Watch empty revision list problem */
       if (*curr == '\n' || curr == end)
         {
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, mrange))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, mrange))
             {
               APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
               lastrange = mrange;
@@ -178,7 +177,7 @@ parse_revlist(const char **input, const char *end,
         }
       else if (*curr == ',')
         {
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, mrange))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, mrange))
             {
               APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
               lastrange = mrange;
@@ -278,7 +277,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
       res = svn_sort_compare_ranges(&elt1, &elt2);
       if (res == 0)
         {
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt1))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
             {
               newrange = svn_range_dup(elt1, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
@@ -290,7 +289,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
         }
       else if (res < 0)
         {
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt1))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
             {
               newrange = svn_range_dup(elt1, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
@@ -301,7 +300,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
         }
       else
         {
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt2))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt2))
             {
               newrange = svn_range_dup(elt2, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
@@ -320,7 +319,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(in1, i, svn_merge_range_t *);
 
-      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+      if (!lastrange || !combine_ranges(&lastrange, lastrange, elt))
         {
           newrange = svn_range_dup(elt, pool);
           APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
@@ -333,7 +332,7 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
 
-      if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+      if (!lastrange || !combine_ranges(&lastrange, lastrange, elt))
         {
           newrange = svn_range_dup(elt, pool);
           APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
@@ -440,8 +439,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
         {
           if (!do_remove)
             {
-              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    elt1))
+              if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
                 {
                   lastrange = svn_range_dup(elt1, pool);
                   APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
@@ -473,8 +471,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.end = elt1->end;
                 }
 
-              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    &tmp_range))
+              if (!lastrange || !combine_ranges(&lastrange, lastrange,
+                                                &tmp_range))
                 {
                   lastrange = svn_range_dup(&tmp_range, pool);
                   APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
@@ -493,8 +491,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->end;
                   
-                  if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                        &tmp_range))
+                  if (!lastrange || !combine_ranges(&lastrange, lastrange,
+                                                    &tmp_range))
                     {
                       lastrange = svn_range_dup(&tmp_range, pool);
                       APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
@@ -519,8 +517,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
             j++;
           else
             {
-              if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                    elt1))
+              if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
                 {
                   if (do_remove)
                     {
@@ -543,8 +540,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
          the whiteboard element. */
       if (i == lasti && i < whiteboard->nelts)
         {
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange,
-                                                &wboardelt))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, &wboardelt))
             {
               lastrange = svn_range_dup(&wboardelt, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
@@ -558,7 +554,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
           svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
                                                  svn_merge_range_t *);
 
-          if (!lastrange || !svn_combine_ranges(&lastrange, lastrange, elt))
+          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt))
             {
               lastrange = svn_range_dup(elt, pool);
               APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
