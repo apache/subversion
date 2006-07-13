@@ -51,7 +51,7 @@ Candidate changes:
       +1: malcolm
       +0: dlr (concept)
 
-  * r20609
+  * r20609, r20612
     Fix the possibility of data loss caused by multiple merges (the
     first of which adds a file to the WC) and a commit in quick
     succession.
