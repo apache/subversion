@@ -101,7 +101,7 @@ Developer-visible-changes:
 * require zlib, for svndiff1 delta encoding (r18363)
 * support SWIG 1.3.29 (r19968)
 * support autoconf 2.60-dev (r19919 20632 -36)
-* removed no-longer-supported Red Hat 7.x RPMs (r20636)
+* removed no-longer-supported Red Hat 7.x RPMs (r20462)
 * add support for building RPMs for x86-64 architecture (r20548 -552)
 * numerous improvements to gen-make.py build system, especially on win32
 * removed Visual Studio.NET APR 0.9 project files (r20170)
