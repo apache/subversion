@@ -553,7 +553,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   if (! path)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  err = svn_io_check_path(path, &kind, pool);
+  if (err)
+    {
+      /* Don't throw an error, but don't continue. */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
   if (kind == svn_node_none)
     {
       err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
@@ -592,7 +599,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
   err = svn_io_check_path(path, &kind, pool);
   if (err)
-    return SVN_NO_ERROR;
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
   if (kind == svn_node_none)
     {
@@ -839,7 +849,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
   err = svn_io_check_path(path, &kind, pool);
   if (err)
-    return SVN_NO_ERROR;
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
   
   if (kind == svn_node_none)
     {
@@ -1018,7 +1031,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
   err = svn_io_check_path(path, &kind, pool);
   if (err)
-    return SVN_NO_ERROR;
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
   
   if (kind == svn_node_none)
     {

@@ -344,17 +344,17 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
 
 /** Try to ensure that the user's ~/.subversion/ area exists, and create
  * no-op template files for any absent config files.  Use @a pool for any
- * temporary allocation.  If @a config_dir is not NULL it specifies a
+ * temporary allocation.  If @a config_dir is not @c NULL it specifies a
  * directory from which to read the config overriding all other sources.
  *
  * Don't error if something exists but is the wrong kind (for example,
  * ~/.subversion exists but is a file, or ~/.subversion/servers exists
  * but is a directory).
  *
- * Also don't error if try to create something and fail -- it's okay
- * for the config area or its contents not to be created.  But if
- * succeed in creating a config template file, return error if unable
- * to initialize its contents.
+ * Also don't error if trying to create something and failing -- it's
+ * okay for the config area or its contents not to be created.
+ * However, if creating a config template file succeeds, return an
+ * error if unable to initialize its contents.
  */
 svn_error_t *svn_config_ensure(const char *config_dir, apr_pool_t *pool);
 
