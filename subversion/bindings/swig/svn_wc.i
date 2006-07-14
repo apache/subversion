@@ -66,8 +66,6 @@
     const char *trail_url
 }
 
-%apply const char **OUTPUT { char **url };
-
 
 /* -----------------------------------------------------------------------
    apr_hash_t **

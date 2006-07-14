@@ -43,13 +43,6 @@
     const char *comment
 };
 
-/* svn_client_url_from_path(), svn_client_uuid_from_url()
- * svn_client_uuid_from_path */
-%apply const char **OUTPUT {
-    const char **url,
-    const char **uuid
-};
-
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 

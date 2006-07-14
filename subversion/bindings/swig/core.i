@@ -228,11 +228,6 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   handle the MIME type return value of svn_io_detect_mimetype()
-*/
-%apply const char **OUTPUT { const char ** };
-
-/* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
    config directory of svn_config_read_auth_data() and
    svn_config_write_auth_data().
