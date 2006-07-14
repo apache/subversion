@@ -531,18 +531,6 @@
 
 
 /* -----------------------------------------------------------------------
-   CALLBACK_BATON: Do not convert to C object from Ruby object.
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) void *CALLBACK_BATON
-{
-  $1 = (void *)$input;
-}
-#endif
-
-
-/* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
    svn_ra get_log()
