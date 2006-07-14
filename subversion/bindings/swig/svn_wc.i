@@ -70,13 +70,12 @@
 
 
 /* -----------------------------------------------------------------------
-   apr_hash_t ** <const char *, const svn_wc_entry_t *>
-   svn_wc_entries_read()
+   apr_hash_t **
 */
 
-#ifndef SWIGPERL
 %hash_argout_typemap(entries, svn_wc_entry_t *, _global_svn_swig_py_pool)
-#endif
+%hash_argout_typemap(externals_p, svn_wc_external_item_t *,
+                     _global_svn_swig_py_pool)
 
 /* -----------------------------------------------------------------------
    Callback: svn_wc_notify_func_t
