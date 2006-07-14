@@ -39,12 +39,6 @@
 /* Redundant from 1.1 onwards, so not worth manually wrapping the callback. */
 %ignore svn_fs_set_berkeley_errcall;
 
-/* -----------------------------------------------------------------------
-   %apply-ing of typemaps defined elsewhere
-*/
-
-%apply const char **OUTPUT { const char ** };
-
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
    ### incompatible. */

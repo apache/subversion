@@ -54,10 +54,6 @@
 /* -----------------------------------------------------------------------
    thunk ra_callback
 */
-%apply const char **OUTPUT {
-    const char **url,
-    const char **uuid
-};
 
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *update_editor,
