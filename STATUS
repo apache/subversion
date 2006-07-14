@@ -16,7 +16,7 @@ Candidate changes:
       provides.  Initialization of JavaHL's native library will fail
       if the invoker's $HOME isn't accessible.
     Votes:
-      +1: dlr
+      +1: dlr, malcolm
 
   * r20652
     JavaHL: Fix handling of the Subversion client's config dir during
