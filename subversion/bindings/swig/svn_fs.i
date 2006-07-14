@@ -16,12 +16,12 @@
  * svn_fs.i: SWIG interface file for svn_fs.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") fs
+#elif defined(SWIGPERL)
 %module "SVN::_Fs"
 #elif defined(SWIGRUBY)
 %module "svn::ext::fs"
-#else
-%module fs
 #endif
 
 %include svn_global.swg

@@ -18,12 +18,12 @@
  *   of the more specific module files.
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") core
+#elif defined(SWIGPERL)
 %module "SVN::_Core"
 #elif defined(SWIGRUBY)
 %module "svn::ext::core"
-#else
-%module core
 #endif
 
 %include svn_global.swg
