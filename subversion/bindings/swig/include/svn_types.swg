@@ -153,6 +153,72 @@
 %apply long long *OUTPUT { svn_filesize_t * }
 
 /* -----------------------------------------------------------------------
+   Generic macros for callback typemaps
+*/
+
+#ifdef SWIGPYTHON
+%define %callback_typemap(CallbackFunction, CallbackBaton,
+                          PythonThunk, PerlThunk, RubyThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  $1 = PythonThunk;
+  $2 = $input;
+}
+%enddef
+%define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
+                                    PythonThunk, PerlThunk, RubyThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  /* FIXME: Handle the NULL case. */
+  $1 = PythonThunk;
+  $2 = $input;
+}
+%enddef
+#endif
+
+#ifdef SWIGPERL
+%define %callback_typemap(CallbackFunction, CallbackBaton,
+                          PythonThunk, PerlThunk, RubyThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  $1 = PerlThunk;
+  $2 = $input;
+}
+%enddef
+%define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
+                                    PythonThunk, PerlThunk, RubyThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  if (SvOK($input)) {
+    $1 = PerlThunk;
+    $2 = $input;
+  } else {
+    $1 = NULL;
+    $2 = NULL;
+  }
+}
+%enddef
+#endif
+
+#ifdef SWIGRUBY
+%define %callback_typemap(CallbackFunction, CallbackBaton,
+                          PythonThunk, PerlThunk, RubyThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  $1 = RubyThunk;
+  $2 = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+%enddef
+%define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
+                                    PythonThunk, PerlThunk, RubyThunk)
+%typemap(in) (CallbackFunction, CallbackBaton) {
+  if (NIL_P($input)) {
+    $1 = NULL;
+    $2 = NULL;
+  } else {
+    $1 = RubyThunk;
+    $2 = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  }
+}
+%enddef
+#endif
+
+/* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
 #ifdef SWIGPYTHON

@@ -58,19 +58,12 @@
 %hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *,
                      _global_svn_swig_py_pool)
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_fs_get_locks_callback_t get_locks_func,
-              void *get_locks_baton) {
-  $1 = svn_swig_py_fs_get_locks_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(in) (svn_fs_get_locks_callback_t get_locks_func,
-              void *get_locks_baton) {
-  $1 = svn_swig_rb_fs_get_locks_callback;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+#ifndef SWIGPERL
+%callback_typemap(svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton,
+                  svn_swig_py_fs_get_locks_func,
+                  ,
+                  svn_swig_rb_fs_get_locks_callback)
 #endif
 
 /* -----------------------------------------------------------------------
