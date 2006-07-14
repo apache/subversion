@@ -72,17 +72,6 @@
 /* FIXME: svn_ra_callbacks_t ? */
 #endif
 
-#ifdef SWIGPERL
-%typemap(in) (const svn_delta_editor_t *update_editor,
-              void *update_baton) {
-    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
-}
-%typemap(in) (const svn_delta_editor_t *diff_editor,
-              void *diff_baton) {
-    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
-}
-#endif
-
 #ifdef SWIGPYTHON
 %typemap(in) (const svn_ra_reporter2_t *reporter, void *report_baton)
 {
