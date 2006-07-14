@@ -497,24 +497,22 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 */
 
 #ifdef SWIGPERL
-%typemap(in) (svn_config_enumerator_t callback, void *baton) {
-    $1 = svn_swig_pl_thunk_config_enumerator,
-    $2 = (void *)$input;
-};
+%callback_typemap(svn_config_enumerator_t callback, void *baton,
+                  ,
+                  svn_swig_pl_thunk_config_enumerator,
+                  )
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_config_enumerator2_t callback, void *baton)
-{
-  $1 = svn_swig_rb_config_enumerator;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-};
+%callback_typemap(svn_config_enumerator2_t callback, void *baton,
+                  ,
+                  ,
+                  svn_swig_rb_config_enumerator)
 
-%typemap(in) (svn_config_section_enumerator2_t callback, void *baton)
-{
-  $1 = svn_swig_rb_config_section_enumerator;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-};
+%callback_typemap(svn_config_section_enumerator2_t callback, void *baton,
+                  ,
+                  ,
+                  svn_swig_rb_config_section_enumerator)
 #endif
 
 /* Allow None to be passed as config_dir argument */
