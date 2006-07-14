@@ -24,17 +24,12 @@
 #include <apr_tables.h>
 #include "svn_client.h"
 #include "../include/org_tigris_subversion_javahl_CommitItemStateFlags.h"
-/**
- * Create a commit message object
- * @param jcommitMessage    the java object to receive the callback
- */
+
 CommitMessage::CommitMessage(jobject jcommitMessage)
 {
     m_jcommitMessage = jcommitMessage;
 }
-/**
- * Destroy a commit message object
- */
+
 CommitMessage::~CommitMessage()
 {
     // since the m_jcommitMessage is a global reference, it has to be deleted
@@ -45,10 +40,7 @@ CommitMessage::~CommitMessage()
         env->DeleteGlobalRef(m_jcommitMessage);
     }
 }
-/**
- * Create a C++ holding object for the java object passed into the native code
- * @param jcommitMessage    local reference to the java object
- */
+
 CommitMessage * CommitMessage::makeCCommitMessage(jobject jcommitMessage)
 {
     // if there is no object passed into this method, there is no need for a 
