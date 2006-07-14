@@ -42,7 +42,7 @@ USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
 [-rs REVISION-SVN ] [-pr REPOS-PATH] \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
-[-neon NEON_PATH ] [-zip] [-sign] [-nodeps]
+[-neon NEON_PATH ] [-zlib ZLIB_PATH] [-zip] [-sign] [-nodeps]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -65,6 +65,7 @@ do
        -apr)  APR_PATH="$ARG" ;;
        -apru) APRU_PATH="$ARG" ;;
        -apri) APRI_PATH="$ARG" ;;
+       -zlib) ZLIB_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
       -beta)  BETA="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
@@ -76,7 +77,7 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apru|-apri|-neon)
+      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apru|-apri|-zlib|-neon)
         ARG_PREV=$ARG
         ;;
       -zip)
@@ -147,6 +148,10 @@ if [ -z "$APRI_PATH" ]; then
   APRI_PATH='apr-iconv'
 fi
 
+if [ -z "$ZLIB_PATH" ]; then
+  ZLIB_PATH='zlib'
+fi
+
 if [ -z "$REPOS_PATH" ]; then
   REPOS_PATH="branches/$VERSION"
 else
@@ -175,8 +180,10 @@ if [ $? -ne 0 ]; then
 fi
 
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
+DEPSNAME="subversion-deps-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
+DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
 echo " release branch's revision: $REVISION"
@@ -185,6 +192,7 @@ echo "     constructed from path: /$REPOS_PATH"
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
+mkdir -p "$DEPSPATH"
 echo "Removed and recreated $DIST_SANDBOX"
 
 LC_ALL=C
@@ -229,6 +237,17 @@ install_dependency()
   fi
 }
 
+move_dependency()
+{
+  DEP_NAME=$1
+
+  SOURCE_PATH="$DISTPATH/$DEP_NAME"
+  DEST_PATH="$DEPSPATH/$DEP_NAME"
+
+  rm -rf "$DEST_PATH"
+  mv "$SOURCE_PATH" "$DEST_PATH"
+}
+
 install_dependency apr "$APR_PATH"
 install_dependency apr-util "$APRU_PATH"
 
@@ -237,6 +256,7 @@ if [ -n "$ZIP" ]; then
 fi
 
 install_dependency neon "$NEON_PATH"
+install_dependency zlib "$ZLIB_PATH"
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
@@ -287,6 +307,16 @@ you probably want to use the "svn log" command -- and if it
 does not do what you need, please send in a patch!
 EOF
 
+# Now that the dependencies have been configured/cleaned properly,
+# move them into their separate tree for packaging.
+move_dependency apr
+move_dependency apr-util
+if [ -n "$ZIP" ]; then
+  move_dependency apr-iconv
+fi
+move_dependency neon
+move_dependency zlib
+
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
   # not compliant with POSIX.1 when including filenames longer than 100 chars.
@@ -296,9 +326,14 @@ if [ -z "$ZIP" ]; then
   echo "Rolling $DISTNAME.tar ..."
   (cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
     "$DISTNAME.tar"
+  echo "Rolling $DEPSNAME.tar ..."
+  (cd "$DIST_SANDBOX/deps" > /dev/null && pax -x ustar -w "$DISTNAME") > \
+    "$DEPSNAME.tar"
 
   echo "Compressing to $DISTNAME.tar.bz2 ..."
   bzip2 -9fk "$DISTNAME.tar"
+  echo "Compressing to $DEPSNAME.tar.bz2 ..."
+  bzip2 -9fk "$DEPSNAME.tar"
 
   # Use the gzip -n flag - this prevents it from storing the original name of
   # the .tar file, and far more importantly, the mtime of the .tar file, in the
@@ -311,10 +346,15 @@ if [ -z "$ZIP" ]; then
   # not any of its contents, so there will be no effect on end-users.
   echo "Compressing to $DISTNAME.tar.gz ..."
   gzip -9nf "$DISTNAME.tar"
+  echo "Compressing to $DEPSNAME.tar.gz ..."
+  gzip -9nf "$DEPSNAME.tar"
 else
   echo "Rolling $DISTNAME.zip ..."
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
     "$DISTNAME.zip"
+  echo "Rolling $DEPSNAME.zip ..."
+  (cd "$DIST_SANDBOX/deps" > /dev/null && zip -q -r - "$DISTNAME") > \
+    "$DEPSNAME.zip"
 fi
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
@@ -349,27 +389,27 @@ sign_file()
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
-  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
-  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2 $DEPSNAME.tar.bz2 $DEPSNAME.tar.gz
   echo ""
   echo "md5sums:"
-  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sums:"
-    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
   fi
 else
-  ls -l "$DISTNAME.zip"
-  sign_file $DISTNAME.zip
+  ls -l "$DISTNAME.zip" "$DEPSNAME.zip"
+  sign_file $DISTNAME.zip $DEPSNAME.zip
   echo ""
   echo "md5sum:"
-  md5sum "$DISTNAME.zip"
+  md5sum "$DISTNAME.zip" "$DEPSNAME.zip"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sum:"
-    sha1sum "$DISTNAME.zip"
+    sha1sum "$DISTNAME.zip" "$DEPSNAME.zip"
   fi
 fi
