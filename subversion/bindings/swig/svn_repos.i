@@ -47,37 +47,32 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
-/* -----------------------------------------------------------------------
-   handle svn_repos_history_func_t/baton pairs
-*/
 #ifdef SWIGPYTHON
 %typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-
   $1 = svn_swig_py_repos_history_func;
   $2 = $input; /* our function is the baton. */
 }
 #endif
-
 #ifdef SWIGPERL
 %typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-
   $1 = svn_swig_pl_thunk_history_func;
   $2 = $input; /* our function is the baton. */
 }
 #endif
-
 #ifdef SWIGRUBY
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton)
-{
+%typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
   $1 = svn_swig_rb_repos_history_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   handle svn_repos_authz_read_func_t/baton pairs
-*/
-
+#ifdef SWIGPYTHON
+%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
+  /* FIXME: Handle the NULL case. */
+  $1 = svn_swig_py_repos_authz_func;
+  $2 = $input; /* our function is the baton. */
+}
+#endif
 #ifdef SWIGPERL
 %typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
   if (SvOK ($input)) {
@@ -90,14 +85,6 @@
   }
 }
 #endif
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  $1 = svn_swig_py_repos_authz_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
 #ifdef SWIGRUBY
 %typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton)
 {
@@ -111,10 +98,6 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   handle start_callback of svn_repos_recover2().
-*/
-
 /* cause SWIG syntax error.
 #ifdef SWIGRUBY
 %typemap(in) (svn_error_t *(*)(void *baton) start_callback, void *start_callback_baton)
@@ -123,10 +106,6 @@
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
-*/
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_file_rev_handler_t/baton pairs
 */
 
 #ifdef SWIGRUBY
@@ -138,10 +117,6 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   handle svn_repos_authz_func_t/baton pairs
-*/
-
 #ifdef SWIGRUBY
 %typemap(in) (svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton)
@@ -150,10 +125,6 @@
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_authz_callback_t/baton pairs
-*/
 
 #ifdef SWIGRUBY
 %typemap(in) (svn_repos_authz_callback_t authz_callback,
@@ -173,15 +144,9 @@
 }
 #endif
 
-/* ----------------------------------------------------------------------- */
-
+/* Ruby fixups for functions not following the pool convention. */
 #ifdef SWIGRUBY
 %ignore svn_repos_fs;
-#endif
-
-%include svn_repos_h.swg
-
-#ifdef SWIGRUBY
 %inline %{
 static svn_fs_t *
 svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
@@ -190,3 +155,7 @@ svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
 }
 %}
 #endif
+
+/* ----------------------------------------------------------------------- */
+
+%include svn_repos_h.swg
