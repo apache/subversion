@@ -16,12 +16,12 @@
  * svn_repos.i: SWIG interface file for svn_repos.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") repos
+#elif defined(SWIGPERL)
 %module "SVN::_Repos"
 #elif defined(SWIGRUBY)
 %module "svn::ext::repos"
-#else
-%module repos
 #endif
 
 %include svn_global.swg

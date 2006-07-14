@@ -16,12 +16,12 @@
  * svn_ra.i: SWIG interface file for svn_ra.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") ra
+#elif defined(SWIGPERL)
 %module "SVN::_Ra"
 #elif defined(SWIGRUBY)
 %module "svn::ext::ra"
-#else
-%module ra
 #endif
 
 %include svn_global.swg

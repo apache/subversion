@@ -16,12 +16,12 @@
  * svn_client.i: SWIG interface file for svn_client.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") client
+#elif defined(SWIGPERL)
 %module "SVN::_Client"
 #elif defined(SWIGRUBY)
 %module "svn::ext::client"
-#else
-%module client
 #endif
 
 %include svn_global.swg
