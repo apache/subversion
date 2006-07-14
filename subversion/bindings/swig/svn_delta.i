@@ -61,7 +61,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 #endif
 
 #ifdef SWIGPERL
-%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton) {
+%typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 #endif

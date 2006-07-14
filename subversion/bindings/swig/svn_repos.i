@@ -48,17 +48,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   XXX: for some reasons svn_delta_editor doesn't get typemapped even
-   if svn_delta.i is imported. so we redeclare here.
-*/
-
-#ifdef SWIGPERL
-%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton) {
-    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
    handle svn_repos_history_func_t/baton pairs
 */
 #ifdef SWIGPYTHON
