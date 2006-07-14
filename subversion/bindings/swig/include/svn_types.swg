@@ -144,14 +144,13 @@
    %apply-ing of typemaps
 */
 
-%apply long *OUTPUT { svn_revnum_t * };
-%apply int *OUTPUT { svn_boolean_t * };
-
-/* svn_fs_check_path() */
-%apply long *OUTPUT { svn_node_kind_t * };
-
-/* svn_config_get_server_setting_int() */
-%apply long long *OUTPUT { apr_int64_t * };
+%apply int *OUTPUT {
+  int *,
+  svn_boolean_t *,
+  enum svn_wc_merge_outcome_t *
+};
+%apply long *OUTPUT { svn_revnum_t *, svn_node_kind_t * };
+%apply long long *OUTPUT { svn_filesize_t * }
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -271,11 +270,6 @@
   $result = Qnil;
 }
 #endif
-
-/* -----------------------------------------------------------------------
-   Define an OUTPUT typemap for 'svn_filesize_t *'
-*/
-%apply long long *OUTPUT { svn_filesize_t * }
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument

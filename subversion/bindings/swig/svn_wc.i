@@ -42,15 +42,6 @@
    %apply-ing of typemaps defined elsewhere
 */
 
-/*
-   svn_wc_check_wc(wc_format)
-   svn_wc_merge(wc_format)
-*/
-%apply int *OUTPUT {
-  int *,
-  enum svn_wc_merge_outcome_t *
-};
-
 /* svn_wc_get_prop_diffs() */
 %apply apr_array_header_t **OUTPUT_OF_PROP {
   apr_array_header_t **propchanges
