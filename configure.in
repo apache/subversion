@@ -473,7 +473,6 @@ AC_HELP_STRING([--with-editor=PATH],
 
 AC_CHECK_HEADER(zlib.h, [
            AC_CHECK_LIB(z, inflate, [
-               AC_DEFINE([SVN_HAVE_ZLIB], [1], [Is zlib support enabled?])
                SVN_ZLIB_LIBS="-lz"
            ], [AC_MSG_ERROR([subversion requires zlib])])
        ], [AC_MSG_ERROR([subversion requires zlib])])

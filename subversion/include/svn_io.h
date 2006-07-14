@@ -610,6 +610,8 @@ svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
  * svn_stream_compressed() returns @a stream unmodified. Make sure you
  * call svn_stream_close() on the stream returned by this function,
  * so that all data are flushed and cleaned up.
+ *
+ * @note From 1.4, compression support is always compiled in.
  */
 svn_stream_t *svn_stream_compressed(svn_stream_t *stream, 
                                     apr_pool_t *pool);
