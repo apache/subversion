@@ -88,17 +88,17 @@
 }
 #endif
 #ifdef SWIGRUBY
-%typemap(in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
+%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
 {
-  $1 = svn_swig_rb_ra_lock_callback;
+  $1 = svn_swig_rb_ra_file_rev_handler;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+%typemap(in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
-  $1 = svn_swig_rb_ra_file_rev_handler;
+  $1 = svn_swig_rb_ra_lock_callback;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
