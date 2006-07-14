@@ -54,33 +54,20 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
-/* -----------------------------------------------------------------------
-   except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
-*/
-
 %hash_argout_typemap(entries_p, svn_fs_dirent_t *, _global_svn_swig_py_pool)
-
-/* -----------------------------------------------------------------------
-   and except for svn_fs_paths_changed, which returns svn_fs_path_change_t
-   structures
-*/
-
 %hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *,
                      _global_svn_swig_py_pool)
 
-/* -----------------------------------------------------------------------
-   handle get_locks_func/get_locks_baton pairs.
-*/
 #ifdef SWIGPYTHON
-%typemap(in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
+%typemap(in) (svn_fs_get_locks_callback_t get_locks_func,
+              void *get_locks_baton) {
   $1 = svn_swig_py_fs_get_locks_func;
   $2 = $input; /* our function is the baton. */
 }
 #endif
-
 #ifdef SWIGRUBY
-%typemap(in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton)
-{
+%typemap(in) (svn_fs_get_locks_callback_t get_locks_func,
+              void *get_locks_baton) {
   $1 = svn_swig_rb_fs_get_locks_callback;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
@@ -94,6 +81,8 @@
    will not cause a 2-tuple to be manufactured.
 
    The answer is to explicitly create a 2-tuple return value.
+
+   FIXME: Do the Perl and Ruby bindings need to do something similar?
 */
 #ifdef SWIGPYTHON
 %typemap(argout) (const char **conflict_p, svn_revnum_t *new_rev) {
@@ -104,20 +93,11 @@
 }
 #endif
 
-/* ----------------------------------------------------------------------- */
-
-%{
-#include "svn_md5.h"
-%}
-
+/* Ruby fixups for functions not following the pool convention. */
 #ifdef SWIGRUBY
 %ignore svn_fs_set_warning_func;
 %ignore svn_fs_root_fs;
-#endif
 
-%include svn_fs_h.swg
-
-#ifdef SWIGRUBY
 %inline %{
 static void
 svn_fs_set_warning_func_wrapper(svn_fs_t *fs,
@@ -135,3 +115,11 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 }
 %}
 #endif
+
+/* ----------------------------------------------------------------------- */
+
+%{
+#include "svn_md5.h"
+%}
+
+%include svn_fs_h.swg
