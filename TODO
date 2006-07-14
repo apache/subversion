@@ -50,9 +50,15 @@ Phase 2
 
 Implement auditing/reporting and other high-level features.
 
-* Allow most/all arguments to 'merge' to be elided (through
-  combination of using merge info and copy history) if user wants.
-  (dberlin)
+* Allow most/all arguments to 'merge' to be optional (via a
+  combination of using merge info and copy history).  (dberlin)
+
+  * Merge source (a URL) defaults to any single previously used merge
+    source.  If there are multiple previous merge sources, a specific
+    source must be specified.
+
+  * Revision range defaults to "all available revisions from the merge
+    source".
 
 * Add some set of svnmerge.py-like commands for merge info
   auditing/editing to the 'svn' command-line binary.
