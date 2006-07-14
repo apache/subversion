@@ -47,56 +47,16 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-  $1 = svn_swig_py_repos_history_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-  $1 = svn_swig_pl_thunk_history_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-  $1 = svn_swig_rb_repos_history_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
+                  svn_swig_py_repos_history_func,
+                  svn_swig_pl_thunk_history_func,
+                  svn_swig_rb_repos_history_func)
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  /* FIXME: Handle the NULL case. */
-  $1 = svn_swig_py_repos_authz_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  if (SvOK ($input)) {
-    $1 = svn_swig_pl_thunk_authz_func;
-    $2 = $input; /* our function is the baton */
-  }
-  else {
-    $1 = NULL;
-    $2 = NULL;
-  }
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton)
-{
-  if (NIL_P($input)) {
-    $1 = NULL;
-    $2 = NULL;
-  } else {
-    $1 = svn_swig_rb_repos_authz_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-  }
-}
-#endif
+%callback_typemap_maybenull(svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            svn_swig_py_repos_authz_func,
+                            svn_swig_pl_thunk_authz_func,
+                            svn_swig_rb_repos_authz_func)
 
 /* cause SWIG syntax error.
 #ifdef SWIGRUBY
@@ -109,30 +69,21 @@
 */
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_repos_file_rev_handler_t handler,
-                    void *handler_baton)
-{
-  $1 = svn_swig_rb_repos_file_rev_handler;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_repos_file_rev_handler_t handler, void *handler_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_file_rev_handler)
 
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton)
-{
-  $1 = svn_swig_rb_repos_authz_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_authz_func)
 
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_authz_callback_t authz_callback,
-                    void *authz_baton)
-{
-  $1 = svn_swig_rb_repos_authz_callback;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_repos_authz_callback_t authz_callback, void *authz_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_authz_callback)
 #endif
 
 /* -----------------------------------------------------------------------

@@ -121,125 +121,57 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   Callback: svn_client_get_commit_log_t
-   svn_client_ctx_t
-*/
+#ifdef SWIGPYTHON
+%callback_typemap(svn_client_get_commit_log_t log_msg_func,
+                  void *log_msg_baton,
+                  svn_swig_py_get_commit_log_func,
+                  ,
+                  )
+#endif
+
+#ifdef SWIGRUBY
+%callback_typemap(svn_client_get_commit_log2_t log_msg_func2,
+                  void *log_msg_baton2,
+                  ,
+                  ,
+                  svn_swig_rb_get_commit_log_func2)
+
+%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
+                  ,
+                  ,
+                  svn_swig_rb_cancel_func)
+#endif
+
+%callback_typemap(svn_client_blame_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_client_blame_receiver_func,
+                  svn_swig_pl_blame_func,
+                  svn_swig_rb_client_blame_receiver_func)
+
+#ifdef SWIGRUBY
+%callback_typemap(svn_wc_notify_func2_t notify_func2, void *notify_baton2,
+                  ,
+                  ,
+                  svn_swig_rb_notify_func2)
+#endif
 
 #ifdef SWIGPYTHON
-%typemap(in) (svn_client_get_commit_log_t log_msg_func,
-                     void *log_msg_baton) {
-
-  $1 = svn_swig_py_get_commit_log_func;
-  $2 = $input; /* our function is the baton. */
-}
+%callback_typemap(svn_info_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_info_receiver_func,
+                  ,
+                  )
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_client_get_commit_log2_t log_msg_func2,
-                    void *log_msg_baton2)
-{
-  $1 = svn_swig_rb_get_commit_log_func2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_client_diff_summarize_func_t summarize_func,
+                  void *summarize_baton,
+                  ,
+                  ,
+                  svn_swig_rb_client_diff_summarize_func)
 
-/* -----------------------------------------------------------------------
-   Callback: svn_cancel_func_t
-   svn_client_ctx_t
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_cancel_func_t cancel_func, void *cancel_baton)
-{
-  $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func2_t
-   svn_client_ctx_t
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
-{
-  $1 = svn_swig_rb_notify_func2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-
-/* -----------------------------------------------------------------------
-   Callback: svn_client_blame_receiver_t
-   svn_client_blame()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_client_blame_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_client_blame_receiver_func;
-    $2 = (void *)$input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_client_blame_receiver_t receiver,
-                     void *receiver_baton) {
-  $1 = svn_swig_pl_blame_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_client_blame_receiver_t receiver,
-                    void *receiver_baton)
-{
-  $1 = svn_swig_rb_client_blame_receiver_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_info_receiver_t
-   svn_client_info()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_info_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_info_receiver_func;
-    $2 = (void *)$input;
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_client_diff_summarize_func_t
-   svn_client_diff_summarize()
-   svn_client_diff_summarize_peg()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_client_diff_summarize_func_t summarize_func,
-                    void *summarize_baton)
-{
-  $1 = svn_swig_rb_client_diff_summarize_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_client_list_func_t
-   svn_client_list()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_client_list_func_t list_func, void *baton)
-{
-  $1 = svn_swig_rb_client_list_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_client_list_func_t list_func, void *baton,
+                  ,
+                  ,
+                  svn_swig_rb_client_list_func)
 #endif
 
 /* -----------------------------------------------------------------------
@@ -261,85 +193,36 @@
   PERL NOTE: store the inputed SV in _global_callback for use in the
              later argout typemap
 */
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_simple_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_simple_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
 #ifdef SWIGPYTHON
-%typemap(in) (svn_auth_simple_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_simple_prompt_func;
-    $2 = $input;
-}
+%define %authprompt_callback_typemap(AuthType)
+%callback_typemap(svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+                  void *prompt_baton,
+                  svn_swig_py_auth_ ## AuthType ## _prompt_func,,)
+%enddef
 #endif
 
 #ifdef SWIGPERL
-%typemap(in) (svn_auth_username_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_username_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
+%define %authprompt_callback_typemap(AuthType)
+%typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+              void *prompt_baton) {
+  $1 = svn_swig_pl_thunk_ ## AuthType ## _prompt;
+  $2 = $input;
+  _global_callback = $input;
 }
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_username_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_username_prompt_func;
-    $2 = $input;
-}
+%enddef
 #endif
 
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_ssl_server_trust_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_py_auth_ssl_server_trust_prompt_func;
-    $2 = $input;
-}
+#ifdef SWIGRUBY
+%define %authprompt_callback_typemap(AuthType)
+/* FIXME: Write me? */
+%enddef
 #endif
 
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_ssl_client_cert_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_ssl_client_cert_prompt_func;
-    $2 = $input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_ssl_client_cert_pw_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_ssl_client_cert_pw_prompt_func;
-    $2 = $input;
-}
-#endif
+%authprompt_callback_typemap(simple)
+%authprompt_callback_typemap(username)
+%authprompt_callback_typemap(ssl_server_trust)
+%authprompt_callback_typemap(ssl_client_cert)
+%authprompt_callback_typemap(ssl_client_cert_pw)
 
 /* -----------------------------------------------------------------------
  * For all the various functions that set a callback baton create a reference

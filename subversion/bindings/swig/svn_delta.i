@@ -127,12 +127,11 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 */
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_delta_path_driver_cb_func_t callback_func,
-                    void *callback_baton)
-{
-  $1 = svn_swig_rb_delta_path_driver_cb_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_delta_path_driver_cb_func_t callback_func,
+                  void *callback_baton,
+                  ,
+                  ,
+                  svn_swig_rb_delta_path_driver_cb_func)
 #endif
 
 /* ----------------------------------------------------------------------- */

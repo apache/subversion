@@ -67,121 +67,56 @@
 }
 
 
-/* -----------------------------------------------------------------------
-   apr_hash_t **
-*/
-
 %hash_argout_typemap(entries, svn_wc_entry_t *, _global_svn_swig_py_pool)
 %hash_argout_typemap(externals_p, svn_wc_external_item_t *,
                      _global_svn_swig_py_pool)
 
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func_t
-   svn_client_ctx_t
-   svn_wc many
-*/
-
 #ifdef SWIGPYTHON
-%typemap(in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-  $1 = svn_swig_py_notify_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-%typemap(in) (svn_wc_notify_func2_t notify_func, void *notify_baton) {
-  $1 = svn_swig_py_notify_func2;
-  $2 = $input; /* our function is the baton. */
-}
+%callback_typemap(svn_wc_notify_func_t notify_func, void *notify_baton,
+                  svn_swig_py_notify_func,
+                  ,
+                  )
 #endif
 
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func2_t
-   svn_client_ctx_t
-   svn_wc many
-*/
+#ifndef SWIGPERL
+%callback_typemap(svn_wc_notify_func2_t notify_func, void *notify_baton,
+                  svn_swig_py_notify_func2,
+                  ,
+                  svn_swig_rb_notify_func2)
+#endif
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_wc_notify_func2_t notify_func, void *notify_baton)
-{
-  $1 = svn_swig_rb_notify_func2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(const svn_wc_entry_callbacks_t *walk_callbacks,
+                  void *walk_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_entry_callbacks())
 #endif
 
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_entry_callbacks_t
-   svn_wc_walk_entries2()
-*/
+#ifndef SWIGRUBY
+%callback_typemap(svn_wc_status_func_t status_func, void *status_baton,
+                  svn_swig_py_status_func,
+                  svn_swig_pl_status_func,
+                  )
+#endif
 
 #ifdef SWIGRUBY
-%typemap(in) (const svn_wc_entry_callbacks_t *walk_callbacks,
-                    void *walk_baton)
-{
-  $1 = svn_swig_rb_wc_entry_callbacks();
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_wc_status_func2_t status_func, void *status_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_status_func)
 
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_status_func_t
-   svn_client_status()
-   svn_wc_get_status_editor()
-*/
+%callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
+                  void *callback_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_diff_callbacks2())
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_py_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_pl_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_status_func2_t
-   svn_client_status2()
-   svn_wc_get_status_editor2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_status_func2_t status_func,
-                    void *status_baton)
-{
-  $1 = svn_swig_rb_wc_status_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_callbacks2_t
-   svn_wc_get_diff_editor3()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (const svn_wc_diff_callbacks2_t *callbacks,
-                    void *callback_baton)
-{
-  $1 = svn_swig_rb_wc_diff_callbacks2();
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_relocation_validator2_t
-   svn_wc_relocate2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_relocation_validator2_t validator,
-                    void *validator_baton)
-{
-  $1 = svn_swig_rb_wc_relocation_validator2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_wc_relocation_validator2_t validator,
+                  void *validator_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_relocation_validator2)
 #endif
 
 /* ----------------------------------------------------------------------- */
