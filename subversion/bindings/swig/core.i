@@ -535,43 +535,32 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.
+  PERL NOTE: store the inputed SV in _global_callback for use in the
+             later argout typemap
 */
-#ifdef SWIGRUBY
-%typemap(in) (svn_auth_simple_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_simple_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+#ifdef SWIGPERL
+%define %authprompt_callback_typemap(AuthType)
+%typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+              void *prompt_baton) {
+  $1 = svn_swig_pl_thunk_ ## AuthType ## _prompt;
+  $2 = $input;
+  _global_callback = $input;
 }
-
-%typemap(in) (svn_auth_username_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_username_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%enddef
+#else
+%define %authprompt_callback_typemap(AuthType)
+%callback_typemap(svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+                  void *prompt_baton,
+                  svn_swig_py_auth_ ## AuthType ## _prompt_func,,
+                  svn_swig_rb_auth_ ## AuthType ## _prompt_func)
+%enddef
 #endif
+
+%authprompt_callback_typemap(simple)
+%authprompt_callback_typemap(username)
+%authprompt_callback_typemap(ssl_server_trust)
+%authprompt_callback_typemap(ssl_client_cert)
+%authprompt_callback_typemap(ssl_client_cert_pw)
 
 /* ----------------------------------------------------------------------- */
 

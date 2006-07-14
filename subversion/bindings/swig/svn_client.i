@@ -188,41 +188,10 @@
 %types(svn_dirent_t *);
 %types(svn_lock_t *);
 
-/* -----------------------------------------------------------------------
-  thunk the various authentication prompt functions.
-  PERL NOTE: store the inputed SV in _global_callback for use in the
-             later argout typemap
+/* FIXME: What on earth is all this CALLBACK_BATON stuff actually trying to do?
+   Does Python need to do anything similar?
+   Why is it in svn_client.i and should it apply on a wider scope?
 */
-#ifdef SWIGPYTHON
-%define %authprompt_callback_typemap(AuthType)
-%callback_typemap(svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
-                  void *prompt_baton,
-                  svn_swig_py_auth_ ## AuthType ## _prompt_func,,)
-%enddef
-#endif
-
-#ifdef SWIGPERL
-%define %authprompt_callback_typemap(AuthType)
-%typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
-              void *prompt_baton) {
-  $1 = svn_swig_pl_thunk_ ## AuthType ## _prompt;
-  $2 = $input;
-  _global_callback = $input;
-}
-%enddef
-#endif
-
-#ifdef SWIGRUBY
-%define %authprompt_callback_typemap(AuthType)
-/* FIXME: Write me? */
-%enddef
-#endif
-
-%authprompt_callback_typemap(simple)
-%authprompt_callback_typemap(username)
-%authprompt_callback_typemap(ssl_server_trust)
-%authprompt_callback_typemap(ssl_client_cert)
-%authprompt_callback_typemap(ssl_client_cert_pw)
 
 /* -----------------------------------------------------------------------
  * For all the various functions that set a callback baton create a reference
@@ -255,6 +224,14 @@
 #endif
 
 #ifdef SWIGRUBY
+/* -----------------------------------------------------------------------
+   CALLBACK_BATON: Do not convert to C object from Ruby object.
+*/
+%typemap(in) void *CALLBACK_BATON
+{
+  $1 = (void *)$input;
+}
+
 %apply void *CALLBACK_BATON
 {
   void *notify_baton2,
