@@ -14,10 +14,10 @@ for repos dump/load, including the merge history index.
     collisions (multiple notifications to the same WC item), giving
     preference to later notifications (?).
 
-  * Stop applying merge ranges as soon as a conflict is encountered,
-    and be sure to record partial application of merge ranges (in
-    addition to the usual full application).  (This change in behavior
-    is under debate on the dev list, and may be scrubbed.)
+  * Stop applying merge ranges as soon as a second conflict is
+    encountered in a WC item (as it might generate overlapping
+    conflict makers), being sure to record partial application of
+    merge ranges.
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (madanus)
