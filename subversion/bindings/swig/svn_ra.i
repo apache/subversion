@@ -28,8 +28,8 @@
 %import core.i
 %import svn_delta.i
 
-/* bad pool convention, also these should not be public interface at all
-   as commented by sussman. */
+/* Bad pool convention, also these are not public interfaces, they were
+   simply placed in the public header by mistake. */
 %ignore svn_ra_svn_init;
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
@@ -51,9 +51,26 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
-/* -----------------------------------------------------------------------
-   thunk ra_callback
-*/
+/* ----------------------------------------------------------------------- */
+
+#ifdef SWIGPYTHON
+%typemap(in) (const svn_ra_callbacks2_t *callbacks, void *callback_baton) {
+  svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+/* FIXME: svn_ra_callbacks_t ? */
+#endif
+#ifdef SWIGPERL
+/* FIXME: svn_ra_callbacks2_t ? */
+%typemap(in) (const svn_ra_callbacks_t *callbacks, void *callback_baton) {
+  svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(in) (const svn_ra_callbacks2_t *callbacks, void *callback_baton) {
+  svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+/* FIXME: svn_ra_callbacks_t ? */
+#endif
 
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *update_editor,
@@ -66,39 +83,11 @@
 }
 #endif
 
-#ifdef SWIGPERL
-%typemap(in) (const svn_ra_callbacks_t *callbacks,
-              void *callback_baton) {
-    svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (const svn_ra_callbacks2_t *callbacks,
-                    void *callback_baton)
-{
-  svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
-}
-#endif
-
 #ifdef SWIGPYTHON
-%typemap(in) (const svn_ra_callbacks2_t *callbacks,
-                      void *callback_baton) {
-  svn_swig_py_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
+%typemap(in) (const svn_ra_reporter2_t *reporter, void *report_baton)
 {
-  $1 = svn_swig_rb_ra_lock_callback;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
-{
-  $1 = svn_swig_rb_ra_file_rev_handler;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  $1 = (svn_ra_reporter2_t *)&swig_py_ra_reporter2;
+  $2 = (void *)$input;
 }
 #endif
 
@@ -109,12 +98,19 @@
    $2 = (void *)$input;
 }
 #endif
-
-#ifdef SWIGPYTHON
-%typemap(in) (const svn_ra_reporter2_t *reporter, void *report_baton)
+#ifdef SWIGRUBY
+%typemap(in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
-  $1 = (svn_ra_reporter2_t *)&swig_py_ra_reporter2;
-  $2 = (void *)$input;
+  $1 = svn_swig_rb_ra_lock_callback;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+{
+  $1 = svn_swig_rb_ra_file_rev_handler;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 #endif
 
