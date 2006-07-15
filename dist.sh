@@ -260,7 +260,6 @@ sed \
  -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
  -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
  -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
- -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_patch/" \
  -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
  -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
  -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_VER_TAG/" \
