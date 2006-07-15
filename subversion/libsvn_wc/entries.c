@@ -1314,8 +1314,10 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
-/* Append STR to BUF, terminating it with a newline.  Escape bytes that
-   needs escaping.  Use POOL for temporary allocations. */
+/* If STR is non-null, append STR to BUF, terminating it with a
+   newline, escaping bytes that needs escaping, using POOL for
+   temporary allocations.  Else if STR is null, just append the
+   terminating newline. */
 static void
 write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
 {
@@ -1340,7 +1342,8 @@ write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
 }
 
 /* Append the string VAL of length LEN to BUF, without escaping any
-   bytes. */
+   bytes, followed by a terminator.  If VAL is NULL, ignore LEN and
+   append just the terminator. */ 
 static void
 write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
 {
@@ -1349,7 +1352,7 @@ write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
   svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
-/* If VAL is true, append FIELD_NAME followede by a terminator to BUF.
+/* If VAL is true, append FIELD_NAME followed by a terminator to BUF.
    Else, just append the terminator. */
 static void
 write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
@@ -1357,8 +1360,9 @@ write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
   write_val(buf, val ? field_name : NULL, val ? strlen(field_name) : 0);
 }
 
-/* Append the representation of REVNUM to BUF and a terminator, using
-   POOL for temporary allocations. */
+/* If REVNUM is valid, append the representation of REVNUM to BUF
+   followed by a terminator, using POOL for temporary allocations. 
+   Otherwise, just append the terminator. */
 static void
 write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
 {
