@@ -562,6 +562,31 @@ PyObject *svn_swig_py_exception_type(void);
 %authprompt_callback_typemap(ssl_client_cert)
 %authprompt_callback_typemap(ssl_client_cert_pw)
 
+/* -----------------------------------------------------------------------
+ * For all the various functions that set a callback baton create a reference
+ * for the baton (which in this case is an SV pointing to the callback)
+ * and make that a return from the function.  The perl side should
+ * then store the return in the object the baton is attached to.
+ * If the function already returns a value then this value is follows that
+ * function.  In the case of the prompt functions auth_open_helper in Core.pm
+ * is used to split up these values.
+*/
+#ifdef SWIGPERL
+%typemap(argout) void *CALLBACK_BATON (SV * _global_callback) {
+  /* callback baton */
+  %append_output(sv_2mortal(newRV_inc(_global_callback)));
+}
+
+%typemap(in) void *CALLBACK_BATON (SV * _global_callback) {
+  _global_callback = $input;
+  $1 = (void *) _global_callback;
+}
+
+%apply void *CALLBACK_BATON {
+  void *prompt_baton
+};
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_error_codes_h.swg
