@@ -288,7 +288,7 @@ tarballs.</p>
 special build tools for Subversion RM duties - for example
 <tt>/opt/svnrm</tt>.  Configure, build and install the three pieces of
 software with <tt>--prefix=/opt/svnrm</tt>, and remember, whenever you
-run <tt>dist.sh</tt> to be sure that <tt>/opt/svnrm</tt> is at the
+run <tt>dist.sh</tt> to be sure that <tt>/opt/svnrm/bin</tt> is at the
 front of your <tt>PATH</tt>.</p>
 
 <p><b>Dependency source preparation</b>: You should create two
@@ -324,7 +324,7 @@ tarball.</p>
 <p><b>Build the tarballs</b>: From within your Unix dependency
 directory, run:</p>
 <pre>
-./dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z
+PATH="/opt/svnrm/bin:$PATH" ./dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z
 </pre>
 <p>Watch <tt>dist.sh</tt>'s output to make sure everything goes
 smoothly; when it's done, you'll have tarballs in the cwd.</p> 
@@ -332,7 +332,7 @@ smoothly; when it's done, you'll have tarballs in the cwd.</p>
 <p><b>Build the zipfiles</b>: From within your Win32 dependency
 directory, run:</p>
 <pre>
-./dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z -zip
+PATH="/opt/svnrm/bin:$PATH" ./dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z -zip
 </pre>
 <p>Watch <tt>dist.sh</tt>'s output to make sure everything goes
 smoothly; when it's done, you'll have zipfiles in the cwd.</p> 
