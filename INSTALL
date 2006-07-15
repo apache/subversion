@@ -123,6 +123,15 @@ I.    BUILD REQUIREMENTS
       the ends of their lines.  Otherwise Visual Studio will complain
       that it doesn't recognize the .dsp files.
 
+      If you use APR libraries checked out from svn in an Unix
+      environment, you need to run the 'buildconf' script in each
+      library's directory, to regenerate the configure scripts and
+      other files required for compiling the libraries:
+
+      $ cd apr; ./buildconf; cd ..
+
+      $ cd apr-util; ./buildconf; cd ..
+
 
       2.  autoconf 2.50 or newer (Unix only)
 
