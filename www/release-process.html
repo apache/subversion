@@ -95,12 +95,12 @@ what the rest of this document is about.</p>
 <p>A new release branch is created for each new major and minor
 release.  So, for example, a new release branch is created when
 preparing to release version 2.0.0, or version 1.3.0.  However, when
-preparing to release 1.3.1 (a micro-version increment), the release
-branch created for 1.3.0 is used.</p>
+preparing to release 1.3.1 (a patch-version increment), the release
+branch created at the time of 1.3.0 is used.</p>
 
-<p>If you are preparing for a micro release, then there is no release
+<p>If you are preparing for a patch release, then there is no release
 branch to create. You just pick up where you left off in the current
-minor version release branch.</p>
+minor version series release branch.</p>
 
 <p>The time at which a new release branch needs to be created is fuzzy
 at best.  Generally, we have a soft schedule of releasing a new minor
@@ -118,7 +118,7 @@ A.B with the version you're preparing, eg. 1.3, or 2.0):</p>
     <pre>
       svn cp http://svn.collab.net/repos/svn/trunk \
              http://svn.collab.net/repos/svn/branches/A.B.x \
-             -m "Create the release branch for release A.B.0."
+             -m "Create A.B.x release branch."
     </pre></li>
 
 <li><p>Edit <tt>subversion/include/svn_version.h</tt> on trunk and
@@ -132,7 +132,7 @@ A.B with the version you're preparing, eg. 1.3, or 2.0):</p>
 <li><p>Edit <tt>CHANGES</tt> on trunk to introduce a new section for the
     upcoming release.  The section starts with:</p>
     <pre>
-      Version A.B.0 (released XX XXXXX 200X, from branches/A.B.x)
+      Version A.B.0 (released ?? ????? 200X, from /branches/A.B.x)
       http://svn.collab.net/repos/svn/tags/A.B.0
     </pre>
     <p>Leave the release date blank for now. It will remain this way
@@ -178,7 +178,7 @@ release stabilization section of the hacking guide</a>.</p>
 release, it must be brought up to date to list all changes since the
 last release.</p>
 
-<p>For micro-releases, this is fairly easy: you just need to walk
+<p>For patch-releases, this is fairly easy: you just need to walk
 through the commit logs for the branch since the last "golden"
 revision, and note all interesting merges.  For minor and major
 releases, this is more complex: you need to traverse the commit log on
@@ -256,6 +256,10 @@ tools before proceeding:</p>
     writing)</p></li>
 </ul>
 
+<p>It is important that you do not use distribution shipped versions
+of this software as they are often patched in ways that are not
+portable.</p>
+
 <p>Also grab the following source tarballs, parts of which will be
 bundled in the Subversion release packages:</p>
 
@@ -270,6 +274,7 @@ bundled in the Subversion release packages:</p>
     document to reflect this)</p></li>
 <li><p>A supported version of Neon (currently 0.25.5 is
     preferred).</p></li>
+<li><p>zlib</p></li>
 </ul>
 
 <p>Once you have all this, you can start the following procedure.
