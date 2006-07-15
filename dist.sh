@@ -1,6 +1,5 @@
 #!/bin/sh
 
-#
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
 #                  [-rs REVISION-VER-TAG]
 #                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
@@ -17,18 +16,23 @@
 #   The tarball will be constructed from the root located at REPOS-PATH,
 #   in REVISION.  For example, the command line:
 #
-#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x
+#      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x
 #
-#   from the top-level of a branches/1.1.x working copy will create
-#   a 1.1.0 release tarball. Make sure you have apr, apr-util, neon
-#   and zlib subdirectories in your current working directory or
-#   specify the path to them with the -apr, -apru, -neon or -zlib
-#   options.  For example:
-#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x \
-#        -apr -neon ~/in-tree-libraries/neon-0.24.7 \
-#        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
-#        -apru ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
+#   will create a 1.4.0 release tarball. Make sure you have apr,
+#   apr-util, neon and zlib subdirectories in your current working
+#   directory or specify the path to them with the -apr, -apru, -neon or
+#   -zlib options.  For example:
+#      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x \
+#        -apr  ~/in-tree-libraries/apr-0.9.12 \
+#        -apru ~/in-tree-libraries/apr-util-0.9.12 \
+#        -neon ~/in-tree-libraries/neon-0.25.5 \
+#        -zlib ~/in-tree-libraries/zlib-1.2.3
 #
+#   Note that there is _no_ need to run dist.sh from a Subversion
+#   working copy, so you may wish to create a dist-resources directory
+#   containing the apr/, apr-util/, neon/ and zlib/ dependencies, and
+#   run dist.sh from that.
+#  
 #   When building alpha, beta or rc tarballs pass the appropriate flag
 #   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
 # 
@@ -39,7 +43,6 @@
 #   path to apr-iconv with -apri.
 
 
-# A quick and dirty usage message
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-rs REVISION-VER-TAG ] \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
