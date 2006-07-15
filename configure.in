@@ -471,12 +471,7 @@ AC_HELP_STRING([--with-editor=PATH],
 
 ])
 
-AC_CHECK_HEADER(zlib.h, [
-           AC_CHECK_LIB(z, inflate, [
-               SVN_ZLIB_LIBS="-lz"
-           ], [AC_MSG_ERROR([subversion requires zlib])])
-       ], [AC_MSG_ERROR([subversion requires zlib])])
-AC_SUBST(SVN_ZLIB_LIBS)
+SVN_LIB_Z
 
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
