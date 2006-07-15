@@ -1,69 +1,8 @@
                 Subversion Tarball Release Procedure
                 ====================================
 
-1.  When starting a new major or minor line create a release branch
-    from the "golden" revision number (otherwise skip to step 3):
-
-       svn cp https://svn.collab.net/repos/svn/trunk \
-              https://svn.collab.net/repos/svn/branches/X.Y.x \
-              -r HEAD \
-              -m "Create release X.Y.Z branch"
-
-    All release of the X.Y line will come out of this branch.
-    Changes from trunk will be merged based upon compatibility
-    rules and voting as explained in HACKING.
-
-2.  Bump the version numbers in svn_version.h on trunk.
-
-    Note that this should be the next major/minor line we plan on
-    doing.  For example, if you're making the 1.1.x branch then the
-    svn_version.h in trunk should reflect 1.2.0.
-
-    You'll commit this change along with the change in step 3. 
-
-3.  Tweak trunk to have a new CHANGES section.
-
-    a) Begin a new section at the top of the CHANGES file with:
-
-       Version X.Y.Z (released XX Month 200X, from branches/X.Y.Z)
-       http://svn.collab.net/repos/svn/tags/X.Y.Z
-
-    b) Commit.
-
-4.  Create a working copy (wc) from the release branch.
-
-       $ svn co https://svn.collab.net/repos/svn/branches/X.Y.Z
-
-5.  Merge fixes and changes from trunk. 
-
-    Only very important bugfixes are allowed to merge from the trunk to
-    the release branch. A decision of a merge happends in the STATUS 
-    file as documented in HACKING. 
-
-    In the following example, we pretends to merge revision 7868 into
-    the release branch:
-
-    a) cd to your branch release working copy and run:
- 
-       $ svn merge -r7867:7868 https://svn.collab.net/repos/svn/trunk
- 
-    b) commit the changes:
- 
-       $ svn ci -m "Merge r7868 into the 0.34.0 branch"
- 
-    c) cd to your wc for https://svn.collab.net/repos/svn/trunk and add
-       a note under User-visible changes or Developer-visible changes. 
- 
-          * fixed: Java bindings compilation.
- 
-       Differentiate between client-side and server-side changes by putting
-       them in separate sections.
- 
-       Note: CHANGES is maintained on the trunk because future releases should
-       have past releases CHANGES entries.  It will be merged onto the branch
-       just before a release.
- 
-    d) commit
+[This guide is migrating to www/release-process.html - the initial
+ parts of it have already moved there.]
 
 6.  It's release time, so cd to the release branch's working copy.
  
@@ -87,11 +26,6 @@
  
     To make sure httpd.conf is properly set up for DAV access, see
     subversion/tests/cmdline/README.
- 
-    You should also have libtool-1.5.14 and autoconf-2.59 installed
-    from source.   It is important that you do not use distribution
-    shipped versions of this software as they are often patched in
-    ways that are not portable.
  
     Also, see sections 'Building the Latest Source under Unix' and
     'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
