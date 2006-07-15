@@ -32,12 +32,12 @@ Candidate changes:
 
   * r20686
     Stop overwriting our dependencies' autoconf stuff when we run
-    autogen.sh.
+    autogen.sh.  (Also, fix "Apache 2.0" -> "Apache 2.x".)
     Justification:
       There is no point in doing so, and it can cause headaches if our 
       deps don't support the same version of autoconf as we do.
     Votes:
-      +1: danderson
+      +1: danderson, maxb
 
 Approved changes:
 
