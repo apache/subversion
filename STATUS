@@ -30,6 +30,15 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r20686
+    Stop overwriting our dependencies' autoconf stuff when we run
+    autogen.sh.
+    Justification:
+      There is no point in doing so, and it can cause headaches if our 
+      deps don't support the same version of autoconf as we do.
+    Votes:
+      +1: danderson
+
 Approved changes:
 
   None
