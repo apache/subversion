@@ -190,33 +190,11 @@
 
 /* FIXME: What on earth is all this CALLBACK_BATON stuff actually trying to do?
    Does Python need to do anything similar?
-   Why is it in svn_client.i and should it apply on a wider scope?
+   Why is some of it in svn_client.i and should it apply on a wider scope?
 */
-
-/* -----------------------------------------------------------------------
- * For all the various functions that set a callback baton create a reference
- * for the baton (which in this case is an SV pointing to the callback)
- * and make that a return from the function.  The perl side should
- * then store the return in the object the baton is attached to.
- * If the function already returns a value then this value is follows that
- * function.  In the case of the prompt functions auth_open_helper in Core.pm
- * is used to split up these values.
-*/
-#ifdef SWIGPERL
-%typemap(argout) void *CALLBACK_BATON (SV * _global_callback) {
-  /* callback baton */
-  %append_output(sv_2mortal(newRV_inc(_global_callback)));
-}
-
-%typemap(in) void *CALLBACK_BATON (SV * _global_callback) {
-  _global_callback = $input;
-  $1 = (void *) _global_callback;
-}
-#endif
 
 #ifdef SWIGPERL
 %apply void *CALLBACK_BATON {
-  void *prompt_baton,
   void *notify_baton,
   void *log_msg_baton,
   void *cancel_baton
