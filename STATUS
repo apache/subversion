@@ -38,6 +38,7 @@ Candidate changes:
       deps don't support the same version of autoconf as we do.
     Votes:
       +1: danderson, maxb
+      -1: jerenkrantz
 
 Approved changes:
 
