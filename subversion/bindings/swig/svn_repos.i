@@ -86,6 +86,15 @@
                   svn_swig_rb_repos_authz_callback)
 #endif
 
+/* -----------------------------------------------------------------------
+   handle svn_repos_get_committed_info().
+*/
+#ifdef SWIGRUBY
+%typemap(argout) const char **committed_date {
+  %append_output(svn_swig_rb_svn_date_string_to_time(*$1));
+}
+#endif
+
 /* Ruby fixups for functions not following the pool convention. */
 #ifdef SWIGRUBY
 %ignore svn_repos_fs;
