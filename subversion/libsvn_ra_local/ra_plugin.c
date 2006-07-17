@@ -24,6 +24,7 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -630,11 +631,31 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
+  apr_hash_t *tempmergeinfo;
 
-  SVN_ERR(svn_repos_fs_get_merge_info(mergeinfo, baton->repos, paths,
+  SVN_ERR(svn_repos_fs_get_merge_info(&tempmergeinfo, baton->repos, paths,
                                       revision, include_parents,
                                       NULL, NULL, pool));
+  if (tempmergeinfo != NULL && apr_hash_count (tempmergeinfo) > 0)
+    {
+      const void *key;
+      void *value;
+      apr_hash_index_t *hi;
 
+      *mergeinfo = apr_hash_make(pool);
+      for (hi = apr_hash_first(pool, tempmergeinfo); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path, *info;
+          apr_hash_t *for_path;
+
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          info = value;
+          SVN_ERR(svn_mergeinfo_parse(info, &for_path, pool));
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+        }
+    }
   return SVN_NO_ERROR;
 }
 
