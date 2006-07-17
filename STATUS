@@ -40,6 +40,25 @@ Candidate changes:
       +1: danderson, maxb
       -1: jerenkrantz
 
+  * r20701, r20703
+    Add 'neon' dependencies to svnsync, ra-local-test, and svn-push,
+    working around libtool bug.
+    Justification:
+      Needed to successfully run tests if compiling against an installed Neon,
+      and there are old Subversion libraries in the same directory as Neon.
+    Branch:
+      rs=http://svn.collab.net/repos/svn
+      svn merge -r20702:HEAD $rs/branches/1.4.x-r20701
+      # In case of svnmerge-integrated property conflict (inevitable unless
+      # nothing else has been merged since the merge branch was created),
+      # revert just the svnmerge-integrated property:
+      svn ps svnmerge-integrated `svn pg -rbase svnmerge-integrated` .
+      svn resolved .
+      # and re-record the merge:
+      svnmerge merge -M -F -r 20701,20703
+    Votes:
+      +1: maxb
+
 Approved changes:
 
   None
