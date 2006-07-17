@@ -631,19 +631,20 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
-  apr_hash_t *tempmergeinfo;
+  apr_hash_t *tmp_mergeinfo;
 
-  SVN_ERR(svn_repos_fs_get_merge_info(&tempmergeinfo, baton->repos, paths,
+  SVN_ERR(svn_repos_fs_get_merge_info(&tmp_mergeinfo, baton->repos, paths,
                                       revision, include_parents,
                                       NULL, NULL, pool));
-  if (tempmergeinfo != NULL && apr_hash_count (tempmergeinfo) > 0)
+  if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {
       const void *key;
       void *value;
       apr_hash_index_t *hi;
 
       *mergeinfo = apr_hash_make(pool);
-      for (hi = apr_hash_first(pool, tempmergeinfo); hi;
+
+      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi;
            hi = apr_hash_next(hi))
         {
           const char *path, *info;
@@ -656,6 +657,9 @@ svn_ra_local__get_merge_info(svn_ra_session_t *session,
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
         }
     }
+  else
+    *mergeinfo = NULL;
+
   return SVN_NO_ERROR;
 }
 
