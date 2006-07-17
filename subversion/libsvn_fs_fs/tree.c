@@ -1167,6 +1167,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
           temprange->end = endrev;
           APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = temprange;
           sqlite_result = sqlite3_step(stmt);
+          lastmergedfrom = mergedfrom;
         }
       apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, pathranges);
       
