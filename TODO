@@ -22,6 +22,10 @@ for repos dump/load, including the merge history index.
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (madanus)
 
+* Treat all revisions from a 'copy' source like merge info for the
+  destination.  This may equate to turning all those revs into actual
+  merge info (simpler?), or deriving that info on an as-needed basis.
+
 * Handle initialization of merge info represented by a copy source:
   target merge info = source revs + source merge info
 
@@ -35,6 +39,8 @@ for repos dump/load, including the merge history index.
 
 * mod_dav_svn: Implement handling for svn_ra_get_merge_info() (as a new
   custom REPORT?).  (dberlin)
+
+* Consolidate merge info storage in the index, removing it from the FS. (?)
 
 * BerkeleyDB FS
 
