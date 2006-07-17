@@ -32,7 +32,6 @@
 #include <string.h>
 #include <apr_general.h>
 #include <apr_file_io.h>
-#include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
 
