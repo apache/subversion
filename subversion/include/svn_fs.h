@@ -1143,23 +1143,23 @@ svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
                                       apr_hash_t *mergeinhash,
                                       apr_pool_t *pool);
 
-/** Retrieve multiple nodes merge info
+/** Retrieve merge info for multiple nodes.
+ *
+ * @a minfohash is filled with merge info for each of the @a paths,
+ * stored as a string.  It will never be @c NULL, but may be empty.
  *
  * @a root indicates the revision root to use when looking up paths.
  *
  * @a paths indicate the paths you are requesting information for
- *
- * @a minfohash is filled with merge info for each of the @a paths,
- * stored as a string.
  *
  * When @a include_parents is @c TRUE, include inherited merge info
  * from parent directories of @a paths.
  *
  * Do any necessary temporary allocation in @a pool.
  */
-svn_error_t *svn_fs_get_merge_info(svn_fs_root_t *root,
+svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
+                                   svn_fs_root_t *root,
                                    const apr_array_header_t *paths,
-                                   apr_hash_t **minfohash,
                                    svn_boolean_t include_parents,
                                    apr_pool_t *pool);
 
