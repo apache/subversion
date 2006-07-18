@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-07-18 23:09+0200\n"
-"PO-Revision-Date: 2006-06-06 12:22+0200\n"
+"PO-Revision-Date: 2006-07-18 23:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3860,9 +3860,9 @@ msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "Klarer ikke å lese filrettigheter for filen i «%s» («file stat»-feil)"
 
 #: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change perms of file '%s'"
-msgstr "Klarer ikke å forandre lese/skrive-rettigheter for filen «%s»"
+msgstr "Klarer ikke å forandre rettigheter for filen «%s»"
 
 #: libsvn_subr/io.c:1370
 #, c-format
@@ -4923,9 +4923,9 @@ msgid "Error removing lock from entry for '%s'"
 msgstr "Feil ved fjerning av lås fra post for «%s»"
 
 #: libsvn_wc/log.c:880
-#, fuzzy, c-format
+#, c-format
 msgid "Error removing changelist from entry '%s'"
-msgstr "Feil under lesing av forandringer for nøkkelen «%s»"
+msgstr "Feil under sletting av forandringsliste fra post «%s»"
 
 #: libsvn_wc/log.c:1010
 #, c-format
@@ -5295,7 +5295,7 @@ msgstr ""
 "Målkatalogen finnes allerede. Flytt den eller bruk --force for å overskrive"
 
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -5312,6 +5312,8 @@ msgstr ""
 "bruk: svn <delkommando> [valg] [arg]\n"
 "Subversion kommandolinjeklient, versjon %s.\n"
 "Skriv «svn help <delkommando>» for hjelp om en spesifikk delkommando\n"
+"Skriv «svn --version» for å se versjonen av programmet og RA-moduler\n"
+"eller «svn --version --quiet» for å kun se versjonsnummeret.\n"
 "\n"
 "De fleste kommandoene tar fil- og/eller katalogargumenter og går inn i "
 "kataloger\n"
@@ -5519,14 +5521,14 @@ msgstr ""
 "%s\n"
 
 #: svn/info-cmd.c:425
-#, fuzzy, c-format
+#, c-format
 msgid "Changelist: %s\n"
-msgstr "Kontrollsum: %s\n"
+msgstr "Forandringsliste: %s\n"
 
 #: svn/info-cmd.c:477
-#, fuzzy, c-format
+#, c-format
 msgid "no such changelist '%s'"
-msgstr "Post ikke funnet: «%s»"
+msgstr "forandringsliste ikke funnet: «%s»"
 
 #: svn/info-cmd.c:539
 #, c-format
@@ -5653,9 +5655,8 @@ msgstr "behandle verdi som om tegnkoden ARG gjelder"
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
 #: svnversion/main.c:125
-#, fuzzy
 msgid "show program version information"
-msgstr "vis versjonsinformasjon"
+msgstr "vis versjonsinformasjon for programmet"
 
 #: svn/main.c:93
 msgid "print extra information"
@@ -5795,15 +5796,15 @@ msgstr "vis et sammendrag av resultatene"
 
 #: svn/main.c:162
 msgid "remove changelist association"
-msgstr ""
+msgstr "fjern assosiasjon med forandringsliste"
 
 #: svn/main.c:164
 msgid "operate only on members of changelist ARG"
-msgstr ""
+msgstr "operer bare på medlemmer av forandringsliste ARG"
 
 #: svn/main.c:166
 msgid "don't delete changelist after commit"
-msgstr ""
+msgstr "ikke slett forandringsliste etter innlegging"
 
 #: svn/main.c:205
 msgid ""
@@ -5850,7 +5851,10 @@ msgid ""
 "Associate (or deassociate) local paths with changelist CLNAME.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --clear TARGET...\n"
-msgstr ""
+msgstr "Assosier (eller deassosier) lokale stier med\n"
+"forandringsliste FLNAVN.\n"
+"bruk: 1. changelist FLNAVN MÅL...\n"
+"      2. changelist --clear MÅL...\n"
 
 #: svn/main.c:237
 msgid ""
@@ -7194,6 +7198,8 @@ msgid ""
 "\n"
 "--- Changelist '%s':\n"
 msgstr ""
+"\n"
+"--- Forandringsliste «%s»:\n"
 
 #: svn/status.c:263
 #, c-format
@@ -7641,7 +7647,6 @@ msgid "done.\n"
 msgstr "ferdig.\n"
 
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7651,6 +7656,8 @@ msgid ""
 msgstr ""
 "generell bruk: svnadmin DELKOMMANDO DEPOTSTI  [ARGUMENTER & VALG ...]\n"
 "Skriv «svnadmin help <delkommando>» for hjelp om en delkommando.\n"
+"Skriv «svnadmin --version» for å se versjonen for programmet og\n"
+"FS-modulene.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -7861,7 +7868,6 @@ msgstr ""
 "bruk: svndumpfilter help [DELKOMMANDO...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -7872,6 +7878,7 @@ msgstr ""
 "generell bruk: svndumpfilter DELKOMMANDO [ARGUMENTER & VALG ...]\n"
 "Skriv «svndumpfilter help <delkommando>» for hjelp til en spesifikk\n"
 "delkommando.\n"
+"Skriv «svndumpfilter --version» for å se programversjonsnummeret.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -8223,7 +8230,6 @@ msgid "Missing repository path argument"
 msgstr "Mangler filstiargument til depotet"
 
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8239,6 +8245,7 @@ msgstr ""
 "      bruker depotets yngste revisjon hvis de brukes uten disse\n"
 "      valgene.\n"
 "Skriv «svnlook help <delkommando>» for hjelp om en delkommando.\n"
+"Skriv «svnlook --version» for å se versjonen for programmet og FS-modulene.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -8554,7 +8561,6 @@ msgstr ""
 "blitt synkronisert enda"
 
 #: svnsync/main.c:1134
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8564,6 +8570,7 @@ msgid ""
 msgstr ""
 "generell bruk: svnsync DELKOMMANDO MÅLURL [ARGUMENTER & VALG ...]\n"
 "Skriv «svnsync help <delkommando>» for hjelp om en spesifikk delkommando.\n"
+"Skriv «svnsync --version» for å se versjonen for programmet og RA-modulene.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
