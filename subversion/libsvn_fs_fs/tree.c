@@ -1174,8 +1174,6 @@ parse_mergeinfo_from_db(sqlite3 *db,
       if (sqlite_result != SQLITE_DONE)
         return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                 sqlite3_errmsg(db));
-
-      apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, pathranges);
     }
   else
     {
