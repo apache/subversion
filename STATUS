@@ -46,7 +46,7 @@ Candidate changes:
       # and re-record the merge:
       svnmerge merge -M -F -r 20701,20703
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
   * r20715, r20717
     Fix some more global pool destruction ordering bugs.
