@@ -16,11 +16,12 @@ Candidate changes:
       Ensuring the config dir exists shouldn't happen during library
       init, but instead when using the SVNClient API.  Changes to the
       config dir should trigger svn_config_ensure().
+    Notes:
+      There is a trivial merge conflict in JNIUtil.cpp.  Take the
+      obvious conflict resolution (the empty .merge.right.r20652 side
+      of the merge).
     Votes:
       +1: dlr
-    Problems:
-      Merge conflicts. Please confirm that the obvious conflict resolution
-      is correct.
 
   * r20686
     Stop overwriting our dependencies' autoconf stuff when we run
@@ -56,7 +57,7 @@ Candidate changes:
     Justification:
       Fixes known issues with svnserve and bdb 4.4, fairly simple changes.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
 Approved changes:
 
