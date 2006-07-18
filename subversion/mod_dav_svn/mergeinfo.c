@@ -55,7 +55,7 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
-  svn_boolean_t include_parents = 0;  /* off by default */
+  svn_boolean_t include_parents = FALSE;  /* off by default */
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
@@ -71,8 +71,6 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
-     syntax implied below... */
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
       /* if this element isn't one of ours, then skip it */
@@ -95,7 +93,6 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
         }
       /* else unknown element; skip it */
     }
-
 
   /* Build authz read baton */
   arb.r = resource->info->r;
@@ -136,8 +133,11 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
       for (hi = apr_hash_first(resource->pool, mergeinfo); hi;
            hi = apr_hash_next(hi))
         {
-          const char *path, *info;          
-          const char itemformat[] = "<S:merge-info-item>" DEBUG_CR "<S:merge-info-path>%s</S:merge-info-path>" DEBUG_CR "<S:merge-info-info>%s</S:merge-info-info>" DEBUG_CR "</S:merge-info-item>";
+          const char *path, *info;
+          const char itemformat[] = "<S:merge-info-item>" DEBUG_CR
+            "<S:merge-info-path>%s</S:merge-info-path>" DEBUG_CR
+            "<S:merge-info-info>%s</S:merge-info-info>" DEBUG_CR
+            "</S:merge-info-item>";
 
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
@@ -187,7 +187,7 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
-  if (((apr_err = ap_fflush(output, bb))) && (! derr))
+  if ((apr_err = ap_fflush(output, bb)) && !derr)
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
                                "Error flushing brigade.",

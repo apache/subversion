@@ -722,7 +722,7 @@ enum {
   ELEM_merge_info_report,
   ELEM_merge_info_item,
   ELEM_merge_info_path,
-  ELEM_merge_info_info,
+  ELEM_merge_info_info
 };
 
 /* ### docco */

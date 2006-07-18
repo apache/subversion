@@ -37,6 +37,11 @@
 
 #include "ra_dav.h"
 
+/* Baton for accumulating mergeinfo.  RESULT stores the final
+   mergeinfo hash result we are going to hand back to the caller of
+   get_mergeinfo.  curr_path and curr_info contain the value of the
+   CDATA from the merge info items as we get them from the server.  */
+
 struct mergeinfo_baton
 {
   apr_pool_t *pool;
@@ -46,7 +51,7 @@ struct mergeinfo_baton
   svn_error_t *err;
 };
 
-static const svn_ra_dav__xml_elm_t minfo_report_elements[] =
+static const svn_ra_dav__xml_elm_t mergeinfo_report_elements[] =
   {
     { SVN_XML_NAMESPACE, "merge-info-report", ELEM_merge_info_report, 0 },
     { SVN_XML_NAMESPACE, "merge-info-item", ELEM_merge_info_item, 0 },
@@ -64,8 +69,8 @@ start_element(void *baton, int parent_state, const char *nspace,
   struct mergeinfo_baton *mb = baton;
 
   const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(minfo_report_elements, nspace, elt_name);
-
+    = svn_ra_dav__lookup_xml_elem(mergeinfo_report_elements, nspace,
+                                  elt_name);
   if (! elm)
     return NE_XML_DECLINE;
 
@@ -95,8 +100,8 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
   struct mergeinfo_baton *mb = baton;
 
   const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(minfo_report_elements, nspace, elt_name);
-
+    = svn_ra_dav__lookup_xml_elem(mergeinfo_report_elements, nspace,
+                                  elt_name);
   if (! elm)
     return NE_XML_DECLINE;
 
@@ -173,9 +178,6 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
     = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
 
   static const char minfo_request_tail[] = "</S:merge-info-report>" DEBUG_CR;
-
-
-
 
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, minfo_request_head);
