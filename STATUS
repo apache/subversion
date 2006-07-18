@@ -21,7 +21,7 @@ Candidate changes:
       obvious conflict resolution (the empty .merge.right.r20652 side
       of the merge).
     Votes:
-      +1: dlr
+      +1: dlr, cmpilato
 
   * r20686
     Stop overwriting our dependencies' autoconf stuff when we run
@@ -52,13 +52,12 @@ Candidate changes:
     Votes:
       +1: maxb, rooneg
 
+Approved changes:
+
   * r20715, r20717
     Fix some more global pool destruction ordering bugs.
     Justification:
       Fixes known issues with svnserve and bdb 4.4, fairly simple changes.
     Votes:
-      +1: rooneg, dlr
+      +1: rooneg, dlr, cmpilato
 
-Approved changes:
-
-  None
