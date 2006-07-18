@@ -625,7 +625,7 @@ svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
      us to protect the name of where a change was merged from, but not
      the change itself. */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_merge_info(root, readable_paths, mergeinfo, 
+    SVN_ERR(svn_fs_get_merge_info(mergeinfo, root, readable_paths,
                                   include_parents, pool));
   else
     *mergeinfo = NULL;
