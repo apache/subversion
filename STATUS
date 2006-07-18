@@ -9,15 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r20648
-    Fix broken API contract and numerous error leaks in svn_config_ensure().
-    Justification:
-      API states a different behavior than the implementation
-      provides.  Initialization of JavaHL's native library will fail
-      if the invoker's $HOME isn't accessible.
-    Votes:
-      +1: dlr, malcolm
-
   * r20652
     JavaHL: Fix handling of the Subversion client's config dir during
     native library init and API manipulation.
@@ -25,8 +16,6 @@ Candidate changes:
       Ensuring the config dir exists shouldn't happen during library
       init, but instead when using the SVNClient API.  Changes to the
       config dir should trigger svn_config_ensure().
-    Note:
-      Depends on r20648.
     Votes:
       +1: dlr
 
