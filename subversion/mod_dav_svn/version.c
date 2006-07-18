@@ -47,6 +47,7 @@ static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
+  { SVN_XML_NAMESPACE, "merge-info-report" },
   { NULL },
 };
 
@@ -1366,6 +1367,10 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
       else if (strcmp(doc->root->name, "replay-report") == 0)
         {
           return dav_svn__replay_report(resource, doc, output);
+        }
+      else if (strcmp(doc->root->name, "merge-info-report") == 0)
+        {
+          return dav_svn__get_merge_info_report(resource, doc, output);
         }
 
       /* NOTE: if you add a report, don't forget to add it to the

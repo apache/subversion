@@ -719,7 +719,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * @since New in 1.5.
  */
 svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
-                                   apr_hash_t **mergeinfo,
+                                   apr_hash_t **mergeoutput,
                                    const apr_array_header_t *paths,
                                    svn_revnum_t revision,
                                    svn_boolean_t include_parents,

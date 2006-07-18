@@ -718,7 +718,11 @@ enum {
   ELEM_change_dir_prop,
   ELEM_close_file,
   ELEM_close_directory,
-  ELEM_deadprop_count
+  ELEM_deadprop_count,
+  ELEM_merge_info_report,
+  ELEM_merge_info_item,
+  ELEM_merge_info_path,
+  ELEM_merge_info_info,
 };
 
 /* ### docco */

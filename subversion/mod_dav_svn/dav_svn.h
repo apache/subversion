@@ -538,6 +538,14 @@ dav_error * dav_svn__replay_report(const dav_resource *resource,
                                    const apr_xml_doc *doc,
                                    ap_filter_t *output);
 
+/* Respond to a client request for a REPORT of type
+   get-mergeinfo-report for the RESOURCE.  Get request body from DOC
+   and send result to OUTPUT. */
+
+dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
+                                           const apr_xml_doc *doc,
+                                           ap_filter_t *output);
+
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
 /* Output XML data to OUTPUT using BB.  Use FMT as format string for the

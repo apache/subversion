@@ -159,6 +159,8 @@
 }
 #endif
 
+%apply apr_hash_t **MERGEHASHHASH { apr_hash_t **mergeoutput };
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_ra_h.swg
