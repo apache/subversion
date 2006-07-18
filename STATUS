@@ -18,6 +18,9 @@ Candidate changes:
       config dir should trigger svn_config_ensure().
     Votes:
       +1: dlr
+    Problems:
+      Merge conflicts. Please confirm that the obvious conflict resolution
+      is correct.
 
   * r20686
     Stop overwriting our dependencies' autoconf stuff when we run
