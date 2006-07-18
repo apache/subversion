@@ -54,10 +54,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r20715, r20717
-    Fix some more global pool destruction ordering bugs.
-    Justification:
-      Fixes known issues with svnserve and bdb 4.4, fairly simple changes.
-    Votes:
-      +1: rooneg, dlr, cmpilato
-
