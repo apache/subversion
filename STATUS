@@ -9,20 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r20652
-    JavaHL: Fix handling of the Subversion client's config dir during
-    native library init and API manipulation.
-    Justification:
-      Ensuring the config dir exists shouldn't happen during library
-      init, but instead when using the SVNClient API.  Changes to the
-      config dir should trigger svn_config_ensure().
-    Notes:
-      There is a trivial merge conflict in JNIUtil.cpp.  Take the
-      obvious conflict resolution (the empty .merge.right.r20652 side
-      of the merge).
-    Votes:
-      +1: dlr, cmpilato
-
   * r20686
     Stop overwriting our dependencies' autoconf stuff when we run
     autogen.sh.  (Also, fix "Apache 2.0" -> "Apache 2.x".)
