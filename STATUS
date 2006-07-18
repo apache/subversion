@@ -38,5 +38,15 @@ Candidate changes:
     Votes:
       +1: maxb, rooneg
 
+  * r20729
+    Pay attention to any errors caused by manipulating hook script
+    (write) file handles.
+    Justification:
+      Fixes error handling for hooks.
+    Note:
+      Something of an edge case; definitely not a blocker for 1.4.0.
+    Votes:
+      +1: dlr
+
 Approved changes:
 
