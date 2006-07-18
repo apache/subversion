@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-07-19 01:08+0200\n"
-"PO-Revision-Date: 2006-03-15 22:21+0100\n"
+"PO-Revision-Date: 2006-07-19 01:57+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -880,7 +880,7 @@ msgstr "Kan ikke beregne «blame»-informasjon for binær fil «%s»"
 
 #: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "«blame» for ARBEID-revisjonen er ikke støttet"
 
 #: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
@@ -1334,7 +1334,7 @@ msgstr "Mangler påkrevet revisjonsspesifikasjon"
 
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
-msgstr ""
+msgstr "Revisjonstype krever en sti i arbeidskopien, ikke en URL"
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
@@ -1373,9 +1373,9 @@ msgid "Value will not be set unless forced"
 msgstr "Verdien blir ikke satt uten tvang"
 
 #: libsvn_client/prop_commands.c:499
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' does not exist in revision '%ld'"
-msgstr "Filstien «%s» finnes ikke i revisjon %ld"
+msgstr "«%s» finnes ikke i revisjon «%ld»"
 
 #: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:765
 #, c-format
@@ -2968,49 +2968,42 @@ msgid "File doesn't exist on HEAD"
 msgstr "Filen finnes ikke i HEAD-revisjonen"
 
 #: libsvn_ra_serf/locks.c:354
-#, fuzzy, c-format
+#, c-format
 msgid "Lock request failed: %d %s"
-msgstr "Låseforespørsel feilet"
+msgstr "Låseforespørsel feilet: %d %s"
 
 #: libsvn_ra_serf/locks.c:703
-#, fuzzy, c-format
+#, c-format
 msgid "Unlock request failed: %d %s"
-msgstr "«Lås opp»-forespørsel feilet"
+msgstr "«Lås opp»-forespørsel feilet: %d %s"
 
 #: libsvn_ra_serf/replay.c:204
-#, fuzzy
 msgid "Missing revision attr in delete-entry element"
 msgstr "Mangler revisjonsattributt i «delete-entry»-element"
 
 #: libsvn_ra_serf/replay.c:224
-#, fuzzy
 msgid "Missing path attr in open-directory element"
-msgstr "Mangler navnattributt i «open-directory»-element"
+msgstr "Mangler stiattributt i «open-directory»-element"
 
 #: libsvn_ra_serf/replay.c:230
-#, fuzzy
 msgid "Missing revision attr in open-directory element"
-msgstr "Mangler revisjonsattributt i «open-root»-element"
+msgstr "Mangler revisjonsattributt i «open-directory»-element"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing path attr in add-directory element"
-msgstr "Mangler navnattributt i «open-directory»-element"
+msgstr "Mangler stiattributt i «add-directory»-element"
 
 #: libsvn_ra_serf/replay.c:285
-#, fuzzy
 msgid "Missing name attr in open-file element"
-msgstr "Mangler navnattributt i «open-directory»-element"
+msgstr "Mangler navnattributt i «open-file»-element"
 
 #: libsvn_ra_serf/replay.c:291
-#, fuzzy
 msgid "Missing revision attr in open-file element"
-msgstr "Mangler revisjonsattributt i «open-root»-element"
+msgstr "Mangler revisjonsattributt i «open-file»-element"
 
 #: libsvn_ra_serf/replay.c:311
-#, fuzzy
 msgid "Missing name attr in add-file element"
-msgstr "Mangler navnattributt i «%s»-element"
+msgstr "Mangler navnattributt i «add-file»-element"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -3027,13 +3020,13 @@ msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versjonen av RA-lasteren (%d) for ra_serf støttes ikke"
 
 #: libsvn_ra_serf/update.c:2112
-#, fuzzy, c-format
+#, c-format
 msgid "Error retrieving REPORT (%d)"
-msgstr "Feil under henting av REPORT"
+msgstr "Feil under henting av REPORT (%d)"
 
 #: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
-msgstr ""
+msgstr "For tidlig filslutt mottatt fra tjener"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -3865,9 +3858,9 @@ msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "Klarer ikke å lese filrettigheter for filen i «%s» («file stat»-feil)"
 
 #: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change perms of file '%s'"
-msgstr "Klarer ikke å forandre lese/skrive-rettigheter for filen «%s»"
+msgstr "Klarer ikke å forandre rettigheter for filen «%s»"
 
 #: libsvn_subr/io.c:1370
 #, c-format
@@ -4643,25 +4636,22 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "Oppføringen «%s» har ugyldig «%s»-verdi"
 
 #: libsvn_wc/entries.c:111
-#, fuzzy
 msgid "Invalid escape sequence"
-msgstr "Ugyldig klargjøring"
+msgstr "Ugyldig escape-sekvens"
 
 #: libsvn_wc/entries.c:118
-#, fuzzy
 msgid "Invalid escaped character"
-msgstr "Ugyldig endringstype"
+msgstr "Ugyldig beskyttet («escaped») tegn"
 
 #: libsvn_wc/entries.c:136 libsvn_wc/entries.c:165 libsvn_wc/entries.c:191
 #: libsvn_wc/entries.c:203
-#, fuzzy
 msgid "Unexpected end of entry"
-msgstr "Uventet slutt på svndiff-inndata"
+msgstr "Uventet slutt på post"
 
 #: libsvn_wc/entries.c:225
 #, c-format
 msgid "Invalid value for field '%s'"
-msgstr ""
+msgstr "Ugyldig verdi i felt «%s»"
 
 #: libsvn_wc/entries.c:307 libsvn_wc/entries.c:533
 #, c-format
@@ -4691,24 +4681,22 @@ msgid "Default entry is missing URL"
 msgstr "Standardoppføringen mangler adresse"
 
 #: libsvn_wc/entries.c:1076
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "Feil under skriving av postfil for «%s»"
+msgstr "Ugyldig versjonslinje i «entries»-fil for «%s»"
 
 #: libsvn_wc/entries.c:1093
-#, fuzzy
 msgid "Missing entry terminator"
-msgstr "Mangler standardoppføring"
+msgstr "Mangler postavslutning"
 
 #: libsvn_wc/entries.c:1096
-#, fuzzy
 msgid "Invalid entry terminator"
-msgstr "Ugyldig forflytning"
+msgstr "Ugyldig postavslutning"
 
 #: libsvn_wc/entries.c:1100
-#, fuzzy, c-format
+#, c-format
 msgid "Error at entry %d in entries file for '%s':"
-msgstr "Feil under skriving av postfil for «%s»"
+msgstr "Feil i post %d i «entries»-fil for «%s»:"
 
 #: libsvn_wc/entries.c:1196
 #, c-format
@@ -4972,9 +4960,8 @@ msgid "Error modifying entry of '%s'"
 msgstr "Feil under endring av oppføringen på «%s»"
 
 #: libsvn_wc/log.c:1486
-#, fuzzy
 msgid "Invalid 'format' attribute"
-msgstr "Ugyldig verdi i innstilling"
+msgstr "Ugyldig «format»-attributt"
 
 #: libsvn_wc/log.c:1521
 #, c-format
@@ -5062,9 +5049,9 @@ msgstr ""
 "men egenskapen finnes allerede med verdien «%s»."
 
 #: libsvn_wc/props.c:880
-#, fuzzy, c-format
+#, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "Mangler «revisjon»-attributt for «%s»"
+msgstr "Mangler linjeslutt i «wcprops»-fil for «%s»"
 
 #: libsvn_wc/props.c:1064 libsvn_wc/props.c:1100 libsvn_wc/props.c:1370
 #: libsvn_wc/props.c:1626
@@ -5283,9 +5270,8 @@ msgid "Can't open stderr"
 msgstr "Kan ikke åpne for standardfeil"
 
 #: svn/diff-cmd.c:184
-#, fuzzy
 msgid "'--new' option only valid with '--old' option"
-msgstr "«new»-valget er bare gyldig sammen med «old»-valget"
+msgstr "«--new»-valget er bare gyldig sammen med «--old»-valget"
 
 #: svn/diff-cmd.c:214
 #, c-format
@@ -5301,7 +5287,7 @@ msgstr ""
 "Målkatalogen finnes allerede. Flytt den eller bruk --force for å overskrive"
 
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -5318,6 +5304,8 @@ msgstr ""
 "bruk: svn <delkommando> [valg] [arg]\n"
 "Subversion kommandolinjeklient, versjon %s.\n"
 "Skriv «svn help <delkommando>» for hjelp om en spesifikk delkommando\n"
+"Skriv «svn --version» for å se versjonen av programmet og RA-moduler\n"
+"eller «svn --version --quiet» for å kun se versjonsnummeret.\n"
 "\n"
 "De fleste kommandoene tar fil- og/eller katalogargumenter og går inn i "
 "kataloger\n"
@@ -5649,9 +5637,8 @@ msgstr "behandle verdi som om tegnkoden ARG gjelder"
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
 #: svnversion/main.c:125
-#, fuzzy
 msgid "show program version information"
-msgstr "vis versjonsinformasjon"
+msgstr "vis versjonsinformasjon for programmet"
 
 #: svn/main.c:93
 msgid "print extra information"
@@ -5952,7 +5939,6 @@ msgstr ""
 "     umiddelbar innsending.\n"
 
 #: svn/main.c:295
-#, fuzzy
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5982,8 +5968,7 @@ msgid ""
 msgstr ""
 "Vis forskjellene mellom to revisjoner eller stier.\n"
 "bruk: 1. diff [-c M | -r N[:M]] [MÅL[@REV]...]\n"
-"      2. diff [-c M | -r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL"
-"[@NYREV]] \\\n"
+"      2. diff [-r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] \\\n"
 "              [STI...]\n"
 "      3. diff GML-URL[@GMLREV] NY-URL[@NYREV]\n"
 "\n"
@@ -6002,8 +5987,7 @@ msgstr ""
 "     NYTT-MÅL kan være arbeidskopi-stier eller URL[@REV]. NYTT-MÅL sin\n"
 "     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV sin\n"
 "     standardverdi til N, -r N:M setter GMLREV sin standardverdi til N\n"
-"     og NYREV sin til M, -c M setter GMLREV til M-1 som standard og NYREV\n"
-"     til M. -c -M setter standardverdien for GMLREV til M og NYREV til M-1.\n"
+"     og NYREV sin til M.\n"
 "\n"
 "  3. Kortform for «svn diff --old=GML-URL[@GMLREV] --new=NY-URL[@NYREV]».\n"
 "\n"
@@ -6077,7 +6061,6 @@ msgstr ""
 "  under URL.\n"
 
 #: svn/main.c:367
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -6087,10 +6070,11 @@ msgid ""
 "  determines in which revision the target is first looked up.\n"
 msgstr ""
 "Viser informasjon om et lokalt eller fjerntliggende element.\n"
-"bruk: info [MÅL...]\n"
+"bruk: info [MÅL[@REV]...]\n"
 "\n"
 "  Viser informasjon om hvert MÅL («.» er standard).\n"
-"  MÅL kan enten være en sti i arbeidskopien eller en URL.\n"
+"  MÅL kan enten være en sti i arbeidskopien eller en URL. Hvis spesifisert,\n"
+"  avgjør REV i hvilken revisjon målet først blir letet opp.\n"
 
 #: svn/main.c:377
 msgid ""
@@ -6156,7 +6140,6 @@ msgid "specify lock comment ARG"
 msgstr "angi låsekommentar ARG"
 
 #: svn/main.c:411
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6186,13 +6169,14 @@ msgid ""
 msgstr ""
 "Viser loggmeldinger for revisjoner og/eller filer.\n"
 "bruk: 1. log [STI]\n"
-"      2. log URL [STI...]\n"
+"      2. log URL[@REV] [STI...]\n"
 "\n"
 "  1. Viser loggmelding for en lokal filsti («.» er standard).\n"
 "     Standard revisjonsområde er BASE:1.\n"
 "\n"
 "  2. Viser loggmeldinger for STIene («.» er standard) under URL.\n"
-"     Standard revisjonsområde er HEAD:1.\n"
+"     Hvis spesifisert, angir REV i hvilken revisjon URLen først blir\n"
+"     letet opp. Standard revisjonsområde er HEAD:1.\n"
 "\n"
 "  Hvis -v brukes, vises alle berørte filstier med hver sin loggmelding.\n"
 "  Hvis -q brukes, skrives ikke loggmelding (kan brukes sammen med -v).\n"
@@ -6770,9 +6754,8 @@ msgid "Non-numeric limit argument given"
 msgstr "Ikke-numerisk begrensningsargument angitt"
 
 #: svn/main.c:898
-#, fuzzy
 msgid "Argument to --limit must be positive"
-msgstr "Argumentet til -c må være et positivt tall"
+msgstr "Argumentet til --limit må være et positivt tall"
 
 #: svn/main.c:918
 msgid ""
@@ -6784,7 +6767,7 @@ msgstr ""
 
 #: svn/main.c:926 svn/main.c:1117
 msgid "Can't specify -c with --old"
-msgstr ""
+msgstr "Kan ikke spesifisere -c med --old"
 
 #: svn/main.c:933
 msgid "Non-numeric change argument given to -c"
@@ -7615,7 +7598,6 @@ msgid "done.\n"
 msgstr "ferdig.\n"
 
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7625,6 +7607,8 @@ msgid ""
 msgstr ""
 "generell bruk: svnadmin DELKOMMANDO DEPOTSTI  [ARGUMENTER & VALG ...]\n"
 "Skriv «svnadmin help <delkommando>» for hjelp om en delkommando.\n"
+"Skriv «svnadmin --version» for å se versjonen for programmet og\n"
+"FS-modulene.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -7835,7 +7819,6 @@ msgstr ""
 "bruk: svndumpfilter help [DELKOMMANDO...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -7846,6 +7829,7 @@ msgstr ""
 "generell bruk: svndumpfilter DELKOMMANDO [ARGUMENTER & VALG ...]\n"
 "Skriv «svndumpfilter help <delkommando>» for hjelp til en spesifikk\n"
 "delkommando.\n"
+"Skriv «svndumpfilter --version» for å se programversjonsnummeret.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -8197,7 +8181,6 @@ msgid "Missing repository path argument"
 msgstr "Mangler filstiargument til depotet"
 
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8213,6 +8196,7 @@ msgstr ""
 "      bruker depotets yngste revisjon hvis de brukes uten disse\n"
 "      valgene.\n"
 "Skriv «svnlook help <delkommando>» for hjelp om en delkommando.\n"
+"Skriv «svnlook --version» for å se versjonen for programmet og FS-modulene.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -8343,13 +8327,12 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "Skriv «%s --help» for bruk.\n"
 
 #: svnserve/main.c:186
-#, fuzzy
 msgid ""
 "usage: svnserve [options]\n"
 "\n"
 "Valid options:\n"
 msgstr ""
-"Bruk: svnserve [valg]\n"
+"bruk: svnserve [valg]\n"
 "\n"
 "Lovlige valg:\n"
 
@@ -8423,13 +8406,13 @@ msgid "Failed to connect to Service Control Manager"
 msgstr "Klarte ikke å koble til Service Control Manager"
 
 #: svnserve/winservice.c:411
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service"
 msgstr ""
 "Tjenesten klarte ikke å starte; en intern feil oppsto under oppstart av "
-"tjenesten."
+"tjenesten"
 
 #: svnsync/main.c:64
 msgid ""
@@ -8529,7 +8512,6 @@ msgstr ""
 "blitt synkronisert enda"
 
 #: svnsync/main.c:1134
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8539,6 +8521,7 @@ msgid ""
 msgstr ""
 "generell bruk: svnsync DELKOMMANDO MÅLURL [ARGUMENTER & VALG ...]\n"
 "Skriv «svnsync help <delkommando>» for hjelp om en spesifikk delkommando.\n"
+"Skriv «svnsync --version» for å se versjonen for programmet og RA-modulene.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -8632,166 +8615,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid "Can't create temporary directory"
-#~ msgstr "Kan ikke lage midlertidig katalog"
-
-#~ msgid "Error creating dir '%s' (path exists)"
-#~ msgstr "Feil under opprettelse av katalogen «%s» (stien eksisterer)"
-
-#~ msgid "Error checking path '%s'"
-#~ msgstr "Feil under kontroll av filstien «%s»"
-
-#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
-#~ msgstr "forandringen gjort av revisjon ARG (samme som -r ARG-1:ARG)"
-
-#~ msgid "'%s' is not supported"
-#~ msgstr "«%s» er ikke støttet"
-
-#~ msgid "'%s' is in the way"
-#~ msgstr "«%s» er i veien"
-
-#~ msgid "Unrecognized node kind of '%s'"
-#~ msgstr "Ukjent nodetype: «%s»"
-
-#~ msgid ""
-#~ "Warning: -R is deprecated.\n"
-#~ "Anonymous access is now read-only by default.\n"
-#~ "To change, use conf/svnserve.conf in repos:\n"
-#~ "  [general]\n"
-#~ "  anon-access = read|write|none (default read)\n"
-#~ "  auth-access = read|write|none (default write)\n"
-#~ "Forcing all access to read-only for now\n"
-#~ msgstr ""
-#~ "Advarsel: -R er avlegs.\n"
-#~ "Anonym tilgang er nå skrivebeskyttet som standard.\n"
-#~ "For å forandre dette, bruk conf/svnserve.conf i depotet:\n"
-#~ "  [general]\n"
-#~ "  anon-access = read|write|none (standard: read)\n"
-#~ "  auth-access = read|write|none (standard: write)\n"
-#~ "Setter all tilgang til skrivebeskyttet i denne omgang\n"
-
-#~ msgid "Unknown node kind: '%s'"
-#~ msgstr "Ukjent nodetype: «%s»"
-
-#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Egenskapen «%s» er endret lokalt til «%s», men oppdateringen setter den "
-#~ "til «%s»\n"
-
-#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Egenskapen «%s» slettet lokalt, men oppdateringen setter den den til «%"
-#~ "s»\n"
-
-#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-#~ msgstr ""
-#~ "Egenskapen «%s» endret lokalt til «%s», men oppdateringen sletter den\n"
-
-#~ msgid "Can't stat new directory '%s'"
-#~ msgstr "Kan ikke lese status fra den nye katalogen «%s»"
-
-#~ msgid "Can't find config file '%s'"
-#~ msgstr "Fant ikke konfigurasjonsfil «%s»"
-
-#~ msgid "Can't open config file '%s'"
-#~ msgstr "Kan ikke åpne konfigurasjonsfil «%s»"
-
-#~ msgid "Can't set timeout"
-#~ msgstr "Kan ikke sette tidsavbrudd"
-
-#~ msgid "Error writing file '%s'"
-#~ msgstr "Feil under skriving til filen «%s»"
-
-#~ msgid "Error reading file '%s'"
-#~ msgstr "Feil under lesing av filen «%s»"
-
-#~ msgid "Can't open file '%s' for writing"
-#~ msgstr "Kan ikke åpne filen «%s» for skriving"
-
-#~ msgid "Can't open file '%s' for reading"
-#~ msgstr "Kan ikke åpne filen «%s» for lesing"
-
-#~ msgid "Can't seek in '%s'"
-#~ msgstr "Kan ikke søke i «%s»"
-
-#~ msgid "Unable to delete temporary file"
-#~ msgstr "Klarte ikke å slette midlertidig fil"
-
-#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-#~ msgstr "Ødelagt noderevisjons-ID «%s» opptrer i filsystem «%s»"
-
-#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-#~ msgstr "Ødelagt noderevisjon for node «%s» i filsystem «%s»"
-
-#~ msgid "Search for malformed path '%s' in filesystem '%s'"
-#~ msgstr "Søk etter misdannet sti «%s» i filsystem «%s»"
-
-#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Ødelagt verdi for nøkkelen «next-id» i tabellen «%s» i filsystem «%s»"
-
-#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Misdannet identifikator som nøkkel i tabellen «nodes» i filsystem «%s»"
-
-#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-#~ msgstr "Ødelagt klonepost for «%s» i transaksjon «%s» i filsystem «%s»"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "Node med droppet forelder sneket inn"
-
-#~ msgid "Move failed"
-#~ msgstr "Flytting feilet"
-
-#~ msgid "Creating readme file"
-#~ msgstr "Lager readme-fil"
-
-#~ msgid "Error restoring props for '%s'"
-#~ msgstr "Feil ved gjenoppretting av egenskaper for «%s»"
-
-#~ msgid "Error removing props for '%s'"
-#~ msgstr "Feil ved sletting av egenskaper for «%s»"
-
-#~ msgid ""
-#~ "'%s' is scheduled for deletion; it must be committed before it can be "
-#~ "overwritten"
-#~ msgstr ""
-#~ "«%s» er klarert for sletting; den må legges inn før den kan overskrives"
-
-#~ msgid "Wrong number of paths given"
-#~ msgstr "Feil antall filstier angitt"
-
-#~ msgid "Not enough args provided"
-#~ msgstr "For få argumenter"
-
-#~ msgid "Too few arguments"
-#~ msgstr "For få argumenter"
-
-#~ msgid ""
-#~ "The entry '%s' is no longer a directory; remove the entry before updating"
-#~ msgstr "Posten «%s» er ikke lengre en katalog. Slett den før oppdatering"
-
-#~ msgid "Working copy '%s' is missing or not locked"
-#~ msgstr "Arbeidskopien «%s» mangler eller er ikke låst"
-
-#~ msgid "'%s' has unknown value for svn:eol-style property"
-#~ msgstr "«%s» har en ukjent verdi for egenskapen svn:eol-style"
-
-#~ msgid "Found malformed header block in dumpfile stream"
-#~ msgstr "Fant misdannet headerblokk i dumpfilstrømmen"
-
-#~ msgid "specifiy revision number ARG"
-#~ msgstr "angi revisjonsnummer ARG"
-
-#~ msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
-#~ msgstr "Objekt «%s» for innsending har kopimerke, men ingen copyfrom-URL\n"
-
-#~ msgid "Can't change executability of file '%s'"
-#~ msgstr "Kan ikke forandre kjørbarhet for filen «%s»"
-
-#~ msgid "print client version info"
-#~ msgstr "vis versjonsinformasjon for klienten"
-
-#~ msgid "svnserve: "
-#~ msgstr "svnserve: "
