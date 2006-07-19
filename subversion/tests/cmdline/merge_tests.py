@@ -1640,7 +1640,7 @@ def merge_in_new_file_and_diff(sbox):
     'newfile' : Item("newfile\n"),
     })
   expected_status = wc.State(short_branch_path, {
-    ''        : Item(status='  ', wc_rev=2),
+    ''        : Item(status=' M', wc_rev=2),
     'alpha'   : Item(status='  ', wc_rev=2),
     'beta'    : Item(status='  ', wc_rev=2),
     'newfile' : Item(status='A ', wc_rev='-', copied='+')
@@ -1660,7 +1660,15 @@ def merge_in_new_file_and_diff(sbox):
     os.chdir(saved_cwd)
 
   # Finally, run diff.  This diff produces no output!
-  svntest.actions.run_and_verify_svn(None, [], [], 'diff', branch_path)
+  expected_output = [
+    "\n",
+    "Property changes on: " + branch_path + "\n",
+    "___________________________________________________________________\n",
+    "Name: " + SVN_PROP_MERGE_INFO + "\n",
+    "   Merged /A/B/E:r2-3\n",
+    "\n", ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     branch_path)
 
 
 #----------------------------------------------------------------------
