@@ -1801,10 +1801,10 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
     ctx.set_log_msg_func do |items|
-      raise Svn::Error::Cancelled
+      raise Svn::Error::CANCELLED
     end
     ctx.mkdir(dir_path)
-    assert_raise(Svn::Error::Cancelled) do
+    assert_raise(Svn::Error::CANCELLED) do
       ctx.commit(@wc_path)
     end
   end
