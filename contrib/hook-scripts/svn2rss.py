@@ -41,7 +41,7 @@ import sys
 # Python 2.3 is required by PyRSS2Gen
 py_version  = sys.version_info
 if sys.version_info[0:2] < (2,3):
-    sys.stderr.write("Error: Python 2.3 or higher required.")
+    sys.stderr.write("Error: Python 2.3 or higher required.\n")
     sys.exit(1)
 
 # And Py2RSSGen is required by this script
@@ -99,13 +99,12 @@ class Svn2RSS:
         if svn_path is not None:
             self.svnlook_cmd = os.path.join(svn_path, 'svnlook')
 
-        self.rss_item_desc = self.make_rss_item_desc()
         (file, ext) = os.path.splitext(self.rss_file)
         self.pickle_file = file + ".pickle"
         self.rss_item = self.make_rss_item()
         self.rss = self.make_rss()
         
-    def make_rss_item_desc(self):
+    def make_item_desc(self):
         cmd = [self.svnlook_cmd, 'info', '-r', self.revision, self.repos_path]
         child_out, child_in, child_err = popen2.popen3(cmd)
         info_lines = child_out.readlines()
@@ -140,7 +139,7 @@ class Svn2RSS:
                     or ""
         rss_item = PyRSS2Gen.RSSItem(title = item_title,
                                      link = item_link,
-                                     description = self.make_rss_item_desc(),
+                                     description = self.make_item_desc(),
                                      guid = PyRSS2Gen.Guid(item_link),
                                      pubDate = datetime.datetime.now())
         return rss_item
@@ -229,22 +228,21 @@ def main():
     else:
         try:
             rev_range = commit_rev.split(':')
+            len_rev_range = len(rev_range)
+            if len_rev_range == 1:
+                revisions = [int(commit_rev)]
+            elif len_rev_range == 2:
+                start, end = rev_range
+                start = int(start)
+                end = int(end)
+                if (start > end):
+                    tmp = start
+                    start = end
+                    end = tmp
+                revisions = range(start, end + 1)[-max_items:]
+            else:
+                raise ValueError()
         except ValueError, msg:
-            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
-                           % (commit_rev))
-        len_rev_range = len(rev_range)
-        if len_rev_range == 1:
-            revisions = [int(commit_rev)]
-        elif len_rev_range == 2:
-            start, end = rev_range
-            start = int(start)
-            end = int(end)
-            if (start > end):
-                tmp = start
-                start = end
-                end = tmp
-            revisions = range(start, end + 1)[-max_items:]
-        else:
             usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
     
