@@ -2893,6 +2893,7 @@ def safe_property_merge(sbox):
     })
 
   expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : "/A/B:4"}),
     'E'        : Item(),
     'E/alpha'  : Item("This is the file 'alpha'.\n"),
     'E/beta'   : Item("This is the file 'beta'.\n"),
@@ -2903,7 +2904,7 @@ def safe_property_merge(sbox):
                       props={'foo' : 'branchval'}) # local mods still present
 
   expected_status = wc.State(B2_path, {
-    ''        : Item(status='  '),
+    ''        : Item(status=' M'),
     'E'       : Item(status=' C'),
     'E/alpha' : Item(status=' C'),
     'E/beta'  : Item(status=' C'),
