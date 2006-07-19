@@ -742,9 +742,12 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
 
     root = SVNTreeNode(root_node_name, None)
 
-    # if necessary, store the root dir's props in the root node.
+    # if necessary, store the root dir's props in a new child node '.'.
     if load_props:
-      root.props = get_props(wc_path)
+      props = get_props(wc_path)
+      if props:
+        root_dir_node = SVNTreeNode(os.path.basename('.'), None, None, props)
+        root.add_child(root_dir_node)
 
     # Walk the tree recursively
     handle_dir(os.path.normpath(wc_path), root, load_props, ignore_svn)

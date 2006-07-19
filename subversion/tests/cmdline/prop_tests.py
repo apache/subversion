@@ -1139,7 +1139,56 @@ def removal_schedule_added_props(sbox):
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'proplist', '-v', newfile_path)
 
+#----------------------------------------------------------------------
 
+def update_props_on_wc_root(sbox):
+  "receive properties on the wc root via update"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Add a property to the root folder
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', wc_dir)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    '' : Item(verb='Sending')
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', wc_rev=2, status='  ')
+
+  # Commit the working copy
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+ # Create expected output tree for an update of the wc_backup.
+  expected_output = svntest.wc.State(wc_backup, {
+    '' : Item(status=' U'),
+    })
+  # Create expected disk tree for the update.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    '' : Item(props = {'red' : 'rojo'}),
+    })
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('', status='  ')
+
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
 
 ########################################################################
 # Run the tests
@@ -1166,6 +1215,7 @@ test_list = [ None,
               recursive_base_wc_ops,
               url_props_ops,
               removal_schedule_added_props,
+              update_props_on_wc_root
              ]
 
 if __name__ == '__main__':
