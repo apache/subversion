@@ -9,14 +9,14 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  None
+
+Approved changes:
+
   * r20767
     Fix build of libsvn_fs_base when APR is built without threads.
     Justification:
       Embarassing bug, simple fix, it would be good to be able to build the
       software.
     Votes:
-      +1: rooneg, dlr
-
-Approved changes:
-
-  None
+      +1: rooneg, dlr, cmpilato
