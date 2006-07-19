@@ -2,7 +2,7 @@
 
 """Usage: svn2rss.py [OPTION...] REPOS-PATH
 
-Generate an RSS 2.0 file containing commit information for the
+Generate an RSS 2.0 feed file containing commit information for the
 Subversion repository located at REPOS-PATH.  Once the maximum number
 of items is reached, older elements are removed.  The item title is
 the revision number, and the item description contains the author,
@@ -12,7 +12,7 @@ Options:
 
  -h, --help             Show this help message.
  
- -f, --rss-file=PATH    Store the RSS feed in the file located at PATH, which
+ -f, --feed-file=PATH   Store the feed in the file located at PATH, which
                         will be created if it doesn't already exist.  If not
                         provided, the script will store the feed in the
                         current working directory, in a file named
@@ -20,15 +20,15 @@ Options:
                         of the REPOS_PATH command-line argument). 
  
  -r, --revision=X[:Y]   Subversion revision (or revision range) to generate
-                        RSS info for.  If not provided, info for the single
+                        info for.  If not provided, info for the single
                         youngest revision in the repository will be generated.
  
- -m, --max-items=N      Keep only N items in the RSS feed file.  By default,
+ -m, --max-items=N      Keep only N items in the feed file.  By default,
                         20 items are kept.
  
- -u, --item-url=URL     Use URL as the basis for generating RSS item links.
+ -u, --item-url=URL     Use URL as the basis for generating feed item links.
  
- -U, --feed-url=URL     Use URL as the global RSS feed link.
+ -U, --feed-url=URL     Use URL as the global feed link.
 
  -P, --svn-path=DIR     Look in DIR for the svnlook binary.  If not provided,
                         the script will run "svnlook" via a typical $PATH hunt.
@@ -171,7 +171,7 @@ def main():
                                         "svn-path=",
                                         "revision=",
                                         "item-url=",
-                                        "rss-file=",
+                                        "feed-file=",
                                         "max-items=",
                                         "feed-url=",
                                         ])
@@ -187,7 +187,7 @@ def main():
     max_items = 20
     commit_rev = None
     svn_path = item_url = feed_url = None
-    rss_file = os.path.basename(repos_path) + ".rss"
+    feed_file = os.path.basename(repos_path) + ".rss"
     
     for opt, arg in opts:
         if opt in ("-h", "--help"):
@@ -199,8 +199,8 @@ def main():
         elif opt in ("-u", "--item-url"):
             item_url = arg
             check_url(item_url, opt)
-        elif opt in ("-f", "--rss-file"):
-            rss_file = arg
+        elif opt in ("-f", "--feed-file"):
+            feed_file = arg
         elif opt in ("-m", "--max-items"):
             try:
                max_items = int(arg)
@@ -246,7 +246,7 @@ def main():
     
     for revision in revisions:
         revision = str(revision)
-        svn2rss = SVN2RSS(svn_path, revision, repos_path, item_url, rss_file, 
+        svn2rss = SVN2RSS(svn_path, revision, repos_path, item_url, feed_file, 
                           max_items, feed_url)
         rss = svn2rss.rss
         svn2rss.pickle()
