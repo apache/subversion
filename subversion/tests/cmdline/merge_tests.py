@@ -1183,7 +1183,7 @@ def merge_one_file_helper(sbox, arg_flav):
     raise svntest.Failure
 
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/D/G/rho', status='M ')
+  expected_status.tweak('A/D/G/rho', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Inspect rho, make sure it's right.
@@ -1222,7 +1222,7 @@ def merge_one_file_helper(sbox, arg_flav):
   finally:
     os.chdir(saved_cwd)
 
-  expected_status.tweak('A/D/G/rho', status='M ')
+  expected_status.tweak('A/D/G/rho', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def merge_one_file_using_r(sbox):
