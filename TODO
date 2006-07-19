@@ -10,14 +10,22 @@ for repos dump/load, including the merge history index.
 
 * Handle notifications resulting from a merge.  (dlr)
 
-  * Collate changes as merge ranges are applied.  Detect and handle
-    collisions (multiple notifications to the same WC item), giving
-    preference to later notifications (?).
+  * Handle multiple notifications for single WC items. Possible
+    solutions include:
+
+    * Output multiple notifications, but print divider lines
+      indicating the revisions range to which a set of notifications
+      applies.  Introduce a new type of "skipped" notification for WC
+      items which are already in conflict.
+
+    * Collate changes as merge ranges are applied.  Detect and handle
+      collisions (multiple notifications to the same WC item), giving
+      preference to later notifications (?).
 
   * Stop applying merge ranges as soon as a second conflict is
     encountered in a WC item (as it might generate overlapping
-    conflict makers), being sure to record partial application of
-    merge ranges.
+    conflict makers, or apply a merge inside a conflict marker!),
+    being sure to record partial application of merge ranges.
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (madanus)
