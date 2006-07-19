@@ -108,6 +108,7 @@ else
   fi
 fi
 
+find build/ -name '*.pyc' -print -exec rm {} \;
 rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then
