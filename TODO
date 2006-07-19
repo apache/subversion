@@ -32,10 +32,8 @@ for repos dump/load, including the merge history index.
 
 * Treat all revisions from a 'copy' source like merge info for the
   destination.  This may equate to turning all those revs into actual
-  merge info (simpler?), or deriving that info on an as-needed basis.
-
-* Handle initialization of merge info represented by a copy source:
-  target merge info = source revs + source merge info
+  merge info (target merge info = source revs + source merge info
+  ... simpler?), or deriving that info on an as-needed basis.
 
   * Update design spec.  (dberlin?)
 
