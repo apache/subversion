@@ -36,7 +36,7 @@ Candidate changes:
     Note:
       Something of an edge case; definitely not a blocker for 1.4.0.
     Votes:
-      +1: dlr
+      +1: dlr, rooneg
 
   * r20741, r20743
     Fix a segmentation fault bug when an error is occurred in log message
