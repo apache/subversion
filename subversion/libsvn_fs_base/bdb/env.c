@@ -604,9 +604,10 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
     }
   else
     {
-      /* If the bdb cache lock has been set to NULL that means we are
-         shutting down, and the pool that holds the bdb cache has already
-         been destroyed, so accessing it here would be a Bad Thing (tm) */
+      /* If the bdb cache has been set to NULL that means we are
+         shutting down, and the pool that holds the bdb cache has
+         already been destroyed, so accessing it here would be a Bad
+         Thing (tm) */
       if (bdb_cache)
         apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
       err = bdb_close(bdb);
