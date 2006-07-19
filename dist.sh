@@ -197,8 +197,10 @@ echo "Removed and recreated $DIST_SANDBOX"
 
 LC_ALL=C
 LANG=C
+TZ=UTC
 export LC_ALL
 export LANG
+export TZ
 
 echo "Exporting revision $REVISION of Subversion into sandbox..."
 (cd "$DIST_SANDBOX" && \
