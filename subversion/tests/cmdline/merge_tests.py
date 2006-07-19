@@ -2426,6 +2426,9 @@ def merge_funny_chars_on_path(sbox):
         expected_output_dic[key] = Item(verb='Adding')
       
   expected_output = wc.State(F_path, expected_output_dic)
+  expected_output.add({
+    '' : Item(verb='Sending'),
+    })
 
   svntest.actions.run_and_verify_commit(F_path,
                                         expected_output,
@@ -3107,9 +3110,11 @@ def property_merge_undo_redo(sbox):
   expected_output = wc.State(wc_dir, {'A/B/E/alpha'  : Item(status=' U'), })
 
   expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'' : Item(props={SVN_PROP_MERGE_INFO : '/:2'}), })
   expected_disk.tweak('A/B/E/alpha', props={'foo' : 'foo_val'})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('', status=' M')
 
   expected_skip = wc.State('', { })
   
