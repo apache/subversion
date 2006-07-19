@@ -2112,6 +2112,7 @@ def dry_run_adds_file_with_prop(sbox):
     'zig'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:2'}),
     'zig'      : Item("zig contents", {'foo':'foo_val'}),
     })
   expected_skip = wc.State('', { })
