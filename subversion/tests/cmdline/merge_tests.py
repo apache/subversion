@@ -463,6 +463,7 @@ def add_with_history(sbox):
     'foo2'   : Item(status='A '),
     })
   expected_disk = wc.State('', {
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2'}),
     'Q'      : Item(),
     'Q2'     : Item(props={'x' : 'x'}),
     'Q/bar'  : Item("bar"),
@@ -471,7 +472,7 @@ def add_with_history(sbox):
     'foo2'   : Item("foo2", props={'y' : 'y'}),
     })
   expected_status = wc.State(short_C_path, {
-    ''       : Item(status='  ', wc_rev=1),
+    ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q2'     : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
@@ -495,6 +496,7 @@ def add_with_history(sbox):
     os.chdir(saved_cwd)
 
   expected_output = svntest.wc.State(wc_dir, {
+    'A/C'       : Item(verb='Sending'),
     'A/C/Q'     : Item(verb='Adding'),
     'A/C/Q2'    : Item(verb='Adding'),
     'A/C/Q/bar' : Item(verb='Adding'),
@@ -505,6 +507,7 @@ def add_with_history(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
+    'A/C'         : Item(status='  ', wc_rev=3),
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
     'A/B/F/Q2'    : Item(status='  ', wc_rev=2),
     'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
@@ -743,6 +746,7 @@ def simple_property_merges(sbox):
     'E/beta'   : Item(status=' U'),
     })
   expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4'}),
     'E'        : Item(),
     'E/alpha'  : Item("This is the file 'alpha'.\n"),
     'E/beta'   : Item("This is the file 'beta'.\n"),
@@ -754,7 +758,7 @@ def simple_property_merges(sbox):
   expected_disk.tweak('E/beta', 
                       props={'foo' : 'mod\201foo', 'bar' : 'bar\201val'})
   expected_status = wc.State(B2_path, {
-    ''        : Item(status='  '),
+    ''        : Item(status=' M'),
     'E'       : Item(status=' M'),
     'E/alpha' : Item(status=' M'),
     'E/beta'  : Item(status=' M'),
@@ -776,7 +780,9 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_status(wc_dir, pristine_status)
 
   # Merge B 2:1 into B2
+  expected_disk.remove('')
   expected_disk.tweak('E', 'E/alpha', 'E/beta', props={})
+  expected_status.tweak('', status='  ')
   svntest.actions.run_and_verify_merge(B2_path, '2', '1', B_url,
                                        expected_output,
                                        expected_disk,
@@ -786,6 +792,7 @@ def simple_property_merges(sbox):
 
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
+    '' : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4'}),
     'E/dir_conflicts.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
            + "but the property does not exist."),    
@@ -799,6 +806,7 @@ def simple_property_merges(sbox):
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
+  expected_status.tweak('', status=' M')
   expected_status.tweak('E', 'E/alpha', 'E/beta', status=' C')
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
                                        expected_output,
@@ -1473,12 +1481,14 @@ def merge_binary_file (sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/:3'}),
     'A/theta' : Item(theta_contents + "some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(short_other_wc, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
+    ''        : Item(status=' M', wc_rev=1),
     'A/theta' : Item(status='M ', wc_rev=2),
     })
   expected_skip = wc.State('', { })
