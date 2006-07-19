@@ -3033,16 +3033,24 @@ working copy.</p>
 
 <p>Calm down, take a deep breath.</p>
 
-<p>First of all, notice that the directory which contains the cached
-passwords (usually ~/.subversion/auth/ on Unix systems) has permissions
-of 700, meaning only you can read them.  Trust your OS to protect data
-on disk.</p>
+<p>On UNIX, notice that the directory which contains the cached
+passwords (usually ~/.subversion/auth/) has permissions
+of 700, meaning only you can read them.</p>
 
-<p>Secondly, if you're really worried, you can permanently turn off
+<p>On Windows 2000 or later, svn 1.2 and above uses standard 
+Windows APIs to encypt the data, so only the user can decrypt the 
+cached password.</p>
+
+<P>Trust your OS to protect data on disk.</p>
+
+<p>However, if you're really worried, you can permanently turn off
 password caching.  With an svn 1.0 client, just set 'store-auth-creds
 = no' in your run-time config file.  With an svn 1.1 client or later,
 you can use the more narrowly-defined 'store-passwords = no' (so that
-server certs are still cached.)</p>
+server certs are still cached). More information on password cacheing
+is in chapter 6 of the <a 
+href="http://svnbook.red-bean.com/nightly/en/index.html">"Nightly 
+Build" Subversion book</a>, under "Client Credentials Caching".</p>
 
 <p>Lastly, we point out that CVS has been caching passwords for years
 in the .cvspass file.  It may look like the passwords in .cvspass are
