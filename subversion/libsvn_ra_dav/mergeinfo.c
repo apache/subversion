@@ -189,7 +189,7 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
     {
       svn_stringbuf_appendcstr(request_body,
                                apr_psprintf(pool,
-                                            "<S:include_parents/>"));
+                                            "<S:include-parents/>"));
     }
 
   if (paths)
