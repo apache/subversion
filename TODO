@@ -35,11 +35,6 @@ for repos dump/load, including the merge history index.
 
   * Anything similar necessary for moves?
 
-* ra_dav: Implement svn_ra_get_merge_info().  (dberlin)
-
-* mod_dav_svn: Implement handling for svn_ra_get_merge_info() (as a new
-  custom REPORT?).  (dberlin)
-
 * Consolidate merge info storage in the index, removing it from the FS. (?)
 
 * BerkeleyDB FS
