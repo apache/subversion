@@ -26,7 +26,7 @@ Candidate changes:
       # and re-record the merge:
       svnmerge merge -M -F -r 20701,20703
     Votes:
-      +1: maxb, rooneg
+      +1: maxb, rooneg, jerenkrantz
 
   * r20729
     Pay attention to any errors caused by manipulating hook script
