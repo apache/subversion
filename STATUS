@@ -13,12 +13,4 @@ Candidate changes:
 
 Approved changes:
 
-  * r20741, r20743
-    Fix a segmentation fault bug when an error is occurred in log message
-    callback.
-    Branch: r20741
-    Justification:
-      A segmentation fault bug is critical bug.
-    Votes:
-      +1: kou, rooneg
-
+  None

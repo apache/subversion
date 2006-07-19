@@ -1537,6 +1537,9 @@ svn_swig_rb_get_commit_log_func2(const char **log_msg,
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
 
+  *log_msg = NULL;
+  *tmp_file = NULL;
+
   svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
 
   if (!NIL_P(proc)) {
@@ -1552,17 +1555,17 @@ svn_swig_rb_get_commit_log_func2(const char **log_msg,
                        c2r_commit_item2_array(commit_items));
     result = invoke_callback_handle_error(args, rb_pool, &err);
 
-    is_message = rb_ary_entry(result, 0);
-    value = rb_ary_entry(result, 1);
+    if (!err) {
+      is_message = rb_ary_entry(result, 0);
+      value = rb_ary_entry(result, 1);
 
-    Check_Type(value, T_STRING);
-    ret = (char *)r2c_string(value, NULL, pool);
-    if (RTEST(is_message)) {
-      *log_msg = ret;
-      *tmp_file = NULL;
-    } else {
-      *log_msg = NULL;
-      *tmp_file = ret;
+      Check_Type(value, T_STRING);
+      ret = (char *)r2c_string(value, NULL, pool);
+      if (RTEST(is_message)) {
+        *log_msg = ret;
+      } else {
+        *tmp_file = ret;
+      }
     }
   }
   return err;
