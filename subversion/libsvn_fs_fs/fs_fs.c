@@ -4018,8 +4018,14 @@ generate_mergeinfo_sql(svn_fs_txn_t *txn, svn_revnum_t new_rev,
     {
       const char *from;
       apr_array_header_t *revlist;
+      const void *key;
+      void *val;
       
-      apr_hash_this(hi, (const void **)&from, NULL, (void **)&revlist);
+      apr_hash_this(hi, &key, NULL, &val);
+
+      from = key;
+      revlist = val;
+
       if (from && revlist)
         {
           int i;
@@ -4068,8 +4074,8 @@ generate_mergeinfo_sql(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 }
 
 static svn_error_t *
-update_mergeinfo_index (svn_fs_txn_t *txn, svn_revnum_t new_rev, 
-                        apr_pool_t *pool)
+update_mergeinfo_index(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
+                       apr_pool_t *pool)
 {
   apr_hash_t *minfoprops;
   
@@ -4084,9 +4090,14 @@ update_mergeinfo_index (svn_fs_txn_t *txn, svn_revnum_t new_rev,
         {
           const char *minfopath;
           svn_string_t *minfostring;
+          const void *key;
+          void *val;
           
-          apr_hash_this(hi, (const void **)&minfopath, NULL, 
-                        (void **)&minfostring);
+          apr_hash_this(hi, &key, NULL, &val);
+
+          minfopath = key;
+          minfostring = val;
+
           SVN_ERR(generate_mergeinfo_sql(txn, new_rev, minfopath, minfostring,
                                          pool));
         }
