@@ -153,7 +153,7 @@ class SVN2RSS:
         else:
             rss_item = self.rss_item
             rss_title = "%s's SVN Commits Feed" \
-                        % (os.path.basename(self.repos_path))
+                        % (os.path.basename(os.path.abspath(self.repos_path)))
             rss = PyRSS2Gen.RSS2(
                               title = rss_title,
                               link = self.feed_url,
@@ -181,7 +181,7 @@ def main():
     # Make sure required arguments are present.
     if len(args) != 1:
         usage_and_exit("You must specify a repository path.")
-    repos_path = args[0]
+    repos_path = os.path.abspath(args[0])
 
     # Now deal with the options.
     max_items = 20
