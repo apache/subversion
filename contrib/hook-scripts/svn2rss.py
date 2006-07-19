@@ -57,9 +57,8 @@ except ImportError:
 import getopt
 import os
 import popen2
-import pickle
+import cPickle as pickle
 import datetime
-from StringIO import StringIO
 
 def usage_and_exit(errmsg=None):
     """Print a usage message, plus an ERRMSG (if provided), then exit.
@@ -125,10 +124,9 @@ class Svn2RSS:
                    changed_data))
         
     def pickle(self):
-        s = StringIO()    
-        pickle.dump(self.rss, s)
-        f = open(self.pickle_file,"w")
-        f.write(s.getvalue())
+        s = pickle.dumps(self.rss)
+        f = open(self.pickle_file, "w")
+        f.write(s)
         f.close()
 
     def make_rss_item(self):
