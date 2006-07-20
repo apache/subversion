@@ -17,6 +17,8 @@ Candidate changes:
     Votes:
       +1: maxb
 
+Approved changes:
+
   * r20787
     svn_apply_autoprops.py: Patch to trim leading and trailing
     whitespace from property names and values.  Without this, any
@@ -25,8 +27,4 @@ Candidate changes:
     Justification:
       Nice correctness fix.  Lives in contrib section.
     Votes:
-      +1: blair
-
-Approved changes:
-
-  None
+      +1: blair, dlr
