@@ -241,11 +241,11 @@ def main():
             usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
     
+    svn2rss = Svn2RSS(svn_path, repos_path, item_url, feed_file, max_items,
+                      feed_url)
     for revision in revisions:
-        svn2rss = Svn2RSS(svn_path, repos_path, item_url, feed_file, 
-                          max_items, feed_url)
         svn2rss.add_revision_item(revision)
-        svn2rss.write_output()
+    svn2rss.write_output()
     
   
 if __name__ == "__main__":
