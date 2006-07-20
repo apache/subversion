@@ -9,7 +9,13 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  None
+  * r20781
+    autogen.sh: Purge *.pyc files from the build/ hierarchy after using the
+    build generator, so that we do not ship them in tarballs.
+    Justification:
+      Shipping detritus like .pyc files in release tarballs is sloppy.
+    Votes:
+      +1: maxb
 
 Approved changes:
 
