@@ -90,27 +90,27 @@ static int request_auth(void *userdata, const char *realm, int attempt,
       const char *realmstring;
 
       /* <https://svn.collab.net:80> Subversion repository */
-      realmstring = apr_psprintf(ras->pool, "<%s://%s:%d> %s",
-                                 ras->root.scheme, ras->root.host,
-                                 ras->root.port, realm);
+      realmstring = apr_psprintf (ras->pool, "<%s://%s:%d> %s",
+                                  ras->root.scheme, ras->root.host,
+                                  ras->root.port, realm);
 
-      err = svn_auth_first_credentials(&creds,
-                                       &(ras->auth_iterstate), 
-                                       SVN_AUTH_CRED_SIMPLE,
-                                       realmstring,
-                                       ras->callbacks->auth_baton,
-                                       ras->pool);
+      err = svn_auth_first_credentials (&creds,
+                                        &(ras->auth_iterstate), 
+                                        SVN_AUTH_CRED_SIMPLE,
+                                        realmstring,
+                                        ras->callbacks->auth_baton,
+                                        ras->pool);
     }
 
   else /* attempt > 0 */
     /* ### TODO:  if the http realm changed this time around, we
        should be calling first_creds(), not next_creds(). */
-    err = svn_auth_next_credentials(&creds,
-                                    ras->auth_iterstate,
-                                    ras->pool);
+    err = svn_auth_next_credentials (&creds,
+                                     ras->auth_iterstate,
+                                     ras->pool);
   if (err || ! creds)
     {
-      svn_error_clear(err);
+      svn_error_clear (err);
       return -1;
     }
   simple_creds = creds;
@@ -160,8 +160,7 @@ convert_neon_failures(int neon_failures)
 }
 
 /* A neon-session callback to validate the SSL certificate when the CA
-   is unknown (e.g. a self-signed cert), or there are other SSL
-   certificate problems. */
+   is unknown or there are other SSL certificate problems. */
 static int
 server_ssl_callback(void *userdata,
                     int failures,
@@ -179,11 +178,11 @@ server_ssl_callback(void *userdata,
   char fingerprint[NE_SSL_DIGESTLEN];
   char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
   const char *realmstring;
-  apr_uint32_t *svn_failures = apr_palloc(ras->pool, sizeof(*svn_failures));
+  apr_uint32_t *svn_failures = apr_palloc (ras->pool, sizeof(*svn_failures));
 
   /* Construct the realmstring, e.g. https://svn.collab.net:80 */
-  realmstring = apr_psprintf(ras->pool, "%s://%s:%d", ras->root.scheme,
-                             ras->root.host, ras->root.port);
+  realmstring = apr_psprintf (ras->pool, "%s://%s:%d", ras->root.scheme,
+                              ras->root.host, ras->root.port);
 
   *svn_failures = convert_neon_failures(failures);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
@@ -305,8 +304,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
 
   apr_pool_create(&pool, ras->pool);
 
-  realmstring = apr_psprintf(pool, "%s://%s:%d", ras->root.scheme,
-                             ras->root.host, ras->root.port);
+  realmstring = apr_psprintf (pool, "%s://%s:%d", ras->root.scheme,
+                              ras->root.host, ras->root.port);
 
   for (try = 0; TRUE; ++try)
     {
@@ -387,8 +386,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
     {
-      apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
-      is_exception = svn_cstring_match_glob_list(requested_host, l);
+      apr_array_header_t *l = svn_cstring_split (exceptions, ",", TRUE, pool);
+      is_exception = svn_cstring_match_glob_list (requested_host, l);
     }
   if (! is_exception)
     {
@@ -551,12 +550,12 @@ ra_dav_get_description(void)
 }
 
 static const char * const *
-ra_dav_get_schemes(apr_pool_t *pool)
+ra_dav_get_schemes (apr_pool_t *pool)
 {
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
 
-#ifdef SVN_NEON_0_25
+#if SVN_NEON_0_25
   return ne_has_support(NE_FEATURE_SSL) ? schemes_ssl : schemes_no_ssl;
 #else /* ! SVN_NEON_0_25 */
   return ne_supports_ssl() ? schemes_ssl : schemes_no_ssl;
@@ -587,31 +586,13 @@ ra_dav_neonprogress(void *baton, off_t progress, off_t total)
  * call and make this halfway sane. */
 
 
-/* Parse URL into *URI, doing some sanity checking and initializing the port
-   to a default value if it wasn't specified in URL.  */
 static svn_error_t *
-parse_url(ne_uri *uri, const char *url)
-{
-  if (ne_uri_parse(url, uri) 
-      || uri->host == NULL || uri->path == NULL || uri->scheme == NULL)
-    {
-      ne_uri_free(uri);
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("Malformed URL for repository"));
-    }
-  if (uri->port == 0)
-    uri->port = ne_uri_defaultport(uri->scheme);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svn_ra_dav__open(svn_ra_session_t *session,
-                 const char *repos_URL,
-                 const svn_ra_callbacks2_t *callbacks,
-                 void *callback_baton,
-                 apr_hash_t *config,
-                 apr_pool_t *pool)
+svn_ra_dav__open (svn_ra_session_t *session,
+                  const char *repos_URL,
+                  const svn_ra_callbacks2_t *callbacks,
+                  void *callback_baton,
+                  apr_hash_t *config,
+                  apr_pool_t *pool)
 {
   apr_size_t len;
   ne_session *sess, *sess2;
@@ -626,7 +607,13 @@ svn_ra_dav__open(svn_ra_session_t *session,
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
   /* Sanity check the URI */
-  SVN_ERR(parse_url(&uri, repos_URL));
+  if (ne_uri_parse(repos_URL, &uri) 
+      || uri.host == NULL || uri.path == NULL || uri.scheme == NULL)
+    {
+      ne_uri_free(&uri);
+      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              _("Malformed URL for repository"));
+    }
 
   /* Can we initialize network? */
   if (ne_sock_init() != 0)
@@ -640,10 +627,10 @@ svn_ra_dav__open(svn_ra_session_t *session,
   /* ### not yet: http_redirect_register(sess, ... ); */
 
   /* HACK!  Neon uses strcmp when checking for https, but RFC 2396 says
-   * we should be using case-insensitive comparisons when checking for 
+   * we should be using case insensitive comparisons when checking for 
    * URI schemes.  To allow our users to use WeIrd CasE HttPS we force
    * the scheme to lower case before we pass it on to Neon, otherwise we
-   * would crash later on when we assume Neon has set up its https stuff
+   * would crash later on when we assume Neon has set up it's https stuff
    * but it really didn't. */
   for (itr = uri.scheme; *itr; ++itr)
     *itr = tolower(*itr);
@@ -651,7 +638,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
     {
-#ifdef SVN_NEON_0_25
+#if SVN_NEON_0_25
       if (ne_has_support(NE_FEATURE_SSL) == 0)
 #else /* ! SVN_NEON_0_25 */
       if (ne_supports_ssl() == 0)
@@ -662,13 +649,18 @@ svn_ra_dav__open(svn_ra_session_t *session,
                                   _("SSL is not supported"));
         }
     }
+  if (uri.port == 0)
+    {
+      uri.port = ne_uri_defaultport(uri.scheme);
+    }
+
   /* Create two neon session objects, and set their properties... */
   sess = ne_session_create(uri.scheme, uri.host, uri.port);
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
 
-  cfg = config ? apr_hash_get(config, 
-                              SVN_CONFIG_CATEGORY_SERVERS,
-                              APR_HASH_KEY_STRING) : NULL;
+  cfg = config ? apr_hash_get (config, 
+                               SVN_CONFIG_CATEGORY_SERVERS,
+                               APR_HASH_KEY_STRING) : NULL;
   if (cfg)
     server_group = svn_config_find_group(cfg, uri.host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
@@ -713,7 +705,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
           {
             /* Allocate the baton in pool, not on stack, so it will
                last till whenever Neon needs it. */
-            struct proxy_auth_baton *pab = apr_palloc(pool, sizeof(*pab));
+            struct proxy_auth_baton *pab = apr_palloc(pool, sizeof (*pab));
 
             pab->username = proxy_username;
             pab->password = proxy_password ? proxy_password : "";
@@ -746,7 +738,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
-  ras->url = svn_stringbuf_create(repos_URL, pool);
+  ras->url = apr_pstrdup (pool, repos_URL);
   /* copies uri pointer members, they get free'd in __close. */
   ras->root = uri; 
   ras->sess = sess;
@@ -842,20 +834,6 @@ svn_ra_dav__open(svn_ra_session_t *session,
 }
 
 
-static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
-                                         const char *url,
-                                         apr_pool_t *pool)
-{
-  svn_ra_dav__session_t *ras = session->priv;
-  ne_uri uri = { 0 };
-
-  SVN_ERR(parse_url(&uri, url));
-  ne_uri_free(&ras->root);
-  ras->root = uri;
-  svn_stringbuf_set(ras->url, url);
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
                                                const char **url,
                                                apr_pool_t *pool)
@@ -868,12 +846,12 @@ static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
       svn_stringbuf_t *url_buf;
 
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
-                                            NULL, ras->sess, ras->url->data,
+                                            NULL, ras->sess, ras->url,
                                             SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components
          in bc_relative. */
-      url_buf = svn_stringbuf_dup(ras->url, pool);
+      url_buf = svn_stringbuf_create(ras->url, pool);
       svn_path_remove_components
         (url_buf, svn_path_component_count(bc_relative.data));
       ras->repos_root = apr_pstrdup(ras->pool, url_buf->data);
@@ -896,10 +874,9 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
       const char *lopped_path;
       const svn_string_t *uuid_propval;
 
-      SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                    ras->sess, ras->url->data,
-                                                    pool));
-      SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
+      SVN_ERR (svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                     ras->sess, ras->url,
+                                                     pool) );
 
       uuid_propval = apr_hash_get(rsrc->propset,
                                   SVN_RA_DAV__PROP_REPOSITORY_UUID,
@@ -936,7 +913,7 @@ handle_creationdate_header(void *userdata,
   if (! value)
     return;
 
-  err = svn_time_from_cstring(&(lrb->creation_date), value, lrb->pool);
+  err = svn_time_from_cstring (&(lrb->creation_date), value, lrb->pool);
   if (err)
     {
       svn_error_clear(err);
@@ -1048,7 +1025,7 @@ pre_send_hook(ne_request *req,
                                 &(lrb->err), lrb->pool);
 }
 
-#ifdef SVN_NEON_0_25
+#if SVN_NEON_0_25
 /* A callback of type ne_post_send_fn;  called after neon has sent a
    request and received a response header back. */
 static int
@@ -1109,7 +1086,7 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
 
       ne_hook_create_request(ras->sess, create_request_hook, lrb);
       ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
-#ifdef SVN_NEON_0_25
+#if SVN_NEON_0_25
       ne_hook_post_send(ras->sess, post_send_hook, lrb);
 #endif /* SVN_NEON_0_25 */
 
@@ -1118,7 +1095,6 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
     }
 }
 
-/* (Note: *LOCK is an output parameter.) */
 /* ### TODO for 1.3: Send all locks to the server at once. */
 static svn_error_t *
 shim_svn_ra_dav__lock(svn_ra_session_t *session,
@@ -1137,7 +1113,7 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   svn_lock_t *slock;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
+  url = svn_path_url_add_component(ras->url, path, pool);  
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                         url, SVN_INVALID_REVNUM, pool));
 
@@ -1271,7 +1247,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
 }
 
 
@@ -1290,7 +1266,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
+  url = svn_path_url_add_component(ras->url, path, pool);  
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);
@@ -1306,7 +1282,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
     {
       svn_lock_t *lock;
 
-      SVN_ERR(svn_ra_dav__get_lock(session, &lock, path, pool));
+      SVN_ERR( svn_ra_dav__get_lock(session, &lock, path, pool) );
       if (! lock)
         return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
                                  _("'%s' is not locked in the repository"),
@@ -1417,7 +1393,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
 }
 
 
@@ -1455,7 +1431,7 @@ lock_receiver(void *userdata,
 
   if (lock)
     {
-#ifdef SVN_NEON_0_25
+#if SVN_NEON_0_25
       /* The post_send hook has not run at this stage; so grab the 
          response headers early.  As Joe Orton explains in Issue
          #2297: "post_send hooks run much later than the name might
@@ -1513,11 +1489,11 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   svn_error_t *err;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
+  url = svn_path_url_add_component (ras->url, path, pool);  
 
   err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                       url, SVN_INVALID_REVNUM, pool);
-  SVN_ERR(svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool));
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras) );
 
   /* Build context for neon callbacks and then register them. */
   setup_neon_request_hook(ras);
@@ -1573,7 +1549,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
 
 
 static const svn_version_t *
-ra_dav_version(void)
+ra_dav_version (void)
 {
   SVN_VERSION_BODY;
 }
@@ -1583,7 +1559,6 @@ static const svn_ra__vtable_t dav_vtable = {
   ra_dav_get_description,
   ra_dav_get_schemes,
   svn_ra_dav__open,
-  svn_ra_dav__reparent,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__change_rev_prop,
@@ -1607,13 +1582,12 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__unlock,
   svn_ra_dav__get_lock,
   svn_ra_dav__get_locks,
-  svn_ra_dav__replay,
 };
 
 svn_error_t *
-svn_ra_dav__init(const svn_version_t *loader_version,
-                 const svn_ra__vtable_t **vtable,
-                 apr_pool_t *pool)
+svn_ra_dav__init (const svn_version_t *loader_version,
+                  const svn_ra__vtable_t **vtable,
+                  apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {

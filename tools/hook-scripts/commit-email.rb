@@ -68,7 +68,7 @@ def parse(args)
     
     opts.on_tail("--help", "Show this message") do
       puts opts
-      exit!
+      exit
     end
   end
 
@@ -205,7 +205,7 @@ INFO
    end + info.deleted_dirs.collect do |dir|
      <<-INFO
   Deleted: #{dir}
-    % svn ls #{[uri, dir].compact.join("/")}@#{rev - 1}
+    % svn ls -r #{rev} #{[uri, dir].compact.join("/")}
 INFO
    end + info.updated_dirs.collect do |dir|
      "  Modified: #{dir}\n"
@@ -217,24 +217,22 @@ def diff_info(info, uri, add_diff)
     [
       key,
       values.collect do |type, value|
-        args = []
-        rev = info.revision
         case type
         when :added
           command = "cat"
+          rev = info.revision.to_s
         when :modified, :property_changed
           command = "diff"
-          args.concat(["-r", "#{info.revision - 1}:#{info.revision}"])
+          rev = "#{info.revision - 1}:#{info.revision}"
         when :deleted
           command = "cat"
-          rev -= 1
+          rev = (info.revision - 1).to_s
         when :copied
           command = "cat"
+          rev = (info.revision - 1).to_s
         else
           raise "unknown diff type: #{value.type}"
         end
-
-        command += " #{args.join(' ')}" unless args.empty?
 
         link = [uri, key].compact.join("/")
 
@@ -248,7 +246,7 @@ HEADER
           desc << value.body
         else
           desc << <<-CONTENT
-    % svn #{command} #{link}@#{rev}
+    % svn #{command} -r #{rev} #{link}
 CONTENT
         end
       
@@ -278,8 +276,8 @@ def make_subject(name, info)
   subject = ""
   subject << "#{name}:" if name
   subject << "r#{info.revision}: "
-  subject << info.log.lstrip.to_a.first.to_s.chomp
-  NKF.nkf("-WM", subject)
+  subject << NKF.nkf("-WM", info.log.lstrip.to_a.first.to_s.chomp)
+  subject
 end
 
 def x_author(info)
@@ -306,8 +304,7 @@ def make_mail(to, from, info, params)
 end
 
 def sendmail(to, from, mail)
-  args = to.collect {|address| address.dump}.join(' ')
-  open("| #{SENDMAIL} #{args}", "w") do |f|
+  open("| #{SENDMAIL} #{to.join(' ')}", "w") do |f|
     f.print(mail)
   end
 end
@@ -378,12 +375,8 @@ def rss_items(items, info, repos_uri)
 end
 
 def main
-  if ARGV.find {|arg| arg == "--help"}
-    parse(ARGV)
-  else
-    repos, revision, to, *rest = ARGV
-    options = parse(rest)
-  end
+  repos, revision, to, *rest = ARGV
+  options = parse(rest)
   
   require "svn/info"
   info = Svn::Info.new(repos, revision)

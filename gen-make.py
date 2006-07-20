@@ -7,11 +7,8 @@
 import os
 import sys
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import ConfigParser
+
 
 # for the generator modules
 sys.path.insert(0, os.path.join('build', 'generator'))
@@ -39,7 +36,7 @@ def main(fname, gentype, verfname=None,
 
   generator.write()
   
-  if ('--debug', '') in other_options:
+  if other_options and ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
       sorted_targets = target_dict.keys(); sorted_targets.sort()
       for target in sorted_targets:
@@ -84,16 +81,6 @@ def _usage_exit():
   print
   print "            The default generator type is 'make'"
   print
-  print "  Makefile-specific options:"
-  print
-  print "  --assume-shared-libs"
-  print "           omit dependencies on libraries, on the assumption that"
-  print "           shared libraries will be built, so that it is unnecessary"
-  print "           to relink executables when the libraries that they depend"
-  print "           on change.  This is an option for developers who want to"
-  print "           increase the speed of frequent rebuilds."
-  print "           *** Do not use unless you understand the consequences. ***"
-  print
   print "  Windows-specific options:"
   print
   print "  --with-apr=DIR"
@@ -106,14 +93,11 @@ def _usage_exit():
   print "           the APR-Iconv sources are in DIR"
   print
   print "  --with-berkeley-db=DIR"
-  print "           look for Berkeley DB headers and libs in"
+  print "           look for Berkley DB headers and libs in"
   print "           DIR"
   print
   print "  --with-neon=DIR"
   print "           the Neon sources are in DIR"
-  print
-  print "  --with-serf=DIR"
-  print "           the Serf sources are in DIR"
   print
   print "  --with-httpd=DIR"
   print "           the httpd sources and binaries required"
@@ -176,30 +160,28 @@ class Options:
 
 if __name__ == '__main__':
   try:
-    opts, args = my_getopt(sys.argv[1:], 'st:',
-                           ['debug',
-                            'release',
-                            'reload',
-                            'assume-shared-libs',
-                            'with-apr=',
-                            'with-apr-util=',
-                            'with-apr-iconv=',
-                            'with-berkeley-db=',
-                            'with-neon=',
-                            'with-serf=',
-                            'with-httpd=',
-                            'with-libintl=',
-                            'with-openssl=',
-                            'with-zlib=',
-                            'with-junit=',
-                            'with-swig=',
-                            'enable-pool-debug',
-                            'enable-purify',
-                            'enable-quantify',
-                            'enable-nls',
-                            'enable-bdb-in-apr-util',
-                            'vsnet-version=',
-                            ])
+    opts, args = getopt.getopt(sys.argv[1:], 'st:',
+                               ['debug',
+                                'release',
+                                'reload',
+                                'with-apr=',
+                                'with-apr-util=',
+                                'with-apr-iconv=',
+                                'with-berkeley-db=',
+                                'with-neon=',
+                                'with-httpd=',
+                                'with-libintl=',
+                                'with-openssl=',
+                                'with-zlib=',
+                                'with-junit=',
+                                'with-swig=',
+                                'enable-pool-debug',
+                                'enable-purify',
+                                'enable-quantify',
+                                'enable-nls',
+                                'enable-bdb-in-apr-util',
+                                'vsnet-version=',
+                                ])
     if len(args) > 1:
       _usage_exit()
   except getopt.GetoptError:

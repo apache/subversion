@@ -1,0 +1,86 @@
+This file tracks the status of releases in the 1.3.x line.
+
+See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.3.3:
+================
+
+Candidate changes:
+
+  * r17333 and associated test case (copied from trunk)
+    Fix issue #2306: modification of "svn:needs-lock" should adjust
+    the native file system's read-only attribute within a WC.
+    Branch: 1.3.x-r17333
+    Justification:
+      Backport of a change to trunk which resolves buggy behavior on
+      Windows, behavior which is inconsistent with Linux.
+    Notes:
+      dlr does not have a Windows development environment, and thus
+      cannot adequately test this change.  Additional testing is
+      especially important given the heavy amount of modification
+      which was necessary when backporting the change from trunk.
+    Votes:
+      +0: dlr
+      -1: malcolm (http://svn.haxx.se/dev/archive-2006-01/0891.shtml)
+
+  * r18144, r18164, r18170, r18171, r18184, r18434, r18882
+    and r18037, r18127 (only tools/dev/stress.pl)
+    Add support for BDB-4.4 and automatic recovery of wedged databases.
+    Justification:
+      See above about automatic recovery of wedged databases.
+    Votes:
+      +1: brane
+
+ * r19915
+   Require APR 0.9.7
+   Justification:
+     Older APR versions didn't return errors upon failed writes
+     with buffered files: Potential repository corruption with FSFS.
+   Votes:
+     +1: dionisos
+
+  * r19968
+    Widen SWIG requirement to 1.3.29.
+    Justification:
+      It seems to work, according to the testsuites.
+    Votes:
+      +1: maxb
+
+  * r20040, r20255, r20256
+    RPM changes to correctly build on x86-64 architecture.
+    Justfication:
+      Quite a few user requests and also RPMs should work on all architectures.
+    Votes:
+      +1: david
+    
+  * r20041
+    Get rid of requirement for another RPM package (chrpath) to build the
+    Linux RPM packages.
+    Justification:
+      Using Fedora Core as an example, I figured out a better
+      way to simplify build package requirements with patch instead of
+      package.
+    Votes:
+      +1: david
+
+  * r20741, r20743
+    Fix a segmentation fault bug when an error is occurred in log message
+    callback.
+    Branch: r20741
+    Justification:
+      A segmentation fault bug is critical bug.
+    Votes:
+      +1: kou
+
+Approved changes:
+
+  * r18254
+    Fix parenthetisation in the SVN_BDB_VERSION_AT_LEAST macro.
+    Justification:
+      Avoids precedence bugs when used in boolean expressions.
+    Note:
+      Depends on r18144 et al. - unmergeable until those revs are merged.
+    Votes:
+      +1: brane, lundblad, malcolm, dlr

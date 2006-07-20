@@ -9,7 +9,6 @@ import fnmatch
 import re
 import glob
 import generator.swig.header_wrappers
-import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
 
 try:
@@ -39,13 +38,12 @@ class WinGeneratorBase(GeneratorBase):
     self.apr_path = 'apr'
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
-    self.serf_path = None
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
     self.neon_ver = 24007
     self.httpd_path = None
     self.libintl_path = None
-    self.zlib_path = 'zlib'
+    self.zlib_path = None
     self.openssl_path = None
     self.junit_path = None
     self.swig_path = None
@@ -58,7 +56,6 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
-    self.have_gen_uri = None
 
     # NLS options
     self.enable_nls = None
@@ -73,8 +70,6 @@ class WinGeneratorBase(GeneratorBase):
         self.apr_util_path = val
       elif opt == '--with-apr-iconv':
         self.apr_iconv_path = val
-      elif opt == '--with-serf':
-        self.serf_path = val
       elif opt == '--with-neon':
         self.neon_path = val
       elif opt == '--with-httpd':
@@ -147,12 +142,6 @@ class WinGeneratorBase(GeneratorBase):
     # Find neon version
     if self.neon_path:
       self._find_neon()
-      
-    # Check for gen_uri_delims project in apr-util
-    gen_uri_path = os.path.join(self.apr_util_path, 'uri',
-                                'gen_uri_delims.dsp')
-    if os.path.exists(gen_uri_path):
-      self.have_gen_uri = 1
 
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
@@ -177,6 +166,17 @@ class WinGeneratorBase(GeneratorBase):
               'use_ml': self.have_ml and 1 or None}
       bat = os.path.join('build', 'win32', 'build_zlib.bat')
       self.write_with_template(bat, 'build_zlib.ezt', data)
+
+    # Generate the build_neon.bat file
+    data = {'neon_path': os.path.abspath(self.neon_path),
+            'expat_path': os.path.join(os.path.abspath(self.apr_util_path),
+                                       'xml', 'expat', 'lib'),
+            'zlib_path': self.zlib_path
+                         and os.path.abspath(self.zlib_path),
+            'openssl_path': self.openssl_path
+                            and os.path.abspath(self.openssl_path)}
+    bat = os.path.join('build', 'win32', 'build_neon.bat')
+    self.write_with_template(bat, 'build_neon.ezt', data)
 
     # Generate the build_locale.bat file
     pofiles = []
@@ -206,11 +206,17 @@ class WinGeneratorBase(GeneratorBase):
     self.configs = ['Debug','Release']
 
     if self.swig_libdir:
-      # Generate SWIG header wrappers and external runtime
-      for swig in (generator.swig.header_wrappers,
-                   generator.swig.checkout_swig_header,
-                   generator.swig.external_runtime):
-        swig.Generator(self.conf, self.swig_exe).write()
+      
+      # Generate SWIG header wrappers
+      header_wrappers = \
+        generator.swig.header_wrappers.Generator("build.conf", self.swig_exe)
+      header_wrappers.write()
+      
+      # Generate external runtime
+      runtime = \
+        generator.swig.external_runtime.Generator("build.conf", self.swig_exe)
+      runtime.write()
+    
     else:
       print "%s not found; skipping SWIG file generation..." % self.swig_exe
       
@@ -238,23 +244,6 @@ class WinGeneratorBase(GeneratorBase):
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
-    
-    # Drop the gen_uri_delims target unless we're on an old apr-util
-    if not self.have_gen_uri:
-      install_targets = filter(lambda x: x.name != 'gen_uri_delims',
-                               install_targets)
-      
-    # Drop the libsvn_fs_base target and tests if we don't have BDB
-    if not self.bdb_lib:
-      install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
-                               install_targets)
-      install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
-                                              and x.install == 'bdb-test'),
-                               install_targets)
-      
-    # Drop the serf target if we don't have it
-    if not self.serf_path:
-      install_targets = filter(lambda x: x.name != 'serf', install_targets)
 
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
@@ -461,10 +450,6 @@ class WinGeneratorBase(GeneratorBase):
       path = self.apr_util_path + target.external_project[8:]
     elif target.external_project[:4] == 'apr/':
       path = self.apr_path + target.external_project[3:]
-    elif target.external_project[:5] == 'neon/':
-      path = self.neon_path + target.external_project[4:]
-    elif target.external_project[:5] == 'serf/' and self.serf_path:
-      path = self.serf_path + target.external_project[4:]
     else:
       path = target.external_project
 
@@ -584,8 +569,7 @@ class WinGeneratorBase(GeneratorBase):
     "Return the list of defines for target"
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
-                   "snprintf=_snprintf", "_CRT_SECURE_NO_DEPRECATE=",
-                   "_CRT_NONSTDC_NO_DEPRECATE="]
+                   "snprintf=_snprintf"]
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
@@ -601,7 +585,6 @@ class WinGeneratorBase(GeneratorBase):
     # XXX: know these things for itself.
     if self.bdb_lib:
       fakedefines.append("APU_HAVE_DB=1")
-      fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
 
     # check if they wanted nls
     if self.enable_nls:
@@ -649,17 +632,12 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
-    
-    if self.serf_path:
-       fakeincludes.append(self.apath(self.serf_path, ""))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
       fakeincludes.append(self.swig_libdir)
 
-    fakeincludes.append(self.apath(self.zlib_path))
-    
     return fakeincludes
 
   def get_win_lib_dirs(self, target, cfg):
@@ -668,9 +646,7 @@ class WinGeneratorBase(GeneratorBase):
     libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
                             "Release", "LibR")
 
-    fakelibdirs = [ self.apath(self.bdb_path, "lib"),
-                    self.apath(self.neon_path),
-                    self.apath(self.zlib_path) ]
+    fakelibdirs = [ self.apath(self.bdb_path, "lib") ]
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -682,11 +658,7 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
-    dblib = None
-    if self.bdb_lib:
-      dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
-    neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
-    zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
+    dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -695,7 +667,6 @@ class WinGeneratorBase(GeneratorBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
-    nondeplibs.append(zlib)
     if self.enable_nls:
       if self.libintl_path:
         nondeplibs.append(self.apath(self.libintl_path,
@@ -717,9 +688,6 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
-      if dep.external_lib == '$(NEON_LIBS)':
-        nondeplibs.append(neonlib)
-        
     return gen_base.unique(nondeplibs)
 
   def get_win_sources(self, target, reldir_prefix=''):
@@ -788,42 +756,12 @@ class WinGeneratorBase(GeneratorBase):
 
   def write_neon_project_file(self, name):
     neon_path = os.path.abspath(self.neon_path)
-    self.move_proj_file(self.neon_path, name,
-                        (('neon_sources',
+    self.move_proj_file(os.path.join('build', 'win32'), name,
+                        (('neon_path', neon_path),
+                         ('neon_sources',
                           glob.glob(os.path.join(neon_path, 'src', '*.c'))),
                          ('neon_headers',
                           glob.glob(os.path.join(neon_path, 'src', '*.h'))),
-                         ('expat_path',
-                          os.path.join(os.path.abspath(self.apr_util_path),
-                                       'xml', 'expat', 'lib')),
-                         ('zlib_path', self.zlib_path 
-                                       and os.path.abspath(self.zlib_path)),
-                         ('openssl_path',
-                          self.openssl_path
-                            and os.path.abspath(self.openssl_path)),
-                        ))
-
-  def write_serf_project_file(self, name):
-    if not self.serf_path:
-      return
-
-    serf_path = os.path.abspath(self.serf_path)
-    self.move_proj_file(self.serf_path, name,
-                        (('serf_sources',
-                          glob.glob(os.path.join(serf_path, '*.c'))
-                          + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.c'))),
-                         ('serf_headers',
-                          glob.glob(os.path.join(serf_path, '*.h'))
-                          + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.h'))),
-                         ('zlib_path', self.zlib_path 
-                                       and os.path.abspath(self.zlib_path)),
-                         ('openssl_path',
-                          self.openssl_path
-                            and os.path.abspath(self.openssl_path)),
-                         ('apr_path', os.path.abspath(self.apr_path)),
-                         ('apr_util_path', os.path.abspath(self.apr_util_path)),
                         ))
 
   def move_proj_file(self, path, name, params=()):
@@ -853,8 +791,9 @@ class WinGeneratorBase(GeneratorBase):
         self.bdb_lib = lib
         break
     else:
-      sys.stderr.write("BDB not found, BDB fs will not be built\n")
-      self.bdb_lib = None
+      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
+                       "by default\n")
+      self.bdb_lib = "libdb42"
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -890,13 +829,13 @@ class WinGeneratorBase(GeneratorBase):
     infp.close()
     try:
       txt = outfp.read()
-      if txt:
+      if (txt):
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
       else:
         vermatch = None
 
-      if vermatch:
+      if (vermatch):
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
@@ -948,15 +887,14 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_neon(self):
     "Find the neon version"
-    msg = 'WARNING: Unable to determine neon version\n'
+    msg = 'WARNING: Unable to determine neon version'
     try:
-      self.neon_lib = "libneon"
       fp = open(os.path.join(self.neon_path, '.version'))
       txt = fp.read()
       vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
   
-      if vermatch:
+      if (vermatch):
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
@@ -964,7 +902,7 @@ class WinGeneratorBase(GeneratorBase):
         self.neon_ver = int('%d%02d%03d' % version)
         msg = 'Found neon version %d.%d.%d\n' % version
     except:
-      msg = 'WARNING: Error while determining neon version\n'
+      msg = 'WARNING: Error while determining neon version'
     sys.stderr.write(msg)
     
   def _configure_apr_util(self):

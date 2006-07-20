@@ -26,17 +26,9 @@ module Svn
 
     class Info
       alias url URL
-      alias repos_root_url repos_root_URL
     end
 
     PropListItem = ProplistItem
-    # Following methods are also available:
-    #
-    # [name]
-    #   Returns an URI for the item concerned with the instance.
-    # [props]
-    #   Returns a Hash of properties, such as
-    #   <tt>{propname1 => propval1, propname2 => propval2, ...}</tt>.
     class PropListItem
       alias name node_name
       alias props prop_hash
@@ -68,7 +60,6 @@ module Svn
       alias _initialize initialize
       def initialize
         @prompts = []
-        @batons = []
         @providers = []
         @auth_baton = Svn::Core::AuthBaton.new
         self.auth_baton = @auth_baton
@@ -122,11 +113,11 @@ module Svn
       end
 
       def update(paths, rev="HEAD", recurse=true, ignore_externals=false)
-        paths_is_array = paths.is_a?(Array)
-        paths = [paths] unless paths_is_array
-        result = Client.update2(paths, rev, recurse, ignore_externals, self)
-        result = result.first unless paths_is_array
-        result
+        if paths.is_a?(Array)
+          Client.update2(paths, rev, recurse, ignore_externals, self)
+        else
+          Client.update(paths, rev, recurse, self)
+        end
       end
       alias up update
 
@@ -165,8 +156,6 @@ module Svn
       alias pdel propdel
       alias pd propdel
 
-      # Returns a value of a property, with +name+ attached to +target+,
-      # as a Hash such as <tt>{uri1 => value1, uri2 => value2, ...}</tt>.
       def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
         rev ||= "HEAD"
         peg_rev ||= rev
@@ -176,9 +165,6 @@ module Svn
       alias pget propget
       alias pg propget
 
-      # Returns list of properties attached to +target+ as an Array of
-      # Svn::Client::PropListItem.
-      # Paths and URIs are available as +target+.
       def proplist(target, rev=nil, peg_rev=nil, recurse=true)
         rev ||= "HEAD"
         peg_rev ||= rev
@@ -189,12 +175,12 @@ module Svn
       alias pl proplist
       
       def copy(src_path, dst_path, rev=nil)
-        Client.copy3(src_path, rev || "HEAD", dst_path, self)
+        Client.copy2(src_path, rev || "HEAD", dst_path, self)
       end
       alias cp copy
       
       def move(src_path, dst_path, force=false)
-        Client.move4(src_path, dst_path, force, self)
+        Client.move3(src_path, dst_path, force, self)
       end
       alias mv move
 
@@ -219,6 +205,7 @@ module Svn
                    recurse=true, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
                    header_encoding=nil)
+        peg_rev ||= URI(path).scheme ? "HEAD" : "BASE"
         header_encoding ||= Core::LOCALE_CHARSET
         Client.diff_peg3(options, path, peg_rev, start_rev, end_rev,
                          recurse, ignore_ancestry,
@@ -226,42 +213,24 @@ module Svn
                          out_file, err_file, self)
       end
 
-      # Invokes block once for each item changed between <tt>path1</tt>
-      # at <tt>rev1</tt> and <tt>path2</tt> at <tt>rev2</tt>,
-      # and returns +nil+.
-      # +diff+ is an instance of Svn::Client::DiffSummarize.
-      def diff_summarize(path1, rev1, path2, rev2,
-                         recurse=true, ignore_ancestry=true,
-                         &block) # :yields: diff
-        Client.diff_summarize(path1, rev1, path2, rev2,
-                              recurse, ignore_ancestry, block, self)
-      end
-
-      def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
-                             recurse=true, ignore_ancestry=true,
-                             &block)
-        Client.diff_summarize_peg(path1, rev1, rev2, peg_rev,
-                                  recurse, ignore_ancestry, block, self)
-      end
-
       def merge(src1, rev1, src2, rev2, target_wcpath,
                 recurse=true, ignore_ancestry=false,
-                force=false, dry_run=false, options=nil)
-        Client.merge2(src1, rev1, src2, rev2, target_wcpath,
-                      recurse, ignore_ancestry, force,
-                      dry_run, options, self)
+                force=false, dry_run=false)
+        Client.merge(src1, rev1, src2, rev2, target_wcpath,
+                     recurse, ignore_ancestry, force,
+                     dry_run, self)
       end
 
       def merge_peg(src, rev1, rev2, target_wcpath,
                     peg_rev=nil, recurse=true,
                     ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil)
-        Client.merge_peg2(src, rev1, rev2, peg_rev,
-                          target_wcpath, recurse, ignore_ancestry,
-                          force, dry_run, options, self)
+                    dry_run=false)
+        peg_rev ||= URI(src).scheme ? "HEAD" : "BASE"
+        Client.merge_peg(src, rev1, rev2, peg_rev,
+                         target_wcpath, recurse, ignore_ancestry,
+                         force, dry_run, self)
       end
       
-      # Returns a content of +path+ at +rev+ as a String.
       def cat(path, rev="HEAD", peg_rev=nil, output=nil)
         used_string_io = output.nil?
         output ||= StringIO.new
@@ -293,7 +262,6 @@ module Svn
         Client.info(path_or_uri, rev, peg_rev, receiver, recurse, self)
       end
 
-      # Returns URL for +path+ as a String.
       def url_from_path(path)
         Client.url_from_path(path)
       end
@@ -302,7 +270,6 @@ module Svn
         Client.uuid_from_path(path, adm, self)
       end
       
-      # Returns UUID for +url+ as a String.
       def uuid_from_url(url)
         Client.uuid_from_url(url, self)
       end
@@ -311,36 +278,19 @@ module Svn
         Client.open_ra_session(url, self)
       end
       
-      # Scans revisions from +start_rev+ to +end_rev+ for each path in
-      # +paths+, invokes block once for each revision, and then returns
-      # +nil+.
-      #
-      # When +discover_changed_paths+ is +false+ or +nil+, +changed_paths+,
-      # the first block-argument, is +nil+.  Otherwise, it is a Hash
-      # containing simple information associated with the revision,
-      # whose keys are paths and values are changes, such as
-      # <tt>{path1 => change1, path2 => change2, ...}</tt>,
-      # where each path is an absolute one in the repository and each
-      # change is a instance of Svn::Core::LogChangedPath.
-      # The rest of the block arguments, +rev+, +author+, +date+, and
-      # +message+ are the revision number, author, date, and the log
-      # message of that revision, respectively.
       def log(paths, start_rev, end_rev, limit,
-              discover_changed_paths, strict_node_history,
-              peg_rev=nil)
+              discover_changed_paths, strict_node_history)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, rev, author, date, message|
+          date = Time.from_svn_format(date) if date
           yield(changed_paths, rev, author, date, message)
         end
-        Client.log3(paths, peg_rev, start_rev, end_rev, limit,
+        Client.log2(paths, start_rev, end_rev, limit,
                     discover_changed_paths,
                     strict_node_history,
                     receiver, self)
       end
-
-      # Returns log messages, for commits affecting +paths+ from +start_rev+
-      # to +end_rev+, as an Array of String.
-      # You can use URIs as well as paths as +paths+.
+      
       def log_message(paths, start_rev=nil, end_rev=nil)
         start_rev ||= "HEAD"
         end_rev ||= start_rev
@@ -358,35 +308,27 @@ module Svn
         end
       end
 
-      def blame(path_or_uri, start_rev=nil, end_rev=nil, peg_rev=nil,
-                diff_options=nil, ignore_mime_type=false)
+      def blame(path_or_uri, start_rev=nil, end_rev=nil, peg_rev=nil)
         start_rev ||= 1
         end_rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         peg_rev ||= end_rev
-        diff_options ||= Svn::Core::DiffFileOptions.new
         receiver = Proc.new do |line_no, revision, author, date, line|
+          date = Time.from_svn_format(date) if date
           yield(line_no, revision, author, date, line)
         end
-        Client.blame3(path_or_uri, peg_rev, start_rev,
-                      end_rev, diff_options, ignore_mime_type,
-                      receiver, self)
+        Client.blame2(path_or_uri, peg_rev, start_rev,
+                      end_rev, receiver, self)
       end
       alias praise blame
       alias annotate blame
       alias ann annotate
       
-      # Returns a value of a revision property named +name+ for +uri+
-      # at +rev+, as a String.
-      # Both URLs and paths are avaiable as +uri+.
       def revprop(name, uri, rev)
         value, = revprop_get(name, uri, rev)
         value
       end
       alias rp revprop
       
-      # Returns a value of a revision property named +name+ for +uri+
-      # at +rev+, as an Array such as <tt>[value, rev]</tt>.
-      # Both URLs and paths are avaiable as +uri+.
       def revprop_get(name, uri, rev)
         result = Client.revprop_get(name, uri, rev, self)
         if result.is_a?(Array)
@@ -398,26 +340,18 @@ module Svn
       alias rpget revprop_get
       alias rpg revprop_get
       
-      # Sets +value+ as a revision property named +name+ for +uri+ at +rev+.
-      # Both URLs and paths are avaiable as +uri+.
       def revprop_set(name, value, uri, rev, force=false)
         Client.revprop_set(name, value, uri, rev, force, self)
       end
       alias rpset revprop_set
       alias rps revprop_set
       
-      # Deletes a revision property, named +name+, for +uri+ at +rev+.
-      # Both URLs and paths are avaiable as +uri+.
       def revprop_del(name, uri, rev, force=false)
         Client.revprop_set(name, nil, uri, rev, force, self)
       end
       alias rpdel revprop_del
       alias rpd revprop_del
 
-      # Returns a list of revision properties set for +uri+ at +rev+,
-      # as an Array such as
-      # <tt>[{revprop1 => value1, revprop2 => value2, ...}, rev]</tt>.
-      # Both URLs and paths are avaiable as +uri+.
       def revprop_list(uri, rev)
         props, rev = Client.revprop_list(uri, rev, self)
         if props.has_key?(Svn::Core::PROP_REVISION_DATE)
@@ -441,42 +375,23 @@ module Svn
         peg_rev ||= rev
         Client.ls3(path_or_uri, rev, peg_rev, recurse, self)
       end
-
-      # Invokes block once for each path below +path_or_uri+ at +rev+
-      # and returns +nil+.
-      # +path+ is a relative path from the +path_or_uri+.
-      # +dirent+ is an instance of Svn::Core::Dirent.
-      # +abs_path+ is an absolute path for +path_or_uri+ in the repository.
-      def list(path_or_uri, rev, peg_rev=nil, recurse=false,
-               dirent_fields=nil, fetch_locks=true,
-               &block) # :yields: path, dirent, lock, abs_path
-        dirent_fields ||= Core::DIRENT_ALL
-        Client.list(path_or_uri, peg_rev, rev, recurse, dirent_fields,
-                    fetch_locks, block, self)
-      end
-
+      
       def switch(path, uri, rev=nil, recurse=true)
         Client.switch(path, uri, rev, recurse, self)
       end
       
       def add_simple_provider
-        add_provider(Core.auth_get_simple_provider)
+        add_provider(Client.get_simple_provider)
       end
 
-      if Core.respond_to?(:get_windows_simple_provider)
+      if Client.respond_to?(:get_windows_simple_provider)
         def add_windows_simple_provider
-          add_provider(Core.auth_get_windows_simple_provider)
-        end
-      end
-      
-      if Core.respond_to?(:get_keychain_simple_provider)
-        def add_keychain_simple_provider
-          add_provider(Core.auth_get_keychain_simple_provider)
+          add_provider(Client.get_windows_simple_provider)
         end
       end
       
       def add_username_provider
-        add_provider(Core.auth_get_username_provider)
+        add_provider(Client.get_username_provider)
       end
       
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
@@ -542,9 +457,7 @@ module Svn
           prompt.call(cred, *prompt_args)
           cred
         end
-        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
-        baton, pro = Core.__send__(method_name, real_prompt, *args)
-        @batons << baton
+        pro = Client.__send__("get_#{name}_prompt_provider", real_prompt, *args)
         @prompts << real_prompt
         add_provider(pro)
       end
@@ -564,57 +477,6 @@ module Svn
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
         end
-      end
-    end
-
-    # Following methods are also available:
-    #
-    # [path]
-    #   Returns a path concerned with the instance.
-    # [prop_changed?]
-    #   Returns +true+ when the instance is a change involving a property
-    #   change.
-    class DiffSummarize
-      alias prop_changed? prop_changed
-
-      # Returns +true+ when the instance is a normal change.
-      def kind_normal?
-        summarize_kind == DIFF_SUMMARIZE_KIND_NORMAL
-      end
-
-      # Returns +true+ when the instance is a change involving addition.
-      def kind_added?
-        summarize_kind == DIFF_SUMMARIZE_KIND_ADDED
-      end
-
-      # Returns +true+ when the instance is a change involving modification.
-      def kind_modified?
-        summarize_kind == DIFF_SUMMARIZE_KIND_MODIFIED
-      end
-
-      # Returns +true+ when the instance is a change involving deletion.
-      def kind_deleted?
-        summarize_kind == DIFF_SUMMARIZE_KIND_DELETED
-      end
-
-      # Returns +true+ when the instance is a change made to no node.
-      def node_kind_none?
-        node_kind == Core::NODE_NONE
-      end
-
-      # Returns +true+ when the instance is a change made to a file node.
-      def node_kind_file?
-        node_kind == Core::NODE_FILE
-      end
-
-      # Returns +true+ when the instance is a change made to a directory node.
-      def node_kind_dir?
-        node_kind == Core::NODE_DIR
-      end
-
-      # Returns +true+ when the instance is a change made to an unknown node.
-      def node_kind_unknown?
-        node_kind == Core::NODE_UNKNOWN
       end
     end
   end

@@ -96,13 +96,23 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self):
     "Write a Solution (.sln)"
 
-    # apr doesn't supply vcproj files, the user must convert them
-    # manually before loading the generated solution
+    # apr doesn't supply vcproj files, so move our pre-defined ones
+    # over if they don't match
+    self.move_proj_file(self.apr_path, 'libapr.vcproj')
+    self.move_proj_file(self.apr_iconv_path, 'libapriconv.vcproj')
+    self.move_proj_file(os.path.join(self.apr_iconv_path,'ccs'),
+                        'libapriconv_ccs_modules.vcproj')
+    self.move_proj_file(os.path.join(self.apr_iconv_path,'ces'),
+                        'libapriconv_ces_modules.vcproj')
+    self.move_proj_file(self.apr_util_path, 'libaprutil.vcproj')
+    self.move_proj_file(os.path.join(self.apr_util_path,'uri'),
+                        'gen_uri_delims.vcproj')
+    self.move_proj_file(os.path.join(self.apr_util_path,'xml', 'expat',
+                        'lib'), 'xml.vcproj')
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj')
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
     self.write_zlib_project_file('zlib.vcproj')
     self.write_neon_project_file('neon.vcproj')
-    self.write_serf_project_file('serf.vcproj')
 
     install_targets = self.get_install_targets()
 
@@ -153,12 +163,6 @@ class Generator(gen_win.WinGeneratorBase):
                             depends=deplist,
                             ))
 
-    # the path name in the .sln template is already enclosed with ""
-    # therefore, remove them from the path itself
-    for target in targets:
-      target.path = string.rstrip(target.path, '"')
-      target.path = string.lstrip(target.path, '"')
-
     targets.sort(lambda x, y: cmp(x.name, y.name))
 
     configs = [ ]
@@ -178,10 +182,7 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    if self.vsnet_version == '9.00':
-      self.write_with_template('subversion_vcnet.sln', 'vc2005_sln.ezt', data)
-    else:
-      self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
+    self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
 
 
 # compatibility with older Pythons:

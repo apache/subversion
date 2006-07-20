@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # Copyright 2005 Branko Cibej <brane@xbc.nu>
 #

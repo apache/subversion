@@ -1,149 +1,141 @@
 #!/bin/sh
 
-# Directory under which all testing happens.  Many of the variables
-# after this are subdirectories of this directory.
+#
+# Root of the test tree
+#
 TEST_ROOT="${HOME}/svn"
 
-# Installation directory.  Everything done under this is temporary and
-# may be wiped out between test runs.  This normally lives inside
-# ${TEST_ROOT}/.
-INST_DIR="${TEST_ROOT}/inst"
+# Installation path, everything under that is considered
+# to be temporary
+INST_DIR="$TEST_ROOT/inst"
 
-# Paths to sources (usually working copies) for Subversion and its
-# dependencies, e.g., APR, APR-UTIL, HTTPD.  
 #
-# For example, $SVN_SOURCE might point to a working copy checked out
-# from http://svn.collab.net/repos/svn/trunk/, or from
-# http://svn.collab.net/repos/svn/branches/SOME_RELEASE_BRANCH/.
-# Similar choices apply to the other source paths.
+# Repository paths and projects name
 #
-#   ****************************** WARNING ******************************
-#   | The svntest system will clean out all non-versioned data from     |
-#   | these working copies.  Don't put anything in them you wouldn't be |
-#   | comfortable losing.                                               |
-#   ****************************** WARNING ******************************
-#
-# The source trees should live in $TEST_ROOT, but the installation for
-# each project will go into $INST_DIR/<proj_name>.  Note that the
-# paths you use here will probably matter when you're writing your
-# $CONFIG_PREFIX.<proj_name> files (discussed later in this script).
-#
+# installation paths are expected to be:
+# '$INST_DIR/<proj_name>, so take care of your
+# $CONFIG_PREFIX.<proj_name> files.
 # Everything in those directories will be wiped out
-# by installation procedure.  See svntest-rebuild-generic.sh
+# by installation procedure. See svntest-rebuild-generic.sh
 
-# Recommendation:
-# svn co http://svn.collab.net/repos/svn/trunk svn
 SVN_NAME=${SVN_NAME:="svn"}
-SVN_SOURCE=${SVN_SOURCE:="$TEST_ROOT/$SVN_NAME"}
+SVN_REPO=${SVN_REPO:="$TEST_ROOT/$SVN_NAME"}
 
-# Recommendation:
-# svn co http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x apr-0.9
 APR_NAME=${APR_NAME:="apr-0.9"}
-APR_SOURCE=${APR_SOURCE:="$TEST_ROOT/$APR_NAME"}
+APR_REPO=${ARP_REPO:="$TEST_ROOT/$APR_NAME"}
 
-# Recommendation:
-# svn co http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \
-#        apr-util-0.9
 APU_NAME=${APU_NAME:="apr-util-0.9"}
-APU_SOURCE=${APU_SOURCE:="$TEST_ROOT/$APU_NAME"}
+APU_REPO=${APU_REPO:="$TEST_ROOT/$APU_NAME"}
 
-# Recommendation:
-# svn co http://svn.apache.org/repos/asf/httpd/httpd/branches/2.0.x httpd-2.0
 HTTPD_NAME=${HTTPD_NAME:="httpd-2.0"}
-HTTPD_SOURCE=${HTTPD_SOURCE:="$TEST_ROOT/$HTTPD_NAME"}
+HTTPD_REPO=${HTTPD_REPO:="$TEST_ROOT/$HTTPD_NAME"}
 
-# Set this to always update the SVN_SOURCE tree to a specific revision.
-# You have to include the "-r", that is: "FORCE_UP_REV_SVN=-r1729".
-# Just leave it empty to default to current head.
-FORCE_UP_REV_SVN=
 
-# Options to pass to 'make' (e.g., -j4)
 MAKE_OPTS=
 
-# Whether the tests take place on a RAM disk.  RAMDISK=<yes|no>
-# (Don't worry: if you set this to "yes", the tests know to clean up
-# after themselves so as not to fill up the ramdisk.)
+#
+# Whether a RAM disk is used to store test data, RAMDISK=<yes|no>
+#
 RAMDISK=no
 
-# Whether to pass CLEANUP=true to Makefile test targets.
+#
+# Whether to pass CLEANUP=true to Makefile test targets,
 # INTERMEDIATE_CLEANUP=<yes|no>
+#
 INTERMEDIATE_CLEANUP=${RAMDISK:="no"}
 
-# Which build targets to test.
-TEST_STATIC=${TEST_STATIC:="yes"}
-TEST_SHARED=${TEST_SHARED:="yes"}
-
-# Whether to test the BDB backend.  TEST_FSFS=<yes|no>
+#
+# Whether to test the BDB backend, TEST_FSFS=<yes|no>
+#
 TEST_BDB=${TEST_BDB:="yes"}
 
-# Whether to test the FSFS backend.  TEST_FSFS=<yes|no>
+#
+# Whether to test the FSFS backend, TEST_FSFS=<yes|no>
+#
 TEST_FSFS=${TEST_FSFS:="yes"}
 
-# Whether to test various bindings.
+#
+# Whether to test various bindings
+#
 TEST_BINDINGS_SWIG_PERL=${TEST_BINDINGS_SWIG_PERL:="no"}
 TEST_BINDINGS_JAVAHL=${TEST_BINDINGS_JAVAHL:="no"}
 TEST_BINDINGS_SWIG_PYTHON=${TEST_BINDINGS_SWIG_PYTHON:="no"}
 TEST_BINDINGS_SWIG_RUBY=${TEST_BINDINGS_SWIG_RUBY:="no"}
 
-# This must correspond to the Listen directive in your httpd.conf.
-RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:52080"
+# This should correspond with your httpd Listen directive
+RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
 
-# Port number for svntest's svnserve instance.
-SVNSERVE_PORT=52069
-RA_SVN_CHECK_ARGS="BASE_URL=svn://localhost:$SVNSERVE_PORT"
-
-# Root of test area for ra_svn, path is relative to the current 
-# object (build) directory.
-RA_SVN_REPO_ROOT=${RA_SVN_REPO_ROOT:="subversion/tests/cmdline"}
-
-# The test run produces a log file, starting with this prefix.
+#
+# Log file name prefix
+#
 LOG_FILE_DIR="$TEST_ROOT/logs/$SVN_NAME"
 LOG_FILE_PREFIX="$LOG_FILE_DIR/LOG_svntest"
 
-# Prefix for the scripts that invoke configure in each project.
-# For example: "config.apr-0.9-shared", "config.subversion-static",
-# etc.  You can name these anything you want; svntest will just look
-# for things starting with $CONFIG_PREFIX and drive whatever it finds.
+#
+# Configure script prefix and object directory names
+#
 CONFIG_PREFIX="config"
-
-# Object directory names.
 OBJ_STATIC="obj-st"
 OBJ_SHARED="obj-sh"
 
-# E-mail addresses for reporting.  You MUST customize these.
 #
-# Note: the email address you use in the $FROM variable must be
-# subscribed to svn-breakage@subversion.tigris.org.  Otherwise your
-# svntest report emails will be mistaken for spam and dropped.
+# E-mail addresses for reporting
+#
 FROM="YOUR_EMAIL_ADDRESS"
 TO="svn-breakage@subversion.tigris.org"
 ERROR_TO="YOUR_EMAIL_ADDRESS"
 REPLY_TO="dev@subversion.tigris.org"
 
-# Paths to utilities.  You may not need to customize these at all.
+#
+# Path to utilities
+#
 BIN="/bin"
 USRBIN="/usr/bin"
 LOCALBIN="/usr/local/bin"
 OPTBIN="/opt/bin"
 PERLBIN="/usr/bin"
 
-# An independent svn binary that won't be affected by the svntest system.
-# This is used for source tree updates.
-SVN="/usr/local/bin/svn"
+# Statically linked svn binary (used for repository updates)
+SVN="$TEST_ROOT/static/bin/svn"
 
-# Path to config.guess (used for generating the mail subject line).
+# CVS binary (used for updating APR & friends)
+CVS="$USRBIN/cvs"
+
+# Path to config.guess (used for generating the mail subject line)
 GUESS="/usr/share/libtool/config.guess"
 
-# Path to sendmail.
-# ### TODO: Why do we demand sendmail, as opposed to some other MDA?
+# Path to sendmail
 SENDMAIL="/usr/sbin/sendmail"
 
-# A program that base64-encodes stdin and writes the result to stdout.
-# The default is a simple Python program in this directory.
+# A program used to base64 encode standard input.  Two choices are
+# 1) The encode-base64 script that comes with the Perl MIME::Base64
+#    module on CPAN at
+#    ftp://ftp.funet.fi/pub/CPAN/modules/by-module/MIME/
 #
-BASE64="`dirname $0`/encode-base64.py"
+#    To install, get the latest MIME-Base64-X.YY.tar.gz and run
+#    perl Makefile.PL
+#    make
+#    make test
+#    make install UNINST=1
+#
+#    Uncomment here if you use this base64 encoder:
+#
+#    BASE64="$PERLBIN/encode-base64"
+#    BASE64_E="$BASE64"
+#
+# 2) A pre-compiled Windows base64.exe binary for Windows users.  C
+#    source code for other OSes.  Available at
+#    http://www.fourmilab.ch/webtools/base64/
+#
+#    No instructions needed.  If you can compile and test Subversion,
+#    then you can compile this :)
+#
+#    Uncomment here if you use this base64 encoder:
+#
+#    BASE64="$USRBIN/base64"
+#    BASE64_E="$BASE64 -e - -"
 
-# Other stuff.  You probably don't need to change any of these.
+# Other stuff
 CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$CP -f"
@@ -170,21 +162,20 @@ TAIL="$USRBIN/tail"
 TAIL_100="$TAIL -n 100"
 TOUCH="$USRBIN/touch"
 UMOUNT="$BIN/umount"
-XARGS="$USRBIN/xargs"
 
-# Make sure messages are not translated.
-export LANGUAGE=C
-export LC_ALL=C
+#
+# Branch prefix for the e-mail subject
+#
+REVPREFIX=`$SVN info $SVN_REPO | $SED -ne 's@^URL:.*/repos/svn/\(branches/\)*\(.*\)$@\2 r@p'`
 
-# Branch prefix for the e-mail subject.
-REVPREFIX=`$SVN info $SVN_SOURCE | $SED -ne 's@^URL:.*/repos/svn/\(branches/\)*\(.*\)$@\2 r@p'`
+#
+# Revision number for the e-mail subject
+#
+REVISION=`$SVN info $SVN_REPO | $SED -ne 's@^Revision: \(.*\)$@\1@p'`
 
-# Revision number for the e-mail subject.
-REVISION=`$SVN info $SVN_SOURCE | $SED -ne 's@^Revision: \(.*\)$@\1@p'`
-
-### Don't change anything below this line. ###
-
-# Helper functions:
+#
+# Helper functions
+#
 
 # Start a test
 START() {
@@ -222,10 +213,10 @@ FAIL_LOG() {
     echo "Complete log saved in $SAVED_LOG" >> $LOG_FILE
 }
 
-# Conditionally mount ramdisk.
-# Check that
-#    i)  RAMDISK is defined
-#    ii) The ramdisk isn't already mounted
+# Mount ramdisk conditionally
+# check that
+# i)  RAMDISK is defined
+# ii) Ramdisk isn't already mounted
 mount_ramdisk() {
     local mount_dir="$1"
     if test "xyes" = "x$RAMDISK";
@@ -256,7 +247,9 @@ umount_ramdisk() {
     return 0
 }
 
+#
 # Re-initialize ramdisk if it is currently unmounted.
+#
 reinitialize_ramdisk () {
     test -x "$TEST_ROOT/$OBJ/subversion/tests/clients" || {
         START "re-initializing ramdisk" "Re-initializing ramdisk"

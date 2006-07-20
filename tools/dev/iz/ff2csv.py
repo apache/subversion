@@ -6,10 +6,6 @@ __date__ = "Time-stamp: <2003-10-16 13:26:27 jrepenning>"[13:30]
 __author__ = "Jack Repenning <jrepenning@collab.net>"
 
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import inspect
 import os
 import os.path
@@ -21,7 +17,7 @@ import sys
 import time
 
 # Long options and their usage strings; "=" means it takes an argument.
-# To get a list suitable for getopt, just do
+# To get a list suitable for getopt.getopt(), just do
 #
 #   [x[0] for x in long_opts]
 #
@@ -45,7 +41,7 @@ manager-speak pictures."""
     global verbose
 
     try:
-        opts, args = my_getopt(sys.argv[1:], "", [x[0] for x in long_opts])
+        opts, args = getopt.getopt(sys.argv[1:], "", [x[0] for x in long_opts])
     except getopt.GetoptError, e:
         print "Error: ", e.msg
         shortusage()

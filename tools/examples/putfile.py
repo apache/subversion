@@ -8,15 +8,13 @@
 import sys
 import os
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 
 from svn import fs, core, repos, delta
 
 def putfile(fname, rpath, uname="", commitmsg=""):
-  rpath = core.svn_path_canonicalize(rpath)
+  if rpath[-1] == "/":
+     rpath = rpath[:-1]
+
   repos_ptr = repos.open(rpath)
   fsob = repos.fs(repos_ptr)
 
@@ -53,7 +51,7 @@ def usage():
   sys.exit(1)
 
 def main():
-  opts, args = my_getopt(sys.argv[1:], 'm:u:')
+  opts, args = getopt.getopt(sys.argv[1:], 'm:u:')
   if len(args) != 2:
     usage()
 

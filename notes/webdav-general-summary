@@ -88,7 +88,7 @@ New HTTP server response headers: {DAV, ...}
                requirement also prevents some non-DAV aware program
                from using your auth credentials and accidentally doing
                an ignorant PUT.  think of it as credentials for your
-               client software!)
+               client sofware!)
 
        - 'DAV:supportedlock' live property: indicates what kinds of
           locking is allowed on a resource.

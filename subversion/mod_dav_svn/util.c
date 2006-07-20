@@ -2,7 +2,7 @@
  * util.c: some handy utilities functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -82,9 +82,6 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
       case SVN_ERR_UNSUPPORTED_FEATURE:
         status = HTTP_NOT_IMPLEMENTED;
         break;
-      case SVN_ERR_FS_PATH_ALREADY_LOCKED:
-        status = HTTP_LOCKED;
-        break;
         /* add other mappings here */
       }
 
@@ -103,19 +100,19 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
    history item (a modification, or a copy) occurred for PATH under
    ROOT.  Use POOL for scratchwork. */
 static svn_error_t *
-get_last_history_rev(svn_revnum_t *revision,
-                     svn_fs_root_t *root,
-                     const char *path,
-                     apr_pool_t *pool)
+get_last_history_rev (svn_revnum_t *revision,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *pool)
 {
   svn_fs_history_t *history;
   const char *ignored;
 
   /* Get an initial HISTORY baton. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, pool));
+  SVN_ERR( svn_fs_node_history(&history, root, path, pool) );
 
   /* Now get the first *real* point of interesting history. */
-  SVN_ERR(svn_fs_history_prev(&history, history, FALSE, pool));
+  SVN_ERR( svn_fs_history_prev(&history, history, FALSE, pool) );
 
   /* Fetch the location information for this history step. */
   return svn_fs_history_location(&ignored, revision, history, pool);
@@ -176,7 +173,7 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
-  const char *path_uri = path ? svn_path_uri_encode(path, pool) : NULL;
+  const char *path_uri = path ? svn_path_uri_encode (path, pool) : NULL;
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
@@ -297,7 +294,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
     {
       /* this is an ordinary "public" URI, so back up to include the
          leading '/' and just return... no need to parse further. */
-      info->repos_path = svn_path_uri_decode(path - 1, pool);
+      info->repos_path = svn_path_uri_decode (path - 1, pool);
       return NULL;
     }
 
@@ -336,7 +333,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
         {
           created_rev_str = apr_pstrndup(pool, path, slash - path);
           info->rev = SVN_STR_TO_REV(created_rev_str);
-          info->repos_path = svn_path_uri_decode(slash, pool);
+          info->repos_path = svn_path_uri_decode (slash, pool);
         }
       if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;

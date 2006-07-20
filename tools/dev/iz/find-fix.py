@@ -27,10 +27,6 @@ _version = "$Revision:"
 #
 
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import operator
 import os
 import os.path
@@ -43,7 +39,7 @@ import time
 me = os.path.basename(sys.argv[0])
 
 # Long options and their usage strings; "=" means it takes an argument.
-# To get a list suitable for getopt, just do
+# To get a list suitable for getopt.getopt(), just do
 #
 #   [x[0] for x in long_opts]
 #
@@ -101,7 +97,7 @@ def main():
   global noncore_milestone_filter
 
   try:
-      opts, args = my_getopt(sys.argv[1:], "", [x[0] for x in long_opts])
+      opts, args = getopt.getopt(sys.argv[1:], "", [x[0] for x in long_opts])
   except getopt.GetoptError, e:
       sys.stderr.write("Error: %s\n" % e.msg)
       shortusage()

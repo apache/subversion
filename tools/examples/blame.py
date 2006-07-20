@@ -6,10 +6,6 @@
 import sys
 import os
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import difflib
 from svn import fs, core, repos
 
@@ -18,7 +14,8 @@ CHUNK_SIZE = 100000
 def blame(path, filename, rev=None):
   
   annotresult = {}
-  path = core.svn_path_canonicalize(path)
+  if path[-1] == "/":
+     path = path[:-1]
 
   repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
@@ -60,7 +57,7 @@ def blame(path, filename, rev=None):
           k = k + 1
           continue
         else:
-          annotresult[k] = (i, j[2:])
+	  annotresult[k] = (i, j[2:])
           k = k + 1
           continue
       elif j[0] == '?':

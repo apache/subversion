@@ -5,9 +5,7 @@ module Svn
     
     module_function
     def to_ruby_class_name(name)
-      name.split("_").collect do |x|
-        "#{x[0,1].upcase}#{x[1..-1].downcase}"
-      end.join("")
+      name.split("_").collect{|x| "#{x[0,1].upcase}#{x[1..-1]}"}.join("")
     end
       
     def to_ruby_const_name(name)
@@ -27,12 +25,10 @@ module Svn
       ext_mod.constants.each do |const|
         target_name = nil
         case const
-        when /^SVN__/
-          # ignore private constants
         when /^SVN_(?:#{target_mod.name.split("::").last.upcase}_)?/
           target_name = $POSTMATCH
         when /^SWIG_SVN_/
-          target_name = $POSTMATCH
+          target_name = "SWIG_#{$POSTMATCH}"
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?(.+)_t$/
           target_name = to_ruby_class_name($1)
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?/

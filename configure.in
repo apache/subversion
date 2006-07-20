@@ -1,91 +1,103 @@
-dnl configure.in: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
+dnl Autoconfiscation for Subversion
+
+dnl General Setup -----------------------
+
+dnl Ensure that subversion is configured with autoconf 2.50 or newer
+dnl Don't even think about removing this check!
 AC_PREREQ(2.50)
 
-dnl Get the version of Subversion, using m4's esyscmd() command to do this
-dnl at m4-time, since AC_INIT() requires it then.
+dnl Get the version number of Subversion, using m4's esyscmd() command to run
+dnl the command at m4-generation time. This allows us to create an m4
+dnl symbol holding the correct version number. AC_INIT() requires the
+dnl version number at m4-time, rather than when ./configure is run, so
+dnl all this must happen as part of m4, not as part of the shell code
+dnl contained in ./configure.
 AC_INIT([subversion],
         [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
         [http://subversion.tigris.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
-AC_CONFIG_AUX_DIR([build])
+AC_CONFIG_AUX_DIR(ac-helpers)
 
 AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 
-AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
-AC_SUBST([abs_builddir], ["`pwd`"])
+abs_srcdir="`cd $srcdir && pwd`"
+abs_builddir="`pwd`"
 
-# Generate config.nice early (before the arguments are munged)
+dnl ### should we ever bother with the system install?
+dnl use abs_srcdir. sometimes during installation, libtool will relink the
+dnl library. when it does this, it does a "cd", so a relative use of
+dnl install-sh will not work.
+INSTALL="$abs_srcdir/ac-helpers/install-sh -c"
+AC_SUBST(INSTALL)
+
+MKDIR="$INSTALL -d"
+AC_SUBST(MKDIR)
+
+
+dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
 
-# ==== Check for programs ====================================================
 
-# Look for a C compiler (before anything can set CFLAGS)
+dnl Check for programs ---------------------
+
+dnl Look for a C compiler (before anything can set CFLAGS)
 AC_PROG_CC
 
-# Look for a C pre-processor
+dnl Look for a C pre-processor
 AC_PROG_CPP
 
-# Grab target_cpu, so we can use it in the Solaris pkginfo file
-AC_CANONICAL_TARGET
-
-# Look for an extended grep, this macro appeared in autoconf-2.53b,
-# before that, the search for an EGREP was always performed.
+dnl Look for an extended grep, this macro appeared in autoconf-2.53b
 ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
 
+dnl See if 'ln -s' works
 AC_PROG_LN_S
 
-AC_PROG_INSTALL
-# If $INSTALL is relative path to our fallback install-sh, then convert
-# to an absolute path, as in some cases (e.g. Solaris VPATH build), libtool
-# may try to use it from a changed working directory.
-if test "$INSTALL" = "build/install-sh -c"; then
-  INSTALL="$abs_srcdir/$INSTALL"
-fi
+dnl Sub-package configuration ---------------------
 
-AC_SUBST([MKDIR], ["$INSTALL -d"])
+dnl Possibly reconfigure packages in subdirectories
+AC_ARG_ENABLE(subdir-config,
+  AC_HELP_STRING([--disable-subdir-config],
+		 [do not reconfigure packages in subdirectories]),
+  [
+      if test "$enableval" = "yes" ; then
+        do_subdir_config="yes"
+      fi
+  ], 
+  [
+      do_subdir_config=yes
+  ])
 
+dnl the extra bits to include into our build process
+SVN_EXTRA_INCLUDES='-I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion'
+SVN_EXTRA_LIBS=
 
-dnl find Apache with a recent-enough magic module number.
-SVN_FIND_APACHE(20020903)
+SVN_SUBDIRS=
 
-# ==== Libraries, for which we may have source to build ======================
+AC_SUBST(SVN_EXTRA_INCLUDES)
+AC_SUBST(SVN_EXTRA_LIBS)
+AC_SUBST(SVN_SUBDIRS)
+
+dnl Configure APR --------------------------
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-dnl The specific reason we require APR 0.9.7 is:
-dnl   It contains fixes to its file writing routines
-dnl   now generating errors instead of silently ignoring
-dnl   them.  Only .7 and later can guarantee repository
-dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
-APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+APR_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
+APU_VER_REGEXES=["0\.9\.[5-9] 0\.9\.1[0-9] 1\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
-# Either a space-separated list of allowable Neon versions, or "any" to
-# mean allow anything.
-NEON_ALLOWED_LIST="0.24.7 0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5"
-NEON_LATEST_WORKING_VER=0.25.5
-NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
-dnl You can skip the neon version check only if you know what you are doing 
-AC_ARG_ENABLE(neon-version-check,
-  AC_HELP_STRING([--disable-neon-version-check],
-		 [do not check the Neon version]),
-  [
-    if test "$enableval" = "no" ; then
-      NEON_ALLOWED_LIST="any"
-    fi
-  ],
-  [])
-SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_LATEST_WORKING_VER, $NEON_URL)
+dnl What version of Expat are we using? -----------------
 
-dnl Search for serf as an alternative to neon
-SVN_LIB_SERF
+APU_HAVE_OLD_EXPAT="`$apu_config --old-expat`"
+if test "$APU_HAVE_OLD_EXPAT" = "yes"; then
+  AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
+fi
+
 
 dnl Set up a number of directories ---------------------
 
@@ -119,7 +131,7 @@ localedir='${datadir}/locale'
 AC_SUBST(localedir)
 
 dnl For SVN_LOCALE_DIR, we have to expand it to something.  See SVN_BINDIR.
-if test "${datadir}" = '${prefix}/share' && test "${prefix}" = "NONE"; then
+if test "${datadir}" = '${prefix}/share' -a "${prefix}" = "NONE"; then
   exp_localedir='${ac_default_prefix}/share/locale'
 else
   exp_localedir=$localedir
@@ -127,6 +139,9 @@ fi
 SVN_EXPAND_VAR(svn_localedir, "${exp_localedir}")
 AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
+
+dnl Pass EXEEXT on to the Makefiles
+AC_SUBST(EXEEXT)
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
@@ -152,7 +167,21 @@ SVN_LT_CCTAG=
 SVN_LT_CXXTAG=
 AC_MSG_CHECKING([whether libtool accepts --tag=XXX])
 
-AC_LANG_CONFTEST([AC_LANG_PROGRAM()])
+cat > conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+int
+main ()
+{ 
+  ;
+  return 0;
+}
+_ACEOF
+
 if $sh_libtool --tag=CC --mode=compile \
   $CC -c $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext >&5
 then
@@ -195,33 +224,25 @@ case $host in
 esac
 AC_SUBST(LT_NO_UNDEFINED)
 
-AC_MSG_CHECKING([whether to avoid circular linkage at all costs])
-case $host in
-  *-*-cygwin*)
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK], 1,
-              [Define if circular linkage is not possible on this platform.])
-    ;;
-  *)
-    AC_MSG_RESULT([no])
-    ;;
-esac
+# Either a space-separated list of allowable Neon versions, or "any" to
+# mean allow anything.
+NEON_ALLOWED_LIST="0.24.7 0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5"
+NEON_LATEST_WORKING_VER=0.25.5
+NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
+dnl You can skip the neon version check only if you know what you are doing 
+AC_ARG_ENABLE(neon-version-check,
+  AC_HELP_STRING([--disable-neon-version-check],
+		 [do not check the Neon version]),
+  [
+    if test "$enableval" = "no" ; then
+      NEON_ALLOWED_LIST="any"
+    fi
+  ],
+  [])
+SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_LATEST_WORKING_VER, $NEON_URL)
 
-dnl Check for trang.
-trang=yes
-AC_ARG_WITH(trang,
-AC_HELP_STRING([--with-trang=PATH],
-	       [Specify the command to run the trang schema converter]),
-[
-    trang="$withval"
-])
-if test "$trang" = "yes"; then
-    AC_PATH_PROG(TRANG, trang, none)
-else
-    TRANG="$trang"
-    AC_SUBST(TRANG)
-fi
-
+dnl find Apache with a recent-enough magic module number.
+SVN_FIND_APACHE(20020903)
 
 dnl Check for libraries --------------------
 
@@ -246,53 +267,6 @@ esac
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
-
-AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
-                   [The desired major version for the Berkeley DB])
-AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
-                   [The desired minor version for the Berkeley DB])
-AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
-                   [The desired patch version for the Berkeley DB])
-
-SVN_LIB_SASL
-
-dnl Mac OS KeyChain -------------------
-
-AC_ARG_ENABLE(keychain,
-  AC_HELP_STRING([--disable-keychain], 
-  [Disable use of Mac OS KeyChain for auth credentials]),
-  [enable_keychain=$enableval],[enable_keychain=yes])
-
-AC_MSG_CHECKING([for Mac OS KeyChain Services])
-
-if test "$enable_keychain" = "yes"; then
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <AvailabilityMacros.h>
-#if !DARWIN || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_2)
-#error KeyChain API unavailable.
-#endif]], [[]])],[],[enable_keychain=no])
-fi
-
-if test "$enable_keychain" = "yes"; then
-  dnl ### Hack.  We should only need to pass the -framework options when
-  dnl linking libsvn_subr, since it is the only library that uses Keychain.
-  dnl
-  dnl Unfortunately, libtool 1.5.x doesn't track transitive dependencies for
-  dnl OS X frameworks like it does for normal libraries, so we need to
-  dnl explicitly pass the option to all the users of libsvn_subr to allow
-  dnl static builds to link successfully.
-  dnl
-  dnl This does mean that all executables we link will be linked directly
-  dnl to these frameworks - even when building shared libraries - but that
-  dnl shouldn't cause any problems.
-  LIBS="$LIBS -framework Security"
-  LIBS="$LIBS -framework CoreFoundation"
-  LIBS="$LIBS -framework CoreServices"
-  AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
-  AC_MSG_RESULT([yes])
-else
-  AC_MSG_RESULT([no])
-fi
-
 
 dnl I18n -------------------
 
@@ -371,16 +345,12 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
 fi
   
+DEFAULT_FS_TYPE="fsfs"
+
 if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES dav-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-dav-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
-fi
-
-if test "$svn_lib_serf" = "yes"; then
-  BUILD_RULES="$BUILD_RULES serf-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-serf-lib/'`"
-  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-serf-lib"
 fi
 
 if test "$USE_NLS" = "yes"; then
@@ -393,6 +363,15 @@ AC_SUBST(INSTALL_STATIC_RULES)
 AC_SUBST(INSTALL_RULES)
 AC_SUBST(BDB_TEST_DEPS)
 AC_SUBST(BDB_TEST_PROGRAMS)
+
+AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
+                   [The desired major version for the Berkeley DB])
+AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
+                   [The desired minor version for the Berkeley DB])
+AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
+                   [The desired patch version for the Berkeley DB])
+AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
+                   [The fs type to use by default])
 
 dnl Check for header files ----------------
 
@@ -443,17 +422,6 @@ AC_HELP_STRING([--enable-debug],
       enable_debugging="no"
     fi
 ])
-if test "$enable_debugging" = "yes" ; then
-  dnl At the moment, we don't want optimization, because we're
-  dnl debugging.
-  dnl ### actually, debugging should be fine with the default -O2
-  CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
-else
-  if test "$enable_debugging" = "no" ; then
-    CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
-  fi
-fi
-
 
 AC_ARG_WITH(editor,
 AC_HELP_STRING([--with-editor=PATH],
@@ -471,8 +439,21 @@ AC_HELP_STRING([--with-editor=PATH],
 
 ])
 
-SVN_LIB_Z
+AC_ARG_WITH(zlib,
+AC_HELP_STRING([--with-zlib], [enable zlib support]),
+[
 
+    if test "$withval" = "yes" ; then
+       AC_CHECK_HEADER(zlib.h, [
+           AC_CHECK_LIB(z, inflate, [
+               AC_DEFINE([SVN_HAVE_ZLIB], [1], [Is zlib support enabled?])
+               LIBS="$LIBS -lz"
+           ])
+       ])
+    fi
+
+])
+    
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
 AC_HELP_STRING([--disable-mod-activation],
@@ -532,6 +513,25 @@ AC_HELP_STRING([--enable-gprof],
 ])
 
 
+if test "$enable_debugging" = "yes" ; then
+  dnl At the moment, we don't want optimization, because we're
+  dnl debugging.
+  dnl ### actually, debugging should be fine with the default -O2
+  CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
+else
+  if test "$enable_debugging" = "no" ; then
+    CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+  fi
+fi
+
+dnl Since this is used only on Unix-y systems, define the path separator as '/'
+AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
+        [Defined to be the path separator used on your local filesystem])
+
+AC_DEFINE_UNQUOTED(SVN_NULL_DEVICE_NAME, "/dev/null",
+        [Defined to be the null device for the system])
+
+
 # Scripting and Bindings languages
 
 # Python: Used for testsuite, and bindings
@@ -556,19 +556,7 @@ AC_PATH_PROG(PERL, perl, none)
 AC_PATH_PROG(RUBY, ruby, none)
 if test "$RUBY" != "none"; then
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
-    AC_PATH_PROG(RDOC, rdoc, none)
-    AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
-    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
-    ])
-    RUBY_MAJOR="$svn_cv_ruby_major"
-
-    AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
-    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MINOR))'`"
-    ])
-    RUBY_MINOR="$svn_cv_ruby_minor"
-
-    AC_SUBST(RUBY_MAJOR)
-    AC_SUBST(RUBY_MINOR)
+    :
   else
     RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
@@ -579,6 +567,16 @@ if test "$RUBY" != "none"; then
 fi
 
 SVN_CHECK_SWIG
+
+dnl try to find the "makeinfo" program
+AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
+if test "$MAKEINFO" = "echo cannot run makeinfo"; then
+        dnl we won't install/make any info pages then
+	INSTALL_INFO=""
+else
+	INSTALL_INFO='install-info'
+fi
+AC_SUBST(INSTALL_INFO)
 
 dnl decide whether we want to link against the RA libraries
 AC_ARG_ENABLE(dso,
@@ -592,7 +590,7 @@ AC_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
     fi
 ])
 
-if test "$enable_shared" = "no" || test "$enable_dso" != "yes"; then
+if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   ### We want ra_local first to handle the following scenario:
   ### user has neon and db3 in /usr/local, and db4 in
   ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_dav.la comes before 
@@ -615,14 +613,6 @@ if test "$enable_shared" = "no" || test "$enable_dso" != "yes"; then
     svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_DAV_DEPS)"
     svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-dav-lib"
     svn_ra_lib_link="$svn_ra_lib_link \$(RA_DAV_LINK)"
-  fi
-
-  if test "$svn_lib_serf" = "yes"; then
-    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SERF, 1,
-          [Defined if libsvn_client should link against libsvn_ra_serf])
-    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SERF_DEPS)"
-    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-serf-lib"
-    svn_ra_lib_link="$svn_ra_lib_link \$(RA_SERF_LINK)"
   fi
 
   SVN_RA_LIB_DEPS=$svn_ra_lib_deps
@@ -655,9 +645,8 @@ AC_SUBST(SVN_FS_LIB_DEPS)
 AC_SUBST(SVN_FS_LIB_INSTALL_DEPS)
 AC_SUBST(SVN_FS_LIB_LINK)
 
-# ==== JavaHL ================================================================
 
-dnl Possibly compile JavaHL
+dnl Possibly compile JavaHL (experimental)
 do_javahl_build=no
 AC_ARG_ENABLE(javahl,
   AC_HELP_STRING([--enable-javahl],
@@ -728,56 +717,50 @@ AC_HELP_STRING([--with-junit=PATH],
 AC_SUBST(JAVA_CLASSPATH)
 AC_SUBST(JAVAHL_TESTS_TARGET)
 
-# ==== Miscellaneous bits ====================================================
+dnl Pass some config data ----------------------------
 
-dnl Since this is used only on Unix-y systems, define the path separator as '/'
-AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
-        [Defined to be the path separator used on your local filesystem])
+AC_SUBST(abs_builddir)
+AC_SUBST(abs_srcdir)
 
-AC_DEFINE_UNQUOTED(SVN_NULL_DEVICE_NAME, "/dev/null",
-        [Defined to be the null device for the system])
-
-DEFAULT_FS_TYPE="fsfs"
-AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
-                   [The fs type to use by default])
-
-# BSD/OS (BSDi) needs to use a different include syntax in Makefile
-INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
+dnl
+dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
+dnl
 case "$host" in
-  *bsdi*)
+*bsdi*)
     # Check whether they've installed GNU make
-    if ! make --version > /dev/null 2>&1; then 
-      # BSDi make
-      INCLUDE_OUTPUTS=".include \"\$(top_srcdir)/build-outputs.mk\""
+    if make --version > /dev/null 2>&1; then 
+	INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
+    else
+	# BSDi make
+	INCLUDE_OUTPUTS=".include \"\$(top_srcdir)/build-outputs.mk\""
     fi
+    ;;
+*)
+    INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
     ;;
 esac
 AC_SUBST(INCLUDE_OUTPUTS)
 
-# ==== Detection complete - output and run config.status =====================
+dnl Final step:  create the Makefile ----------------------------
 
 AC_CONFIG_HEADER(subversion/svn_private_config.h)
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_COMMANDS(mkdir-init, [make mkdir-init])
 
+SVN_CONFIG_SCRIPT(svn-config)
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs.pl)
 SVN_CONFIG_SCRIPT(contrib/client-side/svncopy.pl)
 SVN_CONFIG_SCRIPT(contrib/client-side/testsvncopy.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-email.pl)
+SVN_CONFIG_SCRIPT(tools/hook-scripts/propchange-email.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
-SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
-AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 AC_OUTPUT
 
-# ==== Print final messages to user ==========================================
-
-dnl Configure is long - users tend to miss warnings printed during it.
-dnl Hence, print a warnings about what we did and didn't configure at the 
-dnl end, where people will actually see them.
-
+dnl  Print warning messages about what we did and didn't configure at the 
+dnl  end, where people will actually see them.
 case "$svn_lib_berkeley_db" in
   "no" )
     db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"

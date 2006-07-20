@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # extractor.py: extract function names from declarations in header files
 #

@@ -125,14 +125,14 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(dir_path))
     ctx.mkdir(dir_path)
     assert(File.exist?(dir_path))
-    assert_raises(Svn::Error::EntryExists) do
+    assert_raises(Svn::Error::ENTRY_EXISTS) do
       ctx.add(dir_path)
     end
     old_rev = ctx.commit(@wc_path).revision
 
     new_rev = ctx.mkdir(dir2_uri).revision
     assert_equal(old_rev + 1, new_rev)
-    assert_raises(Svn::Error::FsAlreadyExists) do
+    assert_raises(Svn::Error::FS_ALREADY_EXISTS) do
       ctx.mkdir(dir2_uri)
     end
     assert(!File.exist?(dir2_path))
@@ -241,10 +241,10 @@ class SvnClientTest < Test::Unit::TestCase
 
     File.open(path, "w") {|f| f.print(src * 2)}
     gc_disable do
-      assert_raises(Svn::Error::ClientModified) do
+      assert_raises(Svn::Error::CLIENT_MODIFIED) do
         ctx.delete(path)
       end
-      assert_raises(Svn::Error::WcLocked) do
+      assert_raises(Svn::Error::WC_LOCKED) do
         ctx.delete(path, true)
       end
       ctx.cleanup(@wc_path)
@@ -281,10 +281,10 @@ class SvnClientTest < Test::Unit::TestCase
 
     File.open(path, "w") {|f| f.print(src * 2)}
     gc_disable do
-      assert_raises(Svn::Error::ClientModified) do
+      assert_raises(Svn::Error::CLIENT_MODIFIED) do
         ctx.rm(path)
       end
-      assert_raises(Svn::Error::WcLocked) do
+      assert_raises(Svn::Error::WC_LOCKED) do
         ctx.rm_f(path)
       end
       ctx.cleanup(@wc_path)
@@ -558,75 +558,6 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_log
-    log1 = "sample log1"
-    log2 = "sample log2"
-    log3 = "sample log3"
-    src1 = "source1\n"
-    src2 = "source2\n"
-    src3 = "source3\n"
-    file1 = "sample1.txt"
-    file2 = "sample2.txt"
-    file3 = "sample3.txt"
-    path1 = File.join(@wc_path, file1)
-    path2 = File.join(@wc_path, file2)
-    path3 = File.join(@wc_path, file3)
-    abs_path1 = File.join('', file1)
-    abs_path2 = File.join('', file2)
-    abs_path3 = File.join('', file3)
-
-    ctx = make_context(log1)
-    File.open(path1, "w") {|f| f.print(src1)}
-    ctx.add(path1)
-    rev1 = ctx.ci(@wc_path).revision
-
-    ctx = make_context(log2)
-    ctx.cp(path1, path2)
-    rev2 = ctx.ci(@wc_path).revision
-
-    ctx = make_context(log3)
-    ctx.cp(path1, path3)
-    File.open(path1, "w") {|f| f.print(src2)}
-    File.open(path3, "w") {|f| f.print(src3)}
-    rev3 = ctx.ci(@wc_path).revision
-
-    changed_paths_lists = {}
-    revs = {}
-    messages = {}
-    keys = [@wc_path, path1, path2, path3]
-    keys.each do |key|
-      revs[key] = []
-      changed_paths_lists[key] = []
-      messages[key] = []
-      args = [key, 1, "HEAD", 0, true, nil]
-      ctx.log(*args) do |changed_paths, rev, author, date, message|
-        revs[key] << rev
-        changed_paths_lists[key] << changed_paths
-        messages[key] << message
-      end
-    end
-    changed_paths_list = changed_paths_lists[@wc_path]
-
-    assert_equal([rev1, rev2, rev3], revs[@wc_path])
-    assert_equal([rev1, rev3], revs[path1])
-    assert_equal([rev1, rev2], revs[path2])
-    assert_equal([rev1, rev3], revs[path3])
-    assert_equal([log1, log2, log3], messages[@wc_path])
-
-    expected = [[abs_path1], [abs_path2], [abs_path1, abs_path3]]
-    actual = changed_paths_list.collect {|changed_paths| changed_paths.keys}
-    assert_nested_sorted_array(expected, actual)
-
-    assert_equal('A', changed_paths_list[0][abs_path1].action)
-    assert_false(changed_paths_list[0][abs_path1].copied?)
-    assert_equal('A', changed_paths_list[1][abs_path2].action)
-    assert_true(changed_paths_list[1][abs_path2].copied?)
-    assert_equal(abs_path1, changed_paths_list[1][abs_path2].copyfrom_path)
-    assert_equal(rev1, changed_paths_list[1][abs_path2].copyfrom_rev)
-    assert_equal('M', changed_paths_list[2][abs_path1].action)
-    assert_equal('A', changed_paths_list[2][abs_path3].action)
-  end
-
-  def test_log_message
     log = "sample log"
     file = "hello.txt"
     path = File.join(@wc_path, file)
@@ -735,94 +666,6 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.diff_peg([], path, rev1, rev2, out_file.path, err_file.path)
     out_file.open
     assert_match(/-#{before}\+#{after}\z/, out_file.read)
-  end
-
-  def test_diff_summarize
-    log = "sample log"
-    before = "before\n"
-    after = "after\n"
-    file = "hello.txt"
-    path = File.join(@wc_path, file)
-
-    File.open(path, "w") {|f| f.print(before)}
-
-    ctx = make_context(log)
-    ctx.add(path)
-    commit_info = ctx.commit(@wc_path)
-    rev1 = commit_info.revision
-
-    File.open(path, "w") {|f| f.print(after)}
-
-    commit_info = ctx.commit(@wc_path)
-    rev2 = commit_info.revision
-
-    diffs = []
-    ctx.diff_summarize(path, rev1, path, rev2) do |diff|
-      diffs << diff
-    end
-    assert_equal([file], diffs.collect {|d| d.path})
-    kinds = diffs.collect do |d|
-      [d.kind_normal?, d.kind_added?, d.kind_modified?, d.kind_deleted?]
-    end
-    assert_equal([[false, false, true, false]], kinds)
-    assert_equal([false], diffs.collect {|d| d.prop_changed?})
-    node_kinds = diffs.collect do |d|
-      [d.node_kind_none?, d.node_kind_file?,
-       d.node_kind_dir?, d.node_kind_unknown?]
-    end
-    assert_equal([[false, true, false, false]], node_kinds)
-  end
-
-  def test_diff_summarize_peg
-    log = "sample log"
-    before = "before\n"
-    after = "after\n"
-    before_file = "before.txt"
-    after_file = "after.txt"
-    moved_file = "moved.txt"
-    before_path = File.join(@wc_path, before_file)
-    after_path = File.join(@wc_path, after_file)
-    moved_path = File.join(@wc_path, moved_file)
-    after_uri = "#{@repos_uri}/#{after_file}"
-
-    File.open(before_path, "w") {|f| f.print(before)}
-
-    ctx = make_context(log)
-    ctx.add(before_path)
-    commit_info = ctx.commit(@wc_path)
-    rev1 = commit_info.revision
-
-    ctx.mv(before_path, after_path)
-    commit_info = ctx.commit(@wc_path)
-    rev2 = commit_info.revision
-
-    File.open(after_path, "w") {|f| f.print(after)}
-    commit_info = ctx.commit(@wc_path)
-    rev3 = commit_info.revision
-
-    File.open(after_path, "w") {|f| f.print(before)}
-    commit_info = ctx.commit(@wc_path)
-    rev4 = commit_info.revision
-
-    ctx.mv(after_path, moved_path)
-    commit_info = ctx.commit(@wc_path)
-    rev5 = commit_info.revision
-
-    diffs = []
-    ctx.diff_summarize_peg(after_uri, rev3, rev4, rev3) do |diff|
-      diffs << diff
-    end
-    assert_equal([after_file], diffs.collect {|d| d.path})
-    kinds = diffs.collect do |d|
-      [d.kind_normal?, d.kind_added?, d.kind_modified?, d.kind_deleted?]
-    end
-    assert_equal([[false, false, true, false]], kinds)
-    assert_equal([false], diffs.collect {|d| d.prop_changed?})
-    node_kinds = diffs.collect do |d|
-      [d.node_kind_none?, d.node_kind_file?,
-       d.node_kind_dir?, d.node_kind_unknown?]
-    end
-    assert_equal([[false, true, false, false]], node_kinds)
   end
 
   def test_merge
@@ -984,7 +827,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.relocate(@wc_path, @repos_uri, @repos_svnserve_uri)
     
     ctx = make_context(log)
-    assert_raises(Svn::Error::AuthnNoProvider) do
+    assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
       ctx.cat(path)
     end
   end
@@ -1012,12 +855,12 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(path, "w") {|f| f.print(src2)}
     ctx.up(@wc_path)
 
-    assert_raises(Svn::Error::WcFoundConflict) do
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
       ctx.ci(@wc_path)
     end
 
     ctx.resolved(dir_path, false)
-    assert_raises(Svn::Error::WcFoundConflict) do
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
       ctx.ci(@wc_path)
     end
 
@@ -1099,6 +942,7 @@ class SvnClientTest < Test::Unit::TestCase
     file2 = "sample2.txt"
     path1 = File.join(@wc_path, file1)
     path2 = File.join(@wc_path, file2)
+    full_path2 = File.join(@full_wc_path, file2)
 
     ctx = make_context(log)
     File.open(path1, "w") {|f| f.print(src1)}
@@ -1108,7 +952,7 @@ class SvnClientTest < Test::Unit::TestCase
 
     File.open(path1, "w") {|f| f.print(src2)}
 
-    assert_raises(Svn::Error::ClientModified) do
+    assert_raises(Svn::Error::CLIENT_MODIFIED) do
       ctx.mv(path1, path2)
     end
     ctx.cleanup(@wc_path)
@@ -1117,39 +961,21 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.mv_f(path1, path2)
     end
 
-    notifies = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notifies << notify
+      infos << [notify.path, notify]
     end
     ctx.ci(@wc_path)
 
-    paths = notifies.collect do |notify|
-      notify.path
-    end
-    assert_equal([path1, path2, path2].sort, paths.sort)
-
-    deleted_paths = notifies.find_all do |notify|
-      notify.commit_deleted?
-    end.collect do |notify|
-      notify.path
-    end
-    assert_equal([path1].sort, deleted_paths.sort)
-
-    added_paths = notifies.find_all do |notify|
-      notify.commit_added?
-    end.collect do |notify|
-      notify.path
-    end
-    assert_equal([path2].sort, added_paths.sort)
-
-    postfix_txdelta_paths = notifies.find_all do |notify|
-      notify.commit_postfix_txdelta?
-    end.collect do |notify|
-      notify.path
-    end
-    assert_equal([path2].sort, postfix_txdelta_paths.sort)
-
+    assert_equal([path1, path2, full_path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
     assert_equal(src2, File.open(path2) {|f| f.read})
+    full_path2_notify = infos.assoc(full_path2)[1]
+    assert(full_path2_notify.commit_postfix_txdelta?)
   end
 
   def test_prop
@@ -1213,7 +1039,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.ci(@wc_path)
     assert_equal({dir_uri => prop_value}, ctx.pg(prop_name, dir_path))
 
-    assert_raises(Svn::Error::BadMimeType) do
+    assert_raises(Svn::Error::BAD_MIME_TYPE) do
       ctx.ps(Svn::Core::PROP_MIME_TYPE,
              invalid_mime_type_prop_value,
              path)
@@ -1510,47 +1336,7 @@ class SvnClientTest < Test::Unit::TestCase
     file_dirent = dirents[file]
     assert(file_dirent.file?)
   end
-
-  def test_list
-    log = "sample log"
-    src = "source\n"
-    file = "sample.txt"
-    dir = "sample"
-    prop_name = "sample-prop"
-    prop_value = "sample value"
-    dir_path = File.join(@wc_path, dir)
-    path = File.join(@wc_path, file)
-
-    ctx = make_context(log)
-
-    ctx.mkdir(dir_path)
-    File.open(path, "w") {|f| f.print(src)}
-    ctx.add(path)
-    ctx.prop_set(prop_name, prop_value, path)
-    rev = ctx.ci(@wc_path).revision
-
-    entries = []
-    ctx.list(@wc_path, rev) do |path, dirent, lock, abs_path|
-      entries << [path, dirent, lock, abs_path]
-    end
-    paths = entries.collect do |path, dirent, lock, abs_path|
-      [path, abs_path]
-    end
-    assert_equal([["", "/"], [dir, "/"], [file, "/"]].sort, paths.sort)
-    entries.each do |path, dirent, lock, abs_path|
-      case path
-      when dir, ""
-        assert(dirent.directory?)
-        assert_false(dirent.have_props?)
-      when file
-        assert(dirent.file?)
-        assert_true(dirent.have_props?)
-      else
-        flunk
-      end
-    end
-  end
-
+  
   def test_switch
     log = "sample log"
     trunk_src = "trunk source\n"
@@ -1628,7 +1414,7 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = Svn::Client::Context.new
     
-    assert_raises(Svn::Error::AuthnNoProvider) do
+    assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
       ctx.cat(svnserve_uri)
     end
     
@@ -1637,7 +1423,7 @@ class SvnClientTest < Test::Unit::TestCase
       cred.password = @password
       cred.may_save = false
     end
-    assert_raises(Svn::Error::RaNotAuthorized) do
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
       ctx.cat(svnserve_uri)
     end
     
@@ -1646,7 +1432,7 @@ class SvnClientTest < Test::Unit::TestCase
       cred.password = "wrong-#{@password}"
       cred.may_save = false
     end
-    assert_raises(Svn::Error::RaNotAuthorized) do
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
       ctx.cat(svnserve_uri)
     end
     
@@ -1675,7 +1461,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
     ctx.add_simple_provider
-    assert_raises(Svn::Error::RaNotAuthorized) do
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
       assert_equal(src, ctx.cat(svnserve_uri))
     end
 
@@ -1696,7 +1482,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_windows_simple_provider
-    return unless Svn::Core.respond_to?(:add_windows_simple_provider)
+    return unless Svn::Client.respond_to?(:add_windows_simple_provider)
 
     log = "sample log"
     src = "source\n"
@@ -1714,7 +1500,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
     ctx.add_windows_simple_provider
-    assert_raises(Svn::Error::RaNotAuthorized) do
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
       assert_equal(src, ctx.cat(svnserve_uri))
     end
 
@@ -1791,21 +1577,6 @@ class SvnClientTest < Test::Unit::TestCase
   def test_not_new
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
-    end
-  end
-
-  def test_log_msg_func_cancel
-    log = "sample log"
-    dir = "dir"
-    dir_path = File.join(@wc_path, dir)
-
-    ctx = make_context(log)
-    ctx.set_log_msg_func do |items|
-      raise Svn::Error::Cancelled
-    end
-    ctx.mkdir(dir_path)
-    assert_raise(Svn::Error::Cancelled) do
-      ctx.commit(@wc_path)
     end
   end
 end

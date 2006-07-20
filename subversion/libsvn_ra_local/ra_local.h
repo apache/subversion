@@ -37,12 +37,15 @@ extern "C" {
 /* A baton which represents a single ra_local session. */
 typedef struct svn_ra_local__session_baton_t
 {
+  /* A `file://' URL containing a local repository and path. */
+  const char *repository_URL;
+
   /* The user accessing the repository. */
   const char *username;
 
-  /* The URL of the session, split into two components. */
+  /* The URL above, split into two components. */
   const char *repos_url;
-  svn_stringbuf_t *fs_path;  /* URI-decoded. */
+  const char *fs_path;  /* URI-decoded. */
 
   /* A repository object. */
   svn_repos_t *repos;
@@ -74,11 +77,11 @@ typedef struct svn_ra_local__session_baton_t
    Currently, we are not expecting to handle `file://hostname/'-type
    URLs; hostname, in this case, is expected to be the empty string. */
 svn_error_t *
-svn_ra_local__split_URL(svn_repos_t **repos,
-                        const char **repos_url,
-                        const char **fs_path,
-                        const char *URL,
-                        apr_pool_t *pool);
+svn_ra_local__split_URL (svn_repos_t **repos,
+                         const char **repos_url,
+                         const char **fs_path,
+                         const char *URL,
+                         apr_pool_t *pool);
 
 
 

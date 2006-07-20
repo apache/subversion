@@ -15,7 +15,6 @@
 #              <justin@erenkrantz.com>
 #              me
 #    (I wrote the regression tests.)
-#    Found by: Phineas T. Phinder <phtph@ph1nderz.com>
 #    Suggested by: Snosbig Q. Ptermione <sqptermione@example.com>
 #    Review by: Justin Erenkrantz <justin@erenkrantz.com>
 #               rooneg
@@ -30,6 +29,10 @@
 #   - Expand "me" to the committer name for this revision.
 #   - Associate a parenthetical aside following a field with that field.
 #
+# Right now we do not offer any conversion between committers'
+# usernames and their real names.  In the future, we could take the
+# COMMITTERS file as an optional parameter and do such a transform.
+#
 # NOTES: You might be wondering, why not take 'svn log --xml' input?
 # Well, that would be the Right Thing to do, but in practice this was
 # a lot easier to whip up for straight 'svn log' output.  I'd have no
@@ -38,12 +41,8 @@
 import os
 import sys
 import re
+import shutil
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
-from urllib import quote as url_encode
 
 # Pretend we have true booleans on older python versions
 try:
@@ -68,37 +67,19 @@ def complain(msg, fatal=False):
     sys.exit(1)
 
 
-def html_spam_guard(addr):
-  """Return a spam-protected version of email ADDR that renders the
-  same in HTML as the original address."""
-  return "".join(map(lambda x: "<span>&#%d;</span>" % ord(x), addr))
-
-
 def escape_html(str):
   """Return an HTML-escaped version of STR."""
   return str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
-_spam_guard_in_html_block_re = re.compile(r'&lt;([^&]*@[^&]*)&gt;')
-def _spam_guard_in_html_block_func(m):
-  return "&lt;%s&gt;" % html_spam_guard(m.group(1))
-def spam_guard_in_html_block(str):
-  """Take a block of HTML data, and run html_spam_guard() on parts of it."""
-  return _spam_guard_in_html_block_re.subn(_spam_guard_in_html_block_func,
-                                           str)[0]
-  
 def html_header(title):
-  """Write HTML file header.
-  TITLE parameter is expected to already by HTML-escaped if needed."""
-  s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
-  s += ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
-  s += '<html><head>\n'
-  s += '<meta http-equiv="Content-Type"'
-  s += ' content="text/html; charset=UTF-8" />\n'
-  s += '<title>%s</title>\n' % title
-  s += '</head>\n\n'
-  s += '<body style="text-color: black; background-color: white">\n\n'
-  s += '<h1 style="text-align: center">%s</h1>\n\n' % title
+  title = escape_html(title)
+  s  = '<title>%s</title>\n' % title
+  s += '<html>\n\n'
+  s += '<head><meta http-equiv=Content-Type ' \
+       'content="text/html; charset=UTF-8"></head>\n\n'
+  s += '<body text="#000000" bgcolor="#FFFFFF">\n\n'
+  s += '<center><h1>%s</h1></center>\n\n' % title
   s += '<hr />\n\n'
   return s
 
@@ -186,35 +167,6 @@ class Contributor:
         score += len(self.activities[activity])
     return score
 
-  def score_str(self):
-    """Return a contribution score HTML string for this contributor."""
-    patch_score = 0
-    other_score = 0
-    for activity in self.activities.keys():
-      if activity == 'Patch':
-        patch_score += len(self.activities[activity])
-      else:
-        other_score += len(self.activities[activity])
-    if patch_score == 0:
-      patch_str = ""
-    elif patch_score == 1:
-      patch_str = "1&nbsp;patch"
-    else:
-      patch_str = "%d&nbsp;patches" % patch_score
-    if other_score == 0:
-      other_str = ""
-    elif other_score == 1:
-      other_str = "1&nbsp;non-patch"
-    else:
-      other_str = "%d&nbsp;non-patches" % other_score
-    if patch_str:
-      if other_str:
-        return ",&nbsp;".join((patch_str, other_str))
-      else:
-        return patch_str
-    else:
-      return other_str
-
   def __cmp__(self, other):
     if self.is_full_committer and not other.is_full_committer:
       return 1
@@ -246,7 +198,8 @@ class Contributor:
     email     = None
     name_components = name.split()
     if len(name_components) == 1:
-      name = name_components[0] # Effectively, name = name.strip()
+      if name_components[0] != name:
+        complain("Python couldn't have done that, could it?", True)
       if name[0] == '<' and name[-1] == '>':
         email = name[1:-1]
       elif name.find('@') != -1:
@@ -262,58 +215,51 @@ class Contributor:
   parse = staticmethod(parse)
 
   def canonical_name(self):
-    """Return a canonical name for this contributor.  The canonical
-    name may or may not be based on the contributor's actual email
-    address.
-
-    The canonical name will not contain filename-unsafe characters.
+    """Return a canonical name for this contributor, containing only
+    characters valid in an email address.  The canonical name may or
+    may not be based on the contributor's actual email address, but in
+    any case it will be restricted to email-safe characters, because
+    those are also likely to be filesystem-safe and HTML-safe.
 
     This method is guaranteed to return the same canonical name every
     time only if no further contributions are recorded from this
     contributor after the first call.  This is because a contribution
     may bring a new form of the contributor's name, one which affects
     the algorithm used to construct canonical names."""
-    retval = None
     if self.username:
-      retval = self.username
-    elif self.email:
+      return self.username
+    if self.email:
       # Take some rudimentary steps to shorten the email address, to
       # make it more manageable.  If this is ever discovered to result
       # in collisions, we can always just use to the full address.
-      try:
-        at_posn = self.email.index('@')
-        first_dot_after_at = self.email.index('.', at_posn)
-        retval = self.email[0:first_dot_after_at]
-      except ValueError:
-        retval = self.email
-    elif self.real_name:
-      # Last resort: construct canonical name based on real name.  
-      retval = ''.join(self.real_name.lower().split(' '))
-    if retval is None:
-      complain('Unable to construct a canonical name for Contributor.', True)
-    return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
-
-  def big_name(self, html=False):
-    """Return as complete a name as possible for this contributor."""
-    name_bits = []
-    if self.real_name:
-      if html:
-        name_bits.append(escape_html(self.real_name))
+      at_posn = self.email.find('@')
+      if not at_posn:
+        return self.email
       else:
-        name_bits.append(self.real_name)
+        first_dot_after_at = self.email.find('.', at_posn)
+        return self.email[0:first_dot_after_at]
+    if self.real_name:
+      # Last resort: construct canonical name based on real name.  
+      # ### FIXME: Need to tweak to guarantee that it's made only of
+      # ### characters that would be safe in an email address.
+      return ''.join(self.real_name.lower().split(' '))
+    complain('Unable to construct a canonical name for Contributor.', True)
+
+  def big_name(self):
+    """Return as complete a name as possible for this contributor."""
+    s = ''
+    if self.real_name: s += ' ' + self.real_name
     if self.email:
       if not self.real_name and not self.username:
-        name_bits.append(self.email)
-      elif html:
-        name_bits.append("&lt;%s&gt;" % html_spam_guard(self.email))
+        s += ' ' + self.email
       else:
-        name_bits.append("<%s>" % self.email)
+        s += ' <' + self.email + '>'
     if self.username:
       if not self.real_name and not self.email:
-        name_bits.append(self.username)
+        s += ' ' + self.username
       else:
-        name_bits.append("(%s)" % self.username)
-    return " ".join(name_bits)
+        s += ' (' + self.username + ')'
+    return s[1:]
 
   def __str__(self):
     s = 'CONTRIBUTOR: '
@@ -329,11 +275,13 @@ class Contributor:
       s += ']'
     return s
 
-  def html_out(self, revision_url_pattern, filename):
-    """Create an HTML file named FILENAME, showing all the revisions in which
+  def html_out(self):
+    """Create an HTML file in the current directory, named
+    "`self.canonical_name()`.html", showing all the revisions in which
     this contributor was active."""
-    out = open(filename, 'w')
-    out.write(html_header(self.big_name(html=True)))
+    canon = self.canonical_name()
+    out = open(canon + '.html', 'w')
+    out.write(html_header(self.big_name()))
     unique_logs = { }
 
     sorted_activities = self.activities.keys()
@@ -368,16 +316,10 @@ class Contributor:
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
                                                            log.revision))
       out.write('<pre>\n')
-      if revision_url_pattern:
-        revision_url = revision_url_pattern % log.revision[1:]
-        revision = '<a href="%s">%s</a>' \
-            % (escape_html(revision_url), log.revision)
-      else:
-        revision = log.revision
-      out.write('<b>%s | %s | %s</b>\n\n' % (revision,
+      out.write('<b>%s | %s | %s</b>\n\n' % (log.revision,
                                              escape_html(log.committer),
                                              escape_html(log.date)))
-      out.write(spam_guard_in_html_block(escape_html(log.message)))
+      out.write(escape_html(log.message))
       out.write('</pre>\n')
       out.write('</div>\n\n')
     out.write('<hr />\n')
@@ -388,11 +330,9 @@ class Contributor:
 
 class Field:
   """One field in one log message."""
-  def __init__(self, name, alias = None):
+  def __init__(self, name):
     # The name of this field (e.g., "Patch", "Review", etc).
     self.name = name
-    # An alias for the name of this field (e.g., "Reviewed").
-    self.alias = alias
     # A list of contributor objects, in the order in which they were
     # encountered in the field.
     self.contributors = [ ]
@@ -482,8 +422,7 @@ class LogMessage:
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*(.*)')
-field_aliases = { 'Reviewed' : 'Review' }
+field_re = re.compile('^(Patch|Review|Suggested) by:\s+(.*)')
 parenthetical_aside_re = re.compile('^\(.*\)\s*$')
 
 def graze(input):
@@ -526,14 +465,10 @@ def graze(input):
               # We're on the first line of a field.  Parse the field.
               while m:
                 if not field:
-                  ident = m.group(1)
-                  if field_aliases.has_key(ident):
-                    field = Field(field_aliases[ident], ident)
-                  else:
-                    field = Field(ident)
+                  field = Field(m.group(1))
                 # Each line begins either with "WORD by:", or with whitespace.
                 in_field_re = re.compile('^('
-                                         + (field.alias or field.name)
+                                         + field.name
                                          + ' by:\s+|\s+)(\S.*)+')
                 m = in_field_re.match(line)
                 user, real, email = Contributor.parse(m.group(2))
@@ -557,26 +492,7 @@ def graze(input):
             num_lines -= 1
         continue
 
-index_introduction = '''
-<p>The following list of contributors and their contributions is meant
-to help us keep track of whom to consider for commit access.  The list
-was generated from "svn&nbsp;log" output by <a
-href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
->contribulyze.py</a>, which looks for log messages that use the <a
-href="http://subversion.tigris.org/hacking.html#crediting">special
-contribution format</a>.</p>
-
-<p><i>Please do not use this list as a generic guide to who has
-contributed what to Subversion!</i> It omits existing full committers,
-for example, because they are irrelevant to our search for new
-committers.  Also, it merely counts changes, it does not evaluate
-them.  To truly understand what someone has contributed, you have to
-read their changes in detail.  This page can only assist human
-judgement, not substitute for it.</p>
-
-'''
-
-def drop(revision_url_pattern):
+def drop():
   # Output the data.
   #
   # The data structures are all linked up nicely to one another.  You
@@ -596,13 +512,8 @@ def drop(revision_url_pattern):
     pass
     # print LogMessage.all_logs[key]
 
-  detail_subdir = "detail"
-  if not os.path.exists(detail_subdir):
-    os.mkdir(detail_subdir)
-
   index = open('index.html', 'w')
   index.write(html_header('Contributors'))
-  index.write(index_introduction)
   index.write('<ol>\n')
   # The same contributor appears under multiple keys, so uniquify.
   seen_contributors = { }
@@ -623,13 +534,10 @@ def drop(revision_url_pattern):
           committerness = ''
           if c.is_committer:
             committerness = '&nbsp;(partial&nbsp;committer)'
-          urlpath = "%s/%s.html" % (detail_subdir, c.canonical_name())
-          fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
-          index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
-                      % (url_encode(urlpath),
-                         c.big_name(html=True),
-                         c.score_str(), committerness))
-          c.html_out(revision_url_pattern, fname)
+          index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%d]%s</p></li>\n'
+                      % (c.canonical_name(), escape_html(c.big_name()),
+                         c.score(), committerness))
+          c.html_out()
     seen_contributors[c] = True
   index.write('</ol>\n')
   index.write(html_footer())
@@ -676,39 +584,30 @@ def usage():
   print ''
   print '  -h, -H, -?, --help   Print this usage message and exit'
   print '  -C FILE              Use FILE as the COMMITTERS file'
-  print '  -U URL               Use URL as a Python interpolation pattern to'
-  print '                       generate URLs to link revisions to some kind'
-  print '                       of web-based viewer (e.g. ViewCVS).  The'
-  print '                       interpolation pattern should contain exactly'
-  print '                       one format specifier, \'%s\', which will be'
-  print '                       replaced with the revision number.'
   print ''
 
 
 def main():
   try:
-    opts, args = my_getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
+    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ '--help' ])
   except getopt.GetoptError, e:
     complain(str(e) + '\n\n')
     usage()
     sys.exit(1)
 
   # Parse options.
-  revision_url_pattern = None
   for opt, value in opts:
-    if opt in ('--help', '-h', '-H', '-?'):
+    if (opt == '--help') or (opt == '-h') or (opt == '-H') or (opt == '-?'):
       usage()
       sys.exit(0)
     elif opt == '-C':
       process_committers(open(value))
-    elif opt == '-U':
-      revision_url_pattern = value
 
   # Gather the data.
   graze(sys.stdin)
 
   # Output the data.
-  drop(revision_url_pattern)
+  drop()
 
 if __name__ == '__main__':
   main()

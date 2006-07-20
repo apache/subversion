@@ -2,7 +2,7 @@
  * editor.c :  Driving and consuming an editor across an svn connection
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -255,10 +255,7 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   diff_stream = svn_stream_create(b, pool);
   svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
-  if (svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 1, pool);
-  else
-    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 0, pool);
+  svn_txdelta_to_svndiff(diff_stream, pool, wh, wh_baton);
   return SVN_NO_ERROR;
 }
   
@@ -608,8 +605,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
     entry->err = ds->editor->apply_textdelta(entry->baton, base_checksum, pool,
                                              &wh, &wh_baton);
 
-  if (!entry->err)
-    stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
+  stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
   subpool = svn_pool_create(entry->pool);
   while (1)
     {

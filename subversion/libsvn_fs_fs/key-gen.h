@@ -47,6 +47,31 @@ extern "C" {
 #define MAX_KEY_SIZE 200
 
 
+/* Return the value of the string of digits at DATA as an ASCII
+   decimal number.  The string is at most LEN bytes long.  The value
+   of the number is at most MAX.  Set *END to the address of the first
+   byte after the number, or zero if an error occurred while
+   converting the number (overflow, for example).
+
+   We would like to use strtoul, but that family of functions is
+   locale-dependent, whereas we're trying to parse data in a
+   local-independent format.  */
+
+apr_size_t svn_fs_fs__getsize (const char *data, apr_size_t len,
+                            const char **endptr, apr_size_t max);
+
+
+/* Store the ASCII decimal representation of VALUE at DATA.  Return
+   the length of the representation if all goes well; return zero if
+   the result doesn't fit in LEN bytes.  */
+int svn_fs_fs__putsize (char *data, apr_size_t len, apr_size_t value);
+
+
+/* In the `representations' and `strings', the value at this key is
+   the key to use when storing a new rep or string. */
+extern const char NEXT_KEY_KEY[];
+
+
 /* Generate the next key after a given alphanumeric key.
  *
  * The first *LEN bytes of THIS are an ascii representation of a
@@ -65,7 +90,7 @@ extern "C" {
  * string "0", then *LEN is set to zero and the effect on NEXT
  * is undefined.
  */
-void svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next);
+void svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next);
 
 
 /* Compare two strings A and B as base-36 alphanumeric keys.
@@ -73,10 +98,17 @@ void svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next);
  * Return -1, 0, or 1 if A is less than, equal to, or greater than B,
  * respectively.
  */
-int svn_fs_fs__key_compare(const char *a, const char *b);
+int svn_fs_fs__key_compare (const char *a, const char *b);
+
+/* Compare two strings A and B as base-36 alphanumber keys.
+ *
+ * Return TRUE iff both keys are NULL or both keys have the same
+ * contents.
+ */
+svn_boolean_t svn_fs_fs__same_keys (const char *a, const char *b);
 
 /* Add two base-36 alphanumeric keys to get a third, the result. */
-void svn_fs_fs__add_keys(const char *key1, const char *key2, char *result);
+void svn_fs_fs__add_keys (const char *key1, const char *key2, char *result);
 
 
 #ifdef __cplusplus

@@ -33,6 +33,9 @@ done
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
+### temporary cleanup during transition to libtool 1.4
+(cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
+
 #
 # Handle some libtool helper files
 #
@@ -58,7 +61,7 @@ if [ ! -f $ltfile ]; then
 fi
 
 echo "Copying libtool helper: $ltfile"
-cp $ltfile build/libtool.m4
+cp $ltfile ac-helpers/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.
 #
@@ -108,7 +111,6 @@ else
   fi
 fi
 
-find build/ -name '*.pyc' -print -exec rm {} \;
 rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then
@@ -145,6 +147,18 @@ fi
 # Remove autoconf 2.5x's cache directory
 rm -rf autom4te*.cache
 
+# Run apr/buildconf if it exists.
+if test -x "apr/buildconf" ; then
+  echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
+  (cd apr && ./buildconf)
+fi
+
+# Run apr-util/buildconf if it exists.
+if test -x "apr-util/buildconf" ; then
+  echo "Creating configuration files for apr-util."
+  (cd apr-util && ./buildconf)
+fi
+
 echo ""
 echo "You can run ./configure now."
 echo ""
@@ -156,5 +170,5 @@ echo "./configure --disable-shared"
 echo "./configure --enable-maintainer-mode --disable-shared"
 echo ""
 echo "Note:  If you wish to run a Subversion HTTP server, you will need"
-echo "Apache 2.x.  See the INSTALL file for details."
+echo "Apache 2.0.  See the INSTALL file for details."
 echo ""

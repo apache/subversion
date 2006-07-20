@@ -69,22 +69,9 @@ class TestCase_launch(unittest.TestCase):
         else:
             self.fail("svnmerge.launch did not cause a LaunchError as expected")
 
-class TestCase_PrefixLines(unittest.TestCase):
-    def test_basic(self):
-        self.assertEqual("zz\n", svnmerge.prefix_lines("zz", "\n"))
-        self.assertEqual("zzfoo\n", svnmerge.prefix_lines("zz", "foo\n"))
-        self.assertEqual("zzfoo\nzzbar\n", svnmerge.prefix_lines("zz", "foo\nbar\n"))
-        self.assertEqual("zz\nzzfoo\n", svnmerge.prefix_lines("zz", "\nfoo\n"))
-        self.assertEqual("zz\nzzfoo\nzzbar\n", svnmerge.prefix_lines("zz", "\nfoo\nbar\n"))
-
 class TestCase_RevisionSet(unittest.TestCase):
     def test_constr_string(self):
         rs = svnmerge.RevisionSet("10- 15, 12-48,2 ")
-        self.assert_(17 in rs)
-        self.assert_(2 in rs)
-        self.assert_(9 not in rs)
-
-        rs = svnmerge.RevisionSet("10: 15, 12:48,2 ")
         self.assert_(17 in rs)
         self.assert_(2 in rs)
         self.assert_(9 not in rs)
@@ -100,40 +87,15 @@ class TestCase_RevisionSet(unittest.TestCase):
         self.assertRaises(ValueError, svnmerge.RevisionSet, "10;12-15")
         self.assertRaises(ValueError, svnmerge.RevisionSet, "10,foo,3-15")
 
-        self.assertRaises(ValueError, svnmerge.RevisionSet, "10:12:15")
-        self.assertRaises(ValueError, svnmerge.RevisionSet, "10;12:15")
-        self.assertRaises(ValueError, svnmerge.RevisionSet, "10,foo,3:15")
-
     def test_normalized(self):
         rs = svnmerge.RevisionSet("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
         self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
         self.assertEqual(str(rs), "1,3-6,8-18")
 
-        rs = svnmerge.RevisionSet("8:15,16:18, 4:6, 9, 18, 1:1, 3:3")
-        self.assertEqual(rs.normalized(), [(1,1), (3,6), (8,18)])
-        self.assertEqual(str(rs), "1,3-6,8-18")
-
-    def test_sorted(self):
-        "Test the sorted() function of the RevisionSet class."
-        rs = svnmerge.RevisionSet("8-15,16-18, 4-6, 9, 18, 1-1, 3-3")
-        self.assertEqual(rs.sorted(), [1, 3, 4, 5, 6, 8, 9, 10, 11,
-                                       12, 13, 14, 15, 16, 17, 18])
-
-        rs = svnmerge.RevisionSet("8:15,16:18, 4:6, 9, 18, 1:1, 3:3")
-        self.assertEqual(rs.sorted(), [1, 3, 4, 5, 6, 8, 9, 10, 11,
-                                       12, 13, 14, 15, 16, 17, 18])
-
     def test_length(self):
         rs = svnmerge.RevisionSet("3-8")
         self.assertEqual(len(rs), 6)
         rs = svnmerge.RevisionSet("3-8,4-10")
-        self.assertEqual(len(rs), 8)
-        rs = svnmerge.RevisionSet("1,3,5")
-        self.assertEqual(len(rs), 3)
-
-        rs = svnmerge.RevisionSet("3:8")
-        self.assertEqual(len(rs), 6)
-        rs = svnmerge.RevisionSet("3:8,4:10")
         self.assertEqual(len(rs), 8)
         rs = svnmerge.RevisionSet("1,3,5")
         self.assertEqual(len(rs), 3)
@@ -147,21 +109,12 @@ class TestCase_RevisionSet(unittest.TestCase):
             rs = svnmerge.RevisionSet("4-13,1-5,34,20-22,18-21")
             self.assertEqual(list(iter(rs)), range(1,14)+range(18,23)+[34])
 
-            rs = svnmerge.RevisionSet("4:13,1:5,34,20:22,18:21")
-            self.assertEqual(list(iter(rs)), range(1,14)+range(18,23)+[34])
-
     def test_union(self):
         rs = svnmerge.RevisionSet("3-8,4-10") | svnmerge.RevisionSet("7-14,1")
         self.assertEqual(str(rs), "1,3-14")
 
-        rs = svnmerge.RevisionSet("3:8,4:10") | svnmerge.RevisionSet("7:14,1")
-        self.assertEqual(str(rs), "1,3-14")
-
     def test_subtraction(self):
         rs = svnmerge.RevisionSet("3-8,4-10") - svnmerge.RevisionSet("7-14,1")
-        self.assertEqual(str(rs), "3-6")
-
-        rs = svnmerge.RevisionSet("3:8,4:10") - svnmerge.RevisionSet("7:14,1")
         self.assertEqual(str(rs), "3-6")
 
     def test_constr_empty(self):
@@ -277,26 +230,26 @@ class TestCase_CommandLineOptions(TestCase_SvnMerge):
         options in any order."""
         self.svnmerge("--log avail",
                       error=True,
-                      match=r"no integration info")  # accepted
+                      match="no integration info")  # accepted
         self.svnmerge("-l avail",
                       error=True,
-                      match=r"no integration info")  # accepted
+                      match="no integration info")  # accepted
         self.svnmerge("-r123 merge",
                       error=True,
-                      match=r"no integration info")  # accepted
+                      match="no integration info")  # accepted
         self.svnmerge("-s -v -r92481 merge",
                       error=True,
-                      match=r"no integration info")  # accepted
+                      match="no integration info")  # accepted
         self.svnmerge("--log merge",
                       error=True,
-                      match=r"option --log not recognized")
-        self.svnmerge("--diff foobar", error=True, match=r"foobar")
+                      match="option --log not recognized")
+        self.svnmerge("--diff foobar", error=True, match="foobar")
 
         # This requires gnu_getopt support to be parsed
         if hasattr(getopt, "gnu_getopt"):
             self.svnmerge("-r123 merge . --log",
                           error=True,
-                          match=r"option --log not recognized")
+                          match="option --log not recognized")
 
 def temp_path():
     try:
@@ -325,45 +278,8 @@ def get_test_path():
     p = os.path.join(temp_path(), "__svnmerge_test")
     return os.path.abspath(p)
 
-def abspath_to_url(path):
-    assert path == os.path.abspath(path)
-    path = path.replace("\\", "/")
-    if path[0] != '/':
-        path = '/' + path
-    return "file://" + path
-
 class TestCase_TestRepo(TestCase_SvnMerge):
     def setUp(self):
-        """Creates a working copy of a branch at r13 with the
-        following structure, containing revisions (3-6, 13):
-
-          test-branch/
-           test1
-           test2
-           test3
-
-        ...from a repository with the following structure:
-
-          Path                        Created rev
-          ----                        -----------
-          /                           0
-           trunk/                     3
-            test1                     4
-            test2                     5
-            test3                     6
-            test4                     9
-            test5                     10
-           branches/                  1
-            testYYY-branch/           11 (renamed from testXXX-branch in 12)
-             test1                    4
-             test2                    5
-             test3                    6
-            test-branch/              13 (copied from trunk@6)
-             test1                    4
-             test2                    5
-             test3                    6
-           tags/                      2
-        """
         self.cwd = os.getcwd()
 
         test_path = get_test_path()
@@ -373,10 +289,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.test_path = test_path
 
         self.template_repo_path = os.path.join(template_path, "repo")
-        self.template_repo_url = abspath_to_url(self.template_repo_path)
+        self.template_repo_url = "file://" + self.template_repo_path.replace("\\", "/")
 
         self.test_repo_path = os.path.join(test_path, "repo")
-        self.test_repo_url = abspath_to_url(self.test_repo_path)
+        self.test_repo_url = "file://" + self.test_repo_path.replace("\\", "/")
 
         if not os.path.isdir(template_path):
             rmtree(template_path)
@@ -437,10 +353,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # completed.
         atexit.register(lambda: rmtree(template_path))
 
-    def tearDown(self):
-        os.chdir(self.cwd)
-        rmtree(self.test_path)
-
     def command_dict(self):
         return dict(TEMPLATE_PATH=self.template_path,
                     TEMPLATE_REPO_PATH=self.template_repo_path,
@@ -463,34 +375,22 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
     def getproperty(self):
         out = svnmerge.launch("svn pg %s ." % svnmerge.opts["prop"])
-        if len(out) == 0:
-            return None
-        else:
-            return out[0].strip()
-
-    def getBlockedProperty(self):
-        out = svnmerge.launch("svn pg %s ." % svnmerge.opts["block-prop"])
-        if len(out) == 0:
-            return None
-        else:
-            return out[0].strip()
+        return out[0].strip()
 
     def testNoWc(self):
         os.mkdir("foo")
         os.chdir("foo")
-        self.svnmerge("init", error=True, match=r"working dir")
-        self.svnmerge("avail", error=True, match=r"working dir")
-        self.svnmerge("integrated", error=True, match=r"working dir")
-        self.svnmerge("merge", error=True, match=r"working dir")
-        self.svnmerge("block", error=True, match=r"working dir")
-        self.svnmerge("unblock", error=True, match=r"working dir")
+        self.svnmerge("init", error=True, match="working dir")
+        self.svnmerge("avail", error=True, match="working dir")
+        self.svnmerge("merge", error=True, match="working dir")
+        self.svnmerge("block", error=True, match="working dir")
+        self.svnmerge("unblock", error=True, match="working dir")
 
     def testCheckNoIntegrationInfo(self):
-        self.svnmerge("avail", error=True, match=r"no integration")
-        self.svnmerge("integrated", error=True, match=r"no integration")
-        self.svnmerge("merge", error=True, match=r"no integration")
-        self.svnmerge("block", error=True, match=r"no integration")
-        self.svnmerge("unblock", error=True, match=r"no integration")
+        self.svnmerge("avail", error=True, match="no integration")
+        self.svnmerge("merge", error=True, match="no integration")
+        self.svnmerge("block", error=True, match="no integration")
+        self.svnmerge("unblock", error=True, match="no integration")
 
     def testBlocked(self):
 
@@ -500,183 +400,69 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         # Block revisions that have already been merged
-        self.svnmerge("block -r5", error=True, match=r"no available revisions")
+        self.svnmerge("block -r5", error=True, match="no available revisions")
 
         # Block phantom revisions
-        self.svnmerge("block -r8", error=True, match=r"no available revisions")
+        self.svnmerge("block -r8", error=True, match="no available revisions")
 
         # Block available revisions
-        self.svnmerge("block -r9", match=r"'svnmerge-blocked' set")
+        self.svnmerge("block -r9", match="'svnmerge-blocked' set")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
 
-        # Check that the revision is still available
-        self.svnmerge("avail", match=r"\A10$")
-
         # Check that the revision was blocked correctly
-        self.svnmerge("avail -B", match=r"\A9$")
-
-        # Check that both revisions are available with avail -A
-        self.svnmerge("avail -A", match=r"\A9-10$")
+        out = self.svnmerge("avail")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "10")
 
         # Block all remaining revisions
-        self.svnmerge("block", match=r"'svnmerge-blocked' set")
+        self.svnmerge("block", match="'svnmerge-blocked' set")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
 
         # Check that all revisions were blocked correctly
-        self.svnmerge("avail -B", match=r"\A9-10$")
-
-        # Check that all revisions are available using avail -A
-        self.svnmerge("avail -A", match=r"\A9-10$")
-
-        # Check that no revisions are available, now that they have
-        # been blocked
-        self.svnmerge("avail", match=r"\A\Z")
+        out = self.svnmerge("avail")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "")
 
         # Unblock all revisions
-        self.svnmerge("unblock", match=r"'svnmerge-blocked' deleted")
+        self.svnmerge("unblock", match="'svnmerge-blocked' deleted")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
 
         # Check that all revisions are available
-        self.svnmerge("avail", match=r"\A9-10$")
-        self.svnmerge("avail -A", match=r"\A9-10$")
-
-        # Check that no revisions are blocked
-        self.svnmerge("avail -B", match=r"\A$")
+        out = self.svnmerge("avail")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "9-10")
 
     def testBasic(self):
         self.svnmerge("init")
         p = self.getproperty()
         self.assertEqual("/trunk:1-6", p)
 
-        self.svnmerge("avail", match=r"\A9-10$")
-        self.svnmerge("avail -v", match=r"phantom.*7-8")
-
-        self.svnmerge("avail -B", match=r"\A$")
-        self.svnmerge("avail -A", match=r"\A9-10$")
+        out = self.svnmerge("avail -v", match=r"phantom.*7-8")
+        out = out.rstrip().split("\n")
+        self.assertEqual(out[-1].strip(), "9-10")
 
         self.svnmerge("avail --log", match=r"| r7.*| r8")
-        self.svnmerge("avail --diff -r9", match=r"Index: test4")
+        self.svnmerge("avail --diff -r9", match="Index: test4")
 
-        self.svnmerge("avail --log -r5", match=r"\A\Z")
-        self.svnmerge("avail --diff -r5", match=r"\A\Z")
+        out = self.svnmerge("avail --log -r5")
+        self.assertEqual(out.strip(), "")
+        out = self.svnmerge("avail --diff -r5")
+        self.assertEqual(out.strip(), "")
 
-        self.svnmerge("integrated", match=r"^3-6$")
-        self.svnmerge("integrated --log -r5", match=r"| r5 ")
-        self.svnmerge("integrated --diff -r5", match=r"Index: test2")
-
-    def test_log_msg_suggest(self):
-        self.svnmerge("init -vf commit-log.txt", match=r"wrote commit message")
+    def testCommitFile(self):
+        self.svnmerge("init -vf commit-log.txt", match="wrote commit message")
         self.assert_(os.path.exists("commit-log.txt"))
         os.remove("commit-log.txt")
 
     def testInitForce(self):
         open("test1", "a").write("foo")
-        self.svnmerge("init", error=True, match=r"clean")
+        self.svnmerge("init", error=True, match="clean")
         self.svnmerge("init -F")
         p = self.getproperty()
         self.assertEqual("/trunk:1-6", p)
-
-    def testUninit(self):
-        """Test that uninit works, for both merged and blocked revisions."""
-        os.chdir("..")
-        self.launch("svn co %(TEST_REPO_URL)s/branches/testYYY-branch testYYY-branch")
-
-        os.chdir("trunk")
-        # Not using switch, so must update to get latest repository rev.
-        self.launch("svn update", match=r"At revision 13")
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 14")
-
-        self.svnmerge2(["init", self.test_repo_url + "/branches/testYYY-branch"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 15")
-
-        # Create changes on test-branch that we can block
-        os.chdir("..")
-        os.chdir("test-branch")
-        # Not using switch, so must update to get latest repository rev.
-        self.launch("svn update", match=r"At revision 15")
-
-        open("test1", "w").write("test 1-changed_on_test-branch")
-
-        self.launch("svn commit -m \"Change to test1 on test-branch\"",
-                    match=r"Committed revision 16")
-
-        # Create changes on testYYY-branch that we can block
-        os.chdir("..")
-        os.chdir("testYYY-branch")
-        # Not using switch, so must update to get latest repository rev.
-        self.launch("svn update", match=r"At revision 16")
-
-        open("test2", "w").write("test 2-changed_on_testYYY-branch")
-
-        self.launch("svn commit -m \"Change to test2 on testYYY-branch\"",
-                    match=r"Committed revision 17")
-
-        # Block changes from both branches on the trunk
-        os.chdir("..")
-        os.chdir("trunk")
-        # Not using switch, so must update to get latest repository rev.
-        self.launch("svn update", match=r"At revision 17")
-        self.svnmerge("block -S testYYY-branch", match=r"'svnmerge-blocked' set")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 18")
-
-        self.svnmerge("block -S test-branch", match=r"'svnmerge-blocked' set")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 19")
-
-        # Do the uninit
-        self.svnmerge2(["uninit", "--source", self.test_repo_url + "/branches/testYYY-branch"])
-
-        # Check that the merged property for testYYY-branch was removed, but
-        # not for test-branch
-        pmerged = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-13", pmerged)
-
-        # Check that the blocked property for testYYY-branch was removed, but
-        # not for test-branch
-        pblocked = self.getBlockedProperty()
-        self.assertEqual("/branches/test-branch:16", pblocked)
-
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 20")
-
-        self.svnmerge2(["uninit", "--source", self.test_repo_url + "/branches/test-branch"])
-
-        # Check that the merged and blocked properties for test-branch have been removed too
-        pmerged = self.getproperty()
-        self.assertEqual(None, pmerged)
-
-        pblocked = self.getBlockedProperty()
-        self.assertEqual(None, pblocked)
-
-    def testUninitForce(self):
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
-
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision")
-
-        self.svnmerge2(["init", self.test_repo_url + "/branches/testYYY-branch"])
-
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision")
-
-        p = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-13 /branches/testYYY-branch:1-14", p)
-
-        open("test1", "a").write("foo")
-
-        self.svnmerge("uninit --source " + self.test_repo_url + "/branches/testYYY-branch",
-                      error=True, match=r"clean")
-
-        self.svnmerge("uninit -F --source " + self.test_repo_url + "/branches/testYYY-branch")
-        p = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-13", p)
 
     def testCheckInitializeEverything(self):
         self.svnmerge2(["init", self.test_repo_url + "/trunk"])
@@ -687,7 +473,11 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testCheckNoCopyfrom(self):
         os.chdir("..")
         os.chdir("trunk")
-        self.svnmerge("init", error=True, match=r"no copyfrom")
+        self.svnmerge("init", error=True, match="no copyfrom")
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        rmtree(self.test_path)
 
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
@@ -695,17 +485,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("avail -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
-        self.svnmerge("integrated", match=r"^3-6,8-9$")
-
-    def testMergeRecordOnly(self):
-        """Check that flagging revisions as manually merged works."""
-        self.svnmerge("init")
-        self.svnmerge("avail -vv -r9", match=r"svn log.*-r9:9")
-        self.svnmerge("merge --record-only -F -vv -r9",
-                      nonmatch=r"svn merge -r 8:9")
-        self.svnmerge("avail -r9", match=r"\A$")
-        self.svnmerge("integrated", match=r"^3-6,9$")
-        self.svnmerge("integrated -r9", match=r"^9$")
 
     def testBidirectionalMerges(self):
         """Check that reflected revisions are recognized properly for bidirectional merges."""
@@ -733,19 +512,24 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn commit -m \"Change to test1 on trunk\"",
                     match=r"Committed revision 16")
 
-        self.svnmerge("integrated", match=r"^13-14$")
-
         os.chdir("..")
         os.chdir("test-branch")
 
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 16")
 
-        self.svnmerge("avail -vv --bidirectional", match=r"16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"merge -r 15:16")
+        self.svnmerge("avail -vv", match=r"15-16$")
+        self.svnmerge("merge -vv", match=r"merge -r 14:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
-        self.svnmerge("integrated", match=r"^3-16$")
+
+        # There will be directory property conflict on 'test-branch'
+        # due to the attempted merge from trunk of the addition of the
+        # svnmerge-integrated property, which already exists in the
+        # branch since 'svnmerge.py init' was run in it.  So just
+        # resolve it, as it currently has the correct value (only on
+        # svn 1.3.x, so do not execute a match assertion).
+        self.launch("svn resolved .")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 17")
@@ -771,8 +555,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
-
-        self.svnmerge("integrated", match=r"^13-18$")
 
     def testBidirectionalMergesMultiBranch(self):
         """Check that merges from a second branch are not considered reflected for other branches."""
@@ -829,13 +611,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 19")
 
         # Merge into trunk
-        self.svnmerge("merge -vv --head branch2",
+        self.svnmerge("merge -vv --head ../test-branch2",
                       match=r"merge -r 18:19")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
-
-        self.svnmerge("integrated --head branch2", match=r"^14-19$")
-        self.svnmerge("integrated --head ../test-branch", match=r"^13-16$")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 20")
@@ -854,171 +633,6 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("merge -vv --bidirectional", match=r"merge -r 17:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
-
-        self.svnmerge("integrated", match=r"^3-20$")
-
-    def testRollbackWithoutInit(self):
-        """Rollback should error out if invoked prior to init"""
-
-        self.svnmerge("rollback -vv --head ../trunk",
-                      error = True,
-                      match = r"no integration info available for repository path")
-
-    def testRollbackOutsidePossibleRange(self):
-        """`svnmerge rollback' should error out if range contains revisions prior to
-        SOURCE creation date."""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        expected_error  = r"""Specified revision range falls out of the rollback range."""
-        self.svnmerge("rollback -vv --head ../trunk -r 2-14",
-                      error = True,
-                      match = expected_error)
-
-    def testRollbackWithoutRevisionOpt(self):
-        """`svnmerge rollback' should error out if -r option is not given"""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        self.svnmerge("rollback -vv --head ../trunk",
-                      error = True,
-                      match = r"The '-r' option is mandatory for rollback")
-
-    def testInitAndRollbackRecordOnly(self):
-        """Init svnmerge, modify source head, merge, rollback --record-only."""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        # Rollback record-only
-        expected_output = r"property 'svnmerge-integrated' set on '.'"
-        detested_output = r"""
-D    test2
-D    test3"""
-        self.svnmerge("rollback -vv --record-only --head ../trunk -r5-7",
-                      match = expected_output,
-                      nonmatch = detested_output)
-
-    def testInitAndRollback(self):
-        """Init svnmerge, modify source head, merge, rollback."""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        # Svnmerge rollback r5-7
-        expected_output = r"""
-D    test2
-D    test3"""
-        self.svnmerge("rollback -vv --head ../trunk -r5-7",
-                      match = expected_output)
-
-    def testMergeAndRollbackEmptyRevisionRange(self):
-        """Init svnmerge, modify source head, merge, rollback where no merge
-           occured."""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        # Make changes to trunk
-        os.chdir("../trunk")
-        open("newfile", "w").close()
-        self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
-        open("anothernewfile", "w").close()
-        self.launch("svn add anothernewfile")
-        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
-
-        # Svnmerge block r15,16
-        os.chdir("../test-branch")
-        self.launch("svn up ..",
-                    error = False)
-        self.svnmerge("block -r 15,16 --head ../trunk")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 17")
-        self.svnmerge("merge --head ../trunk")
-        self.launch("svn commit -F svnmerge-commit-message.txt")
-
-        # Svnmerge rollback r15-16
-        self.svnmerge("rollback -vv --head ../trunk -r15-16",
-                      error = False,
-                      match = r"Nothing to rollback in revision range r15-16")
-
-    def testMergeAndRollback(self):
-        """Init svnmerge, modify source head, merge, rollback."""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        # Make changes to trunk
-        os.chdir("../trunk")
-        open("newfile", "w").close()
-        self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
-
-        # Svnmerge merge r15
-        os.chdir("../test-branch")
-        self.svnmerge("merge -r 15 --head ../trunk")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 16")
-
-        # Svnmerge rollback r15
-        self.svnmerge("rollback -vv --head ../trunk -r15",
-                      match = r"-r 15:14")
-
-    def testBlockMergeAndRollback(self):
-        """Init svnmerge, block, modify head, merge, rollback."""
-
-        # Initialize svnmerge
-        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        # Make changes to trunk
-        os.chdir("../trunk")
-        open("newfile", "w").close()
-        self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'", match=r"Committed revision 15")
-        open("anothernewfile", "w").close()
-        self.launch("svn add anothernewfile")
-        self.launch("svn commit -m 'Adding anothernewfile'", match=r"Committed revision 16")
-
-        # Svnmerge block r16, merge r15
-        os.chdir("../test-branch")
-        self.launch("svn up ..",
-                    error = False)
-        self.svnmerge("block -r 16 --head ../trunk")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 17")
-        self.svnmerge("merge --head ../trunk",
-                      nonmatch = r"A    anothernewfile",
-                      match = r"A    newfile")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 18")
-
-        # Svnmerge rollback revision range 15-18 (in effect only 15,17)
-        self.svnmerge("rollback -vv --head ../trunk -r15-18",
-                      nonmatch = r"D    anothernewfile")
 
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing

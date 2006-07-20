@@ -35,10 +35,6 @@
 import os
 import sys
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import random
 import md5
 import base64
@@ -246,9 +242,9 @@ def main():
   limit = None
   
   # Mm... option parsing.
-  optlist, args = my_getopt(sys.argv[1:], "hq",
-                            ['seed=', 'use-svn', 'use-cvs',
-                             'help', 'quiet', 'dry-run', 'limit='])
+  optlist, args = getopt.getopt(sys.argv[1:], "hq",
+                                ['seed=', 'use-svn', 'use-cvs',
+                                 'help', 'quiet', 'dry-run', 'limit='])
   for opt, arg in optlist:
     if opt == '--help' or opt == '-h':
       usage(0)

@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 import sys
 import re
 import string
 
-header_re = re.compile(r'^([^:]*): ?(.*)$')
+header_re = re.compile(r'^(.*): ?(.*)$')
 
 class NodePath:
     def __init__(self, path, headers):
@@ -47,9 +47,12 @@ def parse_header_block(fp):
 
         
 def parse_file(fp):
+    headers = {}
     nodepaths = {}
+    harvesting = None # (could be 'R'evision or 'N'ode)
     current_rev = None
-
+    eof = 0
+    
     while 1:
         # Parse a block of headers
         headers, eof = parse_header_block(fp)

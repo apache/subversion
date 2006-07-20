@@ -15,9 +15,8 @@ module Svn
     alias _path_driver path_driver
 
     module_function
-    def svndiff_handler(output, version=nil)
-      args = [output, version || 0]
-      handler, handler_baton = Delta.txdelta_to_svndiff2(*args)
+    def svndiff_handler(output)
+      handler, handler_baton = Delta.txdelta_to_svndiff_wrapper(output)
       handler.baton = handler_baton
       handler
     end
@@ -101,22 +100,6 @@ module Svn
       end
     end
 
-    TextDeltaWindow = TxdeltaWindow
-
-    class TextDeltaWindow
-      def compose(other_window)
-        Delta.txdelta_compose_windows(other_window, self)
-      end
-
-      def ops
-        Delta.txdelta_window_t_ops_get(self)
-      end
-
-      def apply_instructions(source_buffer)
-        Delta.swig_rb_txdelta_apply_instructions(self, source_buffer)
-      end
-    end
-
     TextDeltaWindowHandler =
       SWIG::TYPE_p_f_p_svn_txdelta_window_t_p_void__p_svn_error_t
     
@@ -178,7 +161,7 @@ module Svn
       end
 
       def change_dir_prop(dir_baton, name, value)
-        args = [self, dir_baton, name, value]
+        args = [self, @baton, dir_baton, name, value]
         Svn::Delta.editor_invoke_change_dir_prop(*args)
       end
 

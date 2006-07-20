@@ -41,16 +41,6 @@ public class SVNClient implements SVNClientInterface
     public SVNClient()
     {
         cppAddr = ctNative();
-
-        // Ensure that Subversion's config file area and templates exist.
-        try
-        {
-            setConfigDirectory(null);
-        }
-        catch (ClientException suppressed)
-        {
-            // Not an exception-worthy problem, continue on.
-        }
     }
     /**
      * Build the native peer
@@ -70,13 +60,6 @@ public class SVNClient implements SVNClientInterface
      * of this member
      */
     protected long cppAddr;
-    /**
-     * @return Version information about the underlying native libraries.
-     */
-    public Version getVersion()
-    {
-        return NativeResources.version;
-    }
     /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
@@ -104,7 +87,7 @@ public class SVNClient implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if they exist.
+     * @param descend   Recurse into subdirectories if existant.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
@@ -118,7 +101,7 @@ public class SVNClient implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories they exist.
+     * @param descend   Recurse into subdirectories if existant.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
@@ -135,7 +118,7 @@ public class SVNClient implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path            Path to explore.
-     * @param descend         Recurse into subdirectories if they exist.
+     * @param descend         Recurse into subdirectories if existant.
      * @param onServer        Request status information from server.
      * @param getAll          get status for uninteristing files (unchanged).
      * @param noIgnore        get status for normaly ignored files and

@@ -8,7 +8,7 @@
 scripts="`dirname $0`"
 scripts="`cd $scripts && pwd`"
 
-d=$scripts/mailer-init.$$
+d=mailer-init.$$
 mkdir $d
 cd $d
 echo "test directory is: $d"

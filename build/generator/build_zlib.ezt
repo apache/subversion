@@ -27,18 +27,13 @@ if "%1" == "debug" goto debug
 goto pIerr
 
 :checkrebuild
-if "%2" == "rebuild" goto rebuild
-if "%2" == "clean" goto clean
+if "%2" == "rebuild" goto clean
 if not "%2" == "" goto pIIerr
 set target= %STATICLIB%
 goto build
 
-:rebuild
-set target=clean %STATICLIB%
-goto build
-
 :clean
-set target=clean
+set target=clean %STATICLIB%
 goto build
 
 @rem **************************************************************************

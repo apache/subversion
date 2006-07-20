@@ -11,13 +11,12 @@ FS_TYPE="$3"
 # Compute local vars
 LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE.$RA_TYPE.$FS_TYPE"
 TEST="`$GUESS` $BUILD_TYPE $RA_TYPE $FS_TYPE"
-REV="`$SVN st -v $SVN_SOURCE/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
+REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 
 # Prime and initialize the log file
 $CP_F "$LOG_FILE_PREFIX.$BUILD_TYPE" $LOG_FILE
 echo >> $LOG_FILE
 echo "TEST: $REVPREFIX$REV on $TEST" >> $LOG_FILE
-echo "TIME: $($DATE '+%Y-%m-%d %H:%M:%S %z')" >> $LOG_FILE
 echo >> $LOG_FILE
 
 # Check the build type
@@ -59,15 +58,15 @@ PASS
 START "check object directory" "Checking object directory..."
 test -d $TEST_ROOT/$OBJ || FAIL; PASS
 START "check svn executable" "Checking svn executable..."
-test -x $INST_DIR/$SVN_NAME/bin/svn || FAIL; PASS
+test -x $TEST_ROOT/$OBJ/subversion/clients/cmdline/svn || FAIL; PASS
 START "check svnadmin executable" "Checking svnadmin executable..."
-test -x $INST_DIR/$SVN_NAME/bin/svnadmin || FAIL; PASS
+test -x $TEST_ROOT/$OBJ/subversion/svnadmin/svnadmin || FAIL; PASS
 START "check svnlook executable" "Checking svnlook executable..."
-test -x $INST_DIR/$SVN_NAME/bin/svnlook || FAIL; PASS
+test -x $TEST_ROOT/$OBJ/subversion/svnlook/svnlook || FAIL; PASS
 START "check svnserve executable" "Checking svnserve executable..."
-test -x $INST_DIR/$SVN_NAME/bin/svnserve || FAIL; PASS
+test -x $TEST_ROOT/$OBJ/subversion/svnserve/svnserve || FAIL; PASS
 START "check svnversion executable" "Checking svnversion executable..."
-test -x $INST_DIR/$SVN_NAME/bin/svnversion || FAIL; PASS
+test -x $TEST_ROOT/$OBJ/subversion/svnversion/svnversion || FAIL; PASS
 
 # Build has initially mounted ramdisk for us, but this
 # script will at the end to do unmount, so check if it is mounted or not
@@ -92,8 +91,7 @@ case $CHECK_TARGET in
     svncheck)
         START "run svnserve" "Running svnserve..."
         $TEST_ROOT/$OBJ/subversion/svnserve/svnserve -d \
-            --listen-port $SVNSERVE_PORT \
-            -r $TEST_ROOT/$OBJ/$RA_SVN_REPO_ROOT \
+            -r $TEST_ROOT/$OBJ/subversion/tests/clients/cmdline \
             >> $LOG_FILE 2>&1
         test $? = 0 || FAIL
         PASS
@@ -104,7 +102,6 @@ case $CHECK_TARGET in
                        | $SED -e 's/^ *//' | $CUT -f 1 -d ' ' -s`"
         test -n "$SVNSERVE_PID" || FAIL
         PASS
-        CHECK_ARGS="$CHECK_ARGS $RA_SVN_CHECK_ARGS"
         ;;
     davcheck)
         START "run $HTTPD_NAME" "Running $HTTPD_NAME..."
@@ -155,9 +152,6 @@ then
     # At the moment we can't give repository url with
     # make davcheck, so use check & BASE_URL here for the present
     $MAKE check $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
-elif test "$CHECK_TARGET" = "svncheck";
-then
-    $MAKE check $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
 else
     $MAKE $CHECK_TARGET $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
 fi
@@ -180,5 +174,3 @@ START "Timer: make $CHECK_TARGET $(($ts_stop - $ts_start)) sec" \
 PASS
 
 kill_svnserve
-echo "TIME: $($DATE '+%Y-%m-%d %H:%M:%S %z')" >> $LOG_FILE
-

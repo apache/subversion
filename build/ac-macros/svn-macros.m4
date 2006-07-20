@@ -1,58 +1,58 @@
-# Miscellaneous additional macros for Subversion's own use.
+dnl -----------------------------------------------------------------------
+dnl Additional autoconf macros for Subversion
+dnl
 
-# SVN_CONFIG_NICE(FILENAME)
-# Write a shell script to FILENAME (typically 'config.nice') which reinvokes
-# configure with all of the arguments.  Reserves use of the filename
-# FILENAME.old for its own use.
-# This is different from 'config.status --recheck' in that it does add implicit
-# --no-create --no-recursion options, and stores _just_ the configure
-# invocation, instead of the entire configured state.
-AC_DEFUN([SVN_CONFIG_NICE], [
+
+dnl this writes a "config.nice" file which reinvokes ./configure with all
+dnl of the arguments. this is different from config.status which simply
+dnl regenerates the output files. config.nice is useful after you rebuild
+dnl ./configure (via autoconf or autogen.sh)
+AC_DEFUN(SVN_CONFIG_NICE,[
+  AC_REQUIRE([AC_CANONICAL_HOST])
   AC_MSG_NOTICE([creating $1])
-  # This little dance satisfies Cygwin, which cannot overwrite in-use files.
-  if test -f "$1"; then
-    mv "$1" "$1.old"
-    rm -f "$1.old"
-  fi
-
-  cat >"$1" <<EOF
+  rm -f $1
+  cat >$1<<EOF
 #! /bin/sh
 #
 # Created by configure
 
-'[$]0' $ac_configure_args "\[$]@"
 EOF
 
-  chmod +x "$1"
+  case $host in
+    *-*-cygwin*)
+      # exec closes config.nice before configure attempts to rewrite it
+      EXEC_HACK="exec "
+      ;;
+    *)
+      EXEC_HACK=
+      ;;
+  esac
+
+  echo "$EXEC_HACK\"[$]0\" \\" >> $1
+  for arg in "[$]@"; do
+    case $arg in
+      --no-create) ;;
+      --no-recursion) ;;
+      *)
+        echo "\"$arg\" \\" >> $1
+      ;;
+    esac
+  done
+  echo '"[$]@"' >> $1
+  chmod +x $1
 ])
 
-
-# SVN_EXTERNAL_PROJECT_SETUP()
-# Internal helper for SVN_EXTERNAL_PROJECT.
-AC_DEFUN([SVN_EXTERNAL_PROJECT_SETUP], [
-  do_subdir_config="yes"
-  AC_ARG_ENABLE([subdir-config],
-    AC_HELP_STRING([--disable-subdir-config],
-                   [do not reconfigure packages in subdirectories]),
-    [if test "$enableval" = "no"; then do_subdir_config="no"; fi])
-  AC_SUBST([SVN_EXTERNAL_PROJECT_SUBDIRS], [""])
-])
-
-# SVN_EXTERNAL_PROJECT(SUBDIR [, ADDITIONAL-CONFIGURE-ARGS])
-# Setup SUBDIR as an external project. This means:
-# - Execute the configure script immediately at the point of macro invocation.
-# - Add SUBDIR to the substitution variable SVN_EXTERNAL_PROJECT_SUBDIRS,
-#   for the Makefile.in to arrange to execute make in the subdir.
-#
-# Derived from APR_SUBDIR_CONFIG
-AC_DEFUN([SVN_EXTERNAL_PROJECT], [
-  AC_REQUIRE([SVN_EXTERNAL_PROJECT_SETUP])
-  SVN_EXTERNAL_PROJECT_SUBDIRS="$SVN_EXTERNAL_PROJECT_SUBDIRS $1"
+dnl
+dnl SVN_SUBDIR_CONFIG(dir [, sub-package-cmdline-args])
+dnl
+dnl Note that this code is a direct copy of that which is found in 
+dnl the apr project's build/apr_common.m4.
+AC_DEFUN(SVN_SUBDIR_CONFIG, [
   if test "$do_subdir_config" = "yes" ; then
     # save our work to this point; this allows the sub-package to use it
     AC_CACHE_SAVE
 
-    AC_MSG_NOTICE([configuring package in $1 now])
+    echo "configuring package in $1 now"
     ac_popdir=`pwd`
     ac_abs_srcdir=`(cd $srcdir/$1 && pwd)`
     apr_config_subdirs="$1"
@@ -82,19 +82,16 @@ AC_DEFUN([SVN_EXTERNAL_PROJECT], [
     # grab any updates from the sub-package
     AC_CACHE_LOAD
   else
-    AC_MSG_WARN([not running configure in $1])
+    AC_MSG_WARN(not running configure in $1)
   fi
-])
+])dnl
 
 dnl
 dnl SVN_CONFIG_SCRIPT(path)
 dnl
 dnl Make AC_OUTPUT create an executable file.
-dnl Accumulate filenames in $SVN_CONFIG_SCRIPT_FILES for AC_SUBSTing to
-dnl use in, for example, Makefile distclean rules.
 dnl
 AC_DEFUN(SVN_CONFIG_SCRIPT, [
-  SVN_CONFIG_SCRIPT_FILES="$SVN_CONFIG_SCRIPT_FILES $1"
   AC_CONFIG_FILES([$1], [chmod +x $1])])
 
 dnl Iteratively interpolate the contents of the second argument

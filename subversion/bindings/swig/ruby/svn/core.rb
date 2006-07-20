@@ -46,10 +46,30 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
-    # for backward compatibility
-    SWIG_INVALID_REVNUM = INVALID_REVNUM
-    SWIG_IGNORED_REVNUM = IGNORED_REVNUM
-
+    apr_initialize
+    at_exit do
+      if $DEBUG
+        i = 0
+        loop do
+          i += 1
+          print "number of pools before GC(#{i}): "
+          before_pools = Svn::Core::Pool.number_of_pools
+          p before_pools
+          GC.start
+          after_pools = Svn::Core::Pool.number_of_pools
+          print "number of pools after GC(#{i}): "
+          p after_pools
+          break if before_pools == after_pools
+        end
+        puts "GC ran #{i} times"
+      end
+      
+      # We don't need to call apr_termintae because pools
+      # are destroyed by ruby's GC.
+      # Svn::Core.apr_terminate
+    end
+    nls_init
+    
     class << self
       alias binary_mime_type? mime_type_is_binary
     end
@@ -61,13 +81,8 @@ module Svn
     AuthCredSSLClientCert = AuthCredSslClientCert
     AuthCredSSLClientCertPw = AuthCredSslClientCertPw
     AuthCredSSLServerTrust = AuthCredSslServerTrust
-
-    dirent_all = 0
-    constants.each do |name|
-      dirent_all |= const_get(name) if /^DIRENT_/ =~ name
-    end
-    DIRENT_ALL = dirent_all
-
+    
+    
     Pool = Svn::Ext::Core::Apr_pool_wrapper_t
     
     class Pool
@@ -88,11 +103,7 @@ module Svn
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
-      if Core.const_defined?(:STREAM_CHUNK_SIZE)
-        CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
-      else
-        CHUNK_SIZE = 8192
-      end
+      CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
 
       def write(data)
         Core.stream_write(self, data)
@@ -178,16 +189,15 @@ module Svn
 
     Diff = SWIG::TYPE_p_svn_diff_t
     class Diff
-      attr_accessor :original, :modified, :latest, :ancestor
+      attr_accessor :original, :modified, :latest
 
       class << self
         def version
           Core.diff_version
         end
 
-        def file_diff(original, modified, options=nil)
-          options ||= Core::DiffFileOptions.new
-          diff = Core.diff_file_diff_2(original, modified, options)
+        def file_diff(original, modified)
+          diff = Core.diff_file_diff(original, modified)
           if diff
             diff.original = original
             diff.modified = modified
@@ -195,31 +205,17 @@ module Svn
           diff
         end
 
-        def file_diff3(original, modified, latest, options=nil)
-          options ||= Core::DiffFileOptions.new
-          diff = Core.diff_file_diff3_2(original, modified, latest, options)
+        def file_diff3(original, modified, latest)
+          diff = Core.diff_file_diff3(original, modified, latest)
           if diff
             diff.original = original
             diff.modified = modified
             diff.latest = latest
-          end
-          diff
-        end
-
-        def file_diff4(original, modified, latest, ancestor, options=nil)
-          options ||= Core::DiffFileOptions.new
-          args = [original, modified, latest, ancestor, options]
-          diff = Core.diff_file_diff4_2(*args)
-          if diff
-            diff.original = original
-            diff.modified = modified
-            diff.latest = latest
-            diff.ancestor = ancestor
           end
           diff
         end
       end
-
+      
       def unified(orig_label, mod_label, header_encoding=nil)
         header_encoding ||= Svn::Core.locale_charset
         output = StringIO.new
@@ -256,28 +252,6 @@ module Svn
 
       def diff?
         Core.diff_contains_diffs(self)
-      end
-    end
-
-    class DiffFileOptions
-      class << self
-        undef new
-        def new(*args)
-          options = Svn::Core.diff_file_options_create(*args)
-          options.__send__("initialize", *args)
-          options
-        end
-
-        def parse(*args)
-          options = new
-          options.parse(*args)
-          options
-        end
-      end
-
-      def parse(*args)
-        args = args.first if args.size == 1 and args.first.is_a?(Array)
-        Svn::Core.diff_file_options_parse(self, args)
       end
     end
 
@@ -319,46 +293,13 @@ module Svn
       end
     end
 
-    # Following methods are also available:
-    #
-    # [created_rev]
-    #   Returns a revision at which the instance was last modified.
-    # [have_props?]
-    #   Returns +true+ if the instance has properties.
-    # [last_author]
-    #   Returns an author who last modified the instance.
-    # [size]
-    #   Returns a size of the instance.
     class Dirent
-      alias have_props? has_props
-
-      # Returns +true+ when the instance is none.
-      def none?
-        kind == NODE_NONE
-      end
-
-      # Returns +true+ when the instance is a directory.
       def directory?
         kind == NODE_DIR
       end
 
-      # Returns +true+ when the instance is a file.
       def file?
         kind == NODE_FILE
-      end
-
-      # Returns +true+ when the instance is an unknown node.
-      def unknown?
-        kind == NODE_UNKNOWN
-      end
-
-      # Returns a Time when the instance was last changed.
-      #
-      # Svn::Core::Dirent#time is replaced by this method, _deprecated_,
-      # and provided for backward compatibility with the 1.3 API.
-      def time2
-        __time = time
-        __time && Time.from_apr_time(__time)
       end
     end
 
@@ -473,25 +414,6 @@ module Svn
       def date
         __date = _date
         __date && Time.from_svn_format(__date)
-      end
-    end
-
-    # Following methods are also available:
-    #
-    # [action]
-    #   Returns an action taken to the path at the revision.
-    # [copyfrom_path]
-    #   If the path was added at the revision by the copy action from
-    #   another path at another revision, returns an original path.
-    #   Otherwise, returns +nil+.
-    # [copyfrom_rev]
-    #   If the path was added at the revision by the copy action from
-    #   another path at another revision, returns an original revision.
-    #   Otherwise, returns <tt>-1</tt>.
-    class LogChangedPath
-      # Returns +true+ when the path is added by the copy action.
-      def copied?
-        Util.copy?(copyfrom_path, copyfrom_rev)
       end
     end
   end

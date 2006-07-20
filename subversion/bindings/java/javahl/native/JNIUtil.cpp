@@ -26,9 +26,10 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include "svn_pools.h"
+#include <svn_pools.h>
+#include <svn_config.h>
 #include "svn_wc.h"
-#include "svn_path.h"
+#include <svn_path.h>
 #include <apr_file_info.h>
 #include "svn_private_config.h"
 #ifdef WIN32
@@ -37,7 +38,7 @@
    that should be fine for now, but a better solution must be found in
    combination with issue #850. */
 extern "C" {
-#include <arch/win32/apr_arch_utf8.h>
+#include "arch/win32/apr_arch_utf8.h"
 };
 #endif
 
@@ -241,6 +242,16 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 #endif
 
+    // we use the default directory for config files
+    // this can be changed later
+    svn_error_t *err = svn_config_ensure (NULL, g_pool); 
+    if (err)
+    {
+        svn_pool_destroy (g_pool);
+        handleSVNError(err);
+        return false;
+    }
+
     // build all mutexes
     g_finalizedObjectsMutex = new JNIMutex(g_pool);
     if(isExceptionThrown())
@@ -292,16 +303,20 @@ JNIMutex *JNIUtil::getGlobalPoolMutex()
 {
     return g_globalPoolMutext;
 }
-void JNIUtil::raiseThrowable(const char *name, const char *message)
+/**
+ * throw an error
+ * @param message the message text of the error
+ */
+void JNIUtil::throwError(const char *message)
 {
-    if (getLogLevel() >= errorLog)
+    if(getLogLevel() >= errorLog)
     {
         JNICriticalSection cs(*g_logMutex);
-        g_logStream << "Throwable raised <" << message << ">" << std::endl;
+        g_logStream << "Error thrown <" << message << ">" << std::endl;
     }
     JNIEnv *env = getEnv();
-    jclass clazz = env->FindClass(name);
-    if (isJavaExceptionThrown())
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/JNIError");
+    if(isJavaExceptionThrown())
     {
         return;
     }
@@ -390,21 +405,28 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     }
     env->Throw(static_cast<jthrowable>(error));
 }
-
-void JNIUtil::putFinalizedClient(SVNBase *object)
+/**
+ * put the object on the finalized object list
+ * it will be deleted by another thread during the next request
+ * @param cl    the C++ peer of the finalized object
+ */
+void JNIUtil::putFinalizedClient(SVNBase *cl)
 {
-    enqueueForDeletion(object);
-}
-
-void JNIUtil::enqueueForDeletion(SVNBase *object)
-{
-    JNICriticalSection cs(*g_finalizedObjectsMutex);
-    if (!isExceptionThrown())
+    // log this, because the object should have disposed
+    if(getLogLevel() >= errorLog)
     {
-        g_finalizedObjects.push_back(object);
+        JNICriticalSection cs(*g_logMutex);
+        g_logStream << "a client object was not disposed" << std::endl;
     }
-}
+    JNICriticalSection cs(*g_finalizedObjectsMutex);
+    if(isExceptionThrown())
+    {
+        return;
+    }
 
+    g_finalizedObjects.push_back(cl);
+
+}
 /**
  * Handle an apr error (those are not expected) by throwing an error
  * @param error the apr error number
@@ -714,9 +736,10 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
  */
 void JNIUtil::throwNullPointerException(const char *message)
 {
-    if (getLogLevel() >= errorLog)
+    if(getLogLevel() >= errorLog)
     {
-        logMessage("NullPointerException thrown");
+        JNICriticalSection cs(*g_logMutex);
+        g_logStream << "NullPointerException thrown" << std::endl;
     }
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/lang/NullPointerException");

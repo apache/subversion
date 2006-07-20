@@ -36,7 +36,7 @@ class JNIByteArray;
 class Prompter;
 class BlameCallback;
 class CommitMessage;
-#include "svn_client.h"
+#include <svn_client.h>
 #include "SVNBase.h"
 
 class SVNClient :public SVNBase
@@ -51,14 +51,7 @@ public:
     void cancelOperation();
     void commitMessageHandler(CommitMessage *commitMessage);
     const char * getConfigDirectory();
-
-    /**
-     * Set the configuration directory, taking the usual steps to
-     * ensure that Subversion's config file templates exist in the
-     * specified location.
-     */
     void setConfigDirectory(const char *configDir);
-
     jbyteArray blame(const char *path, Revision& revisionStart,
                          Revision &revisionEnd);
     void blame(const char *path, Revision &pegRevision, 
@@ -147,8 +140,10 @@ public:
                   bool noDiffDelete, bool force);
 
     const char * getLastPath();
+    void finalize();
     void dispose(jobject jthis);
     static SVNClient * getCppObject(jobject jthis);
+    jlong getCppAddr();
     SVNClient();
     virtual ~SVNClient();
     static jobject createJavaLock(const svn_lock_t *lock);

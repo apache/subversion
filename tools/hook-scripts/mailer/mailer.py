@@ -8,8 +8,8 @@
 # $LastChangedRevision$
 #
 # USAGE: mailer.py commit      REPOS REVISION [CONFIG-FILE]
-#        mailer.py propchange  REPOS REVISION AUTHOR REVPROPNAME [CONFIG-FILE]
-#        mailer.py propchange2 REPOS REVISION AUTHOR REVPROPNAME ACTION \
+#        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+#        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
 #                              [CONFIG-FILE]
 #        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
 #        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
@@ -245,7 +245,7 @@ class StandardOutput(OutputBase):
 
 
 class PipeOutput(MailedOutput):
-  "Deliver a mail message to an MTA via a pipe."
+  "Deliver a mail message to an MDA via a pipe."
 
   def __init__(self, cfg, repos, prefix_param):
     MailedOutput.__init__(self, cfg, repos, prefix_param)
@@ -572,11 +572,11 @@ class DiffSelections:
 
 
 class DiffURLSelections:
-  def __init__(self, cfg, group, params):
-    self.add = cfg.get('diff_add_url', group, params)
-    self.copy = cfg.get('diff_copy_url', group, params)
-    self.delete = cfg.get('diff_delete_url', group, params)
-    self.modify = cfg.get('diff_modify_url', group, params)
+  def __init__(self, cfg, group):
+    self.add = cfg.get('diff_add_url', group, None)
+    self.copy = cfg.get('diff_copy_url', group, None)
+    self.delete = cfg.get('diff_delete_url', group, None)
+    self.modify = cfg.get('diff_modify_url', group, None)
 
 
 def generate_content(renderer, cfg, repos, changelist, group, params, paths,
@@ -587,7 +587,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
-  diffurls = DiffURLSelections(cfg, group, params)
+  diffurls = DiffURLSelections(cfg, group)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
@@ -601,9 +601,9 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, diffsels, diffurls, pool)
+                                group, params, diffsels, diffurls, pool),
   else:
-    other_diffs = None
+    other_diffs = [ ]
 
   data = _data(
     author=repos.author,
@@ -665,8 +665,6 @@ class DiffGenerator:
     self.diffsels = diffsels
     self.diffurls = diffurls
     self.pool = pool
-
-    self.diff = self.diff_url = None
 
     self.idx = 0
 
@@ -885,8 +883,8 @@ class TextCommitRenderer:
 
     w = self.output.write
 
-    w('Author: %s\nDate: %s\nNew Revision: %s\n\nLog:\n%s\n\n'
-      % (data.author, data.date, data.rev, data.log))
+    w('Author: %s\nDate: %s\nNew Revision: %s\n\n'
+      % (data.author, data.date, data.rev))
 
     # print summary sections
     self._render_list('Added', data.added_data)
@@ -903,11 +901,12 @@ class TextCommitRenderer:
       else:
         w('and changes in other areas\n')
 
-    self._render_diffs(data.diffs, '')
+    w('\nLog:\n%s\n' % data.log)
+
+    self._render_diffs(data.diffs)
     if data.other_diffs:
-      self._render_diffs(data.other_diffs,
-                         '\nDiffs of changes in other areas also'
-                         ' in this revision:\n')
+      w('\nDiffs of changes in other areas also in this revision:\n')
+      self._render_diffs(data.other_diffs)
 
   def _render_list(self, header, data_list):
     if not data_list:
@@ -938,31 +937,30 @@ class TextCommitRenderer:
         w('      - copied%s from r%d, %s%s\n'
           % (text, d.base_rev, d.base_path, is_dir))
 
-  def _render_diffs(self, diffs, section_header):
-    """Render diffs. Write the SECTION_HEADER iff there are actually
-    any diffs to render."""
+  def _render_diffs(self, diffs):
     w = self.output.write
-    section_header_printed = False
 
     for diff in diffs:
       if not diff.diff and not diff.diff_url:
         continue
-      if not section_header_printed:
-        w(section_header)
-        section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'A':
         w('\nAdded: %s\n' % diff.path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
-
-      if diff.diff_url:
-        w('URL: %s\n' % diff.diff_url)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
 
       if not diff.diff:
         continue
@@ -1110,8 +1108,7 @@ class Config:
         # then just return the value unchanged.
         setattr(self.maps, optname,
                 lambda value,
-                       sect=getattr(self, sectname): getattr(sect,
-                                                             value.lower(),
+                       sect=getattr(self, sectname): getattr(sect, value,
                                                              value))
         # mark for removal when all optnames are done
         if sectname not in mapsections:
@@ -1229,8 +1226,8 @@ if __name__ == '__main__':
     scriptname = os.path.basename(sys.argv[0])
     sys.stderr.write(
 """USAGE: %s commit      REPOS REVISION [CONFIG-FILE]
-       %s propchange  REPOS REVISION AUTHOR REVPROPNAME [CONFIG-FILE]
-       %s propchange2 REPOS REVISION AUTHOR REVPROPNAME ACTION [CONFIG-FILE]
+       %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
        %s lock        REPOS AUTHOR [CONFIG-FILE]
        %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
@@ -1260,7 +1257,7 @@ if the property was added, modified or deleted, respectively.
     usage()
 
   cmd = sys.argv[1]
-  repos_dir = svn.core.svn_path_canonicalize(sys.argv[2])
+  repos_dir = sys.argv[2]
   try:
     expected_args = cmd_list[cmd]
   except KeyError:

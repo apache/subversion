@@ -45,25 +45,24 @@
 
 
 svn_error_t *
-svn_client_log3(const apr_array_header_t *targets,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *start,
-                const svn_opt_revision_t *end,
-                int limit,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t strict_node_history,
-                svn_log_message_receiver_t receiver,
-                void *receiver_baton,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client_log2 (const apr_array_header_t *targets,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 int limit,
+                 svn_boolean_t discover_changed_paths,
+                 svn_boolean_t strict_node_history,
+                 svn_log_message_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  const char *url_or_path;
-  const char *ignored_url;
+  const char *path;
+  const char *base_url;
   const char *base_name = NULL;
   apr_array_header_t *condensed_targets;
-  svn_revnum_t ignored_revnum;
-  svn_opt_revision_t session_opt_rev;
+  svn_revnum_t start_revnum, end_revnum;
+  svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
@@ -73,20 +72,17 @@ svn_client_log3(const apr_array_header_t *targets,
          _("Missing required revision specification"));
     }
 
-  url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
+  start_revnum = end_revnum = SVN_INVALID_REVNUM;
+
+  path = (APR_ARRAY_IDX(targets, 0, const char *));
 
   /* Use the passed URL, if there is one.  */
-  if (svn_path_is_url(url_or_path))
+  if (svn_path_is_url (path))
     {
-      if (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_committed
-          || peg_revision->kind == svn_opt_revision_previous)
-        return svn_error_create
-          (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-           _("Revision type requires a working copy path, not a URL"));
+      base_url = path;
 
       /* Initialize this array, since we'll be building it below */
-      condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
+      condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
 
       /* The logic here is this: If we get passed one argument, we assume
          it is the full URL to a file/dir we want log info for. If we get
@@ -98,7 +94,7 @@ svn_client_log3(const apr_array_header_t *targets,
 
           /* We have some paths, let's use them. Start after the URL.  */
           for (i = 1; i < targets->nelts; i++)
-            (*((const char **)apr_array_push(condensed_targets))) =
+            (*((const char **)apr_array_push (condensed_targets))) =
                 APR_ARRAY_IDX(targets, i, const char *);
         }
       else
@@ -106,7 +102,7 @@ svn_client_log3(const apr_array_header_t *targets,
           /* If we have a single URL, then the session will be rooted at
              it, so just send an empty string for the paths we are
              interested in. */
-          (*((const char **)apr_array_push(condensed_targets))) = "";
+          (*((const char **)apr_array_push (condensed_targets))) = "";
         }
     }
   else
@@ -117,32 +113,32 @@ svn_client_log3(const apr_array_header_t *targets,
       int i;
       
       /* Get URLs for each target */
-      target_urls = apr_array_make(pool, 1, sizeof(const char *));
-      real_targets = apr_array_make(pool, 1, sizeof(const char *));
+      target_urls = apr_array_make (pool, 1, sizeof (const char *));
+      real_targets = apr_array_make (pool, 1, sizeof (const char *));
       for (i = 0; i < targets->nelts; i++) 
         {
           const svn_wc_entry_t *entry;
           const char *URL;
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                         FALSE, 0, ctx->cancel_func,
-                                         ctx->cancel_baton, pool));
-          SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, pool));
+          SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                           FALSE, 0, ctx->cancel_func,
+                                           ctx->cancel_baton, pool));
+          SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
           if (! entry)
-            return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                     _("'%s' is not under version control"),
-                                     svn_path_local_style(target, pool));
+            return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                      _("'%s' is not under version control"),
+                                      svn_path_local_style (target, pool));
           
           if (! entry->url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
                _("Entry '%s' has no URL"),
-               svn_path_local_style(target, pool));
+               svn_path_local_style (target, pool));
 
-          URL = apr_pstrdup(pool, entry->url);
-          SVN_ERR(svn_wc_adm_close(adm_access));
-          (*((const char **)apr_array_push(target_urls))) = URL;
-          (*((const char **)apr_array_push(real_targets))) = target;
+          URL = apr_pstrdup (pool, entry->url);
+          SVN_ERR (svn_wc_adm_close (adm_access));
+          (*((const char **)apr_array_push (target_urls))) = URL;
+          (*((const char **)apr_array_push (real_targets))) = target;
         }
 
       /* if we have no valid target_urls, just exit. */
@@ -150,46 +146,23 @@ svn_client_log3(const apr_array_header_t *targets,
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR(svn_path_condense_targets(&url_or_path, &condensed_targets,
-                                        target_urls, TRUE, pool));
+      SVN_ERR (svn_path_condense_targets (&base_url, &condensed_targets,
+                                          target_urls, TRUE, pool));
 
       if (condensed_targets->nelts == 0)
-        (*((const char **)apr_array_push(condensed_targets))) = "";
+        (*((const char **)apr_array_push (condensed_targets))) = "";
 
       /* 'targets' now becomes 'real_targets', which has bogus,
          unversioned things removed from it. */
       targets = real_targets;
     }
 
-  /* Determine the revision to open the RA session to. */
-  if (start->kind == svn_opt_revision_number &&
-      end->kind == svn_opt_revision_number)
-    session_opt_rev = (start->value.number > end->value.number ?
-                       *start : *end);
-  else if (start->kind == svn_opt_revision_date &&
-           end->kind == svn_opt_revision_date)
-    session_opt_rev = (start->value.date > end->value.date ? *start : *end);
-  else
-    session_opt_rev.kind = svn_opt_revision_unspecified;
-
-  {
-    const char *target;
-
-    /* If this is a revision type that requires access to the working copy,
-     * we use our initial target path to figure out where to root the RA
-     * session, otherwise we use our URL. */
-    if (peg_revision->kind == svn_opt_revision_base
-        || peg_revision->kind == svn_opt_revision_committed
-        || peg_revision->kind == svn_opt_revision_previous)
-      SVN_ERR(svn_path_condense_targets(&target, NULL, targets, TRUE, pool));
-    else
-      target = url_or_path;
-
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &ignored_url, target,
-                                             peg_revision, &session_opt_rev,
-                                             ctx, pool));
-  }
+  /* Open a repository session to the BASE_URL. */
+  SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, base_url, 
+                                                 base_name, NULL, NULL,
+                                                 (NULL != base_name), TRUE, 
+                                                 ctx, pool));
 
   /* It's a bit complex to correctly handle the special revision words
    * such as "BASE", "COMMITTED", and "PREV".  For example, if the
@@ -214,19 +187,16 @@ svn_client_log3(const apr_array_header_t *targets,
    * every iteration.
    */
   {
-    svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
-    svn_revnum_t start_revnum, end_revnum;
-
-    svn_boolean_t start_is_local = svn_client__revision_is_local(start);
-    svn_boolean_t end_is_local = svn_client__revision_is_local(end);
+    svn_boolean_t start_is_local = svn_client__revision_is_local (start);
+    svn_boolean_t end_is_local = svn_client__revision_is_local (end);
 
     if (! start_is_local)
-      SVN_ERR(svn_client__get_revision_number
-              (&start_revnum, ra_session, start, base_name, pool));
+      SVN_ERR (svn_client__get_revision_number
+               (&start_revnum, ra_session, start, base_name, pool));
 
     if (! end_is_local)
-      SVN_ERR(svn_client__get_revision_number
-              (&end_revnum, ra_session, end, base_name, pool));
+      SVN_ERR (svn_client__get_revision_number
+               (&end_revnum, ra_session, end, base_name, pool));
 
     if (start_is_local || end_is_local)
       {
@@ -260,50 +230,49 @@ svn_client_log3(const apr_array_header_t *targets,
             const char *target = ((const char **)targets->elts)[i];
 
             if (start_is_local)
-              SVN_ERR(svn_client__get_revision_number
-                      (&start_revnum, ra_session, start, target, pool));
+              SVN_ERR (svn_client__get_revision_number
+                       (&start_revnum, ra_session, start, target, pool));
             
             if (end_is_local)
-              SVN_ERR(svn_client__get_revision_number
-                      (&end_revnum, ra_session, end, target, pool));
+              SVN_ERR (svn_client__get_revision_number
+                       (&end_revnum, ra_session, end, target, pool));
 
-            err = svn_ra_get_log(ra_session,
-                                 condensed_targets,
-                                 start_revnum,
-                                 end_revnum,
-                                 limit,
-                                 discover_changed_paths,
-                                 strict_node_history,
-                                 receiver,
-                                 receiver_baton,
-                                 pool);
+            err = svn_ra_get_log (ra_session,
+                                  condensed_targets,
+                                  start_revnum,
+                                  end_revnum,
+                                  limit,
+                                  discover_changed_paths,
+                                  strict_node_history,
+                                  receiver,
+                                  receiver_baton,
+                                  pool);
             if (err)
               break;
           }
       }
     else  /* both revisions are static, so no loop needed */
       {
-        err = svn_ra_get_log(ra_session,
-                             condensed_targets,
-                             start_revnum,
-                             end_revnum,
-                             limit,
-                             discover_changed_paths,
-                             strict_node_history,
-                             receiver,
-                             receiver_baton,
-                             pool);
+        err = svn_ra_get_log (ra_session,
+                              condensed_targets,
+                              start_revnum,
+                              end_revnum,
+                              limit,
+                              discover_changed_paths,
+                              strict_node_history,
+                              receiver,
+                              receiver_baton,
+                              pool);
       }
-  
-    return err;
   }
+  
+  return err;
 }
 
 svn_error_t *
-svn_client_log2(const apr_array_header_t *targets,
+svn_client_log (const apr_array_header_t *targets,
                 const svn_opt_revision_t *start,
                 const svn_opt_revision_t *end,
-                int limit,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
@@ -311,29 +280,11 @@ svn_client_log2(const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_opt_revision_t peg_revision;
-  peg_revision.kind = svn_opt_revision_unspecified;
-  return svn_client_log3(targets, &peg_revision, start, end, limit,
-                         discover_changed_paths, strict_node_history,
-                         receiver, receiver_baton, ctx, pool);
-}
-
-svn_error_t *
-svn_client_log(const apr_array_header_t *targets,
-               const svn_opt_revision_t *start,
-               const svn_opt_revision_t *end,
-               svn_boolean_t discover_changed_paths,
-               svn_boolean_t strict_node_history,
-               svn_log_message_receiver_t receiver,
-               void *receiver_baton,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
-{
   svn_error_t *err = SVN_NO_ERROR;
 
-  err = svn_client_log2(targets, start, end, 0, discover_changed_paths,
-                        strict_node_history, receiver, receiver_baton, ctx,
-                        pool);
+  err = svn_client_log2 (targets, start, end, 0, discover_changed_paths,
+                         strict_node_history, receiver, receiver_baton, ctx,
+                         pool);
     
   /* Special case: If there have been no commits, we'll get an error
    * for requesting log of a revision higher than 0.  But the
@@ -361,14 +312,14 @@ svn_client_log(const apr_array_header_t *targets,
        * Hence, we deduce the repository is empty without needing access
        * to further information. */
 
-      svn_error_clear(err);
+      svn_error_clear (err);
       err = SVN_NO_ERROR;
           
       /* Log receivers are free to handle revision 0 specially... But
          just in case some don't, we make up a message here. */
-      SVN_ERR(receiver(receiver_baton,
-                       NULL, 0, "", "", _("No commits in repository"),
-                       pool));
+      SVN_ERR (receiver (receiver_baton,
+                         NULL, 0, "", "", _("No commits in repository"),
+                         pool));
     }
 
   return err;

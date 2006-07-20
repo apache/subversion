@@ -12,10 +12,10 @@ CVS_UPDATE_REGEXP_1='^[UPARMC] \(\(docs\)\|\(STATUS\)\|\(CHANGES\)\)'
 CVS_UPDATE_REGEXP_2='^[UPARMC] [A-Za-z]'
 
 SVN_UPDATE_REGEXP_1=\
-'^[ADUCG]\([ADUCG]\| \) \(  \)\?\(\(doc\)\|\(notes\)\|\(www\)\|\(contrib\)'\
+'^[ADUCG]\([ADUCG]\| \) \(\(doc\)\|\(notes\)\|\(www\)\|\(contrib\)'\
 '\|\(tools\)\|\(packages\)\|\(STATUS\)\)'
 
-SVN_UPDATE_REGEXP_2='^[ADUCG]\([ADUCG]\| \) \(  \)\?[A-Za-z]'
+SVN_UPDATE_REGEXP_2='^[ADUCG]\([ADUCG]\| \) [A-Za-z]'
 
 #
 # Possible values of the status file:
@@ -55,17 +55,9 @@ UPDATE_REBUILD_FLAG () {
     fi
 }
 
-CLEAN_WORKING_COPY () {
-
-    $SVN st --no-ignore | $GREP '^\(?\|I\) *' | \
-        $SED 's@\(?\|I\) *@@' | $XARGS $RM_RF 
-
-    return 0
-}
-
 # Update apr, apr-util, httpd
 START "update $APR_NAME" "Updating $APR_NAME..."
-cd $APR_SOURCE && CLEAN_WORKING_COPY && $SVN update > "$LOG_FILE_DIR/LOG_up_apr" 2>&1
+cd $APR_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_apr" 2>&1
 test $? = 0 || {
     FAIL_LOG "$LOG_FILE_DIR/LOG_up_apr"
     FAIL
@@ -74,7 +66,7 @@ PASS
 UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_apr" "$TEST_ROOT/$APR_NAME.rb"
 
 START "update $APU_NAME" "Updating $APU_NAME..."
-cd $APU_SOURCE &&  CLEAN_WORKING_COPY && $SVN update > "$LOG_FILE_DIR/LOG_up_apu" 2>&1
+cd $APU_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_apu" 2>&1
 test $? = 0 || {
     FAIL_LOG "$LOG_FILE_DIR/LOG_up_apu"
     FAIL
@@ -83,7 +75,7 @@ PASS
 UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_apu" "$TEST_ROOT/$APU_NAME.rb"
 
 START "update $HTTPD_NAME" "Updating $HTTPD_NAME..."
-cd $HTTPD_SOURCE &&  CLEAN_WORKING_COPY && $SVN update > "$LOG_FILE_DIR/LOG_up_httpd" 2>&1
+cd $HTTPD_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_httpd" 2>&1
 test $? = 0 || {
     FAIL_LOG "$LOG_FILE_DIR/LOG_up_httpd"
     FAIL
@@ -93,7 +85,7 @@ UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_httpd" "$TEST_ROOT/$HTTPD_NAME.rb"
 
 # Update svn
 START "update subversion" "Updating Subversion..."
-cd $SVN_SOURCE &&  CLEAN_WORKING_COPY && $SVN update $FORCE_UP_REV_SVN > "$LOG_FILE_DIR/LOG_up_svn" 2>&1
+cd $SVN_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_svn" 2>&1
 test $? = 0 || {
     FAIL_LOG "$LOG_FILE_DIR/LOG_up_svn"
     FAIL
@@ -103,7 +95,7 @@ UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_svn" "$TEST_ROOT/$SVN_NAME.rb"
 
 # Run autogen.sh
 START "autogen.sh" "Running autogen.sh..."
-cd $SVN_SOURCE && ./autogen.sh > "$LOG_FILE_DIR/LOG_svn_autogen" 2>&1
+cd $SVN_REPO && ./autogen.sh > "$LOG_FILE_DIR/LOG_svn_autogen" 2>&1
 test $? = 0 || {
     FAIL_LOG "$LOG_FILE_DIR/LOG_svn_autogen"
     FAIL

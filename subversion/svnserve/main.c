@@ -2,7 +2,7 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,7 +25,6 @@
 #include <apr_network_io.h>
 #include <apr_signal.h>
 #include <apr_thread_proc.h>
-#include <apr_portable.h>
 
 #include <locale.h>
 
@@ -42,11 +41,6 @@
 #include "svn_version.h"
 
 #include "svn_private_config.h"
-#include "winservice.h"
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>   /* For getpid() */
-#endif
 
 #include "server.h"
 
@@ -64,8 +58,7 @@ enum run_mode {
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
-  run_mode_listen_once,
-  run_mode_service
+  run_mode_listen_once
 };
 
 #if APR_HAS_FORK
@@ -89,38 +82,10 @@ enum run_mode {
 
 #endif
 
-
-#ifdef WIN32
-static apr_os_sock_t winservice_svnserve_accept_socket = INVALID_SOCKET;
-
-/* The SCM calls this function (on an arbitrary thread, not the main()
-   thread!) when it wants to stop the service.
-
-   For now, our strategy is to close the listener socket, in order to
-   unblock main() and cause it to exit its accept loop.  We cannot use
-   apr_socket_close, because that function deletes the apr_socket_t
-   structure, as well as closing the socket handle.  If we called
-   apr_socket_close here, then main() will also call apr_socket_close,
-   resulting in a double-free.  This way, we just close the kernel
-   socket handle, which causes the accept() function call to fail,
-   which causes main() to clean up the socket.  So, memory gets freed
-   only once.
-
-   This isn't pretty, but it's better than a lot of other options.
-   Currently, there is no "right" way to shut down svnserve.
-
-   We store the OS handle rather than a pointer to the apr_socket_t
-   structure in order to eliminate any possibility of illegal memory
-   access. */
-void winservice_notify_stop(void)
-{
-  if (winservice_svnserve_accept_socket != INVALID_SOCKET)
-    closesocket(winservice_svnserve_accept_socket);
-}
-#endif /* _WIN32 */
-
-
 /* Option codes and descriptions for svnserve.
+ *
+ * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
+ * need more, increase that limit first.
  *
  * The entire list must be terminated with an entry of nulls.
  *
@@ -132,8 +97,6 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_FOREGROUND  258
 #define SVNSERVE_OPT_TUNNEL_USER 259
 #define SVNSERVE_OPT_VERSION     260
-#define SVNSERVE_OPT_PID_FILE    261
-#define SVNSERVE_OPT_SERVICE     262
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -146,7 +109,7 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("run in foreground (useful for debugging)")},
     {"help",             'h', 0, N_("display this help")},
     {"version",           SVNSERVE_OPT_VERSION, 0,
-     N_("show program version information")},
+     N_("show version information")},
     {"inetd",            'i', 0, N_("inetd mode")},
     {"root",             'r', 1, N_("root of directory to serve")},
     {"read-only",        'R', 0,
@@ -158,12 +121,6 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, N_("use threads instead of fork")},
 #endif
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
-    {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
-     N_("write server process ID to file arg")},
-#ifdef WIN32
-    {"service",          SVNSERVE_OPT_SERVICE, 0,
-     N_("run as a windows service (SCM only)")},
-#endif
     {0,                  0,   0, 0}
   };
 
@@ -183,7 +140,7 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [options]\n"
+  svn_error_clear(svn_cmdline_fputs(_("Usage: svnserve [options]\n"
                                       "\n"
                                       "Valid options:\n"),
                                     stdout, pool));
@@ -204,13 +161,13 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 
   svn_stringbuf_t *version_footer;
 
-  version_footer = svn_stringbuf_create(fs_desc_start, pool);
-  SVN_ERR(svn_fs_print_modules(version_footer, pool));
+  version_footer = svn_stringbuf_create (fs_desc_start, pool);
+  SVN_ERR (svn_fs_print_modules (version_footer, pool));
 
   return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);
 }
-
+  
 
 #if APR_HAS_FORK
 static void sigchld_handler(int signo)
@@ -229,12 +186,9 @@ static apr_status_t redirect_stdout(void *arg)
 {
   apr_pool_t *pool = arg;
   apr_file_t *out_file, *err_file;
-  apr_status_t apr_err;
 
-  if ((apr_err = apr_file_open_stdout(&out_file, pool)))
-    return apr_err;
-  if ((apr_err = apr_file_open_stderr(&err_file, pool)))
-    return apr_err;
+  apr_file_open_stdout(&out_file, pool);
+  apr_file_open_stderr(&err_file, pool);
   return apr_file_dup2(out_file, err_file, pool);
 }
 
@@ -257,25 +211,6 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 }
 #endif
 
-/* Write the PID of the current process as a decimal number, followed by a
-   newline to the file FILENAME, using POOL for temporary allocations. */
-static svn_error_t *write_pid_file(const char *filename, apr_pool_t *pool)
-{
-  apr_file_t *file;
-  const char *contents = apr_psprintf(pool, "%" APR_PID_T_FMT "\n",
-                                             getpid());
-
-  SVN_ERR(svn_io_file_open(&file, filename,
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
-                           APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_write_full(file, contents, strlen(contents), NULL,
-                                 pool));
-
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions(void)
@@ -295,7 +230,7 @@ check_lib_versions(void)
 }
 
 
-int main(int argc, const char *argv[])
+int main(int argc, const char *const *argv)
 {
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
@@ -306,6 +241,7 @@ int main(int argc, const char *argv[])
   apr_pool_t *connection_pool;
   svn_error_t *err;
   apr_getopt_t *os;
+  char errbuf[256];
   int opt;
   serve_params_t params;
   const char *arg;
@@ -323,10 +259,9 @@ int main(int argc, const char *argv[])
   const char *host = NULL;
   int family = APR_INET;
   int mode_opt_count = 0;
-  const char *pid_filename = NULL;
 
   /* Initialize the app. */
-  if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */
@@ -352,9 +287,7 @@ int main(int argc, const char *argv[])
       return EXIT_FAILURE;
     }
 
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  apr_getopt_init(&os, pool, argc, argv);
 
   params.root = "/";
   params.tunnel = FALSE;
@@ -379,11 +312,8 @@ int main(int argc, const char *argv[])
           break;
           
         case 'd':
-          if (run_mode != run_mode_daemon)
-            {
-              run_mode = run_mode_daemon;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_daemon;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_FOREGROUND:
@@ -391,11 +321,8 @@ int main(int argc, const char *argv[])
           break;
 
         case 'i':
-          if (run_mode != run_mode_inetd)
-            {
-              run_mode = run_mode_inetd;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_inetd;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
@@ -407,11 +334,8 @@ int main(int argc, const char *argv[])
           break;
 
         case 't':
-          if (run_mode != run_mode_tunnel)
-            {
-              run_mode = run_mode_tunnel;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_tunnel;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_TUNNEL_USER:
@@ -419,11 +343,8 @@ int main(int argc, const char *argv[])
           break;
 
         case 'X':
-          if (run_mode != run_mode_listen_once)
-            {
-              run_mode = run_mode_listen_once;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_listen_once;
+          mode_opt_count++;
           break;
 
         case 'r':
@@ -439,36 +360,10 @@ int main(int argc, const char *argv[])
         case 'T':
           handling_mode = connection_mode_thread;
           break;
-
-#ifdef WIN32
-        case SVNSERVE_OPT_SERVICE:
-          if (run_mode != run_mode_service)
-            {
-              run_mode = run_mode_service;
-              mode_opt_count++;
-            }
-          break;
-#endif
-
-        case SVNSERVE_OPT_PID_FILE:
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
-          pid_filename = svn_path_internal_style(pid_filename, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&pid_filename, pid_filename,
-                                            pool));
-          break;
-
         }
     }
   if (os->ind != argc)
     usage(argv[0], pool);
-
-  if (mode_opt_count != 1)
-    {
-      svn_error_clear(svn_cmdline_fputs
-                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
-                       stderr, pool));
-      usage(argv[0], pool);
-    }
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
@@ -479,85 +374,26 @@ int main(int argc, const char *argv[])
       exit(1);
     }
 
+  if (mode_opt_count != 1)
+    {
+      svn_error_clear(svn_cmdline_fputs
+                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
+                       stderr, pool));
+      usage(argv[0], pool);
+    }
+
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
       params.tunnel = (run_mode == run_mode_tunnel);
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
-      status = apr_file_open_stdin(&in_file, pool);
-      if (status)
-        {
-          err = svn_error_wrap_apr(status, _("Can't open stdin"));
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-          svn_error_clear(err);
-          exit(1);
-        }
-
-      status = apr_file_open_stdout(&out_file, pool);
-      if (status)
-        {
-          err = svn_error_wrap_apr(status, _("Can't open stdout"));
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-          svn_error_clear(err);
-          exit(1);
-        }
-                                
+      apr_file_open_stdin(&in_file, pool);
+      apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
       svn_error_clear(serve(conn, &params, pool));
       exit(0);
     }
-
-#ifdef WIN32
-  /* If svnserve needs to run as a Win32 service, then we need to
-     coordinate with the Service Control Manager (SCM) before
-     continuing.  This function call registers the svnserve.exe
-     process with the SCM, waits for the "start" command from the SCM
-     (which will come very quickly), and confirms that those steps
-     succeeded.
-
-     After this call succeeds, the service is free to run.  At some
-     point in the future, the SCM will send a message to the service,
-     requesting that it stop.  This is translated into a call to
-     winservice_notify_stop().  The service is then responsible for
-     cleanly terminating.
-
-     We need to do this before actually starting the service logic
-     (opening files, sockets, etc.) because the SCM wants you to
-     connect *first*, then do your service-specific logic.  If the
-     service process takes too long to connect to the SCM, then the
-     SCM will decide that the service is busted, and will give up on
-     it.
-     */
-  if (run_mode == run_mode_service)
-    {
-      err = winservice_start();
-      if (err)
-        {
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-
-          /* This is the most common error.  It means the user started
-             svnserve from a shell, and specified the --service
-             argument.  svnserve cannot be started, as a service, in
-             this way.  The --service argument is valid only valid if
-             svnserve is started by the SCM. */
-          if (err->apr_err ==
-              APR_FROM_OS_ERROR(ERROR_FAILED_SERVICE_CONTROLLER_CONNECT))
-            {
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                  _("svnserve: The --service flag is only valid if the"
-                    " process is started by the Service Control Manager.\n")));
-            }
-
-          svn_error_clear(err);
-          exit(1);
-        }
-
-      /* The service is now in the "starting" state.  Before the SCM will
-         consider the service "started", this thread must call the
-         winservice_running() function. */
-    }
-#endif /* WIN32 */
-
+ 
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
      APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets. */  
@@ -580,9 +416,10 @@ int main(int argc, const char *argv[])
   status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
   if (status)
     {
-      err = svn_error_wrap_apr(status, _("Can't get address info"));
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't get address info: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -596,9 +433,10 @@ int main(int argc, const char *argv[])
 #endif
   if (status)
     {
-      err = svn_error_wrap_apr(status, _("Can't create server socket"));
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't create server socket: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -609,9 +447,10 @@ int main(int argc, const char *argv[])
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      err = svn_error_wrap_apr(status, _("Can't bind server socket"));
-      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-      svn_error_clear(err);
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't bind server socket: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -629,33 +468,8 @@ int main(int argc, const char *argv[])
   apr_signal(SIGPIPE, SIG_IGN);
 #endif
 
-#ifdef SIGXFSZ
-  /* Disable SIGXFSZ generation for the platforms that have it, otherwise
-   * working with large files when compiled against an APR that doesn't have
-   * large file support will crash the program, which is uncool. */
-  apr_signal(SIGXFSZ, SIG_IGN);
-#endif
-
-  if (pid_filename)
-    SVN_INT_ERR(write_pid_file(pid_filename, pool));
-
-#ifdef WIN32
-  status = apr_os_sock_get(&winservice_svnserve_accept_socket, sock);
-  if (status)
-    winservice_svnserve_accept_socket = INVALID_SOCKET;
-
-  /* At this point, the service is "running".  Notify the SCM. */
-  if (run_mode == run_mode_service)
-    winservice_running();
-#endif
-
   while (1)
     {
-#ifdef WIN32
-      if (winservice_is_stopping())
-        return ERROR_SUCCESS;
-#endif
-
       /* Non-standard pool handling.  The main thread never blocks to join
          the connection threads so it cannot clean up after each one.  So
          separate pools, that can be cleared at thread exit, are used */
@@ -676,10 +490,10 @@ int main(int argc, const char *argv[])
         }
       if (status)
         {
-          err = svn_error_wrap_apr
-            (status, _("Can't accept client connection"));
-          svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-          svn_error_clear(err);
+          svn_error_clear
+            (svn_cmdline_fprintf
+             (stderr, pool, _("Can't accept client connection: %s\n"),
+              apr_strerror(status, errbuf, sizeof(errbuf))));
           exit(1);
         }
 
@@ -731,17 +545,19 @@ int main(int argc, const char *argv[])
           status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't create threadattr"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, pool, _("Can't create threadattr: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
           status = apr_threadattr_detach_set(tattr, 1);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't set detached state"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, pool, _("Can't set detached state: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
@@ -752,9 +568,10 @@ int main(int argc, const char *argv[])
                                      connection_pool);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't create thread"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, pool, _("Can't create thread: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
 #endif

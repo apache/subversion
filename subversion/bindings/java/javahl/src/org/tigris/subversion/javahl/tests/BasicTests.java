@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
- * tests in subversion/tests/cmdline/basic_tests.py).
+ * tests in subversion/tests/clients/cmdline/basic_tests.py).
  */
 public class BasicTests extends SVNTests
 {
@@ -74,49 +74,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test SVNClient.getVersion().
-     * @throws Throwable
-     */
-    public void testVersion() throws Throwable
-    {
-        try
-        {
-            Version version = client.getVersion();
-            String versionString = version.toString();
-            if (versionString == null || versionString.trim().length() == 0)
-            {
-                throw new Exception("Version string empty");
-            }
-        }
-        catch (Exception e)
-        {
-            fail("Version should always be available unless the " +
-                 "native libraries failed to initialize: " + e);
-        }
-    }
-
-    /**
-     * Tests Subversion path validation.
-     */
-    public void testPathValidation() throws Throwable
-    {
-        // Rather than segfaulting, JavaHL considers null an invalid path.
-        assertFalse("Path validation produced false-positive for null path",
-                    Path.isValid(null));
-
-        String path = "valid-path";
-        assertTrue("Validation check of valid path '" + path +
-                   "' should succeed", Path.isValid(path));
-
-        // File names cannot contain control characters.
-        path = "invalid-\u0001-path";
-        assertFalse("Validation check of invalid path '" + path +
-                    "' (which contains control characters) should fail",
-                    Path.isValid(path));
-    }
-
-    /**
-     * test the basic SVNClient.checkout functionality
+     * test the basic SVNCLient.checkout functionality
      * @throws Throwable
      */
     public void testBasicCheckout() throws Throwable
@@ -997,16 +955,7 @@ public class BasicTests extends SVNTests
         pw.close();
         client.remove(new String[] {file.getAbsolutePath()}, null, true);
         assertFalse("failed to remove unversioned file foo", file.exists());
-
-        try
-        {
-            // delete non-existant file foo
-            client.remove(new String[] {file.getAbsolutePath()}, null, true);
-            fail("missing exception");
-        }
-        catch(ClientException expected)
-        {
-        }
+        client.remove(new String[] {file.getAbsolutePath()}, null, true);
 
         // delete file iota in the repository
         addExpectedCommitItem(null, thisTest.getUrl(), "iota", NodeKind.none,

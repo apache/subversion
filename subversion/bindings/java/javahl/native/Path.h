@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file Path.h
- * @brief Interface of the C++ class Path.
+ * @brief Interface of the class Path
  */
 
 #if !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)
@@ -26,7 +26,6 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <string>
-#include <jni.h>
 struct svn_error_t;
 /**
  * Encapsulation for Subversion Path handling
@@ -44,8 +43,7 @@ private:
      *
      * @param pi_path Path string
      */
-    void init(const char * pi_path);
-
+    void init (const char * pi_path);
 public:
     /**
      * Constructor that takes a string as parameter.
@@ -54,7 +52,7 @@ public:
      *
      * @param pi_path Path string
      */
-    Path(const std::string & pi_path = "");
+    Path (const std::string & pi_path = "");
     
     /**
      * Constructor
@@ -62,14 +60,14 @@ public:
      * @see Path::Path (const std::string &)
      * @param pi_path Path string
      */
-    Path(const char * pi_path);
+    Path (const char * pi_path);
 
     /**
      * Copy constructor
      *
      * @param pi_path Path to be copied
      */
-    Path(const Path & pi_path);
+    Path (const Path & pi_path);
 
     /**
      * Assignment operator
@@ -80,7 +78,7 @@ public:
      * @return Path string
      */
     const std::string &
-      path() const;
+    path () const;
 
     /**
      * @return Path string as c string
@@ -90,14 +88,6 @@ public:
 
     svn_error_t * 
     error_occured() const;
-
-    /**
-     * Returns whether @a path is non-NULL and passes the @c
-     * svn_path_check_valid() test.
-     *
-     * @since 1.4.0
-     */
-    static jboolean isValid(const char *path);
 };
 
 // !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)

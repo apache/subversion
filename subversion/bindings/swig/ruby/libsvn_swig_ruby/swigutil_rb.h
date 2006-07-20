@@ -30,6 +30,7 @@ typedef struct apr_pool_wrapper_t
   apr_array_header_t *children;
 } apr_pool_wrapper_t;
 
+void svn_swig_rb_nls_initialize(void);
 void svn_swig_rb_initialize(void);
 
 VALUE svn_swig_rb_svn_delta_editor(void);
@@ -40,9 +41,6 @@ VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
 void svn_swig_rb_handle_svn_error(svn_error_t *error);
 
 void *svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool);
-VALUE svn_swig_rb_from_swig_type(void *value, void *ctx);
-
-VALUE svn_swig_rb_svn_date_string_to_time(const char *date);
 
 VALUE svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
@@ -90,7 +88,6 @@ void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
                                    apr_pool_t *pool);
 
 VALUE svn_swig_rb_make_baton(VALUE proc, VALUE pool);
-void svn_swig_rb_set_baton(VALUE target, VALUE baton);
 
 svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
@@ -127,9 +124,6 @@ svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                                          const char *date,
                                          const char *author,
                                          void *baton);
-svn_error_t *svn_swig_rb_commit_callback2(const svn_commit_info_t *commit_info,
-                                          void *baton,
-                                          apr_pool_t *pool);
 svn_error_t *svn_swig_rb_cancel_func(void *cancel_baton);
 
 svn_error_t *svn_swig_rb_info_receiver(void *baton,
@@ -199,11 +193,9 @@ svn_error_t *svn_swig_rb_repos_file_rev_handler(void *baton,
                                                 apr_array_header_t *prop_diffs,
                                                 apr_pool_t *pool);
 
-svn_error_t *svn_swig_rb_wc_relocation_validator2(void *baton,
-                                                  const char *uuid,
-                                                  const char *url,
-                                                  svn_boolean_t root,
-                                                  apr_pool_t *pool);
+svn_error_t *svn_swig_rb_wc_relocation_validator(void *baton,
+                                                 const char *uuid,
+                                                 const char *url);
 
 
 /* auth provider callbacks */
@@ -283,19 +275,6 @@ svn_error_t *svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
 svn_error_t *svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                                                                svn_txdelta_window_t *window,
                                                                apr_pool_t *pool);
-
-VALUE svn_swig_rb_txdelta_window_t_ops_get(svn_txdelta_window_t *window);
-
-
-svn_error_t *svn_swig_rb_client_diff_summarize_func(const svn_client_diff_summarize_t *diff,
-                                                    void *baton,
-                                                    apr_pool_t *pool);
-svn_error_t *svn_swig_rb_client_list_func(void *baton,
-                                          const char *path,
-                                          const svn_dirent_t *dirent,
-                                          const svn_lock_t *lock,
-                                          const char *abs_path,
-                                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

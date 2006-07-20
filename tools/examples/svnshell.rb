@@ -25,6 +25,7 @@
 
 require "readline"
 require "shellwords"
+require "time"
 
 require "svn/fs"
 require "svn/core"

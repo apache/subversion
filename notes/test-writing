@@ -40,7 +40,7 @@ If you need commands to construct the working copy+repository state,
 checks as described above apply to each of the intermediate commands
 just as they do to the final command.  That way, failure of the final
 command can be narrowed down to just that command, because the
-working copy/repository combination was knowingly in the correct
+working copy/respository combination was knowingly in the correct
 state.
 
 
@@ -95,7 +95,8 @@ On-disk state
 On-disk state objects can be generated with the
 svntest.tree.build_tree_from_wc() function which describe the actual
 state on disk.  If you need an object which describes the unchanged
-(virginal) state, you can use svntest.actions.get_virginal_state().
+(virginal) state, you can use svntest.main.greek_state.copy().
+###Note: shouldn't this be svntest.main.get_virginal_state() nowadays?!
 
 Testing for on-disk states is required in several instances, among
 which:

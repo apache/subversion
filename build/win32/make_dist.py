@@ -2,10 +2,6 @@ import os
 import sys
 import shutil
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import glob
 import traceback
 import ConfigParser
@@ -170,8 +166,8 @@ class InstallMoFiles(Action):
 # This is the distribution tree
 _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
-             'bin': (File('%(blddir)s/svn.exe'),
-                     File('%(blddir)s/svn.pdb'),
+             'bin': (File('%(blddir)s/clients/cmdline/svn.exe'),
+                     File('%(blddir)s/clients/cmdline/svn.pdb'),
                      File('%(blddir)s/svnadmin/svnadmin.exe'),
                      File('%(blddir)s/svnadmin/svnadmin.pdb'),
                      File('%(blddir)s/svnlook/svnlook.exe'),
@@ -388,7 +384,7 @@ def _make_dist(cfg):
 
 
 if __name__ == '__main__':
-  opts, args = my_getopt(sys.argv[1:], '', ['readme='])
+  opts, args = getopt.getopt(sys.argv[1:], '', ['readme='])
   if len(args) != 2 or len(opts) > 1:
     _stderr.write('Usage: make_dist.py [--readme=<file>] <distname> <distdir>\n')
     _exit(2)

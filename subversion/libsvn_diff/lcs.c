@@ -42,7 +42,8 @@ struct svn_diff__snake_t
     svn_diff__position_t *position[2];
 };
 
-static APR_INLINE void
+static APR_INLINE
+void
 svn_diff__snake(apr_off_t k,
                 svn_diff__snake_t *fp,
                 int idx,
@@ -136,7 +137,8 @@ svn_diff__snake(apr_off_t k,
 }
 
 
-static svn_diff__lcs_t *
+static
+svn_diff__lcs_t *
 svn_diff__lcs_reverse(svn_diff__lcs_t *lcs)
 {
   svn_diff__lcs_t *next;

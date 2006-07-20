@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! /usr/bin/python
 """getctype.py - Generate the svn_ctype character classification table.
 """
 

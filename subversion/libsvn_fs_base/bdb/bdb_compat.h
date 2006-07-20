@@ -1,7 +1,7 @@
 /* svn_bdb_compat.h --- Compatibility wrapper for different BDB versions.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -59,18 +59,12 @@ extern "C" {
 #define SVN_BDB_AUTO_RECOVER (0)
 #endif
 
-
-/* Explicit BDB version check. */
-#define SVN_BDB_VERSION_AT_LEAST(major,minor) \
-    (DB_VERSION_MAJOR > (major) \
-     || (DB_VERSION_MAJOR == (major) && DB_VERSION_MINOR >= (minor)))
-
-
 /* Parameter lists */
 
 /* In BDB 4.1, DB->open takes a transaction parameter. We'll ignore it
    when building with 4.0. */
-#if SVN_BDB_VERSION_AT_LEAST(4,1)
+#if (DB_VERSION_MAJOR > 4) \
+    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 1)
 #define SVN_BDB_OPEN_PARAMS(env,txn) (env), (txn)
 #else
 #define SVN_BDB_OPEN_PARAMS(env,txn) (env)
@@ -78,21 +72,14 @@ extern "C" {
 
 /* In BDB 4.3, the error gatherer function grew a new DBENV parameter,
    and the MSG parameter's type changed. */
-#if SVN_BDB_VERSION_AT_LEAST(4,3)
+#if (DB_VERSION_MAJOR > 4) \
+    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)
 /* Prevents most compilers from whining about unused parameters. */
 #define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)(varname))
 #else
 #define bdb_error_gatherer(param1, param2, param3) \
-  bdb_error_gatherer(param2, char *msg)
+  bdb_error_gatherer (param2, char *msg)
 #define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)0)
-#endif
-
-/* In BDB 4.3 and later, the file names in DB_ENV->open and DB->open
-   are assumed to be encoded in UTF-8 on Windows. */
-#if defined(WIN32) && SVN_BDB_VERSION_AT_LEAST(4,3)
-#define SVN_BDB_PATH_UTF8 (1)
-#else
-#define SVN_BDB_PATH_UTF8 (0)
 #endif
 
 
@@ -101,7 +88,7 @@ extern "C" {
    against, because the DB->open call is not binary compatible between
    BDB 4.0 and 4.1. This function returns DB_OLD_VERSION if the
    compile-time and run-time versions of BDB don't match. */
-int svn_fs_bdb__check_version(void);
+int svn_fs_bdb__check_version (void);
 
 
 #ifdef __cplusplus

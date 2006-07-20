@@ -350,12 +350,8 @@ module Svn
                         ignore_ancestry)
       end
 
-      def replay(editor, base_dir=nil, low_water_mark=nil, send_deltas=false,
-                 &callback)
-        base_dir ||= ""
-        low_water_mark ||= Core::INVALID_REVNUM
-        Repos.replay2(self, base_dir, low_water_mark, send_deltas,
-                      editor, callback)
+      def replay(editor)
+        Repos.replay(self, editor)
       end
 
       def copied_from(path)
@@ -434,7 +430,9 @@ module Svn
       end
 
       def committed_info(path)
-        Repos.get_committed_info(self, path)
+        rev, date, author = Repos.get_committed_info(self, path)
+        date = Time.parse_svn_format(date) if date
+        [rev, date, author]
       end
 
       def closest_copy(path)

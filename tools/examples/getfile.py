@@ -8,17 +8,17 @@
 import sys
 import os
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 
 from svn import fs, core, repos
 
 CHUNK_SIZE = 16384
 
 def getfile(path, filename, rev=None):
-  path = core.svn_path_canonicalize(path)
+  #since the backslash on the end of path is not allowed, 
+  #we truncate it
+  if path[-1] == "/":
+     path = path[:-1]
+
   repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
 
@@ -39,7 +39,7 @@ def usage():
   sys.exit(1)
 
 def main():
-  opts, args = my_getopt(sys.argv[1:], 'r:')
+  opts, args = getopt.getopt(sys.argv[1:], 'r:')
   if len(args) != 2:
     usage()
   rev = None

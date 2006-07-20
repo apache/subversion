@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -15,7 +15,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file BlameCallback.h
+ * @file BlameCall.h
  * @brief Interface of the class BlameCallback
  */
 
@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include "svn_client.h"
+#include <svn_client.h>
 
 /**
  * this class holds a java callback object, which will receive every line of 
@@ -37,7 +37,7 @@ class BlameCallback
 public:
     BlameCallback(jobject jcallback);
     ~BlameCallback();
-    svn_error_t *callback(svn_revnum_t revision, const char *author,
+    void callback(svn_revnum_t revision, const char *author,
                       const char *date, const char *line, apr_pool_t *pool);
 private:
     /**

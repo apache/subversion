@@ -2,7 +2,7 @@
 
 # more exercise than test...
 
-SVN=subversion/svn/svn
+SVN=subversion/clients/cmdline/svn
 MUCC=contrib/client-side/mucc
 SL=subversion/svnlook/svnlook
 #REPO=file://`pwd`/repo

@@ -46,7 +46,6 @@ static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "get-locations" },
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
-  { SVN_XML_NAMESPACE, "replay-report" },
   { NULL },
 };
 
@@ -251,7 +250,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
   if (auto_checkout)
     {
       dav_resource *res; /* ignored */
-      const char *uuid_buf;
+      apr_uuid_t uuid;
+      char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
       void *data;
       const char *shared_activity, *shared_txn_name = NULL;
 
@@ -297,7 +297,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       if (! shared_activity)
         {
           /* Build a shared activity for all auto-checked-out resources. */
-          uuid_buf = svn_uuid_generate(resource->info->r->pool);
+          apr_uuid_get(&uuid);
+          apr_uuid_format(uuid_buf, &uuid);
           shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
 
           derr = dav_svn_create_activity(resource->info->repos,
@@ -973,7 +974,7 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
   if ((err = svn_repos_dated_revision(&rev, resource->info->repos->repos, tm,
                                       resource->pool)) != SVN_NO_ERROR)
     {
-      svn_error_clear(err);
+      svn_error_clear (err);
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                            "Could not access revision times.");
     }
@@ -1031,7 +1032,7 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
   if ((err = svn_repos_fs_get_locks(&locks,
                                     resource->info->repos->repos,
                                     resource->info->repos_path,
-                                    dav_svn_authz_read_func(&arb), &arb,
+                                    dav_svn_authz_read, &arb,
                                     resource->pool)) != SVN_NO_ERROR)
     return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                err->message, resource->pool);      
@@ -1198,7 +1199,7 @@ static apr_status_t send_get_locations_report(ap_filter_t *output,
   if (apr_err)
     return apr_err;
 
-  for (hi = apr_hash_first(pool, fs_locations); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, fs_locations); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *value;
@@ -1298,7 +1299,7 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   serr = svn_repos_trace_node_locations(resource->info->repos->fs,
                                         &fs_locations, abs_path, peg_revision,
                                         location_revisions,
-                                        dav_svn_authz_read_func(&arb), &arb,
+                                        dav_svn_authz_read, &arb,
                                         resource->pool);
 
   if (serr)
@@ -1362,10 +1363,6 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
       else if (strcmp(doc->root->name, "get-locks-report") == 0)
         {
           return dav_svn__get_locks_report(resource, doc, output);
-        }
-      else if (strcmp(doc->root->name, "replay-report") == 0)
-        {
-          return dav_svn__replay_report(resource, doc, output);
         }
 
       /* NOTE: if you add a report, don't forget to add it to the
@@ -1547,7 +1544,7 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
   apr_hash_index_t *hi;
   svn_error_t *serr;
   
-  serr = svn_fs_get_access(&fsaccess, resource->info->repos->fs);
+  serr = svn_fs_get_access (&fsaccess, resource->info->repos->fs);
   if (serr)
     {
       /* If an authenticated user name was attached to the request,
@@ -1565,11 +1562,11 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
       apr_hash_this(hi, NULL, NULL, &val);
       token = val;
       
-      serr = svn_fs_access_add_lock_token(fsaccess, token);
+      serr = svn_fs_access_add_lock_token (fsaccess, token);
       if (serr)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Error pushing token into filesystem.",
-                                   pool);
+        return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error pushing token into filesystem.",
+                                    pool);
     }
 
   return NULL;
@@ -1624,7 +1621,6 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   svn_fs_txn_t *txn;
   const char *conflict;
   svn_error_t *serr;
-  char *post_commit_err = NULL;
   svn_revnum_t new_rev;
   apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
@@ -1705,11 +1701,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
       return dav_svn_convert_err(serr, HTTP_CONFLICT, msg, pool);
     }
   else if (serr)
-    {
-      if (serr->child && serr->child->message)
-        post_commit_err = apr_pstrdup(pool, serr->child->message);
-      svn_error_clear(serr);
-    }
+    svn_error_clear(serr);
 
   /* Commit was successful, so schedule deltification. */
   register_deltification_cleanup(source->info->repos->repos, new_rev,
@@ -1755,8 +1747,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
   /* process the response for the new revision. */
   return dav_svn__merge_response(output, source->info->repos, new_rev,
-                                 post_commit_err, prop_elem,
-                                 disable_merge_response, pool);
+                                 prop_elem, disable_merge_response, pool);
 }
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {

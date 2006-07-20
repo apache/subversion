@@ -50,13 +50,13 @@ extern "C" {
  * The return pool will have an abort function set, which will call
  * abort() on OOM.
  */
-apr_pool_t *svn_pool_create_ex(apr_pool_t *parent_pool,
-                               apr_allocator_t *allocator);
+apr_pool_t *svn_pool_create_ex (apr_pool_t *parent_pool,
+                                apr_allocator_t *allocator);
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-apr_pool_t *svn_pool_create_ex_debug(apr_pool_t *parent_pool,
-                                     apr_allocator_t *allocator,
-                                     const char *file_line);
+apr_pool_t *svn_pool_create_ex_debug (apr_pool_t *parent_pool,
+                                      apr_allocator_t *allocator,
+                                      const char *file_line);
 
 #if APR_POOL_DEBUG
 #define svn_pool_create_ex(pool, allocator) \
@@ -67,7 +67,7 @@ svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
 
 
 /** Create a pool as a subpool of @a parent_pool */
-#define svn_pool_create(parent_pool) svn_pool_create_ex(parent_pool, NULL)
+#define svn_pool_create(pool) svn_pool_create_ex(pool, NULL)
 
 /** Clear a @a pool destroying its children.
  *

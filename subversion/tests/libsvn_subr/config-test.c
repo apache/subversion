@@ -45,15 +45,15 @@ static const apr_getopt_option_t opt_def[] =
   };
 static const char *srcdir = NULL;
 
-static svn_error_t *init_params(apr_pool_t *pool)
+static svn_error_t *init_params (apr_pool_t *pool)
 {
   apr_getopt_t *opt;
   int optch;
   const char *opt_arg;
   apr_status_t status;
 
-  apr_getopt_init(&opt, pool, test_argc, test_argv);
-  while (!(status = apr_getopt_long(opt, opt_def, &optch, &opt_arg)))
+  apr_getopt_init (&opt, pool, test_argc, test_argv);
+  while (!(status = apr_getopt_long (opt, opt_def, &optch, &opt_arg)))
     {
       switch (optch)
         {
@@ -72,7 +72,7 @@ static svn_error_t *init_params(apr_pool_t *pool)
 
 /* A quick way to create error messages.  */
 static svn_error_t *
-fail(apr_pool_t *pool, const char *fmt, ...)
+fail (apr_pool_t *pool, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
@@ -81,7 +81,7 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   msg = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
 
-  return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
+  return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
 }
 
 
@@ -94,10 +94,10 @@ static const char *config_values[] = { "bar", "Aa", "100", "bar",
                                        "Aa 100", NULL };
 
 static svn_error_t *
-test1(const char **msg, 
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test1 (const char **msg, 
+       svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
+       apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
@@ -143,10 +143,10 @@ static const char *false_keys[] = {"false1", "false2", "false3", "false4",
                                    NULL};
 
 static svn_error_t *
-test2(const char **msg, 
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test2 (const char **msg, 
+       svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
+       apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
@@ -201,34 +201,6 @@ test2(const char **msg,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-has_section_test(const char **msg, 
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
-{
-  svn_config_t *cfg;
-  const char *cfg_file;
-
-  *msg = "test svn_config_has_section";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
-  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
-
-  if (! svn_config_has_section(cfg, "section1"))
-    return fail(pool, "Failed to find section1");
-
-  if (svn_config_has_section(cfg, "notthere"))
-    return fail(pool, "Returned true on missing section");
-
-  return SVN_NO_ERROR;
-}
 
 /*
    ====================================================================
@@ -241,8 +213,7 @@ has_section_test(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test1),
-    SVN_TEST_PASS(test2),
-    SVN_TEST_PASS(has_section_test),
+    SVN_TEST_PASS (test1),
+    SVN_TEST_PASS (test2),
     SVN_TEST_NULL
   };

@@ -26,8 +26,6 @@
 #include <apr_md5.h>
 #include "svn_fs.h"
 
-#include "bdb/env.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -38,16 +36,43 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_BASE__FORMAT_NUMBER   2
+#define SVN_FS_BASE__FORMAT_NUMBER   1
 
-/* Minimum format number that supports svndiff version 1.  */
-#define SVN_FS_BASE__MIN_SVNDIFF1_FORMAT 2
+#define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
+typedef struct
+{
+  /* Berkeley DB returns extended error info by callback before returning
+     an error code from the failing function.  The callback baton type is a 
+     string, not an arbitrary struct, so we prefix our struct with a valid 
+     string, to avoid problems should BDB ever try to interpret our baton as
+     a string.  Initializers of this structure must strcpy the value of
+     BDB_ERRCALL_BATON_ERRPFX_STRING into this array.  */
+  char errpfx_string[sizeof(BDB_ERRCALL_BATON_ERRPFX_STRING)];
+
+  /* We hold the extended info here until the Berkeley DB function returns.
+     It usually returns an error code, triggering the collection and
+     wrapping of the additional errors stored here.
+
+     Note: In some circumstances BDB will call the error function and not
+     go on to return an error code, so the caller must always check whether
+     pending_errors is non-NULL to avoid leaking errors.  This behaviour
+     has been seen when running recovery on a repository upgraded to 4.3
+     that still has old 4.2 log files present, a typical error string is
+     "Skipping log file db/log.0000000002: historic log version 8" */
+  svn_error_t *pending_errors;
+
+  /* We permitted clients of our library to install a Berkeley BDB errcall.  
+     Since we now use the errcall ourselves, we must store and invoke a user
+     errcall, to maintain our API guarantees. */
+  void (*user_callback) (const char *errpfx, char *msg);
+} bdb_errcall_baton_t;
+
 
 typedef struct
 {
   /* A Berkeley DB environment for all the filesystem's databases.
      This establishes the scope of the filesystem's transactions.  */
-  bdb_env_baton_t *bdb;
+  DB_ENV *env;
 
   /* The filesystem's various tables.  See `structure' for details.  */
   DB *changes;
@@ -68,6 +93,9 @@ typedef struct
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
 
+  /* A baton for collecting detailed errors from Berkeley DB. */
+  bdb_errcall_baton_t *errcall_baton;
+
   /* The format number of this FS. */
   int format;
 
@@ -83,7 +111,7 @@ typedef struct
    filesystem paths should begin with '/', and all redundant and trailing '/'
    characters be removed.  */
 const char *
-svn_fs_base__canonicalize_abspath(const char *path, apr_pool_t *pool);
+svn_fs_base__canonicalize_abspath (const char *path, apr_pool_t *pool);
 
 
 /*** Filesystem Revision ***/
@@ -192,7 +220,7 @@ typedef struct
   /* size of the fulltext data represented by this delta window. */
   apr_size_t size;
 
-  /* representation-key to use when needed source data for
+  /* represenatation-key to use when needed source data for
      undeltification. */
   const char *rep_key;
 

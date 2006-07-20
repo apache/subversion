@@ -34,16 +34,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#ifndef AS400
-#define SVN_APR_LOCALE_CHARSET APR_LOCALE_CHARSET
-#define SVN_APR_DEFAULT_CHARSET APR_DEFAULT_CHARSET
-#else
-/* APR_LOCALE_CHARSET and APR_DEFAULT_CHARSET are defined as ints on
- * OS400. */
-#define SVN_APR_LOCALE_CHARSET (const char*)APR_LOCALE_CHARSET
-#define SVN_APR_DEFAULT_CHARSET (const char*)APR_DEFAULT_CHARSET
-#endif
-
 /**
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
@@ -55,100 +45,78 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-void svn_utf_initialize(apr_pool_t *pool);
+void svn_utf_initialize (apr_pool_t *pool);
 
 /** Set @a *dest to a utf8-encoded stringbuf from native stringbuf @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_stringbuf_to_utf8(svn_stringbuf_t **dest,
-                                       const svn_stringbuf_t *src,
-                                       apr_pool_t *pool);
+svn_error_t *svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
+                                        const svn_stringbuf_t *src,
+                                        apr_pool_t *pool);
 
 
 /** Set @a *dest to a utf8-encoded string from native string @a src; allocate
  * @a *dest in @a pool.
  */
-svn_error_t *svn_utf_string_to_utf8(const svn_string_t **dest,
-                                    const svn_string_t *src,
-                                    apr_pool_t *pool);
+svn_error_t *svn_utf_string_to_utf8 (const svn_string_t **dest,
+                                     const svn_string_t *src,
+                                     apr_pool_t *pool);
 
 
 /** Set @a *dest to a utf8-encoded C string from native C string @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_cstring_to_utf8(const char **dest,
-                                     const char *src,
-                                     apr_pool_t *pool);
+svn_error_t *svn_utf_cstring_to_utf8 (const char **dest,
+                                      const char *src,
+                                      apr_pool_t *pool);
 
 
-/** Set @a *dest to a utf8 encoded C string from @a frompage encoded C
- * string @a src; allocate @a *dest in @a pool.
- * 
- * @since New in 1.4.
+/** Set @a *dest to a utf8-encoded C string from @a frompage C string
+ * @a src; allocate @a *dest in @a pool.  Use @a convset_key as the
+ * cache key for the charset converter; if it's NULL, don't cache the
+ * converter.
  */
-svn_error_t *svn_utf_cstring_to_utf8_ex2(const char **dest,
+svn_error_t *svn_utf_cstring_to_utf8_ex (const char **dest,
                                          const char *src,
                                          const char *frompage,
+                                         const char *convset_key,
                                          apr_pool_t *pool);
-
-
-/** Like svn_utf_cstring_to_utf8_ex2() but with @a convset_key which is
- * ignored.
- *
- * @deprecated Provided for backward compatibility with the 1.3 API.
- */
-svn_error_t *svn_utf_cstring_to_utf8_ex(const char **dest,
-                                        const char *src,
-                                        const char *frompage,
-                                        const char *convset_key,
-                                        apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded stringbuf from utf8 stringbuf @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_stringbuf_from_utf8(svn_stringbuf_t **dest,
-                                         const svn_stringbuf_t *src,
-                                         apr_pool_t *pool);
+svn_error_t *svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
+                                          const svn_stringbuf_t *src,
+                                          apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded string from utf8 string @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_string_from_utf8(const svn_string_t **dest,
-                                      const svn_string_t *src,
-                                      apr_pool_t *pool);
+svn_error_t *svn_utf_string_from_utf8 (const svn_string_t **dest,
+                                       const svn_string_t *src,
+                                       apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded C string from utf8 C string @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_cstring_from_utf8(const char **dest,
-                                       const char *src,
-                                       apr_pool_t *pool);
+svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
+                                        const char *src,
+                                        apr_pool_t *pool);
 
 
-/** Set @a *dest to a @a topage encoded C string from utf8 encoded C string
- * @a src; allocate @a *dest in @a pool.
- * 
- * @since New in 1.4.
+/** Set @a *dest to a @a frompage encoded C string from utf8 C string
+ * @a src; allocate @a *dest in @a pool.  Use @a convset_key as the
+ * cache key for the charset converter; if it's NULL, don't cache the
+ * converter.
  */
-svn_error_t *svn_utf_cstring_from_utf8_ex2(const char **dest,
+svn_error_t *svn_utf_cstring_from_utf8_ex (const char **dest,
                                            const char *src,
                                            const char *topage,
+                                           const char *convset_key,
                                            apr_pool_t *pool);
-
-
-/** Like svn_utf_cstring_from_utf8_ex2() but with @a convset_key which is
- * ignored.
- *
- * @deprecated Provided for backward compatibility with the 1.3 API.
- */
-svn_error_t *svn_utf_cstring_from_utf8_ex(const char **dest,
-                                          const char *src,
-                                          const char *topage,
-                                          const char *convset_key,
-                                          apr_pool_t *pool);
 
 
 /** Return a fuzzily native-encoded C string from utf8 C string @a src,
@@ -175,7 +143,7 @@ svn_error_t *svn_utf_cstring_from_utf8_ex(const char **dest,
  *
  * Now for both cases, the caller can at least fall back on this
  * function, which converts the message as best it can, substituting
- * "?\\XXX" escape codes for the non-ascii characters.
+ * ?\\XXX escape codes for the non-ascii characters.
  *
  * Ultimately, some callers may prefer the iconv "//TRANSLIT" option,
  * so when we can detect that at configure time, things will change.
@@ -184,24 +152,24 @@ svn_error_t *svn_utf_cstring_from_utf8_ex(const char **dest,
  * See http://subversion.tigris.org/issues/show_bug.cgi?id=807 for
  * details.
  */
-const char *svn_utf_cstring_from_utf8_fuzzy(const char *src,
-                                            apr_pool_t *pool);
+const char *svn_utf_cstring_from_utf8_fuzzy (const char *src,
+                                             apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded C string from utf8 stringbuf @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_cstring_from_utf8_stringbuf(const char **dest,
-                                                 const svn_stringbuf_t *src,
-                                                 apr_pool_t *pool);
+svn_error_t *svn_utf_cstring_from_utf8_stringbuf (const char **dest,
+                                                  const svn_stringbuf_t *src,
+                                                  apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded C string from utf8 string @a src;
  * allocate @a *dest in @a pool.
  */
-svn_error_t *svn_utf_cstring_from_utf8_string(const char **dest,
-                                              const svn_string_t *src,
-                                              apr_pool_t *pool);
+svn_error_t *svn_utf_cstring_from_utf8_string (const char **dest,
+                                               const svn_string_t *src,
+                                               apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

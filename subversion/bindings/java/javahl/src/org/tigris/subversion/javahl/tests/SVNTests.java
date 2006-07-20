@@ -119,25 +119,21 @@ public class SVNTests extends TestCase
      */
     protected static void processArgs(String[] args)
     {
-        if (args == null)
+        if(args == null)
             return;
         for (int i = 0; i < args.length; i++)
         {
             String arg = args[i];
-            if ("-d".equals(arg))
-            {
-                if (i + 1 < args.length)
+            if("-d".equals(arg))
+                if(i + 1 < args.length)
                 {
                     rootDirectoryName = args[++i];
                 }
-            }
-            if ("-u".equals(arg))
-            {
-                if (i + 1 < args.length)
+            if("-u".equals(arg))
+                if(i + 1 < args.length)
                 {
                     rootUrl = args[++i];
                 }
-            }
         }
     }
 
@@ -215,7 +211,7 @@ public class SVNTests extends TestCase
 
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
-        client = new SVNClientSynchronized();
+        client = new SVNClient();
         client.notification2(new MyNotifier());
         client.commitMessageHandler(new MyCommitMessage());
         client.username("jrandom");
@@ -701,7 +697,7 @@ public class SVNTests extends TestCase
          */
         String myPath;
         /**
-         * the kind of node (file, directory or none, see NodeKind)
+         * the kind of node (file, diretory or none, see NodeKind)
          */
         int myNodeKind;
         /**

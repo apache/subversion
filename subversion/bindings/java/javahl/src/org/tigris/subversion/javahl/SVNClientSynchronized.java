@@ -54,17 +54,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @return Version information about the underlying native libraries.
-     */
-    public Version getVersion()
-    {
-        synchronized(clazz)
-        {
-            return worker.getVersion();
-        }
-    }
-
-    /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
@@ -112,7 +101,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if they exist.
+     * @param descend   Recurse into subdirectories if existant.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
@@ -129,7 +118,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if they exist.
+     * @param descend   Recurse into subdirectories if existant.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
@@ -149,7 +138,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * List a directory or file of the working copy.
      *
      * @param path            Path to explore.
-     * @param descend         Recurse into subdirectories if they exist.
+     * @param descend         Recurse into subdirectories if existant.
      * @param onServer        Request status information from server.
      * @param getAll          get status for uninteristing files (unchanged).
      * @param noIgnore        get status for normaly ignored files and

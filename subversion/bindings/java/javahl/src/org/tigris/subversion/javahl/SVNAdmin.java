@@ -64,14 +64,6 @@ public class SVNAdmin
     public static final String FSFS = "fsfs";
 
     /**
-     * @return Version information about the underlying native libraries.
-     */
-    public Version getVersion()
-    {
-        return NativeResources.version;
-    }
-
-    /**
      * create a subversion repository.
      * @param path                  the path where the repository will been 
      *                              created.
@@ -172,7 +164,7 @@ public class SVNAdmin
     public native void lstxns(String path, MessageReceiver receiver)
             throws ClientException;
     /**
-     * recover the berkeley db of a repository, returns youngest revision
+     * recover the berkeley db of a repostory, returns youngest revision
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
      */

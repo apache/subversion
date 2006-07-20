@@ -31,12 +31,12 @@
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
-#include "svn_client.h"
-#include "svn_sorts.h"
-#include "svn_time.h"
-#include "svn_config.h"
-#include "svn_io.h"
-#include "svn_path.h"
+#include <svn_client.h>
+#include <svn_sorts.h>
+#include <svn_time.h>
+#include <svn_config.h>
+#include <svn_io.h>
+#include <svn_path.h>
 #include "svn_private_config.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
@@ -69,18 +69,67 @@ SVNClient::~SVNClient()
     delete m_prompter;
 }
 
+jlong SVNClient::getCppAddr()
+{
+    return reinterpret_cast<jlong>(this);
+}
+
 SVNClient * SVNClient::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
-    jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-						   JAVA_PACKAGE"/SVNClient");
-    return (cppAddr == 0 ? NULL : reinterpret_cast<SVNClient *>(cppAddr));
+    JNIEnv *env = JNIUtil::getEnv();
+    if(fid == 0)
+    {
+        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNClient");
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        fid = env->GetFieldID(clazz, "cppAddr", "J");
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+
+    jlong cppAddr = env->GetLongField(jthis, fid);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    return reinterpret_cast<SVNClient*>(cppAddr);
+
 }
 
 void SVNClient::dispose(jobject jthis)
 {
+    delete this;
     static jfieldID fid = 0;
-    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
+    JNIEnv *env = JNIUtil::getEnv();
+    if(fid == 0)
+    {
+        jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNClient");
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return;
+        }
+        fid = env->GetFieldID(clazz, "cppAddr", "J");
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return;
+        }
+    }
+
+    env->SetLongField(jthis, fid, 0);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+}
+
+void SVNClient::finalize()
+{
+    JNIUtil::putFinalizedClient(this);
 }
 
 jstring SVNClient::getAdminDirectoryName()
@@ -381,12 +430,12 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
 
 void SVNClient::username(const char *pi_username)
 {
-    m_userName = (pi_username == NULL ? "" : pi_username);
+    m_userName = pi_username;
 }
 
 void SVNClient::password(const char *pi_password)
 {
-    m_passWord = (pi_password == NULL ? "" : pi_password);
+    m_passWord = pi_password;
 }
 
 void SVNClient::setPrompt(Prompter *prompter)
@@ -626,8 +675,8 @@ void SVNClient::add(const char *path, bool recurse, bool force)
     {
         return;
     }
-    Err = svn_client_add3 (intPath.c_str (), recurse, force, FALSE,
-			   ctx, apr_pool);
+    Err = svn_client_add2 (intPath.c_str (), recurse, force, 
+                                        ctx, apr_pool);
 
     if(Err != NULL)
          JNIUtil::handleSVNError(Err);
@@ -1986,6 +2035,7 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
     {
         return SVN_NO_ERROR;
     }
+    svn_error_t * error = NULL;
     std::vector<jobject> *logs = (std::vector<jobject>*)baton;
 
     static jmethodID mid = 0;
@@ -2034,10 +2084,7 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
     if(date != NULL && *date != '\0')
     {
         apr_time_t timeTemp;
-        
-        svn_error_t * err = svn_time_from_cstring (&timeTemp, date, pool);
-        if(err != SVN_NO_ERROR)
-            return err;
+        svn_time_from_cstring (&timeTemp, date, pool);
 
         jdate = JNIUtil::createDate(timeTemp);
         if(JNIUtil::isJavaExceptionThrown())
@@ -2711,7 +2758,8 @@ blame_receiver2 (void *baton,
                 const char *line,
                 apr_pool_t *pool)
 {
-    return ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
+    ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
+    return NULL;
 }
 void SVNClient::blame(const char *path, Revision &pegRevision, 
                       Revision &revisionStart,
@@ -2749,18 +2797,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
 
 void SVNClient::setConfigDirectory(const char *configDir)
 {
-    // A change to the config directory may necessitate creation of
-    // the config templates.
-    Pool requestPool;
-    svn_error_t *err = svn_config_ensure(configDir, requestPool.pool());
-    if (err)
-    {
-	JNIUtil::handleSVNError(err);
-    }
-    else
-    {
-        m_configDir = (configDir == NULL ? "" : configDir);
-    }
+    m_configDir = configDir;
 }
 
 const char * SVNClient::getConfigDirectory()

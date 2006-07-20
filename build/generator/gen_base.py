@@ -14,13 +14,6 @@ import generator.swig
 import getversion
 
 
-def _warning(msg):
-  sys.stderr.write("WARNING: %s\n" % msg)
-
-def _error(msg):
-  sys.stderr.write("ERROR: %s\n" % msg)
-  sys.exit(1)
-
 class GeneratorBase:
 
   #
@@ -68,10 +61,8 @@ class GeneratorBase:
     # Read in the global options
     self.includes = \
         _collect_paths(parser.get('options', 'includes'))
-    self.private_includes = \
-        _collect_paths(parser.get('options', 'private-includes'))
-    self.private_built_includes = \
-        string.split(parser.get('options', 'private-built-includes'))
+    self.swig_includes = \
+        _collect_paths(parser.get('options', 'swig-includes'))
     self.apache_files = \
         _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
@@ -79,6 +70,8 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
+    self.include_dirs = parser.get('options','include-dirs')
+    self.swig_include_dirs = parser.get('options','swig-include-dirs')
     self.include_wildcards = \
       string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
@@ -148,7 +141,7 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    all_includes = map(native_path, self.includes + self.private_includes)
+    all_includes = map(native_path, self.includes + self.swig_includes)
     for d in unique(self.target_dirs):
       for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
@@ -158,8 +151,7 @@ class GeneratorBase:
   def compute_hdr_deps(self):
     """Compute the dependencies of each header file"""
 
-    include_deps = IncludeDependencyInfo(self.compute_hdrs(),
-        map(native_path, self.private_built_includes))
+    include_deps = IncludeDependencyInfo(self.compute_hdrs())
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -173,11 +165,7 @@ class GeneratorBase:
         ifile = swigsources[0]
         assert isinstance(ifile, SWIGSource)
 
-        c_includes, swig_includes = \
-            include_deps.query_swig(native_path(ifile.filename))
-        for include_file in c_includes:
-          self.graph.add(DT_OBJECT, objectfile, build_path(include_file))
-        for include_file in swig_includes:
+        for include_file in include_deps.query(native_path(ifile.filename)):
           self.graph.add(DT_SWIG_C, source, build_path(include_file))
 
       # Any non-swig C/C++ object must depend on the headers it's parent
@@ -553,8 +541,7 @@ class TargetSWIG(TargetLib):
     self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)
-    cfile = SWIGObject(build_path_join('$(top_srcdir)', self.path, cname),
-                       self.lang)
+    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
     ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
 
     # the .c file depends upon the .i file
@@ -756,7 +743,7 @@ class GenError(Exception):
 # Build paths specified in build.conf are assumed to be always separated
 # by forward slashes, regardless of the current running os.
 #
-# Native paths are paths separated by os.sep.
+# Native paths are paths seperated by os.sep.
 
 def native_path(path):
   """Convert a build path to a native path"""
@@ -854,132 +841,84 @@ def _swig_include_wrapper(fname):
 
 class IncludeDependencyInfo:
   """Finds all dependencies between a named set of headers, and computes
-  closure, so that individual C and SWIG source files can then be scanned, and
-  the stored dependency data used to return all directly and indirectly
-  referenced headers.
-
-  Note that where SWIG is concerned, there are two different kinds of include:
-  (1) those that include files in SWIG processing, and so matter to the
-      generation of .c files. (These are %include, %import).
-  (2) those that include references to C headers in the generated output,
-      and so are not required at .c generation, only at .o generation.
-      (These are %{ #include ... %}).
+  closure, so that individual C files can then be scanned, and the stored
+  dependency data used to return all directly and indirectly referenced
+  headers.
 
   This class works exclusively in native-style paths."""
 
-  def __init__(self, filenames, fnames_nonexist):
-    """Operation of an IncludeDependencyInfo instance is restricted to a
-    'domain' - a set of header files which are considered interesting when
-    following and reporting dependencies.  This is done to avoid creating any
-    dependencies on system header files.  The domain is defined by three
-    factors:
-    (1) FILENAMES is a list of headers which are in the domain, and should be
-        scanned to discover how they inter-relate.
-    (2) FNAMES_NONEXIST is a list of headers which are in the domain, but will
-        be created by the build process, and so are not available to be
-        scanned - they will be assumed not to depend on any other interesting
-        headers.
-    (3) Files in subversion/bindings/swig/proxy/, which are based
-        autogenerated based on files in subversion/include/, will be added to
-        the domain when a file in subversion/include/ is processed, and
-        dependencies will be deduced by special-case logic.
-    """
+  def __init__(self, filenames):
+    """Scan all files in FILENAMES, which should be a sequence of paths to
+    all header files that this IncludeDependencyInfo instance should
+    consider as interesting when following and reporting dependencies - i.e.
+    all the Subversion header files, no system header files."""
     
     # This defines the domain (i.e. set of files) in which dependencies are
     # being located. Its structure is:
     # { 'basename.h': [ 'path/to/something/named/basename.h',
     #                   'path/to/another/named/basename.h', ] }
     self._domain = {}
-    for fname in filenames + fnames_nonexist:
+    for fname in filenames:
       bname = os.path.basename(fname)
-      self._domain.setdefault(bname, []).append(fname)
-      if _is_public_include(fname):
-        swig_fname = _swig_include_wrapper(fname)
-        swig_bname = os.path.basename(swig_fname)
-        self._domain.setdefault(swig_bname, []).append(swig_fname)
+      if not self._domain.has_key(bname):
+        self._domain[bname] = []
+      self._domain[bname].append ( fname )
 
     # This data structure is:
-    # { 'full/path/to/header.h': { 'full/path/to/dependency.h': TYPECODE, } }
-    # TYPECODE is '#', denoting a C include, or '%' denoting a SWIG include.
+    # { 'full/path/to/header.h': { 'full/path/to/dependency.h': None, } }
     self._deps = {}
     for fname in filenames:
       self._deps[fname] = self._scan_for_includes(fname)
+
+    # Keep recomputing closures until we see no more changes
+    while 1:
+      changes = 0
+      for fname in filenames:
+        changes = self._include_closure(self._deps[fname]) or changes
+      if not changes:
+        break
+
+    # Extend self._deps and self._domain with dependency information for
+    # autogenerated SWIG header files
+    for fname in filenames:
       if _is_public_include(fname):
-        hdrs = { self._domain["proxy.swg"][0]: '%',
-                 self._domain["apr.swg"][0]: '%',
-                 fname: '%' }
+        hdrs = { self._domain["proxy.swg"][0]: None,
+                 self._domain["apr.swg"][0]: None,
+                 fname: None }
         for h in self._deps[fname].keys():
           if _is_public_include(h):
-            hdrs[_swig_include_wrapper(h)] = '%'
+            hdrs[_swig_include_wrapper(h)] = None
           else:
             raise RuntimeError, "Public include '%s' depends on '%s', " \
                 "which is not a public include! What's going on?" % (fname, h)
         swig_fname = _swig_include_wrapper(fname)
         swig_bname = os.path.basename(swig_fname)
         self._deps[swig_fname] = hdrs
-    for fname in fnames_nonexist:
-      self._deps[fname] = {}
-
-    # Keep recomputing closures until we see no more changes
-    while 1:
-      changes = 0
-      for fname in self._deps.keys():
-        changes = self._include_closure(self._deps[fname]) or changes
-      if not changes:
-        break
-
-  def query_swig(self, fname):
-    """Scan the C or SWIG file FNAME, and return the full paths of each
-    include file that is a direct or indirect dependency, as a 2-tuple:
-      (C_INCLUDES, SWIG_INCLUDES)."""
-    if self._deps.has_key(fname):
-      hdrs = self._deps[fname]
-    else:
-      hdrs = self._scan_for_includes(fname)
-      self._include_closure(hdrs)
-    c_filenames = []
-    swig_filenames = []
-    for hdr, hdr_type in hdrs.items():
-      if hdr_type == '#':
-        c_filenames.append(hdr)
-      else: # hdr_type == '%'
-        swig_filenames.append(hdr)
-    # Be independent of hash ordering
-    c_filenames.sort()
-    swig_filenames.sort()
-    return (c_filenames, swig_filenames)
+        self._domain[swig_bname] = [ swig_fname ]
 
   def query(self, fname):
-    """Same as SELF.QUERY_SWIG(FNAME), but assert that there are no SWIG
-    includes, and return only C includes as a single list."""
-    c_includes, swig_includes = self.query_swig(fname)
-    assert len(swig_includes) == 0
-    return c_includes
+    """Scan the C file FNAME, and return the full paths of each include file
+    that is a direct or indirect dependency."""
+    hdrs = self._scan_for_includes(fname)
+    self._include_closure(hdrs)
+    filenames = hdrs.keys()
+    filenames.sort() # Be independent of hash ordering
+    return filenames
 
   def _include_closure(self, hdrs):
     """Mutate the passed dictionary HDRS, by performing a single pass
     through the listed headers, adding the headers on which the first group
     of headers depend, if not already present.
 
-    HDRS is of the form { 'path/to/header.h': TYPECODE, }
+    HDRS is of the form { 'path/to/header.h': None, }
     
     Return a boolean indicating whether any changes were made."""
-    items = hdrs.items()
-    for this_hdr, this_type in items:
-      for dependency_hdr, dependency_type in self._deps[this_hdr].items():
-        self._upd_dep_hash(hdrs, dependency_hdr, dependency_type)
-    return (len(items) != len(hdrs))
+    keys = hdrs.keys()
+    for h in keys:
+      hdrs.update(self._deps[h])
+    return (len(keys) != len(hdrs))
 
-  def _upd_dep_hash(self, hash, hdr, type):
-    """Mutate HASH (a data structure of the form
-    { 'path/to/header.h': TYPECODE, } ) to include additional info of a
-    dependency of type TYPE on the file HDR."""
-    # '%' (SWIG, .c: .i) has precedence over '#' (C, .o: .c)
-    if hash.get(hdr) != '%':
-      hash[hdr] = type
-    
-  _re_include = \
-      re.compile(r'^\s*([#%])\s*(?:include|import)\s*([<"])?([^<">;\s]+)')
+  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">;\s]+)')
   def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
     which are directly included, and within the set defined when this
@@ -988,43 +927,32 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
+    if fname.endswith('_external_runtime.swg'):
+      # These files exist only if running in a previously built tree.
+      # Never scan them, so that the behaviour is the same in all
+      # circumstances.
+      return hdrs
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
-      if not match:
-        continue
-      include_param = native_path(match.group(3))
-      type_code = match.group(1)
-      direct_possibility_fname = os.path.normpath(os.path.join(
-        os.path.dirname(fname), include_param))
-      domain_fnames = self._domain.get(os.path.basename(include_param), [])
-      if direct_possibility_fname in domain_fnames:
-        self._upd_dep_hash(hdrs, direct_possibility_fname, type_code)
-      elif include_param.find(os.sep) == -1 and len(domain_fnames) == 1:
-        self._upd_dep_hash(hdrs, domain_fnames[0], type_code)
-      else:
-        # None found
-        if include_param.find(os.sep) == -1 and len(domain_fnames) > 1:
-          _error(
-              "Unable to determine which file is being included\n"
-              "  Include Parameter: '%s'\n"
-              "  Including File: '%s'\n"
-              "  Direct possibility: '%s'\n"
-              "  Other possibilities: %s\n"
-              % (include_param, fname, direct_possibility_fname,
-                domain_fnames))
-        if match.group(2) == '"':
-          _warning('"%s" header not found, file %s' % (include_param, fname))
-        continue
-      if match.group(2) == '<':
-        _warning('<%s> header *found*, file %s' % (include_param, fname))
-      # The above warnings help to avoid the following problems:
-      # - If header is uses the correct <> or "" convention, then the warnings
-      #   reveal if the build generator does/does not make dependencies for it 
-      #   when it should not/should - e.g. might reveal changes needed to
-      #   build.conf.
-      #   ...and...
-      # - If the generator is correct, them the warnings reveal incorrect use
-      #   of <>/"" convention.
+      if match:
+        include_param = native_path(match.group(1))
+        bname = os.path.basename(include_param)
+        if self._domain.has_key(bname):
+          include_fnames = self._domain[bname]
+          if len(include_fnames) == 1:
+            include_fname = include_fnames[0]
+          else:
+            include_fname = os.path.normpath(os.path.join(
+              os.path.dirname(fname), include_param))
+            if include_fname not in include_fnames:
+              raise RuntimeError, (
+                  """Unable to determine which file is being included
+                  Include Parameter: '%s'
+                  Including File: '%s'
+                  Expected but not found: '%s'
+                  Possibilities: '%s'"""
+                  % (include_param, fname, include_fname, include_fnames))
+          hdrs[include_fname] = None
     return hdrs
 
 

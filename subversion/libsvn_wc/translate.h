@@ -31,6 +31,11 @@ extern "C" {
 
 /* Newline and keyword translation properties */
 
+/* The text-base eol style for files using svn_subst_eol_style_native
+   style.  */
+#define SVN_WC__DEFAULT_EOL_MARKER "\n"
+
+
 /* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is
    non-null, set *STYLE to PATH's eol style.  Set *EOL to
 
@@ -49,17 +54,17 @@ extern "C" {
 
    Use POOL for temporary allocation.
 */
-svn_error_t *svn_wc__get_eol_style(svn_subst_eol_style_t *style,
-                                   const char **eol,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__get_eol_style (svn_subst_eol_style_t *style,
+                                    const char **eol,
+                                    const char *path,
+                                    svn_wc_adm_access_t *adm_access,
+                                    apr_pool_t *pool);
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
    return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in
    the property value. */
-void svn_wc__eol_value_from_string(const char **value,
-                                   const char *eol);
+void svn_wc__eol_value_from_string (const char **value,
+                                    const char *eol);
 
 /* Expand keywords for the file at PATH, by parsing a
    whitespace-delimited list of keywords.  If any keywords are found
@@ -77,41 +82,41 @@ void svn_wc__eol_value_from_string(const char **value,
    SVN_PROP_KEYWORDS property for PATH.  In either case, use PATH to
    expand keyword values.
 */
-svn_error_t *svn_wc__get_keywords(apr_hash_t **keywords,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  const char *force_list,
-                                  apr_pool_t *pool);
+svn_error_t *svn_wc__get_keywords (apr_hash_t **keywords,
+                                   const char *path,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const char *force_list,
+                                   apr_pool_t *pool);
 
 
 /* Determine if the svn:special flag is set on PATH.  If so, set
    SPECIAL to TRUE, if not, set it to FALSE.  ADM_ACCESS must be an
    access baton for PATH.  Perform any temporary allocations in
    POOL. */
-svn_error_t *svn_wc__get_special(svn_boolean_t *special,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 apr_pool_t *pool);
+svn_error_t *svn_wc__get_special (svn_boolean_t *special,
+                                  const char *path,
+                                  svn_wc_adm_access_t *adm_access,
+                                  apr_pool_t *pool);
 
 /* If the SVN_PROP_EXECUTABLE property is present at all, then set
    PATH executable.  If DID_SET is non-null, then set *DID_SET to
    TRUE if did set PATH executable, or to FALSE if not.  ADM_ACCESS
    is an access baton set that contains PATH. */
 svn_error_t *
-svn_wc__maybe_set_executable(svn_boolean_t *did_set,
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool);
+svn_wc__maybe_set_executable (svn_boolean_t *did_set,
+                              const char *path,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool);
 
 /* If the SVN_PROP_NEEDS_LOCK property is present and there is no
    lock token for the file in the working copy, set PATH to
    read-only. If DID_SET is non-null, then set *DID_SET to TRUE if
    did set PATH read-write, or to FALSE if not.  ADM_ACCESS is an
    access baton set that contains PATH. */
-svn_error_t * svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                                          const char *path,
-                                          svn_wc_adm_access_t *adm_access,
-                                          apr_pool_t *pool);
+svn_error_t * svn_wc__maybe_set_read_only (svn_boolean_t *did_set,
+                                           const char *path,
+                                           svn_wc_adm_access_t *adm_access,
+                                           apr_pool_t *pool);
 
 
 #ifdef __cplusplus

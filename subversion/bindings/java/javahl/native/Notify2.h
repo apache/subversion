@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include "svn_wc.h"
+#include <svn_wc.h>
 /**
  *  this class passes notification from subversion to a java object
  *  (1.2 version)
@@ -49,17 +49,19 @@ public:
    * @param notify all the information about the event
    * @param pool an apr pool to allocated memory
    */
-    static void notify(void *baton,
-                       const svn_wc_notify_t *notify,
-                       apr_pool_t *pool);
+    static void notify (
+        void *baton,
+        const svn_wc_notify_t *notify,
+        apr_pool_t *pool);
   /**
    * Handler for Subversion notifications.
    *
    * @param notify all the information about the event
    * @param pool an apr pool to allocated memory
    */
-    void onNotify(const svn_wc_notify_t *notify,
-                  apr_pool_t *pool);
+    void onNotify (
+        const svn_wc_notify_t *notify,
+        apr_pool_t *pool);
 
 };
 // !defined(AFX_NOTIFY2_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
