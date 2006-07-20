@@ -3325,12 +3325,21 @@ solution described here was not mentioned in that thread.</p>
     RAM disk?</h3>
 
 <p>Test execution can be dramatically sped up by keeping Subversion
-test data on a RAM disk.  On a Linux system, add lines like the
-following in your /etc/fstab file:</p>
+test data on a RAM disk.  On a Linux system, you can mount a RAM disk
+on the fly with the command:</p>
 
 <blockquote>
-<div><code>tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
-<div><code>tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
+<div><code>mount -t tmpfs tmpfs
+/path/to/src/subversion/tests/cmdline/svn-test-work
+-o user=$USER,mode=770,size=32m</code></div>
+</blockquote>
+
+<p>Or, for a more permanent solution, add lines like the following in
+your <code>/etc/fstab</code> file:</p>
+
+<blockquote>
+<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
+tmpfs  defaults,user,noauto,exec,size=32m</code></div>
 </blockquote>
 
 <p>The minimum required size for testing ramdisk is approximately 700MB.
