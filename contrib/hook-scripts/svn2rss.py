@@ -2,11 +2,11 @@
 
 """Usage: svn2rss.py [OPTION...] REPOS-PATH
 
-Generate an RSS 2.0 feed file containing commit information for the
-Subversion repository located at REPOS-PATH.  Once the maximum number
-of items is reached, older elements are removed.  The item title is
-the revision number, and the item description contains the author,
-date, log messages and changed paths.
+Generate an RSS 2.0 or Atom 1.0 feed file containing commit
+information for the Subversion repository located at REPOS-PATH.  Once
+the maximum number of items is reached, older elements are removed.
+The item title is the revision number, and the item description
+contains the author, date, log messages and changed paths.
 
 Options:
 
@@ -14,14 +14,17 @@ Options:
 
  -F, --format=FORMAT    Required option.  FORMAT must be one of:
                             'rss'  (RSS 2.0)
+                            'atom' (Atom 1.0)
                         to select the appropriate feed format.
 
- -f, --feed-file=PATH   Store the feed in the file located at PATH, which
-                        will be created if it does not exist, or overwritten if
-                        it does.  If not provided, the script will store the
-                        feed in the current working directory, in a file named
-                        REPOS_NAME.rss (where REPOS_NAME is the basename
-                        of the REPOS_PATH command-line argument).
+ -f, --feed-file=PATH   Store the feed in the file located at PATH, which will
+                        be created if it does not exist, or overwritten if it
+                        does.  If not provided, the script will store the feed
+                        in the current working directory, in a file named
+                        REPOS_NAME.rss or REPOS_NAME.atom (where REPOS_NAME is
+                        the basename of the REPOS_PATH command-line argument,
+                        and the file extension depends on the selected
+                        format).
 
  -r, --revision=X[:Y]   Subversion revision (or revision range) to generate
                         info for.  If not provided, info for the single
@@ -29,6 +32,8 @@ Options:
 
  -m, --max-items=N      Keep only N items in the feed file.  By default,
                         20 items are kept.
+                        BUG: This option is currently ignored for Atom feeds,
+                        meaning that they grow without limit.
 
  -u, --item-url=URL     Use URL as the basis for generating feed item links.
                         This value is appended with '?rev=REV_NUMBER' to form
@@ -182,6 +187,108 @@ class Svn2RSS(Svn2Feed):
         return rss_item
 
 
+class Svn2Atom(Svn2Feed):
+    def __init__(self, svn_path, repos_path, item_url, feed_file,
+                 max_items, feed_url):
+        Svn2Feed.__init__(self, svn_path, repos_path, item_url, feed_file,
+                          max_items, feed_url)
+        from xml.dom import getDOMImplementation
+        self.dom_impl = getDOMImplementation()
+
+        self.pickle_file = self.feed_file + ".pickle"
+        if os.path.exists(self.pickle_file):
+            self.document = pickle.load(open(self.pickle_file, "r"))
+            self.feed = self.document.getElementsByTagName('feed')[0]
+        else:
+            self._init_atom_document()
+
+    def get_default_file_extension():
+        return ".atom"
+    get_default_file_extension = staticmethod(get_default_file_extension)
+
+    def add_revision_item(self, revision):
+        item = self._make_atom_item(revision)
+        self.feed.appendChild(item)
+        # FIXME: Process max_items
+
+    def write_output(self):
+        s = pickle.dumps(self.document)
+        f = open(self.pickle_file, "w")
+        f.write(s)
+        f.close()
+
+        f = open(self.feed_file, "w")
+        f.write(self.document.toxml())
+        f.close()
+
+    def _make_atom_item(self, revision):
+        info = self._get_item_dict(revision)
+
+        doc = self.document
+        entry = doc.createElement("entry")
+        entry.appendChild(doc.createTextNode("\n  "))
+
+        id = doc.createElement("id")
+        entry.appendChild(id)
+        id.appendChild(doc.createTextNode(info['link']))
+
+        title = doc.createElement("title")
+        entry.appendChild(title)
+        title.appendChild(doc.createTextNode(info['title']))
+
+        updated = doc.createElement("updated")
+        entry.appendChild(updated)
+        updated.appendChild(
+            doc.createTextNode(self._format_date(info['date'])))
+
+        link = doc.createElement("link")
+        entry.appendChild(link)
+        link.setAttribute("href", info['link'])
+
+        summary = doc.createElement("summary")
+        entry.appendChild(summary)
+        summary.appendChild(doc.createTextNode(info['description']))
+
+        return entry
+
+    def _init_atom_document(self):
+        doc = self.document = self.dom_impl.createDocument(None, None, None)
+        feed = self.feed = doc.createElement("feed")
+        doc.appendChild(feed)
+
+        feed.setAttribute("xmlns", "http://www.w3.org/2005/Atom")
+
+        title = doc.createElement("title")
+        feed.appendChild(title)
+        title.appendChild(doc.createTextNode("%s Subversion Commits Feed" %
+            os.path.basename(self.repos_path)))
+
+        id = doc.createElement("id")
+        feed.appendChild(id)
+        id.appendChild(doc.createTextNode(self.feed_url))
+
+        updated = doc.createElement("updated")
+        feed.appendChild(updated)
+        updated.appendChild(
+                doc.createTextNode(self._format_date(datetime.datetime.now())))
+
+        link = doc.createElement("link")
+        feed.appendChild(link)
+        link.setAttribute("href", self.feed_url)
+
+        author = doc.createElement("author")
+        feed.appendChild(author)
+        aname = doc.createElement("name")
+        author.appendChild(aname)
+        aname.appendChild(doc.createTextNode("subversion"))
+
+    def _format_date(self, dt):
+        """ input date must be in GMT """
+        return ("%04d-%02d-%02dT%02d:%02d:%02d.%02dZ"
+                % (dt.year, dt.month, dt.day, dt.hour, dt.minute,
+                   dt.second, dt.microsecond))
+
+
 def main():
     # Parse the command-line options and arguments.
     try:
@@ -209,7 +316,7 @@ def main():
     item_url = feed_url = ""
     feed_file = None
     feedcls = None
-    feed_classes = { 'rss': Svn2RSS }
+    feed_classes = { 'rss': Svn2RSS, 'atom': Svn2Atom }
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
