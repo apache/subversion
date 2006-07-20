@@ -41,10 +41,12 @@ extern "C" {
 
 
 /** Used as an argument when creating temporary files to indicate
-    when a file should be removed.
-
-    Not specifying any of these means no removal at all. */
-typedef enum
+ * when a file should be removed.
+ *
+ * @since New in 1.4.
+ *
+ * Not specifying any of these means no removal at all. */
+typedef enum svn_io_file_del_t
 {
   /** No deletion ever */
   svn_io_file_del_none = 0,
@@ -305,7 +307,8 @@ svn_error_t *svn_io_set_file_read_write(const char *path,
                                         apr_pool_t *pool);
 
 
-/** Minimally change the read-write permissions of a file.
+/** Similar to svn_io_set_file_read_* functions.
+ * Change the read-write permissions of a file.
  * @since New in 1.1.
  *
  * When making @a path read-write on operating systems with unix style
@@ -321,8 +324,10 @@ svn_error_t *svn_io_set_file_read_write(const char *path,
  *
  * @a path is the utf8-encoded path to the file.  If @a enable_write
  * is @c TRUE, then make the file read-write.  If @c FALSE, make it
- * write-only.  If @a ignore_enoent is @c TRUE, don't fail if the target
+ * read-only.  If @a ignore_enoent is @c TRUE, don't fail if the target
  * file doesn't exist.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *svn_io_set_file_read_write_carefully(const char *path,
                                                   svn_boolean_t enable_write,
@@ -932,7 +937,8 @@ svn_error_t *svn_io_run_diff(const char *dir,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_io_run_diff3_2(const char *dir,
+svn_error_t *svn_io_run_diff3_2(int *exitcode,
+                                const char *dir,
                                 const char *mine,
                                 const char *older,
                                 const char *yours,
@@ -940,7 +946,6 @@ svn_error_t *svn_io_run_diff3_2(const char *dir,
                                 const char *older_label,
                                 const char *yours_label,
                                 apr_file_t *merged,
-                                int *exitcode,
                                 const char *diff3_cmd,
                                 const apr_array_header_t *user_args,
                                 apr_pool_t *pool);

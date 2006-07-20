@@ -480,6 +480,11 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  *
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
+ *
+ * @note New in 1.4 is that the line is defined to contain only the line
+ * content (and no [partial] EOLs; which was undefined in older versions).
+ * Using this callback with svn_client_blame() or svn_client_blame2()
+ * will still give you the old behaviour.
  */
 typedef svn_error_t *(*svn_client_blame_receiver_t)
   (void *baton,
@@ -2344,9 +2349,9 @@ svn_client_list(const char *path_or_url,
                 svn_boolean_t recurse,
                 apr_uint32_t dirent_fields,
                 svn_boolean_t fetch_locks,
-                svn_client_ctx_t *ctx,
                 svn_client_list_func_t list_func,
                 void *baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
 /**

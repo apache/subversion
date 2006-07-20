@@ -99,6 +99,10 @@
    and there is no lock token for the file in the working copy. */
 #define SVN_WC__LOG_MAYBE_READONLY "maybe-readonly"
 
+/* Make file SVN_WC__LOG_ATTR_NAME executable if the
+   executable property is set. */
+#define SVN_WC__LOG_MAYBE_EXECUTABLE "maybe-executable"
+
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 
@@ -154,8 +158,11 @@
 /* This one is for SVN_WC__LOG_MERGE
    and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
 #define SVN_WC__LOG_ATTR_ARG_1          "arg1"
-/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
+/* This one is for SVN_WC__LOG_MERGE
+   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate a versioned
+   path to take its translation properties from */
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"
+/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_ARG_3          "arg3"
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
@@ -188,6 +195,21 @@ struct log_runner
 
 
 
+/*** Forward declarations ***/
+
+/* log runner forward declaration used in log_do_merge */
+static svn_error_t *
+run_log_from_memory(svn_wc_adm_access_t *adm_access,
+                    const char *buf,
+                    apr_size_t buf_len,
+                    svn_boolean_t rerun,
+                    const char *diff3_cmd,
+                    apr_pool_t *pool);
+
+
+
+
+
 /*** The XML handlers. ***/
 
 /* Used by file_xfer_under_path(). */
@@ -207,10 +229,12 @@ enum svn_wc__xfer_action {
       svn_wc__xfer_append:             append contents of NAME to DEST
       svn_wc__xfer_cp_and_translate:   copy NAME to DEST, doing any eol
                                        and keyword expansion according to
-                                       the current property vals of DEST.
+                                       the current property vals of VERSIONED
+                                       or, if that's NULL, those of DEST.
       svn_wc__xfer_cp_and_detranslate: copy NAME to DEST, converting to LF
                                        and contracting keywords according to
-                                       the current property vals of NAME.
+                                       the current property vals of VERSIONED
+                                       or, if that's NULL, those of NAME.
 
       When SPECIAL_ONLY is TRUE, only translate special,
       not keywords and eol-style.
@@ -220,18 +244,24 @@ static svn_error_t *
 file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      const char *dest,
+                     const char *versioned,
                      enum svn_wc__xfer_action action,
                      svn_boolean_t special_only,
                      svn_boolean_t rerun,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *full_from_path, *full_dest_path;
+  const char *full_from_path, *full_dest_path, *full_versioned_path;
 
   full_from_path = svn_path_join(svn_wc_adm_access_path(adm_access), name,
                                  pool);
   full_dest_path = svn_path_join(svn_wc_adm_access_path(adm_access), dest,
                                  pool);
+  if (versioned)
+    full_versioned_path = svn_path_join(svn_wc_adm_access_path(adm_access),
+                                        versioned, pool);
+  else
+    full_versioned_path = NULL; /* Silence GCC uninitialised warning */
 
   switch (action)
     {
@@ -254,7 +284,8 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 
         err = svn_wc_translated_file2
           (&tmp_file,
-           full_from_path, full_dest_path, adm_access,
+           full_from_path, versioned ? full_versioned_path : full_dest_path,
+           adm_access,
            SVN_WC_TRANSLATE_FROM_NF
            | SVN_WC_TRANSLATE_FORCE_COPY,
            pool);
@@ -282,7 +313,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc_translated_file2
                 (&tmp_file,
                  full_from_path,
-                 full_from_path, adm_access,
+                 versioned ? full_versioned_path : full_from_path, adm_access,
                  SVN_WC_TRANSLATE_TO_NF
                  | SVN_WC_TRANSLATE_FORCE_COPY,
                  pool));
@@ -425,8 +456,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     {
       /* No need to make a new file read_write: new files already are. */
       if (same)
-        SVN_ERR(svn_io_set_file_read_write_carefully(filepath, TRUE,
-                                                     FALSE, pool));
+        SVN_ERR(svn_io_set_file_read_write(filepath, FALSE, pool));
       *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
     }
   else
@@ -483,6 +513,7 @@ log_do_merge(struct log_runner *loggy,
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
   enum svn_wc_merge_outcome_t merge_outcome;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", loggy->pool);
   svn_error_t *err;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
@@ -517,10 +548,23 @@ log_do_merge(struct log_runner *loggy,
                        loggy->pool);
 
   /* Now do the merge with our full paths. */
-  err = svn_wc_merge2(left, right, name, loggy->adm_access,
-                      left_label, right_label, target_label,
-                      FALSE, &merge_outcome, loggy->diff3_cmd, NULL,
-                      loggy->pool);
+  err = svn_wc__merge_internal(&log_accum, &merge_outcome,
+                               left, right, name, loggy->adm_access,
+                               left_label, right_label, target_label,
+                               FALSE, loggy->diff3_cmd, NULL,
+                               loggy->pool);
+  if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    if (err)
+      return err;
+
+  err = run_log_from_memory(loggy->adm_access,
+                            log_accum->data, log_accum->len,
+                            loggy->rerun, loggy->diff3_cmd, loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
@@ -539,12 +583,16 @@ log_do_file_xfer(struct log_runner *loggy,
 {
   svn_error_t *err;
   const char *dest = NULL;
+  const char *versioned;
   svn_boolean_t special_only;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
   special_only =
     svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_1, atts) != NULL;
+  versioned =
+    svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
+
   if (! dest)
     return svn_error_createf(pick_error_code(loggy), NULL,
                              _("Missing 'dest' attribute in '%s'"),
@@ -552,8 +600,8 @@ log_do_file_xfer(struct log_runner *loggy,
                              (svn_wc_adm_access_path(loggy->adm_access),
                               loggy->pool));
 
-  err = file_xfer_under_path(loggy->adm_access, name, dest, action,
-                             special_only, loggy->rerun, loggy->pool);
+  err = file_xfer_under_path(loggy->adm_access, name, dest, versioned,
+                             action, special_only, loggy->rerun, loggy->pool);
   if (err)
     signal_error(loggy, err);
 
@@ -578,6 +626,21 @@ log_do_file_readonly(struct log_runner *loggy,
     }
   else
     return err;
+}
+
+/* Maybe make file NAME in log's CWD executable */
+static svn_error_t *
+log_do_file_maybe_executable(struct log_runner *loggy,
+                             const char *name)
+{
+  const char *full_path
+    = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
+                    loggy->pool);
+
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
+                                      loggy->pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Maybe make file NAME in log's CWD readonly */
@@ -1509,6 +1572,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   else if (strcmp(eltname, SVN_WC__LOG_MAYBE_READONLY) == 0) {
     err = log_do_file_maybe_readonly(loggy, name);
   }
+  else if (strcmp(eltname, SVN_WC__LOG_MAYBE_EXECUTABLE) == 0) {
+    err = log_do_file_maybe_executable(loggy, name);
+  }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
   }
@@ -1602,6 +1668,53 @@ svn_wc__logfile_path(int log_number,
                       (log_number == 0) ? ""
                       : apr_psprintf(pool, ".%d", log_number));
 }
+
+/* Run a series of log-instructions from a memory block of length BUF_LEN
+   at BUF. RERUN and DIFF3_CMD are passed in the log baton to the
+   log runner callbacks.
+
+   Allocations are done in POOL.
+*/
+static svn_error_t *
+run_log_from_memory(svn_wc_adm_access_t *adm_access,
+                    const char *buf,
+                    apr_size_t buf_len,
+                    svn_boolean_t rerun,
+                    const char *diff3_cmd,
+                    apr_pool_t *pool)
+{
+  struct log_runner *loggy;
+  svn_xml_parser_t *parser;
+  /* kff todo: use the tag-making functions here, now. */
+  const char *log_start
+    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
+  const char *log_end
+    = "</wc-log>\n";
+
+  loggy = apr_pcalloc(pool, sizeof(*loggy));
+  loggy->adm_access = adm_access;
+  loggy->pool = svn_pool_create(pool);
+  loggy->parser = svn_xml_make_parser(loggy, start_handler,
+                                      NULL, NULL, pool);
+  loggy->entries_modified = FALSE;
+  loggy->wcprops_modified = FALSE;
+  loggy->rerun = rerun;
+  loggy->diff3_cmd = diff3_cmd;
+  loggy->count = 0;
+
+  parser = loggy->parser;
+  /* Expat wants everything wrapped in a top-level form, so start with
+     a ghost open tag. */
+  SVN_ERR(svn_xml_parse(parser, log_start, strlen(log_start), 0));
+
+  SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
+
+  /* Pacify Expat with a pointless closing element tag. */
+  SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Run a sequence of log files. */
 static svn_error_t *
@@ -1877,6 +1990,24 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
+svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+                              svn_wc_adm_access_t *adm_access,
+                              const char *dst,
+                              const char *src,
+                              const char *versioned,
+                              apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+                        SVN_WC__LOG_CP_AND_TRANSLATE,
+                        SVN_WC__LOG_ATTR_NAME, src,
+                        SVN_WC__LOG_ATTR_DEST, dst,
+                        SVN_WC__LOG_ATTR_ARG_2, versioned,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *path,
@@ -2134,6 +2265,23 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                                   SVN_WC__LOG_MV, FALSE, adm_access,
                                   src_path, dst_path, remove_dst_if_no_src,
                                   pool);
+}
+
+
+svn_error_t *
+svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const char *path,
+                                   apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum,
+                        pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_MAYBE_EXECUTABLE,
+                        SVN_WC__LOG_ATTR_NAME, path,
+                        NULL);
+
+  return SVN_NO_ERROR;
 }
 
 

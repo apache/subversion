@@ -45,6 +45,8 @@ svn_cl__help(apr_getopt_t *os,
   N_("usage: svn <subcommand> [options] [args]\n"
      "Subversion command-line client, version %s.\n"
      "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
+     "Type 'svn --version' to see the program version and RA modules\n"
+     "  or 'svn --version --quiet' to see just the version number.\n"
      "\n"
      "Most subcommands take file and/or directory arguments, recursing\n"
      "on the directories.  If no arguments are supplied to such a\n"

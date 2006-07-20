@@ -165,12 +165,19 @@ def locate_libs():
   cp = ConfigParser.ConfigParser()
   cp.read('gen-make.opts')
   apr_path = get(cp, 'options', '--with-apr', 'apr')
-  apr_dll_path = os.path.join(apr_path, objdir, 'libapr.dll')
   aprutil_path = get(cp, 'options', '--with-apr-util', 'apr-util')
-  aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil.dll')
   apriconv_path = get(cp, 'options', '--with-apr-iconv', 'apr-iconv')
-  apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
   apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
+  # look for APR 1.x dll's and use those if found
+  apr_dll_path = os.path.join(apr_path, objdir, 'libapr-1.dll')
+  if os.path.exists(apr_dll_path):
+    aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil-1.dll')
+    apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv-1.dll')
+  else:
+    apr_dll_path = os.path.join(apr_path, objdir, 'libapr.dll')
+    aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil.dll')
+    apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
+    
 
   copy_changed_file(apr_dll_path, abs_objdir)
   copy_changed_file(aprutil_dll_path, abs_objdir)
@@ -257,6 +264,9 @@ class Httpd:
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
     self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                              'httpd')
+    self.authz_file = os.path.join(abs_builddir,
+                                   CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                   'svn-test-work', 'authz')
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
@@ -343,6 +353,7 @@ class Httpd:
       '<Location ' + location + '>\n' \
       '  DAV             svn\n' \
       '  SVNParentPath   ' + self._quote(path) + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
       '  AuthType        Basic\n' \
       '  AuthName        "Subversion Repository"\n' \
       '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \

@@ -98,6 +98,19 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    apr_pool_t *pool);
 
 
+/* Extend **LOG_ACCUM with log instructions to generate a translated
+   file from SRC to DST with translation settings from VERSIONED
+   and flags specified in FLAGS.
+*/
+
+svn_error_t *
+svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+                              svn_wc_adm_access_t *adm_access,
+                              const char *dst,
+                              const char *src,
+                              const char *versioned,
+                              apr_pool_t *pool);
+
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
 */
@@ -176,6 +189,18 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    const char *src_path, const char *dst_path,
                    svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool);
+
+
+
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
+   to 'executable' if it has the 'executable' property set.
+*/
+
+svn_error_t *
+svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const char *path,
+                                   apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly' if it has the 'needs-lock' property set and there is

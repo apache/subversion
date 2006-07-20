@@ -146,7 +146,7 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("run in foreground (useful for debugging)")},
     {"help",             'h', 0, N_("display this help")},
     {"version",           SVNSERVE_OPT_VERSION, 0,
-     N_("show version information")},
+     N_("show program version information")},
     {"inetd",            'i', 0, N_("inetd mode")},
     {"root",             'r', 1, N_("root of directory to serve")},
     {"read-only",        'R', 0,
@@ -352,7 +352,7 @@ int main(int argc, const char *argv[])
       return EXIT_FAILURE;
     }
 
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 

@@ -280,10 +280,10 @@ static svn_error_t *
 get_dirprops_from_ra(struct dir_baton *b)
 {
   SVN_ERR(svn_ra_get_dir2(b->edit_baton->ra_session,
+                          NULL, NULL, &(b->pristine_props),
                           b->path,
                           b->edit_baton->revision,
-                          0, NULL, NULL,
-                          &(b->pristine_props),
+                          0,
                           b->pool));
 
   return SVN_NO_ERROR;
@@ -525,7 +525,7 @@ add_directory(const char *path,
 
   SVN_ERR(get_path_access(&adm_access,
                           pb->edit_baton->adm_access, pb->wcpath,
-                          pb->edit_baton->dry_run, pool));
+                          TRUE, pool));
 
   SVN_ERR(pb->edit_baton->diff_callbacks->dir_added 
           (adm_access, &state, b->wcpath, eb->target_revision,

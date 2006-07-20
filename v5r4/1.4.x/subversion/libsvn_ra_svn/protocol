@@ -167,6 +167,9 @@ The following capabilities are currently defined:
   svndiff1          If both the client and server support svndiff version
                     1, this will be used as the on-the-wire format for svndiff
                     instead of svndiff version 0.
+  absent-entries    If the remote end announces support for this capability,
+                    it will accept the absent-dir and absent-file editor
+                    commands.
 
 3. Commands
 -----------
@@ -420,6 +423,9 @@ reported by the enclosing close-dir or close-file operation.
   close-dir
     params:   ( dir-token:string )
 
+  absent-dir
+    params:   ( path:string parent-token:string )
+
   add-file
     params:   ( path:string dir-token:string file-token:string
                 [ copy-path:string copy-rev:number ] )
@@ -443,6 +449,9 @@ reported by the enclosing close-dir or close-file operation.
 
   close-file
     params:   ( file-token:string [ text-checksum:string ] )
+
+  absent-file
+    params:   ( path:string parent-token:string )
 
   close-edit
     params:   ( )

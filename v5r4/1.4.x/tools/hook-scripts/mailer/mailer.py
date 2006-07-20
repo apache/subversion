@@ -572,11 +572,11 @@ class DiffSelections:
 
 
 class DiffURLSelections:
-  def __init__(self, cfg, group):
-    self.add = cfg.get('diff_add_url', group, None)
-    self.copy = cfg.get('diff_copy_url', group, None)
-    self.delete = cfg.get('diff_delete_url', group, None)
-    self.modify = cfg.get('diff_modify_url', group, None)
+  def __init__(self, cfg, group, params):
+    self.add = cfg.get('diff_add_url', group, params)
+    self.copy = cfg.get('diff_copy_url', group, params)
+    self.delete = cfg.get('diff_delete_url', group, params)
+    self.modify = cfg.get('diff_modify_url', group, params)
 
 
 def generate_content(renderer, cfg, repos, changelist, group, params, paths,
@@ -587,7 +587,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
-  diffurls = DiffURLSelections(cfg, group)
+  diffurls = DiffURLSelections(cfg, group, params)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'

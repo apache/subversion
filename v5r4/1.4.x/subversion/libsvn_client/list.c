@@ -56,8 +56,8 @@ get_dir_contents(apr_uint32_t dirent_fields,
   int i;
 
   /* Get the directory's entries, but not its props. */
-  SVN_ERR(svn_ra_get_dir2(ra_session, dir, rev, dirent_fields, &tmpdirents, 
-                          NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
+                          dir, rev, dirent_fields, pool));
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -101,9 +101,9 @@ svn_client_list(const char *path_or_url,
                 svn_boolean_t recurse,
                 apr_uint32_t dirent_fields,
                 svn_boolean_t fetch_locks,
-                svn_client_ctx_t *ctx,
                 svn_client_list_func_t list_func,
                 void *baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
@@ -168,8 +168,8 @@ svn_client_list(const char *path_or_url,
                                                            TRUE, ctx, pool));
 
               /* Get all parent's entries, no props. */
-              SVN_ERR(svn_ra_get_dir2(parent_session, "", rev, dirent_fields,
-                                      &parent_ents, NULL, NULL, pool));
+              SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,
+                                      NULL, "", rev, dirent_fields, pool));
 
               /* Get the relevant entry. */
               dirent = apr_hash_get(parent_ents, base_name,
@@ -187,9 +187,9 @@ svn_client_list(const char *path_or_url,
               if (dirent_fields & SVN_DIRENT_HAS_PROPS)
                 {
                   apr_hash_t *props;
-                  SVN_ERR(svn_ra_get_dir2(ra_session, "", rev,
-                                          0 /* no dirent fields */,
-                                          NULL, NULL, &props, pool));
+                  SVN_ERR(svn_ra_get_dir2(ra_session, NULL, NULL, &props,
+                                          "", rev, 0 /* no dirent fields */,
+                                          pool));
                   dirent->has_props = (apr_hash_count(props) != 0);
                 }
               dirent->created_rev = rev;
@@ -320,8 +320,8 @@ svn_client_ls3(apr_hash_t **dirents,
   lb.pool = pool;
 
   return svn_client_list(path_or_url, peg_revision, revision, recurse,
-                         SVN_DIRENT_ALL, locks != NULL, ctx,
-                         store_dirent, &lb, pool);
+                         SVN_DIRENT_ALL, locks != NULL,
+                         store_dirent, &lb, ctx, pool);
 }
 
 svn_error_t *

@@ -35,10 +35,10 @@ Skip = svntest.testcase.Skip
 # data.  In theory this data has different interpretations when
 # converting from 2 different charsets into UTF-8.
 
-### "bÔçÅ" in ISO-8859-1 encoding:
+### "bÃÃ§Ã" in ISO-8859-1 encoding:
 i18n_filename = 'b\xd4\xe7\xc5'
 
-### "drieÃ«ntwintig keer was Ã©Ã©n keer teveel" in ISO-8859-1 encoding:
+### "drieÃÂ«ntwintig keer was ÃÂ©ÃÂ©n keer teveel" in ISO-8859-1 encoding:
 i18n_logmsg = 'drie\xc3\xabntwintig keer was \xc3\xa9\xc3\xa9n keer teveel'
 
 
@@ -95,7 +95,7 @@ try:
     # be able to set just the encoding by using ".1252" (that's codepage
     # 1252, which is almost but not quite entirely unlike tea; um, I mean
     # it's very similar to ISO-8859-1).
-    #                                     -- Branko Čibej <brane@xbc.nu>
+    #                                     -- Branko Äibej <brane@xbc.nu>
     locale.setlocale(locale.LC_ALL, '.1252')
   else:
     locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')

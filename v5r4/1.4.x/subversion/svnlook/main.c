@@ -93,7 +93,7 @@ static const apr_getopt_option_t options_table[] =
    N_("show help on a subcommand")},
 
   {"version",       svnlook__version, 0,
-   N_("show version information")},
+   N_("show program version information")},
 
   {"revision",      'r', 1,
    N_("specify revision number ARG")},
@@ -169,7 +169,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {"help", subcommand_help, {"?", "h"},
    N_("usage: svnlook help [SUBCOMMAND...]\n\n"
       "Describe the usage of this program or its subcommands.\n"),
-   {svnlook__version} },
+   {0} },
 
   {"history", subcommand_history, {0},
    N_("usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
@@ -1655,6 +1655,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "      options will, if invoked without one of those options, act on\n"
       "      the repository's youngest revision.\n"
       "Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
+      "Type 'svnlook --version' to see the program version and FS modules.\n"
       "\n"
       "Available subcommands:\n");
 
@@ -1908,7 +1909,7 @@ main(int argc, const char *argv[])
   opt_state.rev = SVN_INVALID_REVNUM;
 
   /* Parse options. */
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
 
@@ -1965,7 +1966,6 @@ main(int argc, const char *argv[])
 
         case svnlook__version:
           opt_state.version = TRUE;
-          opt_state.help = TRUE;
           break;
 
         case svnlook__show_ids:
@@ -2020,12 +2020,25 @@ main(int argc, const char *argv[])
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf(stderr, pool,
-                                 _("Subcommand argument required\n")));
-          subcommand_help(NULL, NULL, pool);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          if (opt_state.version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc_t pseudo_cmd =
+                { "--version", subcommand_help, {0}, "",
+                  {svnlook__version,  /* must accept its own option */
+                  } };
+
+              subcommand = &pseudo_cmd;
+            }
+          else
+            {
+              svn_error_clear
+                (svn_cmdline_fprintf(stderr, pool,
+                                     _("Subcommand argument required\n")));
+              subcommand_help(NULL, NULL, pool);
+              svn_pool_destroy(pool);
+              return EXIT_FAILURE;
+            }
         }
       else
         {
@@ -2127,12 +2140,15 @@ main(int argc, const char *argv[])
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code(opt_id, options_table);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool,
-              _("Subcommand '%s' doesn't accept option '%s'\n"
-                "Type 'svnlook help %s' for usage.\n"),
-              subcommand->name, optstr, subcommand->name));
+          if (subcommand->name[0] == '-')
+            subcommand_help(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool,
+                _("Subcommand '%s' doesn't accept option '%s'\n"
+                  "Type 'svnlook help %s' for usage.\n"),
+                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }

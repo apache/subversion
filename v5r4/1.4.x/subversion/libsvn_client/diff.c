@@ -37,6 +37,7 @@
 #include "svn_pools.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_time.h"
 #include "client.h"
 #include <assert.h>
 
@@ -863,11 +864,11 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
       if (merge_required)
         {
-          SVN_ERR(svn_wc_merge2(older, yours, mine, adm_access,
+          SVN_ERR(svn_wc_merge2(&merge_outcome,
+                                older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
-                                merge_b->dry_run, &merge_outcome, 
-                                merge_b->diff3_cmd, merge_b->merge_options,
-                                subpool));
+                                merge_b->dry_run, merge_b->diff3_cmd,
+                                merge_b->merge_options, subpool));
         }
 
       /* Philip asks "Why?"  Why does the notification depend on whether the
@@ -1761,6 +1762,9 @@ do_merge(const char *initial_URL1,
   
   SVN_ERR(reporter->finish_report(report_baton, pool));
   
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps();
+
   return SVN_NO_ERROR;
 }
 
@@ -1910,6 +1914,9 @@ do_single_file_merge(const char *initial_URL1,
       (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                     pool);
     }
+
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps();
 
   return SVN_NO_ERROR;
 }
