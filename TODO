@@ -22,13 +22,26 @@ for repos dump/load, including the merge history index.
       collisions (multiple notifications to the same WC item), giving
       preference to later notifications (?).
 
-  * Stop applying merge ranges as soon as a second conflict is
-    encountered in a WC item (as it might generate overlapping
-    conflict makers, or apply a merge inside a conflict marker!),
-    being sure to record partial application of merge ranges.
+  * Handle conflicts.
+
+    * If a conflict is encountered, invoke a conflict resolution
+      callback to give a Subversion client a chance to intervene.  If
+      resolution is successful, convert the notification from a 'C' to
+      something else (e.g. 'M').  (Phase 2?)
+
+    * Otherwise, stop applying merge ranges as soon as a second
+      conflict is encountered in a WC item (as it might generate
+      overlapping conflict makers, or apply a merge inside a conflict
+      marker!), being sure to record partial application of merge
+      ranges.
 
 * Handle merge info inheritance (and eliding, if any additional work
   is necessary).  (madanus)
+
+  * Handle inherited merge info for solely the target.
+
+  * Handle differences in inherited/WC-local merge info for children
+    of the target.
 
 * Treat all revisions from a 'copy' source like merge info for the
   destination.  This may equate to turning all those revs into actual
