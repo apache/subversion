@@ -66,9 +66,9 @@ Candidate changes:
       +1: david
 
   * r20741, r20743
-    Fix a segmentation fault bug when an error is occurred in log message
-    callback.
-    Branch: r20741
+    Fix a segmentation fault when an error occurs in log message callback
+    in the Ruby bindings.
+    Branch: 1.3.x-r20741
     Justification:
       A segmentation fault bug is critical bug.
     Votes:
