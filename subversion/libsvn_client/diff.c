@@ -1934,8 +1934,8 @@ do_merge(const char *initial_URL1,
          struct merge_cmd_baton *merge_b,
          apr_pool_t *pool)
 {
-  apr_hash_t *target_mergeinfo;
-  apr_array_header_t *remaining_ranges;
+  apr_hash_t *target_mergeinfo, *repos_mergeinfo;
+  apr_array_header_t *remaining_ranges, *mergeinfo_paths;
   svn_merge_range_t range;
   enum merge_type merge_type;
   svn_boolean_t is_revert;
@@ -2007,10 +2007,20 @@ do_merge(const char *initial_URL1,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  /* Look at the merge info prop of the WC target to see what's
-     already been merged into it. */
+  /* Retrieve any inherited or direct merge info for the target from
+     both the repos and the WC's merge info prop.  Combine these two
+     sets of merge info to determine what's already been merged into
+     the target. */
+  mergeinfo_paths = apr_array_make(pool, 1, sizeof(target_wcpath));
+  /* ### TODO: Add target_wcpath to the list.  Later, we may need to
+     ### list all child paths as well. */
+  SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
+                                SVN_INVALID_REVNUM, TRUE, pool));
   SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access, ctx,
                            pool));
+  if (repos_mergeinfo != NULL)
+    SVN_ERR(svn_mergeinfo_merge(&target_mergeinfo, repos_mergeinfo,
+                                target_mergeinfo, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session, adm_access, pool));
@@ -2130,7 +2140,7 @@ do_single_file_merge(const char *initial_URL1,
   const char *tmpfile1, *tmpfile2;
   const char *mimetype1, *mimetype2;
   svn_string_t *pval;
-  apr_array_header_t *propchanges;
+  apr_array_header_t *propchanges, *remaining_ranges, *mergeinfo_paths;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
@@ -2141,8 +2151,7 @@ do_single_file_merge(const char *initial_URL1,
   svn_ra_session_t *ra_session1, *ra_session2;
   enum merge_type merge_type;
   svn_boolean_t is_revert;
-  apr_hash_t *target_mergeinfo;
-  apr_array_header_t *remaining_ranges;
+  apr_hash_t *target_mergeinfo, *repos_mergeinfo;
   int i;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
@@ -2196,10 +2205,20 @@ do_single_file_merge(const char *initial_URL1,
   else
     is_revert = (merge_type == merge_type_revert);
 
-  /* Look at the merge info prop of the WC target to see what's
-     already been merged into it. */
+  /* Retrieve any inherited or direct merge info for the target from
+     both the repos and the WC's merge info prop.  Combine these two
+     sets of merge info to determine what's already been merged into
+     the target. */
+  mergeinfo_paths = apr_array_make(pool, 1, sizeof(target_wcpath));
+  /* ### TODO: Add target_wcpath to the list.  Later, we may need to
+     ### list all child paths as well. */
+  SVN_ERR(svn_ra_get_merge_info(ra_session1, &repos_mergeinfo, mergeinfo_paths,
+                                SVN_INVALID_REVNUM, TRUE, pool));
   SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access, ctx,
                            pool));
+  if (repos_mergeinfo != NULL)
+    SVN_ERR(svn_mergeinfo_merge(&target_mergeinfo, repos_mergeinfo,
+                                target_mergeinfo, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session1, adm_access, pool));
