@@ -19,12 +19,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r20787
-    svn_apply_autoprops.py: Patch to trim leading and trailing
-    whitespace from property names and values.  Without this, any
-    whitespace in the autoprops section of $HOME/.subversion/config
-    will end up in the property name and/or value.
-    Justification:
-      Nice correctness fix.  Lives in contrib section.
-    Votes:
-      +1: blair, dlr
