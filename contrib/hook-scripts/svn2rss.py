@@ -86,9 +86,8 @@ def check_url(url, opt):
 
 
 class Svn2RSS:
-    def __init__(self, svn_path, revision, repos_path, item_url, rss_file, 
+    def __init__(self, svn_path, repos_path, item_url, rss_file, 
                  max_items, feed_url):
-        self.revision = revision
         self.repos_path = repos_path
         self.item_url = item_url
         self.rss_file = rss_file
@@ -100,67 +99,65 @@ class Svn2RSS:
 
         (file, ext) = os.path.splitext(self.rss_file)
         self.pickle_file = file + ".pickle"
-        self.rss_item = self.make_rss_item()
-        self.rss = self.make_rss()
+        if os.path.exists(self.pickle_file):
+            self.rss = pickle.load(open(self.pickle_file, "r"))
+        else:
+            title = ("%s's Subversion Commits Feed"
+                     % (os.path.basename(os.path.abspath(self.repos_path))))
+            desc = "The latest Subversion commits"
+            self.rss = PyRSS2Gen.RSS2(title = title,
+                                      link = self.feed_url,
+                                      description = desc,
+                                      lastBuildDate = datetime.datetime.now(),
+                                      items = [])
         
-    def make_item_desc(self):
-        cmd = [self.svnlook_cmd, 'info', '-r', self.revision, self.repos_path]
+    def add_revision_item(self, revision):
+        rss_item = self._make_rss_item(revision)
+        self.rss.items.insert(0, rss_item)
+        if len(self.rss.items) > self.max_items:
+            del self.rss.items[self.max_items:]
+
+    def write_output(self):
+        s = pickle.dumps(self.rss)
+        f = open(self.pickle_file, "w")
+        f.write(s)
+        f.close()
+
+        f = open(self.rss_file, "w")
+        self.rss.write_xml(f)
+        f.close()
+
+    def _make_rss_item(self, revision):
+        """ Generate PyRSS2Gen Item from the commit info """
+        revision = str(revision)
+        item_title = "Revision " + revision
+        item_link = self.item_url and self.item_url + "?rev=" + revision or ""
+
+        cmd = [self.svnlook_cmd, 'info', '-r', revision, self.repos_path]
         child_out, child_in, child_err = popen2.popen3(cmd)
         info_lines = child_out.readlines()
         child_out.close()
         child_in.close()
         child_err.close()
         
-        cmd = [self.svnlook_cmd, 'changed', '-r', self.revision,
-               self.repos_path]
+        cmd = [self.svnlook_cmd, 'changed', '-r', revision, self.repos_path]
         child_out, child_in, child_err = popen2.popen3(cmd)
         changed_data = child_out.read()
         child_out.close()
         child_in.close()
         child_err.close()
 
-        return ("\nAuthor: %sDate: %sRevision: %s\nLog: %sModified: \n%s"
-                % (info_lines[0], info_lines[1], self.revision, info_lines[3],
+        desc = ("\nAuthor: %sDate: %sRevision: %s\nLog: %sModified: \n%s"
+                % (info_lines[0], info_lines[1], revision, info_lines[3],
                    changed_data))
         
-    def pickle(self):
-        s = pickle.dumps(self.rss)
-        f = open(self.pickle_file, "w")
-        f.write(s)
-        f.close()
-
-    def make_rss_item(self):
-        """ Generate PyRSS2Gen Item from the commit info """
-        item_title = "Revision " + self.revision
-        item_link = self.item_url \
-                    and self.item_url + "?rev=" + self.revision \
-                    or ""
         rss_item = PyRSS2Gen.RSSItem(title = item_title,
                                      link = item_link,
-                                     description = self.make_item_desc(),
+                                     description = desc,
                                      guid = PyRSS2Gen.Guid(item_link),
                                      pubDate = datetime.datetime.now())
         return rss_item
 
-    def make_rss(self):
-        """ Generate a PyRSS2Gen RSS2 object """
-        if os.path.exists(self.pickle_file):
-            rss = pickle.load(open(self.pickle_file, "r"))
-            rss.items.insert(0, self.rss_item)
-            if(len(rss.items) > self.max_items):
-                del(rss.items[self.max_items:])
-        else:
-            rss_item = self.rss_item
-            rss_title = "%s's Subversion Commits Feed" \
-                        % (os.path.basename(os.path.abspath(self.repos_path)))
-            rss = PyRSS2Gen.RSS2(
-                              title = rss_title,
-                              link = self.feed_url,
-                              description = "The latest Subversion commits",
-                              lastBuildDate = datetime.datetime.now(),
-                              items = [rss_item])
-
-        return rss
 
 def main():
     # Parse the command-line options and arguments.
@@ -245,12 +242,10 @@ def main():
                            % (commit_rev))
     
     for revision in revisions:
-        revision = str(revision)
-        svn2rss = Svn2RSS(svn_path, revision, repos_path, item_url, feed_file, 
+        svn2rss = Svn2RSS(svn_path, repos_path, item_url, feed_file, 
                           max_items, feed_url)
-        rss = svn2rss.rss
-        svn2rss.pickle()
-        rss.write_xml(open(svn2rss.rss_file, "w"))
+        svn2rss.add_revision_item(revision)
+        svn2rss.write_output()
     
   
 if __name__ == "__main__":
