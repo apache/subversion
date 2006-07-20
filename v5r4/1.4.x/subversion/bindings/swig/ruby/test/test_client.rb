@@ -1793,4 +1793,19 @@ class SvnClientTest < Test::Unit::TestCase
       Svn::Client::CommitItem.new
     end
   end
+
+  def test_log_msg_func_cancel
+    log = "sample log"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+
+    ctx = make_context(log)
+    ctx.set_log_msg_func do |items|
+      raise Svn::Error::CANCELLED
+    end
+    ctx.mkdir(dir_path)
+    assert_raise(Svn::Error::CANCELLED) do
+      ctx.commit(@wc_path)
+    end
+  end
 end

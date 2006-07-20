@@ -83,7 +83,7 @@ run_hook_cmd(const char *name,
       (apr_err, _("Can't make pipe read handle non-inherited for hook '%s'"),
        cmd);
 
-  apr_file_inherit_unset(write_errhandle);
+  apr_err = apr_file_inherit_unset(write_errhandle);
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Can't make pipe write handle non-inherited for hook '%s'"),

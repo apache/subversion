@@ -364,6 +364,16 @@ static apr_hash_t *bdb_cache = NULL;
 /* The mutex that protects bdb_cache. */
 static apr_thread_mutex_t *bdb_cache_lock = NULL;
 
+/* Cleanup callback to NULL out the cache and its lock, so we don't try to
+   use them after the pool has been cleared during global shutdown. */
+static apr_status_t
+clear_cache(void *data)
+{
+  bdb_cache = NULL;
+  bdb_cache_lock = NULL;
+  return APR_SUCCESS;
+}
+
 /* Magic values for atomic initialization of the environment cache. */
 #define BDB_CACHE_UNINITIALIZED 0
 #define BDB_CACHE_START_INIT    1
@@ -409,6 +419,9 @@ svn_fs_bdb__init(void)
                                   " Berkeley DB environment descriptors");
         }
 
+      apr_pool_cleanup_register(bdb_cache_pool, NULL, clear_cache,
+                                apr_pool_cleanup_null);
+
       svn__atomic_cas(&bdb_cache_state,
                       BDB_CACHE_INITIALIZED,
                       BDB_CACHE_START_INIT);
@@ -440,7 +453,8 @@ static APR_INLINE void
 acquire_cache_mutex(void)
 {
 #if APR_HAS_THREADS
-  apr_thread_mutex_lock(bdb_cache_lock);
+  if (bdb_cache_lock)
+    apr_thread_mutex_lock(bdb_cache_lock);
 #endif
 }
 
@@ -449,7 +463,8 @@ static APR_INLINE void
 release_cache_mutex(void)
 {
 #if APR_HAS_THREADS
-  apr_thread_mutex_unlock(bdb_cache_lock);
+  if (bdb_cache_lock)
+    apr_thread_mutex_unlock(bdb_cache_lock);
 #endif
 }
 
@@ -589,7 +604,12 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
     }
   else
     {
-      apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
+      /* If the bdb cache has been set to NULL that means we are
+         shutting down, and the pool that holds the bdb cache has
+         already been destroyed, so accessing it here would be a Bad
+         Thing (tm) */
+      if (bdb_cache)
+        apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
       err = bdb_close(bdb);
       release_cache_mutex();
     }
