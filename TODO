@@ -43,7 +43,7 @@ for repos dump/load, including the merge history index.
 
 * Consolidate merge info storage in the index, removing it from the FS. (?)
 
-* BerkeleyDB FS
+* Handle merge info in the BerkeleyDB FS backend.  (cmpilato?)
 
 * Move update design.html with the latest content from the design spec
   in the notes/ dir.
