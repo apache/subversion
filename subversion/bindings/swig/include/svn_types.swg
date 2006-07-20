@@ -55,7 +55,7 @@
 };
 
 %typemap(argout,warning="900:FIXME: Missing argout typemap") SWIGTYPE ** {
-  %#warning "FIXME: Missing argout typemap: $symname arg $argnum ($1_type)"
+  /* FIXME: Missing argout typemap: $symname arg $argnum ($1_type) */
 #if defined(SWIGRUBY) && SWIG_VERSION <= 0x010329
   /* Ruby fails to define $symname. */
   SWIG_exception(SWIG_ValueError, "Function is not implemented yet");
