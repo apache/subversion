@@ -809,12 +809,10 @@ svn_range_to_string(svn_stringbuf_t **result, svn_merge_range_t *range,
                     apr_pool_t *pool)
 {
   if (range->start == range->end)
-    *result = svn_stringbuf_createf(pool, "%" SVN_REVNUM_T_FMT,
-                                    range->start);
+    *result = svn_stringbuf_createf(pool, "%ld", range->start);
   else
-    *result = svn_stringbuf_createf(pool,
-                                    "%" SVN_REVNUM_T_FMT "-%" SVN_REVNUM_T_FMT,
-                                    range->start, range->end);
+    *result = svn_stringbuf_createf(pool, "%ld-%ld",range->start,
+                                    range->end);
   return SVN_NO_ERROR;
 }
 

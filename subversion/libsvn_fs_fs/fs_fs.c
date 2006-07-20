@@ -4243,12 +4243,12 @@ commit_body(void *baton, apr_pool_t *pool)
 #endif     
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
       deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo_changed where revision = %" 
-                                  SVN_REVNUM_T_FMT ";", new_rev);
+                                  "delete from mergeinfo_changed where revision = %ld;",
+                                  new_rev);
       SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
       deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo where revision = %" 
-                                  SVN_REVNUM_T_FMT ";", new_rev);
+                                  "delete from mergeinfo where revision = %ld;", 
+                                  new_rev);
       SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
       SVN_ERR(update_mergeinfo_index(cb->txn, new_rev, pool));
       
@@ -4271,12 +4271,12 @@ commit_body(void *baton, apr_pool_t *pool)
 #endif
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
       deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo_changed where revision = %" 
-                                  SVN_REVNUM_T_FMT ";", new_rev);
+                                  "delete from mergeinfo_changed where revision = %ld;",
+                                  new_rev);
       SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
       deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo where revision = %" 
-                                  SVN_REVNUM_T_FMT ";", new_rev);
+                                  "delete from mergeinfo where revision = %ld;",
+                                  new_rev);
       SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
       SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
       SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
