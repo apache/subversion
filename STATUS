@@ -21,8 +21,8 @@ Candidate changes:
     Create valid Bourne shell "pre-lock" and "post-lock" repository
     hooks by default.
     Justification:
-      The default hooks getting created should be valid for all Bourne
-      shell-compatible implementations.
+      The generated, default hook scripts should be valid for vanilla
+      Bourne shell.
     Votes:
       +1: dlr, maxb
 
