@@ -43,6 +43,9 @@ for repos dump/load, including the merge history index.
   * Handle differences in inherited/WC-local merge info for children
     of the target.
 
+* Change lookup to merge info from parents if include_parents is true.
+  Right now it won't include it if some subset exists in the child (dberlin).
+
 * Treat all revisions from a 'copy' source like merge info for the
   destination.  This may equate to turning all those revs into actual
   merge info (target merge info = source revs + source merge info
