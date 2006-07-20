@@ -12,6 +12,10 @@ Options:
 
  -h, --help             Show this help message.
 
+ -F, --format=FORMAT    Required option.  FORMAT must be one of:
+                            'rss'  (RSS 2.0)
+                        to select the appropriate feed format.
+
  -f, --feed-file=PATH   Store the feed in the file located at PATH, which
                         will be created if it does not exist, or overwritten if
                         it does.  If not provided, the script will store the
@@ -38,20 +42,9 @@ Options:
 
 import sys
 
-# Python 2.3 is required by PyRSS2Gen
-py_version  = sys.version_info
-if sys.version_info[0:2] < (2,3):
+# Python 2.3 is required for datetime
+if sys.version_info < (2, 3):
     sys.stderr.write("Error: Python 2.3 or higher required.\n")
-    sys.exit(1)
-
-# And Py2RSSGen is required by this script
-try:
-    import PyRSS2Gen
-except ImportError:
-    print >> sys.stderr, "Error: Required PyRSS2Gen module not found."
-    print >> sys.stderr, "PyRSS2Gen can be downloaded from:"
-    print >> sys.stderr, "http://www.dalkescientific.com/Python/PyRSS2Gen.html"
-    print >> sys.stderr, ""
     sys.exit(1)
 
 import getopt
@@ -85,7 +78,7 @@ def check_url(url, opt):
                      "'%s' option" % (url, opt))
 
 
-class Svn2RSS:
+class Svn2Feed:
     def __init__(self, svn_path, repos_path, item_url, feed_file,
                  max_items, feed_url):
         self.repos_path = repos_path
@@ -96,42 +89,12 @@ class Svn2RSS:
         self.svnlook_cmd = 'svnlook'
         if svn_path is not None:
             self.svnlook_cmd = os.path.join(svn_path, 'svnlook')
+        self.feed_title = ("%s's Subversion Commits Feed"
+                % (os.path.basename(os.path.abspath(self.repos_path))))
+        self.feed_desc = "The latest Subversion commits"
 
-        (file, ext) = os.path.splitext(self.feed_file)
-        self.pickle_file = file + ".pickle"
-        if os.path.exists(self.pickle_file):
-            self.rss = pickle.load(open(self.pickle_file, "r"))
-        else:
-            title = ("%s's Subversion Commits Feed"
-                     % (os.path.basename(os.path.abspath(self.repos_path))))
-            desc = "The latest Subversion commits"
-            self.rss = PyRSS2Gen.RSS2(title = title,
-                                      link = self.feed_url,
-                                      description = desc,
-                                      lastBuildDate = datetime.datetime.now(),
-                                      items = [])
-
-    def add_revision_item(self, revision):
-        rss_item = self._make_rss_item(revision)
-        self.rss.items.insert(0, rss_item)
-        if len(self.rss.items) > self.max_items:
-            del self.rss.items[self.max_items:]
-
-    def write_output(self):
-        s = pickle.dumps(self.rss)
-        f = open(self.pickle_file, "w")
-        f.write(s)
-        f.close()
-
-        f = open(self.feed_file, "w")
-        self.rss.write_xml(f)
-        f.close()
-
-    def _make_rss_item(self, revision):
-        """ Generate PyRSS2Gen Item from the commit info """
+    def _get_item_dict(self, revision):
         revision = str(revision)
-        item_title = "Revision " + revision
-        item_link = self.item_url and self.item_url + "?rev=" + revision or ""
 
         cmd = [self.svnlook_cmd, 'info', '-r', revision, self.repos_path]
         child_out, child_in, child_err = popen2.popen3(cmd)
@@ -151,18 +114,78 @@ class Svn2RSS:
                 % (info_lines[0], info_lines[1], revision, info_lines[3],
                    changed_data))
 
-        rss_item = PyRSS2Gen.RSSItem(title = item_title,
-                                     link = item_link,
-                                     description = desc,
-                                     guid = PyRSS2Gen.Guid(item_link),
-                                     pubDate = datetime.datetime.now())
+        item_dict = {
+            'title': "Revision %s" % revision,
+            'link': self.item_url and "%s?rev=%s" % (self.item_url, revision),
+            'date': datetime.datetime.now(),
+            'description': desc,
+            }
+
+        return item_dict
+
+
+class Svn2RSS(Svn2Feed):
+    def __init__(self, svn_path, repos_path, item_url, feed_file,
+                 max_items, feed_url):
+        Svn2Feed.__init__(self, svn_path, repos_path, item_url, feed_file,
+                          max_items, feed_url)
+        try:
+            import PyRSS2Gen
+        except ImportError:
+            sys.stderr.write("Error: Required PyRSS2Gen module not found.\n"
+                    "PyRSS2Gen can be downloaded from:\n"
+                    "http://www.dalkescientific.com/Python/PyRSS2Gen.html\n\n")
+            sys.exit(1)
+        self.PyRSS2Gen = PyRSS2Gen
+
+        (file, ext) = os.path.splitext(self.feed_file)
+        self.pickle_file = file + ".pickle"
+        if os.path.exists(self.pickle_file):
+            self.rss = pickle.load(open(self.pickle_file, "r"))
+        else:
+            self.rss = self.PyRSS2Gen.RSS2(
+                    title = self.feed_title,
+                    link = self.feed_url,
+                    description = self.feed_desc,
+                    lastBuildDate = datetime.datetime.now(),
+                    items = [])
+
+    def get_default_file_extension():
+        return ".rss"
+    get_default_file_extension = staticmethod(get_default_file_extension)
+
+    def add_revision_item(self, revision):
+        rss_item = self._make_rss_item(revision)
+        self.rss.items.insert(0, rss_item)
+        if len(self.rss.items) > self.max_items:
+            del self.rss.items[self.max_items:]
+
+    def write_output(self):
+        s = pickle.dumps(self.rss)
+        f = open(self.pickle_file, "w")
+        f.write(s)
+        f.close()
+
+        f = open(self.feed_file, "w")
+        self.rss.write_xml(f)
+        f.close()
+
+    def _make_rss_item(self, revision):
+        info = self._get_item_dict(revision)
+
+        rss_item = self.PyRSS2Gen.RSSItem(
+                title = info['title'],
+                link = info['link'],
+                description = info['description'],
+                guid = self.PyRSS2Gen.Guid(info['link']),
+                pubDate = info['date'])
         return rss_item
 
 
 def main():
     # Parse the command-line options and arguments.
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "hP:r:u:f:m:U:",
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "hP:r:u:f:m:U:F:",
                                        ["help",
                                         "svn-path=",
                                         "revision=",
@@ -170,6 +193,7 @@ def main():
                                         "feed-file=",
                                         "max-items=",
                                         "feed-url=",
+                                        "format=",
                                         ])
     except getopt.GetoptError, msg:
         usage_and_exit(msg)
@@ -183,7 +207,9 @@ def main():
     max_items = 20
     commit_rev = svn_path = None
     item_url = feed_url = ""
-    feed_file = os.path.basename(repos_path) + ".rss"
+    feed_file = None
+    feedcls = None
+    feed_classes = { 'rss': Svn2RSS }
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
@@ -207,6 +233,14 @@ def main():
         elif opt in ("-U", "--feed-url"):
             feed_url = arg
             check_url(feed_url, opt)
+        elif opt in ("-F", "--format"):
+            try:
+                feedcls = feed_classes[arg]
+            except KeyError:
+                usage_and_exit("Invalid value '%s' for --format." % arg)
+
+    if feedcls is None:
+        usage_and_exit("Option -F [--format] is required.")
 
     if commit_rev is None:
         svnlook_cmd = 'svnlook'
@@ -241,7 +275,10 @@ def main():
             usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
 
-    feedcls = Svn2RSS
+    if feed_file is None:
+        feed_file = (os.path.basename(repos_path) +
+                     feedcls.get_default_file_extension())
+
     feed = feedcls(svn_path, repos_path, item_url, feed_file, max_items,
                    feed_url)
     for revision in revisions:
