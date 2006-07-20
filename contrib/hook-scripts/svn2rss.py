@@ -86,18 +86,18 @@ def check_url(url, opt):
 
 
 class Svn2RSS:
-    def __init__(self, svn_path, repos_path, item_url, rss_file, 
+    def __init__(self, svn_path, repos_path, item_url, feed_file, 
                  max_items, feed_url):
         self.repos_path = repos_path
         self.item_url = item_url
-        self.rss_file = rss_file
+        self.feed_file = feed_file
         self.max_items = max_items
         self.feed_url = feed_url
         self.svnlook_cmd = 'svnlook'
         if svn_path is not None:
             self.svnlook_cmd = os.path.join(svn_path, 'svnlook')
 
-        (file, ext) = os.path.splitext(self.rss_file)
+        (file, ext) = os.path.splitext(self.feed_file)
         self.pickle_file = file + ".pickle"
         if os.path.exists(self.pickle_file):
             self.rss = pickle.load(open(self.pickle_file, "r"))
@@ -123,7 +123,7 @@ class Svn2RSS:
         f.write(s)
         f.close()
 
-        f = open(self.rss_file, "w")
+        f = open(self.feed_file, "w")
         self.rss.write_xml(f)
         f.close()
 
@@ -241,11 +241,12 @@ def main():
             usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
     
-    svn2rss = Svn2RSS(svn_path, repos_path, item_url, feed_file, max_items,
-                      feed_url)
+    feedcls = Svn2RSS
+    feed = feedcls(svn_path, repos_path, item_url, feed_file, max_items,
+                   feed_url)
     for revision in revisions:
-        svn2rss.add_revision_item(revision)
-    svn2rss.write_output()
+        feed.add_revision_item(revision)
+    feed.write_output()
     
   
 if __name__ == "__main__":
