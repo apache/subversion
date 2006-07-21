@@ -3070,7 +3070,7 @@ Commands:
   (let ((diff-mode-shared-map (copy-keymap svn-status-diff-mode-map))
         major-mode mode-name)
     (diff-mode)
-    (setq revert-buffer-function 'svn-status-diff-update)))
+    (set (make-local-variable 'revert-buffer-function) 'svn-status-diff-update)))
 
 (defun svn-status-diff-update (arg noconfirm)
   "Rerun the last svn diff command and update the *svn-diff* buffer."
