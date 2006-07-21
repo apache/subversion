@@ -452,7 +452,7 @@ module Svn
                &block) # :yields: path, dirent, lock, abs_path
         dirent_fields ||= Core::DIRENT_ALL
         Client.list(path_or_uri, peg_rev, rev, recurse, dirent_fields,
-                    fetch_locks, self, block)
+                    fetch_locks, block, self)
       end
 
       def switch(path, uri, rev=nil, recurse=true)

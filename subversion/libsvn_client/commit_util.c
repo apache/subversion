@@ -1298,7 +1298,7 @@ svn_client__do_commit(const char *base_url,
       void *val;
       void *file_baton;
       const char *tempfile, *dir_path;
-      const unsigned char *digest;
+      unsigned char digest[APR_MD5_DIGESTSIZE];
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
       
@@ -1342,15 +1342,15 @@ svn_client__do_commit(const char *base_url,
       dir_path = svn_path_dirname(item->path, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
                                   subpool));
-      SVN_ERR(svn_wc_transmit_text_deltas2(item->path, item_access, fulltext,
-                                           editor, file_baton, 
-                                           &tempfile, &digest, subpool));
+      SVN_ERR(svn_wc_transmit_text_deltas2(&tempfile, digest, item->path,
+                                           item_access, fulltext, editor,
+                                           file_baton, subpool));
       if (tempfile && *tempfiles)
         {
           tempfile = apr_pstrdup(apr_hash_pool_get(*tempfiles), tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
-      if (digest && digests)
+      if (digests)
         {
           unsigned char *new_digest = apr_pmemdup(apr_hash_pool_get(*digests),
                                                   digest, APR_MD5_DIGESTSIZE);

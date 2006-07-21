@@ -2,14 +2,18 @@
 
 # SVN_CONFIG_NICE(FILENAME)
 # Write a shell script to FILENAME (typically 'config.nice') which reinvokes
-# configure with all of the arguments.  Saves any previously existing FILENAME
-# as FILENAME.old, overwriting any previously existing FILENAME.old.  This is
-# different from 'config.status --recheck' in that it does add implicit
+# configure with all of the arguments.  Reserves use of the filename
+# FILENAME.old for its own use.
+# This is different from 'config.status --recheck' in that it does add implicit
 # --no-create --no-recursion options, and stores _just_ the configure
 # invocation, instead of the entire configured state.
 AC_DEFUN([SVN_CONFIG_NICE], [
   AC_MSG_NOTICE([creating $1])
-  mv "$1" "$1.old"
+  # This little dance satisfies Cygwin, which cannot overwrite in-use files.
+  if test -f "$1"; then
+    mv "$1" "$1.old"
+    rm -f "$1.old"
+  fi
 
   cat >"$1" <<EOF
 #! /bin/sh

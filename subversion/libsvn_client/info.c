@@ -135,8 +135,8 @@ push_dir_info(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_ra_get_dir2(ra_session, dir, rev, DIRENT_FIELDS, &tmpdirents, 
-                          NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
+                          dir, rev, DIRENT_FIELDS, pool));
 
   for (hi = apr_hash_first(pool, tmpdirents); hi; hi = apr_hash_next(hi))
     {
@@ -397,8 +397,8 @@ svn_client_info(const char *path_or_url,
                                                    ctx, pool));
       
       /* Get all parent's entries, and find the item's dirent in the hash. */
-      SVN_ERR(svn_ra_get_dir2(parent_ra_session, "", rev, DIRENT_FIELDS,
-                              &parent_ents, NULL, NULL, pool));
+      SVN_ERR(svn_ra_get_dir2(parent_ra_session, &parent_ents, NULL, NULL,
+                              "", rev, DIRENT_FIELDS, pool));
       the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,

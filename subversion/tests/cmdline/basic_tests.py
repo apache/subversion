@@ -1762,10 +1762,36 @@ def checkout_peg_rev(sbox):
                                           checkout_target, 
                                           expected_output,
                                           expected_wc)
+
+# Isue #1869.
+def move_relative_paths(sbox):
+  "move file using relative path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  rel_path = os.path.join('..', '..', '..')
+
+  current_dir = os.getcwd()
+  os.chdir(E_path)
   
+  try:
+    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
+def is_this_windows():
+  return (os.name == 'nt')
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1801,6 +1827,7 @@ test_list = [ None,
               cat_added_PREV,
               checkout_creates_intermediate_folders,
               checkout_peg_rev,
+              XFail(move_relative_paths, is_this_windows),
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

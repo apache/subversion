@@ -259,7 +259,7 @@ typedef const unsigned char *
 (*svn_txdelta_md5_digest_fn_t)(void *baton);
 
 /** Create and return a generic text delta stream with @a baton, @a
- * next_window_fn and @a md5_digest_fn.  Allocate the new stream in @a
+ * next_window and @a md5_digest.  Allocate the new stream in @a
  * pool.
  *
  * @since New in 1.4.
@@ -281,7 +281,7 @@ svn_error_t *svn_txdelta_next_window(svn_txdelta_window_t **window,
                                      apr_pool_t *pool);
 
 
-/** Return the @a md5 digest for the complete fulltext deltified by
+/** Return the md5 digest for the complete fulltext deltified by
  * @a stream, or @c NULL if @a stream has not yet returned its final 
  * @c NULL window.  The digest is allocated in the same memory as @a 
  * STREAM.
@@ -443,8 +443,8 @@ svn_error_t *svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
                                              apr_pool_t *pool);
 
 /**
- * Skip one delta window in svndiff format in the file @a file.  and
- * place it in @a *window, allocating the result in @a pool.  The
+ * Read and skip one delta window in svndiff format from the
+ * file @a file.  @a pool is used for temporary allocations.  The
  * caller must take responsibility for stripping off the four-byte
  * 'SVN@<ver@>' header at the beginning of the svndiff document before
  * reading or skipping the first window, and must provide the version

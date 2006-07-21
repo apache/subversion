@@ -118,6 +118,7 @@ else
   fi
 fi
 
+find build/ -name '*.pyc' -print -exec rm {} \;
 rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then
@@ -154,18 +155,6 @@ fi
 # Remove autoconf 2.5x's cache directory
 rm -rf autom4te*.cache
 
-# Run apr/buildconf if it exists.
-if test -x "apr/buildconf" ; then
-  echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
-  (cd apr && ./buildconf)
-fi
-
-# Run apr-util/buildconf if it exists.
-if test -x "apr-util/buildconf" ; then
-  echo "Creating configuration files for apr-util."
-  (cd apr-util && ./buildconf)
-fi
-
 echo ""
 echo "You can run ./configure now."
 echo ""
@@ -177,5 +166,5 @@ echo "./configure --disable-shared"
 echo "./configure --enable-maintainer-mode --disable-shared"
 echo ""
 echo "Note:  If you wish to run a Subversion HTTP server, you will need"
-echo "Apache 2.0.  See the INSTALL file for details."
+echo "Apache 2.x.  See the INSTALL file for details."
 echo ""

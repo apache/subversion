@@ -475,6 +475,9 @@ lock-comment:
 lock-creation-date:
    The lock creation date iff there is a lock token.
 
+changelist:
+   Which changelist this entry is part of, or empty if none.
+
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
 copyfrom-url, copyfrom-rev and kind.  The other fields are only stored

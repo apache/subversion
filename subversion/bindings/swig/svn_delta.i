@@ -16,12 +16,12 @@
  * svn_delta.i: SWIG interface file for svn_delta.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") delta
+#elif defined(SWIGPERL)
 %module "SVN::_Delta"
 #elif defined(SWIGRUBY)
 %module "svn::ext::delta"
-#else
-%module delta
 #endif
 
 %include svn_global.swg
@@ -61,7 +61,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 #endif
 
 #ifdef SWIGPERL
-%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton) {
+%typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 #endif
@@ -127,17 +127,11 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 */
 
 #ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *paths
-{
-  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
-}
-
-%typemap(in) (svn_delta_path_driver_cb_func_t callback_func,
-                    void *callback_baton)
-{
-  $1 = svn_swig_rb_delta_path_driver_cb_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_delta_path_driver_cb_func_t callback_func,
+                  void *callback_baton,
+                  ,
+                  ,
+                  svn_swig_rb_delta_path_driver_cb_func)
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -160,10 +154,6 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 %}
 #endif
 
-
-#ifdef SWIGRUBY
-%ignore svn_txdelta_to_svndiff2;
-#endif
 
 %include svn_delta_h.swg
 
@@ -205,19 +195,6 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
                     pool, handler, handler_baton);
 }
 
-/* FIXME: Is this even required any more, now that the arguments have
-   been re-ordered so that pool is last? */
-static void
-svn_txdelta_to_svndiff2_wrapper(svn_stream_t *output,
-                                svn_txdelta_window_handler_t *handler,
-                                void **handler_baton,
-                                int svndiff_version,
-                                apr_pool_t *pool)
-{
-  svn_txdelta_to_svndiff2(handler, handler_baton, output, svndiff_version,
-                          pool);
-}
-
 static svn_error_t *
 svn_txdelta_invoke_window_handler(VALUE window_handler,
                                   svn_txdelta_window_t *window,
@@ -252,15 +229,3 @@ svn_txdelta_md5_digest_as_cstring(svn_txdelta_stream_t *stream,
 
 %}
 #endif
-
-
-/* -----------------------------------------------------------------------
-   editor callback invokers
-*/
-
-/* Cancel the typemap as they aren't returned valued in member functions
-   if editor. */
-#ifdef SWIGPERL
-%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton);
-#endif
-

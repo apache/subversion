@@ -56,6 +56,17 @@ struct svn_ra_svn_conn_st {
   apr_pool_t *pool;
 };
 
+typedef struct svn_ra_svn__session_baton_t {
+  apr_pool_t *pool;
+  svn_ra_svn_conn_t *conn;
+  int protocol_version;
+  svn_boolean_t is_tunneled;
+  struct svn_auth_baton_t *auth_baton;
+  const char *user;
+  const char *realm_prefix;
+  const char **tunnel_argv;
+} svn_ra_svn__session_baton_t;
+
 /* Set a callback for blocked writes on conn.  This handler may
  * perform reads on the connection in order to prevent deadlock due to
  * pipelining.  If callback is NULL, the connection goes back to
@@ -94,6 +105,22 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * @a pool for temporary allocations. */
 svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
                                                apr_pool_t *pool);
+
+/* Respond to an auth request and perform authentication.  REALM may
+ * be NULL for the initial authentication exchange of protocol version
+ * 1. */
+svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
+                              apr_array_header_t *mechlist,
+                              const char *realm, apr_pool_t *pool);
+
+/* Having picked a mechanism, start authentication by writing out an
+ * auth response.  If COMPAT is true, also write out a version number
+ * and capability list.  MECH_ARG may be NULL for mechanisms with no
+ * initial client response. */
+svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn, 
+                                       apr_pool_t *pool,
+                                       const char *mech, const char *mech_arg,
+                                       svn_boolean_t compat);
 
 #ifdef __cplusplus
 }

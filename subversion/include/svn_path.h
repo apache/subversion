@@ -235,7 +235,7 @@ svn_path_split_if_file(const char *path,
                        apr_pool_t *pool);
 
 /** Find the common prefix of the canonicalized paths in @a targets
- * (an array of @a const char *'s), and remove redundant paths if @a
+ * (an array of <tt>const char *</tt>'s), and remove redundant paths if @a
  * remove_redundancies is true.
  *
  *   - Set @a *pcommon to the absolute path of the path or URL common to

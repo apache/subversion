@@ -3033,16 +3033,24 @@ working copy.</p>
 
 <p>Calm down, take a deep breath.</p>
 
-<p>First of all, notice that the directory which contains the cached
-passwords (usually ~/.subversion/auth/ on Unix systems) has permissions
-of 700, meaning only you can read them.  Trust your OS to protect data
-on disk.</p>
+<p>On UNIX, notice that the directory which contains the cached
+passwords (usually ~/.subversion/auth/) has permissions
+of 700, meaning only you can read them.</p>
 
-<p>Secondly, if you're really worried, you can permanently turn off
+<p>On Windows 2000 or later, svn 1.2 and above uses standard 
+Windows APIs to encrypt the data, so only the user can decrypt the 
+cached password.</p>
+
+<P>Trust your OS to protect data on disk.</p>
+
+<p>However, if you're really worried, you can permanently turn off
 password caching.  With an svn 1.0 client, just set 'store-auth-creds
 = no' in your run-time config file.  With an svn 1.1 client or later,
 you can use the more narrowly-defined 'store-passwords = no' (so that
-server certs are still cached.)</p>
+server certs are still cached). More information on password cacheing
+is in chapter 6 of the <a 
+href="http://svnbook.red-bean.com/nightly/en/index.html">"Nightly 
+Build" Subversion book</a>, under "Client Credentials Caching".</p>
 
 <p>Lastly, we point out that CVS has been caching passwords for years
 in the .cvspass file.  It may look like the passwords in .cvspass are
@@ -3317,12 +3325,21 @@ solution described here was not mentioned in that thread.</p>
     RAM disk?</h3>
 
 <p>Test execution can be dramatically sped up by keeping Subversion
-test data on a RAM disk.  On a Linux system, add lines like the
-following in your /etc/fstab file:</p>
+test data on a RAM disk.  On a Linux system, you can mount a RAM disk
+on the fly with the command:</p>
 
 <blockquote>
-<div><code>tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
-<div><code>tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
+<div><code>mount -t tmpfs tmpfs
+/path/to/src/subversion/tests/cmdline/svn-test-work
+-o uid=$USER,mode=770,size=32m</code></div>
+</blockquote>
+
+<p>Or, for a more permanent solution, add lines like the following in
+your <code>/etc/fstab</code> file:</p>
+
+<blockquote>
+<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
+tmpfs  defaults,user,noauto,exec,size=32m</code></div>
 </blockquote>
 
 <p>The minimum required size for testing ramdisk is approximately 700MB.
@@ -3367,7 +3384,7 @@ to debug them right within your source tree.</p>
 
 <p>To do so, edit the last <code>exec</code> statement in the shell
 script to run the real binary in your debugger.  With gdb, this
-amounts to replacing <code>exec "$prgodir/$progname"</code> with
+amounts to replacing <code>exec "$progdir/$progname"</code> with
 <code>exec gdb --args "$progdir/$progname"</code>.</p>
 
 <p>This trick is also very useful when applied to the

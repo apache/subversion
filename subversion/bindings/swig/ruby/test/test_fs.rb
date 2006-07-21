@@ -62,7 +62,7 @@ class SvnFsTest < Test::Unit::TestCase
     FileUtils.mv(@fs.path, backup_path)
     FileUtils.mv(dest_fs.path, @fs.path)
 
-    assert_raises(Svn::Error::FS_NO_SUCH_REVISION) do
+    assert_raises(Svn::Error::FsNoSuchRevision) do
       assert_equal(log, ctx.log_message(path, rev))
     end
 
@@ -126,7 +126,7 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(rev2, @fs.root.node_created_rev(path_in_repos))
     assert_equal(path_in_repos, @fs.root.node_created_path(path_in_repos))
 
-    assert_raises(Svn::Error::FS_NOT_TXN_ROOT) do
+    assert_raises(Svn::Error::FsNotTxnRoot) do
       @fs.root.set_node_prop(path_in_repos, "name", "value")
     end
   end
@@ -145,7 +145,7 @@ class SvnFsTest < Test::Unit::TestCase
     ctx.add(path)
     ctx.commit(@wc_path)
     
-    assert_raises(Svn::Error::FS_NO_SUCH_TRANSACTION) do
+    assert_raises(Svn::Error::FsNoSuchTransaction) do
       @fs.open_txn("NOT-EXIST")
     end
     
@@ -317,7 +317,7 @@ class SvnFsTest < Test::Unit::TestCase
       checksum = MD5.new(result).hexdigest
       handler = txn.root.apply_textdelta(path_in_repos,
                                          base_checksum, checksum)
-      assert_raises(Svn::Error::CHECKSUM_MISMATCH) do
+      assert_raises(Svn::Error::ChecksumMismatch) do
         handler.call(nil)
       end
     end

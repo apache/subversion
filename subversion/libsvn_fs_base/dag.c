@@ -769,8 +769,9 @@ svn_fs_base__dag_clone_root(dag_node_t **root_p,
       SVN_ERR(svn_fs_bdb__get_node_revision(&noderev, fs, base_root_id,
                                             trail, pool));
 
-      /* Store it. */
-      /* ### todo: Does it even makes sense to have a different copy id for
+      /* With its Y-chromosome changed to X...
+         (Store it with an updated predecessor count.) */
+      /* ### TODO: Does it even makes sense to have a different copy id for
          the root node?  That is, does this function need a copy_id
          passed in?  */
       noderev->predecessor_id = svn_fs_base__id_copy(base_root_id, pool);

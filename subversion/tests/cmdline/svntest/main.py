@@ -161,10 +161,9 @@ config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 pristine_wc_dir = os.path.join(temp_dir, "wc")
 default_config_dir = config_dir
 
-# calculate repo url from pristine_dir
-pristine_url = test_area_url + '/' + pristine_dir
-if windows == 1:
-  pristine_url = string.replace(pristine_url, '\\', '/')
+# Location to the pristine repository, will be calculated from test_area_url
+# when we know what the user specified for --url.
+pristine_url = None
 
 #
 # Our pristine greek-tree state.
@@ -800,6 +799,7 @@ def run_tests(test_list):
   """
 
   global test_area_url
+  global pristine_url
   global fs_type
   global verbose_mode
   global cleanup_mode
@@ -842,6 +842,11 @@ def run_tests(test_list):
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
+  # Calculate pristine_url from test_area_url.
+  pristine_url = test_area_url + '/' + pristine_dir
+  if windows == 1:
+    pristine_url = string.replace(pristine_url, '\\', '/')  
+  
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))

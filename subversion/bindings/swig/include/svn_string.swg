@@ -280,32 +280,5 @@ typedef struct svn_string_t svn_string_t;
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   define a general INPUT param of an array of const char * items.
- */
-
-#ifdef SWIGPYTHON
-%typemap(in) const apr_array_header_t *STRINGLIST {
-    $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in) const apr_array_header_t *STRINGLIST {
-    $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
-                                                             _global_pool);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) const apr_array_header_t *STRINGLIST {
-  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
-}
-#endif
-
-/* path lists */
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *paths
-};
+/* svn_wc_get_ancestry() lacks a 'const' */
+%apply const char **OUTPUT { const char **, char **url };

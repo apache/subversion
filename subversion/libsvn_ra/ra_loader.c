@@ -419,8 +419,8 @@ svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
   svn_commit_callback2_t callback2;
   void *callback2_baton;
 
-  svn_compat_wrap_commit_callback(callback, callback_baton,
-                                  &callback2, &callback2_baton,
+  svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
+                                  callback, callback_baton,
                                   pool);
 
   return svn_ra_get_commit_editor2(session, editor, edit_baton,
@@ -449,21 +449,21 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_hash_t **props,
                             apr_pool_t *pool)
 {
-  return session->vtable->get_dir(session, path, revision, SVN_DIRENT_ALL,
-                                  dirents, fetched_rev, props, pool);
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, SVN_DIRENT_ALL, pool);
 }
 
 svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t revision,
-                             apr_uint32_t dirent_fields,
                              apr_hash_t **dirents,
                              svn_revnum_t *fetched_rev,
                              apr_hash_t **props,
+                             const char *path,
+                             svn_revnum_t revision,
+                             apr_uint32_t dirent_fields,
                              apr_pool_t *pool)
 {
-  return session->vtable->get_dir(session, path, revision, dirent_fields,
-                                  dirents, fetched_rev, props, pool);
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, dirent_fields, pool);
 }
 
 svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,

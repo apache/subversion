@@ -2,7 +2,7 @@
 # Makefile.in:  template Makefile for Subversion
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -41,10 +41,10 @@ NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
-SVN_KEYCHAIN_LIBS = @SVN_KEYCHAIN_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
+SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
 LIBS = @LIBS@
 
@@ -100,9 +100,9 @@ LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
-           @SVN_NEON_INCLUDES@ @SVN_KEYCHAIN_INCLUDES@ \
+           @SVN_NEON_INCLUDES@ \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@ \
-           @SVN_SASL_INCLUDES@
+           @SVN_SASL_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -132,6 +132,9 @@ SVN_APRUTIL_PREFIX = @SVN_APRUTIL_PREFIX@
 
 SVN_SERF_INCLUDES = @SVN_SERF_INCLUDES@
 SVN_SERF_PREFIX = @SVN_SERF_PREFIX@
+
+SVN_ZLIB_PREFIX = @SVN_ZLIB_PREFIX@
+SVN_ZLIB_INCLUDES = @SVN_ZLIB_INCLUDES@
 
 MKDIR = @MKDIR@
 

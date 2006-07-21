@@ -16,7 +16,6 @@
 #
 
 import sys
-import string
 import time
 import os
 
@@ -24,6 +23,7 @@ from svn import core, fs, delta, repos
 
 class SVNLook:
   def __init__(self, path, cmd, rev, txn):
+    path = core.svn_path_canonicalize(path)
     repos_ptr = repos.open(path)
     self.fs_ptr = repos.fs(repos_ptr)
 
@@ -308,7 +308,7 @@ class DiffEditor(delta.Editor):
 
 def _basename(path):
   "Return the basename for a '/'-separated path."
-  idx = string.rfind(path, '/')
+  idx = path.rfind('/')
   if idx == -1:
     return path
   return path[idx+1:]
@@ -373,7 +373,7 @@ def main():
   if args:
     if len(args) > 1:
       usage(1)
-    cmd = string.replace(args[0], '-', '_')
+    cmd = args[0].replace('-', '_')
   else:
     cmd = 'default'
 

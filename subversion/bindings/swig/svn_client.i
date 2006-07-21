@@ -16,12 +16,12 @@
  * svn_client.i: SWIG interface file for svn_client.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") client
+#elif defined(SWIGPERL)
 %module "SVN::_Client"
 #elif defined(SWIGRUBY)
 %module "svn::ext::client"
-#else
-%module client
 #endif
 
 %include svn_global.swg
@@ -38,24 +38,9 @@
   const svn_opt_revision_t *peg_revision
 };
 
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *targets,
-    const apr_array_header_t *diff_options
-};
-
 %apply const char *MAY_BE_NULL {
     const char *native_eol,
     const char *comment
-};
-
-/* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
-%apply apr_hash_t **PROPHASH { apr_hash_t **props };
-
-/* svn_client_url_from_path(), svn_client_uuid_from_url()
- * svn_client_uuid_from_path */
-%apply const char **OUTPUT {
-    const char **url,
-    const char **uuid
 };
 
 #ifdef SWIGPYTHON
@@ -136,125 +121,57 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   Callback: svn_client_get_commit_log_t
-   svn_client_ctx_t
-*/
+#ifdef SWIGPYTHON
+%callback_typemap(svn_client_get_commit_log_t log_msg_func,
+                  void *log_msg_baton,
+                  svn_swig_py_get_commit_log_func,
+                  ,
+                  )
+#endif
+
+#ifdef SWIGRUBY
+%callback_typemap(svn_client_get_commit_log2_t log_msg_func2,
+                  void *log_msg_baton2,
+                  ,
+                  ,
+                  svn_swig_rb_get_commit_log_func2)
+
+%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
+                  ,
+                  ,
+                  svn_swig_rb_cancel_func)
+#endif
+
+%callback_typemap(svn_client_blame_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_client_blame_receiver_func,
+                  svn_swig_pl_blame_func,
+                  svn_swig_rb_client_blame_receiver_func)
+
+#ifdef SWIGRUBY
+%callback_typemap(svn_wc_notify_func2_t notify_func2, void *notify_baton2,
+                  ,
+                  ,
+                  svn_swig_rb_notify_func2)
+#endif
 
 #ifdef SWIGPYTHON
-%typemap(in) (svn_client_get_commit_log_t log_msg_func,
-                     void *log_msg_baton) {
-
-  $1 = svn_swig_py_get_commit_log_func;
-  $2 = $input; /* our function is the baton. */
-}
+%callback_typemap(svn_info_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_info_receiver_func,
+                  ,
+                  )
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_client_get_commit_log2_t log_msg_func2,
-                    void *log_msg_baton2)
-{
-  $1 = svn_swig_rb_get_commit_log_func2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_client_diff_summarize_func_t summarize_func,
+                  void *summarize_baton,
+                  ,
+                  ,
+                  svn_swig_rb_client_diff_summarize_func)
 
-/* -----------------------------------------------------------------------
-   Callback: svn_cancel_func_t
-   svn_client_ctx_t
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_cancel_func_t cancel_func, void *cancel_baton)
-{
-  $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func2_t
-   svn_client_ctx_t
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
-{
-  $1 = svn_swig_rb_notify_func2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-
-/* -----------------------------------------------------------------------
-   Callback: svn_client_blame_receiver_t
-   svn_client_blame()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_client_blame_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_client_blame_receiver_func;
-    $2 = (void *)$input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_client_blame_receiver_t receiver,
-                     void *receiver_baton) {
-  $1 = svn_swig_pl_blame_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_client_blame_receiver_t receiver,
-                    void *receiver_baton)
-{
-  $1 = svn_swig_rb_client_blame_receiver_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_info_receiver_t
-   svn_client_info()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_info_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_info_receiver_func;
-    $2 = (void *)$input;
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_client_diff_summarize_func_t
-   svn_client_diff_summarize()
-   svn_client_diff_summarize_peg()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_client_diff_summarize_func_t summarize_func,
-                    void *summarize_baton)
-{
-  $1 = svn_swig_rb_client_diff_summarize_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_client_list_func_t
-   svn_client_list()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_client_list_func_t list_func, void *baton)
-{
-  $1 = svn_swig_rb_client_list_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_client_list_func_t list_func, void *baton,
+                  ,
+                  ,
+                  svn_swig_rb_client_list_func)
 #endif
 
 /* -----------------------------------------------------------------------
@@ -271,115 +188,13 @@
 %types(svn_dirent_t *);
 %types(svn_lock_t *);
 
-/* -----------------------------------------------------------------------
-  thunk the various authentication prompt functions.
-  PERL NOTE: store the inputed SV in _global_callback for use in the
-             later argout typemap
+/* FIXME: What on earth is all this CALLBACK_BATON stuff actually trying to do?
+   Does Python need to do anything similar?
+   Why is some of it in svn_client.i and should it apply on a wider scope?
 */
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_simple_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_simple_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_simple_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_simple_prompt_func;
-    $2 = $input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_username_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_username_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_username_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_username_prompt_func;
-    $2 = $input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_ssl_server_trust_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_py_auth_ssl_server_trust_prompt_func;
-    $2 = $input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_ssl_client_cert_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_ssl_client_cert_prompt_func;
-    $2 = $input;
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_pl_thunk_ssl_client_cert_pw_prompt;
-    _global_callback = $input;
-    $2 = (void *) _global_callback;
-}
-#endif
-#ifdef SWIGPYTHON
-%typemap(in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_py_auth_ssl_client_cert_pw_prompt_func;
-    $2 = $input;
-}
-#endif
-
-/* -----------------------------------------------------------------------
- * For all the various functions that set a callback baton create a reference
- * for the baton (which in this case is an SV pointing to the callback)
- * and make that a return from the function.  The perl side should
- * then store the return in the object the baton is attached to.
- * If the function already returns a value then this value is follows that
- * function.  In the case of the prompt functions auth_open_helper in Core.pm
- * is used to split up these values.
-*/
-#ifdef SWIGPERL
-%typemap(argout) void *CALLBACK_BATON (SV * _global_callback) {
-  /* callback baton */
-  %append_output(sv_2mortal(newRV_inc(_global_callback)));
-}
-
-%typemap(in) void *CALLBACK_BATON (SV * _global_callback) {
-  _global_callback = $input;
-  $1 = (void *) _global_callback;
-}
-#endif
 
 #ifdef SWIGPERL
 %apply void *CALLBACK_BATON {
-  void *prompt_baton,
   void *notify_baton,
   void *log_msg_baton,
   void *cancel_baton
@@ -387,6 +202,14 @@
 #endif
 
 #ifdef SWIGRUBY
+/* -----------------------------------------------------------------------
+   CALLBACK_BATON: Do not convert to C object from Ruby object.
+*/
+%typemap(in) void *CALLBACK_BATON
+{
+  $1 = (void *)$input;
+}
+
 %apply void *CALLBACK_BATON
 {
   void *notify_baton2,
@@ -494,13 +317,6 @@
   (*$1)->cancel_func = svn_swig_pl_cancel_func;
   (*$1)->cancel_baton = (void *) &PL_sv_undef;
   %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
-}
-#endif
-
-/* svn_client_update2 */
-#ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **result_revs {
-  %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
 }
 #endif
 

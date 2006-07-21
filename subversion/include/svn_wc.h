@@ -2980,7 +2980,8 @@ typedef enum svn_wc_merge_outcome_t
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_merge2(const char *left,
+svn_error_t *svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+                           const char *left,
                            const char *right,
                            const char *merge_target,
                            svn_wc_adm_access_t *adm_access,
@@ -2988,7 +2989,6 @@ svn_error_t *svn_wc_merge2(const char *left,
                            const char *right_label,
                            const char *target_label,
                            svn_boolean_t dry_run,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
                            const char *diff3_cmd,
                            const apr_array_header_t *merge_options,
                            apr_pool_t *pool);
@@ -3330,8 +3330,9 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  * This process creates a copy of @a path with keywords and eol
  * untranslated.  If @a tempfile is non-null, set @a *tempfile to the
  * path to this copy.  Do not clean up the copy; caller can do that.
- * If @a digest is non-null, set @a *digest to the MD5 checksum of the
- * temporary file.  (The purpose of handing back the tmp copy is that
+ * If @a digest is non-null, put the MD5 checksum of the
+ * temporary file into @a digest, which must point to @c APR_MD5_DIGESTSIZE
+ * bytes of storage.  (The purpose of handing back the tmp copy is that
  * it is usually about to become the new text base anyway, but the
  * installation of the new text base is outside the scope of this
  * function.)
@@ -3349,13 +3350,13 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_transmit_text_deltas2(const char *path,
+svn_error_t *svn_wc_transmit_text_deltas2(const char **tempfile,
+                                          unsigned char digest[],
+                                          const char *path,
                                           svn_wc_adm_access_t *adm_access,
                                           svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
-                                          const char **tempfile,
-                                          const unsigned char **digest,
                                           apr_pool_t *pool);
 
 /** Similar to svn_wc_transmit_text_deltas2(), but with @a digest set to null.
@@ -3409,7 +3410,7 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
-/** Return @c TRUE iff @a STR matches any of the elements of @a LIST, a
+/** Return true iff @a str matches any of the elements of @a list, a
  * list of zero or more ignore patterns.
  *
  * @since New in 1.5.

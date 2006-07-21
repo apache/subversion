@@ -18,12 +18,12 @@
  *   of the more specific module files.
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") core
+#elif defined(SWIGPERL)
 %module "SVN::_Core"
 #elif defined(SWIGRUBY)
 %module "svn::ext::core"
-#else
-%module core
 #endif
 
 %include svn_global.swg
@@ -228,14 +228,6 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   Diff options are strings in array.
-*/
-
-%apply const apr_array_header_t *STRINGLIST {
-  const apr_array_header_t *args
-}
-
-/* -----------------------------------------------------------------------
    input rangelist to svn_rangelist_to_string
 */
 %apply apr_array_header_t *RANGELIST {
@@ -254,11 +246,6 @@
    apr_hash_t *eraser,
    apr_hash_t *whiteboard
 }
-
-/* -----------------------------------------------------------------------
-   handle the MIME type return value of svn_io_detect_mimetype()
-*/
-%apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
@@ -380,45 +367,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   auth provider convertors
-*/
-#ifdef SWIGPERL
-%typemap(in) apr_array_header_t *providers {
-    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
-      $descriptor(svn_auth_provider_object_t *), _global_pool);
-}
-#endif
-
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *providers {
-    svn_auth_provider_object_t *provider;
-    int targlen;
-    if (!PySequence_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        SWIG_fail;
-    }
-    targlen = PySequence_Length($input);
-    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
-    ($1)->nelts = targlen;
-    while (targlen--) {
-        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
-          $descriptor(svn_auth_provider_object_t *), $svn_argnum, NULL);
-        if (PyErr_Occurred()) {
-          SWIG_fail;
-        }
-        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
-    }
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *providers
-{
-  $1 = svn_swig_rb_array_to_auth_provider_object_apr_array($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
    auth parameter set/get
 */
 
@@ -480,6 +428,7 @@
 #endif
 
 /* -----------------------------------------------------------------------
+<<<<<<< .working
    svn_mergeinfo_parse()
 */
 
@@ -515,6 +464,8 @@
 #endif
 
 /* -----------------------------------------------------------------------
+=======
+>>>>>>> .merge-right.r20607
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 #ifdef SWIGPYTHON
@@ -604,42 +555,22 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 */
 
 #ifdef SWIGPERL
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *)));
-}
-
-%typemap(in) (svn_config_enumerator_t callback, void *baton) {
-    $1 = svn_swig_pl_thunk_config_enumerator,
-    $2 = (void *)$input;
-};
+%callback_typemap(svn_config_enumerator_t callback, void *baton,
+                  ,
+                  svn_swig_pl_thunk_config_enumerator,
+                  )
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
-                                                        "svn_config_t *"));
-}
+%callback_typemap(svn_config_enumerator2_t callback, void *baton,
+                  ,
+                  ,
+                  svn_swig_rb_config_enumerator)
 
-%typemap(in) (svn_config_enumerator2_t callback, void *baton)
-{
-  $1 = svn_swig_rb_config_enumerator;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-};
-
-%typemap(in) (svn_config_section_enumerator2_t callback, void *baton)
-{
-  $1 = svn_swig_rb_config_section_enumerator;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-};
-#endif
-
-#ifdef SWIGPYTHON
-/* FIXME: We are effectively treating this hash as an opaque blob...
- * shouldn't we be converting it to a dict? */
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
-                                        _global_svn_swig_py_pool));
-}
+%callback_typemap(svn_config_section_enumerator2_t callback, void *baton,
+                  ,
+                  ,
+                  svn_swig_rb_config_section_enumerator)
 #endif
 
 /* Allow None to be passed as config_dir argument */
@@ -660,69 +591,58 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 PyObject *svn_swig_py_exception_type(void);
 #endif
 
-/* svn_prop_diffs */
-#ifdef SWIGRUBY
-%typemap(argout) apr_array_header_t **propdiffs {
-  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
-}
-#endif
-
-%apply apr_hash_t *PROPHASH {
-  apr_hash_t *target_props,
-  apr_hash_t *source_props
-};
-
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *proplist
-{
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
-}
-#endif
-
-%apply apr_array_header_t **OUTPUT_OF_PROP {
-  apr_array_header_t **entry_props,
-  apr_array_header_t **wc_props,
-  apr_array_header_t **regular_props
-};
-
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.
+  PERL NOTE: store the inputed SV in _global_callback for use in the
+             later argout typemap
 */
-#ifdef SWIGRUBY
-%typemap(in) (svn_auth_simple_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_simple_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+#ifdef SWIGPERL
+%define %authprompt_callback_typemap(AuthType)
+%typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+              void *prompt_baton) {
+  $1 = svn_swig_pl_thunk_ ## AuthType ## _prompt;
+  $2 = $input;
+  _global_callback = $input;
+}
+%enddef
+#else
+%define %authprompt_callback_typemap(AuthType)
+%callback_typemap(svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
+                  void *prompt_baton,
+                  svn_swig_py_auth_ ## AuthType ## _prompt_func,,
+                  svn_swig_rb_auth_ ## AuthType ## _prompt_func)
+%enddef
+#endif
+
+%authprompt_callback_typemap(simple)
+%authprompt_callback_typemap(username)
+%authprompt_callback_typemap(ssl_server_trust)
+%authprompt_callback_typemap(ssl_client_cert)
+%authprompt_callback_typemap(ssl_client_cert_pw)
+
+/* -----------------------------------------------------------------------
+ * For all the various functions that set a callback baton create a reference
+ * for the baton (which in this case is an SV pointing to the callback)
+ * and make that a return from the function.  The perl side should
+ * then store the return in the object the baton is attached to.
+ * If the function already returns a value then this value is follows that
+ * function.  In the case of the prompt functions auth_open_helper in Core.pm
+ * is used to split up these values.
+*/
+#ifdef SWIGPERL
+%typemap(argout) void *CALLBACK_BATON (SV * _global_callback) {
+  /* callback baton */
+  %append_output(sv_2mortal(newRV_inc(_global_callback)));
 }
 
-%typemap(in) (svn_auth_username_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_username_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+%typemap(in) void *CALLBACK_BATON (SV * _global_callback) {
+  _global_callback = $input;
+  $1 = (void *) _global_callback;
 }
 
-%typemap(in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
-%typemap(in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                    void *prompt_baton)
-{
-  $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%apply void *CALLBACK_BATON {
+  void *prompt_baton
+};
 #endif
 
 /* ----------------------------------------------------------------------- */

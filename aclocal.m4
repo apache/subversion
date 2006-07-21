@@ -19,6 +19,7 @@ sinclude(build/ac-macros/svn-apache.m4)
 sinclude(build/ac-macros/java.m4)
 sinclude(build/ac-macros/swig.m4)
 sinclude(build/ac-macros/sasl.m4)
+sinclude(build/ac-macros/zlib.m4)
 
 # Include the libtool macros
 sinclude(build/libtool.m4)

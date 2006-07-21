@@ -301,9 +301,8 @@ svn_cl__list(apr_getopt_t *os,
                               &(opt_state->start_revision),
                               opt_state->recursive, dirent_fields,
                               (opt_state->xml || opt_state->verbose),
-                              ctx, opt_state->xml
-                              ? print_dirent_xml : print_dirent, &pb,
-                              subpool));
+                              opt_state->xml ? print_dirent_xml : print_dirent,
+                              &pb, ctx, subpool));
 
       if (opt_state->xml)
         {

@@ -854,8 +854,8 @@ svn_repos_get_commit_editor3(const svn_delta_editor_t **editor,
   svn_commit_callback2_t callback2;
   void *callback2_baton;
 
-  svn_compat_wrap_commit_callback(callback, callback_baton,
-                                  &callback2, &callback2_baton,
+  svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
+                                  callback, callback_baton,
                                   pool);
 
   return svn_repos_get_commit_editor4(editor, edit_baton, repos, txn,
