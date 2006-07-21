@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Usage: svn2rss.py [OPTION...] REPOS-PATH
+"""Usage: svn2feed.py [OPTION...] REPOS-PATH
 
 Generate an RSS 2.0 or Atom 1.0 feed file containing commit
 information for the Subversion repository located at REPOS-PATH.  Once
@@ -79,7 +79,7 @@ def check_url(url, opt):
     if not (url.startswith('https://') \
             or url.startswith('http://') \
             or url.startswith('file://')):
-      usage_and_exit("svn2rss.py: Invalid url '%s' is specified for " \
+      usage_and_exit("svn2feed.py: Invalid url '%s' is specified for " \
                      "'%s' option" % (url, opt))
 
 
@@ -379,7 +379,7 @@ def main():
             else:
                 raise ValueError()
         except ValueError, msg:
-            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
+            usage_and_exit("svn2feed.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
 
     if feed_file is None:
