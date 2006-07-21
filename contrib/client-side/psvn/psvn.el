@@ -197,6 +197,10 @@
 
 (require 'easymenu)
 
+(eval-when-compile (require 'dired))
+(eval-when-compile (require 'ediff-util))
+(eval-when-compile (require 'elp))
+
 (condition-case nil
     (progn
       (require 'diff-mode))
@@ -775,7 +779,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 
 (when (not svn-status-diff-mode-map)
   (setq svn-status-diff-mode-map (copy-keymap diff-mode-shared-map))
-  (define-key svn-status-diff-mode-map [?g] 'svn-status-diff-update)
+  (define-key svn-status-diff-mode-map [?g] 'revert-buffer)
   (define-key svn-status-diff-mode-map [?s] 'svn-status-pop-to-status-buffer)
   (define-key svn-status-diff-mode-map [?w] 'svn-status-diff-save-current-defun-as-kill))
 
@@ -3065,9 +3069,10 @@ Commands:
 "
   (let ((diff-mode-shared-map (copy-keymap svn-status-diff-mode-map))
         major-mode mode-name)
-    (diff-mode)))
+    (diff-mode)
+    (setq revert-buffer-function 'svn-status-diff-update)))
 
-(defun svn-status-diff-update ()
+(defun svn-status-diff-update (arg noconfirm)
   "Rerun the last svn diff command and update the *svn-diff* buffer."
   (interactive)
   (svn-status-save-some-buffers)
@@ -3237,8 +3242,8 @@ user can enter a new file name, or an existing directory: this is used as the ar
   "Actually run svn mv or svn cp.
 This is just to prevent duplication in `svn-status-prompt-and-act-on-files'"
   (if force
-      (svn-run nil t (intern command) command "--force" "--" original-name dest)
-    (svn-run nil t (intern command) command "--" original-name dest))
+      (svn-run nil t (intern command) command "--force" "--" original destination)
+    (svn-run nil t (intern command) command "--" original destination))
 ;;;TODO: use something like the following instead of calling svn-status-update
 ;;;      at the end of svn-status-mv-cp.
 ;;   (let ((output (svn-status-parse-ar-output))
