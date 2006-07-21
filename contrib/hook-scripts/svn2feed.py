@@ -313,7 +313,7 @@ def main():
     # Now deal with the options.
     max_items = 20
     commit_rev = svn_path = None
-    item_url = feed_url = ""
+    item_url = feed_url = None
     feed_file = None
     feedcls = None
     feed_classes = { 'rss': Svn2RSS, 'atom': Svn2Atom }
@@ -348,6 +348,12 @@ def main():
 
     if feedcls is None:
         usage_and_exit("Option -F [--format] is required.")
+
+    if item_url is None:
+        usage_and_exit("Option -u [--item-url] is required.")
+
+    if feed_url is None:
+        usage_and_exit("Option -U [--feed-url] is required.")
 
     if commit_rev is None:
         svnlook_cmd = 'svnlook'
