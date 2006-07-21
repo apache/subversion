@@ -32,8 +32,6 @@ Options:
 
  -m, --max-items=N      Keep only N items in the feed file.  By default,
                         20 items are kept.
-                        BUG: This option is currently ignored for Atom feeds,
-                        meaning that they grow without limit.
 
  -u, --item-url=URL     Use URL as the basis for generating feed item links.
                         This value is appended with '?rev=REV_NUMBER' to form
@@ -208,8 +206,21 @@ class Svn2Atom(Svn2Feed):
 
     def add_revision_item(self, revision):
         item = self._make_atom_item(revision)
-        self.feed.appendChild(item)
-        # FIXME: Process max_items
+
+        total = 0
+        for childNode in self.feed.childNodes:
+            # author is the last non-entry element. We insert the new
+            # element before its next sibling because it is obviously an
+            # 'entry' element. If there is no such element, then next
+            # sibling will be None and the element will be inserted
+            # after the 'author' element
+            if(childNode.nodeName == 'author'):
+                self.feed.insertBefore(item, childNode.nextSibling)
+            elif(childNode.nodeName == 'entry'):
+                total += 1
+
+        if (total > self.max_items):
+            self.feed.removeChild(self.feed.lastChild)
 
     def write_output(self):
         s = pickle.dumps(self.document)
