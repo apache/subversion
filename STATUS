@@ -17,5 +17,15 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r20190, r20250, r20444, r20826
+    A few improvements to the Windows build system including a fix for the
+    swig perl bindings.  They are grouped together to avoid conflicts.
+    Justification:
+      Most are very low impact build improvements, but without r20826 the
+      Perl bindings won't build on Windows.
+      
+    Votes:
+      +1: djh, brane (r20826 only from email)
+
 Approved changes:
 
