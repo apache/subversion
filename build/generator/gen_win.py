@@ -634,6 +634,7 @@ class WinGeneratorBase(GeneratorBase):
                        self.path("subversion/bindings/swig/proxy"),
                        self.path("subversion/bindings/swig/include"),
                        self.path("subversion/include"),
+                       self.path("subversion"),
                        self.path(util_includes),
                        self.apath(self.apr_path, "include"),
                        self.apath(self.apr_util_path, "include") ]
