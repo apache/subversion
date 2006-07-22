@@ -793,7 +793,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# happen:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -804,7 +804,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# happen:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"$USER\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -929,7 +929,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If we get no result from svnlook, there's no lock, return success:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -937,7 +937,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If the person unlocking matches the lock's owner, return success:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"$USER\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR

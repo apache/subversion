@@ -19,12 +19,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r20796
-    Create valid Bourne shell "pre-lock" and "post-lock" repository
-    hooks by default.
-    Justification:
-      The generated, default hook scripts should be valid for vanilla
-      Bourne shell.
-    Votes:
-      +1: dlr, maxb, jerenkrantz
-
