@@ -27,5 +27,13 @@ Candidate changes:
     Votes:
       +1: djh, brane (r20826 only from email)
 
+  * r20172, r20828
+    Update the Windows build instructions.
+    Justification:
+      Documentation that more closely matches the reality is good.
+      
+    Votes:
+      +1: djh
+
 Approved changes:
 
