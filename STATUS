@@ -35,5 +35,22 @@ Candidate changes:
     Votes:
       +1: djh
 
+
+
 Approved changes:
 
+
+
+Status of 1.4.1:
+================
+
+Candidate changes:
+
+  * r20384
+    Fix issue #2583: 'svn diff' shouldn't require write access
+    to the working copy.
+    Justification:
+      Relatively low impact change; most of it is copy-pasted from
+      old (proven) code.
+    Votes:
+      +1: dionisos
