@@ -1801,6 +1801,96 @@ def conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
     svntest.main.run_svn(None, 'update', wc_dir)
 
+# eol-style handling during update, scenario 2:
+# if part of that update is a propchange (add, change, delete) of
+# svn:eol-style, make sure the correct eol-style is applied before
+# calculating the merge (and conflicts if any)
+def update_eolstyle_handling(sbox):
+  "handle eol-style propchange during update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
+
+  # Checkout a second working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     sbox.repo_url, wc_backup)
+  path_backup = os.path.join(wc_backup, 'A', 'mu')
+
+  # Test 1: add the eol-style property and commit, change mu in the second
+  # working copy and update; there should be no conflict!
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CRLF", mu_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
+
+  svntest.main.file_append_binary(path_backup, 'Added new line of text.\012')
+
+  expected_backup_disk = svntest.main.greek_state.copy()
+  expected_backup_disk.tweak(
+  'A/mu', contents= "This is the file 'mu'." + crlf +
+    "Added new line of text." + crlf)
+  expected_backup_output = svntest.wc.State(wc_backup, {
+    'A/mu' : Item(status='GU'),
+    })
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_backup_status.tweak('A/mu', status='M ')
+
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_backup_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        None, None, None)
+
+  # Test 2: now change the eol-style property to another value and commit,
+  # update the still changed mu in the second working copy; there should be
+  # no conflict!
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CR", mu_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
+
+  expected_backup_disk = svntest.main.greek_state.copy()
+  expected_backup_disk.add({
+  'A/mu' : Item(contents= "This is the file 'mu'.\015" +
+    "Added new line of text.\015")
+  })
+  expected_backup_output = svntest.wc.State(wc_backup, {
+    'A/mu' : Item(status='GU'),
+    })
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_backup_status.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_backup_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        None, None, None)
+
+  # Test 3: now delete the eol-style property and commit, update the still
+  # changed mu in the second working copy; there should be no conflict!
+  # EOL of mu should be unchanged (=CR).
+  svntest.main.run_svn(None, 'propdel', 'svn:eol-style', mu_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'del eol-style property', wc_dir)
+
+  expected_backup_disk = svntest.main.greek_state.copy()
+  expected_backup_disk.add({
+  'A/mu' : Item(contents= "This is the file 'mu'.\015" +
+    "Added new line of text.\015")
+  })
+  expected_backup_output = svntest.wc.State(wc_backup, {
+    'A/mu' : Item(status=' U'),
+    })
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 4)
+  expected_backup_status.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_backup_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        None, None, None)
+
 ########################################################################
 # Run the tests
 
@@ -1834,7 +1924,8 @@ test_list = [ None,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
               checkout_broken_eol,
-              conflict_markers_matching_eol
+              conflict_markers_matching_eol,
+              XFail(update_eolstyle_handling)
              ]
 
 if __name__ == '__main__':
