@@ -1723,22 +1723,15 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   return SVN_NO_ERROR;
 }
 
-/* Parse any merge info from WCPATH and store it in MERGEINFO.  If no
-   merge info is available, set MERGEINFO to an empty hash. */
+/* Parse any merge info from WCPATH's ENTRY and store it in MERGEINFO.
+   If no merge info is available, set MERGEINFO to an empty hash. */
 static svn_error_t *
-parse_merge_info(apr_hash_t **mergeinfo, const char *wcpath,
-                 svn_wc_adm_access_t *adm_access, svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+parse_merge_info(apr_hash_t **mergeinfo, const svn_wc_entry_t *entry,
+                 const char *wcpath, svn_wc_adm_access_t *adm_access,
+                 svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   apr_hash_t *props = apr_hash_make(pool);
   const svn_string_t *propval;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(wcpath, pool));
 
   /* ### Use svn_wc_prop_get() would actually be sufficient for now.
      ### DannyB thinks that later we'll need behavior more like
@@ -1752,6 +1745,43 @@ parse_merge_info(apr_hash_t **mergeinfo, const char *wcpath,
   else
     *mergeinfo = apr_hash_make(pool);
 
+  return SVN_NO_ERROR;
+}
+
+/* Retrieve any inherited or direct merge info for the target from
+   both the repos and the WC's merge info prop.  Combine these two
+   sets of merge info to determine what's already been merged into the
+   target (reflected by *ENTRY), and store them in *TARGET_MERGEINFO. */
+static svn_error_t *
+get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
+                         const svn_wc_entry_t **entry,
+                         svn_ra_session_t *ra_session,
+                         const char *target_wcpath,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *repos_mergeinfo;
+  apr_array_header_t *mergeinfo_paths = apr_array_make(pool, 1,
+                                                       sizeof(target_wcpath));
+  /* ### TODO: Add target_wcpath to the list.  Later, we may need to
+     ### list all child paths as well. */
+  SVN_ERR(svn_wc_entry(entry, target_wcpath, adm_access, FALSE, pool));
+  if (*entry == NULL)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"), 
+                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
+                                (*entry)->revision, TRUE, pool));
+  SVN_ERR(parse_merge_info(target_mergeinfo, *entry, target_wcpath,
+                           adm_access, ctx, pool));
+  if (repos_mergeinfo != NULL)
+    /* ### FIXME: Pre-existing WC-local changes may've reverted some
+       ### of the merge info on WC_TARGET.  How should we combine
+       ### these sets of merge info (e.g. give precedence to the WC if
+       ### it has merge info set)? */
+    SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,
+                                *target_mergeinfo, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1934,8 +1964,8 @@ do_merge(const char *initial_URL1,
          struct merge_cmd_baton *merge_b,
          apr_pool_t *pool)
 {
-  apr_hash_t *target_mergeinfo, *repos_mergeinfo;
-  apr_array_header_t *remaining_ranges, *mergeinfo_paths;
+  apr_hash_t *target_mergeinfo;
+  apr_array_header_t *remaining_ranges;
   svn_merge_range_t range;
   enum merge_type merge_type;
   svn_boolean_t is_revert;
@@ -1947,6 +1977,7 @@ do_merge(const char *initial_URL1,
   svn_client_ctx_t *ctx = merge_b->ctx;
   const char *URL1, *URL2, *path1, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
+  const svn_wc_entry_t *entry;
   int i;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
@@ -2007,20 +2038,8 @@ do_merge(const char *initial_URL1,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  /* Retrieve any inherited or direct merge info for the target from
-     both the repos and the WC's merge info prop.  Combine these two
-     sets of merge info to determine what's already been merged into
-     the target. */
-  mergeinfo_paths = apr_array_make(pool, 1, sizeof(target_wcpath));
-  /* ### TODO: Add target_wcpath to the list.  Later, we may need to
-     ### list all child paths as well. */
-  SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
-                                SVN_INVALID_REVNUM, TRUE, pool));
-  SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access, ctx,
-                           pool));
-  if (repos_mergeinfo != NULL)
-    SVN_ERR(svn_mergeinfo_merge(&target_mergeinfo, repos_mergeinfo,
-                                target_mergeinfo, pool));
+  SVN_ERR(get_wc_target_merge_info(&target_mergeinfo, &entry, ra_session,
+                                   target_wcpath, adm_access, ctx, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session, adm_access, pool));
@@ -2079,8 +2098,8 @@ do_merge(const char *initial_URL1,
       /* As some of the above merges may've changed the WC's merge
          info, refresh our copy before using it to update the WC's
          merge info. */
-      SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access,
-                               ctx, pool));
+      SVN_ERR(parse_merge_info(&target_mergeinfo, entry, target_wcpath,
+                               adm_access, ctx, pool));
       SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
                                    remaining_ranges, is_revert, adm_access,
                                    pool));
@@ -2140,7 +2159,7 @@ do_single_file_merge(const char *initial_URL1,
   const char *tmpfile1, *tmpfile2;
   const char *mimetype1, *mimetype2;
   svn_string_t *pval;
-  apr_array_header_t *propchanges, *remaining_ranges, *mergeinfo_paths;
+  apr_array_header_t *propchanges, *remaining_ranges;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
@@ -2151,7 +2170,8 @@ do_single_file_merge(const char *initial_URL1,
   svn_ra_session_t *ra_session1, *ra_session2;
   enum merge_type merge_type;
   svn_boolean_t is_revert;
-  apr_hash_t *target_mergeinfo, *repos_mergeinfo;
+  apr_hash_t *target_mergeinfo;
+  const svn_wc_entry_t *entry;
   int i;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
@@ -2205,20 +2225,8 @@ do_single_file_merge(const char *initial_URL1,
   else
     is_revert = (merge_type == merge_type_revert);
 
-  /* Retrieve any inherited or direct merge info for the target from
-     both the repos and the WC's merge info prop.  Combine these two
-     sets of merge info to determine what's already been merged into
-     the target. */
-  mergeinfo_paths = apr_array_make(pool, 1, sizeof(target_wcpath));
-  /* ### TODO: Add target_wcpath to the list.  Later, we may need to
-     ### list all child paths as well. */
-  SVN_ERR(svn_ra_get_merge_info(ra_session1, &repos_mergeinfo, mergeinfo_paths,
-                                SVN_INVALID_REVNUM, TRUE, pool));
-  SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access, ctx,
-                           pool));
-  if (repos_mergeinfo != NULL)
-    SVN_ERR(svn_mergeinfo_merge(&target_mergeinfo, repos_mergeinfo,
-                                target_mergeinfo, pool));
+  SVN_ERR(get_wc_target_merge_info(&target_mergeinfo, &entry, ra_session1,
+                                   target_wcpath, adm_access, ctx, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session1, adm_access, pool));
@@ -2295,8 +2303,8 @@ do_single_file_merge(const char *initial_URL1,
       /* As some of the above merges may've changed the WC's merge
          info, refresh our copy before using it to update the WC's
          merge info. */
-      SVN_ERR(parse_merge_info(&target_mergeinfo, target_wcpath, adm_access,
-                               ctx, pool));
+      SVN_ERR(parse_merge_info(&target_mergeinfo, entry, target_wcpath,
+                               adm_access, ctx, pool));
       SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
                                    remaining_ranges, is_revert, adm_access,
                                    pool));
