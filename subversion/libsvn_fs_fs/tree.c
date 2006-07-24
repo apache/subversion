@@ -1102,7 +1102,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
                         apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
-  long long int lastchanged_rev;
+  sqlite_int64 lastchanged_rev;
   int sqlite_result;
 
   SQLITE_ERR(sqlite3_prepare(db, "SELECT MAX(revision) from mergeinfo_changed"
@@ -1228,7 +1228,7 @@ get_merge_info_for_path(sqlite3 *db,
   apr_hash_t *cacheresult;
   sqlite3_stmt *stmt;
   int sqlite_result;
-  long long int count;
+  sqlite_int64 count;
   svn_boolean_t has_no_mergeinfo = FALSE;
   
   cacheresult = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
