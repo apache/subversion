@@ -54,9 +54,8 @@ Candidate changes:
       Relatively low impact change; most of it is copy-pasted from
       old (proven) code.
     Notes:
-      translated_file_for_diff() never seems to be called (on trunk)
-      with any flag other than SVN_WC_TRANSLATE_TO_NF.  Why does its
-      implementation handle so many other permutations of FLAGS?
+      translated_file_for_diff() was kept as close as can be expected
+      to its originator (svn_wc_translated_file2), to make the change
+      where both are merged as trivial as can be.
     Votes:
-      +1: dionisos
-      +0: dlr (concept)
+      +1: dionisos, dlr
