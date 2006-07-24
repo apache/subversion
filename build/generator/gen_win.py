@@ -410,6 +410,23 @@ class WinGeneratorBase(GeneratorBase):
     elif isinstance(target, gen_base.TargetI18N):
       return target.name
 
+  def get_output_pdb(self, target):
+    if isinstance(target, gen_base.TargetExe):
+      return target.name + '.pdb'
+    elif isinstance(target, gen_base.TargetJava):
+      return None
+    elif isinstance(target, gen_base.TargetApacheMod):
+      return target.name + '.pdb'
+    elif isinstance(target, gen_base.TargetLib):
+      if target.msvc_static:
+        return '%s-%d.pdb' % (target.name, self.version)
+      else:
+        return os.path.basename(target.filename) + '.pdb'
+    elif isinstance(target, gen_base.TargetProject):
+      return target.name + '.pdb'
+    elif isinstance(target, gen_base.TargetI18N):
+      return target.name + '.pdb'
+
   def get_output_dir(self, target):
     if isinstance(target, gen_base.TargetJavaHeaders):
       return msvc_path("../" + target.headers)
