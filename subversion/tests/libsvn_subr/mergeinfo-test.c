@@ -89,19 +89,21 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2, *info3;
 
-#define NBR_MERGEINFO_VALS 3
+#define NBR_MERGEINFO_VALS 4
 /* Valid merge info values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
   {
     "/trunk:1",
     "/trunk/foo:1-6",
-    "/trunk: 5,7-9,10,11,13,14"
+    "/trunk: 5,7-9,10,11,13,14",
+    "/trunk: "
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
   {
     "/trunk",
     "/trunk/foo",
+    "/trunk",
     "/trunk"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
@@ -109,7 +111,8 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS] =
   {
     { 1, 1 },
     { 1, 6 },
-    { 5, 5 }
+    { 5, 5 },
+    { SVN_INVALID_REVNUM, SVN_INVALID_REVNUM }
   };
 
 static svn_error_t *
