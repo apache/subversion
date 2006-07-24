@@ -8,6 +8,19 @@ Record and use merge history to avoid the repeated merge problem and
 allow for cherry-picking.  Expose merge info via properties.  Allow
 for repos dump/load, including the merge history index.
 
+* Allow for merge info which contains empty range lists, necessary for
+  override of merge info by child paths which would otherwise inherit
+  merge info from their parents which they don't reflect.
+
+  * Add regression test case(s).
+
+  * Assure that the code path from client to FS allows such values to
+    make it all the way through to the FS and into the merge info
+    index in a meaningful fashion yet.
+
+* Make 'propedit' pull down merge info from the repository and combine
+  it with any WC-local merge info.
+
 * Handle notifications resulting from a merge.  (dlr)
 
   * Handle multiple notifications for single WC items. Possible
