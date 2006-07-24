@@ -409,6 +409,14 @@ def file_append(path, new_text):
   fp.write(new_text)
   fp.close()
 
+# Append in binary mode
+def file_append_binary(path, new_text):
+  "Append NEW_TEXT to file at PATH in binary mode"
+
+  fp = open(path, 'ab')  # open in (a)ppend mode
+  fp.write(new_text)
+  fp.close()
+
 # For making local mods to files
 def file_write(path, new_text):
   "Replace contents of file at PATH with NEW_TEXT"
