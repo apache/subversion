@@ -26,6 +26,7 @@ Candidate changes:
       
     Votes:
       +1: djh, brane (r20826 only from email)
+      +0: dlr
 
   * r20172, r20828
     Update the Windows build instructions.
@@ -33,7 +34,7 @@ Candidate changes:
       Documentation that more closely matches the reality is good.
       
     Votes:
-      +1: djh
+      +1: djh, dlr
 
 
 
@@ -52,5 +53,10 @@ Candidate changes:
     Justification:
       Relatively low impact change; most of it is copy-pasted from
       old (proven) code.
+    Notes:
+      translated_file_for_diff() never seems to be called (on trunk)
+      with any flag other than SVN_WC_TRANSLATE_TO_NF.  Why does its
+      implementation handle so many other permutations of FLAGS?
     Votes:
       +1: dionisos
+      +0: dlr (concept)
