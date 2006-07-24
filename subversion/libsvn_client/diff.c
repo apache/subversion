@@ -1772,8 +1772,13 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
                              _("'%s' is not under version control"), 
                              svn_path_local_style(target_wcpath, pool));
 
-  /* ### TODO: Add the target to mergeinfo_paths.  Later, we may need
-     ### to include all child paths as well. */
+  /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
+     ### with a copied parameter of TRUE and a revision number of
+     ### INVALID_REVNUM.  Copied directories cause this behaviour on
+     ### their children.  It's an implementation shortcut to model
+     ### wc-side copies." */
+  /* ### TODO: Later, we may need to include all child paths as
+     ### well. */
   switch ((*entry)->schedule)
     {
     case svn_wc_schedule_add:
