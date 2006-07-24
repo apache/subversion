@@ -137,13 +137,11 @@ translated_file_for_diff(const char **xlated_path,
                                adm_access, NULL, pool));
   SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
 
-
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
       && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
     {
       /* Translation would be a no-op, so return the original file. */
       *xlated_path = src;
-
     }
   else  /* some translation (or copying) is necessary */
     {
