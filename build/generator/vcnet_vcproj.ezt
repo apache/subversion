@@ -36,6 +36,7 @@
 [end]				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="3"
+				ProgramDataBaseFileName="$(IntDir)\[target.output_pdb]"
 				CompileAsManaged="0"
 				CompileAs="0"[if-any is_exe][is configs.name "Release"]
 				OptimizeForWindowsApplication="TRUE"[end][end]/>
