@@ -1764,15 +1764,31 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
   apr_hash_t *repos_mergeinfo;
   apr_array_header_t *mergeinfo_paths = apr_array_make(pool, 1,
                                                        sizeof(target_wcpath));
-  /* ### TODO: Add target_wcpath to the list.  Later, we may need to
-     ### list all child paths as well. */
+  svn_revnum_t target_rev;
+
   SVN_ERR(svn_wc_entry(entry, target_wcpath, adm_access, FALSE, pool));
   if (*entry == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"), 
                              svn_path_local_style(target_wcpath, pool));
+
+  /* ### TODO: Add the target to mergeinfo_paths.  Later, we may need
+     ### to include all child paths as well. */
+  switch ((*entry)->schedule)
+    {
+    case svn_wc_schedule_add:
+    case svn_wc_schedule_replace:
+      target_rev = (*entry)->copyfrom_rev;
+      /* ### TODO: Add copyfrom_url to mergeinfo_paths. */
+      break;
+
+    default:
+      target_rev = (*entry)->revision;
+      /* ### TODO: Add target_wcpath to mergeinfo_paths. */
+      break;
+    }
   SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
-                                (*entry)->revision, TRUE, pool));
+                                target_rev, TRUE, pool));
   SVN_ERR(parse_merge_info(target_mergeinfo, *entry, target_wcpath,
                            adm_access, ctx, pool));
   if (repos_mergeinfo != NULL)
