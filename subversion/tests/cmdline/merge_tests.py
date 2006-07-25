@@ -1735,7 +1735,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(short_C_path, {
-    ''       : Item(status='  ', wc_rev=1),
+    ''       : Item(status=' M', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -1779,7 +1779,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(short_C_path, {
-    ''     : Item(status='  ', wc_rev=1),
+    ''     : Item(status=' M', wc_rev=1),
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_C_path, {
@@ -1849,12 +1849,14 @@ def merge_skips_obstructions(sbox):
 
   saved_cwd = os.getcwd()
   try:
+    my_expected_status = expected_status.copy(short_wc_dir)
+    my_expected_status.tweak('', status=' M')
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_wc_dir, '2', '3', 
                                          svntest.main.current_repo_url,
                                          expected_output,
                                          expected_disk,
-                                         expected_status.copy(short_wc_dir),
+                                         my_expected_status,
                                          expected_skip)
   finally:
     os.chdir(saved_cwd)
@@ -1910,11 +1912,13 @@ def merge_skips_obstructions(sbox):
   saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
+    my_expected_status = expected_status.copy(short_wc_dir)
+    my_expected_status.tweak('', status=' M')
     svntest.actions.run_and_verify_merge(short_wc_dir, '3', '4',
                                          svntest.main.current_repo_url,
                                          expected_output,
                                          expected_disk,
-                                         expected_status.copy(short_wc_dir),
+                                         my_expected_status,
                                          expected_skip)
   finally:
     os.chdir(saved_cwd)
@@ -1926,11 +1930,13 @@ def merge_skips_obstructions(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'add', lambda_path)
 
   expected_output = wc.State(wc_dir, {
+    ''            : Item(verb='Sending'),
     'A/B/lambda'  : Item(verb='Adding'),
     })
   expected_status.add({
     'A/B/lambda'  : Item(wc_rev=6, status='  '),
     })
+  expected_status.tweak('', wc_rev=6)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -1944,6 +1950,7 @@ def merge_skips_obstructions(sbox):
   expected_output = wc.State(short_wc_dir, { })
   expected_disk.remove('A/B/lambda')
   expected_status.tweak('A/B/lambda', status='! ')
+  expected_skip = wc.State('', { })
   saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
