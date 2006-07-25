@@ -2124,7 +2124,7 @@ def merge_binary_with_common_ancestry(sbox):
   fp = open(os.path.join(sys.path[0], "theta.bin"))
   theta_contents = fp.read()
   fp.close()
-  theta_I_path = os.path.join(wc_dir, 'I', 'theta')
+  theta_I_path = os.path.join(I_path, 'theta')
   fp = open(theta_I_path, 'w')
   fp.write(theta_contents)
   fp.close()
@@ -2193,7 +2193,7 @@ def merge_binary_with_common_ancestry(sbox):
                                         wc_dir)
 
   # Copy 'I/theta' to 'K/'. This file will be merged later.
-  theta_K_path = os.path.join(wc_dir, 'K', 'theta')
+  theta_K_path = os.path.join(K_path, 'theta')
   svntest.main.run_svn(None, 'copy', theta_I_path, theta_K_path)
 
   # Commit the new file
