@@ -46,13 +46,15 @@ Candidate changes:
       +1: djh
       +0: dlr
 
-  * r20854
+  * r20841, r20854
     Fix a regression in mailer.py's handling of the configured diff urls.
-    (See issue #2587.)
+    (See issue #2587.)  r20841 is a whitespace only commit, so merging
+    it may help future merges.  r20854 fixes the regression.
     Justification:
       Regression.  Exception-ful script runs.  Badness.
     Votes:
-      +1: cmpilato
+      +1: cmpilato (r20854 only)
+      +1: blair
 
 Approved changes:
 
