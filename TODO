@@ -81,6 +81,18 @@ for repos dump/load, including the merge history index.
 
   * Anything similar necessary for moves?
 
+* Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
+  We'll likely need to use a different method of calculating the set
+  of revision ranges to merge than we do for a straight single repos
+  URL -> WC merge.
+
+  We'll need to account for the WC target's mergeinfo, probably when
+  calculating the differences between URL1 to URL2, since we won't
+  have access to the individual deltas represented by the diff when
+  merging the changes into the WC.  If we rev'd the ways deltas came
+  down through the editor, we might be able to account for the merge
+  info on the client-side instead.
+
 * Refactor merge info index-related code into a module, and use this
   from libsvn_fs_fs.  (Can we use libsvn_fs as its home, or would that
   introduce a cyclic dependency?)  (kamesh/cmpilato?)
