@@ -16,6 +16,7 @@ Candidate changes:
       Shipping detritus like .pyc files in release tarballs is sloppy.
     Votes:
       +1: maxb
+      -1: cmpilato (this is a very odd place to do this.  dist.sh, perhaps?)
 
   * r20190, r20250, r20444, r20826
     A few improvements to the Windows build system including a fix for the
@@ -23,7 +24,6 @@ Candidate changes:
     Justification:
       Most are very low impact build improvements, but without r20826 the
       Perl bindings won't build on Windows.
-      
     Votes:
       +1: djh, brane (r20826 only from email)
       +0: dlr
@@ -32,7 +32,6 @@ Candidate changes:
     Update the Windows build instructions.
     Justification:
       Documentation that more closely matches the reality is good.
-      
     Votes:
       +1: djh, dlr
 
@@ -44,7 +43,7 @@ Candidate changes:
       information when linking to Subversion libraries.
     Votes:
       +1: djh
-      +0: dlr
+      +0: dlr, cmpilato
 
   * r20841, r20854
     Fix a regression in mailer.py's handling of the configured diff urls.
@@ -53,8 +52,7 @@ Candidate changes:
     Justification:
       Regression.  Exception-ful script runs.  Badness.
     Votes:
-      +1: cmpilato (r20854 only)
-      +1: blair
+      +1: cmpilato, blair
 
 Approved changes:
 
