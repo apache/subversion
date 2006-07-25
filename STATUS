@@ -42,10 +42,9 @@ Candidate changes:
     Justification:
       Very low impact and silences hundreds of warnings about missing debug
       information when linking to Subversion libraries.
-      
     Votes:
       +1: djh
-
+      +0: dlr
 
 
 Approved changes:
