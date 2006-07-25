@@ -231,6 +231,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
+                       const apr_array_header_t *prop_diff,
                        apr_pool_t *pool);
 
 #ifdef __cplusplus
