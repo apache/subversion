@@ -2046,8 +2046,6 @@ do_merge(const char *initial_URL1,
                                              pool));
   if (merge_type == merge_type_no_op)
     return SVN_NO_ERROR;
-  else
-    is_revert = (merge_type == merge_type_revert);
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -2062,6 +2060,7 @@ do_merge(const char *initial_URL1,
   SVN_ERR(get_wc_target_merge_info(&target_mergeinfo, &entry, ra_session,
                                    target_wcpath, adm_access, ctx, pool));
 
+  is_revert = (merge_type == merge_type_revert);
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session, adm_access, pool));
   SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path, target_mergeinfo,
@@ -2243,12 +2242,11 @@ do_single_file_merge(const char *initial_URL1,
                                              pool));
   if (merge_type == merge_type_no_op)
     return SVN_NO_ERROR;
-  else
-    is_revert = (merge_type == merge_type_revert);
 
   SVN_ERR(get_wc_target_merge_info(&target_mergeinfo, &entry, ra_session1,
                                    target_wcpath, adm_access, ctx, pool));
 
+  is_revert = (merge_type == merge_type_revert);
   SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                             ra_session1, adm_access, pool));
   SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path, target_mergeinfo,
