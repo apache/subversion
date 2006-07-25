@@ -294,7 +294,7 @@ sub DESTROY {
 }
 
 package SVN::Pool;
-use SVN::Base qw/Core svn_pool_/;
+use SVN::Base qw(Core svn_pool_);
 
 =head2 svn_pool_t - SVN::Pool
 
