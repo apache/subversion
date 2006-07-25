@@ -46,6 +46,13 @@ Candidate changes:
       +1: djh
       +0: dlr
 
+  * r20854
+    Fix a regression in mailer.py's handling of the configured diff urls.
+    (See issue #2587.)
+    Justification:
+      Regression.  Exception-ful script runs.  Badness.
+    Votes:
+      +1: cmpilato
 
 Approved changes:
 
