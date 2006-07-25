@@ -63,7 +63,7 @@ Status of 1.4.1:
 
 Candidate changes:
 
-  * r20384
+  * r20834
     Fix issue #2583: 'svn diff' shouldn't require write access
     to the working copy.
     Justification:
