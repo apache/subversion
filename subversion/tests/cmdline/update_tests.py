@@ -1925,7 +1925,7 @@ test_list = [ None,
               update_xml_unsafe_dir,
               checkout_broken_eol,
               conflict_markers_matching_eol,
-              XFail(update_eolstyle_handling)
+              update_eolstyle_handling
              ]
 
 if __name__ == '__main__':

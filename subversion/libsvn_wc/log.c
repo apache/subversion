@@ -556,7 +556,7 @@ log_do_merge(struct log_runner *loggy,
   err = svn_wc__merge_internal(&log_accum, &merge_outcome,
                                left, right, name, loggy->adm_access,
                                left_label, right_label, target_label,
-                               FALSE, loggy->diff3_cmd, NULL,
+                               FALSE, loggy->diff3_cmd, NULL, NULL,
                                loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {

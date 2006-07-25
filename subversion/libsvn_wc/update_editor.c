@@ -2082,7 +2082,7 @@ merge_file(svn_stringbuf_t *log_accum,
                        svn_path_join(base, base_name, pool),
                        adm_access,
                        oldrev_str, newrev_str, ".mine",
-                       FALSE, diff3_cmd, NULL,
+                       FALSE, diff3_cmd, NULL, prop_changes,
                        pool));
 
             } /* end: working file exists and has mods */
