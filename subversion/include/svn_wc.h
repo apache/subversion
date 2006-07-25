@@ -100,6 +100,13 @@ const svn_version_t *svn_wc_version(void);
    */
 #define SVN_WC_TRANSLATE_FORCE_COPY              0x00000008
 
+  /** Use a non-wc-local tmp directory for creating output files,
+   * instead of in the working copy admin tmp area which is the default.
+   *
+   * @since New in 1.5.
+   */
+#define SVN_WC_TRANSLATE_USE_GLOBAL_TMP          0x00000010
+
 /** @} */
 
 

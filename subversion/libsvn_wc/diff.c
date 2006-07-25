@@ -46,13 +46,10 @@
 
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_subst.h"
-#include "svn_io.h"
 
 #include "wc.h"
 #include "props.h"
 #include "adm_files.h"
-#include "translate.h"
 
 #include "svn_private_config.h"
 
@@ -114,69 +111,6 @@ reverse_propchanges(apr_hash_t *baseprops,
           apr_hash_set(baseprops, propchange->name, APR_HASH_KEY_STRING, str);
         }
     }
-}
-
-/* Another helper function to translate files into a globally writeable
-   temp area. */
-static svn_error_t *
-translated_file_for_diff(const char **xlated_path,
-                         const char *src,
-                         const char *versioned_file,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_uint32_t flags,
-                         apr_pool_t *pool)
-{
-  svn_subst_eol_style_t style;
-  const char *eol;
-  apr_hash_t *keywords;
-  svn_boolean_t special;
-
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
-                                adm_access, pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
-                               adm_access, NULL, pool));
-  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
-
-  if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
-      && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
-    {
-      /* Translation would be a no-op, so return the original file. */
-      *xlated_path = src;
-    }
-  else  /* some translation (or copying) is necessary */
-    {
-      const char *tmp_dir, *tmp_vfile;
-      svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
-
-      svn_path_split(versioned_file, &tmp_dir, &tmp_vfile, pool);
-      SVN_ERR(svn_io_temp_dir(&tmp_dir, pool));
-
-      SVN_ERR(svn_io_open_unique_file2
-              (NULL, &tmp_vfile,
-               svn_path_join(tmp_dir, "svndiff", pool),
-               SVN_WC__TMP_EXT,
-               (flags & SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP)
-               ? svn_io_file_del_none : svn_io_file_del_on_pool_cleanup,
-               pool));
-
-      if (flags & SVN_WC_TRANSLATE_TO_NF)
-        /* to normal form */
-        SVN_ERR(svn_subst_translate_to_normal_form
-                (src, tmp_vfile, style, eol,
-                 repair_forced,
-                 keywords, special, pool));
-      else /* from normal form */
-        SVN_ERR(svn_subst_copy_and_translate3
-                (src, tmp_vfile,
-                 eol, TRUE,
-                 keywords, TRUE,
-                 special,
-                 pool));
-
-      *xlated_path = tmp_vfile;
-    }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -624,9 +558,10 @@ file_diff(struct dir_baton *dir_baton,
       SVN_ERR(get_working_mimetype(&working_mimetype, NULL,
                                    adm_access, path, pool));
 
-      SVN_ERR(translated_file_for_diff
+      SVN_ERR(svn_wc_translated_file2
               (&translated, path, path, adm_access,
-               SVN_WC_TRANSLATE_TO_NF,
+               SVN_WC_TRANSLATE_TO_NF
+               | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
                pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_added
@@ -651,10 +586,11 @@ file_diff(struct dir_baton *dir_baton,
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
-          SVN_ERR(translated_file_for_diff
+          SVN_ERR(svn_wc_translated_file2
                   (&translated, path,
                    path, adm_access,
-                   SVN_WC_TRANSLATE_TO_NF,
+                   SVN_WC_TRANSLATE_TO_NF
+                   | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
                    pool));
         }
 
@@ -886,10 +822,11 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   else
     source_file = path;
 
-  SVN_ERR(translated_file_for_diff
+  SVN_ERR(svn_wc_translated_file2
           (&translated_file,
            source_file, path, adm_access,
-           SVN_WC_TRANSLATE_TO_NF,
+           SVN_WC_TRANSLATE_TO_NF
+           | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            pool));
 
   SVN_ERR(eb->callbacks->file_added
@@ -1495,10 +1432,11 @@ close_file(void *file_baton,
         localfile = svn_wc__text_base_path(b->path, FALSE, b->pool);
       else
         /* a detranslated version of the working file */
-        SVN_ERR(translated_file_for_diff
+        SVN_ERR(svn_wc_translated_file2
                 (&localfile, b->path,
                  b->path, adm_access,
-                 SVN_WC_TRANSLATE_TO_NF,
+                 SVN_WC_TRANSLATE_TO_NF
+                 | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
                  pool));
     }
   else
