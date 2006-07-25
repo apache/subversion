@@ -36,6 +36,16 @@ Candidate changes:
     Votes:
       +1: djh, dlr
 
+  * r20833, r20836 (depends on r20190 group above)
+    Provide named, separate debug information files for clients building
+    against Subversion libraries.
+    Justification:
+      Very low impact and silences hundreds of warnings about missing debug
+      information when linking to Subversion libraries.
+      
+    Votes:
+      +1: djh
+
 
 
 Approved changes:
