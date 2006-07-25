@@ -573,11 +573,33 @@ class DiffSelections:
 
 class DiffURLSelections:
   def __init__(self, cfg, group, params):
-    self.add = cfg.get('diff_add_url', group, params)
-    self.copy = cfg.get('diff_copy_url', group, params)
-    self.delete = cfg.get('diff_delete_url', group, params)
-    self.modify = cfg.get('diff_modify_url', group, params)
+    self.cfg = cfg
+    self.group = group
+    self.params = params
 
+  def _get_url(self, action, repos_rev, change):
+    # The parameters for the URLs generation need to be placed in the
+    # parameters for the configuration module, otherwise we may get
+    # KeyError exceptions.
+    params = self.params.copy()
+    params['path'] = change.path and urllib.quote(change.path) or None
+    params['base_path'] = change.base_path and urllib.quote(change.base_path) or None
+    params['rev'] = repos_rev
+    params['base_rev'] = change.base_rev
+
+    return self.cfg.get("diff_%s_url" % action, self.group, params)
+
+  def get_add_url(self, repos_rev, change):
+    return self._get_url('add', repos_rev, change)
+
+  def get_copy_url(self, repos_rev, change):
+    return self._get_url('copy', repos_rev, change)
+
+  def get_delete_url(self, repos_rev, change):
+    return self._get_url('delete', repos_rev, change)
+
+  def get_modify_url(self, repos_rev, change):
+    return self._get_url('modify', repos_rev, change)
 
 def generate_content(renderer, cfg, repos, changelist, group, params, paths,
                      pool):
@@ -674,17 +696,6 @@ class DiffGenerator:
     # we always have some items
     return True
 
-  def _gen_url(self, urlstr, repos_rev, change):
-    if not len(urlstr):
-      return None
-    args = {
-      'path' : change.path and urllib.quote(change.path) or None,
-      'base_path' : change.base_path and urllib.quote(change.base_path) or None,
-      'rev' : repos_rev,
-      'base_rev' : change.base_rev,
-      }
-    return urlstr % args
-
   def __getitem__(self, idx):
     while 1:
       if self.idx == len(self.changelist):
@@ -717,10 +728,8 @@ class DiffGenerator:
         # it was delete.
         kind = 'D'
 
-        # show the diff url?
-        if self.diffurls.delete:
-          diff_url = self._gen_url(self.diffurls.delete,
-                                   self.repos.rev, change)
+        # get the diff url, if any is specified
+        diff_url = self.diffurls.get_delete_url(self.repos.rev, change)
 
         # show the diff?
         if self.diffsels.delete:
@@ -739,10 +748,8 @@ class DiffGenerator:
           # any diff of interest?
           if change.text_changed:
 
-            # show the diff url?
-            if self.diffurls.copy:
-              diff_url = self._gen_url(self.diffurls.copy,
-                                       self.repos.rev, change)
+            # get the diff url, if any is specified
+            diff_url = self.diffurls.get_copy_url(self.repos.rev, change)
 
             # show the diff?
             if self.diffsels.copy:
@@ -757,10 +764,8 @@ class DiffGenerator:
           # the file was added.
           kind = 'A'
 
-          # show the diff url?
-          if self.diffurls.add:
-            diff_url = self._gen_url(self.diffurls.add,
-                                     self.repos.rev, change)
+          # get the diff url, if any is specified
+          diff_url = self.diffurls.get_add_url(self.repos.rev, change)
 
           # show the diff?
           if self.diffsels.add:
@@ -777,10 +782,8 @@ class DiffGenerator:
         # a simple modification.
         kind = 'M'
 
-        # show the diff url?
-        if self.diffurls.modify:
-          diff_url = self._gen_url(self.diffurls.modify,
-                                   self.repos.rev, change)
+        # get the diff url, if any is specified
+        diff_url = self.diffurls.get_modify_url(self.repos.rev, change)
 
         # show the diff?
         if self.diffsels.modify:
@@ -1081,6 +1084,11 @@ class Config:
     mapper = getattr(self.maps, option, None)
     if mapper is not None:
       value = mapper(value)
+
+      # Apply any parameters that may now be available for
+      # substitution that were not before the mapping.
+      if value is not None and params is not None:
+        value = value % params
 
     return value
 
