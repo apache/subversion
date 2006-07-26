@@ -93,6 +93,12 @@ for repos dump/load, including the merge history index.
   down through the editor, we might be able to account for the merge
   info on the client-side instead.
 
+  This is responsible for the failure of merge test #19, which fails
+  because the HEAD revision is used for both URLs, which upong
+  retrieving the same revnum for each URL appears to the new 'merge'
+  logic as neither a merge nor a revert, and is thus considered a
+  no-op.
+
 * Refactor merge info index-related code into a module, and use this
   from libsvn_fs_fs.  (Can we use libsvn_fs as its home, or would that
   introduce a cyclic dependency?)  (kamesh/cmpilato?)
