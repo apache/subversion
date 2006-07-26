@@ -37,17 +37,16 @@ static const svn_prop_t *
 get_prop(const apr_array_header_t *prop_diff,
          const char *prop_name)
 {
-  int i;
-
   if (prop_diff)
-    for (i=0;i<prop_diff->nelts;i++)
-      {
-        const svn_prop_t *elt =
-          &APR_ARRAY_IDX(prop_diff, i, svn_prop_t);
-
-        if (strcmp(elt->name,prop_name) == 0)
-          return elt;
-      }
+    {
+      int i;
+      for (i = 0; i < prop_diff->nelts; i++)
+        {
+          const svn_prop_t *elt = &APR_ARRAY_IDX(prop_diff, i, svn_prop_t);
+          if (strcmp(elt->name,prop_name) == 0)
+            return elt;
+        }
+    }
 
   return NULL;
 }
@@ -304,7 +303,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   /* Decide if the merge target is a text or binary file. */
   if ((prop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && prop->value)
-      is_binary = svn_mime_type_is_binary(prop->value->data);
+    is_binary = svn_mime_type_is_binary(prop->value->data);
   else
     SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
