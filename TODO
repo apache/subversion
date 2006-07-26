@@ -94,7 +94,7 @@ for repos dump/load, including the merge history index.
   info on the client-side instead.
 
   This is responsible for the failure of merge test #19, which fails
-  because the HEAD revision is used for both URLs, which upong
+  because the HEAD revision is used for both URLs, which upon
   retrieving the same revnum for each URL appears to the new 'merge'
   logic as neither a merge nor a revert, and is thus considered a
   no-op.
