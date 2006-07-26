@@ -25,8 +25,9 @@ Candidate changes:
       Most are very low impact build improvements, but without r20826 the
       Perl bindings won't build on Windows.
     Votes:
-      +1: djh, brane (r20826 only from email)
-      +0: dlr
+      +1: djh, brane (r20826 only from email),
+          pburba (r20190, r20444, r20826)
+      +0: dlr, pburba (r20250)
 
   * r20172, r20828
     Update the Windows build instructions.
