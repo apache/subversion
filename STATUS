@@ -46,6 +46,14 @@ Candidate changes:
       +1: djh
       +0: dlr, cmpilato
 
+  * r20834, r20864
+    Fix issue #2583: 'svn diff' shouldn't require write access
+    to the working copy.
+    Justification:
+      Low impact change restoring previous behavior.
+    Votes:
+      +1: dionisos, dlr
+
   * r20841, r20854
     Fix a regression in mailer.py's handling of the configured diff urls.
     (See issue #2587.)  r20841 is a whitespace only commit, so merging
@@ -74,11 +82,3 @@ Status of 1.4.1:
 ================
 
 Candidate changes:
-
-  * r20834, r20864
-    Fix issue #2583: 'svn diff' shouldn't require write access
-    to the working copy.
-    Justification:
-      Low impact change restoring previous behavior.
-    Votes:
-      +1: dionisos, dlr
