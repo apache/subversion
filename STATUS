@@ -54,15 +54,6 @@ Candidate changes:
     Votes:
       +1: dionisos, dlr
 
-  * r20841, r20854
-    Fix a regression in mailer.py's handling of the configured diff urls.
-    (See issue #2587.)  r20841 is a whitespace only commit, so merging
-    it may help future merges.  r20854 fixes the regression.
-    Justification:
-      Regression.  Exception-ful script runs.  Badness.
-    Votes:
-      +1: cmpilato, blair
-
   * r20874
     Improve the output from svnsync to use the correct verb tense, to
     not abbreviate unnecessarily, to report that properties were copied
@@ -72,9 +63,18 @@ Candidate changes:
       Our output text is a form of API.  If we don't fix this stuff now,
       we're stuck with it for a while.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, dlr
     
 Approved changes:
+
+  * r20841, r20854
+    Fix a regression in mailer.py's handling of the configured diff urls.
+    (See issue #2587.)  r20841 is a whitespace only commit, so merging
+    it may help future merges.  r20854 fixes the regression.
+    Justification:
+      Regression.  Exception-ful script runs.  Badness.
+    Votes:
+      +1: cmpilato, blair, dlr
 
 
 
