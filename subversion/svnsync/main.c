@@ -422,7 +422,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 {
   sync_baton_t *sb = baton;
 
-  SVN_ERR(svn_cmdline_printf(pool, _("Committing rev %ld\n"),
+  SVN_ERR(svn_cmdline_printf(pool, _("Committed revision %ld.\n"),
                              commit_info->revision));
 
   sb->committed_rev = commit_info->revision;
@@ -825,6 +825,8 @@ copy_revprops(svn_ra_session_t *from_session,
                                      subpool));
     }
 
+  SVN_ERR(svn_cmdline_printf(subpool, 
+                             _("Copied properties for revision %ld.\n"), rev));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
