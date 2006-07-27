@@ -55,7 +55,7 @@ def run_sync(url):
   if errput:
     raise svntest.actions.SVNUnexpectedStderr(errput)
   if not output:
-    # should be: ['Committing rev 1\n', 'Committing rev 2\n']
+    # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
 
 def run_init(dst_url, src_url):
