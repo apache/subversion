@@ -1126,7 +1126,8 @@ svn_wc_add2(const char *path,
           return svn_error_createf 
             (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
              _("Can't replace '%s' with a node of a differing type; "
-               "commit the deletion, update the parent, and then add '%s'"),
+               "the deletion must be committed and the parent updated "
+               "before adding '%s'"),
              svn_path_local_style(path, pool),
              svn_path_local_style(path, pool));
         }
