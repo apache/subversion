@@ -64,6 +64,13 @@ Candidate changes:
       we're stuck with it for a while.
     Votes:
       +1: cmpilato, dlr
+
+  * r20879, r20880
+    Fix segfaults caused by faulty svnsync user input.
+    Justification:
+      Segfault.  Duh.
+    Votes:
+      +1: cmpilato
     
 Approved changes:
 
