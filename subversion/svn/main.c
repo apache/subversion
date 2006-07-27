@@ -1285,15 +1285,11 @@ main(int argc, const char *argv[])
 
       if (! svn_opt_subcommand_takes_option2(subcommand, opt_id))
         {
-          const char *optstr, *optstr_utf8, *cmdname_utf8;
+          const char *optstr;
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code2(opt_id, svn_cl__options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
-          if ((err = svn_utf_cstring_to_utf8(&optstr_utf8, optstr, pool))
-              || (err = svn_utf_cstring_to_utf8(&cmdname_utf8,
-                                                subcommand->name, pool)))
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
           if (subcommand->name[0] == '-')
             svn_cl__help(NULL, NULL, pool);
           else
@@ -1301,7 +1297,7 @@ main(int argc, const char *argv[])
               (svn_cmdline_fprintf
                (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svn help %s' for usage.\n"),
-                cmdname_utf8, optstr_utf8, cmdname_utf8));
+                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
