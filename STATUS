@@ -71,6 +71,15 @@ Candidate changes:
       Segfault.  Duh.
     Votes:
       +1: cmpilato
+
+  * r20883
+    Fix an l10n encoding error for an error message from svn.
+    Justification:
+      Inability to display a correct error message due to an encoding issue
+      is not good and confuses users using locales with many multibyte
+      characters.  The change has low impact.
+    Votes:
+      +1: nori
     
 Approved changes:
 
