@@ -214,44 +214,45 @@ add_file(const char *path,
   svn_node_kind_t kind;
   svn_boolean_t is_special;
 
-  /* add the file */
-  SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      NULL, NULL, pool));
-
   /* Check to see if this is a special file. */
   SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
 
   if (is_special)
-    {
-      /* This must be a special file. */
-      SVN_ERR(svn_wc_prop_set2
-              (SVN_PROP_SPECIAL,
-               svn_string_create(SVN_PROP_SPECIAL_VALUE, pool),
-               path, adm_access, FALSE, pool));
-      mimetype = NULL;
-    }
+    mimetype = NULL;
   else
+    /* Get automatic properties */
+    /* This may fail on write-only files:
+       we open them to estimate file type.
+       That's why we postpone the add untill after this step. */
+    SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
+                                       pool));
+
+  /* Add the file */
+  SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
+                      ctx->cancel_func, ctx->cancel_baton,
+                      NULL, NULL, pool));
+
+  if (is_special)
+    /* This must be a special file. */
+    SVN_ERR(svn_wc_prop_set2
+            (SVN_PROP_SPECIAL,
+             svn_string_create(SVN_PROP_SPECIAL_VALUE, pool),
+             path, adm_access, FALSE, pool));
+  else if (properties)
     {
-      /* get automatic properties */
-      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
-                                         pool));
-      if (properties)
+      /* loop through the hashtable and add the properties */
+      for (hi = apr_hash_first(pool, properties);
+           hi != NULL; hi = apr_hash_next(hi))
         {
-          /* loop through the hashtable and add the properties */
-          for (hi = apr_hash_first(pool, properties);
-               hi != NULL; hi = apr_hash_next(hi))
-            {
-              const void *pname;
-              void *pval;
-          
-              apr_hash_this(hi, &pname, NULL, &pval);
-              /* It's probably best to pass 0 for force, so that if
-                 the autoprops say to set some weird combination,
-                 we just error and let the user sort it out. */
-              SVN_ERR(svn_wc_prop_set2(pname, pval, path,
-                                       adm_access, FALSE, pool));
-            }
+          const void *pname;
+          void *pval;
+
+          apr_hash_this(hi, &pname, NULL, &pval);
+          /* It's probably best to pass 0 for force, so that if
+             the autoprops say to set some weird combination,
+             we just error and let the user sort it out. */
+          SVN_ERR(svn_wc_prop_set2(pname, pval, path,
+                                   adm_access, FALSE, pool));
         }
     }
 
