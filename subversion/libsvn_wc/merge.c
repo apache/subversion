@@ -140,6 +140,7 @@ detranslate_wc_file(const char **detranslated_file,
       keywords = NULL;
       special = FALSE;
       eol = NULL;
+      style = svn_subst_eol_style_none;
     }
   else if ((!is_binary)
            && (prop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
@@ -162,6 +163,7 @@ detranslate_wc_file(const char **detranslated_file,
         {
           keywords = NULL;
           eol = NULL;
+          style = svn_subst_eol_style_none;
         }
       else
         {
@@ -175,7 +177,10 @@ detranslate_wc_file(const char **detranslated_file,
             SVN_ERR(svn_wc__get_eol_style(&style, &eol, merge_target,
                                           adm_access, pool));
           else
-            eol = NULL;
+            {
+              eol = NULL;
+              style = svn_subst_eol_style_none;
+            }
 
           /* In case there were keywords, detranslate with keywords
              (iff we were texty) */
@@ -200,14 +205,13 @@ detranslate_wc_file(const char **detranslated_file,
                svn_wc_adm_access_path(adm_access),
                svn_io_file_del_none, pool));
 
-      SVN_ERR(svn_subst_copy_and_translate3(merge_target,
-                                            detranslated,
-                                            /*###Repair?! (or error?) */
-                                            eol, eol ? FALSE : TRUE,
-                                            keywords,
-                                            FALSE, /* Un-expand */
-                                            special,
-                                            pool));
+      SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
+                                                 detranslated,
+                                                 style,
+                                                 eol, eol ? FALSE : TRUE,
+                                                 keywords,
+                                                 special,
+                                                 pool));
       *detranslated_file = detranslated;
     }
   else
