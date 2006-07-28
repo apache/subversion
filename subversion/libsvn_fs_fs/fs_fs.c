@@ -4073,6 +4073,7 @@ generate_mergeinfo_sql(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   return SVN_NO_ERROR;
 }
 
+/* A no-op if TXN has no associated merge info. */
 static svn_error_t *
 update_mergeinfo_index(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
                        apr_pool_t *pool)
@@ -4113,6 +4114,48 @@ struct commit_baton {
   svn_fs_txn_t *txn;
 };
 
+/* Clean the mergeinfo index for any previous failed commit with the
+   revision number as NEW_REV, then record the merge info for the
+   current transaction. */
+static svn_error_t *
+index_merge_info(struct commit_baton *cb, svn_revnum_t new_rev,
+                 apr_pool_t *pool)
+{
+  const char *deletestring;
+  fs_txn_data_t *ftd = cb->txn->fsap_data;
+      
+  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(cb->fs, pool),
+                          &ftd->mtd), ftd->mtd);
+#ifdef SQLITE3_DEBUG
+  sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
+#endif 
+  SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
+
+  /* Cleanup the leftovers of any previous, failed FSFS transactions
+     involving NEW_REV. */
+  deletestring = apr_psprintf(pool, 
+                              "delete from mergeinfo_changed where revision = %ld;",
+                              new_rev);
+  SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
+  deletestring = apr_psprintf(pool, 
+                              "delete from mergeinfo where revision = %ld;", 
+                              new_rev);
+  SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
+
+  /* Record any merge info from the current transaction. */
+  SVN_ERR(update_mergeinfo_index(cb->txn, new_rev, pool));
+      
+  /* This is moved here from commit_txn, because we don't want to
+     write the final current file if the sqlite commit fails.
+     On the other hand, if we commit the transaction and end up failing
+     the current file, we just end up with inaccessible data in the
+     database, not a real problem.  */
+  SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
+  SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
+
+  return SVN_NO_ERROR; 
+}
+
 /* The work-horse for svn_fs_fs__commit, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type.  BATON is a 'struct commit_baton *'. */
@@ -4130,7 +4173,6 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  fs_txn_data_t *ftd = cb->txn->fsap_data;
   svn_boolean_t contains_merge_info = FALSE;
   
   /* Get the current youngest revision. */
@@ -4231,57 +4273,8 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop, 
                                      old_rev_filename, pool));
   
-  /* Do mergeinfo indexing.  */
   if (contains_merge_info)
-    {
-      const char *deletestring;
-      
-      SQLITE_ERR(sqlite3_open(path_mergeinfo_db(cb->fs, pool),
-	                      &ftd->mtd), ftd->mtd);
-#ifdef SQLITE3_DEBUG
-      sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
-#endif     
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
-      deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo_changed where revision = %ld;",
-                                  new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
-      deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo where revision = %ld;", 
-                                  new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
-      SVN_ERR(update_mergeinfo_index(cb->txn, new_rev, pool));
-      
-      /* This is moved here from commit_txn, because we don't want to
-         write the final current file if the sqlite commit fails.
-         On the other hand, if we commit the transaction and end up failing
-         the current file, we just end up with inaccessible data in the
-         database, not a real problem.  */
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
-      SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
-    }
-  else
-    {
-      const char *deletestring;
-      
-      SQLITE_ERR(sqlite3_open(path_mergeinfo_db(cb->fs, pool),
-	                      &ftd->mtd), ftd->mtd);
-#ifdef SQLITE3_DEBUG
-      sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
-#endif
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
-      deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo_changed where revision = %ld;",
-                                  new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
-      deletestring = apr_psprintf(pool, 
-                                  "delete from mergeinfo where revision = %ld;",
-                                  new_rev);
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
-      SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
-      SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
-    }
-
+    SVN_ERR(index_merge_info(cb, new_rev, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
