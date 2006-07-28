@@ -170,7 +170,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-07-28 18:43+0900\n"
-"PO-Revision-Date: 2006-07-03 12:40+0900\n"
+"PO-Revision-Date: 2006-07-28 19:05+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4749,13 +4749,13 @@ msgid "'%s' is already under version control"
 msgstr "'%s' は既にバージョン管理下におかれています"
 
 #: libsvn_wc/adm_ops.c:1128
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"'%s' は、異なる形式のノードに置換できません。削除をコミットし親ディレクトリ"
-"で update を実行してから、'%s' を追加してください"
+"'%s' は、異なる形式のノードに置換できません。'%s' を追加する前に、削除をコ"
+"ミットして親ディレクトリを更新しなければいけません"
 
 #: libsvn_wc/adm_ops.c:1145
 #, c-format
@@ -9315,29 +9315,26 @@ msgid "Destination repository is already synchronizing from '%s'"
 msgstr "同期先リポジトリは既に '%s' から同期中です"
 
 #: svnsync/main.c:390
-#, fuzzy
 msgid "You must supply a source URL; try 'svnsync help' for more info"
 msgstr ""
-"与える引数が不十分です。より詳しく知りたいときは 'svn help' を試してみてくだ"
-"さい。"
+"同期元 URL を与えなければいけません。より詳しく知りたいときは 'svnsync help' "
+"を試してみてください"
 
 #: svnsync/main.c:398 svnsync/main.c:401 svnsync/main.c:1064
 #: svnsync/main.c:1130
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a URL"
-msgstr "パス '%s' はファイルではありません"
+msgstr "パス '%s' は URL ではありません"
 
 #: svnsync/main.c:441
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"\n"
-"リビジョン %ld をコミットしました。\n"
+msgstr "リビジョン %ld をコミットしました。\n"
 
 #: svnsync/main.c:845
-#, fuzzy, c-format
+#, c-format
 msgid "Copied properties for revision %ld.\n"
-msgstr "リビジョン %ld においてバージョン管理されていない属性です:\n"
+msgstr "リビジョン %ld の属性をコピーしました。\n"
 
 #: svnsync/main.c:872
 msgid "Destination repository has not been initialized"
@@ -9369,12 +9366,11 @@ msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "まだ同期されていないリビジョンのリビジョン属性はコピーできません"
 
 #: svnsync/main.c:1134
-#, fuzzy
 msgid ""
 "You must supply a valid revision number; try 'svnsync help' for more info"
 msgstr ""
-"与える引数が不十分です。より詳しく知りたいときは 'svn help' を試してみてくだ"
-"さい。"
+"有効なリビジョン番号を与えなければいけません。より詳しく知りたいときは "
+"'svnsync help' を試してみてください"
 
 # * Description for svnsync.
 #: svnsync/main.c:1165
@@ -9397,9 +9393,8 @@ msgstr ""
 "利用可能なサブコマンド:\n"
 
 #: svnsync/main.c:1297
-#, fuzzy
 msgid "Invalid revision number"
-msgstr "与えられたリビジョン番号が不正です"
+msgstr "リビジョン番号が不正です"
 
 #: svnsync/main.c:1375
 #, c-format
