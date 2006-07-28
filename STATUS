@@ -88,6 +88,13 @@ Candidate changes:
     Votes:
       +1: nori
     
+  * r20886 (depends on r20833 group above)
+    Allow javahl to build with VC Express and fix its debug symbol files.
+    Justification:
+      Low impact and allows javahl to build on VC Express.
+    Votes:
+      +1: djh
+
 Approved changes:
 
 
