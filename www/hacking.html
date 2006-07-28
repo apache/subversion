@@ -1579,10 +1579,10 @@ author:</p>
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
-   Patch by: J. Random &lt;jrandom@example.com&gt;
-
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
+
+   Patch by: J. Random &lt;jrandom@example.com&gt;
 </pre>
 
 <p>If multiple individuals wrote the patch, list them each on a
@@ -1596,13 +1596,13 @@ committing the change.</p>
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
    Patch by: J. Random &lt;jrandom@example.com&gt;
              Enrico Caruso &lt;codingtenor@codingtenor.com&gt;
              jcommitter
              me
-
-   * subversion/libsvn_ra_ansible/get_editor.c
-     (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
 <p>If someone found the bug or pointed out the problem, but didn't
@@ -1612,10 +1612,10 @@ write the patch, indicate their contribution with
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
-   Found by: J. Random &lt;jrandom@example.com&gt;
-
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
+
+   Found by: J. Random &lt;jrandom@example.com&gt;
 </pre>
 
 <p>If someone suggested something useful, but didn't write the patch,
@@ -1624,9 +1624,9 @@ indicate their contribution with "Suggested&nbsp;by:&nbsp;":</p>
 <pre>
    Extend the Contribulyzer syntax to distinguish finds from ideas.
 
-   Suggested by: dlr
-
    * www/hacking.html (crediting): Adjust accordingly.
+
+   Suggested by: dlr
 </pre>
 
 <p>If someone reviewed the change, use "Review&nbsp;by:&nbsp;"
@@ -1635,10 +1635,10 @@ indicate their contribution with "Suggested&nbsp;by:&nbsp;":</p>
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
-   Review by: Eagle Eyes &lt;eeyes@example.com&gt;
-
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
+
+   Review by: Eagle Eyes &lt;eeyes@example.com&gt;
 </pre>
 
 <p>A field may have multiple lines, and a log message may contain any
@@ -1647,15 +1647,15 @@ combination of fields:</p>
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
    Patch by: J. Random &lt;jrandom@example.com&gt;
              Enrico Caruso &lt;codingtenor@codingtenor.com&gt;
              me
    Found by: J. Random &lt;jrandom@example.com&gt;
    Review by: Eagle Eyes &lt;eeyes@example.com&gt;
               jcommitter
-
-   * subversion/libsvn_ra_ansible/get_editor.c
-     (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
 <p>Further details about a contribution should be listed in a
@@ -1667,15 +1667,15 @@ that the spacing is optional and not necessary for parseability:</p>
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
    Patch by: J. Random &lt;jrandom@example.com&gt;
    (Tweaked by me.)
 
    Review by: Eagle Eyes &lt;eeyes@example.com&gt;
               jcommitter
    (Eagle Eyes caught an off-by-one-error in the basename extraction.)
-
-   * subversion/libsvn_ra_ansible/get_editor.c
-     (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
 <p>Currently, these fields</p>
