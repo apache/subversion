@@ -43,11 +43,11 @@ typedef struct {
   ap_filter_t *output;
   svn_boolean_t started;
   svn_boolean_t sending_textdelta;
-} dav_svn_edit_baton_t;
+} edit_baton_t;
 
 
 static svn_error_t *
-maybe_start_report(dav_svn_edit_baton_t *eb)
+maybe_start_report(edit_baton_t *eb)
 {
   if (! eb->started)
     {
@@ -65,7 +65,7 @@ maybe_start_report(dav_svn_edit_baton_t *eb)
 
 
 static svn_error_t *
-maybe_close_textdelta(dav_svn_edit_baton_t *eb)
+maybe_close_textdelta(edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
     { 
@@ -83,7 +83,7 @@ set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
                     apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = edit_baton;
+  edit_baton_t *eb = edit_baton;
 
   SVN_ERR(maybe_start_report(eb));
 
@@ -101,7 +101,7 @@ open_root(void *edit_baton,
           apr_pool_t *pool,
           void **root_baton)
 {
-  dav_svn_edit_baton_t *eb = edit_baton;
+  edit_baton_t *eb = edit_baton;
 
   *root_baton = edit_baton;
 
@@ -121,7 +121,7 @@ delete_entry(const char *path,
              void *parent_baton,
              apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = parent_baton;
+  edit_baton_t *eb = parent_baton;
 
   const char *qname = apr_xml_quote_string(pool, path, 1);
 
@@ -144,7 +144,7 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  dav_svn_edit_baton_t *eb = parent_baton;
+  edit_baton_t *eb = parent_baton;
 
   const char *qpath = apr_xml_quote_string(pool, path, 1);
 
@@ -180,7 +180,7 @@ open_directory(const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  dav_svn_edit_baton_t *eb = parent_baton;
+  edit_baton_t *eb = parent_baton;
 
   const char *qpath = apr_xml_quote_string(pool, path, 1);
 
@@ -202,7 +202,7 @@ change_dir_prop(void *baton,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = baton;
+  edit_baton_t *eb = baton;
   const char *qname;
 
   SVN_ERR(maybe_close_textdelta(eb));
@@ -238,7 +238,7 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  dav_svn_edit_baton_t *eb = parent_baton;
+  edit_baton_t *eb = parent_baton;
 
   const char *qname = apr_xml_quote_string(pool, path, 1);
 
@@ -274,7 +274,7 @@ open_file(const char *path,
           apr_pool_t *pool,
           void **file_baton)
 {
-  dav_svn_edit_baton_t *eb = parent_baton;
+  edit_baton_t *eb = parent_baton;
 
   const char *qname = apr_xml_quote_string(pool, path, 1);
 
@@ -297,7 +297,7 @@ apply_textdelta(void *file_baton,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
-  dav_svn_edit_baton_t *eb = file_baton;
+  edit_baton_t *eb = file_baton;
   svn_stream_t *stream;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
@@ -324,7 +324,7 @@ change_file_prop(void *baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = baton;
+  edit_baton_t *eb = baton;
   const char *qname;
 
   SVN_ERR(maybe_close_textdelta(eb));
@@ -354,7 +354,7 @@ change_file_prop(void *baton,
 static svn_error_t *
 close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = file_baton;
+  edit_baton_t *eb = file_baton;
 
   SVN_ERR(maybe_close_textdelta(eb));
 
@@ -367,7 +367,7 @@ close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 static svn_error_t *
 close_directory(void *dir_baton, apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = dir_baton;
+  edit_baton_t *eb = dir_baton;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
                             "<S:close-directory/>" DEBUG_CR));
@@ -379,7 +379,7 @@ close_directory(void *dir_baton, apr_pool_t *pool)
 static svn_error_t *
 close_edit(void *edit_baton, apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = edit_baton;
+  edit_baton_t *eb = edit_baton;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
                             "</S:editor-report>" DEBUG_CR));
@@ -395,7 +395,7 @@ make_editor(const svn_delta_editor_t **editor,
             ap_filter_t *output,
             apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
+  edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
   svn_delta_editor_t *e = svn_delta_default_editor(pool);
 
   eb->bb = bb;
