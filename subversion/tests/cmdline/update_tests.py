@@ -1891,6 +1891,45 @@ def update_eolstyle_handling(sbox):
                                         expected_backup_status,
                                         None, None, None)
 
+# Bug in which "update" put a bogus revision number on a schedule-add file,
+# causing the wrong version of it to be committed.
+def update_copy_of_old_rev(sbox):
+  "update schedule-add copy of old rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir = os.path.join(wc_dir, 'A')
+  dir2 = os.path.join(wc_dir, 'A2')
+  file = os.path.join(dir, 'mu')
+  file2 = os.path.join(dir2, 'mu')
+  url = sbox.repo_url + '/A/mu'
+  url2 = sbox.repo_url + '/A2/mu'
+
+  # Remember the original text of the file
+  text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                    'cat', '-r1', url)
+
+  # Commit a different version of the file
+  svntest.main.file_write(file, "Second revision of 'mu'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '', wc_dir)
+
+  # Copy an old revision of its directory into a new path in the WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-r1', dir, dir2)
+
+  # Update.  (Should do nothing, but added a bogus "revision" in "entries".)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Commit, and check that it says it's committing the right thing
+  exp_out = ['Adding         ' + dir2 + '\n',
+             '\n',
+             'Committed revision 3.\n']
+  svntest.actions.run_and_verify_svn(None, exp_out, [], 'ci', '-m', '', wc_dir)
+
+  # Verify the committed file's content
+  svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', url2)
+
+
 ########################################################################
 # Run the tests
 
@@ -1925,7 +1964,8 @@ test_list = [ None,
               update_xml_unsafe_dir,
               checkout_broken_eol,
               conflict_markers_matching_eol,
-              update_eolstyle_handling
+              update_eolstyle_handling,
+              XFail(update_copy_of_old_rev),
              ]
 
 if __name__ == '__main__':
