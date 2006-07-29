@@ -16,7 +16,6 @@
  * ====================================================================
  */
 
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -49,11 +48,13 @@ struct file_rev_baton {
   void *window_baton;
 };
 
+
 /* If FRB->needs_header is true, send the "<S:file-revs-report>" start
    tag and set FRB->needs_header to zero.  Else do nothing.
    This is basically duplicated in log.c.  Consider factoring if
    duplicating again. */
-static svn_error_t *maybe_send_header(struct file_rev_baton *frb)
+static svn_error_t *
+maybe_send_header(struct file_rev_baton *frb)
 {
   if (frb->needs_header)
     {
@@ -67,11 +68,15 @@ static svn_error_t *maybe_send_header(struct file_rev_baton *frb)
   return SVN_NO_ERROR;
 }
 
+
 /* Send a property named NAME with value VAL in an element named ELEM_NAME. 
    Quote NAME and base64-encode VAL if necessary. */
 static svn_error_t *
-send_prop(struct file_rev_baton *frb, const char *elem_name,
-          const char *name, const svn_string_t *val, apr_pool_t *pool)
+send_prop(struct file_rev_baton *frb,
+          const char *elem_name,
+          const char *name,
+          const svn_string_t *val,
+          apr_pool_t *pool)
 {
   name = apr_xml_quote_string(pool, name, 1);
 
@@ -96,6 +101,7 @@ send_prop(struct file_rev_baton *frb, const char *elem_name,
   return SVN_NO_ERROR;
 }
 
+
 /* This implements the svn_txdelta_window_handler interface.
    Forward to a more interesting window handler and if we're done, terminate
    the txdelta and file-rev elements. */
@@ -116,6 +122,7 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
     }
   return SVN_NO_ERROR;
 }
+
 
 /* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *
@@ -195,6 +202,7 @@ file_rev_handler(void *baton,
 
   return SVN_NO_ERROR;
 }
+
 
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,

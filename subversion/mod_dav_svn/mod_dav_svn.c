@@ -17,35 +17,33 @@
  * ====================================================================
  */
 
-
-
+#include <apr_strings.h>
 
 #include <httpd.h>
 #include <http_config.h>
 #include <http_request.h>
 #include <http_log.h>
-#include <mod_dav.h>
 #include <ap_provider.h>
-
-#include <apr_strings.h>
+#include <mod_dav.h>
 
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_utf.h"
+#include "mod_dav_svn.h"
 
 #include "dav_svn.h"
 
-#include "mod_dav_svn.h"
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */
 #define SVN_DEFAULT_SPECIAL_URI "!svn"
 
+
 /* per-server configuration */
 typedef struct {
   const char *special_uri;
-
 } dav_svn_server_conf;
+
 
 /* A tri-state enum used for per directory on/off flags.  Note that
    it's important that DAV_SVN_FLAG_DEFAULT is 0 to make
@@ -56,6 +54,7 @@ enum dav_svn_flag {
   DAV_SVN_FLAG_OFF
 };
 
+
 /* per-dir configuration */
 typedef struct {
   const char *fs_path;               /* path to the SVN FS */
@@ -65,18 +64,19 @@ typedef struct {
   enum dav_svn_flag autoversioning;  /* whether autoversioning is active */
   enum dav_svn_flag do_path_authz;   /* whether GET subrequests are active */
   enum dav_svn_flag list_parentpath; /* whether to allow GET of parentpath */
-
 } dav_svn_dir_conf;
+
 
 #define INHERIT_VALUE(parent, child, field) \
                 ((child)->field ? (child)->field : (parent)->field)
+
 
 /* Note: the "dav_svn" prefix is mandatory */
 extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
 
-static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
-                        server_rec *s)
+static int
+dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 {
   svn_error_t *serr;
   ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
@@ -96,13 +96,16 @@ static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
   return OK;
 }
 
-static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
+
+static void *
+dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
 {
   return apr_pcalloc(p, sizeof(dav_svn_server_conf));
 }
 
-static void *dav_svn_merge_server_config(apr_pool_t *p,
-                                         void *base, void *overrides)
+
+static void *
+dav_svn_merge_server_config(apr_pool_t *p, void *base, void *overrides)
 {
   dav_svn_server_conf *parent = base;
   dav_svn_server_conf *child = overrides;
@@ -115,7 +118,9 @@ static void *dav_svn_merge_server_config(apr_pool_t *p,
   return newconf;
 }
 
-static void *dav_svn_create_dir_config(apr_pool_t *p, char *dir)
+
+static void *
+dav_svn_create_dir_config(apr_pool_t *p, char *dir)
 {
   /* NOTE: dir==NULL creates the default per-dir config */
   dav_svn_dir_conf *conf = apr_pcalloc(p, sizeof(*conf));
@@ -123,8 +128,8 @@ static void *dav_svn_create_dir_config(apr_pool_t *p, char *dir)
   return conf;
 }
 
-static void *dav_svn_merge_dir_config(apr_pool_t *p,
-                                      void *base, void *overrides)
+static void *
+dav_svn_merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 {
   dav_svn_dir_conf *parent = base;
   dav_svn_dir_conf *child = overrides;
@@ -143,8 +148,9 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
   return newconf;
 }
 
-static const char *dav_svn_repo_name(cmd_parms *cmd, void *config,
-                                     const char *arg1)
+
+static const char *
+dav_svn_repo_name(cmd_parms *cmd, void *config, const char *arg1)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -153,8 +159,9 @@ static const char *dav_svn_repo_name(cmd_parms *cmd, void *config,
   return NULL;
 }
 
-static const char *dav_svn_xslt_uri(cmd_parms *cmd, void *config,
-                                    const char *arg1)
+
+static const char *
+dav_svn_xslt_uri(cmd_parms *cmd, void *config, const char *arg1)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -163,8 +170,9 @@ static const char *dav_svn_xslt_uri(cmd_parms *cmd, void *config,
   return NULL;
 }
 
-static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config,
-                                              int arg)
+
+static const char *
+dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config, int arg)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -176,8 +184,9 @@ static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config,
   return NULL;
 }
 
-static const char *dav_svn_pathauthz_cmd(cmd_parms *cmd, void *config,
-                                         int arg)
+
+static const char *
+dav_svn_pathauthz_cmd(cmd_parms *cmd, void *config, int arg)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -190,8 +199,8 @@ static const char *dav_svn_pathauthz_cmd(cmd_parms *cmd, void *config,
 }
 
 
-static const char *dav_svn_list_parentpath_cmd(cmd_parms *cmd, void *config,
-                                               int arg)
+static const char *
+dav_svn_list_parentpath_cmd(cmd_parms *cmd, void *config, int arg)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -204,8 +213,8 @@ static const char *dav_svn_list_parentpath_cmd(cmd_parms *cmd, void *config,
 }
 
 
-static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
-                                    const char *arg1)
+static const char *
+dav_svn_path_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -219,8 +228,8 @@ static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
 }
 
 
-static const char *dav_svn_parent_path_cmd(cmd_parms *cmd, void *config,
-                                           const char *arg1)
+static const char *
+dav_svn_parent_path_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dav_svn_dir_conf *conf = config;
 
@@ -233,8 +242,9 @@ static const char *dav_svn_parent_path_cmd(cmd_parms *cmd, void *config,
   return NULL;
 }
 
-static const char *dav_svn_special_uri_cmd(cmd_parms *cmd, void *config,
-                                           const char *arg1)
+
+static const char *
+dav_svn_special_uri_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dav_svn_server_conf *conf;
   char *uri;
@@ -267,7 +277,8 @@ static const char *dav_svn_special_uri_cmd(cmd_parms *cmd, void *config,
 
 /** Accessor functions for the module's configuration state **/
 
-const char *dav_svn_get_fs_path(request_rec *r)
+const char *
+dav_svn_get_fs_path(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -275,7 +286,9 @@ const char *dav_svn_get_fs_path(request_rec *r)
   return conf->fs_path;
 }
 
-const char *dav_svn_get_fs_parent_path(request_rec *r)
+
+const char *
+dav_svn_get_fs_parent_path(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -283,9 +296,11 @@ const char *dav_svn_get_fs_parent_path(request_rec *r)
   return conf->fs_parent_path;
 }
 
-AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r, 
-                                                      const char *root_path,
-                                                      const char **repos_path)
+
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_get_repos_path(request_rec *r,
+                       const char *root_path,
+                       const char **repos_path)
 {
 
   const char *fs_path;        
@@ -326,7 +341,9 @@ AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r,
   return NULL;
 }
 
-const char *dav_svn_get_repo_name(request_rec *r)
+
+const char *
+dav_svn_get_repo_name(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -334,7 +351,9 @@ const char *dav_svn_get_repo_name(request_rec *r)
   return conf->repo_name;
 }
 
-const char *dav_svn_get_xslt_uri(request_rec *r)
+
+const char *
+dav_svn_get_xslt_uri(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -342,7 +361,9 @@ const char *dav_svn_get_xslt_uri(request_rec *r)
   return conf->xslt_uri;
 }
 
-const char *dav_svn_get_special_uri(request_rec *r)
+
+const char *
+dav_svn_get_special_uri(request_rec *r)
 {
   dav_svn_server_conf *conf;
 
@@ -351,7 +372,9 @@ const char *dav_svn_get_special_uri(request_rec *r)
   return conf->special_uri ? conf->special_uri : SVN_DEFAULT_SPECIAL_URI;
 }
 
-svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r)
+
+svn_boolean_t
+dav_svn_get_autoversioning_flag(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -359,7 +382,9 @@ svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r)
   return conf->autoversioning == DAV_SVN_FLAG_ON;
 }
 
-svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
+
+svn_boolean_t
+dav_svn_get_pathauthz_flag(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -367,7 +392,9 @@ svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
   return conf->do_path_authz != DAV_SVN_FLAG_OFF;
 }
 
-svn_boolean_t dav_svn_get_list_parentpath_flag(request_rec *r)
+
+svn_boolean_t
+dav_svn_get_list_parentpath_flag(request_rec *r)
 {
   dav_svn_dir_conf *conf;
 
@@ -375,7 +402,9 @@ svn_boolean_t dav_svn_get_list_parentpath_flag(request_rec *r)
   return conf->list_parentpath == DAV_SVN_FLAG_ON;
 }
 
-static void merge_xml_filter_insert(request_rec *r)
+
+static void
+merge_xml_filter_insert(request_rec *r)
 {
   /* We only care about MERGE and DELETE requests. */
   if ((r->method_number == M_MERGE)
@@ -392,17 +421,20 @@ static void merge_xml_filter_insert(request_rec *r)
     }
 }
 
+
 typedef struct {
   apr_bucket_brigade *bb;
   apr_xml_parser *parser;
   apr_pool_t *pool;
 } merge_ctx_t;
 
-static apr_status_t merge_xml_in_filter(ap_filter_t *f,
-                                        apr_bucket_brigade *bb,
-                                        ap_input_mode_t mode,
-                                        apr_read_type_e block,
-                                        apr_off_t readbytes)
+
+static apr_status_t
+merge_xml_in_filter(ap_filter_t *f,
+                    apr_bucket_brigade *bb,
+                    ap_input_mode_t mode,
+                    apr_read_type_e block,
+                    apr_off_t readbytes)
 {
   apr_status_t rv;
   request_rec *r = f->r;
@@ -490,6 +522,7 @@ static apr_status_t merge_xml_in_filter(ap_filter_t *f,
 }
 
 
+
 /** Module framework stuff **/
 
 static const command_rec dav_svn_cmds[] =
@@ -534,6 +567,7 @@ static const command_rec dav_svn_cmds[] =
   { NULL }
 };
 
+
 static dav_provider dav_svn_provider =
 {
   &dav_svn_hooks_repos,
@@ -544,7 +578,9 @@ static dav_provider dav_svn_provider =
   NULL                        /* search */
 };
 
-static void register_hooks(apr_pool_t *pconf)
+
+static void
+register_hooks(apr_pool_t *pconf)
 {
   ap_hook_post_config(dav_svn_init, NULL, NULL, APR_HOOK_MIDDLE);
 
@@ -565,6 +601,7 @@ static void register_hooks(apr_pool_t *pconf)
                                 APR_HOOK_MIDDLE);
   dav_svn_register_uris(pconf);
 }
+
 
 module AP_MODULE_DECLARE_DATA dav_svn_module =
 {

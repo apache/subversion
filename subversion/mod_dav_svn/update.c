@@ -16,12 +16,13 @@
  * ====================================================================
  */
 
-
-
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
 #include <apr_md5.h>
+
+#include <http_request.h>
+#include <http_log.h>
 #include <mod_dav.h>
 
 #include "svn_pools.h"
@@ -35,8 +36,6 @@
 #include "svn_props.h"
 
 #include "dav_svn.h"
-#include <http_request.h>
-#include <http_log.h>
 
 
 typedef struct {
@@ -112,11 +111,12 @@ typedef struct item_baton_t {
    modules loaded into apache.  Return TRUE if the subrequest succeeds, FALSE
    otherwise. If REV is SVN_INVALID_REVNUM, then we look at HEAD.
 */
-static svn_boolean_t allow_read(request_rec *r,
-                                const dav_svn_repos *repos,
-                                const char *path,
-                                svn_revnum_t rev,
-                                apr_pool_t *pool)
+static svn_boolean_t
+allow_read(request_rec *r,
+           const dav_svn_repos *repos,
+           const char *path,
+           svn_revnum_t rev,
+           apr_pool_t *pool)
 {
   const char *uri;
   request_rec *subreq;
@@ -165,11 +165,12 @@ static svn_boolean_t allow_read(request_rec *r,
    BATON must be a pointer to a dav_svn_authz_read_baton.
    Use POOL for for any temporary allocation.
 */
-static svn_error_t *authz_read(svn_boolean_t *allowed,
-                               svn_fs_root_t *root,
-                               const char *path,
-                               void *baton,
-                               apr_pool_t *pool)
+static svn_error_t *
+authz_read(svn_boolean_t *allowed,
+           svn_fs_root_t *root,
+           const char *path,
+           void *baton,
+           apr_pool_t *pool)
 {
   dav_svn_authz_read_baton *arb = baton;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -245,7 +246,8 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
 }
 
 
-svn_repos_authz_func_t dav_svn_authz_read_func(dav_svn_authz_read_baton *baton)
+svn_repos_authz_func_t
+dav_svn_authz_read_func(dav_svn_authz_read_baton *baton)
 {
   /* Easy out: If the admin has explicitly set 'SVNPathAuthz Off',
      then we don't need to do any authorization checks. */
@@ -256,18 +258,20 @@ svn_repos_authz_func_t dav_svn_authz_read_func(dav_svn_authz_read_baton *baton)
 }
 
 
-svn_boolean_t dav_svn_allow_read(const dav_resource *resource,
-                                 svn_revnum_t rev, apr_pool_t *pool)
+svn_boolean_t
+dav_svn_allow_read(const dav_resource *resource,
+                   svn_revnum_t rev,
+                   apr_pool_t *pool)
 {
   return allow_read(resource->info->r, resource->info->repos,
                     resource->info->repos_path, rev, pool);
 }
 
+
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
    if LINKPATH is NULL, PATH will map to itself. */
-static void add_to_path_map(apr_hash_t *hash,
-                            const char *path,
-                            const char *linkpath)
+static void
+add_to_path_map(apr_hash_t *hash, const char *path, const char *linkpath)
 {
   /* normalize 'root paths' to have a slash */
   const char *norm_path = strcmp(path, "") ? path : "/";
@@ -283,9 +287,8 @@ static void add_to_path_map(apr_hash_t *hash,
 
 /* return the actual repository path referred to by the editor's PATH,
    allocated in POOL, determined by examining the pathmap HASH. */
-static const char *get_from_path_map(apr_hash_t *hash,
-                                     const char *path,
-                                     apr_pool_t *pool)
+static const char *
+get_from_path_map(apr_hash_t *hash, const char *path, apr_pool_t *pool)
 {
   const char *repos_path;
   svn_stringbuf_t *my_path;
@@ -325,9 +328,9 @@ static const char *get_from_path_map(apr_hash_t *hash,
   return apr_pstrdup(pool, path);
 }
 
-static item_baton_t *make_child_baton(item_baton_t *parent, 
-                                      const char *path,
-                                      apr_pool_t *pool)
+
+static item_baton_t *
+make_child_baton(item_baton_t *parent, const char *path, apr_pool_t *pool)
 {
   item_baton_t *baton;
 
@@ -364,9 +367,8 @@ struct brigade_write_baton
 
 
 /* This implements 'svn_write_fn_t'. */
-static svn_error_t * brigade_write_fn(void *baton,
-                                      const char *data,
-                                      apr_size_t *len)
+static svn_error_t *
+brigade_write_fn(void *baton, const char *data, apr_size_t *len)
 {
   struct brigade_write_baton *wb = baton;
   apr_status_t apr_err;
@@ -380,9 +382,10 @@ static svn_error_t * brigade_write_fn(void *baton,
 }
 
 
-svn_stream_t * dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
-                                                 ap_filter_t *output,
-                                                 apr_pool_t *pool)
+svn_stream_t *
+dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
+                                  ap_filter_t *output,
+                                  apr_pool_t *pool)
 {
   struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
   svn_stream_t *stream = svn_stream_create(wb, pool);
@@ -406,7 +409,8 @@ get_real_fs_path(item_baton_t *baton, apr_pool_t *pool)
 }
 
 
-static svn_error_t * send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
+static svn_error_t *
+send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
 {
   const char *href;
   const char *path;
@@ -425,10 +429,12 @@ static svn_error_t * send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
                            DEBUG_CR, apr_xml_quote_string(pool, href, 1));
 }
 
-static svn_error_t * absent_helper(svn_boolean_t is_dir,
-                                   const char *path,
-                                   item_baton_t *parent,
-                                   apr_pool_t *pool)
+
+static svn_error_t *
+absent_helper(svn_boolean_t is_dir,
+              const char *path,
+              item_baton_t *parent,
+              apr_pool_t *pool)
 {
   update_ctx_t *uc = parent->uc;
 
@@ -448,29 +454,28 @@ static svn_error_t * absent_helper(svn_boolean_t is_dir,
 }
 
 
-static svn_error_t * upd_absent_directory(const char *path,
-                                          void *parent_baton,
-                                          apr_pool_t *pool)
+static svn_error_t *
+upd_absent_directory(const char *path, void *parent_baton, apr_pool_t *pool)
 {
   return absent_helper(TRUE, path, parent_baton, pool);
 }
 
 
-static svn_error_t * upd_absent_file(const char *path,
-                                     void *parent_baton,
-                                     apr_pool_t *pool)
+static svn_error_t *
+upd_absent_file(const char *path, void *parent_baton, apr_pool_t *pool)
 {
   return absent_helper(FALSE, path, parent_baton, pool);
 }
 
 
-static svn_error_t * add_helper(svn_boolean_t is_dir,
-                                const char *path,
-                                item_baton_t *parent,
-                                const char *copyfrom_path,
-                                svn_revnum_t copyfrom_revision,
-                                apr_pool_t *pool,
-                                void **child_baton)
+static svn_error_t *
+add_helper(svn_boolean_t is_dir,
+           const char *path,
+           item_baton_t *parent,
+           const char *copyfrom_path,
+           svn_revnum_t copyfrom_revision,
+           apr_pool_t *pool,
+           void **child_baton)
 {
   item_baton_t *child;
   update_ctx_t *uc = parent->uc;
@@ -569,12 +574,14 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * open_helper(svn_boolean_t is_dir,
-                                 const char *path,
-                                 item_baton_t *parent,
-                                 svn_revnum_t base_revision,
-                                 apr_pool_t *pool,
-                                 void **child_baton)
+
+static svn_error_t *
+open_helper(svn_boolean_t is_dir,
+            const char *path,
+            item_baton_t *parent,
+            svn_revnum_t base_revision,
+            apr_pool_t *pool,
+            void **child_baton)
 {
   item_baton_t *child = make_child_baton(parent, path, pool);
   const char *qname = apr_xml_quote_string(pool, child->name, 1);
@@ -588,7 +595,9 @@ static svn_error_t * open_helper(svn_boolean_t is_dir,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
+
+static svn_error_t *
+close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
   int i;
   
@@ -678,7 +687,8 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 
 /* Send the opening tag of the update-report if it hasn't been sent
    already. */
-static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
+static svn_error_t *
+maybe_start_update_report(update_ctx_t *uc)
 {
   if ((! uc->resource_walk) && (! uc->started_update))
     {
@@ -697,9 +707,10 @@ static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
 }
 
 
-static svn_error_t * upd_set_target_revision(void *edit_baton,
-                                             svn_revnum_t target_revision,
-                                             apr_pool_t *pool)
+static svn_error_t *
+upd_set_target_revision(void *edit_baton,
+                        svn_revnum_t target_revision,
+                        apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
 
@@ -713,10 +724,12 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_open_root(void *edit_baton,
-                                   svn_revnum_t base_revision,
-                                   apr_pool_t *pool,
-                                   void **root_baton)
+
+static svn_error_t *
+upd_open_root(void *edit_baton,
+              svn_revnum_t base_revision,
+              apr_pool_t *pool,
+              void **root_baton)
 {
   update_ctx_t *uc = edit_baton;
   item_baton_t *b = apr_pcalloc(pool, sizeof(*b));
@@ -759,10 +772,12 @@ static svn_error_t * upd_open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_delete_entry(const char *path,
-                                      svn_revnum_t revision,
-                                      void *parent_baton,
-                                      apr_pool_t *pool)
+
+static svn_error_t *
+upd_delete_entry(const char *path,
+                 svn_revnum_t revision,
+                 void *parent_baton,
+                 apr_pool_t *pool)
 {
   item_baton_t *parent = parent_baton;
   const char *qname = apr_xml_quote_string(pool, 
@@ -771,19 +786,23 @@ static svn_error_t * upd_delete_entry(const char *path,
                            "<S:delete-entry name=\"%s\"/>" DEBUG_CR, qname);
 }
 
-static svn_error_t * upd_add_directory(const char *path,
-                                       void *parent_baton,
-                                       const char *copyfrom_path,
-                                       svn_revnum_t copyfrom_revision,
-                                       apr_pool_t *pool,
-                                       void **child_baton)
+
+static svn_error_t *
+upd_add_directory(const char *path,
+                  void *parent_baton,
+                  const char *copyfrom_path,
+                  svn_revnum_t copyfrom_revision,
+                  apr_pool_t *pool,
+                  void **child_baton)
 {
   return add_helper(TRUE /* is_dir */,
                     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
                     child_baton);
 }
 
-static svn_error_t * upd_open_directory(const char *path,
+
+static svn_error_t *
+upd_open_directory(const char *path,
                                         void *parent_baton,
                                         svn_revnum_t base_revision,
                                         apr_pool_t *pool,
@@ -793,10 +812,12 @@ static svn_error_t * upd_open_directory(const char *path,
                      path, parent_baton, base_revision, pool, child_baton);
 }
 
-static svn_error_t * upd_change_xxx_prop(void *baton,
-                                         const char *name,
-                                         const svn_string_t *value,
-                                         apr_pool_t *pool)
+
+static svn_error_t *
+upd_change_xxx_prop(void *baton,
+                    const char *name,
+                    const svn_string_t *value,
+                    apr_pool_t *pool)
 {
   item_baton_t *b = baton;
   const char *qname;
@@ -899,29 +920,34 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_close_directory(void *dir_baton,
-                                         apr_pool_t *pool)
+
+static svn_error_t *
+upd_close_directory(void *dir_baton, apr_pool_t *pool)
 {
   return close_helper(TRUE /* is_dir */, dir_baton);
 }
 
-static svn_error_t * upd_add_file(const char *path,
-                                  void *parent_baton,
-                                  const char *copyfrom_path,
-                                  svn_revnum_t copyfrom_revision,
-                                  apr_pool_t *pool,
-                                  void **file_baton)
+
+static svn_error_t *
+upd_add_file(const char *path,
+             void *parent_baton,
+             const char *copyfrom_path,
+             svn_revnum_t copyfrom_revision,
+             apr_pool_t *pool,
+             void **file_baton)
 {
   return add_helper(FALSE /* is_dir */,
                     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
                     file_baton);
 }
 
-static svn_error_t * upd_open_file(const char *path,
-                                   void *parent_baton,
-                                   svn_revnum_t base_revision,
-                                   apr_pool_t *pool,
-                                   void **file_baton)
+
+static svn_error_t *
+upd_open_file(const char *path,
+              void *parent_baton,
+              svn_revnum_t base_revision,
+              apr_pool_t *pool,
+              void **file_baton)
 {
   return open_helper(FALSE /* is_dir */,
                      path, parent_baton, base_revision, pool, file_baton);
@@ -944,7 +970,8 @@ struct window_handler_baton
 
 
 /* This implements 'svn_txdelta_window_handler_t'. */
-static svn_error_t * window_handler(svn_txdelta_window_t *window, void *baton)
+static svn_error_t *
+window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct window_handler_baton *wb = baton;
 
@@ -967,18 +994,19 @@ static svn_error_t * window_handler(svn_txdelta_window_t *window, void *baton)
    During a resource walk, the driver sends an empty window as a
    boolean indicating that a change happened to this file, but we
    don't want to send anything over the wire as a result. */
-static svn_error_t * dummy_window_handler(svn_txdelta_window_t *window,
-                                          void *baton)
+static svn_error_t *
+dummy_window_handler(svn_txdelta_window_t *window, void *baton)
 {
   return SVN_NO_ERROR;
 }
 
 
-static svn_error_t * upd_apply_textdelta(void *file_baton, 
-                                         const char *base_checksum,
-                                         apr_pool_t *pool,
-                                         svn_txdelta_window_handler_t *handler,
-                                         void **handler_baton)
+static svn_error_t *
+upd_apply_textdelta(void *file_baton,
+                    const char *base_checksum,
+                    apr_pool_t *pool,
+                    svn_txdelta_window_handler_t *handler,
+                    void **handler_baton)
 {
   item_baton_t *file = file_baton;
   struct window_handler_baton *wb;
@@ -1014,9 +1042,8 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
 }
 
 
-static svn_error_t * upd_close_file(void *file_baton,
-                                    const char *text_checksum,
-                                    apr_pool_t *pool)
+static svn_error_t *
+upd_close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   item_baton_t *file = file_baton;
 
@@ -1040,8 +1067,8 @@ static svn_error_t * upd_close_file(void *file_baton,
 }
 
 
-static svn_error_t * upd_close_edit(void *edit_baton,
-                                    apr_pool_t *pool)
+static svn_error_t *
+upd_close_edit(void *edit_baton, apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
 
@@ -1054,8 +1081,7 @@ static svn_error_t * upd_close_edit(void *edit_baton,
 /* Return a specific error associated with the contents of TAGNAME
    being malformed.  Use pool for allocations.  */
 static dav_error *
-malformed_element_error(const char *tagname,
-                        apr_pool_t *pool)
+malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
   const char *errstr = apr_pstrcat(pool, "The request's '", tagname, 
                                    "' element is malformed; there "
@@ -1065,9 +1091,10 @@ malformed_element_error(const char *tagname,
 }
 
 
-dav_error * dav_svn__update_report(const dav_resource *resource,
-                                   const apr_xml_doc *doc,
-                                   ap_filter_t *output)
+dav_error *
+dav_svn__update_report(const dav_resource *resource,
+                       const apr_xml_doc *doc,
+                       ap_filter_t *output)
 {
   svn_delta_editor_t *editor;
   apr_xml_elem *child;

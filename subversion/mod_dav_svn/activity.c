@@ -16,18 +16,17 @@
  * ====================================================================
  */
 
-
+#include <apr_dbm.h>
 
 #include <httpd.h>
 #include <mod_dav.h>
-
-#include <apr_dbm.h>
 
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 
 #include "dav_svn.h"
+
 
 #define ACTIVITY_DB "dav/activities"
 
@@ -205,6 +204,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
 
   return NULL;
 }
+
 
 dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                    const char **ptxn_name,
