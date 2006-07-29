@@ -16,13 +16,12 @@
  * ====================================================================
  */
 
-
+#include <apr_tables.h>
+#include <apr_uuid.h>
 
 #include <httpd.h>
 #include <http_log.h>
 #include <mod_dav.h>
-#include <apr_tables.h>
-#include <apr_uuid.h>
 
 #include "svn_fs.h"
 #include "svn_xml.h"
@@ -50,13 +49,15 @@ static const dav_report_elem avail_reports[] = {
   { NULL },
 };
 
+
 /* declare these static functions early, so we can use them anywhere. */
 static dav_error *dav_svn_make_activity(dav_resource *resource);
 
 
-svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
-                                          const char *fs_path,
-                                          apr_pool_t *pool)
+svn_error_t *
+dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
+                             const char *fs_path,
+                             apr_pool_t *pool)
 {
   const char *logmsg;
   svn_string_t *logval;
@@ -86,7 +87,8 @@ svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
 
 /* Helper: attach an auto-generated svn:log property to a txn within
    an auto-checked-out working resource. */
-static dav_error *set_auto_revprops(dav_resource *resource)
+static dav_error *
+set_auto_revprops(dav_resource *resource)
 {
   svn_error_t *serr;
 
@@ -106,8 +108,11 @@ static dav_error *set_auto_revprops(dav_resource *resource)
 }
 
 
-static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
-                           const char *txn_name, apr_pool_t *pool)
+static dav_error *
+open_txn(svn_fs_txn_t **ptxn,
+         svn_fs_t *fs,
+         const char *txn_name,
+         apr_pool_t *pool)
 {
   svn_error_t *serr;
 
@@ -134,7 +139,9 @@ static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
   return NULL;
 }
 
-static void dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
+
+static void
+dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
 {
   /* Note: we append pieces with care for Web Folders's 63-char limit
      on the DAV: header */
@@ -147,9 +154,11 @@ static void dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   /* ### fork-control? */
 }
 
-static dav_error *dav_svn_get_option(const dav_resource *resource,
-                                     const apr_xml_elem *elem,
-                                     apr_text_header *option)
+
+static dav_error *
+dav_svn_get_option(const dav_resource *resource,
+                   const apr_xml_elem *elem,
+                   apr_text_header *option)
 {
   /* ### DAV:version-history-collection-set */
 
@@ -172,12 +181,16 @@ static dav_error *dav_svn_get_option(const dav_resource *resource,
   return NULL;
 }
 
-static int dav_svn_versionable(const dav_resource *resource)
+
+static int
+dav_svn_versionable(const dav_resource *resource)
 {
   return 0;
 }
 
-static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
+
+static dav_auto_version
+dav_svn_auto_versionable(const dav_resource *resource)
 {
   /* The svn client attempts to proppatch a baseline when changing
      unversioned revision props.  Thus we allow baselines to be
@@ -209,8 +222,9 @@ static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
   return DAV_AUTO_VERSION_NEVER;
 }
 
-static dav_error *dav_svn_vsn_control(dav_resource *resource,
-                                      const char *target)
+
+static dav_error *
+dav_svn_vsn_control(dav_resource *resource, const char *target)
 {
   /* All mod_dav_svn resources are versioned objects;  so it doesn't
      make sense to call vsn_control on a resource that exists . */
@@ -234,12 +248,15 @@ static dav_error *dav_svn_vsn_control(dav_resource *resource,
   return NULL;
 }
 
-dav_error *dav_svn_checkout(dav_resource *resource,
-                            int auto_checkout,
-                            int is_unreserved, int is_fork_ok,
-                            int create_activity,
-                            apr_array_header_t *activities,
-                            dav_resource **working_resource)
+
+dav_error *
+dav_svn_checkout(dav_resource *resource,
+                 int auto_checkout,
+                 int is_unreserved,
+                 int is_fork_ok,
+                 int create_activity,
+                 apr_array_header_t *activities,
+                 dav_resource **working_resource)
 {
   const char *txn_name;
   svn_error_t *serr;
@@ -645,7 +662,9 @@ dav_error *dav_svn_checkout(dav_resource *resource,
   return NULL;
 }
 
-static dav_error *dav_svn_uncheckout(dav_resource *resource)
+
+static dav_error *
+dav_svn_uncheckout(dav_resource *resource)
 {
   if (resource->type != DAV_RESOURCE_TYPE_WORKING)
     return dav_svn__new_error_tag(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
@@ -705,7 +724,8 @@ struct cleanup_deltify_baton
    return APR_SUCCESS no matter what, as this is a pool cleanup
    function and deltification is not a matter of correctness
    anyway. */
-static apr_status_t cleanup_deltify(void *data)
+static apr_status_t
+cleanup_deltify(void *data)
 {
   struct cleanup_deltify_baton *cdb = data;
   svn_repos_t *repos;
@@ -754,9 +774,10 @@ static apr_status_t cleanup_deltify(void *data)
    revision against which to deltify.  POOL is both the pool on which
    to register the cleanup function and the pool that will be used for
    temporary allocations while deltifying. */
-static void register_deltification_cleanup(svn_repos_t *repos,
-                                           svn_revnum_t revision,
-                                           apr_pool_t *pool)
+static void
+register_deltification_cleanup(svn_repos_t *repos,
+                               svn_revnum_t revision,
+                               apr_pool_t *pool)
 {
   struct cleanup_deltify_baton *cdb = apr_palloc(pool, sizeof(*cdb));
   
@@ -768,9 +789,10 @@ static void register_deltification_cleanup(svn_repos_t *repos,
 }
 
 
-dav_error *dav_svn_checkin(dav_resource *resource,
-                           int keep_checked_out,
-                           dav_resource **version_resource)
+dav_error *
+dav_svn_checkin(dav_resource *resource,
+                int keep_checked_out,
+                dav_resource **version_resource)
 {
   svn_error_t *serr;
   dav_error *err;
@@ -911,8 +933,10 @@ dav_error *dav_svn_checkin(dav_resource *resource,
   return NULL;
 }
 
-static dav_error *dav_svn_avail_reports(const dav_resource *resource,
-                                        const dav_report_elem **reports)
+
+static dav_error *
+dav_svn_avail_reports(const dav_resource *resource,
+                      const dav_report_elem **reports)
 {
   /* ### further restrict to the public space? */
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR) {
@@ -924,18 +948,22 @@ static dav_error *dav_svn_avail_reports(const dav_resource *resource,
   return NULL;
 }
 
-static int dav_svn_report_label_header_allowed(const apr_xml_doc *doc)
+
+static int
+dav_svn_report_label_header_allowed(const apr_xml_doc *doc)
 {
   return 0;
 }
+
 
 /* Respond to a S:dated-rev-report request.  The request contains a
  * DAV:creationdate element giving the requested date; the response
  * contains a DAV:version-name element giving the most recent revision
  * as of that date. */
-static dav_error * dav_svn__drev_report(const dav_resource *resource,
-                                        const apr_xml_doc *doc,
-                                        ap_filter_t *output)
+static dav_error *
+dav_svn__drev_report(const dav_resource *resource,
+                     const apr_xml_doc *doc,
+                     ap_filter_t *output)
 {
   apr_xml_elem *child;
   int ns;
@@ -1005,9 +1033,10 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
 
 /* Respond to a get-locks-report request.  See description of this
    report in libsvn_ra_dav/fetch.c.  */
-static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
-                                             const apr_xml_doc *doc,
-                                             ap_filter_t *output)
+static dav_error *
+dav_svn__get_locks_report(const dav_resource *resource,
+                          const apr_xml_doc *doc,
+                          ap_filter_t *output)
 {
   apr_bucket_brigade *bb;
   svn_error_t *err;
@@ -1180,11 +1209,11 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
 }
 
 
-
-static apr_status_t send_get_locations_report(ap_filter_t *output,
-                                              apr_bucket_brigade *bb,
-                                              const dav_resource *resource,
-                                              apr_hash_t *fs_locations)
+static apr_status_t
+send_get_locations_report(ap_filter_t *output,
+                          apr_bucket_brigade *bb,
+                          const dav_resource *resource,
+                          apr_hash_t *fs_locations)
 {
   apr_hash_index_t *hi;
   apr_pool_t *pool;
@@ -1215,9 +1244,11 @@ static apr_status_t send_get_locations_report(ap_filter_t *output,
   return ap_fprintf(output, bb, "</S:get-locations-report>" DEBUG_CR);
 }
 
-dav_error *dav_svn__get_locations_report(const dav_resource *resource,
-                                         const apr_xml_doc *doc,
-                                         ap_filter_t *output)
+
+dav_error *
+dav_svn__get_locations_report(const dav_resource *resource,
+                              const apr_xml_doc *doc,
+                              ap_filter_t *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -1328,10 +1359,12 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   return derr;
 }
 
-static dav_error *dav_svn_deliver_report(request_rec *r,
-                                         const dav_resource *resource,
-                                         const apr_xml_doc *doc,
-                                         ap_filter_t *output)
+
+static dav_error *
+dav_svn_deliver_report(request_rec *r,
+                       const dav_resource *resource,
+                       const apr_xml_doc *doc,
+                       ap_filter_t *output)
 {
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
@@ -1381,7 +1414,9 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
                                 SVN_DAV_ERROR_TAG);
 }
 
-static int dav_svn_can_be_activity(const dav_resource *resource)
+
+static int
+dav_svn_can_be_activity(const dav_resource *resource)
 {
   /* If our resource is marked as auto_checked_out'd, then we allow this to
    * be an activity URL.  Otherwise, it must be a real activity URL that
@@ -1392,7 +1427,9 @@ static int dav_svn_can_be_activity(const dav_resource *resource)
            !resource->exists));
 }
 
-static dav_error *dav_svn_make_activity(dav_resource *resource)
+
+static dav_error *
+dav_svn_make_activity(dav_resource *resource)
 {
   const char *activity_id = resource->info->root.activity_id;
   const char *txn_name;
@@ -1425,11 +1462,11 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
 }
 
 
-
-dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
-                                    request_rec *r,
-                                    const char *path_prefix,
-                                    apr_pool_t *pool)
+dav_error *
+dav_svn__build_lock_hash(apr_hash_t **locks,
+                         request_rec *r,
+                         const char *path_prefix,
+                         apr_pool_t *pool)
 {
   apr_status_t apr_err;
   dav_error *derr;
@@ -1538,10 +1575,10 @@ dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
 }
 
 
-
-dav_error *dav_svn__push_locks(dav_resource *resource,
-                               apr_hash_t *locks,
-                               apr_pool_t *pool)
+dav_error *
+dav_svn__push_locks(dav_resource *resource,
+                    apr_hash_t *locks,
+                    apr_pool_t *pool)
 {
   svn_fs_access_t *fsaccess;
   apr_hash_index_t *hi;
@@ -1579,10 +1616,11 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
 /* Helper for dav_svn_merge().  Free every lock in LOCKS.  The locks
    live in REPOS.  Log any errors for REQUEST.  Use POOL for temporary
    work.*/
-static svn_error_t *release_locks(apr_hash_t *locks,
-                                  svn_repos_t *repos,
-                                  request_rec *r,
-                                  apr_pool_t *pool)
+static svn_error_t *
+release_locks(apr_hash_t *locks,
+              svn_repos_t *repos,
+              request_rec *r,
+              apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *key;
@@ -1613,11 +1651,13 @@ static svn_error_t *release_locks(apr_hash_t *locks,
 }
 
 
-
-static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
-                                int no_auto_merge, int no_checkout,
-                                apr_xml_elem *prop_elem,
-                                ap_filter_t *output)
+static dav_error *
+dav_svn_merge(dav_resource *target,
+              dav_resource *source,
+              int no_auto_merge,
+              int no_checkout,
+              apr_xml_elem *prop_elem,
+              ap_filter_t *output)
 {
   apr_pool_t *pool;
   dav_error *err;
@@ -1758,6 +1798,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                  post_commit_err, prop_elem,
                                  disable_merge_response, pool);
 }
+
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_get_vsn_options,

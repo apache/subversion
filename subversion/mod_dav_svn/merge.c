@@ -27,9 +27,9 @@
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_xml.h"
 
 #include "dav_svn.h"
-#include "svn_xml.h"
 
 
 /* #################################################################
@@ -60,13 +60,14 @@
 */
 
 /* send a response to the client for this baton */
-static svn_error_t *send_response(const dav_svn_repos *repos,
-                                  svn_fs_root_t *root,
-                                  const char *path,
-                                  svn_boolean_t is_dir,
-                                  ap_filter_t *output,
-                                  apr_bucket_brigade *bb,
-                                  apr_pool_t *pool)
+static svn_error_t *
+send_response(const dav_svn_repos *repos,
+              svn_fs_root_t *root,
+              const char *path,
+              svn_boolean_t is_dir,
+              ap_filter_t *output,
+              apr_bucket_brigade *bb,
+              apr_pool_t *pool)
 {
   const char *href;
   const char *vsn_url;
@@ -103,12 +104,13 @@ static svn_error_t *send_response(const dav_svn_repos *repos,
 }
 
 
-static svn_error_t *do_resources(const dav_svn_repos *repos,
-                                 svn_fs_root_t *root, 
-                                 svn_revnum_t revision, 
-                                 ap_filter_t *output,
-                                 apr_bucket_brigade *bb,
-                                 apr_pool_t *pool)
+static svn_error_t *
+do_resources(const dav_svn_repos *repos,
+             svn_fs_root_t *root, 
+             svn_revnum_t revision, 
+             ap_filter_t *output,
+             apr_bucket_brigade *bb,
+             apr_pool_t *pool)
 {
   apr_hash_t *changes;
   apr_hash_t *sent = apr_hash_make(pool);
@@ -198,13 +200,14 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
    PUBLIC FUNCTIONS
 */
 
-dav_error * dav_svn__merge_response(ap_filter_t *output,
-                                    const dav_svn_repos *repos,
-                                    svn_revnum_t new_rev,
-                                    char *post_commit_err,
-                                    apr_xml_elem *prop_elem,
-                                    svn_boolean_t disable_merge_response,
-                                    apr_pool_t *pool)
+dav_error *
+dav_svn__merge_response(ap_filter_t *output,
+                        const dav_svn_repos *repos,
+                        svn_revnum_t new_rev,
+                        char *post_commit_err,
+                        apr_xml_elem *prop_elem,
+                        svn_boolean_t disable_merge_response,
+                        apr_pool_t *pool)
 {
   apr_bucket_brigade *bb;
   svn_fs_root_t *root;

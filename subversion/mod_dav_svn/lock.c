@@ -16,13 +16,12 @@
  * ====================================================================
  */
 
-
+#include <apr_uuid.h>
+#include <apr_time.h>
 
 #include <httpd.h>
 #include <http_log.h>
 #include <mod_dav.h>
-#include <apr_uuid.h>
-#include <apr_time.h>
 
 #include "svn_fs.h"
 #include "svn_repos.h"
@@ -31,8 +30,6 @@
 #include "svn_pools.h"
 
 #include "dav_svn.h"
-
-
 
 
 struct dav_lockdb_private
@@ -117,7 +114,6 @@ svn_lock_to_dav_lock(dav_lock **dlock,
 }
 
 
-
 /* Helper func for dav_lock_to_svn_lock:  take an incoming 
    "<D:owner>&lt;foo&gt;</D:owner>" tag and convert it to
    "<foo>". */
@@ -148,7 +144,6 @@ unescape_xml(const char **output,
                   xml_doc->namespaces, NULL, output, NULL);
   return SVN_NO_ERROR;
 }
-
 
 
 /* Helper func:  convert a dav_lock to an svn_lock_t, allocated in pool. */
@@ -243,7 +238,6 @@ dav_svn_get_supportedlock(const dav_resource *resource)
 }
 
 
-
 /* Parse a lock token URI, returning a lock token object allocated
  * in the given pool.
  */
@@ -262,7 +256,6 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
 }
 
 
-
 /* Format a lock token object into a URI string, allocated in
  * the given pool.
  *
@@ -277,7 +270,6 @@ dav_svn_format_locktoken(apr_pool_t *p,
 }
 
 
-
 /* Compare two lock tokens.
  *
  * Result < 0  => lt1 < lt2
@@ -290,7 +282,6 @@ dav_svn_compare_locktoken(const dav_locktoken *lt1,
 {
   return strcmp(lt1->uuid_str, lt2->uuid_str);
 }
-
 
 
 /* Open the provider's lock database.
@@ -353,7 +344,6 @@ dav_svn_open_lockdb(request_rec *r,
 }
 
 
-
 /* Indicates completion of locking operations */
 static void
 dav_svn_close_lockdb(dav_lockdb *lockdb)
@@ -361,7 +351,6 @@ dav_svn_close_lockdb(dav_lockdb *lockdb)
   /* nothing to do here. */
   return;
 }
-
 
 
 /* Take a resource out of the lock-null state. */
@@ -378,7 +367,6 @@ dav_svn_remove_locknull_state(dav_lockdb *lockdb,
 
   return 0;  /* Just to suppress compiler warnings. */
 }
-
 
 
 /*
@@ -417,7 +405,6 @@ dav_svn_create_lock(dav_lockdb *lockdb,
   *lock = dlock;
   return 0;  
 }
-
 
 
 /*
@@ -506,7 +493,6 @@ dav_svn_get_locks(dav_lockdb *lockdb,
 }
 
 
-
 /*
 ** Find a particular lock on a resource (specified by its locktoken).
 **
@@ -573,7 +559,6 @@ dav_svn_find_lock(dav_lockdb *lockdb,
 }
 
 
-
 /*
 ** Quick test to see if the resource has *any* locks on it.
 **
@@ -631,7 +616,6 @@ dav_svn_has_locks(dav_lockdb *lockdb,
   *locks_present = slock ? 1 : 0;
   return 0;
 }
-
 
 
 /*
@@ -794,7 +778,6 @@ dav_svn_append_locks(dav_lockdb *lockdb,
 }
 
 
-
 /*
 ** Remove any lock that has the specified locktoken.
 **
@@ -883,7 +866,6 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
 }
 
 
-
 /*
 ** Refresh all locks, found on the specified resource, which has a
 ** locktoken in the provided list.
@@ -966,10 +948,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
 }
 
 
-
-
 /* The main locking vtable, provided to mod_dav */
-
 const dav_hooks_locks dav_svn_hooks_locks = {
   dav_svn_get_supportedlock,
   dav_svn_parse_locktoken,

@@ -16,11 +16,10 @@
  * ====================================================================
  */
 
-
-
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
+
 #include <mod_dav.h>
 
 #include "svn_repos.h"
@@ -51,7 +50,8 @@ struct log_receiver_baton
    element and set LRB->needs_header to zero.  Else do nothing.
    This is basically duplicated in file_revs.c.  Consider factoring if
    duplicating again. */
-static svn_error_t * maybe_send_header(struct log_receiver_baton *lrb)
+static svn_error_t *
+maybe_send_header(struct log_receiver_baton *lrb)
 {
   if (lrb->needs_header)
     {
@@ -64,15 +64,17 @@ static svn_error_t * maybe_send_header(struct log_receiver_baton *lrb)
   return SVN_NO_ERROR;
 }
 
+
 /* This implements `svn_log_message_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
-static svn_error_t * log_receiver(void *baton,
-                                  apr_hash_t *changed_paths,
-                                  svn_revnum_t rev,
-                                  const char *author,
-                                  const char *date,
-                                  const char *msg,
-                                  apr_pool_t *pool)
+static svn_error_t *
+log_receiver(void *baton,
+             apr_hash_t *changed_paths,
+             svn_revnum_t rev,
+             const char *author,
+             const char *date,
+             const char *msg,
+             apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
 
@@ -193,11 +195,10 @@ static svn_error_t * log_receiver(void *baton,
 }
 
 
-
-
-dav_error * dav_svn__log_report(const dav_resource *resource,
-                                const apr_xml_doc *doc,
-                                ap_filter_t *output)
+dav_error *
+dav_svn__log_report(const dav_resource *resource,
+                    const apr_xml_doc *doc,
+                    ap_filter_t *output)
 {
   svn_error_t *serr;
   apr_status_t apr_err;

@@ -16,21 +16,20 @@
  * ====================================================================
  */
 
-
+#include <apr_tables.h>
+#include <apr_md5.h>
 
 #include <httpd.h>
 #include <util_xml.h>
-#include <apr_tables.h>
-#include <apr_md5.h>
 #include <mod_dav.h>
-
-#include "dav_svn.h"
 
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_dav.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+
+#include "dav_svn.h"
 
 
 /*
@@ -39,14 +38,14 @@
 */
 static const char * const dav_svn_namespace_uris[] =
 {
-    "DAV:",
-    SVN_DAV_PROP_NS_DAV,
+  "DAV:",
+  SVN_DAV_PROP_NS_DAV,
 
-    NULL        /* sentinel */
+  NULL        /* sentinel */
 };
 enum {
-    DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
-    DAV_SVN_NAMESPACE_URI       /* the dav<->ra_dav namespace URI */
+  DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
+  DAV_SVN_NAMESPACE_URI       /* the dav<->ra_dav namespace URI */
 };
 
 #define SVN_RO_DAV_PROP(name) \
@@ -70,6 +69,7 @@ enum {
   SVN_PROPID_repository_uuid,
   SVN_PROPID_deadprop_count
 };
+
 
 static const dav_liveprop_spec dav_svn_props[] =
 {
@@ -102,12 +102,14 @@ static const dav_liveprop_spec dav_svn_props[] =
   { 0 } /* sentinel */
 };
 
+
 static const dav_liveprop_group dav_svn_liveprop_group =
 {
-    dav_svn_props,
-    dav_svn_namespace_uris,
-    &dav_svn_hooks_liveprop
+  dav_svn_props,
+  dav_svn_namespace_uris,
+  &dav_svn_hooks_liveprop
 };
+
 
 /* Set *PROPVAL to the value for the revision property PROPNAME on
    COMMITTED_REV, in the repository identified by RESOURCE, if
@@ -134,11 +136,12 @@ static const dav_liveprop_group dav_svn_liveprop_group =
    might leak protected information because we will only test the
    readability of a single changed path.
 */
-static svn_error_t *dav_svn_get_path_revprop(svn_string_t **propval,
-                                             const dav_resource *resource,
-                                             svn_revnum_t committed_rev,
-                                             const char *propname,
-                                             apr_pool_t *pool)
+static svn_error_t *
+dav_svn_get_path_revprop(svn_string_t **propval,
+                         const dav_resource *resource,
+                         svn_revnum_t committed_rev,
+                         const char *propname,
+                         apr_pool_t *pool)
 {
   *propval = NULL;
 
@@ -154,9 +157,11 @@ static svn_error_t *dav_svn_get_path_revprop(svn_string_t **propval,
                                     NULL, NULL, pool);
 }
 
-static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
-                                           int propid, dav_prop_insert what,
-                                           apr_text_header *phdr)
+
+static dav_prop_insert
+dav_svn_insert_prop(const dav_resource *resource,
+                    int propid, dav_prop_insert what,
+                    apr_text_header *phdr)
 {
   const char *value = NULL;
   const char *s;
@@ -609,7 +614,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   return what;
 }
 
-static int dav_svn_is_writable(const dav_resource *resource, int propid)
+
+static int
+dav_svn_is_writable(const dav_resource *resource, int propid)
 {
   const dav_liveprop_spec *info;
 
@@ -617,42 +624,54 @@ static int dav_svn_is_writable(const dav_resource *resource, int propid)
   return info->is_writable;
 }
 
-static dav_error * dav_svn_patch_validate(const dav_resource *resource,
-                                          const apr_xml_elem *elem,
-                                          int operation, void **context,
-                                          int *defer_to_dead)
+
+static dav_error *
+dav_svn_patch_validate(const dav_resource *resource,
+                       const apr_xml_elem *elem,
+                       int operation,
+                       void **context,
+                       int *defer_to_dead)
 {
   /* NOTE: this function will not be called unless/until we have
      modifiable (writable) live properties. */
   return NULL;
 }
 
-static dav_error * dav_svn_patch_exec(const dav_resource *resource,
-                                      const apr_xml_elem *elem,
-                                      int operation, void *context,
-                                      dav_liveprop_rollback **rollback_ctx)
+
+static dav_error *
+dav_svn_patch_exec(const dav_resource *resource,
+                   const apr_xml_elem *elem,
+                   int operation,
+                   void *context,
+                   dav_liveprop_rollback **rollback_ctx)
 {
   /* NOTE: this function will not be called unless/until we have
      modifiable (writable) live properties. */
   return NULL;
 }
 
-static void dav_svn_patch_commit(const dav_resource *resource,
-                                 int operation, void *context,
-                                 dav_liveprop_rollback *rollback_ctx)
+
+static void
+dav_svn_patch_commit(const dav_resource *resource,
+                     int operation,
+                     void *context,
+                     dav_liveprop_rollback *rollback_ctx)
 {
   /* NOTE: this function will not be called unless/until we have
      modifiable (writable) live properties. */
 }
 
-static dav_error * dav_svn_patch_rollback(const dav_resource *resource,
-                                          int operation, void *context,
-                                          dav_liveprop_rollback *rollback_ctx)
+static dav_error *
+dav_svn_patch_rollback(const dav_resource *resource,
+                       int operation,
+                       void *context,
+                       dav_liveprop_rollback *rollback_ctx)
 {
   /* NOTE: this function will not be called unless/until we have
      modifiable (writable) live properties. */
   return NULL;
 }
+
 
 const dav_hooks_liveprop dav_svn_hooks_liveprop = {
   dav_svn_insert_prop,
@@ -664,7 +683,9 @@ const dav_hooks_liveprop dav_svn_hooks_liveprop = {
   dav_svn_patch_rollback,
 };
 
-void dav_svn_gather_propsets(apr_array_header_t *uris)
+
+void
+dav_svn_gather_propsets(apr_array_header_t *uris)
 {
   /* ### what should we use for a URL to describe the available prop set? */
   /* ### for now... nothing. we will *only* have DAV properties */
@@ -674,9 +695,12 @@ void dav_svn_gather_propsets(apr_array_header_t *uris)
 #endif
 }
 
-int dav_svn_find_liveprop(const dav_resource *resource,
-                          const char *ns_uri, const char *name,
-                          const dav_hooks_liveprop **hooks)
+
+int
+dav_svn_find_liveprop(const dav_resource *resource,
+                      const char *ns_uri,
+                      const char *name,
+                      const dav_hooks_liveprop **hooks)
 {
   /* don't try to find any liveprops if this isn't "our" resource */
   if (resource->hooks != &dav_svn_hooks_repos)
@@ -685,55 +709,63 @@ int dav_svn_find_liveprop(const dav_resource *resource,
   return dav_do_find_liveprop(ns_uri, name, &dav_svn_liveprop_group, hooks);
 }
 
-void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  dav_prop_insert what, apr_text_header *phdr)
+
+void
+dav_svn_insert_all_liveprops(request_rec *r,
+                             const dav_resource *resource,
+                             dav_prop_insert what,
+                             apr_text_header *phdr)
 {
-    const dav_liveprop_spec *spec;
-    apr_pool_t *pool;
-    apr_pool_t *subpool;
+  const dav_liveprop_spec *spec;
+  apr_pool_t *pool;
+  apr_pool_t *subpool;
 
-    /* don't insert any liveprops if this isn't "our" resource */
-    if (resource->hooks != &dav_svn_hooks_repos)
-        return;
+  /* don't insert any liveprops if this isn't "our" resource */
+  if (resource->hooks != &dav_svn_hooks_repos)
+    return;
 
-    if (!resource->exists) {
-        /* a lock-null resource */
-        /*
-        ** ### technically, we should insert empty properties. dunno offhand
-        ** ### what part of the spec said this, but it was essentially thus:
-        ** ### "the properties should be defined, but may have no value".
-        */
-        return;
+  if (!resource->exists)
+    {
+      /* a lock-null resource */
+      /*
+       ** ### technically, we should insert empty properties. dunno offhand
+       ** ### what part of the spec said this, but it was essentially thus:
+       ** ### "the properties should be defined, but may have no value".
+       */
+      return;
     }
 
-    pool = resource->info->pool;
-    subpool = svn_pool_create(pool);
-    resource->info->pool = subpool;
+  pool = resource->info->pool;
+  subpool = svn_pool_create(pool);
+  resource->info->pool = subpool;
 
-    for (spec = dav_svn_props; spec->name != NULL; ++spec)
-      {
-        svn_pool_clear(subpool);
-        (void) dav_svn_insert_prop(resource, spec->propid, what, phdr);
-      }
+  for (spec = dav_svn_props; spec->name != NULL; ++spec)
+    {
+      svn_pool_clear(subpool);
+      (void) dav_svn_insert_prop(resource, spec->propid, what, phdr);
+    }
 
-    resource->info->pool = pool;
-    svn_pool_destroy(subpool);
+  resource->info->pool = pool;
+  svn_pool_destroy(subpool);
 
-    /* ### we know the others aren't defined as liveprops */
+  /* ### we know the others aren't defined as liveprops */
 }
 
-void dav_svn_register_uris(apr_pool_t *p)
+
+void
+dav_svn_register_uris(apr_pool_t *p)
 {
-    /* register the namespace URIs */
-    dav_register_liveprop_group(p, &dav_svn_liveprop_group);
+  /* register the namespace URIs */
+  dav_register_liveprop_group(p, &dav_svn_liveprop_group);
 }
 
 
-int dav_svn_get_last_modified_time(const char **datestring,
-                                   apr_time_t *timeval,
-                                   const dav_resource *resource,
-                                   enum dav_svn_time_format format,
-                                   apr_pool_t *pool)
+int
+dav_svn_get_last_modified_time(const char **datestring,
+                               apr_time_t *timeval,
+                               const dav_resource *resource,
+                               enum dav_svn_time_format format,
+                               apr_pool_t *pool)
 {
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   svn_string_t *committed_date = NULL;

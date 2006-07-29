@@ -20,6 +20,9 @@
 #include <apr_strings.h>
 #include <apr_xml.h>
 #include <apr_md5.h>
+
+#include <http_request.h>
+#include <http_log.h>
 #include <mod_dav.h>
 
 #include "svn_pools.h"
@@ -33,8 +36,7 @@
 #include "svn_props.h"
 
 #include "dav_svn.h"
-#include <http_request.h>
-#include <http_log.h>
+
 
 typedef struct {
   apr_bucket_brigade *bb;
@@ -42,6 +44,7 @@ typedef struct {
   svn_boolean_t started;
   svn_boolean_t sending_textdelta;
 } dav_svn_edit_baton_t;
+
 
 static svn_error_t *
 maybe_start_report(dav_svn_edit_baton_t *eb)
@@ -60,6 +63,7 @@ maybe_start_report(dav_svn_edit_baton_t *eb)
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 maybe_close_textdelta(dav_svn_edit_baton_t *eb)
 {
@@ -72,6 +76,7 @@ maybe_close_textdelta(dav_svn_edit_baton_t *eb)
 
   return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 set_target_revision(void *edit_baton,
@@ -88,6 +93,7 @@ set_target_revision(void *edit_baton,
 
   return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 open_root(void *edit_baton,
@@ -108,10 +114,12 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *delete_entry(const char *path,
-                                 svn_revnum_t revision,
-                                 void *parent_baton,
-                                 apr_pool_t *pool)
+
+static svn_error_t *
+delete_entry(const char *path,
+             svn_revnum_t revision,
+             void *parent_baton,
+             apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
@@ -127,12 +135,14 @@ static svn_error_t *delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *add_directory(const char *path,
-                                  void *parent_baton,
-                                  const char *copyfrom_path,
-                                  svn_revnum_t copyfrom_rev,
-                                  apr_pool_t *pool,
-                                  void **child_baton)
+
+static svn_error_t *
+add_directory(const char *path,
+              void *parent_baton,
+              const char *copyfrom_path,
+              svn_revnum_t copyfrom_rev,
+              apr_pool_t *pool,
+              void **child_baton)
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
@@ -162,11 +172,13 @@ static svn_error_t *add_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *open_directory(const char *path,
-                                   void *parent_baton,
-                                   svn_revnum_t base_revision,
-                                   apr_pool_t *pool,
-                                   void **child_baton)
+
+static svn_error_t *
+open_directory(const char *path,
+               void *parent_baton,
+               svn_revnum_t base_revision,
+               apr_pool_t *pool,
+               void **child_baton)
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
@@ -183,10 +195,12 @@ static svn_error_t *open_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *change_dir_prop(void *baton,
-                                    const char *name,
-                                    const svn_string_t *value,
-                                    apr_pool_t *pool)
+
+static svn_error_t *
+change_dir_prop(void *baton,
+                const char *name,
+                const svn_string_t *value,
+                apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = baton;
   const char *qname;
@@ -215,12 +229,14 @@ static svn_error_t *change_dir_prop(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *add_file(const char *path,
-                             void *parent_baton,
-                             const char *copyfrom_path,
-                             svn_revnum_t copyfrom_rev,
-                             apr_pool_t *pool,
-                             void **file_baton)
+
+static svn_error_t *
+add_file(const char *path,
+         void *parent_baton,
+         const char *copyfrom_path,
+         svn_revnum_t copyfrom_rev,
+         apr_pool_t *pool,
+         void **file_baton)
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
@@ -250,11 +266,13 @@ static svn_error_t *add_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *open_file(const char *path,
-                              void *parent_baton,
-                              svn_revnum_t base_revision,
-                              apr_pool_t *pool,
-                              void **file_baton)
+
+static svn_error_t *
+open_file(const char *path,
+          void *parent_baton,
+          svn_revnum_t base_revision,
+          apr_pool_t *pool,
+          void **file_baton)
 {
   dav_svn_edit_baton_t *eb = parent_baton;
 
@@ -271,11 +289,13 @@ static svn_error_t *open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *apply_textdelta(void *file_baton,
-                                    const char *base_checksum,
-                                    apr_pool_t *pool,
-                                    svn_txdelta_window_handler_t *handler,
-                                    void **handler_baton)
+
+static svn_error_t *
+apply_textdelta(void *file_baton,
+                const char *base_checksum,
+                apr_pool_t *pool,
+                svn_txdelta_window_handler_t *handler,
+                void **handler_baton)
 {
   dav_svn_edit_baton_t *eb = file_baton;
   svn_stream_t *stream;
@@ -297,10 +317,12 @@ static svn_error_t *apply_textdelta(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *change_file_prop(void *baton,
-                                     const char *name,
-                                     const svn_string_t *value,
-                                     apr_pool_t *pool)
+
+static svn_error_t *
+change_file_prop(void *baton,
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = baton;
   const char *qname;
@@ -328,9 +350,9 @@ static svn_error_t *change_file_prop(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *close_file(void *file_baton,
-                               const char *text_checksum,
-                               apr_pool_t *pool)
+
+static svn_error_t *
+close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = file_baton;
 
@@ -341,8 +363,9 @@ static svn_error_t *close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *close_directory(void *dir_baton,
-                                    apr_pool_t *pool)
+
+static svn_error_t *
+close_directory(void *dir_baton, apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = dir_baton;
 
@@ -352,8 +375,9 @@ static svn_error_t *close_directory(void *dir_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *close_edit(void *edit_baton,
-                               apr_pool_t *pool)
+
+static svn_error_t *
+close_edit(void *edit_baton, apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = edit_baton;
 
@@ -363,11 +387,13 @@ static svn_error_t *close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-static void make_editor(const svn_delta_editor_t **editor,
-                        void **edit_baton,
-                        apr_bucket_brigade *bb,
-                        ap_filter_t *output,
-                        apr_pool_t *pool)
+
+static void
+make_editor(const svn_delta_editor_t **editor,
+            void **edit_baton,
+            apr_bucket_brigade *bb,
+            ap_filter_t *output,
+            apr_pool_t *pool)
 {
   dav_svn_edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
   svn_delta_editor_t *e = svn_delta_default_editor(pool);
@@ -395,6 +421,7 @@ static void make_editor(const svn_delta_editor_t **editor,
   *edit_baton = eb;
 }
 
+
 static dav_error *
 malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
@@ -406,6 +433,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                             NULL),
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
+
 
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,

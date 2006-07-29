@@ -1,5 +1,5 @@
 /*
- * util.c: some handy utilities functions
+ * util.c: some handy utility functions
  *
  * ====================================================================
  * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
@@ -19,6 +19,7 @@
 #include <apr_xml.h>
 #include <apr_errno.h>
 #include <apr_uri.h>
+
 #include <mod_dav.h>
 
 #include "svn_error.h"
@@ -27,12 +28,14 @@
 
 #include "dav_svn.h"
 
-dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
-                                   int status,
-                                   int error_id,
-                                   const char *desc,
-                                   const char *namespace,
-                                   const char *tagname)
+
+dav_error *
+dav_svn__new_error_tag(apr_pool_t *pool,
+                       int status,
+                       int error_id,
+                       const char *desc,
+                       const char *namespace,
+                       const char *tagname)
 {
   /* dav_new_error_tag will record errno but Subversion makes no attempt
      to ensure that it is valid.  We reset it to avoid putting incorrect
@@ -43,10 +46,11 @@ dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
   return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
 }
 
+
 /* Build up a chain of DAV errors that correspond to the underlying SVN
    errors that caused this problem. */
-static dav_error *build_error_chain(apr_pool_t *pool, svn_error_t *err,
-                                    int status)
+static dav_error *
+build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
 {
   char *msg = err->message ? apr_pstrdup(pool, err->message) : NULL;
 
@@ -60,8 +64,12 @@ static dav_error *build_error_chain(apr_pool_t *pool, svn_error_t *err,
   return derr;
 }
 
-dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
-                                const char *message, apr_pool_t *pool)
+
+dav_error *
+dav_svn_convert_err(svn_error_t *serr,
+                    int status,
+                    const char *message,
+                    apr_pool_t *pool)
 {
     dav_error *derr;
 
@@ -122,9 +130,8 @@ get_last_history_rev(svn_revnum_t *revision,
 }
 
 
-svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool)
+svn_revnum_t
+dav_svn_get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   svn_revnum_t revision = svn_fs_revision_root_revision(root);    
   svn_revnum_t history_rev;
@@ -166,13 +173,13 @@ svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
 }
                                    
 
-
-const char *dav_svn_build_uri(const dav_svn_repos *repos,
-                              enum dav_svn_build_what what,
-                              svn_revnum_t revision,
-                              const char *path,
-                              int add_href,
-                              apr_pool_t *pool)
+const char *
+dav_svn_build_uri(const dav_svn_repos *repos,
+                  enum dav_svn_build_what what,
+                  svn_revnum_t revision,
+                  const char *path,
+                  int add_href,
+                  apr_pool_t *pool)
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
@@ -222,10 +229,12 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
   /* NOTREACHED */
 }
 
-svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
-                                      const dav_resource *relative,
-                                      const char *uri,
-                                      apr_pool_t *pool)
+
+svn_error_t *
+dav_svn_simple_parse_uri(dav_svn_uri_info *info,
+                         const dav_resource *relative,
+                         const char *uri,
+                         apr_pool_t *pool)
 {
   apr_uri_t comp;
   const char *path;
@@ -355,8 +364,10 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                           "Unsupported URI form");
 }
 
+
 /* ### move this into apr_xml */
-int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
+int
+dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
 {
   int i;
 
@@ -366,8 +377,12 @@ int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
   return -1;
 }
 
-svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
-                                const char *fmt, ...)
+
+svn_error_t *
+dav_svn__send_xml(apr_bucket_brigade *bb,
+                  ap_filter_t *output,
+                  const char *fmt,
+                  ...)
 {
   apr_status_t apr_err;
   va_list ap;
@@ -386,7 +401,8 @@ svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
 }
 
 
-dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
+dav_error *
+dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 {
   if (strcmp(path, svn_path_canonicalize(path, pool)) == 0)
     return NULL;
@@ -400,15 +416,17 @@ dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
      SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
 
-dav_error * dav_svn__sanitize_error(svn_error_t *serr,
-                                    const char *new_msg,
-                                    int http_status,
-                                    request_rec *r)
+
+dav_error *
+dav_svn__sanitize_error(svn_error_t *serr,
+                        const char *new_msg,
+                        int http_status,
+                        request_rec *r)
 {
-    svn_error_t *safe_err = serr;
-    if (new_msg != NULL)
-      {
-        /* Sanitization is necessary.  Create a new, safe error and
+  svn_error_t *safe_err = serr;
+  if (new_msg != NULL)
+    {
+      /* Sanitization is necessary.  Create a new, safe error and
            log the original error. */
         safe_err = svn_error_create(serr->apr_err, NULL, new_msg);
         ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
