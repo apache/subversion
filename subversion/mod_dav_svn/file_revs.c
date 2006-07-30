@@ -215,7 +215,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   apr_xml_elem *child;
   int ns;
   struct file_rev_baton frb;
-  dav_svn_authz_read_baton arb;
+  dav_svn__authz_read_baton arb;
   const char *path = NULL;
   
   /* These get determined from the request document. */
@@ -273,7 +273,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* Get the revisions and send them. */
   serr = svn_repos_get_file_revs(resource->info->repos->repos,
                                  path, start, end,
-                                 dav_svn_authz_read_func(&arb), &arb,
+                                 dav_svn__authz_read_func(&arb), &arb,
                                  file_rev_handler, &frb, resource->pool);
 
   if (serr)
