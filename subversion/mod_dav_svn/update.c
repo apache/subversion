@@ -359,45 +359,6 @@ make_child_baton(item_baton_t *parent, const char *path, apr_pool_t *pool)
 }
 
 
-struct brigade_write_baton
-{
-  apr_bucket_brigade *bb;
-  ap_filter_t *output;
-};
-
-
-/* This implements 'svn_write_fn_t'. */
-static svn_error_t *
-brigade_write_fn(void *baton, const char *data, apr_size_t *len)
-{
-  struct brigade_write_baton *wb = baton;
-  apr_status_t apr_err;
-
-  apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
-
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Error writing base64 data");
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_stream_t *
-dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
-                                  ap_filter_t *output,
-                                  apr_pool_t *pool)
-{
-  struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
-  svn_stream_t *stream = svn_stream_create(wb, pool);
-
-  wb->bb = bb;
-  wb->output = output;
-  svn_stream_set_write(stream, brigade_write_fn);
-
-  return svn_base64_encode(stream, pool);
-}
-
-
 /* Get the real filesystem PATH for BATON, and return the value
    allocated from POOL.  This function juggles the craziness of
    updates, switches, and updates of switched things. */
@@ -1028,8 +989,9 @@ upd_apply_textdelta(void *file_baton,
   wb = apr_palloc(file->pool, sizeof(*wb));
   wb->seen_first_window = FALSE;
   wb->uc = file->uc;
-  base64_stream = dav_svn_make_base64_output_stream(wb->uc->bb, wb->uc->output,
-                                                    file->pool);
+  base64_stream = dav_svn__make_base64_output_stream(wb->uc->bb,
+                                                     wb->uc->output,
+                                                     file->pool);
 
   svn_txdelta_to_svndiff2(&(wb->handler), &(wb->handler_baton), 
                           base64_stream, file->uc->svndiff_version,
