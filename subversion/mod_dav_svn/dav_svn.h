@@ -262,18 +262,16 @@ dav_svn_insert_all_liveprops(request_rec *r,
                              dav_prop_insert what,
                              apr_text_header *phdr);
 
-/* register our live property URIs with mod_dav. */
-void dav_svn_register_uris(apr_pool_t *p);
-
 /* generate an ETag for RESOURCE and return it, allocated in POOL. */
 const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool);
 
 /* our hooks structures; these are gathered into a dav_provider */
 extern const dav_hooks_repository dav_svn_hooks_repos;
 extern const dav_hooks_propdb dav_svn_hooks_propdb;
-extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
 extern const dav_hooks_vsn dav_svn_hooks_vsn;
 extern const dav_hooks_locks dav_svn_hooks_locks;
+
+extern const dav_liveprop_group dav_svn_liveprop_group;
 
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn_get_fs_path(request_rec *r);

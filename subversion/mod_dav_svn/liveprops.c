@@ -103,14 +103,6 @@ static const dav_liveprop_spec dav_svn_props[] =
 };
 
 
-static const dav_liveprop_group dav_svn_liveprop_group =
-{
-  dav_svn_props,
-  dav_svn_namespace_uris,
-  &dav_svn_hooks_liveprop
-};
-
-
 /* Set *PROPVAL to the value for the revision property PROPNAME on
    COMMITTED_REV, in the repository identified by RESOURCE, if
    RESOURCE's path is readable.  If it is not readable, set *PROPVAL
@@ -673,7 +665,7 @@ dav_svn_patch_rollback(const dav_resource *resource,
 }
 
 
-const dav_hooks_liveprop dav_svn_hooks_liveprop = {
+static const dav_hooks_liveprop dav_svn_hooks_liveprop = {
   dav_svn_insert_prop,
   dav_svn_is_writable,
   dav_svn_namespace_uris,
@@ -681,6 +673,14 @@ const dav_hooks_liveprop dav_svn_hooks_liveprop = {
   dav_svn_patch_exec,
   dav_svn_patch_commit,
   dav_svn_patch_rollback,
+};
+
+
+const dav_liveprop_group dav_svn_liveprop_group =
+{
+  dav_svn_props,
+  dav_svn_namespace_uris,
+  &dav_svn_hooks_liveprop
 };
 
 
@@ -749,14 +749,6 @@ dav_svn_insert_all_liveprops(request_rec *r,
   svn_pool_destroy(subpool);
 
   /* ### we know the others aren't defined as liveprops */
-}
-
-
-void
-dav_svn_register_uris(apr_pool_t *p)
-{
-  /* register the namespace URIs */
-  dav_register_liveprop_group(p, &dav_svn_liveprop_group);
 }
 
 
