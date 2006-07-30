@@ -204,6 +204,8 @@ file_rev_handler(void *baton,
 }
 
 
+/* Respond to a client request for a REPORT of type file-revs-report for the
+   RESOURCE.  Get request body from DOC and send result to OUTPUT. */
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,

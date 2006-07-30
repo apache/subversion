@@ -548,29 +548,37 @@ dav_svn__merge_response(ap_filter_t *output,
                         svn_boolean_t disable_merge_response,
                         apr_pool_t *pool);
 
+
+/* The various report handlers, defined in reports/, and used by version.c.  */
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output);
-
-/* ### todo: document this, as soon as understand what the heck it
-   does :-).  -kff */   
 dav_error *
 dav_svn__log_report(const dav_resource *resource,
                     const apr_xml_doc *doc,
                     ap_filter_t *output);
-
-/* Respond to a client request for a REPORT of type file-revs-report for the
-   RESOURCE.  Get request body from DOC and send result to OUTPUT. */
+dav_error *
+dav_svn__dated_rev_report(const dav_resource *resource,
+                          const apr_xml_doc *doc,
+                          ap_filter_t *output);
+dav_error *
+dav_svn__get_locations_report(const dav_resource *resource,
+                              const apr_xml_doc *doc,
+                              ap_filter_t *output);
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);
-
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output);
+dav_error *
+dav_svn__get_locks_report(const dav_resource *resource,
+                          const apr_xml_doc *doc,
+                          ap_filter_t *output);
+
 
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
@@ -603,11 +611,6 @@ dav_svn_get_last_modified_time(const char **datestring,
                                const dav_resource *resource,
                                enum dav_svn_time_format format,
                                apr_pool_t *pool);
-
-dav_error *
-dav_svn__get_locations_report(const dav_resource *resource,
-                              const apr_xml_doc *doc,
-                              ap_filter_t *output);
 
 
 /* Return a writable generic stream that will encode its output to base64
