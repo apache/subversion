@@ -599,7 +599,7 @@ register_hooks(apr_pool_t *pconf)
   dav_hook_find_liveprop(dav_svn_find_liveprop, NULL, NULL, APR_HOOK_MIDDLE);
   dav_hook_insert_all_liveprops(dav_svn_insert_all_liveprops, NULL, NULL,
                                 APR_HOOK_MIDDLE);
-  dav_svn_register_uris(pconf);
+  dav_register_liveprop_group(pconf, &dav_svn_liveprop_group);
 }
 
 
