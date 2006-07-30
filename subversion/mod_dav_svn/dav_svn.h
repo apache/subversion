@@ -614,9 +614,9 @@ dav_svn__get_locations_report(const dav_resource *resource,
    and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
    POOL. */
 svn_stream_t *
-dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
-                                  ap_filter_t *output,
-                                  apr_pool_t *pool);
+dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
+                                   ap_filter_t *output,
+                                   apr_pool_t *pool);
 
 
 /* A baton needed by dav_svn_authz_read(). */

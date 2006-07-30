@@ -308,7 +308,7 @@ apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
 
-  stream = dav_svn_make_base64_output_stream(eb->bb, eb->output, pool);
+  stream = dav_svn__make_base64_output_stream(eb->bb, eb->output, pool);
 
   svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
 

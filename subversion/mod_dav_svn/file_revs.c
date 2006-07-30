@@ -184,8 +184,8 @@ file_rev_handler(void *baton,
     {
       svn_stream_t *base64_stream;
 
-      base64_stream = dav_svn_make_base64_output_stream(frb->bb, frb->output,
-                                                        pool);
+      base64_stream = dav_svn__make_base64_output_stream(frb->bb, frb->output,
+                                                         pool);
       svn_txdelta_to_svndiff2(&frb->window_handler, &frb->window_baton,
                               base64_stream, frb->svndiff_version, pool);
       *window_handler = delta_window_handler;
