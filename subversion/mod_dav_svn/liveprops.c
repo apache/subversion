@@ -377,7 +377,7 @@ dav_svn_insert_prop(const dav_resource *resource,
           return DAV_PROP_INSERT_NOTSUPP;
         }
 
-      value = dav_svn_getetag(resource, p);
+      value = dav_svn__getetag(resource, p);
       break;
 
     case DAV_PROPID_auto_version:

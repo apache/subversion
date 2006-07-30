@@ -262,9 +262,6 @@ dav_svn_insert_all_liveprops(request_rec *r,
                              dav_prop_insert what,
                              apr_text_header *phdr);
 
-/* generate an ETag for RESOURCE and return it, allocated in POOL. */
-const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool);
-
 /* our hooks structures; these are gathered into a dav_provider */
 extern const dav_hooks_repository dav_svn_hooks_repos;
 extern const dav_hooks_propdb dav_svn_hooks_propdb;
@@ -381,6 +378,12 @@ dav_svn_create_activity(const dav_svn_repos *repos,
                         apr_pool_t *pool);
 
 
+/*** repos.c ***/
+
+/* generate an ETag for RESOURCE and return it, allocated in POOL. */
+const char *
+dav_svn__getetag(const dav_resource *resource, apr_pool_t *pool);
+
 /*
   Construct a working resource for a given resource.
 
@@ -394,10 +397,10 @@ dav_svn_create_activity(const dav_svn_repos *repos,
   working resource and return NULL.
 */
 dav_resource *
-dav_svn_create_working_resource(dav_resource *base,
-                                const char *activity_id,
-                                const char *txn_name,
-                                int tweak_in_place);
+dav_svn__create_working_resource(dav_resource *base,
+                                 const char *activity_id,
+                                 const char *txn_name,
+                                 int tweak_in_place);
 /* 
    Convert a working RESOURCE back into a regular one, in-place.
 
@@ -405,17 +408,19 @@ dav_svn_create_working_resource(dav_resource *base,
    'working' flag, change the fs root from a txn-root to a rev-root,
    and set the URL back into either a public URL or bc URL.
 */
-dav_error *dav_svn_working_to_regular_resource(dav_resource *resource);
+dav_error *
+dav_svn__working_to_regular_resource(dav_resource *resource);
 
 /* 
    Given a version-resource URI, construct a new version-resource in
    POOL and return it in  *VERSION_RES.
 */
 dav_error *
-dav_svn_create_version_resource(dav_resource **version_res,
-                                const char *uri,
-                                apr_pool_t *pool);
+dav_svn__create_version_resource(dav_resource **version_res,
+                                 const char *uri,
+                                 apr_pool_t *pool);
 
+/*** ***/
 
 /* 
    Hook function of types 'checkout' and 'checkin', as defined in
@@ -512,27 +517,6 @@ dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                          const dav_resource *relative,
                          const char *uri,
                          apr_pool_t *pool);
-
-
-/* Given an apache request R and a ROOT_PATH to the svn location
-   block, set *KIND to the node-kind of the URI's associated
-   (revision, path) pair, if possible.
-   
-   Public uris, baseline collections, version resources, and working
-   (non-baseline) resources all have associated (revision, path)
-   pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
-   will be returned.
-
-   If URI is something more abstract, then set *KIND to
-   svn_node_unknown.  This is true for baselines, working baselines,
-   version controled configurations, activities, histories, and other
-   private resources.
-*/
-dav_error *
-dav_svn_resource_kind(request_rec *r,
-                      const char *uri,
-                      const char *root_path,
-                      svn_node_kind_t *kind);
 
 
 /* Generate the HTTP response body for a successful MERGE. */
