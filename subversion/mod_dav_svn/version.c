@@ -348,9 +348,9 @@ dav_svn_checkout(dav_resource *resource,
 
       /* Tweak the VCR in-place, making it into a WR.  (Ignore the
          NULL return value.) */
-      res = dav_svn_create_working_resource(resource,
-                                            shared_activity, shared_txn_name,
-                                            TRUE /* tweak in place */);
+      res = dav_svn__create_working_resource(resource,
+                                             shared_activity, shared_txn_name,
+                                             TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
          dav_svn_auto_versionable allows us to do an auto-checkin and
@@ -655,10 +655,10 @@ dav_svn_checkout(dav_resource *resource,
             }
         }
     }
-  *working_resource = dav_svn_create_working_resource(resource,
-                                                      parse.activity_id,
-                                                      txn_name,
-                                                      FALSE);
+  *working_resource = dav_svn__create_working_resource(resource,
+                                                       parse.activity_id,
+                                                       txn_name,
+                                                       FALSE);
   return NULL;
 }
 
@@ -694,7 +694,7 @@ dav_svn_uncheckout(dav_resource *resource)
   resource->info->auto_checked_out = FALSE;
 
   /* Convert the working resource back into a regular one, in-place. */
-  return dav_svn_working_to_regular_resource(resource);
+  return dav_svn__working_to_regular_resource(resource);
 }
 
 
@@ -910,8 +910,8 @@ dav_svn_checkin(dav_resource *resource,
                                   new_rev, resource->info->repos_path,
                                   0, resource->pool);
           
-          err = dav_svn_create_version_resource(version_resource, uri,
-                                                resource->pool);
+          err = dav_svn__create_version_resource(version_resource, uri,
+                                                 resource->pool);
           if (err)
             return err;
         }
@@ -927,7 +927,7 @@ dav_svn_checkin(dav_resource *resource,
   if (! keep_checked_out)
     {
       resource->info->auto_checked_out = FALSE;
-      return dav_svn_working_to_regular_resource(resource);
+      return dav_svn__working_to_regular_resource(resource);
     } 
 
   return NULL;
