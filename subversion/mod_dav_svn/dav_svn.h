@@ -619,7 +619,7 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    apr_pool_t *pool);
 
 
-/* A baton needed by dav_svn_authz_read(). */
+/* A baton needed by dav_svn__authz_read_func(). */
 typedef struct 
 {
   /* The original request, needed to generate a subrequest. */
@@ -628,7 +628,7 @@ typedef struct
   /* We need this to construct a URI based on a repository abs path. */
   const dav_svn_repos *repos;
 
-} dav_svn_authz_read_baton;
+} dav_svn__authz_read_baton;
 
 
 /* Convert incoming RESOURCE and revision REV into a version-resource URI and
@@ -639,14 +639,14 @@ typedef struct
    Use POOL for any temporary allocation.
 */
 svn_boolean_t
-dav_svn_allow_read(const dav_resource *resource,
+dav_svn__allow_read(const dav_resource *resource,
                    svn_revnum_t rev,
                    apr_pool_t *pool);
 
 /* If authz is enabled in the specified BATON, return a read authorization
    function. Otherwise, return NULL. */
 svn_repos_authz_func_t
-dav_svn_authz_read_func(dav_svn_authz_read_baton *baton);
+dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 
 /* Every provider needs to define an opaque locktoken type. */
 struct dav_locktoken
