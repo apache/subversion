@@ -444,7 +444,7 @@ dav_svn__replay_report(const dav_resource *resource,
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   const svn_delta_editor_t *editor;
   svn_boolean_t send_deltas = TRUE;
-  dav_svn_authz_read_baton arb;
+  dav_svn__authz_read_baton arb;
   const char *base_dir = resource->info->repos_path;
   apr_bucket_brigade *bb;
   apr_xml_elem *child;
@@ -525,7 +525,7 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,
                                send_deltas, editor, edit_baton,
-                               dav_svn_authz_read_func(&arb), &arb,
+                               dav_svn__authz_read_func(&arb), &arb,
                                resource->pool)))
     return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                "Problem replaying revision",

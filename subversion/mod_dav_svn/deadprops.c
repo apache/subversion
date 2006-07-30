@@ -200,7 +200,7 @@ dav_svn_db_open(apr_pool_t *p,
                 dav_db **pdb)
 {
   dav_db *db;
-  dav_svn_authz_read_baton *arb;
+  dav_svn__authz_read_baton *arb;
 
   /* Some resource types do not have deadprop databases. Specifically:
      REGULAR, VERSION, and WORKING resources have them. (SVN does not
@@ -240,7 +240,7 @@ dav_svn_db_open(apr_pool_t *p,
   arb->r = resource->info->r;
   arb->repos = resource->info->repos;
   db->authz_read_baton = arb;
-  db->authz_read_func = dav_svn_authz_read_func(arb);
+  db->authz_read_func = dav_svn__authz_read_func(arb);
 
   /* ### use RO and node's mutable status to look for an error? */
 

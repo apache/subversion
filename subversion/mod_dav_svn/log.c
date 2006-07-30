@@ -205,7 +205,7 @@ dav_svn__log_report(const dav_resource *resource,
   dav_error *derr = NULL;
   apr_xml_elem *child;
   struct log_receiver_baton lrb;
-  dav_svn_authz_read_baton arb;
+  dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *action;
   const char *target = NULL;
@@ -285,7 +285,7 @@ dav_svn__log_report(const dav_resource *resource,
                              limit,
                              discover_changed_paths,
                              strict_node_history,
-                             dav_svn_authz_read_func(&arb),
+                             dav_svn__authz_read_func(&arb),
                              &arb,
                              log_receiver,
                              &lrb,
