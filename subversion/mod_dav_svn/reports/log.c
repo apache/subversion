@@ -28,7 +28,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "../dav_svn.h"
 
 
 struct log_receiver_baton

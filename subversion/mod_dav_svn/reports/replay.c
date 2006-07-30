@@ -35,7 +35,7 @@
 #include "svn_dav.h"
 #include "svn_props.h"
 
-#include "dav_svn.h"
+#include "../dav_svn.h"
 
 
 typedef struct {

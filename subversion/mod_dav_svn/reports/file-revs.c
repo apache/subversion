@@ -26,7 +26,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "../dav_svn.h"
 
 struct file_rev_baton {
   /* this buffers the output for a bit and is automatically flushed,
