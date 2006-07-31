@@ -79,12 +79,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20879, r20880
-    Fix segfaults caused by faulty svnsync user input.
-    Justification:
-      Segfault.  Duh.
-    Votes:
-      +1: cmpilato, rooneg, dlr
 
 Status of 1.4.1:
 ================

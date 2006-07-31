@@ -377,6 +377,7 @@ static svn_error_t *
 initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 {
   svn_ra_callbacks2_t callbacks = { 0 };
+  const char *to_url, *from_url;
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
   apr_array_header_t *args;
@@ -384,9 +385,24 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
 
-  baton.to_url = APR_ARRAY_IDX(args, 0, const char *);
-  baton.from_url = opt_baton->source_url;
+  if (! opt_baton->source_url)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("You must supply a source URL;"
+                              " try 'svnsync help' for more info"));
 
+  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
+  from_url = svn_path_canonicalize(opt_baton->source_url, pool);
+
+  if (! svn_path_is_url(to_url))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
+                             _("Path '%s' is not a URL"), to_url);
+  if (! svn_path_is_url(from_url))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
+                             _("Path '%s' is not a URL"), from_url);
+
+  baton.to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *),
+                                       pool);
+  baton.from_url = svn_path_canonicalize(opt_baton->source_url, pool);
   baton.config = opt_baton->config;
 
   callbacks.open_tmp_file = open_tmp_file;
@@ -1041,7 +1057,11 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
 
-  to_url = APR_ARRAY_IDX(args, 0, const char *);
+  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
+
+  if (! svn_path_is_url(to_url))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
+                             _("Path '%s' is not a URL"), to_url);
 
   callbacks.open_tmp_file = open_tmp_file;
   callbacks.auth_baton = opt_baton->auth_baton;
@@ -1103,7 +1123,16 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
 
-  to_url = APR_ARRAY_IDX(args, 0, const char *);
+  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
+
+  if (! svn_path_is_url(to_url))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
+                             _("Path '%s' is not a URL"), to_url);
+
+  if (! SVN_IS_VALID_REVNUM(opt_baton->revision))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("You must supply a valid revision number;"
+                              " try 'svnsync help' for more info"));
 
   callbacks.open_tmp_file = open_tmp_file;
   callbacks.auth_baton = opt_baton->auth_baton;
@@ -1193,6 +1222,7 @@ main(int argc, const char *argv[])
     }
 
   memset(&opt_baton, 0, sizeof(opt_baton));
+  opt_baton.revision = SVN_INVALID_REVNUM;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1262,9 +1292,13 @@ main(int argc, const char *argv[])
               if ((! SVN_IS_VALID_REVNUM(opt_baton.revision))
                   || (! digits_end)
                   || *digits_end)
-                SVN_INT_ERR(svn_error_create
-                            (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Invalid revision number supplied")));
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("Invalid revision number"));
+                  svn_handle_error2(err, stderr, FALSE, "svnsync: ");
+                  svn_error_clear(err);
+                  return EXIT_FAILURE;
+                }
             }
             break;
 
