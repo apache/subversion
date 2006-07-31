@@ -677,8 +677,8 @@ prep_history(dav_resource_combined *comb)
 static dav_error *
 prep_working(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.root.activity_id);
+  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
+                                          comb->priv.root.activity_id);
   apr_pool_t *pool = comb->res.pool;
   svn_error_t *serr;
   dav_error *derr;
@@ -791,8 +791,8 @@ prep_working(dav_resource_combined *comb)
 static dav_error *
 prep_activity(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.root.activity_id);
+  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
+                                          comb->priv.root.activity_id);
 
   comb->priv.root.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
@@ -3112,8 +3112,8 @@ remove_resource(dav_resource *resource, dav_response **response)
   /* Handle activity deletions (early exit). */
   if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY)
     {
-      return dav_svn_delete_activity(resource->info->repos,
-                                     resource->info->root.activity_id);
+      return dav_svn__delete_activity(resource->info->repos,
+                                      resource->info->root.activity_id);
     }
 
   /* ### note that the parent was checked out at some point, and this

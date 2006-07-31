@@ -31,8 +31,8 @@
 #define ACTIVITY_DB "dav/activities"
 
 
-const char *dav_svn_get_txn(const dav_svn_repos *repos,
-                            const char *activity_id)
+const char *
+dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id)
 {
   apr_dbm_t *dbm;
   apr_status_t status;
@@ -72,8 +72,8 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
 }
 
 
-dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
-                                   const char *activity_id)
+dav_error *
+dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
 {
   dav_error *err = NULL;
   apr_dbm_t *dbm;
@@ -164,9 +164,10 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
 }
 
 
-dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
-                                  const char *activity_id,
-                                  const char *txn_name)
+dav_error *
+dav_svn__store_activity(const dav_svn_repos *repos,
+                        const char *activity_id,
+                        const char *txn_name)
 {
   apr_dbm_t *dbm;
   apr_status_t status;
@@ -206,9 +207,10 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
 }
 
 
-dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
-                                   const char **ptxn_name,
-                                   apr_pool_t *pool)
+dav_error *
+dav_svn__create_activity(const dav_svn_repos *repos,
+                         const char **ptxn_name,
+                         apr_pool_t *pool)
 {
   svn_revnum_t rev;
   svn_fs_txn_t *txn;

@@ -357,25 +357,25 @@ dav_svn__new_error_tag(apr_pool_t *pool,
 dav_error *dav_svn__test_canonical(const char *path, apr_pool_t *pool);
 
 
+/*** activity.c ***/
+
 /* activity functions for looking up, storing, and deleting
    ACTIVITY->TXN mappings */
 const char *
-dav_svn_get_txn(const dav_svn_repos *repos,
-                const char *activity_id);
+dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);
 
 dav_error *
-dav_svn_delete_activity(const dav_svn_repos *repos,
-                        const char *activity_id);
+dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id);
 
 dav_error *
-dav_svn_store_activity(const dav_svn_repos *repos,
-                       const char *activity_id,
-                       const char *txn_name);
+dav_svn__store_activity(const dav_svn_repos *repos,
+                        const char *activity_id,
+                        const char *txn_name);
 
 dav_error *
-dav_svn_create_activity(const dav_svn_repos *repos,
-                        const char **ptxn_name,
-                        apr_pool_t *pool);
+dav_svn__create_activity(const dav_svn_repos *repos,
+                         const char **ptxn_name,
+                         apr_pool_t *pool);
 
 
 /*** repos.c ***/

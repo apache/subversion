@@ -317,13 +317,13 @@ dav_svn_checkout(dav_resource *resource,
           uuid_buf = svn_uuid_generate(resource->info->r->pool);
           shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
 
-          derr = dav_svn_create_activity(resource->info->repos,
-                                         &shared_txn_name,
-                                         resource->info->r->pool);
+          derr = dav_svn__create_activity(resource->info->repos,
+                                          &shared_txn_name,
+                                          resource->info->r->pool);
           if (derr) return derr;
 
-          derr = dav_svn_store_activity(resource->info->repos,
-                                        shared_activity, shared_txn_name);
+          derr = dav_svn__store_activity(resource->info->repos,
+                                         shared_activity, shared_txn_name);
           if (derr) return derr;
 
           /* Save the shared activity in r->pool for others to use. */         
@@ -339,8 +339,8 @@ dav_svn_checkout(dav_resource *resource,
 
       if (! shared_txn_name)
         {                       
-          shared_txn_name = dav_svn_get_txn(resource->info->repos,
-                                            shared_activity);
+          shared_txn_name = dav_svn__get_txn(resource->info->repos,
+                                             shared_activity);
           if (! shared_txn_name)
             return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                  "Cannot look up a txn_name by activity");
@@ -447,8 +447,8 @@ dav_svn_checkout(dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  if ((txn_name = dav_svn_get_txn(resource->info->repos,
-                                  parse.activity_id)) == NULL)
+  if ((txn_name = dav_svn__get_txn(resource->info->repos,
+                                   parse.activity_id)) == NULL)
     {
       return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT,
                                     SVN_ERR_APMOD_ACTIVITY_NOT_FOUND,
@@ -681,8 +681,8 @@ dav_svn_uncheckout(dav_resource *resource)
   /* Attempt to destroy the shared activity. */
   if (resource->info->root.activity_id)
     {
-      dav_svn_delete_activity(resource->info->repos,
-                              resource->info->root.activity_id);
+      dav_svn__delete_activity(resource->info->repos,
+                               resource->info->root.activity_id);
       apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
                             NULL, resource->info->r->pool);
     }
@@ -836,8 +836,8 @@ dav_svn_checkin(dav_resource *resource,
       const char *conflict_msg;
       svn_revnum_t new_rev;
 
-      shared_txn_name = dav_svn_get_txn(resource->info->repos,
-                                        shared_activity);
+      shared_txn_name = dav_svn__get_txn(resource->info->repos,
+                                         shared_activity);
       if (! shared_txn_name)
         return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                              "Cannot look up a txn_name by activity");
@@ -883,7 +883,7 @@ dav_svn_checkin(dav_resource *resource,
             msg = "An error occurred while committing the transaction.";
 
           /* Attempt to destroy the shared activity. */
-          dav_svn_delete_activity(resource->info->repos, shared_activity);
+          dav_svn__delete_activity(resource->info->repos, shared_activity);
           apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
                                 NULL, resource->info->r->pool);
           
@@ -892,7 +892,7 @@ dav_svn_checkin(dav_resource *resource,
         }
 
       /* Attempt to destroy the shared activity. */
-      dav_svn_delete_activity(resource->info->repos, shared_activity);
+      dav_svn__delete_activity(resource->info->repos, shared_activity);
       apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
                             NULL, resource->info->r->pool);
             
@@ -1042,12 +1042,12 @@ dav_svn_make_activity(dav_resource *resource)
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
    
-  err = dav_svn_create_activity(resource->info->repos, &txn_name,
-                                resource->pool);
+  err = dav_svn__create_activity(resource->info->repos, &txn_name,
+                                 resource->pool);
   if (err != NULL)
     return err;
 
-  err = dav_svn_store_activity(resource->info->repos, activity_id, txn_name);
+  err = dav_svn__store_activity(resource->info->repos, activity_id, txn_name);
   if (err != NULL)
     return err;
 
@@ -1360,8 +1360,8 @@ dav_svn_merge(dav_resource *target,
      Store an empty txn ID in the activity database so that when the
      client deletes the activity, we don't try to open and abort the
      transaction. */
-  err = dav_svn_store_activity(source->info->repos,
-                               source->info->root.activity_id, "");
+  err = dav_svn__store_activity(source->info->repos,
+                                source->info->root.activity_id, "");
   if (err != NULL)
     return err;
 
