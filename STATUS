@@ -66,9 +66,9 @@ Candidate changes:
   * r20885
     Clarify an error message.
     Justification:
-      Just an error message improvement and low impact.
+      A low-risk error message improvement.
     Votes:
-      +1: nori
+      +1: nori, dlr
     
   * r20886 (depends on r20833 group above)
     Allow javahl to build with VC Express and fix its debug symbol files.
