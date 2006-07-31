@@ -223,7 +223,7 @@ add_file(const char *path,
     /* Get automatic properties */
     /* This may fail on write-only files:
        we open them to estimate file type.
-       That's why we postpone the add untill after this step. */
+       That's why we postpone the add until after this step. */
     SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
                                        pool));
 
