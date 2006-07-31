@@ -79,17 +79,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20874
-    Improve the output from svnsync to use the correct verb tense, to
-    not abbreviate unnecessarily, to report that properties were copied
-    successfully, and to (in general) more closely match output from our
-    other binaries.
-    Justification:
-      Our output text is a form of API.  If we don't fix this stuff now,
-      we're stuck with it for a while.
-    Votes:
-      +1: cmpilato, dlr, rooneg
-
   * r20879, r20880
     Fix segfaults caused by faulty svnsync user input.
     Justification:
