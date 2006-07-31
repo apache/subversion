@@ -1861,19 +1861,25 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   return SVN_NO_ERROR;
 }
 
-/* Calculate the new merge info for REL_PATH based on TARGET_MERGEINFO
-   and RANGES, and record it in the WC at TARGET_WCPATH.
-   TARGET_MERGEINFO is expected to be non-NULL. */
+/* Calculate the new merge info for REL_PATH based on the merge info
+   for TARGET_WCPATH and RANGES, and record it in the WC at
+   TARGET_WCPATH. */
 static svn_error_t *
-update_wc_merge_info(const char *target_wcpath, apr_hash_t *target_mergeinfo,
+update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                      const char *rel_path, apr_array_header_t *ranges,
                      svn_boolean_t is_revert, svn_wc_adm_access_t *adm_access,
-                     apr_pool_t *pool)
+                     svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_string_t *mergeinfo_str = NULL;
-  apr_hash_t *mergeinfo = apr_hash_copy(pool, target_mergeinfo);
-  apr_array_header_t *rangelist = apr_hash_get(target_mergeinfo, rel_path,
-                                               APR_HASH_KEY_STRING);
+  apr_hash_t *mergeinfo;
+  apr_array_header_t *rangelist;
+
+  /* As some of the merges may've changed the WC's merge info, get a
+     fresh copy before using it to update the WC's merge info. */
+  SVN_ERR(parse_merge_info(&mergeinfo, entry, target_wcpath, adm_access,
+                           ctx, pool));
+
+  rangelist = apr_hash_get(mergeinfo, rel_path, APR_HASH_KEY_STRING);
   if (rangelist == NULL)
     rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
@@ -2115,14 +2121,9 @@ do_merge(const char *initial_URL1,
 
   if (!merge_b->dry_run && remaining_ranges->nelts > 0)
     {
-      /* As some of the above merges may've changed the WC's merge
-         info, refresh our copy before using it to update the WC's
-         merge info. */
-      SVN_ERR(parse_merge_info(&target_mergeinfo, entry, target_wcpath,
-                               adm_access, ctx, pool));
-      SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
+      SVN_ERR(update_wc_merge_info(target_wcpath, entry, rel_path,
                                    remaining_ranges, is_revert, adm_access,
-                                   pool));
+                                   ctx, pool));
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -2319,14 +2320,9 @@ do_single_file_merge(const char *initial_URL1,
 
   if (!merge_b->dry_run && remaining_ranges->nelts > 0)
     {
-      /* As some of the above merges may've changed the WC's merge
-         info, refresh our copy before using it to update the WC's
-         merge info. */
-      SVN_ERR(parse_merge_info(&target_mergeinfo, entry, target_wcpath,
-                               adm_access, ctx, pool));
-      SVN_ERR(update_wc_merge_info(target_wcpath, target_mergeinfo, rel_path,
+      SVN_ERR(update_wc_merge_info(target_wcpath, entry, rel_path,
                                    remaining_ranges, is_revert, adm_access,
-                                   pool));
+                                   ctx, pool));
     }
 
   /* Sleep to ensure timestamp integrity. */
