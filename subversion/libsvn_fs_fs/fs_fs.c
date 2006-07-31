@@ -3995,13 +3995,12 @@ verify_locks(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Create SQL to insert the necessary indexing data for all the
-   mergeinfo lists of PATH, which is stored unparsed in MINFOSTRING. */
-   
+/* Create SQL to insert the necessary indexing data for all the merge
+   info lists of PATH, which is provided (unparsed) in MINFOSTRING. */
 static svn_error_t *
-generate_mergeinfo_sql(svn_fs_txn_t *txn, svn_revnum_t new_rev,
-                       const char *path, svn_string_t *minfostring,
-                       apr_pool_t *pool)
+index_path_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
+                      const char *path, svn_string_t *minfostring,
+                      apr_pool_t *pool)
 {
   apr_hash_t *minfo;
   apr_hash_index_t *hi;
@@ -4073,13 +4072,14 @@ generate_mergeinfo_sql(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   return SVN_NO_ERROR;
 }
 
-/* A no-op if TXN has no associated merge info. */
+/* Create the index for any merge info in TXN (a no-op if TXN has no
+   associated merge info). */
 static svn_error_t *
-update_mergeinfo_index(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
-                       apr_pool_t *pool)
+index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
+                     apr_pool_t *pool)
 {
   apr_hash_t *minfoprops;
-  
+
   SVN_ERR(svn_fs_fs__txn_mergeinfo(&minfoprops, txn, pool));
   if (minfoprops)
     {
@@ -4099,11 +4099,11 @@ update_mergeinfo_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
           minfopath = key;
           minfostring = val;
 
-          SVN_ERR(generate_mergeinfo_sql(txn, new_rev, minfopath, minfostring,
-                                         pool));
+          SVN_ERR(index_path_merge_info(txn, new_rev, minfopath, minfostring,
+                                        pool));
         }
     }
-  
+
   return SVN_NO_ERROR; 
 }
 
@@ -4114,12 +4114,13 @@ struct commit_baton {
   svn_fs_txn_t *txn;
 };
 
-/* Clean the mergeinfo index for any previous failed commit with the
-   revision number as NEW_REV, then record the merge info for the
-   current transaction. */
+/* Clean the merge info index for any previous failed commit with the
+   revision number as NEW_REV, and if the current transaction contains
+   merge info, record it. */
 static svn_error_t *
-index_merge_info(struct commit_baton *cb, svn_revnum_t new_rev,
-                 apr_pool_t *pool)
+update_merge_info_index(struct commit_baton *cb, svn_revnum_t new_rev,
+                        svn_boolean_t txn_contains_merge_info,
+                        apr_pool_t *pool)
 {
   const char *deletestring;
   fs_txn_data_t *ftd = cb->txn->fsap_data;
@@ -4143,8 +4144,9 @@ index_merge_info(struct commit_baton *cb, svn_revnum_t new_rev,
   SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
 
   /* Record any merge info from the current transaction. */
-  SVN_ERR(update_mergeinfo_index(cb->txn, new_rev, pool));
-      
+  if (txn_contains_merge_info)
+    SVN_ERR(index_txn_merge_info(cb->txn, new_rev, pool));
+
   /* This is moved here from commit_txn, because we don't want to
      write the final current file if the sqlite commit fails.
      On the other hand, if we commit the transaction and end up failing
@@ -4173,7 +4175,7 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  svn_boolean_t contains_merge_info = FALSE;
+  svn_boolean_t txn_contains_merge_info = FALSE;
   
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -4246,7 +4248,7 @@ commit_body(void *baton, apr_pool_t *pool)
       if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
-          contains_merge_info = TRUE;
+          txn_contains_merge_info = TRUE;
           SVN_ERR(svn_fs_fs__change_txn_prop
                   (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
                    NULL, pool));
@@ -4273,8 +4275,7 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop, 
                                      old_rev_filename, pool));
   
-  if (contains_merge_info)
-    SVN_ERR(index_merge_info(cb, new_rev, pool));
+  SVN_ERR(update_merge_info_index(cb, new_rev, txn_contains_merge_info, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
