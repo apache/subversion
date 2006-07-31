@@ -22,6 +22,7 @@ use strict;
 use Cwd;
 use Win32;
 require 'cmn.pl';
+use File::Basename;
 
 ################################################################################
 # FUNCTION DECLARATIONS
@@ -64,22 +65,6 @@ sub Main
 
     #Set version info on svn.iss
     &SetVerSvnIss($SvnVersion, $SvnRevision);
-}
-
-#-------------------------------------------------------------------------------
-# FUNCTION PathSetupOut
-# DOES     Finding and returning the current svn.exe path as of
-#          ..\svn_iss_dyn.iss
-sub PathSetupOut
-{
-    my $SetupOut = &cmn_ValuePathfile('path_setup_out');
-  
-    if ( ! -e "../$SetupOut")
-      {
-        die "ERROR: Could not find $SetupOut in ..\\svn_dynamics.iss\n";
-      }
-    
-    return $SetupOut;
 }
 
 #-------------------------------------------------------------------------------
