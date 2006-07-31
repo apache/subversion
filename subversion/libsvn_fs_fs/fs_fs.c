@@ -348,12 +348,6 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
-  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(fs, pool), &ffd->mtd),
-                          ffd->mtd);
-#ifdef SQLITE3_DEBUG
-  sqlite3_trace (ffd->mtd, sqlite_tracer, ffd->mtd);
-#endif
-
   return SVN_NO_ERROR;
 }
 
