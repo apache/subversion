@@ -9,6 +9,13 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  * r20932
+    Fix --enable-dso in the face of our global bdb environment cache.
+    Justification:
+      Packagers like it when --enable-dso works.
+    Votes:
+      +1: rooneg
+
   * r20781
     autogen.sh: Purge *.pyc files from the build/ hierarchy after using the
     build generator, so that we do not ship them in tarballs.
