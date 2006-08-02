@@ -99,6 +99,12 @@ for repos dump/load, including the merge history index.
   logic as neither a merge nor a revert, and is thus considered a
   no-op.
 
+  * As a first cut, punt and restore the code from trunk for 3-way
+    merges to keep the complexity of the 'merge' logic from getting
+    out of hand.
+
+  * Later, come up with a better solution.
+
 * Refactor merge info index-related code into a module, and use this
   from libsvn_fs_fs.  (Can we use libsvn_fs as its home, or would that
   introduce a cyclic dependency?)  (kamesh/cmpilato?)
