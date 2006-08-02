@@ -101,15 +101,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20927
-    Show locking notifications using local path style for the 'svn'
-    command-line client.
-    Justification:
-      Consistent output with other notifications.
-    Note:
-      Not a blocker for 1.4.0.
-    Votes:
-      +1: dlr, jerenkrantz, djh
 
 Status of 1.4.1:
 ================
