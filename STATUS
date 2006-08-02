@@ -55,14 +55,6 @@ Candidate changes:
       +1: djh
       +0: dlr, cmpilato
 
-  * r20834, r20864
-    Fix issue #2583: 'svn diff' shouldn't require write access
-    to the working copy.
-    Justification:
-      Low impact change restoring previous behavior.
-    Votes:
-      +1: dionisos, dlr
-
   * r20883
     Fix an l10n encoding bug: correctly encode an error message showing
     invalid options passed to svn.
@@ -107,12 +99,19 @@ Candidate changes:
     Note:
       Not a blocker for 1.4.0.
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
 
 
 Approved changes:
 
+  * r20834, r20864
+    Fix issue #2583: 'svn diff' shouldn't require write access
+    to the working copy.
+    Justification:
+      Low impact change restoring previous behavior.
+    Votes:
+      +1: dionisos, dlr, jerenkrantz
 
 Status of 1.4.1:
 ================
