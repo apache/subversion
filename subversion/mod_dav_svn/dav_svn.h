@@ -248,41 +248,41 @@ struct dav_resource_private {
                         properties defined on that resource. The properties
                         are inserted according to the WHAT parameter.
 */
-void dav_svn_gather_propsets(apr_array_header_t *uris);
+void dav_svn__gather_propsets(apr_array_header_t *uris);
 
 int
-dav_svn_find_liveprop(const dav_resource *resource,
-                      const char *ns_uri,
-                      const char *name,
-                      const dav_hooks_liveprop **hooks);
+dav_svn__find_liveprop(const dav_resource *resource,
+                       const char *ns_uri,
+                       const char *name,
+                       const dav_hooks_liveprop **hooks);
 
 void
-dav_svn_insert_all_liveprops(request_rec *r,
-                             const dav_resource *resource,
-                             dav_prop_insert what,
-                             apr_text_header *phdr);
+dav_svn__insert_all_liveprops(request_rec *r,
+                              const dav_resource *resource,
+                              dav_prop_insert what,
+                              apr_text_header *phdr);
 
 /* our hooks structures; these are gathered into a dav_provider */
-extern const dav_hooks_repository dav_svn_hooks_repos;
-extern const dav_hooks_propdb dav_svn_hooks_propdb;
-extern const dav_hooks_vsn dav_svn_hooks_vsn;
-extern const dav_hooks_locks dav_svn_hooks_locks;
+extern const dav_hooks_repository dav_svn__hooks_repository;
+extern const dav_hooks_propdb dav_svn__hooks_propdb;
+extern const dav_hooks_vsn dav_svn__hooks_vsn;
+extern const dav_hooks_locks dav_svn__hooks_locks;
 
-extern const dav_liveprop_group dav_svn_liveprop_group;
+extern const dav_liveprop_group dav_svn__liveprop_group;
 
 /* for the repository referred to by this request, where is the SVN FS? */
-const char *dav_svn_get_fs_path(request_rec *r);
-const char *dav_svn_get_fs_parent_path(request_rec *r);
+const char *dav_svn__get_fs_path(request_rec *r);
+const char *dav_svn__get_fs_parent_path(request_rec *r);
 
 /* for the repository referred to by this request, is autoversioning active? */
-svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r);
+svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
-svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r);
+svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
 
 /* for the repository referred to by this request, is a GET of
    SVNParentPath allowed? */
-svn_boolean_t dav_svn_get_list_parentpath_flag(request_rec *r);
+svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
 
 
 /* SPECIAL URI
@@ -313,13 +313,13 @@ svn_boolean_t dav_svn_get_list_parentpath_flag(request_rec *r);
 */
 
 /* Return the special URI to be used for this resource. */
-const char *dav_svn_get_special_uri(request_rec *r);
+const char *dav_svn__get_special_uri(request_rec *r);
 
 /* Return a descriptive name for the repository */
-const char *dav_svn_get_repo_name(request_rec *r);
+const char *dav_svn__get_repo_name(request_rec *r);
 
 /* Return the URI of an XSL transform stylesheet */
-const char *dav_svn_get_xslt_uri(request_rec *r);
+const char *dav_svn__get_xslt_uri(request_rec *r);
 
 /* Convert an svn_error_t into a dav_error, pushing another error based on
    MESSAGE if MESSAGE is not NULL.  Use the provided HTTP status for the
@@ -420,33 +420,35 @@ dav_svn__create_version_resource(dav_resource **version_res,
                                  const char *uri,
                                  apr_pool_t *pool);
 
-/*** ***/
+/*** liveprops.c ***/
 
 /* 
    Hook function of types 'checkout' and 'checkin', as defined in
    mod_dav.h's versioning provider hooks table (see dav_hooks_vsn).
 */
 dav_error *
-dav_svn_checkout(dav_resource *resource,
-                 int auto_checkout,
-                 int is_unreserved,
-                 int is_fork_ok,
-                 int create_activity,
-                 apr_array_header_t *activities,
-                 dav_resource **working_resource);
+dav_svn__checkout(dav_resource *resource,
+                  int auto_checkout,
+                  int is_unreserved,
+                  int is_fork_ok,
+                  int create_activity,
+                  apr_array_header_t *activities,
+                  dav_resource **working_resource);
 
 dav_error *
-dav_svn_checkin(dav_resource *resource,
-                int keep_checked_out,
-                dav_resource **version_resource);
+dav_svn__checkin(dav_resource *resource,
+                 int keep_checked_out,
+                 dav_resource **version_resource);
+
+/*** ***/
 
 /* For an autoversioning commit, a helper function which attaches an
    auto-generated 'svn:log' property to a txn, as well as a property
    that indicates the revision was made via autoversioning. */
 svn_error_t *
-dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
-                             const char *fs_path,
-                             apr_pool_t *pool);
+dav_svn__attach_auto_revprops(svn_fs_txn_t *txn,
+                              const char *fs_path,
+                              apr_pool_t *pool);
 
 enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
@@ -578,22 +580,6 @@ enum dav_svn_time_format {
   dav_svn_time_format_iso8601,
   dav_svn_time_format_rfc1123
 };
-
-/* Given a mod_dav_svn @a resource, set @a *timeval and @a *datestring
-   to the last-modified-time of the resource.  The datestring will be
-   formatted according to @a format.  Use @a pool for both
-   scratchwork, and to allocate @a *datestring. 
-
-   If @a timeval or @a datestring is NULL, don't touch it.
-
-   Return zero on success, non-zero if an error occurs. */
-int
-dav_svn_get_last_modified_time(const char **datestring,
-                               apr_time_t *timeval,
-                               const dav_resource *resource,
-                               enum dav_svn_time_format format,
-                               apr_pool_t *pool);
-
 
 /* Return a writable generic stream that will encode its output to base64
    and send it to the Apache filter OUTPUT using BB.  Allocate the stream in

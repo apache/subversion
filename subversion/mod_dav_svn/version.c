@@ -38,7 +38,7 @@
 
 /* ### should move these report names to a public header to share with
    ### the client (and third parties). */
-static const dav_report_elem avail_reports[] = {
+static const dav_report_elem reports_list[] = {
   { SVN_XML_NAMESPACE, "update-report" },
   { SVN_XML_NAMESPACE, "log-report" },
   { SVN_XML_NAMESPACE, "dated-rev-report" },
@@ -50,14 +50,10 @@ static const dav_report_elem avail_reports[] = {
 };
 
 
-/* declare these static functions early, so we can use them anywhere. */
-static dav_error *dav_svn_make_activity(dav_resource *resource);
-
-
 svn_error_t *
-dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
-                             const char *fs_path,
-                             apr_pool_t *pool)
+dav_svn__attach_auto_revprops(svn_fs_txn_t *txn,
+                              const char *fs_path,
+                              apr_pool_t *pool)
 {
   const char *logmsg;
   svn_string_t *logval;
@@ -97,9 +93,9 @@ set_auto_revprops(dav_resource *resource)
     return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                          "Set_auto_revprops called on invalid resource.");
 
-  if ((serr = dav_svn_attach_auto_revprops(resource->info->root.txn,
-                                           resource->info->repos_path,
-                                           resource->pool)))
+  if ((serr = dav_svn__attach_auto_revprops(resource->info->root.txn,
+                                            resource->info->repos_path,
+                                            resource->pool)))
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Error setting a revision property "
                                " on auto-checked-out resource's txn. ",
@@ -141,7 +137,7 @@ open_txn(svn_fs_txn_t **ptxn,
 
 
 static void
-dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
+get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
 {
   /* Note: we append pieces with care for Web Folders's 63-char limit
      on the DAV: header */
@@ -156,9 +152,9 @@ dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
 
 
 static dav_error *
-dav_svn_get_option(const dav_resource *resource,
-                   const apr_xml_elem *elem,
-                   apr_text_header *option)
+get_option(const dav_resource *resource,
+           const apr_xml_elem *elem,
+           apr_text_header *option)
 {
   /* ### DAV:version-history-collection-set */
 
@@ -183,14 +179,14 @@ dav_svn_get_option(const dav_resource *resource,
 
 
 static int
-dav_svn_versionable(const dav_resource *resource)
+versionable(const dav_resource *resource)
 {
   return 0;
 }
 
 
 static dav_auto_version
-dav_svn_auto_versionable(const dav_resource *resource)
+auto_versionable(const dav_resource *resource)
 {
   /* The svn client attempts to proppatch a baseline when changing
      unversioned revision props.  Thus we allow baselines to be
@@ -224,7 +220,7 @@ dav_svn_auto_versionable(const dav_resource *resource)
 
 
 static dav_error *
-dav_svn_vsn_control(dav_resource *resource, const char *target)
+vsn_control(dav_resource *resource, const char *target)
 {
   /* All mod_dav_svn resources are versioned objects;  so it doesn't
      make sense to call vsn_control on a resource that exists . */
@@ -250,13 +246,13 @@ dav_svn_vsn_control(dav_resource *resource, const char *target)
 
 
 dav_error *
-dav_svn_checkout(dav_resource *resource,
-                 int auto_checkout,
-                 int is_unreserved,
-                 int is_fork_ok,
-                 int create_activity,
-                 apr_array_header_t *activities,
-                 dav_resource **working_resource)
+dav_svn__checkout(dav_resource *resource,
+                  int auto_checkout,
+                  int is_unreserved,
+                  int is_fork_ok,
+                  int create_activity,
+                  apr_array_header_t *activities,
+                  dav_resource **working_resource)
 {
   const char *txn_name;
   svn_error_t *serr;
@@ -353,8 +349,8 @@ dav_svn_checkout(dav_resource *resource,
                                              TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
-         dav_svn_auto_versionable allows us to do an auto-checkin and
-         dav_svn_can_be_activity will allow this resource to be an
+         auto_versionable allows us to do an auto-checkin and
+         can_be_activity will allow this resource to be an
          activity. */
       resource->info->auto_checked_out = TRUE;
         
@@ -664,7 +660,7 @@ dav_svn_checkout(dav_resource *resource,
 
 
 static dav_error *
-dav_svn_uncheckout(dav_resource *resource)
+uncheckout(dav_resource *resource)
 {
   if (resource->type != DAV_RESOURCE_TYPE_WORKING)
     return dav_svn__new_error_tag(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
@@ -790,9 +786,9 @@ register_deltification_cleanup(svn_repos_t *repos,
 
 
 dav_error *
-dav_svn_checkin(dav_resource *resource,
-                int keep_checked_out,
-                dav_resource **version_resource)
+dav_svn__checkin(dav_resource *resource,
+                 int keep_checked_out,
+                 dav_resource **version_resource)
 {
   svn_error_t *serr;
   dav_error *err;
@@ -850,7 +846,7 @@ dav_svn_checkin(dav_resource *resource,
                              " autoversioning transaction.");
      
       if (! resource->info->root.txn)
-        /* should already be open by dav_svn_checkout */
+        /* should already be open by checkout */
         return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                              "Autoversioning txn isn't open "
                              "when it should be.");
@@ -935,8 +931,7 @@ dav_svn_checkin(dav_resource *resource,
 
 
 static dav_error *
-dav_svn_avail_reports(const dav_resource *resource,
-                      const dav_report_elem **reports)
+avail_reports(const dav_resource *resource, const dav_report_elem **reports)
 {
   /* ### further restrict to the public space? */
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR) {
@@ -944,23 +939,23 @@ dav_svn_avail_reports(const dav_resource *resource,
     return NULL;
   }
 
-  *reports = avail_reports;
+  *reports = reports_list;
   return NULL;
 }
 
 
 static int
-dav_svn_report_label_header_allowed(const apr_xml_doc *doc)
+report_label_header_allowed(const apr_xml_doc *doc)
 {
   return 0;
 }
 
 
 static dav_error *
-dav_svn_deliver_report(request_rec *r,
-                       const dav_resource *resource,
-                       const apr_xml_doc *doc,
-                       ap_filter_t *output)
+deliver_report(request_rec *r,
+               const dav_resource *resource,
+               const apr_xml_doc *doc,
+               ap_filter_t *output)
 {
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
@@ -998,7 +993,7 @@ dav_svn_deliver_report(request_rec *r,
         }
 
       /* NOTE: if you add a report, don't forget to add it to the
-       *       avail_reports[] array at the top of this file.
+       *       reports_list[] array at the top of this file.
        */
     }
 
@@ -1012,7 +1007,7 @@ dav_svn_deliver_report(request_rec *r,
 
 
 static int
-dav_svn_can_be_activity(const dav_resource *resource)
+can_be_activity(const dav_resource *resource)
 {
   /* If our resource is marked as auto_checked_out'd, then we allow this to
    * be an activity URL.  Otherwise, it must be a real activity URL that
@@ -1025,7 +1020,7 @@ dav_svn_can_be_activity(const dav_resource *resource)
 
 
 static dav_error *
-dav_svn_make_activity(dav_resource *resource)
+make_activity(dav_resource *resource)
 {
   const char *activity_id = resource->info->root.activity_id;
   const char *txn_name;
@@ -1033,7 +1028,7 @@ dav_svn_make_activity(dav_resource *resource)
 
   /* sanity check:  make sure the resource is a valid activity, in
      case an older mod_dav doesn't do the check for us. */
-  if (! dav_svn_can_be_activity(resource))
+  if (! can_be_activity(resource))
     return dav_svn__new_error_tag(resource->pool, HTTP_FORBIDDEN,
                                   SVN_ERR_APMOD_MALFORMED_URI,
                                   "Activities cannot be created at that "
@@ -1209,7 +1204,7 @@ dav_svn__push_locks(dav_resource *resource,
 }
 
 
-/* Helper for dav_svn_merge().  Free every lock in LOCKS.  The locks
+/* Helper for merge().  Free every lock in LOCKS.  The locks
    live in REPOS.  Log any errors for REQUEST.  Use POOL for temporary
    work.*/
 static svn_error_t *
@@ -1248,12 +1243,12 @@ release_locks(apr_hash_t *locks,
 
 
 static dav_error *
-dav_svn_merge(dav_resource *target,
-              dav_resource *source,
-              int no_auto_merge,
-              int no_checkout,
-              apr_xml_elem *prop_elem,
-              ap_filter_t *output)
+merge(dav_resource *target,
+      dav_resource *source,
+      int no_auto_merge,
+      int no_checkout,
+      apr_xml_elem *prop_elem,
+      ap_filter_t *output)
 {
   apr_pool_t *pool;
   dav_error *err;
@@ -1396,24 +1391,24 @@ dav_svn_merge(dav_resource *target,
 }
 
 
-const dav_hooks_vsn dav_svn_hooks_vsn = {
-  dav_svn_get_vsn_options,
-  dav_svn_get_option,
-  dav_svn_versionable,
-  dav_svn_auto_versionable,
-  dav_svn_vsn_control,
-  dav_svn_checkout,
-  dav_svn_uncheckout,
-  dav_svn_checkin,
-  dav_svn_avail_reports,
-  dav_svn_report_label_header_allowed,
-  dav_svn_deliver_report,
+const dav_hooks_vsn dav_svn__hooks_vsn = {
+  get_vsn_options,
+  get_option,
+  versionable,
+  auto_versionable,
+  vsn_control,
+  dav_svn__checkout,
+  uncheckout,
+  dav_svn__checkin,
+  avail_reports,
+  report_label_header_allowed,
+  deliver_report,
   NULL,                 /* update */
   NULL,                 /* add_label */
   NULL,                 /* remove_label */
   NULL,                 /* can_be_workspace */
   NULL,                 /* make_workspace */
-  dav_svn_can_be_activity,
-  dav_svn_make_activity,
-  dav_svn_merge,
+  can_be_activity,
+  make_activity,
+  merge,
 };

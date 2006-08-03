@@ -194,10 +194,10 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
 
 
 static dav_error *
-dav_svn_db_open(apr_pool_t *p,
-                const dav_resource *resource,
-                int ro,
-                dav_db **pdb)
+db_open(apr_pool_t *p,
+        const dav_resource *resource,
+        int ro,
+        dav_db **pdb)
 {
   dav_db *db;
   dav_svn__authz_read_baton *arb;
@@ -251,14 +251,14 @@ dav_svn_db_open(apr_pool_t *p,
 
 
 static void
-dav_svn_db_close(dav_db *db)
+db_close(dav_db *db)
 {
   svn_pool_destroy(db->p);
 }
 
 
 static dav_error *
-dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
+db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
 {
   dav_xmlns_add(xi, "S", SVN_DAV_PROP_NS_SVN);
   dav_xmlns_add(xi, "C", SVN_DAV_PROP_NS_CUSTOM);
@@ -270,11 +270,11 @@ dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
 }
 
 static dav_error *
-dav_svn_db_output_value(dav_db *db, 
-                        const dav_prop_name *name,
-                        dav_xmlns_info *xi,
-                        apr_text_header *phdr,
-                        int *found)
+db_output_value(dav_db *db, 
+                const dav_prop_name *name,
+                dav_xmlns_info *xi,
+                apr_text_header *phdr,
+                int *found)
 {
   const char *prefix;
   const char *s;
@@ -339,9 +339,9 @@ dav_svn_db_output_value(dav_db *db,
 
 
 static dav_error *
-dav_svn_db_map_namespaces(dav_db *db,
-                          const apr_array_header_t *namespaces,
-                          dav_namespace_map **mapping)
+db_map_namespaces(dav_db *db,
+                  const apr_array_header_t *namespaces,
+                  dav_namespace_map **mapping)
 {
   /* we don't need a namespace mapping right now. nothing to do */
   return NULL;
@@ -349,10 +349,10 @@ dav_svn_db_map_namespaces(dav_db *db,
 
 
 static dav_error *
-dav_svn_db_store(dav_db *db,
-                 const dav_prop_name *name,
-                 const apr_xml_elem *elem,
-                 dav_namespace_map *mapping)
+db_store(dav_db *db,
+         const dav_prop_name *name,
+         const apr_xml_elem *elem,
+         dav_namespace_map *mapping)
 {
   const svn_string_t *propval;
   apr_pool_t *pool = db->p;
@@ -391,7 +391,7 @@ dav_svn_db_store(dav_db *db,
 
 
 static dav_error *
-dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
+db_remove(dav_db *db, const dav_prop_name *name)
 {
   svn_error_t *serr;
   const char *propname;
@@ -437,7 +437,7 @@ dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 
 
 static int
-dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
+db_exists(dav_db *db, const dav_prop_name *name)
 {
   const char *propname;
   svn_string_t *propval;
@@ -504,7 +504,7 @@ static void get_name(dav_db *db, dav_prop_name *pname)
 
 
 static dav_error *
-dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
+db_first_name(dav_db *db, dav_prop_name *pname)
 {
   /* if we don't have a copy of the properties, then get one */
   if (db->props == NULL)
@@ -552,7 +552,7 @@ dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
 
 
 static dav_error *
-dav_svn_db_next_name(dav_db *db, dav_prop_name *pname)
+db_next_name(dav_db *db, dav_prop_name *pname)
 {
   /* skip to the next hash entry */
   if (db->hi != NULL)
@@ -566,9 +566,9 @@ dav_svn_db_next_name(dav_db *db, dav_prop_name *pname)
 
 
 static dav_error *
-dav_svn_db_get_rollback(dav_db *db, 
-                        const dav_prop_name *name,
-                        dav_deadprop_rollback **prollback)
+db_get_rollback(dav_db *db, 
+                const dav_prop_name *name,
+                dav_deadprop_rollback **prollback)
 {
   dav_error *err;
   dav_deadprop_rollback *ddp;
@@ -588,28 +588,28 @@ dav_svn_db_get_rollback(dav_db *db,
 
 
 static dav_error *
-dav_svn_db_apply_rollback(dav_db *db, dav_deadprop_rollback *rollback)
+db_apply_rollback(dav_db *db, dav_deadprop_rollback *rollback)
 {
   if (rollback->value.data == NULL)
     {
-      return dav_svn_db_remove(db, &rollback->name);
+      return db_remove(db, &rollback->name);
     }
   
   return save_value(db, &rollback->name, &rollback->value);
 }
 
 
-const dav_hooks_propdb dav_svn_hooks_propdb = {
-  dav_svn_db_open,
-  dav_svn_db_close,
-  dav_svn_db_define_namespaces,
-  dav_svn_db_output_value,
-  dav_svn_db_map_namespaces,
-  dav_svn_db_store,
-  dav_svn_db_remove,
-  dav_svn_db_exists,
-  dav_svn_db_first_name,
-  dav_svn_db_next_name,
-  dav_svn_db_get_rollback,
-  dav_svn_db_apply_rollback,
+const dav_hooks_propdb dav_svn__hooks_propdb = {
+  db_open,
+  db_close,
+  db_define_namespaces,
+  db_output_value,
+  db_map_namespaces,
+  db_store,
+  db_remove,
+  db_exists,
+  db_first_name,
+  db_next_name,
+  db_get_rollback,
+  db_apply_rollback,
 };
