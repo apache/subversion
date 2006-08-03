@@ -106,8 +106,9 @@ for repos dump/load, including the merge history index.
   * Later, come up with a better solution.
 
 * Refactor merge info index-related code into a module, and use this
-  from libsvn_fs_fs.  (Can we use libsvn_fs as its home, or would that
-  introduce a cyclic dependency?)  (kamesh/cmpilato?)
+  from libsvn_fs_fs.  (kamesh)
+
+  * Need libsvn_fs_subr to avoid cyclic dependency.  (kamesh)
 
 * Handle merge info in the BerkeleyDB FS backend using the modularized
   merge info index API.  (kamesh/cmpilato?)
