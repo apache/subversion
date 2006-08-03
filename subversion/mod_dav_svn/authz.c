@@ -44,7 +44,7 @@ allow_read(request_rec *r,
 
   /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
      then this whole callback does nothing. */
-  if (! dav_svn_get_pathauthz_flag(r))
+  if (! dav_svn__get_pathauthz_flag(r))
     {
       return TRUE;
     }
@@ -170,7 +170,7 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton)
 {
   /* Easy out: If the admin has explicitly set 'SVNPathAuthz Off',
      then we don't need to do any authorization checks. */
-  if (! dav_svn_get_pathauthz_flag(baton->r))
+  if (! dav_svn__get_pathauthz_flag(baton->r))
     return NULL;
 
   return authz_read;

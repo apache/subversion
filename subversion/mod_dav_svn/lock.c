@@ -220,7 +220,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
 
 /* Return the supportedlock property for a resource */
 static const char *
-dav_svn_get_supportedlock(const dav_resource *resource)
+get_supportedlock(const dav_resource *resource)
 {
   /* This is imitating what mod_dav_fs is doing.  Note that unlike
      mod_dav_fs, however, we don't support "shared" locks, only
@@ -242,9 +242,9 @@ dav_svn_get_supportedlock(const dav_resource *resource)
  * in the given pool.
  */
 static dav_error *
-dav_svn_parse_locktoken(apr_pool_t *pool,
-                        const char *char_token,
-                        dav_locktoken **locktoken_p)
+parse_locktoken(apr_pool_t *pool,
+                const char *char_token,
+                dav_locktoken **locktoken_p)
 {
   dav_locktoken *token = apr_pcalloc(pool, sizeof(*token));
 
@@ -262,8 +262,7 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
  * Always returns non-NULL.
  */
 static const char *
-dav_svn_format_locktoken(apr_pool_t *p,
-                         const dav_locktoken *locktoken)
+format_locktoken(apr_pool_t *p, const dav_locktoken *locktoken)
 {
   /* libsvn_fs already produces a valid locktoken URI. */
   return apr_pstrdup(p, locktoken->uuid_str);
@@ -277,8 +276,7 @@ dav_svn_format_locktoken(apr_pool_t *p,
  * Result > 0  => lt1 > lt2
  */
 static int
-dav_svn_compare_locktoken(const dav_locktoken *lt1,
-                          const dav_locktoken *lt2)
+compare_locktoken(const dav_locktoken *lt1, const dav_locktoken *lt2)
 {
   return strcmp(lt1->uuid_str, lt2->uuid_str);
 }
@@ -302,10 +300,7 @@ dav_svn_compare_locktoken(const dav_locktoken *lt1,
  * If force != 0, locking operations will definitely occur.
  */
 static dav_error *
-dav_svn_open_lockdb(request_rec *r,
-                    int ro,
-                    int force,
-                    dav_lockdb **lockdb)
+open_lockdb(request_rec *r, int ro, int force, dav_lockdb **lockdb)
 {
   const char *svn_client_options, *version_name;
   dav_lockdb *db = apr_pcalloc(r->pool, sizeof(*db));
@@ -335,7 +330,7 @@ dav_svn_open_lockdb(request_rec *r,
                          SVN_STR_TO_REV(version_name): SVN_INVALID_REVNUM;
 
   /* The generic lockdb structure.  */
-  db->hooks = &dav_svn_hooks_locks;
+  db->hooks = &dav_svn__hooks_locks;
   db->ro = ro;
   db->info = info;
 
@@ -346,7 +341,7 @@ dav_svn_open_lockdb(request_rec *r,
 
 /* Indicates completion of locking operations */
 static void
-dav_svn_close_lockdb(dav_lockdb *lockdb)
+close_lockdb(dav_lockdb *lockdb)
 {
   /* nothing to do here. */
   return;
@@ -355,8 +350,7 @@ dav_svn_close_lockdb(dav_lockdb *lockdb)
 
 /* Take a resource out of the lock-null state. */
 static dav_error *
-dav_svn_remove_locknull_state(dav_lockdb *lockdb,
-                              const dav_resource *resource)
+remove_locknull_state(dav_lockdb *lockdb, const dav_resource *resource)
 {
 
   /* mod_dav_svn supports RFC2518bis which does not actually require
@@ -376,9 +370,7 @@ dav_svn_remove_locknull_state(dav_lockdb *lockdb,
 ** The lock provider may store private information into lock->info.
 */
 static dav_error *
-dav_svn_create_lock(dav_lockdb *lockdb,
-                    const dav_resource *resource,
-                    dav_lock **lock)
+create_lock(dav_lockdb *lockdb, const dav_resource *resource, dav_lock **lock)
 {
   svn_error_t *serr;
   dav_locktoken *token = apr_pcalloc(resource->pool, sizeof(*token));
@@ -422,10 +414,10 @@ dav_svn_create_lock(dav_lockdb *lockdb,
 ** #define DAV_GETLOCKS_COMPLETE   2    -- fill out indirect locks
 */
 static dav_error *
-dav_svn_get_locks(dav_lockdb *lockdb,
-                  const dav_resource *resource,
-                  int calltype,
-                  dav_lock **locks)
+get_locks(dav_lockdb *lockdb,
+          const dav_resource *resource,
+          int calltype,
+          dav_lock **locks)
 {
   dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
@@ -506,11 +498,11 @@ dav_svn_get_locks(dav_lockdb *lockdb,
 ** lock structure will be filled out as a DAV_LOCKREC_INDIRECT.
 */
 static dav_error *
-dav_svn_find_lock(dav_lockdb *lockdb,
-                  const dav_resource *resource,
-                  const dav_locktoken *locktoken,
-                  int partial_ok,
-                  dav_lock **lock)
+find_lock(dav_lockdb *lockdb,
+          const dav_resource *resource,
+          const dav_locktoken *locktoken,
+          int partial_ok,
+          dav_lock **lock)
 {
   dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
@@ -569,9 +561,7 @@ dav_svn_find_lock(dav_lockdb *lockdb,
 **          exist (i.e. it may not perform timeout checks).
 */
 static dav_error *
-dav_svn_has_locks(dav_lockdb *lockdb,
-                  const dav_resource *resource,
-                  int *locks_present)
+has_locks(dav_lockdb *lockdb, const dav_resource *resource, int *locks_present)
 {
   dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
@@ -630,10 +620,10 @@ dav_svn_has_locks(dav_lockdb *lockdb,
 ** Multiple locks are specified using the lock->next links.
 */
 static dav_error *
-dav_svn_append_locks(dav_lockdb *lockdb,
-                     const dav_resource *resource,
-                     int make_indirect,
-                     const dav_lock *lock)
+append_locks(dav_lockdb *lockdb,
+             const dav_resource *resource,
+             int make_indirect,
+             const dav_lock *lock)
 {
   dav_lockdb_private *info = lockdb->info;
   svn_lock_t *slock;
@@ -700,9 +690,9 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                                    "Could not create empty file.",
                                    resource->pool);
       
-      if ((serr = dav_svn_attach_auto_revprops(txn,
-                                               resource->info->repos_path,
-                                               resource->pool)))
+      if ((serr = dav_svn__attach_auto_revprops(txn,
+                                                resource->info->repos_path,
+                                                resource->pool)))
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not create empty file.",
                                    resource->pool);
@@ -784,9 +774,9 @@ dav_svn_append_locks(dav_lockdb *lockdb,
 ** If locktoken == NULL, then ALL locks are removed.
 */
 static dav_error *
-dav_svn_remove_lock(dav_lockdb *lockdb,
-                    const dav_resource *resource,
-                    const dav_locktoken *locktoken)
+remove_lock(dav_lockdb *lockdb,
+            const dav_resource *resource,
+            const dav_locktoken *locktoken)
 {
   dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
@@ -877,11 +867,11 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
 ** Note that the locks will be fully resolved.
 */
 static dav_error *
-dav_svn_refresh_locks(dav_lockdb *lockdb,
-                      const dav_resource *resource,
-                      const dav_locktoken_list *ltl,
-                      time_t new_time,
-                      dav_lock **locks)
+refresh_locks(dav_lockdb *lockdb,
+              const dav_resource *resource,
+              const dav_locktoken_list *ltl,
+              time_t new_time,
+              dav_lock **locks)
 {
   /* We're not looping over a list of locks, since we only support one
      lock per resource. */
@@ -949,21 +939,21 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
 
 
 /* The main locking vtable, provided to mod_dav */
-const dav_hooks_locks dav_svn_hooks_locks = {
-  dav_svn_get_supportedlock,
-  dav_svn_parse_locktoken,
-  dav_svn_format_locktoken,
-  dav_svn_compare_locktoken,
-  dav_svn_open_lockdb,
-  dav_svn_close_lockdb,
-  dav_svn_remove_locknull_state,
-  dav_svn_create_lock,
-  dav_svn_get_locks,
-  dav_svn_find_lock,
-  dav_svn_has_locks,
-  dav_svn_append_locks,
-  dav_svn_remove_lock,
-  dav_svn_refresh_locks,
+const dav_hooks_locks dav_svn__hooks_locks = {
+  get_supportedlock,
+  parse_locktoken,
+  format_locktoken,
+  compare_locktoken,
+  open_lockdb,
+  close_lockdb,
+  remove_locknull_state,
+  create_lock,
+  get_locks,
+  find_lock,
+  has_locks,
+  append_locks,
+  remove_lock,
+  refresh_locks,
   NULL,
   NULL                          /* hook structure context */
 };

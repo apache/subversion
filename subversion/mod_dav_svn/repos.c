@@ -44,8 +44,6 @@
 #include "dav_svn.h"
 
 
-/* mod_dav defines the name dav_stream as an opaque baton type.
-   Individual providers then specify internal details for their own use. */
 struct dav_stream {
   const dav_resource *res;
 
@@ -885,7 +883,7 @@ create_private_resource(const dav_resource *base,
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
                               path->data, NULL);
   comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = base->pool;
 
   comb->priv.uri_path = path;
@@ -929,8 +927,8 @@ dav_svn_split_uri(request_rec *r,
   char *uri;
 
   /* one of these is NULL, the other non-NULL. */
-  fs_path = dav_svn_get_fs_path(r);
-  fs_parent_path = dav_svn_get_fs_parent_path(r);
+  fs_path = dav_svn__get_fs_path(r);
+  fs_parent_path = dav_svn__get_fs_parent_path(r);
 
   if ((fs_path == NULL) && (fs_parent_path == NULL))
     {
@@ -1053,7 +1051,7 @@ dav_svn_split_uri(request_rec *r,
   relative++;
 
   {
-    const char *special_uri = dav_svn_get_special_uri(r);
+    const char *special_uri = dav_svn__get_special_uri(r);
     apr_size_t len2;
     char ch;
 
@@ -1210,7 +1208,7 @@ get_parentpath_resource(request_rec *r,
   comb->res.collection = TRUE;
   comb->res.uri = apr_pstrdup(r->pool, r->uri);
   comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = r->pool;
   comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
   
@@ -1222,10 +1220,10 @@ get_parentpath_resource(request_rec *r,
   
   comb->priv.repos = repos;      
   repos->pool = r->pool;
-  repos->xslt_uri = dav_svn_get_xslt_uri(r);
-  repos->autoversioning = dav_svn_get_autoversioning_flag(r);
+  repos->xslt_uri = dav_svn__get_xslt_uri(r);
+  repos->autoversioning = dav_svn__get_autoversioning_flag(r);
   repos->base_url = ap_construct_url(r->pool, "", r);
-  repos->special_uri = dav_svn_get_special_uri(r);
+  repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
   
   /* Make sure this type of resource always has a trailing slash; if
@@ -1452,13 +1450,13 @@ get_resource(request_rec *r,
   struct cleanup_fs_access_baton *cleanup_baton;
   void *userdata;
 
-  repo_name = dav_svn_get_repo_name(r);
-  xslt_uri = dav_svn_get_xslt_uri(r);
-  fs_parent_path = dav_svn_get_fs_parent_path(r);
+  repo_name = dav_svn__get_repo_name(r);
+  xslt_uri = dav_svn__get_xslt_uri(r);
+  fs_parent_path = dav_svn__get_fs_parent_path(r);
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
-  if (fs_parent_path && dav_svn_get_list_parentpath_flag(r))
+  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
     {
       char *uri = apr_pstrdup(r->pool, r->uri);
       char *parentpath = apr_pstrdup(r->pool, root_path);
@@ -1489,7 +1487,7 @@ get_resource(request_rec *r,
 
   /* The path that we will eventually try to open as an svn
      repository.  Normally defined by the SVNPath directive. */
-  fs_path = dav_svn_get_fs_path(r);
+  fs_path = dav_svn__get_fs_path(r);
 
   /* If the SVNParentPath directive was used instead... */
   if (fs_parent_path != NULL)
@@ -1504,7 +1502,7 @@ get_resource(request_rec *r,
   /* Start building and filling a 'combination' object. */
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = r->pool;
   comb->res.uri = cleaned_uri;
 
@@ -1572,11 +1570,11 @@ get_resource(request_rec *r,
   repos->xslt_uri = xslt_uri;
 
   /* Is autoversioning active in this repos? */
-  repos->autoversioning = dav_svn_get_autoversioning_flag(r);
+  repos->autoversioning = dav_svn__get_autoversioning_flag(r);
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
-  repos->special_uri = dav_svn_get_special_uri(r);
+  repos->special_uri = dav_svn__get_special_uri(r);
 
   /* Remember who is making this request */
   repos->username = r->user;
@@ -2604,7 +2602,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           apr_hash_index_t *hi;
           apr_hash_t *dirents;
           const char *fs_parent_path = 
-            dav_svn_get_fs_parent_path(resource->info->r);
+            dav_svn__get_fs_parent_path(resource->info->r);
 
           serr = svn_io_get_dirents2(&dirents, fs_parent_path, resource->pool);
           if (serr != NULL)
@@ -2966,9 +2964,9 @@ create_collection(dav_resource *resource)
     {
       /* Change the VCR into a WR, in place.  This creates a txn and
          changes resource->info->root from a rev-root into a txn-root. */
-      err = dav_svn_checkout(resource,
-                             1 /* auto-checkout */,
-                             0, 0, 0, NULL, NULL);
+      err = dav_svn__checkout(resource,
+                              1 /* auto-checkout */,
+                              0, 0, 0, NULL, NULL);
       if (err)
         return err;
     }
@@ -2987,7 +2985,7 @@ create_collection(dav_resource *resource)
   if (resource->info->auto_checked_out)
     {
       /* This also changes the WR back into a VCR, in place. */
-      err = dav_svn_checkin(resource, 0, NULL);
+      err = dav_svn__checkin(resource, 0, NULL);
       if (err)
         return err;
     }
@@ -3040,9 +3038,9 @@ copy_resource(const dav_resource *src,
     {
       /* Change the VCR into a WR, in place.  This creates a txn and
          changes dst->info->root from a rev-root into a txn-root. */
-      err = dav_svn_checkout(dst,
-                             1 /* auto-checkout */,
-                             0, 0, 0, NULL, NULL);
+      err = dav_svn__checkout(dst,
+                              1 /* auto-checkout */,
+                              0, 0, 0, NULL, NULL);
       if (err)
         return err;
     }
@@ -3079,7 +3077,7 @@ copy_resource(const dav_resource *src,
   if (dst->info->auto_checked_out)
     {
       /* This also changes the WR back into a VCR, in place. */
-      err = dav_svn_checkin(dst, 0, NULL);
+      err = dav_svn__checkin(dst, 0, NULL);
       if (err)
         return err;
     }
@@ -3131,9 +3129,9 @@ remove_resource(dav_resource *resource, dav_response **response)
     {
       /* Change the VCR into a WR, in place.  This creates a txn and
          changes resource->info->root from a rev-root into a txn-root. */
-      err = dav_svn_checkout(resource,
-                             1 /* auto-checkout */,
-                             0, 0, 0, NULL, NULL);
+      err = dav_svn__checkout(resource,
+                              1 /* auto-checkout */,
+                              0, 0, 0, NULL, NULL);
       if (err)
         return err;
     }
@@ -3198,7 +3196,7 @@ remove_resource(dav_resource *resource, dav_response **response)
   if (resource->info->auto_checked_out)
     {
       /* This also changes the WR back into a VCR, in place. */
-      err = dav_svn_checkin(resource, 0, NULL);
+      err = dav_svn__checkin(resource, 0, NULL);
       if (err)
         return err;
     }
@@ -3235,9 +3233,9 @@ move_resource(dav_resource *src,
 
   /* Change the dst VCR into a WR, in place.  This creates a txn and
      changes dst->info->root from a rev-root into a txn-root. */
-  err = dav_svn_checkout(dst,
-                         1 /* auto-checkout */,
-                         0, 0, 0, NULL, NULL);
+  err = dav_svn__checkout(dst,
+                          1 /* auto-checkout */,
+                          0, 0, 0, NULL, NULL);
   if (err)
     return err;
 
@@ -3261,7 +3259,7 @@ move_resource(dav_resource *src,
                                dst->pool);
 
   /* Commit:  this also changes the WR back into a VCR, in place. */
-  err = dav_svn_checkin(dst, 0, NULL);
+  err = dav_svn__checkin(dst, 0, NULL);
   if (err)
     return err;
 
@@ -3537,7 +3535,7 @@ dav_svn__create_working_resource(dav_resource *base,
 
   res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
                          path, NULL);
-  res->hooks = &dav_svn_hooks_repos;
+  res->hooks = &dav_svn__hooks_repository;
   res->pool = base->pool;
 
   res->info->uri_path = svn_stringbuf_create(path, base->pool);
@@ -3628,7 +3626,7 @@ dav_svn__create_version_resource(dav_resource **version_res,
 }
 
 
-const dav_hooks_repository dav_svn_hooks_repos =
+const dav_hooks_repository dav_svn__hooks_repository =
 {
   1,                            /* special GET handling */
   get_resource,
