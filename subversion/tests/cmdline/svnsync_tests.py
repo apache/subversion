@@ -61,7 +61,7 @@ def run_sync(url):
 def run_init(dst_url, src_url):
   "Initialize the mirror repository from the master"
   output, errput = svntest.main.run_svnsync(
-    "initialize", dst_url, "--source-url", src_url,
+    "initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
   if output:
