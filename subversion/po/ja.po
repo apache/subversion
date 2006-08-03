@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-02 20:50+0900\n"
-"PO-Revision-Date: 2006-08-02 20:43+0900\n"
+"POT-Creation-Date: 2006-08-03 15:37+0900\n"
+"PO-Revision-Date: 2006-08-03 15:37+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1465,7 +1465,7 @@ msgstr "'%s' はこの作業コピーでロックされていません"
 msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
-#: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:895
+#: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:929
 #: libsvn_ra/ra_loader.c:636
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
@@ -1686,18 +1686,29 @@ msgstr "%s\\ ファイルの末尾に改行がありません%s"
 msgid "Failed to delete mmap '%s'"
 msgstr "メモリへのマップ '%s' を削除できませんでした"
 
-#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:169
+#: libsvn_fs/fs-loader.c:102 libsvn_fs/fs-loader.c:323
+#, c-format
+msgid "Can't grab FS mutex"
+msgstr "ファイルシステム相互排除ロックを奪えません"
+
+#: libsvn_fs/fs-loader.c:123 libsvn_fs/fs-loader.c:137
+#: libsvn_fs/fs-loader.c:329
+#, c-format
+msgid "Can't ungrab FS mutex"
+msgstr "ファイルシステム相互排除ロックを手放せません"
+
+#: libsvn_fs/fs-loader.c:143 libsvn_ra/ra_loader.c:169
 #: libsvn_ra/ra_loader.c:182
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' は '%s()' を定義しません"
 
-#: libsvn_fs/fs-loader.c:131
+#: libsvn_fs/fs-loader.c:169
 #, c-format
 msgid "Failed to load module for FS type '%s'"
 msgstr "ファイルシステム形式 '%s' のモジュールをロードできませんでした"
 
-#: libsvn_fs/fs-loader.c:138
+#: libsvn_fs/fs-loader.c:176
 #, c-format
 msgid ""
 "Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
@@ -1705,27 +1716,17 @@ msgstr ""
 "ファイルシステムモジュール '%s' のバージョンが一致しません: 実際 %d.%d.%d%s, "
 "予想 %d.%d.%d%s"
 
-#: libsvn_fs/fs-loader.c:163
+#: libsvn_fs/fs-loader.c:201
 #, c-format
 msgid "Unknown FS type '%s'"
 msgstr "未知のファイルシステム形式 '%s' です"
 
-#: libsvn_fs/fs-loader.c:253
+#: libsvn_fs/fs-loader.c:283
 #, c-format
 msgid "Can't allocate FS mutex"
 msgstr "ファイルシステム相互排除ロックを割り当てられません"
 
-#: libsvn_fs/fs-loader.c:289
-#, c-format
-msgid "Can't grab FS mutex"
-msgstr "ファイルシステム相互排除ロックを奪えません"
-
-#: libsvn_fs/fs-loader.c:295
-#, c-format
-msgid "Can't ungrab FS mutex"
-msgstr "ファイルシステム相互排除ロックを手放せません"
-
-#: libsvn_fs/fs-loader.c:901
+#: libsvn_fs/fs-loader.c:935
 msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "svn_fs_lock に渡された有効期限の値が負です"
 
@@ -5558,7 +5559,7 @@ msgstr ""
 "Subversion はバージョン管理用のツールです。\n"
 "さらに詳しい情報は、http://subversion.tigris.org/ をご覧ください。\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1172
+#: svn/help-cmd.c:65 svnsync/main.c:1178
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5823,7 +5824,7 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:63 svn/main.c:64 svnadmin/main.c:227 svnadmin/main.c:230
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
-#: svnlook/main.c:93 svnsync/main.c:103 svnsync/main.c:105
+#: svnlook/main.c:93 svnsync/main.c:109 svnsync/main.c:111
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
@@ -5919,7 +5920,7 @@ msgstr ""
 # * Description for 'svn{,admin,dumpfilter,look,serve,sync,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
-#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
+#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:107
 #: svnversion/main.c:125
 msgid "show program version information"
 msgstr "プログラムのバージョン情報を表示します"
@@ -5938,13 +5939,13 @@ msgstr "更新情報を表示します"
 
 # * Description for 'svn{,sync} --username'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:96 svnsync/main.c:93
+#: svn/main.c:96 svnsync/main.c:99
 msgid "specify a username ARG"
 msgstr "ユーザ名を <引数> と指定します"
 
 # * Description for 'svn{,sync} --password'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:98 svnsync/main.c:95
+#: svn/main.c:98 svnsync/main.c:101
 msgid "specify a password ARG"
 msgstr "パスワードを <引数> と指定します"
 
@@ -6026,13 +6027,13 @@ msgstr ""
 
 # * Description for 'svn{,sync} --no-auth-cache'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:138 svnsync/main.c:91
+#: svn/main.c:138 svnsync/main.c:97
 msgid "do not cache authentication tokens"
 msgstr "認証情報をキャッシュしません"
 
 # * Description for 'svn{,sync} --non-interactive'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:140 svnsync/main.c:89
+#: svn/main.c:140 svnsync/main.c:95
 msgid "do no interactive prompting"
 msgstr "対話式の認証用プロンプト表示をしません"
 
@@ -6110,7 +6111,7 @@ msgstr "URL を書き換え、参照するリポジトリを変更します"
 
 # * Description for 'svn{,sync} --config-dir'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:97
+#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:103
 msgid "read user configuration files from directory ARG"
 msgstr ""
 "ディレクトリ <引数> からユーザ設定ファイルを読み\n"
@@ -7352,7 +7353,7 @@ msgstr ""
 "は、\n"
 "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
-#: svn/main.c:820 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
+#: svn/main.c:820 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:142
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
@@ -8642,7 +8643,7 @@ msgstr ""
 
 # * Description for 'svnlook --revision'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:99 svnsync/main.c:99
+#: svnlook/main.c:99 svnsync/main.c:105
 msgid "specify revision number ARG"
 msgstr "リビジョン番号を <引数> と指定します"
 
@@ -9280,14 +9281,28 @@ msgstr ""
 #: svnsync/main.c:64
 msgid ""
 "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-"Initialize a destination repository.\n"
+"Initialize a destination repository for synchronization from\n"
+"another repository.\n"
+"\n"
+"The destination URL must point to the root of a repository with\n"
+"no committed revisions.  The destination repository must allow\n"
+"revision property changes, and you should not commit to it by\n"
+"any method other than 'svnsync'.\n"
 msgstr ""
 "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
-"同期先のリポジトリを初期化します。\n"
+"<同期先 URL> のリポジトリを、他のリポジトリから同期するために初期化します。\n"
+"\n"
+"<同期先 URL> が指すのは、コミットされたリビジョンをもたないリポジトリのルー"
+"ト\n"
+"でなければいけません。同期先リポジトリではリビジョン属性変更が許可されてい"
+"な\n"
+"ければならず、そのリポジトリには 'svnsync' 以外の方法でコミットすべきではあ"
+"り\n"
+"ません。\n"
 
 # * Description for 'svnsync synchronize'.
 # * "synchronize (sync): " is displayed at the head of the first line.
-#: svnsync/main.c:69
+#: svnsync/main.c:75
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "Transfer all pending revisions from source to destination.\n"
@@ -9297,7 +9312,7 @@ msgstr ""
 
 # * Description for 'svnsync synchronize'.
 # * "synchronize (sync): " is displayed at the head of the first line.
-#: svnsync/main.c:73
+#: svnsync/main.c:79
 msgid ""
 "usage: svnsync copy-revprops DEST_URL --revision REV\n"
 "Copy all revision properties for revision REV from source to\n"
@@ -9308,7 +9323,7 @@ msgstr ""
 
 # * Description for 'svnsync --source-url'.
 # * "help: " is displayed at the head of the first line.
-#: svnsync/main.c:78
+#: svnsync/main.c:84
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "Describe the usage of this program or its subcommands.\n"
@@ -9319,67 +9334,67 @@ msgstr ""
 
 # * Description for 'svnsync --source-url'.
 # * 29 half-size characters are displayed on the left.
-#: svnsync/main.c:87
+#: svnsync/main.c:93
 msgid "The url to synchronize from"
 msgstr "同期元の URL"
 
-#: svnsync/main.c:168
+#: svnsync/main.c:174
 #, c-format
 msgid "Can't get local hostname"
 msgstr "ローカルのホスト名を取得できません"
 
-#: svnsync/main.c:191
+#: svnsync/main.c:197
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr ""
 "同期先リポジトリのロックを取得できませんでした。現在 '%s' が所持しています\n"
 
-#: svnsync/main.c:274
+#: svnsync/main.c:280
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "セッションのルートは '%s' ですが、リポジトリのルートは '%s' です"
 
-#: svnsync/main.c:304
+#: svnsync/main.c:310
 msgid "Cannot initialize a repository with content in it"
 msgstr "内容を含んだリポジトリは初期化できません"
 
-#: svnsync/main.c:314
+#: svnsync/main.c:320
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "同期先リポジトリは既に '%s' から同期中です"
 
-#: svnsync/main.c:390
+#: svnsync/main.c:396
 msgid "You must supply a source URL; try 'svnsync help' for more info"
 msgstr ""
 "同期元 URL を与えなければいけません。より詳しく知りたいときは 'svnsync help' "
 "を試してみてください"
 
-#: svnsync/main.c:398 svnsync/main.c:401 svnsync/main.c:1064
-#: svnsync/main.c:1130
+#: svnsync/main.c:404 svnsync/main.c:407 svnsync/main.c:1070
+#: svnsync/main.c:1136
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "パス '%s' は URL ではありません"
 
-#: svnsync/main.c:441
+#: svnsync/main.c:447
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "リビジョン %ld をコミットしました。\n"
 
-#: svnsync/main.c:845
+#: svnsync/main.c:851
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "リビジョン %ld の属性をコピーしました。\n"
 
-#: svnsync/main.c:872
+#: svnsync/main.c:878
 msgid "Destination repository has not been initialized"
 msgstr "同期先リポジトリは初期化されていません"
 
-#: svnsync/main.c:887
+#: svnsync/main.c:893
 #, c-format
-msgid "UUID of destination repository (%s) does not match expected UUID (%s)"
-msgstr "同期先リポジトリの UUID (%s) が予想される UUID (%s) と一致しません"
+msgid "UUID of source repository (%s) does not match expected UUID (%s)"
+msgstr "同期元リポジトリの UUID (%s) が予想される UUID (%s) と一致しません"
 
-#: svnsync/main.c:948
+#: svnsync/main.c:954
 #, c-format
 msgid ""
 "Currently copying rev %ld in source is less than latest rev in destination (%"
@@ -9388,18 +9403,18 @@ msgstr ""
 "現在コピー中の同期元リビジョン %ld は、同期先の最新リビジョン (%ld) よりも若"
 "いです"
 
-#: svnsync/main.c:1020
+#: svnsync/main.c:1026
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr ""
 "コミットでリビジョン %ld が作成されましたが、作成されるべきだったのは %ld で"
 "す"
 
-#: svnsync/main.c:1106
+#: svnsync/main.c:1112
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "まだ同期されていないリビジョンのリビジョン属性はコピーできません"
 
-#: svnsync/main.c:1134
+#: svnsync/main.c:1140
 msgid ""
 "You must supply a valid revision number; try 'svnsync help' for more info"
 msgstr ""
@@ -9407,7 +9422,7 @@ msgstr ""
 "'svnsync help' を試してみてください"
 
 # * Description for svnsync.
-#: svnsync/main.c:1165
+#: svnsync/main.c:1171
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -9426,11 +9441,11 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnsync/main.c:1297
+#: svnsync/main.c:1303
 msgid "Invalid revision number"
 msgstr "リビジョン番号が不正です"
 
-#: svnsync/main.c:1375
+#: svnsync/main.c:1381
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -9538,6 +9553,19 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+# * Description for 'svnsync initialize'.
+# * "initialize (init): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+#~ "Initialize a destination repository.\n"
+#~ msgstr ""
+#~ "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
+#~ "同期先のリポジトリを初期化します。\n"
+
+#~ msgid ""
+#~ "UUID of destination repository (%s) does not match expected UUID (%s)"
+#~ msgstr "同期先リポジトリの UUID (%s) が予想される UUID (%s) と一致しません"
 
 # * Description for 'svn --extensions'.
 # * 29 half-size characters are displayed on the left.
