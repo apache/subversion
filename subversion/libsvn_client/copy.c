@@ -822,7 +822,7 @@ repos_to_wc_copy(const char *src_url,
     {
       SVN_ERR(svn_client__checkout_internal
               (NULL, src_url, dst_path, &revision, &revision,
-               TRUE, FALSE, NULL, ctx, pool));
+               TRUE, FALSE, FALSE, NULL, ctx, pool));
 
       if ((revision.kind == svn_opt_revision_head) && same_repositories)
         {

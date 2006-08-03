@@ -269,9 +269,20 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If PATH is omitted, the basename of the URL will be used as\n"
      "  the destination. If multiple URLs are given each will be checked\n"
      "  out into a sub-directory of PATH, with the name of the sub-directory\n"
-     "  being the basename of the URL.\n"),
-    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-     svn_cl__ignore_externals_opt} },
+     "  being the basename of the URL.\n"
+     "\n"
+     "  If --force is used, unversioned obstructing paths in the working\n"
+     "  copy destination do not automatically cause the check out to fail.\n"
+     "  If the obstructing path is the same type (file or directory) as the\n"
+     "  corresponding path in the repository it becomes versioned but its\n"
+     "  contents are left 'as-is' in the working copy.  This means that an\n"
+     "  obstructing directory's unversioned children may also obstruct and\n"
+     "  become versioned.  For files, any content differences between the\n"
+     "  obstruction and the repository are treated like a local modification\n"
+     "  to the working copy.  All properties from the repository are applied\n"
+     "  to the obstructing path.\n"),
+    {'r', 'q', 'N', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
@@ -742,9 +753,20 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
-     "     directory within the same repository.\n"),
+     "     directory within the same repository.\n"
+     "\n"
+     "  If --force is used, unversioned obstructing paths in the working\n"
+     "  copy do not automatically cause a failure if the switch attempts to\n"
+     "  add the same path.  If the obstructing path is the same type (file\n"
+     "  or directory) as the corresponding path in the repository it becomes\n"
+     "  versioned but its contents are left 'as-is' in the working copy.\n"
+     "  This means that an obstructing directory's unversioned children may\n"
+     "  also obstruct and become versioned.  For files, any content differences\n"
+     "  between the obstruction and the repository are treated like a local\n"
+     "  modification to the working copy.  All properties from the repository\n"
+     "  are applied to the obstructing path.\n"),
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
-      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__force_opt} },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
@@ -769,13 +791,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    U  Updated\n"
      "    C  Conflict\n"
      "    G  Merged\n"
+     "    E  Existed\n"
      "\n"
      "  A character in the first column signifies an update to the actual file,\n"
      "  while updates to the file's properties are shown in the second column.\n"
      "  A 'B' in the third column signifies that the lock for the file has\n"
-     "  been broken or stolen.\n"),
-    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
+     "  been broken or stolen.\n"
+     "\n"
+     "  If --force is used, unversioned obstructing paths in the working\n"
+     "  copy do not automatically cause a failure if the update attempts to\n"
+     "  add the same path.  If the obstructing path is the same type (file\n"
+     "  or directory) as the corresponding path in the repository it becomes\n"
+     "  versioned but its contents are left 'as-is' in the working copy.\n"
+     "  This means that an obstructing directory's unversioned children may\n"
+     "  also obstruct and become versioned.  For files, any content differences\n"
+     "  between the obstruction and the repository are treated like a local\n"
+     "  modification to the working copy.  All properties from the repository\n"
+     "  are applied to the obstructing path.  Obstructing paths are reported\n"
+     "  in the first column with code 'E'.\n"),
+    {'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__force_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+     svn_cl__ignore_externals_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };

@@ -569,7 +569,7 @@ def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])([B ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
   # There may be other verbs we need to match, in addition to
   # "Restored".  If so, add them as alternatives in the first match
   # group below.
