@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-03 15:37+0900\n"
-"PO-Revision-Date: 2006-08-03 15:37+0900\n"
+"POT-Creation-Date: 2006-08-04 02:41+0900\n"
+"PO-Revision-Date: 2006-08-04 02:41+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1029,26 +1029,26 @@ msgstr "'%s' はディレクトリを指しています"
 msgid "(local)"
 msgstr "(ローカル)"
 
-#: libsvn_client/checkout.c:91
+#: libsvn_client/checkout.c:92
 #, c-format
 msgid "URL '%s' doesn't exist"
 msgstr "URL '%s' は存在しません"
 
-#: libsvn_client/checkout.c:95
+#: libsvn_client/checkout.c:96
 #, c-format
 msgid "URL '%s' refers to a file, not a directory"
 msgstr "URL '%s' が参照しているのはファイルです。ディレクトリではありません"
 
-#: libsvn_client/checkout.c:163
+#: libsvn_client/checkout.c:167
 #, c-format
 msgid "'%s' is already a working copy for a different URL"
 msgstr "'%s' は既に、異なる URL にあるリポジトリ用の作業コピーとなっています"
 
-#: libsvn_client/checkout.c:167
+#: libsvn_client/checkout.c:171
 msgid "; run 'svn update' to complete it"
 msgstr "。完了させるために 'svn update' を実行してください"
 
-#: libsvn_client/checkout.c:177
+#: libsvn_client/checkout.c:181
 #, c-format
 msgid "'%s' already exists and is not a directory"
 msgstr "'%s' は既に存在します。そしてディレクトリではありません"
@@ -1155,16 +1155,16 @@ msgstr ""
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
 #: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:950
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
-#: libsvn_client/status.c:256 libsvn_client/switch.c:106
+#: libsvn_client/status.c:256 libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
 #: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:86 libsvn_wc/copy.c:442
 #: libsvn_wc/copy.c:564 libsvn_wc/copy.c:571 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
-#: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:182
-#: libsvn_wc/questions.c:291 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
-#: libsvn_wc/update_editor.c:2065 libsvn_wc/update_editor.c:2841
+#: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
+#: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
+#: libsvn_wc/update_editor.c:2167 libsvn_wc/update_editor.c:3006
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' はバージョン管理下におかれていません"
@@ -1389,7 +1389,7 @@ msgstr ""
 "今のところ、パスのテキストベースと作業ファイルの差分しかサポートされていませ"
 "ん"
 
-#: libsvn_client/diff.c:2144 libsvn_client/switch.c:110
+#: libsvn_client/diff.c:2144 libsvn_client/switch.c:111
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "ディレクトリ '%s' に URL がありません"
@@ -1426,8 +1426,8 @@ msgstr "'%s' は存在します。そしてディレクトリではありませ�
 msgid "'%s' already exists"
 msgstr "'%s' は既に存在します"
 
-#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1601
-#: libsvn_wc/update_editor.c:2194
+#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1679
+#: libsvn_wc/update_editor.c:2297
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。予想: '%s', 実際: '%s'"
@@ -1479,7 +1479,7 @@ msgid "Revision type requires a working copy path, not a URL"
 msgstr "リビジョン形式には URL ではなく作業コピーパスが必要となります。"
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
-#: libsvn_client/update.c:86
+#: libsvn_client/update.c:87
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "エントリ '%s' に URL がありません"
@@ -3102,7 +3102,7 @@ msgid "%s request failed on '%s'"
 msgstr "%s リクエスト (相手: '%s') が失敗しました"
 
 #: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:587
-#: libsvn_wc/update_editor.c:2355
+#: libsvn_wc/update_editor.c:2464
 #, c-format
 msgid ""
 "'%s'\n"
@@ -5352,7 +5352,7 @@ msgstr ""
 "このクライアントは、作業コピー '%s' を扱うには古すぎます。もっと新しい "
 "Subversion クライアントをダウンロードしてください。"
 
-#: libsvn_wc/questions.c:337
+#: libsvn_wc/questions.c:341
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -5367,28 +5367,46 @@ msgstr ""
 msgid "Relocate can only change the repository part of an URL"
 msgstr "relocate は、URL のリポジトリ部分しか変更できません"
 
-#: libsvn_wc/update_editor.c:387
+#: libsvn_wc/update_editor.c:390
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "'.' エントリはありません: '%s'"
 
-#: libsvn_wc/update_editor.c:888
+#: libsvn_wc/update_editor.c:896
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
 msgstr "ローカルで変更されたディレクトリ '%s' は削除できません"
 
-#: libsvn_wc/update_editor.c:962
+#: libsvn_wc/update_editor.c:970
 #, c-format
 msgid "Error writing log file for '%s'"
 msgstr "'%s' のログファイルを書いている最中にエラーが発生しました"
 
-#: libsvn_wc/update_editor.c:1065
+#: libsvn_wc/update_editor.c:1078
+#, c-format
+msgid ""
+"Failed to add directory '%s': a non-directory object of the same name "
+"already exists"
+msgstr ""
+"ディレクトリ '%s' を追加できませんでした: ディレクトリ以外の同名のオブジェク"
+"トが既にあります"
+
+#: libsvn_wc/update_editor.c:1108
+#, c-format
+msgid ""
+"Failed to forcibly add directory '%s': a versioned directory of the same "
+"name already exists"
+msgstr ""
+"強制的にであってもディレクトリ '%s' を追加できませんでした: バージョン管理下"
+"におかれた同名のディレクトリが既にあります"
+
+#: libsvn_wc/update_editor.c:1121
 #, c-format
 msgid "Failed to add directory '%s': object of the same name already exists"
 msgstr ""
 "ディレクトリ '%s' を追加できませんでした: 同名のオブジェクトが既にあります"
 
-#: libsvn_wc/update_editor.c:1073
+#: libsvn_wc/update_editor.c:1130
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
@@ -5397,14 +5415,14 @@ msgstr ""
 "ディレクトリ '%s' を追加できませんでした: 同名の管理用ディレクトリと同じ名前"
 "のオブジェクトです"
 
-#: libsvn_wc/update_editor.c:1087
+#: libsvn_wc/update_editor.c:1144
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr ""
 "ディレクトリ '%s' を追加できませんでした: コピー元の引数がサポートされていま"
 "せん"
 
-#: libsvn_wc/update_editor.c:1108
+#: libsvn_wc/update_editor.c:1165
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name is already scheduled "
@@ -5413,11 +5431,11 @@ msgstr ""
 "ディレクトリ '%s' を追加できませんでした: 同名のオブジェクトが既に追加準備さ"
 "れています"
 
-#: libsvn_wc/update_editor.c:1312
+#: libsvn_wc/update_editor.c:1370
 msgid "Couldn't do property merge"
 msgstr "属性のマージはできません"
 
-#: libsvn_wc/update_editor.c:1376
+#: libsvn_wc/update_editor.c:1434
 #, c-format
 msgid ""
 "Failed to mark '%s' absent: item of the same name is already scheduled for "
@@ -5426,13 +5444,21 @@ msgstr ""
 "'%s' に「欠如」マークをつけられませんでした: 同名の項目が既に追加準備されてい"
 "ます"
 
-#: libsvn_wc/update_editor.c:1468
+#: libsvn_wc/update_editor.c:1534
+#, c-format
+msgid ""
+"Failed to add file '%s': a non-file object of the same name already exists"
+msgstr ""
+"ファイル '%s' を追加できませんでした: ファイル以外の同名のオブジェクトが既に"
+"存在します"
+
+#: libsvn_wc/update_editor.c:1545
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
 msgstr ""
 "ファイル '%s' を追加できませんでした: 同名のオブジェクトが既に存在します"
 
-#: libsvn_wc/update_editor.c:1489
+#: libsvn_wc/update_editor.c:1567
 #, c-format
 msgid ""
 "Failed to add file '%s': object of the same name is already scheduled for "
@@ -5441,24 +5467,24 @@ msgstr ""
 "ファイル '%s' を追加できませんでした: 同名のオブジェクトが既に追加準備されて"
 "います"
 
-#: libsvn_wc/update_editor.c:1497
+#: libsvn_wc/update_editor.c:1575
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr ""
 "ファイル '%s' (ディレクトリ '%s' 内のもの) はバージョン管理されていないリソー"
 "スです"
 
-#: libsvn_wc/update_editor.c:1609
+#: libsvn_wc/update_editor.c:1687
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。記録: '%s', 実際: '%s'"
 
-#: libsvn_wc/update_editor.c:2686
+#: libsvn_wc/update_editor.c:2851
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' には系統情報がありません"
 
-#: libsvn_wc/update_editor.c:2849
+#: libsvn_wc/update_editor.c:3014
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "コピー元の URL '%s' のリポジトリルートが、'%s' と異なっています"
@@ -6254,6 +6280,17 @@ msgid ""
 "  the destination. If multiple URLs are given each will be checked\n"
 "  out into a sub-directory of PATH, with the name of the sub-directory\n"
 "  being the basename of the URL.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy destination do not automatically cause the check out to fail.\n"
+"  If the obstructing path is the same type (file or directory) as the\n"
+"  corresponding path in the repository it becomes versioned but its\n"
+"  contents are left 'as-is' in the working copy.  This means that an\n"
+"  obstructing directory's unversioned children may also obstruct and\n"
+"  become versioned.  For files, any content differences between the\n"
+"  obstruction and the repository are treated like a local modification\n"
+"  to the working copy.  All properties from the repository are applied\n"
+"  to the obstructing path.\n"
 msgstr ""
 "リポジトリから作業コピーをチェックアウトします。\n"
 "使用方法: checkout <URL>[@<REV>]... [<パス>]\n"
@@ -6265,10 +6302,30 @@ msgstr ""
 "  の <URL> が与えられた場合、各 <URL> のベース名を名前にもつサブディレクト"
 "リ\n"
 "  を <パス> の下に作り、各々をそこにチェックアウトします。\n"
+"\n"
+"  --force が指定されている場合、チェックアウト先の作業コピー内で同名のパス"
+"が\n"
+"  障害となっても、それだけでチェックアウトが自動的に失敗することはありませ"
+"ん。\n"
+"  障害となっているパスがリポジトリ内の対応するパスと同じ形式 (ファイルまた"
+"は\n"
+"  ディレクトリ) である場合、そのパスはバージョン管理下に置かれますが、その"
+"内\n"
+"  容は作業コピー内に「そのまま」残されます。つまり、障害となっているディレ"
+"ク\n"
+"  トリの中で、バージョン管理下にない子ノードがまた障害となっていると、それ"
+"も\n"
+"  またバージョン管理下に置かれるかもしれません。ファイルに関しては、障害と"
+"なっ\n"
+"  ているものとリポジトリ内のものの内容の違いはすべて、作業コピーへのローカ"
+"ル\n"
+"  の修正のように扱われます。リポジトリで与えられている属性はすべて、障害と"
+"なっ\n"
+"  ているパスに適用されます。\n"
 
 # * Description for 'svn cleanup'.
 # * "cleanup: " is displayed at the head of the first line.
-#: svn/main.c:277
+#: svn/main.c:288
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -6280,7 +6337,7 @@ msgstr ""
 
 # * Description for 'svn commit'.
 # * "commit (ci): " is displayed at the head of the first line.
-#: svn/main.c:284
+#: svn/main.c:295
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -6302,7 +6359,7 @@ msgstr ""
 
 # * Description for 'svn commit' (for OS400).
 # * "commit (ci): " is displayed at the head of the first line.
-#: svn/main.c:292
+#: svn/main.c:303
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -6325,7 +6382,7 @@ msgstr ""
 
 # * Description for 'svn copy'.
 # * "copy (cp): " is displayed at the head of the first line.
-#: svn/main.c:307
+#: svn/main.c:318
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -6350,7 +6407,7 @@ msgstr ""
 
 # * Description for 'svn delete'.
 # * "delete (del, remove, rm): " is displayed at the head of the first line.
-#: svn/main.c:319
+#: svn/main.c:330
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -6384,7 +6441,7 @@ msgstr ""
 
 # * Description for 'svn diff'.
 # * "diff (di): " is displayed at the head of the first line.
-#: svn/main.c:335
+#: svn/main.c:346
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -6459,7 +6516,7 @@ msgstr ""
 
 # * Description for 'svn export'.
 # * "export: " is displayed at the head of the first line.
-#: svn/main.c:365
+#: svn/main.c:376
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -6512,7 +6569,7 @@ msgstr ""
 
 # * Description for 'svn help'.
 # * "help (?, h): " is displayed at the head of the first line.
-#: svn/main.c:388
+#: svn/main.c:399
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -6522,7 +6579,7 @@ msgstr ""
 
 # * Description for 'svn import'.
 # * "import: " is displayed at the head of the first line.
-#: svn/main.c:394
+#: svn/main.c:405
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -6546,7 +6603,7 @@ msgstr ""
 
 # * Description for 'svn info'.
 # * "info: " is displayed at the head of the first line.
-#: svn/main.c:407
+#: svn/main.c:418
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -6565,7 +6622,7 @@ msgstr ""
 
 # * Description for 'svn list'.
 # * "list (ls): " is displayed at the head of the first line.
-#: svn/main.c:417
+#: svn/main.c:428
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -6611,7 +6668,7 @@ msgstr ""
 
 # * Description for 'svn lock'.
 # * "lock: " is displayed at the head of the first line.
-#: svn/main.c:439
+#: svn/main.c:450
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -6627,19 +6684,19 @@ msgstr ""
 
 # * Description for 'svn lock --file'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:447
+#: svn/main.c:458
 msgid "read lock comment from file ARG"
 msgstr "ファイル <引数> からロックについてのコメントを読み込みます"
 
 # * Description for 'svn lock --message'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:448
+#: svn/main.c:459
 msgid "specify lock comment ARG"
 msgstr "ロックについてのコメントを <引数> と指定します"
 
 # * Description for 'svn log'.
 # * "log: " is displayed at the head of the first line.
-#: svn/main.c:451
+#: svn/main.c:462
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6704,7 +6761,7 @@ msgstr ""
 
 # * Description for 'svn merge'.
 # * "merge: " is displayed at the head of the first line.
-#: svn/main.c:481
+#: svn/main.c:492
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6771,7 +6828,7 @@ msgstr ""
 
 # * Description for 'svn mkdir'.
 # * "mkdir: " is displayed at the head of the first line.
-#: svn/main.c:510
+#: svn/main.c:521
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -6805,7 +6862,7 @@ msgstr ""
 
 # * Description for 'svn move'.
 # * "move (mv, rename, ren): " is displayed at the head of the first line.
-#: svn/main.c:527
+#: svn/main.c:538
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -6832,7 +6889,7 @@ msgstr ""
 
 # * Description for 'svn propdel'.
 # * "propdel (pdel, pd): " is displayed at the head of the first line.
-#: svn/main.c:540
+#: svn/main.c:551
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6853,7 +6910,7 @@ msgstr ""
 
 # * Description for 'svn propedit'.
 # * "propedit (pedit, pe): " is displayed at the head of the first line.
-#: svn/main.c:552
+#: svn/main.c:563
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6875,7 +6932,7 @@ msgstr ""
 
 # * Description for 'svn propget'.
 # * "propget (pget, pg): " is displayed at the head of the first line.
-#: svn/main.c:565
+#: svn/main.c:576
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6917,7 +6974,7 @@ msgstr ""
 
 # * Description for 'svn proplist'.
 # * "proplist (plist, pl): " is displayed at the head of the first line.
-#: svn/main.c:584
+#: svn/main.c:595
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6943,7 +7000,7 @@ msgstr ""
 
 # * Description for 'svn propset'.
 # * "propset (pset, ps): " is displayed at the head of the first line.
-#: svn/main.c:596
+#: svn/main.c:607
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -7044,13 +7101,13 @@ msgstr ""
 
 # * Description for 'svn propset --file'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:638
+#: svn/main.c:649
 msgid "read property value from file ARG"
 msgstr "ファイル <引数> から属性値を読み込みます"
 
 # * Description for 'svn resolved'.
 # * "resolved: " is displayed at the head of the first line.
-#: svn/main.c:641
+#: svn/main.c:652
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -7070,7 +7127,7 @@ msgstr ""
 
 # * Description for 'svn revert'.
 # * "revert: " is displayed at the head of the first line.
-#: svn/main.c:650
+#: svn/main.c:661
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -7088,7 +7145,7 @@ msgstr ""
 
 # * Description for 'svn status'.
 # * "status (stat, st): " is displayed at the head of the first line.
-#: svn/main.c:658
+#: svn/main.c:669
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -7257,7 +7314,7 @@ msgstr ""
 
 # * Description for 'svn switch'.
 # * "switch (sw): " is displayed at the head of the first line.
-#: svn/main.c:734
+#: svn/main.c:745
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -7271,6 +7328,17 @@ msgid ""
 "     This is used when repository's root URL changes (such as a scheme\n"
 "     or hostname change) but your working copy still reflects the same\n"
 "     directory within the same repository.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy do not automatically cause a failure if the switch attempts to\n"
+"  add the same path.  If the obstructing path is the same type (file\n"
+"  or directory) as the corresponding path in the repository it becomes\n"
+"  versioned but its contents are left 'as-is' in the working copy.\n"
+"  This means that an obstructing directory's unversioned children may\n"
+"  also obstruct and become versioned.  For files, any content differences\n"
+"  between the obstruction and the repository are treated like a local\n"
+"  modification to the working copy.  All properties from the repository\n"
+"  are applied to the obstructing path.\n"
 msgstr ""
 "作業コピーを別の URL に更新します。\n"
 "使用方法: 1. switch <URL> [<パス>]\n"
@@ -7289,10 +7357,30 @@ msgstr ""
 "     更した) が、同じリポジトリ内の同じディレクトリを作業コピーに反映させ続"
 "け\n"
 "     たいときに、これを用います。\n"
+"\n"
+"  --force が指定されている場合、switch によって作業コピー内にパスを追加しよ"
+"う\n"
+"  としたときに、バージョン管理下にない同名のパスが障害となっても、それだけ"
+"で\n"
+"  switch が自動的に失敗することはありません。障害となっているパスがリポジト"
+"リ\n"
+"  内の対応するパスと同じ形式 (ファイルまたはディレクトリ) である場合、その"
+"パ\n"
+"  スはバージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」"
+"残\n"
+"  されます。つまり、障害となっているディレクトリの中で、バージョン管理下に"
+"な\n"
+"  い子ノードがまた障害となっていると、それもまたバージョン管理下に置かれる"
+"か\n"
+"  もしれません。ファイルに関しては、障害となっているものとリポジトリ内のも"
+"の\n"
+"  の内容の違いはすべて、作業コピーへのローカルの修正のように扱われます。リ"
+"ポ\n"
+"  ジトリで与えられている属性はすべて、障害となっているパスに適用されます。\n"
 
 # * Description for 'svn unlock'.
 # * "unlock: " is displayed at the head of the first line.
-#: svn/main.c:750
+#: svn/main.c:772
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -7306,7 +7394,7 @@ msgstr ""
 
 # * Description for 'svn update'.
 # * "update (up): " is displayed at the head of the first line.
-#: svn/main.c:758
+#: svn/main.c:780
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -7322,11 +7410,24 @@ msgid ""
 "    U  Updated\n"
 "    C  Conflict\n"
 "    G  Merged\n"
+"    E  Existed\n"
 "\n"
 "  A character in the first column signifies an update to the actual file,\n"
 "  while updates to the file's properties are shown in the second column.\n"
 "  A 'B' in the third column signifies that the lock for the file has\n"
 "  been broken or stolen.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy do not automatically cause a failure if the update attempts to\n"
+"  add the same path.  If the obstructing path is the same type (file\n"
+"  or directory) as the corresponding path in the repository it becomes\n"
+"  versioned but its contents are left 'as-is' in the working copy.\n"
+"  This means that an obstructing directory's unversioned children may\n"
+"  also obstruct and become versioned.  For files, any content differences\n"
+"  between the obstruction and the repository are treated like a local\n"
+"  modification to the working copy.  All properties from the repository\n"
+"  are applied to the obstructing path.  Obstructing paths are reported\n"
+"  in the first column with code 'E'.\n"
 msgstr ""
 "リポジトリの変更点を作業コピーに取り入れます。\n"
 "使用方法: update [<パス>...]\n"
@@ -7346,26 +7447,49 @@ msgstr ""
 "    U  更新されました\n"
 "    C  衝突しています\n"
 "    G  マージされました\n"
+"    E  存在していました\n"
 "\n"
 "  1 列目の文字は、実際のファイルに対する更新を意味します。これに対し、ファ"
 "イ\n"
 "  ルの属性に対する更新は 2 列目で示されます。3 列目に 'B' がある場合、それ"
 "は、\n"
 "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
+"\n"
+"  --force が指定されている場合、更新によって作業コピー内にパスを追加しよう"
+"と\n"
+"  したときに、バージョン管理下にない同名のパスが障害となっても、それだけで"
+"更\n"
+"  新が自動的に失敗することはありません。障害となっているパスがリポジトリ内"
+"の\n"
+"  対応するパスと同じ形式 (ファイルまたはディレクトリ) である場合、そのパス"
+"は\n"
+"  バージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」残さ"
+"れ\n"
+"  ます。つまり、障害となっているディレクトリの中で、バージョン管理下にない"
+"子\n"
+"  ノードがまた障害となっていると、それもまたバージョン管理下に置かれるかも"
+"し\n"
+"  れません。ファイルに関しては、障害となっているものとリポジトリ内のものの"
+"内\n"
+"  容の違いはすべて、作業コピーへのローカルの修正のように扱われます。リポジ"
+"ト\n"
+"  リで与えられている属性はすべて、障害となっているパスに適用されます。障害"
+"と\n"
+"  なったパスは 1 列目でコード 'E' を用いて報告されます。\n"
 
-#: svn/main.c:820 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:142
+#: svn/main.c:856 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:142
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
-#: svn/main.c:932
+#: svn/main.c:968
 msgid "Non-numeric limit argument given"
 msgstr "--limit の引数に数値以外が指定されています"
 
-#: svn/main.c:938
+#: svn/main.c:974
 msgid "Argument to --limit must be positive"
 msgstr "--limit に渡す引数は正でなければなりません"
 
-#: svn/main.c:958
+#: svn/main.c:994
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
@@ -7373,19 +7497,19 @@ msgstr ""
 "複数のリビジョン引数が指定されています。-c を 2 つ指定したり -c と -r の両方"
 "を指定したりはできません"
 
-#: svn/main.c:966 svn/main.c:1157
+#: svn/main.c:1002 svn/main.c:1193
 msgid "Can't specify -c with --old"
 msgstr "-c は、--old と同時には指定できません"
 
-#: svn/main.c:973
+#: svn/main.c:1009
 msgid "Non-numeric change argument given to -c"
 msgstr "-c の引数に数値以外が指定されています"
 
-#: svn/main.c:979
+#: svn/main.c:1015
 msgid "There is no change 0"
 msgstr "変更 0 はありません"
 
-#: svn/main.c:1006
+#: svn/main.c:1042
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -7393,32 +7517,32 @@ msgstr ""
 "複数のリビジョン引数が指定されています。-r と -c を用いた指定はできません。'-"
 "r <N> -r <M>' の代わりに '-r <N>:<M>' を使ってみてください"
 
-#: svn/main.c:1019 svnadmin/main.c:1244
+#: svn/main.c:1055 svnadmin/main.c:1244
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "リビジョン引数 '%s' で構文エラーが生じました"
 
-#: svn/main.c:1173 svn/main.c:1183
+#: svn/main.c:1209 svn/main.c:1219
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props と --no-auto-props は互いに排他的です"
 
-#: svn/main.c:1199
+#: svn/main.c:1235
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
-#: svn/main.c:1272 svndumpfilter/main.c:1207 svnlook/main.c:2037
+#: svn/main.c:1308 svndumpfilter/main.c:1207 svnlook/main.c:2037
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: svn/main.c:1291 svnadmin/main.c:1367 svndumpfilter/main.c:1226
+#: svn/main.c:1327 svnadmin/main.c:1367 svndumpfilter/main.c:1226
 #: svnlook/main.c:2056
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知のコマンドです: '%s'\n"
 
-#: svn/main.c:1324
+#: svn/main.c:1360
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7427,19 +7551,19 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svn help %s' と打ってください。\n"
 
-#: svn/main.c:1361
+#: svn/main.c:1397
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ログメッセージファイルがバージョン管理されているファイルです。無効にするには "
 "'--force-log' を用いてください"
 
-#: svn/main.c:1368
+#: svn/main.c:1404
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ロックについてのコメントのファイルがバージョン管理されているファイルです。無"
 "効にするには '--force-log' を用いてください"
 
-#: svn/main.c:1389
+#: svn/main.c:1425
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7447,7 +7571,7 @@ msgstr ""
 "ログメッセージがパス名です (-F のつもりでしたか?)。無効にするには '--force-"
 "log' を用いてください"
 
-#: svn/main.c:1396
+#: svn/main.c:1432
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7455,7 +7579,7 @@ msgstr ""
 "ロックについてのコメントがパス名です (-F のつもりでしたか?)。無効にするには "
 "'--force-log' を用いてください"
 
-#: svn/main.c:1521
+#: svn/main.c:1557
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -7490,27 +7614,27 @@ msgstr "行方不明の対象ファイルは飛ばしました: %s\n"
 msgid "Skipped '%s'\n"
 msgstr "'%s' を飛ばしました\n"
 
-#: svn/notify.c:94
+#: svn/notify.c:100
 #, c-format
 msgid "Restored '%s'\n"
 msgstr "'%s' を元に戻しました\n"
 
-#: svn/notify.c:100
+#: svn/notify.c:106
 #, c-format
 msgid "Reverted '%s'\n"
 msgstr "'%s' を元に戻しました\n"
 
-#: svn/notify.c:106
+#: svn/notify.c:112
 #, c-format
 msgid "Failed to revert '%s' -- try updating instead.\n"
 msgstr "'%s' を元に戻せませんでした -- 復元でなく更新をしてみてください。\n"
 
-#: svn/notify.c:114
+#: svn/notify.c:120
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "'%s' の衝突状態を解消しました\n"
 
-#: svn/notify.c:195
+#: svn/notify.c:201
 #, c-format
 msgid ""
 "\n"
@@ -7519,77 +7643,77 @@ msgstr ""
 "\n"
 "外部項目を '%s' に取得しています\n"
 
-#: svn/notify.c:210
+#: svn/notify.c:216
 #, c-format
 msgid "Exported external at revision %ld.\n"
 msgstr "外部項目 (リビジョン %ld) をエクスポートしました。\n"
 
-#: svn/notify.c:211
+#: svn/notify.c:217
 #, c-format
 msgid "Exported revision %ld.\n"
 msgstr "リビジョン %ld をエクスポートしました。\n"
 
-#: svn/notify.c:219
+#: svn/notify.c:225
 #, c-format
 msgid "Checked out external at revision %ld.\n"
 msgstr "外部項目 (リビジョン %ld) をチェックアウトしました。\n"
 
-#: svn/notify.c:220
+#: svn/notify.c:226
 #, c-format
 msgid "Checked out revision %ld.\n"
 msgstr "リビジョン %ld をチェックアウトしました。\n"
 
-#: svn/notify.c:230
+#: svn/notify.c:236
 #, c-format
 msgid "Updated external to revision %ld.\n"
 msgstr "外部項目をリビジョン %ld に更新しました。\n"
 
-#: svn/notify.c:231
+#: svn/notify.c:237
 #, c-format
 msgid "Updated to revision %ld.\n"
 msgstr "リビジョン %ld に更新しました。\n"
 
-#: svn/notify.c:239
+#: svn/notify.c:245
 #, c-format
 msgid "External at revision %ld.\n"
 msgstr "リビジョン %ld の外部項目です。\n"
 
-#: svn/notify.c:240
+#: svn/notify.c:246
 #, c-format
 msgid "At revision %ld.\n"
 msgstr "リビジョン %ld です。\n"
 
-#: svn/notify.c:252
+#: svn/notify.c:258
 #, c-format
 msgid "External export complete.\n"
 msgstr "外部項目のエクスポートが終わりました。\n"
 
-#: svn/notify.c:253
+#: svn/notify.c:259
 #, c-format
 msgid "Export complete.\n"
 msgstr "エクスポートが終わりました。\n"
 
-#: svn/notify.c:260
+#: svn/notify.c:266
 #, c-format
 msgid "External checkout complete.\n"
 msgstr "外部項目のチェックアウトが終わりました。\n"
 
-#: svn/notify.c:261
+#: svn/notify.c:267
 #, c-format
 msgid "Checkout complete.\n"
 msgstr "チェックアウトが終わりました。\n"
 
-#: svn/notify.c:268
+#: svn/notify.c:274
 #, c-format
 msgid "External update complete.\n"
 msgstr "外部項目の更新が終わりました。\n"
 
-#: svn/notify.c:269
+#: svn/notify.c:275
 #, c-format
 msgid "Update complete.\n"
 msgstr "更新が終わりました。\n"
 
-#: svn/notify.c:285
+#: svn/notify.c:291
 #, c-format
 msgid ""
 "\n"
@@ -7598,47 +7722,47 @@ msgstr ""
 "\n"
 "外部項目 '%s' の状態表示を行っています。\n"
 
-#: svn/notify.c:293
+#: svn/notify.c:299
 #, c-format
 msgid "Status against revision: %6ld\n"
 msgstr "状態の背景となるリビジョン: %6ld\n"
 
-#: svn/notify.c:301
+#: svn/notify.c:307
 #, c-format
 msgid "Sending        %s\n"
 msgstr "送信しています              %s\n"
 
-#: svn/notify.c:310
+#: svn/notify.c:316
 #, c-format
 msgid "Adding  (bin)  %s\n"
 msgstr "追加しています  (バイナリ)  %s\n"
 
-#: svn/notify.c:317
+#: svn/notify.c:323
 #, c-format
 msgid "Adding         %s\n"
 msgstr "追加しています              %s\n"
 
-#: svn/notify.c:324
+#: svn/notify.c:330
 #, c-format
 msgid "Deleting       %s\n"
 msgstr "削除しています              %s\n"
 
-#: svn/notify.c:331
+#: svn/notify.c:337
 #, c-format
 msgid "Replacing      %s\n"
 msgstr "置換しています              %s\n"
 
-#: svn/notify.c:341
+#: svn/notify.c:347
 #, c-format
 msgid "Transmitting file data "
 msgstr "ファイルのデータを送信中です"
 
-#: svn/notify.c:350
+#: svn/notify.c:356
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
 msgstr "'%s' をユーザ '%s' がロックしています。\n"
 
-#: svn/notify.c:356
+#: svn/notify.c:362
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "'%s' のロックが解除されました。\n"
@@ -9553,6 +9677,115 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+# * Description for 'svn checkout'.
+# * "checkout (co): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Check out a working copy from a repository.\n"
+#~ "usage: checkout URL[@REV]... [PATH]\n"
+#~ "\n"
+#~ "  If specified, REV determines in which revision the URL is first\n"
+#~ "  looked up.\n"
+#~ "\n"
+#~ "  If PATH is omitted, the basename of the URL will be used as\n"
+#~ "  the destination. If multiple URLs are given each will be checked\n"
+#~ "  out into a sub-directory of PATH, with the name of the sub-directory\n"
+#~ "  being the basename of the URL.\n"
+#~ msgstr ""
+#~ "リポジトリから作業コピーをチェックアウトします。\n"
+#~ "使用方法: checkout <URL>[@<REV>]... [<パス>]\n"
+#~ "\n"
+#~ "  <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。\n"
+#~ "\n"
+#~ "  <パス> が省略された場合、<URL> のベース名がコピー先として用いられます。"
+#~ "複数\n"
+#~ "  の <URL> が与えられた場合、各 <URL> のベース名を名前にもつサブディレクト"
+#~ "リ\n"
+#~ "  を <パス> の下に作り、各々をそこにチェックアウトします。\n"
+
+# * Description for 'svn switch'.
+# * "switch (sw): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Update the working copy to a different URL.\n"
+#~ "usage: 1. switch URL [PATH]\n"
+#~ "       2. switch --relocate FROM TO [PATH...]\n"
+#~ "\n"
+#~ "  1. Update the working copy to mirror a new URL within the repository.\n"
+#~ "     This behaviour is similar to 'svn update', and is the way to\n"
+#~ "     move a working copy to a branch or tag within the same repository.\n"
+#~ "\n"
+#~ "  2. Rewrite working copy URL metadata to reflect a syntactic change "
+#~ "only.\n"
+#~ "     This is used when repository's root URL changes (such as a scheme\n"
+#~ "     or hostname change) but your working copy still reflects the same\n"
+#~ "     directory within the same repository.\n"
+#~ msgstr ""
+#~ "作業コピーを別の URL に更新します。\n"
+#~ "使用方法: 1. switch <URL> [<パス>]\n"
+#~ "          2. switch --relocate <変更元> <変更先> [<パス>...]\n"
+#~ "\n"
+#~ "  1. 作業コピーを、リポジトリ内の新しい <URL> にミラーさせて更新します。こ"
+#~ "れ\n"
+#~ "     は 'svn update' と似た動作をし、作業コピーを同じリポジトリ内のブラン"
+#~ "チや\n"
+#~ "     タグに移行させる方法として使えます。\n"
+#~ "\n"
+#~ "  2. 作業コピーの URL メタデータを書き換え、URL シンタックスの変更のみを反"
+#~ "映\n"
+#~ "     させます。リポジトリのルート URL が変更した (スキームやホスト名などが"
+#~ "変\n"
+#~ "     更した) が、同じリポジトリ内の同じディレクトリを作業コピーに反映させ"
+#~ "続け\n"
+#~ "     たいときに、これを用います。\n"
+
+# * Description for 'svn update'.
+# * "update (up): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Bring changes from the repository into the working copy.\n"
+#~ "usage: update [PATH...]\n"
+#~ "\n"
+#~ "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
+#~ "  Else synchronize working copy to revision given by -r.\n"
+#~ "\n"
+#~ "  For each updated item a line will start with a character reporting the\n"
+#~ "  action taken.  These characters have the following meaning:\n"
+#~ "\n"
+#~ "    A  Added\n"
+#~ "    D  Deleted\n"
+#~ "    U  Updated\n"
+#~ "    C  Conflict\n"
+#~ "    G  Merged\n"
+#~ "\n"
+#~ "  A character in the first column signifies an update to the actual "
+#~ "file,\n"
+#~ "  while updates to the file's properties are shown in the second column.\n"
+#~ "  A 'B' in the third column signifies that the lock for the file has\n"
+#~ "  been broken or stolen.\n"
+#~ msgstr ""
+#~ "リポジトリの変更点を作業コピーに取り入れます。\n"
+#~ "使用方法: update [<パス>...]\n"
+#~ "\n"
+#~ "  リビジョンが指定されなかった場合は HEAD リビジョンを取り入れ、作業コピー"
+#~ "を\n"
+#~ "  最新の状態にします。そうでない場合、-r で指定されたリビジョンで作業コ"
+#~ "ピーを\n"
+#~ "  同期します。\n"
+#~ "\n"
+#~ "  更新された各項目に関しては、行われた操作を報告する文字が行頭につけられま"
+#~ "す。\n"
+#~ "  これらの文字は次のような意味をもっています:\n"
+#~ "\n"
+#~ "    A  追加されました\n"
+#~ "    D  削除されました\n"
+#~ "    U  更新されました\n"
+#~ "    C  衝突しています\n"
+#~ "    G  マージされました\n"
+#~ "\n"
+#~ "  1 列目の文字は、実際のファイルに対する更新を意味します。これに対し、ファ"
+#~ "イ\n"
+#~ "  ルの属性に対する更新は 2 列目で示されます。3 列目に 'B' がある場合、それ"
+#~ "は、\n"
+#~ "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
 # * Description for 'svnsync initialize'.
 # * "initialize (init): " is displayed at the head of the first line.
