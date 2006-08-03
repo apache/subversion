@@ -2244,6 +2244,11 @@ do_merge(const char *initial_URL1,
 
       SVN_ERR(reporter->finish_report(report_baton, pool));
 
+      /* ### LATER: Give the caller a shot at resolving any conflicts
+         ### we've detected.  If the conflicts are not resolved, abort
+         ### application of any remaining revision ranges for this WC
+         ### item. */
+
       if (!merge_b->dry_run)
         {
           /* Update the WC merge info here to account for our new
@@ -2453,6 +2458,11 @@ do_single_file_merge(const char *initial_URL1,
           notify->prop_state = prop_state;
           notification_receiver(&notify_b, notify, pool);
         }
+
+      /* ### LATER: Give the caller a shot at resolving any conflicts
+         ### we've detected.  If the conflicts are not resolved, abort
+         ### application of any remaining revision ranges for this WC
+         ### item. */
 
       if (!merge_b->dry_run)
         {
