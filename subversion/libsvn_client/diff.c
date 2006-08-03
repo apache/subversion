@@ -1861,55 +1861,169 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
   return SVN_NO_ERROR;
 }
 
-/* Calculate the new merge info for REL_PATH based on the merge info
-   for TARGET_WCPATH and RANGES, and record it in the WC at
-   TARGET_WCPATH. */
+/* Contains any state collected while receiving path notifications. */
+typedef struct
+{
+  /* The wrapped callback and baton. */
+  svn_wc_notify_func2_t wrapped_func;
+  void *wrapped_baton;
+
+  /* The list of any skipped paths, which should be examined and
+     cleared after each invocation of the callback. */
+  apr_array_header_t *skipped_paths;
+
+  /* Pool used in notification_receiver() to avoid the iteration
+     sub-pool which is passed in, then subsequently destroyed. */
+  apr_pool_t *pool;
+} notification_receiver_baton_t;
+
+/* Our svn_wc_notify_func2_t wrapper.*/
+static void
+notification_receiver(void *baton, const svn_wc_notify_t *notify,
+                      apr_pool_t *pool)
+{
+  notification_receiver_baton_t *notify_b = baton;
+
+  if (notify->action == svn_wc_notify_skip)
+    {
+      if (notify_b->skipped_paths == NULL)
+        notify_b->skipped_paths = apr_array_make(notify_b->pool, 1,
+                                                 sizeof(char *));
+
+      APR_ARRAY_PUSH(notify_b->skipped_paths, const char *) =
+        apr_pstrdup(notify_b->pool, notify->path);
+    }
+
+  if (notify->content_state == svn_wc_notify_state_conflicted)
+    {
+      /* ### We might be able to use the entries cache instead. */
+    }
+
+  if (notify_b->wrapped_func)
+    (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify, pool);
+}
+
+/* Create merge info describing the merge of RANGE into our target,
+   without including merge info for skips or conflicts from
+   NOTIFY_B. */
+static svn_error_t *
+determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
+                           svn_merge_range_t *range,
+                           notification_receiver_baton_t *notify_b,
+                           apr_pool_t *pool)
+{
+  apr_array_header_t *rangelist = apr_array_make(pool, 1, sizeof(*range));
+  *merges = apr_hash_make(pool);
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  /* ### FIXME: What if the root of the target path wasn't merged
+     ### either (e.g. only its children were)? */
+  apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+
+  /* Override the merge info for child paths which weren't actually
+     merged. */
+  if (notify_b->skipped_paths != NULL)
+    {
+      int i;
+      for (i = 0; i < notify_b->skipped_paths->nelts; i++)
+        {
+          /* Add an empty range list for this path. */
+          /* ### Sometimes a path exists more than once... */
+          apr_hash_set(*merges,
+                       APR_ARRAY_IDX(notify_b->skipped_paths, i, const char *),
+                       APR_HASH_KEY_STRING,
+                       apr_array_make(pool, 0, sizeof(*range)));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Calculate the new merge info for the target tree based on the merge
+   info for TARGET_WCPATH and MERGES (a mapping of WC paths to range
+   lists), and record it in the WC (at, and possibly below,
+   TARGET_WCPATH). */
 static svn_error_t *
 update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
-                     const char *rel_path, apr_array_header_t *ranges,
-                     svn_boolean_t is_revert, svn_wc_adm_access_t *adm_access,
+                     const char *repos_rel_path, apr_hash_t *merges,
+                     svn_boolean_t is_revert, svn_ra_session_t *ra_session,
+                     svn_wc_adm_access_t *adm_access,
                      svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
-  svn_string_t *mergeinfo_str = NULL;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_string_t *mergeinfo_str;
+  const char *rel_path;
   apr_hash_t *mergeinfo;
-  apr_array_header_t *rangelist;
+  apr_hash_index_t *hi;
 
-  /* As some of the merges may've changed the WC's merge info, get a
-     fresh copy before using it to update the WC's merge info. */
-  SVN_ERR(parse_merge_info(&mergeinfo, entry, target_wcpath, adm_access,
-                           ctx, pool));
-
-  rangelist = apr_hash_get(mergeinfo, rel_path, APR_HASH_KEY_STRING);
-  if (rangelist == NULL)
-    rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-
-  if (is_revert)
+  /* Combine the merge info for the revision range just merged into
+     the WC with its on-disk merge info. */
+  for (hi = apr_hash_first(pool, merges); hi; hi = apr_hash_next(hi))
     {
-      ranges = svn_rangelist_dup(ranges, pool);
-      SVN_ERR(svn_rangelist_reverse(ranges, pool));
-      SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist, pool));
-    }
-  else
-    SVN_ERR(svn_rangelist_merge(&rangelist, rangelist, ranges, pool));
+      const void *key;
+      void *value;
+      const char *path;
+      apr_array_header_t *ranges, *rangelist;
 
-  /* Update the merge info by adjusting the rangelist for REL_PATH. */
-  if (rangelist->nelts == 0)
-    rangelist = NULL;
-  apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, rangelist);
+      svn_pool_clear(subpool);
 
-  if (apr_hash_count(mergeinfo) > 0)
-    {
-      /* The WC will contain merge info. */
-      svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
-      mergeinfo_str = svn_string_create_from_buf(mergeinfo_buf, pool);
-    }
+      apr_hash_this(hi, &key, NULL, &value);
+      path = key;
+      ranges = value;
+      if (ranges->nelts == 0)
+        continue;
+
+      /* As some of the merges may've changed the WC's merge info, get
+         a fresh copy before using it to update the WC's merge info. */
+      SVN_ERR(parse_merge_info(&mergeinfo, entry, path, adm_access, ctx,
+                               subpool));
+
+      /* ASSUMPTION: "target_wcpath" is always both a parent and
+         prefix of "path". */
+      int len = strlen(target_wcpath);
+      if (len < strlen(path))
+        rel_path = apr_pstrcat(subpool, repos_rel_path, "/", path + len);
+      else
+        rel_path = repos_rel_path;
+      rangelist = apr_hash_get(mergeinfo, rel_path, APR_HASH_KEY_STRING);
+      if (rangelist == NULL)
+        rangelist = apr_array_make(subpool, 0, sizeof(svn_merge_range_t *));
+
+      if (is_revert)
+        {
+          ranges = svn_rangelist_dup(ranges, subpool);
+          SVN_ERR(svn_rangelist_reverse(ranges, subpool));
+          SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist,
+                                       subpool));
+        }
+      else
+        SVN_ERR(svn_rangelist_merge(&rangelist, rangelist, ranges, subpool));
+
+      /* Update the merge info by adjusting the path's rangelist. */
+      if (rangelist->nelts == 0)
+        rangelist = NULL;
+      apr_hash_set(mergeinfo, rel_path, APR_HASH_KEY_STRING, rangelist);
+
+      /* Convert the merge info (if any) into text for storage as a
+         property value. */
+      mergeinfo_str = NULL;
+      if (apr_hash_count(mergeinfo) > 0)
+        {
+          /* The WC will contain merge info. */
+          svn_stringbuf_t *mergeinfo_buf;
+          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, subpool));
+          mergeinfo_str = svn_string_create_from_buf(mergeinfo_buf, pool);
+        }
   
-  /* Record the new merge info in the WC. */
-  /* ### Later, we'll want behavior more analogous to
-     ### svn_client__get_prop_from_wc(). */
-  return svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str, target_wcpath,
-                          adm_access, TRUE /* skip checks */, pool);
+      /* Record the new merge info in the WC. */
+      /* ### Later, we'll want behavior more analogous to
+         ### svn_client__get_prop_from_wc(). */
+      SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str,
+                               path, adm_access, TRUE /* skip checks */,
+                               subpool));
+    }
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 /* A tri-state value returned by grok_range_info_from_opt_revisions(). */
@@ -2002,6 +2116,8 @@ do_merge(const char *initial_URL1,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
+  notification_receiver_baton_t notify_b =
+    { ctx->notify_func2, ctx->notify_baton2, NULL, pool };
   const char *URL1, *URL2, *path1, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   const svn_wc_entry_t *entry;
@@ -2086,6 +2202,14 @@ do_merge(const char *initial_URL1,
       svn_merge_range_t *r = APR_ARRAY_IDX(remaining_ranges, i,
                                            svn_merge_range_t *);
 
+      /* We must avoid subsequent merges to files which are already in
+         conflict, as subsequent merges might overlap with the
+         conflict markers in the file (or worse, be completely inside
+         them). */
+      /* ### TODO: Drill code to avoid merges for files which are
+         ### already in conflict down into the API which requests or
+         ### applies the diff. */
+
       SVN_ERR(svn_client__get_diff_editor(target_wcpath,
                                           adm_access,
                                           callbacks,
@@ -2094,8 +2218,8 @@ do_merge(const char *initial_URL1,
                                           merge_b->dry_run,
                                           ra_session2,
                                           is_revert ? r->start : r->start - 1,
-                                          ctx->notify_func2,
-                                          ctx->notify_baton2,
+                                          notification_receiver,
+                                          &notify_b,
                                           ctx->cancel_func,
                                           ctx->cancel_baton,
                                           &diff_editor,
@@ -2116,14 +2240,26 @@ do_merge(const char *initial_URL1,
                                  is_revert ? r->start : r->start - 1,
                                  FALSE, NULL, pool));
 
-      SVN_ERR(reporter->finish_report(report_baton, pool));
-    }
+      /* ### TODO: Print revision range separator line. */
 
-  if (!merge_b->dry_run && remaining_ranges->nelts > 0)
-    {
-      SVN_ERR(update_wc_merge_info(target_wcpath, entry, rel_path,
-                                   remaining_ranges, is_revert, adm_access,
-                                   ctx, pool));
+      SVN_ERR(reporter->finish_report(report_baton, pool));
+
+      if (!merge_b->dry_run)
+        {
+          /* Update the WC merge info here to account for our new
+             merges, minus any unresolved conflicts and skips. */
+          apr_hash_t *merges;
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath, r,
+                                             &notify_b, pool));
+          SVN_ERR(update_wc_merge_info(target_wcpath, entry, rel_path, merges,
+                                       is_revert, ra_session, adm_access,
+                                       ctx, pool));
+        }
+
+      /* Clear the list of skipped paths in preparation for the next
+         revision range merge. */
+      if (notify_b.skipped_paths != NULL)
+        notify_b.skipped_paths->nelts = 0;
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -2184,6 +2320,8 @@ do_single_file_merge(const char *initial_URL1,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
+  notification_receiver_baton_t notify_b =
+    { ctx->notify_func2, ctx->notify_baton2, NULL, pool };
   const char *URL1, *path1, *URL2, *path2, *rel_path;
   svn_opt_revision_t *revision1, *revision2;
   svn_error_t *err;
@@ -2306,7 +2444,6 @@ do_single_file_merge(const char *initial_URL1,
         return err;
       svn_error_clear(err);
   
-      if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify
           = svn_wc_create_notify(merge_b->target, svn_wc_notify_update_update,
@@ -2314,15 +2451,25 @@ do_single_file_merge(const char *initial_URL1,
           notify->kind = svn_node_file;
           notify->content_state = text_state;
           notify->prop_state = prop_state;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          notification_receiver(&notify_b, notify, pool);
         }
-    }
 
-  if (!merge_b->dry_run && remaining_ranges->nelts > 0)
-    {
-      SVN_ERR(update_wc_merge_info(target_wcpath, entry, rel_path,
-                                   remaining_ranges, is_revert, adm_access,
-                                   ctx, pool));
+      if (!merge_b->dry_run)
+        {
+          /* Update the WC merge info here to account for our new
+             merges, minus any unresolved conflicts and skips. */
+          apr_hash_t *merges;
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath, r,
+                                             &notify_b, pool));
+          SVN_ERR(update_wc_merge_info(target_wcpath, entry, rel_path, merges,
+                                       is_revert, ra_session1, adm_access,
+                                       ctx, pool));
+        }
+
+      /* Clear the list of skipped paths in preparation for the next
+         revision range merge. */
+      if (notify_b.skipped_paths != NULL)
+        notify_b.skipped_paths->nelts = 0;
     }
 
   /* Sleep to ensure timestamp integrity. */
