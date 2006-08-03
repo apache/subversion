@@ -43,8 +43,7 @@ static svn_opt_subcommand_t initialize_cmd,
                             help_cmd;
 
 enum {
-  svnsync_opt_source_url       = SVN_OPT_FIRST_LONGOPT_ID,
-  svnsync_opt_non_interactive,
+  svnsync_opt_non_interactive = SVN_OPT_FIRST_LONGOPT_ID,
   svnsync_opt_no_auth_cache,
   svnsync_opt_auth_username,
   svnsync_opt_auth_password,
@@ -61,7 +60,7 @@ enum {
 static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
   {
     { "initialize", initialize_cmd, { "init" },
-      N_("usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+      N_("usage: svnsync initialize DEST_URL SOURCE_URL\n"
          "Initialize a destination repository for synchronization from\n"
          "another repository.\n"
          "\n"
@@ -69,17 +68,16 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
          "no committed revisions.  The destination repository must allow\n"
          "revision property changes, and you should not commit to it by\n"
          "any method other than 'svnsync'.\n"),
-      { SVNSYNC_OPTS_DEFAULT,
-        svnsync_opt_source_url } },
+      { SVNSYNC_OPTS_DEFAULT } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "Transfer all pending revisions from source to destination.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
-      N_("usage: svnsync copy-revprops DEST_URL --revision REV\n"
+      N_("usage: svnsync copy-revprops DEST_URL REV\n"
          "Copy all revision properties for revision REV from source to\n"
          "destination.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'r' } },
+      { SVNSYNC_OPTS_DEFAULT } },
     { "help", help_cmd, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
          "Describe the usage of this program or its subcommands.\n"),
@@ -89,8 +87,6 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
 
 static const apr_getopt_option_t svnsync_options[] =
   {
-    {"source-url",     svnsync_opt_source_url, 1,
-                       N_("The url to synchronize from")},
     {"non-interactive", svnsync_opt_non_interactive, 0,
                        N_("do no interactive prompting") },
     {"no-auth-cache",  svnsync_opt_no_auth_cache, 0,
@@ -101,8 +97,6 @@ static const apr_getopt_option_t svnsync_options[] =
                        N_("specify a password ARG") },
     {"config-dir",     svnsync_opt_config_dir, 1,
                        N_("read user configuration files from directory ARG")},
-    {"revision",       'r', 1,
-                       N_("specify revision number ARG")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
@@ -113,7 +107,6 @@ static const apr_getopt_option_t svnsync_options[] =
   };
 
 typedef struct {
-  const char *source_url;
   svn_auth_baton_t *auth_baton;
   svn_boolean_t non_interactive;
   svn_boolean_t no_auth_cache;
@@ -123,7 +116,6 @@ typedef struct {
   apr_hash_t *config;
   svn_boolean_t version;
   svn_boolean_t help;
-  svn_revnum_t revision;
 } opt_baton_t;
 
 static volatile sig_atomic_t cancelled = FALSE;
@@ -389,15 +381,10 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *args;
   init_baton_t baton;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-
-  if (! opt_baton->source_url)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("You must supply a source URL;"
-                              " try 'svnsync help' for more info"));
+  SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
 
   to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
-  from_url = svn_path_canonicalize(opt_baton->source_url, pool);
+  from_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 1, const char *), pool);
 
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
@@ -406,9 +393,8 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
                              _("Path '%s' is not a URL"), from_url);
 
-  baton.to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *),
-                                       pool);
-  baton.from_url = svn_path_canonicalize(opt_baton->source_url, pool);
+  baton.to_url = svn_path_canonicalize(to_url, pool);
+  baton.from_url = svn_path_canonicalize(from_url, pool);
   baton.config = opt_baton->config;
 
   callbacks.open_tmp_file = open_tmp_file;
@@ -1126,19 +1112,20 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *args;
   copy_revprops_baton_t baton;
   const char *to_url;
+  svn_revnum_t revision = SVN_INVALID_REVNUM;
+  char *digits_end = NULL;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
+  SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
 
   to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
-
+  revision = strtol(APR_ARRAY_IDX(args, 1, const char *), &digits_end, 10);
+  
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
                              _("Path '%s' is not a URL"), to_url);
-
-  if (! SVN_IS_VALID_REVNUM(opt_baton->revision))
+  if ((! SVN_IS_VALID_REVNUM(revision)) || (! digits_end) || *digits_end)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("You must supply a valid revision number;"
-                              " try 'svnsync help' for more info"));
+                            _("Invalid revision number"));
 
   callbacks.open_tmp_file = open_tmp_file;
   callbacks.auth_baton = opt_baton->auth_baton;
@@ -1146,7 +1133,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   baton.callbacks = &callbacks;
   baton.config = opt_baton->config;
   baton.to_url = to_url;
-  baton.rev = opt_baton->revision;
+  baton.rev = revision;
 
   SVN_ERR(svn_ra_open2(&to_session,
                        to_url,
@@ -1228,7 +1215,6 @@ main(int argc, const char *argv[])
     }
 
   memset(&opt_baton, 0, sizeof(opt_baton));
-  opt_baton.revision = SVN_INVALID_REVNUM;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1263,10 +1249,6 @@ main(int argc, const char *argv[])
 
       switch (opt_id)
         {
-          case svnsync_opt_source_url:
-            opt_baton.source_url = opt_arg;
-            break;
-
           case svnsync_opt_non_interactive:
             opt_baton.non_interactive = TRUE;
             break;
@@ -1289,23 +1271,6 @@ main(int argc, const char *argv[])
 
           case svnsync_opt_version:
             opt_baton.version = TRUE;
-            break;
-
-          case 'r':
-            {
-              char *digits_end = NULL;
-              opt_baton.revision = strtol(opt_arg, &digits_end, 10);
-              if ((! SVN_IS_VALID_REVNUM(opt_baton.revision))
-                  || (! digits_end)
-                  || *digits_end)
-                {
-                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                         _("Invalid revision number"));
-                  svn_handle_error2(err, stderr, FALSE, "svnsync: ");
-                  svn_error_clear(err);
-                  return EXIT_FAILURE;
-                }
-            }
             break;
 
           case '?':
