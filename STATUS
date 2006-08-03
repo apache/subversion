@@ -9,6 +9,27 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  * r20938
+    Improve svnsync help output.
+    Justification:
+      Low risk, helpful for users.
+    Votes:
+      +1: rooneg
+
+  * r20939
+    Fix svnsync error message.
+    Justification:
+      Low risk, correct error messages are nice to have.
+    Votes:
+      +1: rooneg
+
+  * r20940
+    Give svnsync a minimal man page.
+    Justification:
+      Low risk, helpful for new users.
+    Votes:
+      +1: rooneg
+
   * r20932
     Fix --enable-dso in the face of our global bdb environment cache.
     Justification:
