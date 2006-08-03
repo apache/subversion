@@ -14,14 +14,14 @@ Candidate changes:
     Justification:
       Low risk, helpful for users.
     Votes:
-      +1: rooneg
+      +1: rooneg, nori
 
   * r20939
     Fix svnsync error message.
     Justification:
       Low risk, correct error messages are nice to have.
     Votes:
-      +1: rooneg
+      +1: rooneg, nori
 
   * r20940
     Give svnsync a minimal man page.
