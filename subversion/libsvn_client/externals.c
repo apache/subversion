@@ -198,8 +198,9 @@ switch_external(const char *path,
           if (strcmp(entry->url, url) == 0)
             {
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
-                                                  TRUE, FALSE, timestamp_sleep,
-                                                  ctx, pool));
+                                                  TRUE, FALSE, FALSE,
+                                                  timestamp_sleep, ctx,
+                                                  pool));
               return SVN_NO_ERROR;
             }
           else if (entry->repos)
@@ -236,8 +237,8 @@ switch_external(const char *path,
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url, revision,
-                                                  TRUE, timestamp_sleep, ctx,
-                                                  subpool));
+                                                  TRUE, timestamp_sleep,
+                                                  FALSE, ctx, subpool));
 
               return SVN_NO_ERROR;
             }
@@ -268,7 +269,7 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, path, revision, revision,
-                                        TRUE, FALSE, timestamp_sleep,
+                                        TRUE, FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
   return SVN_NO_ERROR;
@@ -362,7 +363,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
                                               &(new_item->revision),
                                               &(new_item->revision),
-                                              TRUE, FALSE,
+                                              TRUE, FALSE, FALSE,
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
     }

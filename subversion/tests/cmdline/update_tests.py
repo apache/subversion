@@ -1929,6 +1929,233 @@ def update_copy_of_old_rev(sbox):
   # Verify the committed file's content
   svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', url2)
 
+#----------------------------------------------------------------------
+def forced_update(sbox):
+  "forced update tolerates obstructions to adds"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append (mu_path, 'appended mu text')
+  svntest.main.file_append (rho_path, 'new appended text for rho')
+
+  # Add some files
+  nu_path = os.path.join(wc_dir, 'A', 'B', 'F', 'nu')
+  svntest.main.file_append(nu_path, "This is the file 'nu'\n")
+  svntest.main.run_svn(None, 'add', nu_path)
+  kappa_path = os.path.join(wc_dir, 'kappa')
+  svntest.main.file_append(kappa_path, "This is the file 'kappa'\n")
+  svntest.main.run_svn(None, 'add', kappa_path)
+
+  # Add a dir with two files
+  I_path = os.path.join(wc_dir, 'A', 'C', 'I')
+  os.mkdir(I_path)
+  svntest.main.run_svn(None, 'add', I_path)
+  upsilon_path = os.path.join(I_path, 'upsilon')
+  svntest.main.file_append(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.main.run_svn(None, 'add', upsilon_path)
+  zeta_path = os.path.join(I_path, 'zeta')
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'\n")
+  svntest.main.run_svn(None, 'add', zeta_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/mu'          : Item(verb='Sending'),
+    'A/D/G/rho'     : Item(verb='Sending'),
+    'A/B/F/nu'      : Item(verb='Adding'),
+    'kappa'         : Item(verb='Adding'),
+    'A/C/I'         : Item(verb='Adding'),
+    'A/C/I/upsilon' : Item(verb='Adding'),
+    'A/C/I/zeta'    : Item(verb='Adding'),
+    })
+
+  # Create expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/nu'      : Item(status='  ', wc_rev=2),
+    'kappa'         : Item(status='  ', wc_rev=2),
+    'A/C/I'         : Item(status='  ', wc_rev=2),
+    'A/C/I/upsilon' : Item(status='  ', wc_rev=2),
+    'A/C/I/zeta'    : Item(status='  ', wc_rev=2),
+    })  
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
+
+  # Commit.
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status, None,
+                                         None, None, None, None, wc_dir)
+
+  # Make a local mod to mu that will merge cleanly.
+  backup_mu_path = os.path.join(wc_backup, 'A', 'mu')
+  svntest.main.file_append (backup_mu_path, 'appended mu text')
+
+  # Create unversioned files and dir that will obstruct A/B/F/nu, kappa,
+  # A/C/I, and A/C/I/upsilon coming from repos during update.
+  # The obstructing nu has the same contents as  the repos, while kappa and
+  # upsilon differ, which means the latter two should show as modified after
+  # the forced update.
+  nu_path = os.path.join(wc_backup, 'A', 'B', 'F', 'nu')
+  svntest.main.file_append(nu_path, "This is the file 'nu'\n")
+  kappa_path = os.path.join(wc_backup, 'kappa')
+  svntest.main.file_append(kappa_path,
+                           "This is the OBSTRUCTING file 'kappa'\n")
+  I_path = os.path.join(wc_backup, 'A', 'C', 'I')
+  os.mkdir(I_path)
+  upsilon_path = os.path.join(I_path, 'upsilon')
+  svntest.main.file_append(upsilon_path,
+                           "This is the OBSTRUCTING file 'upsilon'\n")
+
+  # Create expected output tree for an update of the wc_backup.
+  # mu and rho are run of the mill update operations; merge and update
+  # respectively.
+  # kappa, nu, I, and upsilon all 'E'xisted as unversioned items in the WC.
+  # While the dir I does exist, zeta does not so it's just an add.
+  expected_output = wc.State(wc_backup, {
+    'A/mu'          : Item(status='G '),
+    'A/D/G/rho'     : Item(status='U '),
+    'kappa'         : Item(status='E '),
+    'A/B/F/nu'      : Item(status='E '),
+    'A/C/I'         : Item(status='E '),
+    'A/C/I/upsilon' : Item(status='E '),
+    'A/C/I/zeta'    : Item(status='A '),
+    })
+
+  # Create expected output tree for an update of the wc_backup.
+  #
+  # - mu and rho are run of the mill update operations; merge and update
+  #   respectively.
+  #
+  # - kappa, nu, I, and upsilon all 'E'xisted as unversioned items in the WC.
+  #
+  # - While the dir I does exist, I/zeta does not so it's just an add.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/F/nu'      : Item("This is the file 'nu'\n"),
+    'kappa'         : Item("This is the OBSTRUCTING file 'kappa'\n"),
+    'A/C/I'         : Item(),
+    'A/C/I/upsilon' : Item("This is the OBSTRUCTING file 'upsilon'\n"),
+    'A/C/I/zeta'    : Item("This is the file 'zeta'\n"),
+    })
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+  expected_disk.tweak('A/D/G/rho',
+                      contents=expected_disk.desc['A/D/G/rho'].contents
+                      + 'new appended text for rho')
+
+  # Create expected status tree for the update.  Since the obstructing
+  # kappa and upsilon differ from the repos, they should show as modified.
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.add({
+    'A/B/F/nu'      : Item(status='  ', wc_rev=2),
+    'A/C/I'         : Item(status='  ', wc_rev=2),
+    'A/C/I/zeta'    : Item(status='  ', wc_rev=2),
+    'kappa'         : Item(status='M ', wc_rev=2),
+    'A/C/I/upsilon' : Item(status='M ', wc_rev=2),
+    })
+
+  # Perform forced update and check the results in three ways.
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 0,
+                                        wc_backup, '--force')
+
+#----------------------------------------------------------------------
+def forced_update_failures(sbox):
+  "forced up fails with some types of obstructions"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Add a file
+  nu_path = os.path.join(wc_dir, 'A', 'B', 'F', 'nu')
+  svntest.main.file_append(nu_path, "This is the file 'nu'\n")
+  svntest.main.run_svn(None, 'add', nu_path)
+
+  # Add a dir
+  I_path = os.path.join(wc_dir, 'A', 'C', 'I')
+  os.mkdir(I_path)
+  svntest.main.run_svn(None, 'add', I_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/nu'      : Item(verb='Adding'),
+    'A/C/I'         : Item(verb='Adding'),
+    })
+
+  # Create expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/nu'      : Item(status='  ', wc_rev=2),
+    'A/C/I'         : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Create an unversioned dir A/B/F/nu that will obstruct the file of the
+  # same name coming from the repository.  Create an unversioned file A/C/I
+  # that will obstruct the dir of the same name.
+  nu_path = os.path.join(wc_backup, 'A', 'B', 'F', 'nu')
+  os.mkdir(nu_path)
+  I_path = os.path.join(wc_backup, 'A', 'C', 'I')
+  svntest.main.file_append(I_path,
+                           "This is the file 'I'...shouldn't I be a dir?\n")
+
+  # A forced update that tries to add a file when an unversioned directory
+  # of the same name already exists should fail.
+  F_Path = os.path.join(wc_backup, 'A', 'B', 'F')
+  svntest.actions.run_and_verify_update(F_Path, None, None, None,
+                                        ".*Failed to add file.*" + \
+                                        "a non-file object of the " + \
+                                        "same name already exists",
+                                        None, None, None, None, 0, F_Path,
+                                        '--force')
+
+  # A forced update that tries to add a directory when an unversioned file
+  # of the same name already exists should fail.
+  C_Path = os.path.join(wc_backup, 'A', 'C')
+  svntest.actions.run_and_verify_update(C_Path, None, None, None,
+                                        ".*Failed to add directory.*" + \
+                                        "a non-directory object of the " + \
+                                        "same name already exists",
+                                        None, None, None, None, 0, C_Path,
+                                        '--force')
+
+  # A forced update that tries to add a directory when a versioned directory
+  # of the same name already exists should fail.
+
+  # Remove the file A/C/I and make it a versioned directory.
+  I_url = svntest.main.current_repo_url + "/A/C/I"
+  os.remove(I_path)
+  os.mkdir(I_path)
+  so, se = svntest.actions.run_and_verify_svn("Unexpected error during co",
+                                              ['Checked out revision 2.\n'],
+                                              [], "co", I_url, I_path)
+
+  svntest.actions.run_and_verify_update(C_Path, None, None, None,
+                                        ".*Failed to forcibly add " + \
+                                        "directory.*a versioned directory " + \
+                                        "of the same name already exists",
+                                        None, None, None, None, 0, C_Path,
+                                        '--force')
 
 ########################################################################
 # Run the tests
@@ -1966,6 +2193,8 @@ test_list = [ None,
               conflict_markers_matching_eol,
               update_eolstyle_handling,
               XFail(update_copy_of_old_rev),
+              forced_update,
+              forced_update_failures
              ]
 
 if __name__ == '__main__':

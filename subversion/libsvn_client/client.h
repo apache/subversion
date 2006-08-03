@@ -323,13 +323,17 @@ svn_error_t * svn_client__wc_delete(const char *path,
    function will sleep before returning to ensure timestamp integrity.
    If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
    will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
-   not change *TIMESTAMP_SLEEP if no sleep is required. */
+   not change *TIMESTAMP_SLEEP if no sleep is required.  If
+   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
+   obstruct items added from the repos are tolerated; if FALSE, these
+   obstructions cause the update to fail. */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
                             svn_boolean_t recurse,
                             svn_boolean_t ignore_externals,
+                            svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
@@ -341,7 +345,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
    function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a
    sleep is required, and will not change *TIMESTAMP_SLEEP if no sleep
-   is required. */
+   is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children
+   of PATH that obstruct items added from the repos are tolerated; if FALSE,
+   these obstructions cause the checkout to fail. */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
@@ -350,6 +356,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const svn_opt_revision_t *revision,
                               svn_boolean_t recurse,
                               svn_boolean_t ignore_externals,
+                              svn_boolean_t allow_unver_obstructions,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
@@ -360,7 +367,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
    to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required. */
+   *TIMESTAMP_SLEEP if no sleep is required.  If ALLOW_UNVER_OBSTRUCTIONS
+   is TRUE, unversioned children of PATH that obstruct items added from
+   the repos are tolerated; if FALSE, these obstructions cause the switch
+   to fail. */
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -368,6 +378,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *revision,
                             svn_boolean_t recurse,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t allow_unver_obstructions,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 

@@ -1510,7 +1510,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       if (! reinstall_working)
         SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
                                                  fullpath, FALSE, adm_access,
-                                                 FALSE, pool));
+                                                 FALSE, FALSE, pool));
 
       if (reinstall_working)
         {
@@ -1889,8 +1889,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       full_path = svn_path_join(full_path, name, pool);
 
       /* Check for local mods. before removing entry */
-      SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                                     FALSE, adm_access, pool));
+      SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, full_path,
+                                      FALSE, FALSE, adm_access, pool));
       if (text_modified_p && instant_error)
         return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                                  _("File '%s' has local modifications"),

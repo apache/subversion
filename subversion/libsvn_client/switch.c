@@ -57,6 +57,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *revision,
                             svn_boolean_t recurse,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t allow_unver_obstructions,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -128,8 +129,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR(svn_wc_get_switch_editor2(&revnum, adm_access, target,
+  SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
                                     switch_url, use_commit_times, recurse,
+                                    allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     diff3_cmd,
@@ -202,6 +204,21 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 }
 
 svn_error_t *
+svn_client_switch2(svn_revnum_t *result_rev,
+                   const char *path,
+                   const char *switch_url,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client__switch_internal(result_rev, path, switch_url, revision,
+                                     recurse, NULL,
+                                     allow_unver_obstructions, ctx, pool);
+}
+
+svn_error_t *
 svn_client_switch(svn_revnum_t *result_rev,
                   const char *path,
                   const char *switch_url,
@@ -211,5 +228,5 @@ svn_client_switch(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     recurse, NULL, ctx, pool);
+                                     recurse, NULL, FALSE, ctx, pool);
 }
