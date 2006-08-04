@@ -29,14 +29,6 @@
 #include <apr_signal.h>
 #include <apr_uuid.h>
 
-#define PROP_PREFIX            "svn:sync-"
-
-#define LOCK_PROP              PROP_PREFIX "lock"
-#define FROM_URL_PROP          PROP_PREFIX "from-url"
-#define FROM_UUID_PROP         PROP_PREFIX "from-uuid"
-#define LAST_MERGED_REV_PROP   PROP_PREFIX "last-merged-rev"
-#define CURRENTLY_COPYING_PROP PROP_PREFIX "currently-copying"
-
 static svn_opt_subcommand_t initialize_cmd,
                             synchronize_cmd,
                             copy_revprops_cmd,
@@ -126,7 +118,38 @@ typedef struct {
   svn_boolean_t help;
 } opt_baton_t;
 
+
+
+/*** svnsync custom revision properties ***/
+
+/* Prefix for all svnsync custom properties. */
+#define PROP_PREFIX               "svn:sync-"
+
+/* The following revision properties are set on revision 0 of
+ * destination repositories by svnsync:
+ */
+
+/* Used to enforce mutually exclusive destination repository access. */
+#define LOCK_PROP                 PROP_PREFIX "lock"
+
+/* Identifies the repository's source. */
+#define FROM_URL_PROP             PROP_PREFIX "from-url"
+#define FROM_UUID_PROP            PROP_PREFIX "from-uuid"
+
+/* Identifies the last completely mirrored revision. */
+#define LAST_MERGED_REV_PROP      PROP_PREFIX "last-merged-rev"
+
+/* Identifies the revision currently being copied. */
+#define CURRENTLY_COPYING_PROP    PROP_PREFIX "currently-copying"
+
+
+
+/*** Helper functions ***/
+
+
+/* Global record of whether the user has requested cancellation. */
 static volatile sig_atomic_t cancelled = FALSE;
+
 
 /* Callback function for apr_signal(). */
 static void
@@ -904,57 +927,89 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   svn_ra_session_t *from_session;
   sync_baton_t *baton = b;
   apr_pool_t *subpool;
+  svn_string_t *currently_copying;
+  svn_revnum_t to_latest, copying, last_merged;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev, to_session,
                               baton->callbacks, baton->config, baton, pool));
 
-  /* Now, check to see if we have revprops that still need to be
-     copied for a prior revision we didn't finish copying. */
+  /* Check to see if we have revprops that still need to be copied for
+     a prior revision we didn't finish copying.  But first, check for
+     state sanity.  Remember, mirroring is not an atomic action,
+     because revision properties are copied separately from the
+     revision's contents.
 
-  {
-    svn_string_t *currently_copying;
-    svn_revnum_t to_latest, copying;
+     So, any time that currently-copying is not set, then
+     last-merged-rev should be the HEAD revision of the destination
+     repository.  That is, if we didn't fall over in the middle of a
+     previous syncronization, then our destination repository should
+     have exactly as many revisions in it as we've syncronized.
 
-    SVN_ERR(svn_ra_rev_prop(to_session, 0, CURRENTLY_COPYING_PROP,
-                            &currently_copying, pool));
+     Alternately, if currently-copying *is* set, it must
+     be either last-merged-rev or last-merged-rev + 1, and the HEAD
+     revision must be equal to either last-merged-rev or
+     currently-copying. If this is not the case, somebody has meddled
+     with the destination without using svnsync.
+  */
 
-    SVN_ERR(svn_ra_get_latest_revnum(to_session, &to_latest, pool));
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, CURRENTLY_COPYING_PROP,
+                          &currently_copying, pool));
 
-    if (currently_copying)
-      {
-        copying = atol(currently_copying->data);
+  SVN_ERR(svn_ra_get_latest_revnum(to_session, &to_latest, pool));
 
-        if (copying == to_latest)
-          {
-            SVN_ERR(copy_revprops(from_session, to_session, to_latest,
-                                  pool));
+  last_merged = SVN_STR_TO_REV(last_merged_rev->data);
 
-            last_merged_rev = svn_string_create(apr_psprintf(pool, "%ld",
-                                                             to_latest),
-                                                pool);
+  if (currently_copying)
+    {
+      copying = SVN_STR_TO_REV(currently_copying->data);
 
-            /* Now update last merged rev and drop currently changing.
-               Note that the order here is significant, if we do them
-               in the wrong order there are race conditions where we
-               end up not being able to tell if there have been bogus
-               (i.e. non-svnsync) commits to the dest repository. */
-
-            SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                           LAST_MERGED_REV_PROP,
-                                           last_merged_rev, pool));
-
-            SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                           CURRENTLY_COPYING_PROP,
-                                           NULL, pool));
-          }
-        else if (copying < to_latest)
+      if ((copying < last_merged)
+          || (copying > (last_merged + 1))
+          || ((to_latest != last_merged) && (to_latest != copying)))
+        {
           return svn_error_createf
-                   (APR_EINVAL, NULL,
-                    _("Currently copying rev %ld in source is less than "
-                      "latest rev in destination (%ld)"),
-                    copying, to_latest);
-      }
-  }
+            (APR_EINVAL, NULL,
+             _("Revision being currently copied (%ld), last merged revision "
+               "(%ld), and destination HEAD (%ld) are inconsistent; have you "
+               "committed to the destination without using svnsync?"),
+             copying, last_merged, to_latest);
+        }
+      else if (copying == to_latest)
+        {
+          if (copying > last_merged)
+            {
+              SVN_ERR(copy_revprops(from_session, to_session, 
+                                    to_latest, pool));
+              last_merged = copying;
+              last_merged_rev = svn_string_create
+                (apr_psprintf(pool, "%ld", last_merged), pool);
+            }
+
+          /* Now update last merged rev and drop currently changing.
+             Note that the order here is significant, if we do them
+             in the wrong order there are race conditions where we
+             end up not being able to tell if there have been bogus
+             (i.e. non-svnsync) commits to the dest repository. */
+
+          SVN_ERR(svn_ra_change_rev_prop(to_session, 0, LAST_MERGED_REV_PROP,
+                                         last_merged_rev, pool));
+          SVN_ERR(svn_ra_change_rev_prop(to_session, 0, CURRENTLY_COPYING_PROP,
+                                         NULL, pool));
+        }
+      /* If copying > to_latest, then we just fall through to
+         attempting to copy the revision again. */
+    }
+  else
+    {
+      if (to_latest != last_merged)
+        {
+          return svn_error_createf
+            (APR_EINVAL, NULL,
+             _("Destination HEAD (%ld) is not the last merged revision (%ld); "
+               "have you committed to the destination without using svnsync?"),
+             to_latest, last_merged);
+        }
+    }
 
   /* Now check to see if there are any revisions to copy. */
 
