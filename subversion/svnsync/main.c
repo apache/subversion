@@ -67,7 +67,7 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
          "mirror of the source repository.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "synchronize", synchronize_cmd, { "sync" },
-      N_("usage: svnsync synchronize DEST_URL\n\n"
+      N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
          "Transfer all pending revisions from source to destination.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
