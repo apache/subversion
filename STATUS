@@ -98,21 +98,21 @@ Candidate changes:
     Votes:
       +1: nori, dlr
 
-  * r20965, r20964, r20961, r20960, r20958, r20956
+  * r20967, r20965, r20964, r20961, r20960, r20958, r20956
     Tons of bugfixes, UI and usages improvements, error detection and
     reporting enhancements, and so on -- all in svnsync.
     Notes:
       Probably wanna grab the revisions which comprise sweeping code
       formatting changes, too, for merge and maintenance simplicity
       (r20963, r20962, r20959).  In fact, I think we basically want
-      -r20955:20965 of the trunk, here, which contains all -- and only --
+      -r20955:20967 of the trunk, here, which contains all -- and only --
       these changes.
     Justification:
       Brand new code, admittedly getting a late start on testing outside
       of original dev-testing, but needing these improvements to prevent
       user confusion and embarrassment.
     Votes:
-      +1: cmpilato
+      +1: cmpilato (except for r20967)
 
 Approved changes:
 
