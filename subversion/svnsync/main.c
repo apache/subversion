@@ -454,7 +454,7 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 }
 
 
-/* SUBCOMMAND:  init */
+/* SUBCOMMAND: init */
 static svn_error_t *
 initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 {
@@ -1241,7 +1241,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 /*** `svnsync help' ***/
 
 
-/* SUBCOMMAND:  help */
+/* SUBCOMMAND: help */
 static svn_error_t *
 help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
