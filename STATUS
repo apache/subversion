@@ -116,14 +116,6 @@ Approved changes:
     Votes:
       +1: rooneg, dlr, cmpilato
     
-
-  * r20938
-    Improve svnsync help output.
-    Justification:
-      Low risk, helpful for users.
-    Votes:
-      +1: rooneg, nori, dlr
-
   * r20939
     Fix svnsync error message.
     Justification:

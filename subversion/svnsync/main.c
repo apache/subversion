@@ -62,7 +62,13 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
   {
     { "initialize", initialize_cmd, { "init" },
       N_("usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-         "Initialize a destination repository.\n"),
+         "Initialize a destination repository for synchronization from\n"
+         "another repository.\n"
+         "\n"
+         "The destination URL must point to the root of a repository with\n"
+         "no committed revisions.  The destination repository must allow\n"
+         "revision property changes, and you should not commit to it by\n"
+         "any method other than 'svnsync'.\n"),
       { SVNSYNC_OPTS_DEFAULT,
         svnsync_opt_source_url } },
     { "synchronize", synchronize_cmd, { "sync" },
