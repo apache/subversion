@@ -79,16 +79,18 @@ typedef struct svn_fs_t svn_fs_t;
  * Callers should invoke this function to initialize global state in
  * the FS library before creating FS objects.  If this function is
  * invoked, no FS objects may be created in another thread at the same
- * time as this invocation.
+ * time as this invocation, and the provided @a pool must last longer
+ * than any FS object created subsequently.
  *
  * If this function is not called, the FS library will make a best
  * effort to bootstrap a mutex for protecting data common to FS
- * objects; however, there is a small window of failure.
+ * objects; however, there is a small window of failure.  Also, a
+ * small amount of data will be leaked if the Subversion FS library is
+ * dynamically unloaded.
  *
- * If this function is called multiple times the later calls will have
+ * If this function is called multiple times before the pool passed to
+ * the first call is destroyed or cleared, the later calls will have
  * no effect.
- *
- * @a pool is no longer used.
  *
  * @since New in 1.2.
  */
