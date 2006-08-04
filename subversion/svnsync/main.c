@@ -273,6 +273,48 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
        url, sess_root);
 }
 
+static svn_error_t *
+copy_revprops(svn_ra_session_t *from_session,
+              svn_ra_session_t *to_session,
+              svn_revnum_t rev,
+              apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *revprops;
+  svn_boolean_t saw_sync_props = FALSE;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_ra_rev_proplist(from_session, rev, &revprops, pool));
+
+  for (hi = apr_hash_first(pool, revprops); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, NULL, &val);
+
+      if (strncmp(key, PROP_PREFIX, sizeof(PROP_PREFIX) - 1) == 0)
+        saw_sync_props = TRUE;
+      else
+        SVN_ERR(svn_ra_change_rev_prop(to_session, rev, key, val, subpool));
+    }
+
+  if (saw_sync_props)
+    SVN_ERR(svn_cmdline_printf(subpool, 
+                               _("Copied properties for revision %ld "
+                                 "(%s* properties skipped).\n"),
+                               rev, PROP_PREFIX));
+  else
+    SVN_ERR(svn_cmdline_printf(subpool, 
+                               _("Copied properties for revision %ld.\n"), 
+                               rev));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 typedef struct {
   const char *from_url;
   const char *to_url;
@@ -286,10 +328,7 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   svn_ra_session_t *from_session;
   init_baton_t *baton = b;
   svn_string_t *from_url;
-  apr_hash_t *revprops;
-  apr_hash_index_t *hi;
   svn_revnum_t latest;
-  apr_pool_t *subpool;
   const char *uuid;
 
   /* First, sanity check to see that we're copying into a brand new repos. */
@@ -334,31 +373,7 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   /* Finally, copy all non-svnsync revprops from rev 0 of the source repos
    * into the dest repos. */
-
-  SVN_ERR(svn_ra_rev_proplist(from_session, 0, &revprops, pool));
-
-  subpool = svn_pool_create(pool);
-
-  for (hi = apr_hash_first(pool, revprops);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *pname;
-      svn_string_t *pval;
-      const void *key;
-      void *val;
-
-      svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-
-      pname = key;
-      pval = val;
-
-      if (strncmp(pname, PROP_PREFIX, sizeof(PROP_PREFIX) - 1) != 0)
-        SVN_ERR(svn_ra_change_rev_prop(to_session, 0, pname, pval,
-                                       subpool));
-    }
+  SVN_ERR(copy_revprops(from_session, to_session, 0, pool));
 
   /* It would be nice if we could set the dest repos UUID to be equal to the
    * UUID of the source repos, at least optionally.  That way people could
@@ -797,45 +812,6 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
 
   *editor = tree_editor;
   *edit_baton = eb;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-copy_revprops(svn_ra_session_t *from_session,
-              svn_ra_session_t *to_session,
-              svn_revnum_t rev,
-              apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *revprops;
-  apr_hash_index_t *hi;
-
-  SVN_ERR(svn_ra_rev_proplist(from_session, rev, &revprops, pool));
-
-  for (hi = apr_hash_first(pool, revprops);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *pname;
-      svn_string_t *pval;
-      const void *key;
-      void *val;
-
-      svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-
-      pname = key;
-      pval = val;
-
-      SVN_ERR(svn_ra_change_rev_prop(to_session, rev, pname, pval,
-                                     subpool));
-    }
-
-  SVN_ERR(svn_cmdline_printf(subpool, 
-                             _("Copied properties for revision %ld.\n"), rev));
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
